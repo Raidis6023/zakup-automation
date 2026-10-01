@@ -1132,3 +1132,90 @@ button {
   }
 
 }
+/* ============================================
+   ИМПОРТ ОСТАТКОВ
+   ============================================ */
+
+.stock-upload-box {
+  display: flex;
+
+  align-items: center;
+
+  gap: 18px;
+
+  flex-wrap: wrap;
+}
+
+
+.stock-file-button {
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  user-select: none;
+}
+
+
+.stock-upload-message {
+  width: 100%;
+
+  padding-top: 4px;
+
+  color:
+    var(--text-secondary);
+
+  font-size: 13px;
+}
+
+
+.navigation-button {
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  text-decoration: none;
+}
+
+
+.stock-import-table {
+  min-width: 1200px;
+}
+
+
+.import-status {
+  display: inline-flex;
+
+  padding:
+    5px
+    8px;
+
+  border-radius: 7px;
+
+  font-size: 12px;
+
+  font-weight: 600;
+
+  white-space: nowrap;
+}
+
+
+.import-status-matched {
+  background:
+    rgba(40, 160, 90, 0.12);
+}
+
+
+.import-status-new_product {
+  background:
+    rgba(60, 120, 220, 0.13);
+}
+
+
+.import-status-error {
+  background:
+    rgba(220, 70, 70, 0.13);
+}
