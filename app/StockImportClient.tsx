@@ -52,21 +52,15 @@ function normalizeText(
     return "";
   }
 
-
   return String(value)
-
-    // Неразрывный пробел
     .replace(/\u00A0/g, " ")
-
-    // Несколько пробелов / переносов
     .replace(/\s+/g, " ")
-
     .trim();
 }
 
 
 // ============================================
-// ПАРСИНГ СВОБОДНОГО ОСТАТКА
+// ПАРСИНГ ЧИСЛА
 // ============================================
 
 function parseNumber(
@@ -82,34 +76,30 @@ function parseNumber(
     return null;
   }
 
-
   if (
     typeof value === "number"
   ) {
 
-    return Number.isFinite(value)
-      ? Math.round(value)
-      : null;
+    if (
+      !Number.isFinite(value)
+    ) {
+      return null;
+    }
 
+    return Math.round(value);
   }
-
 
   const normalized =
     normalizeText(value)
-
       .replace(/\s/g, "")
-
       .replace(",", ".");
-
 
   if (!normalized) {
     return null;
   }
 
-
   const result =
     Number(normalized);
-
 
   if (
     !Number.isFinite(result)
@@ -117,13 +107,12 @@ function parseNumber(
     return null;
   }
 
-
   return Math.round(result);
 }
 
 
 // ============================================
-// ДАТА → YYYY-MM-DD
+// ПРЕОБРАЗОВАНИЕ ДАТЫ
 // ============================================
 
 function toIsoDate(
@@ -131,7 +120,6 @@ function toIsoDate(
 ):
   string | null {
 
-  // SheetJS может вернуть Date
   if (
     value instanceof Date &&
     !Number.isNaN(
@@ -158,13 +146,10 @@ function toIsoDate(
         "0"
       );
 
-
     return `${year}-${month}-${day}`;
   }
 
 
-  // Иногда дата Excel приходит
-  // числовым serial value
   if (
     typeof value === "number"
   ) {
@@ -173,7 +158,6 @@ function toIsoDate(
       XLSX.SSF.parse_date_code(
         value
       );
-
 
     if (parsed) {
 
@@ -194,11 +178,8 @@ function toIsoDate(
             "0"
           );
 
-
       return `${year}-${month}-${day}`;
-
     }
-
   }
 
 
@@ -206,10 +187,6 @@ function toIsoDate(
     normalizeText(value);
 
 
-  // Например:
-  // 02.10.2026
-  // 02/10/2026
-  // 02-10-2026
   const match =
     text.match(
       /(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})/
@@ -228,14 +205,12 @@ function toIsoDate(
         "0"
       );
 
-
   const month =
     match[2]
       .padStart(
         2,
         "0"
       );
-
 
   const year =
     match[3];
@@ -246,14 +221,7 @@ function toIsoDate(
 
 
 // ============================================
-// ПОЛУЧЕНИЕ ЯЧЕЙКИ ИЗ МАССИВА
-//
-// columnIndex начинается с 0:
-//
-// A = 0
-// B = 1
-// C = 2
-// ...
+// ПОЛУЧЕНИЕ ЯЧЕЙКИ
 // ============================================
 
 function getCell(
@@ -301,7 +269,7 @@ export default function StockImportClient() {
 
 
   // ==========================================
-  // ЧТЕНИЕ EXCEL
+  // ОБРАБОТКА EXCEL
   // ==========================================
 
   async function handleFile(
@@ -322,42 +290,29 @@ export default function StockImportClient() {
     try {
 
       // ======================================
-      // 1. ПОЛУЧАЕМ ARRAYBUFFER
+      // 1. ЧИТАЕМ ФАЙЛ
       // ======================================
 
       const buffer =
         await file.arrayBuffer();
 
 
-      // ======================================
-      // 2. ЧИТАЕМ EXCEL ЧЕРЕЗ SHEETJS
-      //
-      // В отличие от ExcelJS эта библиотека
-      // не требует разбора drawing anchors
-      // для нашей задачи.
-      // ======================================
-
       const workbook =
         XLSX.read(
           buffer,
           {
             type: "array",
-
             cellDates: true,
-
             cellFormula: false,
-
             cellHTML: false,
-
             cellStyles: false,
-
             cellNF: false,
           }
         );
 
 
       // ======================================
-      // 3. ВЫБИРАЕМ ЛИСТ
+      // 2. ВЫБИРАЕМ ЛИСТ
       // ======================================
 
       const sheetName =
@@ -395,16 +350,7 @@ export default function StockImportClient() {
 
 
       // ======================================
-      // 4. ПРЕВРАЩАЕМ ЛИСТ
-      // В МАССИВ СТРОК
-      //
-      // Каждая строка:
-      // [
-      //   колонка A,
-      //   колонка B,
-      //   колонка C,
-      //   ...
-      // ]
+      // 3. ПРЕОБРАЗУЕМ ЛИСТ В МАССИВ
       // ======================================
 
       const rows =
@@ -414,11 +360,8 @@ export default function StockImportClient() {
           worksheet,
           {
             header: 1,
-
             raw: true,
-
             defval: null,
-
             blankrows: true,
           }
         );
@@ -436,23 +379,18 @@ export default function StockImportClient() {
 
 
       // ======================================
-      // 5. ДАТА ОТЧЁТА
+      // 4. ОПРЕДЕЛЯЕМ ДАТУ ОТЧЁТА
       //
-      // C2:
-      // row index 1
-      // column index 2
+      // Сначала читаем физическую C2.
+      // Затем используем резервный поиск.
       // ======================================
 
-      const reportDateValue =
-        rows[1]
-          ? getCell(
-              rows[1],
-              2
-            )
-          : null;
+      let reportDateValue:
+        unknown =
+        worksheet["C2"]?.v;
 
 
-      const reportDate =
+      let reportDate =
         toIsoDate(
           reportDateValue
         );
@@ -460,21 +398,95 @@ export default function StockImportClient() {
 
       if (!reportDate) {
 
+        for (
+          let rowIndex = 0;
+          rowIndex <
+            Math.min(
+              rows.length,
+              15
+            );
+          rowIndex++
+        ) {
+
+          const row =
+            rows[rowIndex];
+
+
+          if (
+            !Array.isArray(row)
+          ) {
+            continue;
+          }
+
+
+          for (
+            const cellValue
+            of row
+          ) {
+
+            const text =
+              normalizeText(
+                cellValue
+              )
+                .toLowerCase();
+
+
+            if (
+              text.includes(
+                "дата отчета"
+              )
+              ||
+              text.includes(
+                "дата отчёта"
+              )
+            ) {
+
+              const foundDate =
+                toIsoDate(
+                  cellValue
+                );
+
+
+              if (foundDate) {
+
+                reportDate =
+                  foundDate;
+
+                break;
+
+              }
+
+            }
+
+          }
+
+
+          if (reportDate) {
+            break;
+          }
+
+        }
+
+      }
+
+
+      if (!reportDate) {
+
         console.log(
-          "Значение C2:",
+          "C2:",
           reportDateValue
         );
 
 
         throw new Error(
-          "Не удалось определить дату отчёта из ячейки C2"
+          "Не удалось определить дату отчёта"
         );
 
       }
 
 
       // ======================================
-      // 6. ЧИТАЕМ ТОВАРЫ
+      // 5. РАЗБИРАЕМ ТОВАРЫ
       // ======================================
 
       const parsedRows:
@@ -503,7 +515,7 @@ export default function StockImportClient() {
 
 
           // ==================================
-          // КОЛОНКИ ТЕКУЩЕГО ОТЧЁТА
+          // КОЛОНКИ ТЕКУЩЕГО ФАЙЛА
           //
           // A = Номенклатура
           // E = Артикул
@@ -552,7 +564,7 @@ export default function StockImportClient() {
 
 
           // ==================================
-          // 7. ОПРЕДЕЛЯЕМ СКЛАД
+          // 6. ОПРЕДЕЛЯЕМ СКЛАД
           // ==================================
 
           const possibleWarehouse =
@@ -562,9 +574,7 @@ export default function StockImportClient() {
 
           if (
             possibleWarehouse
-              .includes(
-                "склад"
-              )
+              .includes("склад")
 
             &&
             !columnE
@@ -581,7 +591,7 @@ export default function StockImportClient() {
 
 
           // ==================================
-          // 8. ПУСТЫЕ СТРОКИ
+          // 7. ПРОПУСКАЕМ ПУСТЫЕ СТРОКИ
           // ==================================
 
           if (
@@ -594,7 +604,7 @@ export default function StockImportClient() {
 
 
           // ==================================
-          // 9. СТРОКА "ИТОГО"
+          // 8. ПРОПУСКАЕМ "ИТОГО"
           // ==================================
 
           if (
@@ -609,7 +619,7 @@ export default function StockImportClient() {
 
 
           // ==================================
-          // 10. ЗАГОЛОВКИ
+          // 9. ПРОПУСКАЕМ ЗАГОЛОВКИ
           // ==================================
 
           if (
@@ -633,7 +643,7 @@ export default function StockImportClient() {
 
 
           // ==================================
-          // 11. СВОБОДНЫЙ ОСТАТОК
+          // 10. ЧИТАЕМ СВОБОДНЫЙ ОСТАТОК
           // ==================================
 
           const freeStock =
@@ -643,8 +653,8 @@ export default function StockImportClient() {
 
 
           // ==================================
-          // 12. ОПРЕДЕЛЯЕМ,
-          // ПОХОЖА ЛИ СТРОКА НА ТОВАР
+          // 11. ПРОВЕРКА,
+          // ЧТО ЭТО ПОХОЖЕ НА ТОВАР
           // ==================================
 
           if (
@@ -657,7 +667,7 @@ export default function StockImportClient() {
 
 
           // ==================================
-          // 13. ОШИБКА ПАРСИНГА
+          // 12. ОШИБКА ПАРСИНГА
           // ==================================
 
           let parseError:
@@ -676,7 +686,7 @@ export default function StockImportClient() {
 
 
           // ==================================
-          // 14. ДОБАВЛЯЕМ СТРОКУ
+          // 13. ДОБАВЛЯЕМ СТРОКУ
           // ==================================
 
           parsedRows.push({
@@ -715,7 +725,7 @@ export default function StockImportClient() {
 
 
       // ======================================
-      // 15. ПРОВЕРКА
+      // 14. ПРОВЕРЯЕМ РЕЗУЛЬТАТ
       // ======================================
 
       if (
@@ -735,7 +745,7 @@ export default function StockImportClient() {
 
 
       // ======================================
-      // 16. СОЗДАЁМ PREVIEW В SUPABASE
+      // 15. СОЗДАЁМ PREVIEW В SUPABASE
       // ======================================
 
       const batchId =
@@ -766,7 +776,7 @@ export default function StockImportClient() {
 
 
       // ======================================
-      // 17. ПЕРЕХОДИМ К PREVIEW
+      // 16. ПЕРЕХОДИМ НА PREVIEW
       // ======================================
 
       setMessage(
