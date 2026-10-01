@@ -1,20 +1,17 @@
 "use client";
 
-import {
-  useState,
-} from "react";
-
-import {
-  useRouter,
-} from "next/navigation";
-
-import ExcelJS
-  from "exceljs";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import ExcelJS from "exceljs";
 
 import {
   createStockImportPreview,
 } from "./actions";
 
+
+// ============================================
+// ТИП СТРОКИ ПОСЛЕ РАЗБОРА EXCEL
+// ============================================
 
 type ParsedRow = {
   source_row_number: number;
@@ -39,9 +36,13 @@ type ParsedRow = {
 };
 
 
+// ============================================
+// ПОЛУЧЕНИЕ ТЕКСТА ИЗ ЯЧЕЙКИ EXCEL
+// ============================================
+
 function cellText(
   value: unknown
-) {
+): string {
 
   if (
     value === null ||
@@ -51,6 +52,33 @@ function cellText(
   }
 
 
+  // Обычный текст
+  if (
+    typeof value === "string"
+  ) {
+    return value;
+  }
+
+
+  // Число
+  if (
+    typeof value === "number"
+  ) {
+    return String(value);
+  }
+
+
+  // Дата
+  if (
+    value instanceof Date
+  ) {
+    return value.toLocaleDateString(
+      "ru-RU"
+    );
+  }
+
+
+  // Сложные значения ExcelJS
   if (
     typeof value === "object"
   ) {
@@ -61,30 +89,40 @@ function cellText(
 
         result?: unknown;
 
+        hyperlink?: string;
+
         richText?: Array<{
           text?: string;
         }>;
       };
 
 
+    // Формат:
+    // { text: "..." }
     if (
-      typeof objectValue.text
-      === "string"
+      typeof objectValue.text ===
+      "string"
     ) {
       return objectValue.text;
     }
 
 
+    // Формула:
+    // { formula: "...", result: ... }
     if (
       objectValue.result !==
-      undefined
+      undefined &&
+      objectValue.result !==
+      null
     ) {
+
       return String(
         objectValue.result
       );
     }
 
 
+    // Rich text
     if (
       Array.isArray(
         objectValue.richText
@@ -107,15 +145,29 @@ function cellText(
 }
 
 
+// ============================================
+// НОРМАЛИЗАЦИЯ ТЕКСТА
+// ============================================
+
 function normalizeText(
   value: unknown
-) {
+): string {
 
   return cellText(value)
+
+    // Неразрывные пробелы
+    .replace(/\u00A0/g, " ")
+
+    // Несколько пробелов подряд
     .replace(/\s+/g, " ")
+
     .trim();
 }
 
+
+// ============================================
+// ПАРСИНГ ЧИСЛА
+// ============================================
 
 function parseNumber(
   value: unknown
@@ -135,15 +187,23 @@ function parseNumber(
     typeof value === "number"
   ) {
 
-    return Number.isFinite(value)
-      ? Math.round(value)
-      : null;
+    if (
+      !Number.isFinite(value)
+    ) {
+      return null;
+    }
+
+    return Math.round(value);
   }
 
 
   const normalized =
     normalizeText(value)
+
+      // удаляем обычные и неразрывные пробелы
       .replace(/\s/g, "")
+
+      // российская десятичная запятая
       .replace(",", ".");
 
 
@@ -167,11 +227,16 @@ function parseNumber(
 }
 
 
+// ============================================
+// ПРЕОБРАЗОВАНИЕ ДАТЫ В YYYY-MM-DD
+// ============================================
+
 function toIsoDate(
   value: unknown
 ):
   string | null {
 
+  // ExcelJS уже распознал дату
   if (
     value instanceof Date &&
     !Number.isNaN(
@@ -185,12 +250,18 @@ function toIsoDate(
     const month =
       String(
         value.getMonth() + 1
-      ).padStart(2, "0");
+      ).padStart(
+        2,
+        "0"
+      );
 
     const day =
       String(
         value.getDate()
-      ).padStart(2, "0");
+      ).padStart(
+        2,
+        "0"
+      );
 
 
     return `${year}-${month}-${day}`;
@@ -201,6 +272,10 @@ function toIsoDate(
     normalizeText(value);
 
 
+  // Например:
+  // 02.10.2026
+  // 02/10/2026
+  // 02-10-2026
   const match =
     text.match(
       /(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})/
@@ -214,11 +289,19 @@ function toIsoDate(
 
   const day =
     match[1]
-      .padStart(2, "0");
+      .padStart(
+        2,
+        "0"
+      );
+
 
   const month =
     match[2]
-      .padStart(2, "0");
+      .padStart(
+        2,
+        "0"
+      );
+
 
   const year =
     match[3];
@@ -227,6 +310,10 @@ function toIsoDate(
   return `${year}-${month}-${day}`;
 }
 
+
+// ============================================
+// КОМПОНЕНТ ИМПОРТА
+// ============================================
 
 export default function StockImportClient() {
 
@@ -257,6 +344,10 @@ export default function StockImportClient() {
     useState(false);
 
 
+  // ==========================================
+  // ОБРАБОТКА ВЫБРАННОГО EXCEL
+  // ==========================================
+
   async function handleFile(
     file: File
   ) {
@@ -274,6 +365,10 @@ export default function StockImportClient() {
 
     try {
 
+      // ======================================
+      // 1. ЧИТАЕМ ФАЙЛ
+      // ======================================
+
       const buffer =
         await file.arrayBuffer();
 
@@ -282,10 +377,32 @@ export default function StockImportClient() {
         new ExcelJS.Workbook();
 
 
+      // ======================================
+      // ВАЖНО:
+      // игнорируем графические элементы Excel.
+      //
+      // В исходном файле есть drawing,
+      // который ExcelJS пытается разобрать
+      // через anchors и падает.
+      //
+      // Для остатков нам рисунки не нужны.
+      // ======================================
+
       await workbook.xlsx.load(
-        buffer
+        buffer,
+        {
+          ignoreNodes: [
+            "drawing",
+            "legacyDrawing",
+            "legacyDrawingHF",
+          ],
+        }
       );
 
+
+      // ======================================
+      // 2. ВЫБИРАЕМ ЛИСТ
+      // ======================================
 
       const worksheet =
         workbook.getWorksheet(
@@ -298,14 +415,14 @@ export default function StockImportClient() {
       if (!worksheet) {
 
         throw new Error(
-          "В Excel не найден лист"
+          "В Excel не найден ни один лист"
         );
 
       }
 
 
       // ======================================
-      // ДАТА ОТЧЁТА
+      // 3. ДАТА ОТЧЁТА
       // ======================================
 
       const reportDate =
@@ -326,7 +443,7 @@ export default function StockImportClient() {
 
 
       // ======================================
-      // РАЗБОР СТРОК
+      // 4. РАЗБОР ТОВАРНЫХ СТРОК
       // ======================================
 
       const parsedRows:
@@ -342,26 +459,41 @@ export default function StockImportClient() {
           includeEmpty: false,
         },
 
-        (row, rowNumber) => {
+        (
+          row,
+          rowNumber
+        ) => {
 
+          // ==================================
+          // КОЛОНКИ ТЕКУЩЕГО ФОРМАТА
+          // ==================================
+
+          // A — Номенклатура
           const columnA =
             normalizeText(
               row.getCell(1).value
             );
 
+
+          // E — Артикул
           const columnE =
             normalizeText(
               row.getCell(5).value
             );
 
+
+          // G — Свободный остаток
           const columnGValue =
             row.getCell(7).value;
+
 
           const columnGText =
             normalizeText(
               columnGValue
             );
 
+
+          // J — Штрихкод
           const columnJ =
             normalizeText(
               row.getCell(10).value
@@ -369,7 +501,7 @@ export default function StockImportClient() {
 
 
           // ==================================
-          // СТРОКА С НАЗВАНИЕМ СКЛАДА
+          // ОПРЕДЕЛЯЕМ СКЛАД
           // ==================================
 
           const possibleWarehouse =
@@ -395,7 +527,7 @@ export default function StockImportClient() {
 
 
           // ==================================
-          // СЛУЖЕБНЫЕ СТРОКИ
+          // ПУСТАЯ СТРОКА
           // ==================================
 
           if (
@@ -407,6 +539,10 @@ export default function StockImportClient() {
           }
 
 
+          // ==================================
+          // ИТОГИ
+          // ==================================
+
           if (
             columnA
               .toLowerCase()
@@ -415,6 +551,10 @@ export default function StockImportClient() {
             return;
           }
 
+
+          // ==================================
+          // ЗАГОЛОВОК НОМЕНКЛАТУРЫ
+          // ==================================
 
           if (
             columnA
@@ -427,6 +567,10 @@ export default function StockImportClient() {
           }
 
 
+          // ==================================
+          // ЗАГОЛОВОК АРТИКУЛА
+          // ==================================
+
           if (
             columnE
               .toLowerCase()
@@ -437,7 +581,7 @@ export default function StockImportClient() {
 
 
           // ==================================
-          // ТОВАРНАЯ СТРОКА
+          // ЧИТАЕМ СВОБОДНЫЙ ОСТАТОК
           // ==================================
 
           const freeStock =
@@ -446,9 +590,11 @@ export default function StockImportClient() {
             );
 
 
-          // Если это вообще не похоже
-          // на товарную строку —
-          // пропускаем.
+          // ==================================
+          // ЕСЛИ ЭТО НЕ ПОХОЖЕ НА ТОВАР —
+          // НЕ ДОБАВЛЯЕМ В PREVIEW
+          // ==================================
+
           if (
             !columnA &&
             !columnE &&
@@ -457,6 +603,10 @@ export default function StockImportClient() {
             return;
           }
 
+
+          // ==================================
+          // ПРОВЕРКА ОШИБКИ ПАРСИНГА
+          // ==================================
 
           let parseError:
             string | null = null;
@@ -473,31 +623,50 @@ export default function StockImportClient() {
           }
 
 
+          // ==================================
+          // ДОБАВЛЯЕМ ТОВАРНУЮ СТРОКУ
+          // ==================================
+
           parsedRows.push({
+
             source_row_number:
               rowNumber,
+
 
             warehouse_name:
               currentWarehouse,
 
+
             product_name:
               columnA || null,
 
+
+            // Пока передаём исходное значение.
+            // В Supabase будет выполнен trim().
             offer_id_raw:
               columnE || null,
+
 
             free_stock:
               freeStock,
 
+
             barcode:
               columnJ || null,
 
+
             parse_error:
               parseError,
+
           });
+
         }
       );
 
+
+      // ======================================
+      // 5. ПРОВЕРЯЕМ, ЧТО ТОВАРЫ НАШЛИСЬ
+      // ======================================
 
       if (
         parsedRows.length === 0
@@ -511,22 +680,39 @@ export default function StockImportClient() {
 
 
       setMessage(
-        `Найдено строк: ${parsedRows.length}. Создаём предварительную проверку...`
+        `Найдено товарных строк: ${parsedRows.length}. Создаём предварительную проверку...`
       );
 
+
+      // ======================================
+      // 6. СОЗДАЁМ PREVIEW В SUPABASE
+      // ======================================
 
       const batchId =
         await createStockImportPreview(
           {
+
             fileName:
               file.name,
 
+
             reportDate,
+
 
             rows:
               parsedRows,
+
           }
         );
+
+
+      // ======================================
+      // 7. ПЕРЕХОДИМ НА PREVIEW
+      // ======================================
+
+      setMessage(
+        "Файл обработан. Загружаем предварительный просмотр..."
+      );
 
 
       router.push(
@@ -536,14 +722,19 @@ export default function StockImportClient() {
 
       router.refresh();
 
-
     } catch (error) {
+
+      console.error(
+        "Ошибка импорта Excel:",
+        error
+      );
+
 
       setMessage(
 
         error instanceof Error
           ? error.message
-          : "Ошибка чтения Excel"
+          : "Неизвестная ошибка чтения Excel"
 
       );
 
@@ -552,8 +743,13 @@ export default function StockImportClient() {
       setLoading(false);
 
     }
+
   }
 
+
+  // ==========================================
+  // ИНТЕРФЕЙС
+  // ==========================================
 
   return (
 
@@ -569,7 +765,9 @@ export default function StockImportClient() {
         <div className="muted">
 
           {fileName
+
             ? `Выбран: ${fileName}`
+
             : "Файл пока не выбран"}
 
         </div>
@@ -577,7 +775,10 @@ export default function StockImportClient() {
       </div>
 
 
-      <label className="primary-button stock-file-button">
+      <label
+        className=
+          "primary-button stock-file-button"
+      >
 
         {loading
           ? "Обрабатываем..."
@@ -603,9 +804,11 @@ export default function StockImportClient() {
 
 
               if (file) {
-                handleFile(
+
+                void handleFile(
                   file
                 );
+
               }
 
             }
@@ -618,7 +821,9 @@ export default function StockImportClient() {
 
 
       <div className="stock-upload-message">
+
         {message}
+
       </div>
 
     </div>
