@@ -381,11 +381,11 @@ export default function StockImportClient() {
       // ======================================
       // 4. ОПРЕДЕЛЯЕМ ДАТУ ОТЧЁТА
       //
-      // Сначала читаем физическую C2.
-      // Затем используем резервный поиск.
+      // Сначала физическая ячейка C2.
+      // Потом резервный поиск.
       // ======================================
 
-      let reportDateValue:
+      const reportDateValue:
         unknown =
         worksheet["C2"]?.v;
 
@@ -472,12 +472,6 @@ export default function StockImportClient() {
 
       if (!reportDate) {
 
-        console.log(
-          "C2:",
-          reportDateValue
-        );
-
-
         throw new Error(
           "Не удалось определить дату отчёта"
         );
@@ -486,7 +480,7 @@ export default function StockImportClient() {
 
 
       // ======================================
-      // 5. РАЗБИРАЕМ ТОВАРЫ
+      // 5. РАЗБИРАЕМ ТОВАРНЫЕ СТРОКИ
       // ======================================
 
       const parsedRows:
@@ -515,7 +509,7 @@ export default function StockImportClient() {
 
 
           // ==================================
-          // КОЛОНКИ ТЕКУЩЕГО ФАЙЛА
+          // КОЛОНКИ ТЕКУЩЕГО ФОРМАТА
           //
           // A = Номенклатура
           // E = Артикул
@@ -563,68 +557,48 @@ export default function StockImportClient() {
             );
 
 
-          // ==================================
-          // 6. ОПРЕДЕЛЯЕМ СКЛАД
-          // ==================================
-
-          const possibleWarehouse =
+          const columnALower =
             columnA
               .toLowerCase();
 
 
-          if (
-            possibleWarehouse
-              .includes("склад")
-
-            &&
-            !columnE
-
-            &&
-            !columnGText
-          ) {
-
-            currentWarehouse =
-              columnA;
-
-            return;
-          }
+          const columnELower =
+            columnE
+              .toLowerCase();
 
 
           // ==================================
-          // 7. ПРОПУСКАЕМ ПУСТЫЕ СТРОКИ
+          // 6. СЛУЖЕБНЫЕ СТРОКИ
           // ==================================
 
           if (
-            !columnA &&
-            !columnE &&
-            !columnGText
+            columnALower ===
+              "параметры:"
+            ||
+            columnALower ===
+              "параметры"
+            ||
+            columnALower ===
+              "заказ клиента"
           ) {
             return;
           }
 
 
           // ==================================
-          // 8. ПРОПУСКАЕМ "ИТОГО"
+          // 7. ЗАГОЛОВКИ
           // ==================================
 
           if (
-            columnA
-              .toLowerCase()
-              .startsWith(
-                "итого"
-              )
+            columnALower ===
+              "склад"
           ) {
             return;
           }
 
 
-          // ==================================
-          // 9. ПРОПУСКАЕМ ЗАГОЛОВКИ
-          // ==================================
-
           if (
-            columnA
-              .toLowerCase()
+            columnALower
               .includes(
                 "номенклатура"
               )
@@ -634,16 +608,81 @@ export default function StockImportClient() {
 
 
           if (
-            columnE
-              .toLowerCase()
-              === "артикул"
+            columnELower ===
+              "артикул"
           ) {
             return;
           }
 
 
           // ==================================
-          // 10. ЧИТАЕМ СВОБОДНЫЙ ОСТАТОК
+          // 8. СТРОКА "ИТОГО"
+          // ==================================
+
+          if (
+            columnALower
+              .startsWith(
+                "итого"
+              )
+          ) {
+            return;
+          }
+
+
+          // ==================================
+          // 9. ОПРЕДЕЛЯЕМ НАЗВАНИЕ СКЛАДА
+          //
+          // Не считаем обычное слово
+          // "Склад" названием склада.
+          // ==================================
+
+          const isWarehouseRow =
+            (
+              columnALower
+                .startsWith(
+                  "основной склад"
+                )
+              ||
+              columnALower
+                .startsWith(
+                  "склад -"
+                )
+              ||
+              columnALower
+                .startsWith(
+                  "склад-"
+                )
+            )
+            &&
+            !columnE
+            &&
+            !columnGText;
+
+
+          if (isWarehouseRow) {
+
+            currentWarehouse =
+              columnA;
+
+            return;
+          }
+
+
+          // ==================================
+          // 10. ПУСТЫЕ СТРОКИ
+          // ==================================
+
+          if (
+            !columnA &&
+            !columnE &&
+            !columnGText
+          ) {
+            return;
+          }
+
+
+          // ==================================
+          // 11. СВОБОДНЫЙ ОСТАТОК
           // ==================================
 
           const freeStock =
@@ -653,12 +692,19 @@ export default function StockImportClient() {
 
 
           // ==================================
-          // 11. ПРОВЕРКА,
-          // ЧТО ЭТО ПОХОЖЕ НА ТОВАР
+          // 12. ОТБРАСЫВАЕМ ПРОЧИЕ
+          // СЛУЖЕБНЫЕ СТРОКИ
+          //
+          // Если нет артикула И нет
+          // числового остатка, это не товар.
+          //
+          // Важно:
+          // товар без артикула, но с остатком
+          // НЕ отбрасываем — он должен
+          // попасть в ошибки preview.
           // ==================================
 
           if (
-            !columnA &&
             !columnE &&
             freeStock === null
           ) {
@@ -667,7 +713,7 @@ export default function StockImportClient() {
 
 
           // ==================================
-          // 12. ОШИБКА ПАРСИНГА
+          // 13. ОШИБКА ЧТЕНИЯ ОСТАТКА
           // ==================================
 
           let parseError:
@@ -686,7 +732,7 @@ export default function StockImportClient() {
 
 
           // ==================================
-          // 13. ДОБАВЛЯЕМ СТРОКУ
+          // 14. ДОБАВЛЯЕМ ТОВАР
           // ==================================
 
           parsedRows.push({
@@ -725,7 +771,7 @@ export default function StockImportClient() {
 
 
       // ======================================
-      // 14. ПРОВЕРЯЕМ РЕЗУЛЬТАТ
+      // 15. ПРОВЕРЯЕМ РЕЗУЛЬТАТ
       // ======================================
 
       if (
@@ -745,7 +791,7 @@ export default function StockImportClient() {
 
 
       // ======================================
-      // 15. СОЗДАЁМ PREVIEW В SUPABASE
+      // 16. СОЗДАЁМ PREVIEW В SUPABASE
       // ======================================
 
       const batchId =
@@ -776,7 +822,7 @@ export default function StockImportClient() {
 
 
       // ======================================
-      // 16. ПЕРЕХОДИМ НА PREVIEW
+      // 17. ПЕРЕХОДИМ НА НОВЫЙ PREVIEW
       // ======================================
 
       setMessage(
