@@ -37,7 +37,7 @@ function getSupabaseConfig() {
 
 
 // ============================================
-// УНИВЕРСАЛЬНЫЙ ВЫЗОВ RPC SUPABASE
+// УНИВЕРСАЛЬНЫЙ RPC SUPABASE
 // ============================================
 
 async function callSupabaseRpc(
@@ -123,8 +123,7 @@ export async function simulateChinaTransport(
     Number(
       String(
         rawValue ?? ""
-      )
-        .replace(",", ".")
+      ).replace(",", ".")
     );
 
 
@@ -132,11 +131,9 @@ export async function simulateChinaTransport(
     Number.isNaN(volume) ||
     volume < 0
   ) {
-
     throw new Error(
       "Введите корректный объём новых товаров"
     );
-
   }
 
 
@@ -197,54 +194,32 @@ export async function saveChinaManualAdjustment(
     Number(rawQuantity);
 
 
-  // ==========================================
-  // ПРОВЕРКА ID
-  // ==========================================
-
   if (!calculationItemId) {
-
     throw new Error(
       "Не найден ID строки расчёта SKU"
     );
-
   }
 
-
-  // ==========================================
-  // ПРОВЕРКА СЦЕНАРИЯ
-  // ==========================================
 
   if (
     scenario !== "container" &&
     scenario !== "truck"
   ) {
-
     throw new Error(
       "Некорректный сценарий транспортировки"
     );
-
   }
 
-
-  // ==========================================
-  // ПРОВЕРКА КОЛИЧЕСТВА
-  // ==========================================
 
   if (
     !Number.isInteger(quantity) ||
     quantity < 0
   ) {
-
     throw new Error(
       "Количество должно быть целым числом от 0"
     );
-
   }
 
-
-  // ==========================================
-  // СОХРАНЯЕМ РУЧНУЮ КОРРЕКТИРОВКУ
-  // ==========================================
 
   await callSupabaseRpc(
     "save_china_manual_adjustment",
@@ -261,35 +236,20 @@ export async function saveChinaManualAdjustment(
       p_comment:
         comment || null,
 
-      // Временно.
-      // Позже здесь будет ID
-      // реально авторизованного сотрудника.
       p_adjusted_by:
         "test-user",
     }
   );
 
 
-  // ==========================================
-  // ПОЛУЧАЕМ ТЕКУЩИЙ ОБЪЁМ НОВЫХ ТОВАРОВ
-  //
-  // Он нужен, чтобы после ручной
-  // корректировки пересчитать транспорт,
-  // сохранив текущую симуляцию новинок.
-  // ==========================================
-
   const dashboard =
     await callSupabaseRpc(
       "get_china_dashboard"
     ) as {
-
       simulation?: {
-
         new_products_volume_m3?:
           number | string;
-
       } | null;
-
     };
 
 
@@ -302,10 +262,6 @@ export async function saveChinaManualAdjustment(
     );
 
 
-  // ==========================================
-  // АВТОМАТИЧЕСКИ ПЕРЕСЧИТЫВАЕМ ТРАНСПОРТ
-  // ==========================================
-
   await callSupabaseRpc(
     "simulate_china_transport",
     {
@@ -315,9 +271,160 @@ export async function saveChinaManualAdjustment(
   );
 
 
-  // ==========================================
-  // ОБНОВЛЯЕМ ГЛАВНУЮ СТРАНИЦУ
-  // ==========================================
+  revalidatePath("/");
+}
+
+
+// ============================================
+// 4. СОЗДАТЬ PREVIEW ИМПОРТА ОСТАТКОВ
+// ============================================
+
+type StockImportRowInput = {
+  source_row_number: number;
+
+  warehouse_name:
+    string | null;
+
+  product_name:
+    string | null;
+
+  offer_id_raw:
+    string | null;
+
+  free_stock:
+    number | null;
+
+  barcode:
+    string | null;
+
+  parse_error:
+    string | null;
+};
+
+
+export async function createStockImportPreview(
+  input: {
+    fileName: string;
+    reportDate: string;
+    rows: StockImportRowInput[];
+  }
+) {
+
+  if (!input.fileName) {
+    throw new Error(
+      "Не указано имя файла"
+    );
+  }
+
+
+  if (!input.reportDate) {
+    throw new Error(
+      "Не определена дата отчёта"
+    );
+  }
+
+
+  if (
+    !input.rows ||
+    input.rows.length === 0
+  ) {
+    throw new Error(
+      "В Excel не найдено товаров"
+    );
+  }
+
+
+  const result =
+    await callSupabaseRpc(
+      "create_stock_import_preview",
+      {
+        p_source_file_name:
+          input.fileName,
+
+        p_report_date:
+          input.reportDate,
+
+        p_rows:
+          input.rows,
+      }
+    );
+
+
+  if (
+    typeof result !== "string" ||
+    !result
+  ) {
+    throw new Error(
+      "Supabase не вернул ID импорта"
+    );
+  }
+
+
+  revalidatePath(
+    "/stock-import"
+  );
+
+
+  return result;
+}
+
+
+// ============================================
+// 5. ПОЛУЧИТЬ PREVIEW ИМПОРТА
+// ============================================
+
+export async function getStockImportPreview(
+  batchId: string
+) {
+
+  if (!batchId) {
+    throw new Error(
+      "Не указан ID импорта"
+    );
+  }
+
+
+  return callSupabaseRpc(
+    "get_stock_import_preview",
+    {
+      p_batch_id:
+        batchId,
+    }
+  );
+}
+
+
+// ============================================
+// 6. ПОДТВЕРДИТЬ ИМПОРТ
+// ============================================
+
+export async function confirmStockImport(
+  batchId: string
+) {
+
+  if (!batchId) {
+    throw new Error(
+      "Не указан ID импорта"
+    );
+  }
+
+
+  const result =
+    await callSupabaseRpc(
+      "confirm_own_stock_import",
+      {
+        p_batch_id:
+          batchId,
+      }
+    );
+
+
+  revalidatePath(
+    "/stock-import"
+  );
 
   revalidatePath("/");
+
+
+  return result;
 }
