@@ -18,17 +18,22 @@ html[data-theme="light"] {
 
   --border: #dedfe3;
   --border-soft: #ececef;
+  --border-strong: #c9cbd1;
 
   --button: #17191d;
   --button-hover: #292c32;
   --button-text: #ffffff;
+
+  --secondary-button: #f1f2f4;
+  --secondary-button-hover: #e6e7ea;
 
   --input: #ffffff;
 
   --accent: #111318;
 
   --shadow:
-    0 1px 2px rgba(0, 0, 0, 0.03);
+    0 1px 2px rgba(0, 0, 0, 0.03),
+    0 4px 14px rgba(0, 0, 0, 0.025);
 }
 
 
@@ -51,10 +56,14 @@ html[data-theme="dark"] {
 
   --border: #2b3038;
   --border-soft: #232830;
+  --border-strong: #3b424d;
 
   --button: #f1f2f4;
   --button-hover: #ffffff;
   --button-text: #111318;
+
+  --secondary-button: #242931;
+  --secondary-button-hover: #2c323c;
 
   --input: #12151a;
 
@@ -65,21 +74,22 @@ html[data-theme="dark"] {
 
 
 /* ============================================
-   ОБЩИЕ
+   БАЗОВЫЕ СТИЛИ
    ============================================ */
 
 * {
   box-sizing: border-box;
 }
 
-html,
-body {
-  margin: 0;
-  padding: 0;
+html {
+  min-height: 100%;
 }
 
 body {
   min-height: 100vh;
+
+  margin: 0;
+  padding: 0;
 
   background: var(--background);
   color: var(--text);
@@ -95,23 +105,41 @@ body {
 }
 
 button,
-input {
+input,
+textarea,
+select {
   font: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
 }
 
 
 /* ============================================
-   СТРАНИЦА
+   ОСНОВНАЯ СТРАНИЦА
    ============================================ */
 
 .page {
   min-height: 100vh;
-  padding: 32px 24px 50px;
+
+  padding:
+    32px
+    24px
+    50px;
+
+  background: var(--background);
+  color: var(--text);
 }
 
 .container {
+  width: 100%;
+
   max-width: 1500px;
-  margin: 0 auto;
+
+  margin:
+    0
+    auto;
 }
 
 
@@ -121,6 +149,7 @@ input {
 
 .header {
   display: flex;
+
   justify-content: space-between;
   align-items: flex-start;
 
@@ -131,6 +160,7 @@ input {
 
 .header-actions {
   display: flex;
+
   align-items: stretch;
 
   gap: 10px;
@@ -145,6 +175,8 @@ input {
   font-weight: 700;
 
   letter-spacing: 0.12em;
+
+  text-transform: uppercase;
 }
 
 .title {
@@ -154,58 +186,203 @@ input {
 
   font-size: 34px;
   font-weight: 700;
+
+  line-height: 1.15;
 }
 
 .subtitle {
-  margin: 8px 0 0;
+  margin:
+    8px
+    0
+    0;
 
   color: var(--text-secondary);
-}
 
-.version-box {
-  min-width: 145px;
+  font-size: 14px;
 
-  padding: 14px 18px;
-
-  background: var(--surface);
-
-  border: 1px solid var(--border);
-  border-radius: 12px;
-
-  box-shadow: var(--shadow);
+  line-height: 1.5;
 }
 
 
 /* ============================================
-   THEME BUTTON
+   ВЕРСИЯ РАСЧЁТА
+   ============================================ */
+
+.version-box {
+  min-width: 145px;
+
+  padding:
+    14px
+    18px;
+
+  background: var(--surface);
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius: 12px;
+
+  box-shadow: var(--shadow);
+
+  color: var(--text);
+}
+
+
+/* ============================================
+   ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ
    ============================================ */
 
 .theme-toggle {
-  min-width: 110px;
+  min-width: 115px;
 
-  padding: 10px 14px;
+  padding:
+    10px
+    14px;
 
   background: var(--surface);
 
   color: var(--text);
 
-  border: 1px solid var(--border);
+  border:
+    1px solid
+    var(--border);
+
   border-radius: 12px;
 
   cursor: pointer;
 
+  font-size: 13px;
+  font-weight: 600;
+
   transition:
-    background 0.15s ease,
-    border-color 0.15s ease;
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.05s ease;
 }
 
 .theme-toggle:hover {
-  background: var(--surface-soft);
+  background:
+    var(--surface-soft);
+
+  border-color:
+    var(--border-strong);
+}
+
+.theme-toggle:active {
+  transform:
+    translateY(1px);
 }
 
 
 /* ============================================
-   CARDS
+   ОБЩИЕ ТЕКСТОВЫЕ ЭЛЕМЕНТЫ
+   ============================================ */
+
+.muted {
+  color: var(--text-muted);
+
+  font-size: 13px;
+
+  line-height: 1.45;
+}
+
+
+/* ============================================
+   УПРАВЛЕНИЕ РАСЧЁТОМ
+   ============================================ */
+
+.controls {
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  flex-wrap: wrap;
+
+  padding:
+    18px
+    22px;
+
+  margin-bottom: 20px;
+
+  background: var(--surface);
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius: 14px;
+
+  box-shadow: var(--shadow);
+}
+
+.controls-title {
+  margin:
+    0
+    0
+    5px;
+
+  color: var(--text);
+
+  font-size: 18px;
+  font-weight: 700;
+}
+
+
+/* ============================================
+   ОСНОВНАЯ КНОПКА
+   ============================================ */
+
+.primary-button {
+  padding:
+    12px
+    18px;
+
+  background:
+    var(--button);
+
+  color:
+    var(--button-text);
+
+  border: none;
+
+  border-radius: 9px;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  white-space: nowrap;
+
+  transition:
+    background-color 0.15s ease,
+    transform 0.05s ease,
+    opacity 0.15s ease;
+}
+
+.primary-button:hover {
+  background:
+    var(--button-hover);
+}
+
+.primary-button:active {
+  transform:
+    translateY(1px);
+}
+
+.primary-button:disabled {
+  opacity: 0.5;
+
+  cursor: not-allowed;
+}
+
+
+/* ============================================
+   СВОДНЫЕ КАРТОЧКИ
    ============================================ */
 
 .summary-grid {
@@ -223,22 +400,31 @@ input {
 }
 
 .card {
+  min-width: 0;
+
   padding: 20px;
 
   background: var(--surface);
 
-  border: 1px solid var(--border);
+  border:
+    1px solid
+    var(--border);
+
   border-radius: 14px;
 
   box-shadow: var(--shadow);
 }
 
 .card-label {
+  display: block;
+
   margin-bottom: 8px;
 
   color: var(--text-muted);
 
   font-size: 12px;
+
+  line-height: 1.4;
 }
 
 .big-number {
@@ -248,17 +434,13 @@ input {
 
   font-size: 24px;
   font-weight: 700;
-}
 
-.muted {
-  color: var(--text-muted);
-
-  font-size: 13px;
+  line-height: 1.2;
 }
 
 
 /* ============================================
-   SECTIONS
+   ОСНОВНЫЕ СЕКЦИИ
    ============================================ */
 
 .section {
@@ -268,7 +450,10 @@ input {
 
   background: var(--surface);
 
-  border: 1px solid var(--border);
+  border:
+    1px solid
+    var(--border);
+
   border-radius: 14px;
 
   box-shadow: var(--shadow);
@@ -277,7 +462,7 @@ input {
 .section-header {
   display: flex;
 
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
 
   gap: 16px;
@@ -291,69 +476,14 @@ input {
   color: var(--text);
 
   font-size: 20px;
+  font-weight: 700;
+
+  line-height: 1.25;
 }
 
 
 /* ============================================
-   УПРАВЛЕНИЕ
-   ============================================ */
-
-.controls {
-  display: flex;
-
-  align-items: center;
-  justify-content: space-between;
-
-  gap: 20px;
-
-  flex-wrap: wrap;
-
-  padding: 18px 22px;
-
-  margin-bottom: 20px;
-
-  background: var(--surface);
-
-  border: 1px solid var(--border);
-  border-radius: 14px;
-}
-
-.controls-title {
-  margin: 0 0 5px;
-
-  font-size: 18px;
-}
-
-.primary-button {
-  padding: 12px 18px;
-
-  background: var(--button);
-  color: var(--button-text);
-
-  border: none;
-  border-radius: 9px;
-
-  font-size: 14px;
-  font-weight: 600;
-
-  cursor: pointer;
-
-  transition:
-    background 0.15s ease,
-    transform 0.05s ease;
-}
-
-.primary-button:hover {
-  background: var(--button-hover);
-}
-
-.primary-button:active {
-  transform: translateY(1px);
-}
-
-
-/* ============================================
-   TRANSPORT FORM
+   ФОРМА СИМУЛЯЦИИ ТРАНСПОРТА
    ============================================ */
 
 .transport-form {
@@ -368,7 +498,10 @@ input {
 
 .input-group {
   display: flex;
+
   flex-direction: column;
+
+  gap: 0;
 }
 
 .input-label {
@@ -379,29 +512,52 @@ input {
   color: var(--text-secondary);
 
   font-size: 12px;
+  font-weight: 500;
+
+  line-height: 1.35;
 }
 
 .input {
   width: 190px;
 
-  padding: 11px 12px;
+  padding:
+    11px
+    12px;
 
   background: var(--input);
+
   color: var(--text);
 
-  border: 1px solid var(--border);
+  border:
+    1px solid
+    var(--border);
+
   border-radius: 8px;
 
   outline: none;
+
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.input:hover {
+  border-color:
+    var(--border-strong);
 }
 
 .input:focus {
-  border-color: var(--text-muted);
+  border-color:
+    var(--text-muted);
+
+  box-shadow:
+    0 0 0 2px
+    rgba(120, 120, 120, 0.08);
 }
 
 
 /* ============================================
-   TRANSPORT RESULTS
+   РЕЗУЛЬТАТ ТРАНСПОРТНОЙ СИМУЛЯЦИИ
    ============================================ */
 
 .transport-grid {
@@ -417,9 +573,16 @@ input {
 }
 
 .transport-card {
+  min-width: 0;
+
   padding: 16px;
 
-  background: var(--surface-soft);
+  background:
+    var(--surface-soft);
+
+  border:
+    1px solid
+    var(--border-soft);
 
   border-radius: 10px;
 }
@@ -427,9 +590,12 @@ input {
 .transport-value {
   display: block;
 
+  margin-bottom: 6px;
+
   color: var(--text);
 
   font-size: 21px;
+  font-weight: 700;
 }
 
 .reason-box {
@@ -437,56 +603,105 @@ input {
 
   padding: 16px;
 
-  background: var(--surface-strong);
+  background:
+    var(--surface-strong);
+
+  border:
+    1px solid
+    var(--border-soft);
 
   border-radius: 10px;
+
+  color: var(--text);
 }
 
 .reason-text {
   margin-top: 7px;
 
-  color: var(--text-secondary);
+  color:
+    var(--text-secondary);
+
+  font-size: 13px;
 
   line-height: 1.5;
 }
 
 
 /* ============================================
-   TABLE
+   ТАБЛИЦА
    ============================================ */
 
 .table-wrapper {
+  width: 100%;
+
   overflow-x: auto;
+
+  border-radius: 8px;
 }
 
 .table {
   width: 100%;
 
+  min-width: 1100px;
+
   border-collapse: collapse;
+
+  color: var(--text);
 
   font-size: 13px;
 }
 
-.table th {
-  padding: 12px 10px;
+.table thead {
+  background:
+    var(--surface-soft);
+}
 
-  color: var(--text-secondary);
+.table th {
+  padding:
+    12px
+    10px;
+
+  color:
+    var(--text-secondary);
 
   border-bottom:
-    1px solid var(--border);
+    1px solid
+    var(--border);
+
+  font-size: 12px;
+  font-weight: 600;
 
   white-space: nowrap;
 }
 
 .table td {
-  padding: 13px 10px;
+  padding:
+    13px
+    10px;
 
   color: var(--text);
 
   border-bottom:
-    1px solid var(--border-soft);
+    1px solid
+    var(--border-soft);
 
   white-space: nowrap;
+
+  vertical-align: middle;
+}
+
+.table tbody tr {
+  transition:
+    background-color 0.12s ease;
+}
+
+.table tbody tr:hover {
+  background:
+    var(--surface-soft);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .left {
@@ -499,20 +714,225 @@ input {
 
 
 /* ============================================
-   ERROR
+   РУЧНЫЕ КОРРЕКТИРОВКИ
+   ============================================ */
+
+.adjustments-list {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 14px;
+}
+
+.adjustment-card {
+  padding: 18px;
+
+  background:
+    var(--surface-soft);
+
+  border:
+    1px solid
+    var(--border-soft);
+
+  border-radius: 12px;
+}
+
+.adjustment-product {
+  display: flex;
+
+  align-items: center;
+
+  gap:
+    10px
+    16px;
+
+  flex-wrap: wrap;
+
+  margin-bottom: 16px;
+}
+
+.adjustment-product strong {
+  color: var(--text);
+
+  font-size: 14px;
+}
+
+
+/* ============================================
+   ФОРМА КОРРЕКТИРОВКИ
+   ============================================ */
+
+.adjustment-form {
+  display: grid;
+
+  grid-template-columns:
+    minmax(180px, 0.8fr)
+    minmax(150px, 0.55fr)
+    minmax(220px, 1.4fr)
+    auto;
+
+  align-items: end;
+
+  gap: 12px;
+
+  padding:
+    14px
+    0;
+
+  border-top:
+    1px solid
+    var(--border-soft);
+}
+
+.adjustment-form + .reason-text {
+  margin:
+    0
+    0
+    12px;
+
+  padding:
+    10px
+    12px;
+
+  background:
+    var(--surface-strong);
+
+  border-radius: 8px;
+}
+
+.adjustment-input,
+.comment-input {
+  width: 100%;
+
+  min-height: 40px;
+
+  padding:
+    10px
+    11px;
+
+  background:
+    var(--input);
+
+  color:
+    var(--text);
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius: 8px;
+
+  outline: none;
+
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.adjustment-input:hover,
+.comment-input:hover {
+  border-color:
+    var(--border-strong);
+}
+
+.adjustment-input:focus,
+.comment-input:focus {
+  border-color:
+    var(--text-muted);
+
+  box-shadow:
+    0 0 0 2px
+    rgba(120, 120, 120, 0.08);
+}
+
+.adjustment-input::placeholder,
+.comment-input::placeholder {
+  color: var(--text-muted);
+}
+
+
+/* ============================================
+   ВТОРИЧНАЯ КНОПКА
+   ============================================ */
+
+.secondary-button {
+  min-height: 40px;
+
+  padding:
+    10px
+    15px;
+
+  background:
+    var(--secondary-button);
+
+  color:
+    var(--text);
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius: 8px;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  white-space: nowrap;
+
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.05s ease;
+}
+
+.secondary-button:hover {
+  background:
+    var(--secondary-button-hover);
+
+  border-color:
+    var(--border-strong);
+}
+
+.secondary-button:active {
+  transform:
+    translateY(1px);
+}
+
+
+/* ============================================
+   ОШИБКА
    ============================================ */
 
 .error-box {
   max-width: 700px;
 
-  margin: 80px auto;
+  margin:
+    80px
+    auto;
 
   padding: 24px;
 
-  background: var(--surface);
+  background:
+    var(--surface);
 
-  border: 1px solid var(--border);
+  color:
+    var(--text);
+
+  border:
+    1px solid
+    var(--border);
+
   border-radius: 12px;
+
+  box-shadow:
+    var(--shadow);
+}
+
+.error-box h1 {
+  margin-top: 0;
 }
 
 
@@ -521,41 +941,194 @@ input {
    ============================================ */
 
 .footer {
-  padding-bottom: 20px;
+  padding:
+    2px
+    0
+    20px;
 
-  color: var(--text-muted);
+  color:
+    var(--text-muted);
 
   font-size: 12px;
 }
 
 
 /* ============================================
-   MOBILE
+   ПОЛОСА ПРОКРУТКИ
    ============================================ */
 
-@media (max-width: 700px) {
-  .page {
-    padding:
-      22px 14px 40px;
+.table-wrapper::-webkit-scrollbar {
+  height: 9px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+  background:
+    var(--surface-soft);
+
+  border-radius: 20px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+  background:
+    var(--border-strong);
+
+  border-radius: 20px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+  background:
+    var(--text-muted);
+}
+
+
+/* ============================================
+   ПЛАНШЕТЫ
+   ============================================ */
+
+@media (max-width: 1000px) {
+
+  .adjustment-form {
+    grid-template-columns:
+      1fr
+      1fr;
+
+    align-items: end;
   }
 
-  .header {
-    flex-direction: column;
-  }
-
-  .header-actions {
+  .secondary-button {
     width: 100%;
   }
 
+}
+
+
+/* ============================================
+   МОБИЛЬНЫЕ / УЗКИЕ ОКНА
+   ============================================ */
+
+@media (max-width: 700px) {
+
+  .page {
+    padding:
+      22px
+      14px
+      40px;
+  }
+
+
+  .header {
+    flex-direction: column;
+
+    align-items: stretch;
+
+    gap: 18px;
+  }
+
+
+  .header-actions {
+    width: 100%;
+
+    align-items: stretch;
+  }
+
+
   .version-box {
     flex: 1;
+
+    min-width: 0;
   }
+
 
   .theme-toggle {
     flex: 1;
+
+    min-width: 0;
   }
+
 
   .title {
     font-size: 27px;
   }
+
+
+  .controls {
+    align-items: stretch;
+
+    flex-direction: column;
+  }
+
+
+  .controls form {
+    width: 100%;
+  }
+
+
+  .primary-button {
+    width: 100%;
+  }
+
+
+  .section {
+    padding: 17px;
+  }
+
+
+  .section-header {
+    flex-direction: column;
+
+    align-items: flex-start;
+  }
+
+
+  .transport-form {
+    align-items: stretch;
+
+    flex-direction: column;
+  }
+
+
+  .input-group {
+    width: 100%;
+  }
+
+
+  .input {
+    width: 100%;
+  }
+
+
+  .adjustment-card {
+    padding: 14px;
+  }
+
+
+  .adjustment-product {
+    align-items: flex-start;
+
+    flex-direction: column;
+
+    gap: 5px;
+  }
+
+
+  .adjustment-form {
+    grid-template-columns:
+      1fr;
+
+    align-items: stretch;
+
+    gap: 10px;
+  }
+
+
+  .adjustment-input,
+  .comment-input {
+    width: 100%;
+  }
+
+
+  .secondary-button {
+    width: 100%;
+  }
+
 }
