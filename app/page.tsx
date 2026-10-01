@@ -1,13 +1,19 @@
 import {
   runChinaCalculation,
   simulateChinaTransport,
+  saveChinaManualAdjustment,
 } from "./actions";
 
-import ThemeToggle
-  from "./ThemeToggle";
+import ThemeToggle from "./ThemeToggle";
 
+
+// ============================================
+// ТИП ТОВАРА
+// ============================================
 
 type ChinaItem = {
+  calculation_item_id: string;
+
   offer_id: string;
   name: string | null;
 
@@ -15,6 +21,7 @@ type ChinaItem = {
 
   own_stock_quantity: number;
   ozon_stock_quantity: number;
+
   physical_stock: number;
 
   active_ved_quantity: number;
@@ -22,17 +29,81 @@ type ChinaItem = {
 
   coverage_days: number | null;
 
+
+  // ==========================================
+  // КОНТЕЙНЕР — СИСТЕМНЫЙ РАСЧЁТ
+  // ==========================================
+
   container_order_units: number;
   container_cartons: number;
   container_final_units: number;
   container_order_volume_m3: number;
 
+
+  // ==========================================
+  // КОНТЕЙНЕР — РУЧНАЯ КОРРЕКТИРОВКА
+  // ==========================================
+
+  container_manual_quantity:
+    number | null;
+
+  container_manual_final_units:
+    number | null;
+
+  container_manual_volume_m3:
+    number | null;
+
+  container_manual_comment:
+    string | null;
+
+
+  // Итог после учёта ручной корректировки
+  container_effective_final_units:
+    number;
+
+  container_effective_volume_m3:
+    number;
+
+
+  // ==========================================
+  // ФУРА — СИСТЕМНЫЙ РАСЧЁТ
+  // ==========================================
+
   truck_order_units: number;
   truck_cartons: number;
   truck_final_units: number;
   truck_order_volume_m3: number;
+
+
+  // ==========================================
+  // ФУРА — РУЧНАЯ КОРРЕКТИРОВКА
+  // ==========================================
+
+  truck_manual_quantity:
+    number | null;
+
+  truck_manual_final_units:
+    number | null;
+
+  truck_manual_volume_m3:
+    number | null;
+
+  truck_manual_comment:
+    string | null;
+
+
+  // Итог после учёта ручной корректировки
+  truck_effective_final_units:
+    number;
+
+  truck_effective_volume_m3:
+    number;
 };
 
+
+// ============================================
+// ТИП ДАШБОРДА
+// ============================================
 
 type ChinaDashboard = {
   run: {
@@ -45,6 +116,7 @@ type ChinaDashboard = {
     sales_window_days: number;
 
     container_lead_days: number;
+
     truck_lead_days: number;
 
     safety_buffer_days: number;
@@ -57,6 +129,7 @@ type ChinaDashboard = {
 
     container_tolerance_m3: number;
   } | null;
+
 
   simulation: {
     new_products_volume_m3: number;
@@ -78,9 +151,14 @@ type ChinaDashboard = {
     created_at: string;
   } | null;
 
+
   items: ChinaItem[];
 };
 
+
+// ============================================
+// ПОЛУЧЕНИЕ ДАННЫХ ИЗ SUPABASE
+// ============================================
 
 async function getChinaDashboard():
   Promise<ChinaDashboard> {
@@ -89,6 +167,7 @@ async function getChinaDashboard():
     process.env
       .NEXT_PUBLIC_SUPABASE_URL;
 
+
   const supabaseSecretKey =
     process.env
       .SUPABASE_SECRET_KEY;
@@ -96,44 +175,48 @@ async function getChinaDashboard():
 
   if (!supabaseUrl) {
     throw new Error(
-      "Не найдена NEXT_PUBLIC_SUPABASE_URL"
+      "Не найдена переменная NEXT_PUBLIC_SUPABASE_URL"
     );
   }
 
 
   if (!supabaseSecretKey) {
     throw new Error(
-      "Не найдена SUPABASE_SECRET_KEY"
+      "Не найдена переменная SUPABASE_SECRET_KEY"
     );
   }
 
 
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_china_dashboard`,
-    {
-      method: "POST",
+  const response =
+    await fetch(
+      `${supabaseUrl}/rest/v1/rpc/get_china_dashboard`,
+      {
+        method: "POST",
 
-      headers: {
-        apikey:
-          supabaseSecretKey,
+        headers: {
+          apikey:
+            supabaseSecretKey,
 
-        Authorization:
-          `Bearer ${supabaseSecretKey}`,
+          Authorization:
+            `Bearer ${supabaseSecretKey}`,
 
-        "Content-Type":
-          "application/json",
-      },
+          "Content-Type":
+            "application/json",
+        },
 
-      body: JSON.stringify({}),
+        body:
+          JSON.stringify({}),
 
-      cache: "no-store",
-    }
-  );
+        cache:
+          "no-store",
+      }
+    );
 
 
   if (!response.ok) {
     const errorText =
       await response.text();
+
 
     throw new Error(
       `Ошибка Supabase: ${response.status} ${errorText}`
@@ -145,31 +228,45 @@ async function getChinaDashboard():
 }
 
 
+// ============================================
+// НАЗВАНИЕ ТРАНСПОРТА
+// ============================================
+
 function transportName(
   scenario?: string
 ) {
+
   switch (scenario) {
 
     case "container":
       return "Контейнер 68 м³";
 
+
     case "container_manual_review":
       return "Контейнер — ручная проверка";
+
 
     case "truck_90":
       return "Фура 90 м³";
 
+
     case "truck_100":
       return "Фура 100 м³";
 
+
     case "manual_review_over_100":
       return "Требуется ручное решение";
+
 
     default:
       return "Не рассчитано";
   }
 }
 
+
+// ============================================
+// ФОРМАТИРОВАНИЕ ЧИСЕЛ
+// ============================================
 
 function formatNumber(
   value:
@@ -203,6 +300,10 @@ function formatNumber(
 }
 
 
+// ============================================
+// ГЛАВНАЯ СТРАНИЦА
+// ============================================
+
 export default async function Home() {
 
   let dashboard:
@@ -217,6 +318,7 @@ export default async function Home() {
   } catch (error) {
 
     return (
+
       <main className="page">
 
         <div className="error-box">
@@ -224,6 +326,7 @@ export default async function Home() {
           <h1>
             Ошибка загрузки данных
           </h1>
+
 
           <p>
 
@@ -236,12 +339,14 @@ export default async function Home() {
         </div>
 
       </main>
+
     );
   }
 
 
   const simulation =
     dashboard.simulation;
+
 
   const run =
     dashboard.run;
@@ -266,9 +371,11 @@ export default async function Home() {
               СИСТЕМА ЗАКУПА
             </div>
 
+
             <h1 className="title">
               Китай — расчёт потребности
             </h1>
+
 
             <p className="subtitle">
               Тестовый режим.
@@ -290,10 +397,13 @@ export default async function Home() {
                 Версия расчёта
               </div>
 
+
               <strong>
+
                 {run
                   ?.calculation_version
                   ?? "—"}
+
               </strong>
 
             </div>
@@ -304,7 +414,7 @@ export default async function Home() {
 
 
         {/* ===================================
-            УПРАВЛЕНИЕ
+            УПРАВЛЕНИЕ РАСЧЁТОМ
             =================================== */}
 
         <section className="controls">
@@ -315,8 +425,10 @@ export default async function Home() {
               Управление расчётом
             </h2>
 
+
             <div className="muted">
-              Тестовый режим
+              Создание нового расчёта
+              потребности по текущим данным
             </div>
 
           </div>
@@ -347,17 +459,23 @@ export default async function Home() {
         <section className="summary-grid">
 
 
+          {/* ПРОДАЖИ */}
+
           <div className="card">
 
             <div className="card-label">
               Продажи
             </div>
 
+
             <div className="big-number">
+
               {run
                 ?.sales_window_days
                 ?? 28} дней
+
             </div>
+
 
             <div className="muted">
               Период среднего значения
@@ -366,17 +484,23 @@ export default async function Home() {
           </div>
 
 
+          {/* КОНТЕЙНЕР */}
+
           <div className="card">
 
             <div className="card-label">
               Контейнер
             </div>
 
+
             <div className="big-number">
+
               {run
                 ?.container_order_point_days
                 ?? 100} дней
+
             </div>
+
 
             <div className="muted">
               90 дней плечо
@@ -386,17 +510,23 @@ export default async function Home() {
           </div>
 
 
+          {/* ФУРА */}
+
           <div className="card">
 
             <div className="card-label">
               Фура
             </div>
 
+
             <div className="big-number">
+
               {run
                 ?.truck_order_point_days
                 ?? 70} дней
+
             </div>
+
 
             <div className="muted">
               60 дней плечо
@@ -406,11 +536,14 @@ export default async function Home() {
           </div>
 
 
+          {/* РЕШЕНИЕ */}
+
           <div className="card">
 
             <div className="card-label">
               Транспорт
             </div>
+
 
             <div className="big-number">
 
@@ -420,6 +553,7 @@ export default async function Home() {
               )}
 
             </div>
+
 
             <div className="muted">
               Текущий результат
@@ -432,7 +566,7 @@ export default async function Home() {
 
 
         {/* ===================================
-            ВВОД НОВЫХ ТОВАРОВ
+            НАСТРОЙКА СИМУЛЯЦИИ
             =================================== */}
 
         <section className="section">
@@ -445,9 +579,12 @@ export default async function Home() {
                 Симуляция транспорта
               </h2>
 
+
               <div className="muted">
                 Укажите общий объём
-                новых товаров
+                новых товаров.
+                Объём действующих SKU
+                система считает автоматически.
               </div>
 
             </div>
@@ -515,26 +652,43 @@ export default async function Home() {
 
 
         {/* ===================================
-            РЕЗУЛЬТАТ ТРАНСПОРТА
+            РЕЗУЛЬТАТ ТРАНСПОРТНОЙ СИМУЛЯЦИИ
             =================================== */}
 
         {simulation && (
 
           <section className="section">
 
-            <h2 className="section-title">
-              Транспортная симуляция
-            </h2>
+            <div className="section-header">
+
+              <div>
+
+                <h2 className="section-title">
+                  Транспортная симуляция
+                </h2>
+
+
+                <div className="muted">
+                  Последний рассчитанный
+                  сценарий
+                </div>
+
+              </div>
+
+            </div>
 
 
             <div className="transport-grid">
 
+
+              {/* НОВЫЕ ТОВАРЫ */}
 
               <div className="transport-card">
 
                 <span className="card-label">
                   Новые товары
                 </span>
+
 
                 <strong className="transport-value">
 
@@ -549,11 +703,14 @@ export default async function Home() {
               </div>
 
 
+              {/* КОНТЕЙНЕР */}
+
               <div className="transport-card">
 
                 <span className="card-label">
                   Контейнерный расчёт
                 </span>
+
 
                 <strong className="transport-value">
 
@@ -565,15 +722,30 @@ export default async function Home() {
 
                 </strong>
 
+
+                <div className="muted">
+
+                  Действующие SKU:{" "}
+
+                  {formatNumber(
+                    simulation
+                      .container_existing_volume_m3,
+                    3
+                  )} м³
+
+                </div>
+
               </div>
 
+
+              {/* ФУРА */}
 
               <div className="transport-card">
 
                 <span className="card-label">
-                  После пересчёта
-                  под фуру
+                  После пересчёта под фуру
                 </span>
+
 
                 <strong className="transport-value">
 
@@ -585,14 +757,30 @@ export default async function Home() {
 
                 </strong>
 
+
+                <div className="muted">
+
+                  Действующие SKU:{" "}
+
+                  {formatNumber(
+                    simulation
+                      .truck_existing_volume_m3,
+                    3
+                  )} м³
+
+                </div>
+
               </div>
 
+
+              {/* ВЫБРАННЫЙ ОБЪЁМ */}
 
               <div className="transport-card">
 
                 <span className="card-label">
                   Выбранный объём
                 </span>
+
 
                 <strong className="transport-value">
 
@@ -640,7 +828,7 @@ export default async function Home() {
 
 
         {/* ===================================
-            ТОВАРЫ
+            ОСНОВНАЯ ТАБЛИЦА ТОВАРОВ
             =================================== */}
 
         <section className="section">
@@ -648,14 +836,27 @@ export default async function Home() {
 
           <div className="section-header">
 
-            <h2 className="section-title">
-              Товары
-            </h2>
+            <div>
+
+              <h2 className="section-title">
+                Товары
+              </h2>
+
+
+              <div className="muted">
+                Итоговые значения уже
+                учитывают ручные корректировки
+              </div>
+
+            </div>
+
 
             <div className="muted">
+
               SKU: {
                 dashboard.items.length
               }
+
             </div>
 
           </div>
@@ -673,41 +874,56 @@ export default async function Home() {
                     Артикул
                   </th>
 
+
                   <th className="left">
                     Товар
                   </th>
+
 
                   <th className="right">
                     Продажи/сутки
                   </th>
 
+
                   <th className="right">
                     Наш склад
                   </th>
+
 
                   <th className="right">
                     Ozon
                   </th>
 
+
                   <th className="right">
                     ВЭД
                   </th>
+
+
+                  <th className="right">
+                    Общий остаток
+                  </th>
+
 
                   <th className="right">
                     Покрытие
                   </th>
 
+
                   <th className="right">
                     Контейнер, шт.
                   </th>
+
 
                   <th className="right">
                     Контейнер, м³
                   </th>
 
+
                   <th className="right">
                     Фура, шт.
                   </th>
+
 
                   <th className="right">
                     Фура, м³
@@ -725,26 +941,37 @@ export default async function Home() {
 
                     <tr
                       key={
-                        item.offer_id
+                        item.calculation_item_id
                       }
                     >
 
+
+                      {/* АРТИКУЛ */}
+
                       <td className="left">
+
                         <strong>
                           {
                             item.offer_id
                           }
                         </strong>
+
                       </td>
 
 
+                      {/* НАЗВАНИЕ */}
+
                       <td className="left">
+
                         {
                           item.name
                           ?? "—"
                         }
+
                       </td>
 
+
+                      {/* ПРОДАЖИ */}
 
                       <td className="right">
 
@@ -757,6 +984,8 @@ export default async function Home() {
                       </td>
 
 
+                      {/* НАШ СКЛАД */}
+
                       <td className="right">
 
                         {formatNumber(
@@ -766,6 +995,8 @@ export default async function Home() {
 
                       </td>
 
+
+                      {/* OZON */}
 
                       <td className="right">
 
@@ -777,6 +1008,8 @@ export default async function Home() {
                       </td>
 
 
+                      {/* ВЭД */}
+
                       <td className="right">
 
                         {formatNumber(
@@ -786,6 +1019,20 @@ export default async function Home() {
 
                       </td>
 
+
+                      {/* ЭФФЕКТИВНЫЙ ОСТАТОК */}
+
+                      <td className="right">
+
+                        {formatNumber(
+                          item
+                            .effective_stock
+                        )}
+
+                      </td>
+
+
+                      {/* ПОКРЫТИЕ */}
 
                       <td className="right">
 
@@ -803,42 +1050,80 @@ export default async function Home() {
                       </td>
 
 
+                      {/* КОНТЕЙНЕР ШТ */}
+
                       <td className="right">
 
-                        {formatNumber(
-                          item
-                            .container_final_units
+                        <strong>
+
+                          {formatNumber(
+                            item
+                              .container_effective_final_units
+                          )}
+
+                        </strong>
+
+
+                        {item
+                          .container_manual_quantity
+                          !== null && (
+
+                          <div className="muted">
+                            вручную
+                          </div>
+
                         )}
 
                       </td>
 
 
+                      {/* КОНТЕЙНЕР М3 */}
+
                       <td className="right">
 
                         {formatNumber(
                           item
-                            .container_order_volume_m3,
+                            .container_effective_volume_m3,
                           3
                         )}
 
                       </td>
 
 
+                      {/* ФУРА ШТ */}
+
                       <td className="right">
 
-                        {formatNumber(
-                          item
-                            .truck_final_units
+                        <strong>
+
+                          {formatNumber(
+                            item
+                              .truck_effective_final_units
+                          )}
+
+                        </strong>
+
+
+                        {item
+                          .truck_manual_quantity
+                          !== null && (
+
+                          <div className="muted">
+                            вручную
+                          </div>
+
                         )}
 
                       </td>
 
 
+                      {/* ФУРА М3 */}
+
                       <td className="right">
 
                         {formatNumber(
                           item
-                            .truck_order_volume_m3,
+                            .truck_effective_volume_m3,
                           3
                         )}
 
@@ -857,6 +1142,525 @@ export default async function Home() {
 
         </section>
 
+
+        {/* ===================================
+            РУЧНЫЕ КОРРЕКТИРОВКИ
+            =================================== */}
+
+        <section className="section">
+
+          <div className="section-header">
+
+            <div>
+
+              <h2 className="section-title">
+                Ручные корректировки
+              </h2>
+
+
+              <div className="muted">
+                Системный расчёт не
+                перезаписывается.
+                Каждая корректировка
+                сохраняется отдельно.
+              </div>
+
+            </div>
+
+          </div>
+
+
+          <div className="adjustments-list">
+
+            {dashboard.items.map(
+              (item) => (
+
+                <div
+                  className="adjustment-card"
+
+                  key={
+                    item.calculation_item_id
+                  }
+                >
+
+
+                  {/* ===========================
+                      ТОВАР
+                      =========================== */}
+
+                  <div className="adjustment-product">
+
+                    <strong>
+                      {item.offer_id}
+                    </strong>
+
+
+                    <span className="muted">
+
+                      {
+                        item.name
+                        ?? "—"
+                      }
+
+                    </span>
+
+
+                    <span className="muted">
+
+                      Продажи:{" "}
+
+                      {formatNumber(
+                        item
+                          .avg_sales_per_day,
+                        2
+                      )} / сутки
+
+                    </span>
+
+
+                    <span className="muted">
+
+                      Остаток:{" "}
+
+                      {formatNumber(
+                        item.effective_stock
+                      )} шт.
+
+                    </span>
+
+
+                    <span className="muted">
+
+                      Покрытие:{" "}
+
+                      {formatNumber(
+                        item.coverage_days,
+                        1
+                      )} дн.
+
+                    </span>
+
+                  </div>
+
+
+                  {/* ===========================
+                      КОНТЕЙНЕР
+                      =========================== */}
+
+                  <form
+                    action={
+                      saveChinaManualAdjustment
+                    }
+
+                    className="adjustment-form"
+                  >
+
+                    <input
+                      type="hidden"
+
+                      name=
+                        "calculationItemId"
+
+                      value={
+                        item
+                          .calculation_item_id
+                      }
+                    />
+
+
+                    <input
+                      type="hidden"
+
+                      name="scenario"
+
+                      value="container"
+                    />
+
+
+                    <div>
+
+                      <div className="input-label">
+                        Контейнер
+                      </div>
+
+
+                      <div className="muted">
+
+                        Потребность:{" "}
+
+                        {formatNumber(
+                          item
+                            .container_order_units
+                        )} шт.
+
+                      </div>
+
+
+                      <div className="muted">
+
+                        После коробок:{" "}
+
+                        {formatNumber(
+                          item
+                            .container_final_units
+                        )} шт.
+
+                      </div>
+
+
+                      <div className="muted">
+
+                        Объём системы:{" "}
+
+                        {formatNumber(
+                          item
+                            .container_order_volume_m3,
+                          3
+                        )} м³
+
+                      </div>
+
+                    </div>
+
+
+                    {/* РУЧНОЕ КОЛИЧЕСТВО */}
+
+                    <div className="input-group">
+
+                      <label
+                        className="input-label"
+                      >
+                        Количество вручную
+                      </label>
+
+
+                      <input
+                        className=
+                          "adjustment-input"
+
+                        type="number"
+
+                        min="0"
+
+                        step="1"
+
+                        name=
+                          "manualQuantity"
+
+                        defaultValue={
+                          item
+                            .container_manual_quantity
+                          ??
+                          item
+                            .container_order_units
+                        }
+
+                        required
+                      />
+
+                    </div>
+
+
+                    {/* КОММЕНТАРИЙ */}
+
+                    <div className="input-group">
+
+                      <label
+                        className="input-label"
+                      >
+                        Комментарий
+                      </label>
+
+
+                      <input
+                        className=
+                          "comment-input"
+
+                        type="text"
+
+                        name="comment"
+
+                        placeholder=
+                          "Причина изменения"
+
+                        defaultValue={
+                          item
+                            .container_manual_comment
+                          ?? ""
+                        }
+                      />
+
+                    </div>
+
+
+                    <button
+                      className=
+                        "secondary-button"
+
+                      type="submit"
+                    >
+                      Сохранить
+                    </button>
+
+                  </form>
+
+
+                  {/* ТЕКУЩАЯ КОРРЕКТИРОВКА
+                      КОНТЕЙНЕРА */}
+
+                  {item
+                    .container_manual_quantity
+                    !== null && (
+
+                    <div className="reason-text">
+
+                      Текущая ручная
+                      корректировка контейнера:{" "}
+
+                      <strong>
+
+                        {formatNumber(
+                          item
+                            .container_manual_quantity
+                        )} шт.
+
+                      </strong>
+
+                      {" → "}
+
+                      {formatNumber(
+                        item
+                          .container_manual_final_units
+                      )} шт. после коробок
+
+                      {" / "}
+
+                      {formatNumber(
+                        item
+                          .container_manual_volume_m3,
+                        3
+                      )} м³
+
+                    </div>
+
+                  )}
+
+
+                  {/* ===========================
+                      ФУРА
+                      =========================== */}
+
+                  <form
+                    action={
+                      saveChinaManualAdjustment
+                    }
+
+                    className="adjustment-form"
+                  >
+
+                    <input
+                      type="hidden"
+
+                      name=
+                        "calculationItemId"
+
+                      value={
+                        item
+                          .calculation_item_id
+                      }
+                    />
+
+
+                    <input
+                      type="hidden"
+
+                      name="scenario"
+
+                      value="truck"
+                    />
+
+
+                    <div>
+
+                      <div className="input-label">
+                        Фура
+                      </div>
+
+
+                      <div className="muted">
+
+                        Потребность:{" "}
+
+                        {formatNumber(
+                          item
+                            .truck_order_units
+                        )} шт.
+
+                      </div>
+
+
+                      <div className="muted">
+
+                        После коробок:{" "}
+
+                        {formatNumber(
+                          item
+                            .truck_final_units
+                        )} шт.
+
+                      </div>
+
+
+                      <div className="muted">
+
+                        Объём системы:{" "}
+
+                        {formatNumber(
+                          item
+                            .truck_order_volume_m3,
+                          3
+                        )} м³
+
+                      </div>
+
+                    </div>
+
+
+                    {/* РУЧНОЕ КОЛИЧЕСТВО */}
+
+                    <div className="input-group">
+
+                      <label
+                        className="input-label"
+                      >
+                        Количество вручную
+                      </label>
+
+
+                      <input
+                        className=
+                          "adjustment-input"
+
+                        type="number"
+
+                        min="0"
+
+                        step="1"
+
+                        name=
+                          "manualQuantity"
+
+                        defaultValue={
+                          item
+                            .truck_manual_quantity
+                          ??
+                          item
+                            .truck_order_units
+                        }
+
+                        required
+                      />
+
+                    </div>
+
+
+                    {/* КОММЕНТАРИЙ */}
+
+                    <div className="input-group">
+
+                      <label
+                        className="input-label"
+                      >
+                        Комментарий
+                      </label>
+
+
+                      <input
+                        className=
+                          "comment-input"
+
+                        type="text"
+
+                        name="comment"
+
+                        placeholder=
+                          "Причина изменения"
+
+                        defaultValue={
+                          item
+                            .truck_manual_comment
+                          ?? ""
+                        }
+                      />
+
+                    </div>
+
+
+                    <button
+                      className=
+                        "secondary-button"
+
+                      type="submit"
+                    >
+                      Сохранить
+                    </button>
+
+                  </form>
+
+
+                  {/* ТЕКУЩАЯ КОРРЕКТИРОВКА
+                      ФУРЫ */}
+
+                  {item
+                    .truck_manual_quantity
+                    !== null && (
+
+                    <div className="reason-text">
+
+                      Текущая ручная
+                      корректировка фуры:{" "}
+
+                      <strong>
+
+                        {formatNumber(
+                          item
+                            .truck_manual_quantity
+                        )} шт.
+
+                      </strong>
+
+                      {" → "}
+
+                      {formatNumber(
+                        item
+                          .truck_manual_final_units
+                      )} шт. после коробок
+
+                      {" / "}
+
+                      {formatNumber(
+                        item
+                          .truck_manual_volume_m3,
+                        3
+                      )} м³
+
+                    </div>
+
+                  )}
+
+                </div>
+
+              )
+            )}
+
+          </div>
+
+        </section>
+
+
+        {/* ===================================
+            FOOTER
+            =================================== */}
 
         <footer className="footer">
 
