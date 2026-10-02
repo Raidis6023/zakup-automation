@@ -7,7 +7,7 @@ import {
 
 
 // ============================================================
-// ТИПЫ
+// ТИПЫ ТРАНСПОРТА
 // ============================================================
 
 type TransportScenario = {
@@ -15,10 +15,15 @@ type TransportScenario = {
   existing_products_volume_m3?: number;
   new_products_volume_m3?: number;
   total_volume_m3?: number;
+
   nominal_capacity_m3?: number;
   manual_review_limit_m3?: number;
+
   truck_90_capacity_m3?: number;
   truck_100_capacity_m3?: number;
+
+  raw_need_products?: number;
+  below_carton_products?: number;
 };
 
 
@@ -31,8 +36,15 @@ type TransportBlockers = {
 
 type TransportProducts = {
   total?: number;
+
+  container_raw_need?: number;
   container_need?: number;
+  container_below_carton?: number;
+
+  truck_raw_need?: number;
   truck_need?: number;
+  truck_below_carton?: number;
+
   with_responsible_storage?: number;
 };
 
@@ -74,12 +86,164 @@ type TransportDecision = {
 
 
 // ============================================================
-// ФОРМАТ ЧИСЕЛ
+// СОСТАВ ЗАКАЗА
+// ============================================================
+
+type ChinaOrderItem = {
+
+  product_id:
+    string;
+
+  offer_id:
+    string;
+
+  product_name:
+    string | null;
+
+
+  sales_28_days:
+    number;
+
+  avg_sales_per_day:
+    number;
+
+
+  own_stock_quantity:
+    number;
+
+  responsible_storage_quantity:
+    number;
+
+  ozon_stock_quantity:
+    number;
+
+  active_ved_quantity:
+    number;
+
+  effective_stock:
+    number;
+
+  coverage_days:
+    number | null;
+
+
+  units_per_carton:
+    number;
+
+  transport_carton_volume_m3:
+    number;
+
+
+  order_units:
+    number;
+
+  cartons:
+    number;
+
+  final_units:
+    number;
+
+  order_volume_m3:
+    number;
+
+
+  has_responsible_storage:
+    boolean;
+
+  own_stock_assumed_zero:
+    boolean;
+
+};
+
+
+type DeferredOrderItem = {
+
+  product_id:
+    string;
+
+  offer_id:
+    string;
+
+  product_name:
+    string | null;
+
+  avg_sales_per_day:
+    number;
+
+  effective_stock:
+    number;
+
+  coverage_days:
+    number | null;
+
+  units_per_carton:
+    number;
+
+  order_units:
+    number;
+
+  cartons:
+    number;
+
+  final_units:
+    number;
+
+  reason:
+    string;
+
+};
+
+
+type ChinaOrderPreview = {
+
+  ok:
+    boolean;
+
+  error?:
+    string;
+
+  run_id?:
+    string;
+
+  scenario?:
+    "container" | "truck";
+
+  items_count?:
+    number;
+
+  deferred_count?:
+    number;
+
+  total_final_units?:
+    number;
+
+  total_cartons?:
+    number;
+
+  total_volume_m3?:
+    number;
+
+  items?:
+    ChinaOrderItem[];
+
+  deferred?:
+    DeferredOrderItem[];
+
+};
+
+
+// ============================================================
+// FORMAT
 // ============================================================
 
 function formatNumber(
-  value: number | null | undefined,
-  maximumFractionDigits = 3
+  value:
+    | number
+    | null
+    | undefined,
+
+  maximumFractionDigits =
+    3
 ) {
 
   if (
@@ -105,18 +269,25 @@ function formatNumber(
 
 
 // ============================================================
-// ЧТЕНИЕ ЧИСЛА ИЗ INPUT
+// INPUT NUMBER
 // ============================================================
 
 function parseInputNumber(
   value: string
-): number | null {
+):
+  number | null {
 
   const normalized =
     value
       .trim()
-      .replace(/\s/g, "")
-      .replace(",", ".");
+      .replace(
+        /\s/g,
+        ""
+      )
+      .replace(
+        ",",
+        "."
+      );
 
 
   if (!normalized) {
@@ -127,11 +298,15 @@ function parseInputNumber(
 
 
   const parsed =
-    Number(normalized);
+    Number(
+      normalized
+    );
 
 
   if (
-    !Number.isFinite(parsed)
+    !Number.isFinite(
+      parsed
+    )
   ) {
 
     return null;
@@ -145,18 +320,20 @@ function parseInputNumber(
 
 
 // ============================================================
-// ЗАПРОС К API
+// TRANSPORT API
 // ============================================================
 
 async function requestTransportDecision(
   volume: number
-): Promise<TransportDecision> {
+):
+  Promise<TransportDecision> {
 
   const response =
     await fetch(
       "/api/china-transport",
       {
-        method: "POST",
+        method:
+          "POST",
 
         headers: {
           "Content-Type":
@@ -171,13 +348,15 @@ async function requestTransportDecision(
             }
           ),
 
-        cache: "no-store",
+        cache:
+          "no-store",
       }
     );
 
 
-  const data: TransportDecision =
-    await response.json();
+  const data:
+    TransportDecision =
+      await response.json();
 
 
   if (
@@ -201,7 +380,67 @@ async function requestTransportDecision(
 
 
 // ============================================================
-// КОМПОНЕНТ
+// ORDER PREVIEW API
+// ============================================================
+
+async function requestOrderPreview(
+  scenario:
+    "container" | "truck"
+):
+  Promise<ChinaOrderPreview> {
+
+  const response =
+    await fetch(
+      "/api/china-order-preview",
+      {
+        method:
+          "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+
+        body:
+          JSON.stringify(
+            {
+              scenario,
+            }
+          ),
+
+        cache:
+          "no-store",
+      }
+    );
+
+
+  const data:
+    ChinaOrderPreview =
+      await response.json();
+
+
+  if (
+    !response.ok
+    ||
+    !data.ok
+  ) {
+
+    throw new Error(
+      data.error
+      ||
+      "Не удалось получить состав заказа"
+    );
+
+  }
+
+
+  return data;
+
+}
+
+
+// ============================================================
+// COMPONENT
 // ============================================================
 
 export default function ChinaTransportClient() {
@@ -210,14 +449,29 @@ export default function ChinaTransportClient() {
     inputValue,
     setInputValue,
   ] =
-    useState("0");
+    useState(
+      "0"
+    );
 
 
   const [
     decision,
     setDecision,
   ] =
-    useState<TransportDecision | null>(
+    useState<
+      TransportDecision | null
+    >(
+      null
+    );
+
+
+  const [
+    orderPreview,
+    setOrderPreview,
+  ] =
+    useState<
+      ChinaOrderPreview | null
+    >(
       null
     );
 
@@ -226,75 +480,156 @@ export default function ChinaTransportClient() {
     loading,
     setLoading,
   ] =
-    useState(false);
+    useState(
+      false
+    );
 
 
   const [
     error,
     setError,
   ] =
-    useState("");
+    useState(
+      ""
+    );
 
 
   // ==========================================================
-  // ПЕРВИЧНЫЙ РАСЧЁТ ПРИ ОТКРЫТИИ
+  // ПОЛНЫЙ РАСЧЁТ
+  // ==========================================================
+
+  async function loadCalculation(
+    volume: number
+  ) {
+
+    setLoading(
+      true
+    );
+
+    setError(
+      ""
+    );
+
+
+    try {
+
+      // ======================================================
+      // 1. ТРАНСПОРТ
+      // ======================================================
+
+      const transport =
+        await requestTransportDecision(
+          volume
+        );
+
+
+      setDecision(
+        transport
+      );
+
+
+      // ======================================================
+      // 2. ЕСЛИ РАСЧЁТ ЗАБЛОКИРОВАН
+      // ======================================================
+
+      if (
+        transport.decision_status ===
+          "blocked"
+      ) {
+
+        setOrderPreview(
+          null
+        );
+
+        return;
+
+      }
+
+
+      // ======================================================
+      // 3. ОПРЕДЕЛЯЕМ ФАКТИЧЕСКИЙ СЦЕНАРИЙ
+      //
+      // switched_to_truck = true
+      // → используем заказ на 70 дней
+      //
+      // иначе
+      // → заказ на 100 дней
+      // ======================================================
+
+      const scenario:
+        "container" | "truck" =
+
+          transport
+            .switched_to_truck
+
+            ? "truck"
+
+            : "container";
+
+
+      // ======================================================
+      // 4. СОСТАВ ЗАКАЗА
+      // ======================================================
+
+      const preview =
+        await requestOrderPreview(
+          scenario
+        );
+
+
+      setOrderPreview(
+        preview
+      );
+
+
+    } catch (caughtError) {
+
+      setDecision(
+        null
+      );
+
+
+      setOrderPreview(
+        null
+      );
+
+
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Неизвестная ошибка"
+      );
+
+    } finally {
+
+      setLoading(
+        false
+      );
+
+    }
+
+  }
+
+
+  // ==========================================================
+  // INITIAL
   // ==========================================================
 
   useEffect(
     () => {
 
-      async function loadInitial() {
+      void loadCalculation(
+        0
+      );
 
-        setLoading(true);
-
-        setError("");
-
-
-        try {
-
-          const data =
-            await requestTransportDecision(
-              0
-            );
-
-
-          setDecision(
-            data
-          );
-
-        } catch (caughtError) {
-
-          setDecision(
-            null
-          );
-
-
-          setError(
-            caughtError instanceof Error
-              ? caughtError.message
-              : "Неизвестная ошибка"
-          );
-
-        } finally {
-
-          setLoading(
-            false
-          );
-
-        }
-
-      }
-
-
-      void loadInitial();
-
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     },
     []
   );
 
 
   // ==========================================================
-  // РУЧНОЙ ПЕРЕСЧЁТ
+  // MANUAL RECALC
   // ==========================================================
 
   async function calculateTransport() {
@@ -331,57 +666,20 @@ export default function ChinaTransportClient() {
     }
 
 
-    setLoading(
-      true
+    await loadCalculation(
+      volume
     );
-
-    setError(
-      ""
-    );
-
-
-    try {
-
-      const data =
-        await requestTransportDecision(
-          volume
-        );
-
-
-      setDecision(
-        data
-      );
-
-    } catch (caughtError) {
-
-      setDecision(
-        null
-      );
-
-
-      setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "Неизвестная ошибка"
-      );
-
-    } finally {
-
-      setLoading(
-        false
-      );
-
-    }
 
   }
 
 
   // ==========================================================
-  // ДАННЫЕ СЦЕНАРИЕВ
+  // SCENARIO DATA
   // ==========================================================
 
   const containerExisting =
-    decision?.container
+    decision
+      ?.container
       ?.existing_products_volume_m3
     ??
     decision
@@ -389,7 +687,8 @@ export default function ChinaTransportClient() {
 
 
   const containerTotal =
-    decision?.container
+    decision
+      ?.container
       ?.total_volume_m3
     ??
     decision
@@ -397,7 +696,8 @@ export default function ChinaTransportClient() {
 
 
   const truckExisting =
-    decision?.truck
+    decision
+      ?.truck
       ?.existing_products_volume_m3
     ??
     decision
@@ -405,7 +705,8 @@ export default function ChinaTransportClient() {
 
 
   const truckTotal =
-    decision?.truck
+    decision
+      ?.truck
       ?.total_volume_m3
     ??
     decision
@@ -420,8 +721,9 @@ export default function ChinaTransportClient() {
 
     <>
 
+
       {/* ======================================================
-          УПРАВЛЕНИЕ
+          TRANSPORT INPUT
           ====================================================== */}
 
       <section className="controls">
@@ -447,18 +749,30 @@ export default function ChinaTransportClient() {
 
         <div
           style={{
-            display: "flex",
-            gap: "12px",
-            alignItems: "end",
-            flexWrap: "wrap",
+            display:
+              "flex",
+
+            gap:
+              "12px",
+
+            alignItems:
+              "end",
+
+            flexWrap:
+              "wrap",
           }}
         >
 
           <label
             style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "6px",
+              display:
+                "flex",
+
+              flexDirection:
+                "column",
+
+              gap:
+                "6px",
             }}
           >
 
@@ -481,20 +795,31 @@ export default function ChinaTransportClient() {
               }
 
               onChange={
-                (event) => {
+                (
+                  event
+                ) => {
 
                   setInputValue(
-                    event.target.value
+                    event
+                      .target
+                      .value
                   );
 
                 }
               }
 
               style={{
-                width: "180px",
-                minHeight: "44px",
-                padding: "0 14px",
-                borderRadius: "10px",
+                width:
+                  "180px",
+
+                minHeight:
+                  "44px",
+
+                padding:
+                  "0 14px",
+
+                borderRadius:
+                  "10px",
 
                 border:
                   "1px solid var(--border)",
@@ -505,7 +830,8 @@ export default function ChinaTransportClient() {
                 color:
                   "var(--text)",
 
-                fontSize: "16px",
+                fontSize:
+                  "16px",
               }}
             />
 
@@ -515,7 +841,8 @@ export default function ChinaTransportClient() {
           <button
             type="button"
 
-            className="primary-button"
+            className=
+              "primary-button"
 
             disabled={
               loading
@@ -542,7 +869,7 @@ export default function ChinaTransportClient() {
 
 
       {/* ======================================================
-          ОШИБКА
+          ERROR
           ====================================================== */}
 
       {error && (
@@ -568,16 +895,13 @@ export default function ChinaTransportClient() {
 
 
       {/* ======================================================
-          РЕЗУЛЬТАТ
+          TRANSPORT RESULT
           ====================================================== */}
 
       {decision && (
 
         <>
 
-          {/* ==================================================
-              ГЛАВНОЕ РЕШЕНИЕ
-              ================================================== */}
 
           <section className="section">
 
@@ -590,12 +914,16 @@ export default function ChinaTransportClient() {
               className="section-title"
 
               style={{
-                fontSize: "28px",
-                marginTop: "8px",
+                fontSize:
+                  "28px",
+
+                marginTop:
+                  "8px",
               }}
             >
 
-              {decision.decision_name
+              {decision
+                .decision_name
                 ??
                 "Нет решения"}
 
@@ -604,7 +932,8 @@ export default function ChinaTransportClient() {
 
             <div className="reason-text">
 
-              {decision.reason
+              {decision
+                .reason
                 ??
                 "—"}
 
@@ -612,10 +941,6 @@ export default function ChinaTransportClient() {
 
           </section>
 
-
-          {/* ==================================================
-              СВОДКА
-              ================================================== */}
 
           <section className="summary-grid">
 
@@ -695,9 +1020,11 @@ export default function ChinaTransportClient() {
 
               </div>
 
+
               <div className="muted">
 
-                {decision.decision_code
+                {decision
+                  .decision_code
                   ??
                   "—"}
 
@@ -709,7 +1036,7 @@ export default function ChinaTransportClient() {
 
 
           {/* ==================================================
-              СРАВНЕНИЕ СЦЕНАРИЕВ
+              COMPARISON
               ================================================== */}
 
           <section className="section">
@@ -721,16 +1048,21 @@ export default function ChinaTransportClient() {
 
             <div
               style={{
-                overflowX: "auto",
+                overflowX:
+                  "auto",
               }}
             >
 
               <table
                 style={{
-                  width: "100%",
+                  width:
+                    "100%",
+
                   borderCollapse:
                     "collapse",
-                  fontSize: "14px",
+
+                  fontSize:
+                    "14px",
                 }}
               >
 
@@ -740,8 +1072,11 @@ export default function ChinaTransportClient() {
 
                     <th
                       style={{
-                        textAlign: "left",
-                        padding: "12px",
+                        textAlign:
+                          "left",
+
+                        padding:
+                          "12px",
                       }}
                     >
                       Сценарий
@@ -750,8 +1085,11 @@ export default function ChinaTransportClient() {
 
                     <th
                       style={{
-                        textAlign: "right",
-                        padding: "12px",
+                        textAlign:
+                          "right",
+
+                        padding:
+                          "12px",
                       }}
                     >
                       Текущие SKU
@@ -760,8 +1098,11 @@ export default function ChinaTransportClient() {
 
                     <th
                       style={{
-                        textAlign: "right",
-                        padding: "12px",
+                        textAlign:
+                          "right",
+
+                        padding:
+                          "12px",
                       }}
                     >
                       Новые товары
@@ -770,8 +1111,11 @@ export default function ChinaTransportClient() {
 
                     <th
                       style={{
-                        textAlign: "right",
-                        padding: "12px",
+                        textAlign:
+                          "right",
+
+                        padding:
+                          "12px",
                       }}
                     >
                       Итого
@@ -788,7 +1132,8 @@ export default function ChinaTransportClient() {
 
                     <td
                       style={{
-                        padding: "12px",
+                        padding:
+                          "12px",
                       }}
                     >
                       Контейнер — 100 дней
@@ -797,8 +1142,11 @@ export default function ChinaTransportClient() {
 
                     <td
                       style={{
-                        padding: "12px",
-                        textAlign: "right",
+                        padding:
+                          "12px",
+
+                        textAlign:
+                          "right",
                       }}
                     >
 
@@ -811,8 +1159,11 @@ export default function ChinaTransportClient() {
 
                     <td
                       style={{
-                        padding: "12px",
-                        textAlign: "right",
+                        padding:
+                          "12px",
+
+                        textAlign:
+                          "right",
                       }}
                     >
 
@@ -826,8 +1177,11 @@ export default function ChinaTransportClient() {
 
                     <td
                       style={{
-                        padding: "12px",
-                        textAlign: "right",
+                        padding:
+                          "12px",
+
+                        textAlign:
+                          "right",
                       }}
                     >
 
@@ -848,7 +1202,8 @@ export default function ChinaTransportClient() {
 
                     <td
                       style={{
-                        padding: "12px",
+                        padding:
+                          "12px",
                       }}
                     >
                       Фура — 70 дней
@@ -857,8 +1212,11 @@ export default function ChinaTransportClient() {
 
                     <td
                       style={{
-                        padding: "12px",
-                        textAlign: "right",
+                        padding:
+                          "12px",
+
+                        textAlign:
+                          "right",
                       }}
                     >
 
@@ -871,8 +1229,11 @@ export default function ChinaTransportClient() {
 
                     <td
                       style={{
-                        padding: "12px",
-                        textAlign: "right",
+                        padding:
+                          "12px",
+
+                        textAlign:
+                          "right",
                       }}
                     >
 
@@ -886,8 +1247,11 @@ export default function ChinaTransportClient() {
 
                     <td
                       style={{
-                        padding: "12px",
-                        textAlign: "right",
+                        padding:
+                          "12px",
+
+                        textAlign:
+                          "right",
                       }}
                     >
 
@@ -913,10 +1277,11 @@ export default function ChinaTransportClient() {
 
 
           {/* ==================================================
-              ПЕРЕСЧЁТ ПОД ФУРУ
+              TRUCK RECALC
               ================================================== */}
 
-          {decision.switched_to_truck && (
+          {decision
+            .switched_to_truck && (
 
             <section className="section">
 
@@ -954,7 +1319,7 @@ export default function ChinaTransportClient() {
 
 
                 <div className="reason-text">
-                  Объём новых товаров при этом не изменяется.
+                  Новые товары при этом не пересчитываются.
                 </div>
 
               </div>
@@ -965,7 +1330,7 @@ export default function ChinaTransportClient() {
 
 
           {/* ==================================================
-              SKU
+              PRODUCT COUNTERS
               ================================================== */}
 
           <section className="summary-grid">
@@ -1056,75 +1421,610 @@ export default function ChinaTransportClient() {
 
           </section>
 
+        </>
+
+      )}
+
+
+      {/* ======================================================
+          СОСТАВ ЗАКАЗА
+          ====================================================== */}
+
+      {orderPreview && (
+
+        <>
+
+
+          <section className="section">
+
+            <div className="small-label">
+              СОСТАВ ЗАКАЗА
+            </div>
+
+
+            <h2 className="section-title">
+
+              {orderPreview.scenario ===
+                "truck"
+
+                ? "Заказ после пересчёта под фуру"
+
+                : "Заказ для контейнерного сценария"}
+
+            </h2>
+
+
+            <div className="reason-text">
+
+              Показаны только товары,
+              которые после округления
+              формируют хотя бы один
+              транспортный короб.
+
+            </div>
+
+          </section>
+
+
+          <section className="summary-grid">
+
+
+            <div className="card">
+
+              <div className="card-label">
+                SKU в заказе
+              </div>
+
+              <div className="big-number">
+
+                {formatNumber(
+                  orderPreview
+                    .items_count,
+                  0
+                )}
+
+              </div>
+
+            </div>
+
+
+            <div className="card">
+
+              <div className="card-label">
+                Коробов
+              </div>
+
+              <div className="big-number">
+
+                {formatNumber(
+                  orderPreview
+                    .total_cartons,
+                  0
+                )}
+
+              </div>
+
+            </div>
+
+
+            <div className="card">
+
+              <div className="card-label">
+                Итоговых единиц
+              </div>
+
+              <div className="big-number">
+
+                {formatNumber(
+                  orderPreview
+                    .total_final_units,
+                  0
+                )}
+
+              </div>
+
+            </div>
+
+
+            <div className="card">
+
+              <div className="card-label">
+                Объём SKU
+              </div>
+
+              <div className="big-number">
+
+                {formatNumber(
+                  orderPreview
+                    .total_volume_m3
+                )} м³
+
+              </div>
+
+            </div>
+
+          </section>
+
 
           {/* ==================================================
-              BLOCKED
+              ORDER TABLE
               ================================================== */}
 
-          {decision.decision_status ===
-            "blocked" && (
+          <section className="section">
+
+            <h2 className="section-title">
+              Товары заказа
+            </h2>
+
+
+            <div
+              style={{
+                overflowX:
+                  "auto",
+              }}
+            >
+
+              <table
+                style={{
+                  width:
+                    "100%",
+
+                  minWidth:
+                    "1500px",
+
+                  borderCollapse:
+                    "collapse",
+
+                  fontSize:
+                    "13px",
+                }}
+              >
+
+                <thead>
+
+                  <tr>
+
+                    {[
+                      "Артикул",
+                      "Товар",
+                      "Прод./сутки",
+                      "Наш склад",
+                      "ОХ",
+                      "Ozon",
+                      "ВЭД",
+                      "Эфф. остаток",
+                      "Покрытие",
+                      "Потребность",
+                      "Вложимость",
+                      "Коробов",
+                      "Итого, шт.",
+                      "Объём, м³",
+                    ].map(
+                      (
+                        title
+                      ) => (
+
+                        <th
+                          key={
+                            title
+                          }
+
+                          style={{
+                            textAlign:
+                              "right",
+
+                            padding:
+                              "10px",
+                          }}
+                        >
+
+                          {title}
+
+                        </th>
+
+                      )
+                    )}
+
+                  </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                  {(
+                    orderPreview
+                      .items
+                    ??
+                    []
+                  ).map(
+                    (
+                      item
+                    ) => (
+
+                      <tr
+                        key={
+                          item.product_id
+                        }
+                      >
+
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+
+                            textAlign:
+                              "left",
+                          }}
+                        >
+
+                          {item.offer_id}
+
+                        </td>
+
+
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+
+                            textAlign:
+                              "left",
+
+                            minWidth:
+                              "300px",
+                          }}
+                        >
+
+                          {item.product_name
+                            ??
+                            "—"}
+
+                        </td>
+
+
+                        <td style={{
+                          padding: "10px",
+                          textAlign: "right",
+                        }}>
+                          {formatNumber(
+                            item.avg_sales_per_day,
+                            2
+                          )}
+                        </td>
+
+
+                        <td style={{
+                          padding: "10px",
+                          textAlign: "right",
+                        }}>
+
+                          {formatNumber(
+                            item.own_stock_quantity,
+                            0
+                          )}
+
+                          {item
+                            .own_stock_assumed_zero
+                            ? " *"
+                            : ""}
+
+                        </td>
+
+
+                        <td style={{
+                          padding: "10px",
+                          textAlign: "right",
+                        }}>
+                          {formatNumber(
+                            item.responsible_storage_quantity,
+                            0
+                          )}
+                        </td>
+
+
+                        <td style={{
+                          padding: "10px",
+                          textAlign: "right",
+                        }}>
+                          {formatNumber(
+                            item.ozon_stock_quantity,
+                            0
+                          )}
+                        </td>
+
+
+                        <td style={{
+                          padding: "10px",
+                          textAlign: "right",
+                        }}>
+                          {formatNumber(
+                            item.active_ved_quantity,
+                            0
+                          )}
+                        </td>
+
+
+                        <td style={{
+                          padding: "10px",
+                          textAlign: "right",
+                        }}>
+                          {formatNumber(
+                            item.effective_stock,
+                            0
+                          )}
+                        </td>
+
+
+                        <td style={{
+                          padding: "10px",
+                          textAlign: "right",
+                        }}>
+
+                          {item.coverage_days ===
+                            null
+
+                            ? "—"
+
+                            : `${formatNumber(
+                                item.coverage_days,
+                                1
+                              )} дн.`}
+
+                        </td>
+
+
+                        <td style={{
+                          padding: "10px",
+                          textAlign: "right",
+                        }}>
+                          {formatNumber(
+                            item.order_units,
+                            0
+                          )}
+                        </td>
+
+
+                        <td style={{
+                          padding: "10px",
+                          textAlign: "right",
+                        }}>
+                          {formatNumber(
+                            item.units_per_carton,
+                            0
+                          )}
+                        </td>
+
+
+                        <td style={{
+                          padding: "10px",
+                          textAlign: "right",
+                        }}>
+                          {formatNumber(
+                            item.cartons,
+                            0
+                          )}
+                        </td>
+
+
+                        <td style={{
+                          padding: "10px",
+                          textAlign: "right",
+                        }}>
+                          <strong>
+                            {formatNumber(
+                              item.final_units,
+                              0
+                            )}
+                          </strong>
+                        </td>
+
+
+                        <td style={{
+                          padding: "10px",
+                          textAlign: "right",
+                        }}>
+                          <strong>
+                            {formatNumber(
+                              item.order_volume_m3,
+                              6
+                            )}
+                          </strong>
+                        </td>
+
+                      </tr>
+
+                    )
+                  )}
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+
+            <div className="muted">
+
+              * Ноль основного склада
+              получен по правилу:
+              товар отсутствует в полном
+              отчёте «Свободный остаток».
+
+            </div>
+
+          </section>
+
+
+          {/* ==================================================
+              DEFERRED
+              ================================================== */}
+
+          {(orderPreview
+            .deferred_count
+            ??
+            0) > 0 && (
 
             <section className="section">
 
               <h2 className="section-title">
-                Что блокирует расчёт
+                Не вошли из-за округления коробов
               </h2>
 
 
-              <div className="reason-box">
+              <div className="reason-text">
 
-                <div className="reason-text">
+                По этим SKU потребность
+                рассчитана, но её недостаточно,
+                чтобы после математического
+                округления сформировался
+                хотя бы один транспортный короб.
 
-                  Без данных основного склада:{" "}
+              </div>
 
-                  <strong>
 
-                    {formatNumber(
-                      decision
-                        .blockers
-                        ?.products_without_own_stock_data,
-                      0
+              <div
+                style={{
+                  overflowX:
+                    "auto",
+
+                  marginTop:
+                    "16px",
+                }}
+              >
+
+                <table
+                  style={{
+                    width:
+                      "100%",
+
+                    borderCollapse:
+                      "collapse",
+
+                    fontSize:
+                      "13px",
+                  }}
+                >
+
+                  <thead>
+
+                    <tr>
+
+                      <th style={{
+                        textAlign: "left",
+                        padding: "10px",
+                      }}>
+                        Артикул
+                      </th>
+
+
+                      <th style={{
+                        textAlign: "left",
+                        padding: "10px",
+                      }}>
+                        Товар
+                      </th>
+
+
+                      <th style={{
+                        textAlign: "right",
+                        padding: "10px",
+                      }}>
+                        Потребность
+                      </th>
+
+
+                      <th style={{
+                        textAlign: "right",
+                        padding: "10px",
+                      }}>
+                        Вложимость
+                      </th>
+
+
+                      <th style={{
+                        textAlign: "right",
+                        padding: "10px",
+                      }}>
+                        Коробов
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+
+                  <tbody>
+
+                    {(
+                      orderPreview
+                        .deferred
+                      ??
+                      []
+                    ).map(
+                      (
+                        item
+                      ) => (
+
+                        <tr
+                          key={
+                            item.product_id
+                          }
+                        >
+
+                          <td style={{
+                            padding: "10px",
+                          }}>
+                            {item.offer_id}
+                          </td>
+
+
+                          <td style={{
+                            padding: "10px",
+                          }}>
+                            {item.product_name
+                              ??
+                              "—"}
+                          </td>
+
+
+                          <td style={{
+                            padding: "10px",
+                            textAlign: "right",
+                          }}>
+                            {formatNumber(
+                              item.order_units,
+                              0
+                            )}
+                          </td>
+
+
+                          <td style={{
+                            padding: "10px",
+                            textAlign: "right",
+                          }}>
+                            {formatNumber(
+                              item.units_per_carton,
+                              0
+                            )}
+                          </td>
+
+
+                          <td style={{
+                            padding: "10px",
+                            textAlign: "right",
+                          }}>
+                            0
+                          </td>
+
+                        </tr>
+
+                      )
                     )}
 
-                  </strong>
+                  </tbody>
 
-                </div>
-
-
-                <div className="reason-text">
-
-                  Без логистики контейнера:{" "}
-
-                  <strong>
-
-                    {formatNumber(
-                      decision
-                        .blockers
-                        ?.container_products_without_packaging,
-                      0
-                    )}
-
-                  </strong>
-
-                </div>
-
-
-                <div className="reason-text">
-
-                  Без логистики фуры:{" "}
-
-                  <strong>
-
-                    {formatNumber(
-                      decision
-                        .blockers
-                        ?.truck_products_without_packaging,
-                      0
-                    )}
-
-                  </strong>
-
-                </div>
+                </table>
 
               </div>
 
@@ -1133,10 +2033,6 @@ export default function ChinaTransportClient() {
           )}
 
 
-          {/* ==================================================
-              ВЕРСИЯ
-              ================================================== */}
-
           <section className="section">
 
             <div className="muted">
@@ -1144,7 +2040,7 @@ export default function ChinaTransportClient() {
               Версия расчёта:{" "}
 
               {decision
-                .calculation_version
+                ?.calculation_version
                 ??
                 "—"}
 
