@@ -14,7 +14,7 @@ export async function GET() {
       { status: 500 }
     );
   }
-
+  
   // ID задачи, которую только что создал Wildberries
   const taskId = "fb3998e1-f8c8-403f-ab1d-34801ec1c4f1";
 
