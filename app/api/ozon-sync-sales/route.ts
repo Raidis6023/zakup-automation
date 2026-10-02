@@ -9,17 +9,20 @@ import {
 //
 // ПРАВИЛА:
 //
-// 1. Берём последние 28 ЗАВЕРШЁННЫХ дней.
+// 1. Последние 28 ЗАВЕРШЁННЫХ дней.
 // 2. Часовой пояс расчёта — Москва UTC+3.
 // 3. Все статусы, кроме cancelled, считаются продажами.
-// 4. cancelled храним отдельно.
+// 4. cancelled сохраняем отдельно.
 // 5. Группируем:
 //      дата + offer_id + кластер.
-// 6. Если хотя бы один склад не удалось
-//    сопоставить с кластером — ничего не сохраняем.
-// 7. Только после полной загрузки вызываем Supabase.
-// 8. /v3/posting/fbo/list запрашиваем максимум
-//    по 100 отправлений за страницу.
+// 6. Получаем кластеры:
+//      Россия + СНГ.
+// 7. Если хотя бы один склад не сопоставился
+//    с кластером — ничего не сохраняем.
+// 8. Только после полной проверки
+//    вызываем Supabase.
+// 9. /v3/posting/fbo/list:
+//      максимум 100 отправлений за страницу.
 // ============================================================
 
 
@@ -41,6 +44,7 @@ type OzonLogisticCluster = {
 type OzonCluster = {
   id?: number | string;
   name?: string;
+  type?: string;
 
   logistic_clusters?:
     OzonLogisticCluster[];
@@ -113,6 +117,8 @@ type WarehouseClusterInfo = {
   cluster_id: string;
 
   cluster_name: string;
+
+  cluster_type: string;
 
   warehouse_name:
     string | null;
@@ -262,7 +268,7 @@ function sleep(
 
 
 // ============================================================
-// OZON POST С ПОВТОРНЫМИ ПОПЫТКАМИ
+// OZON POST С RETRY
 // ============================================================
 
 async function ozonPost<T>(
@@ -356,10 +362,6 @@ async function ozonPost<T>(
 
     }
 
-
-    // ========================================================
-    // 429 И 5xx СЧИТАЕМ ВРЕМЕННЫМИ ОШИБКАМИ
-    // ========================================================
 
     const shouldRetry =
       response.status === 429
@@ -514,7 +516,6 @@ function getCompletedMoscowRange(
   numberOfDays: number
 ) {
 
-  // Москва — UTC+3.
   const moscowNow =
     new Date(
       Date.now()
@@ -538,7 +539,7 @@ function getCompletedMoscowRange(
     );
 
 
-  // Сегодня ещё не завершён.
+  // Сегодня не включаем.
   const endDate =
     new Date(
       todayMoscow
@@ -638,10 +639,139 @@ function getMoscowDateFromTimestamp(
 
 
 // ============================================================
+// ДОБАВЛЕНИЕ КЛАСТЕРОВ В КАРТУ СКЛАДОВ
+// ============================================================
+
+function addClustersToWarehouseMap(
+  clusters: OzonCluster[],
+
+  clusterType: string,
+
+  warehouseMap:
+    Map<
+      string,
+      WarehouseClusterInfo
+    >
+) {
+
+  for (
+    const cluster
+    of clusters
+  ) {
+
+    const clusterId =
+      String(
+        cluster.id
+        ?? ""
+      )
+        .trim();
+
+
+    const clusterName =
+      String(
+        cluster.name
+        ?? ""
+      )
+        .trim();
+
+
+    if (!clusterId) {
+      continue;
+    }
+
+
+    for (
+      const logisticCluster
+      of cluster.logistic_clusters
+        ?? []
+    ) {
+
+      for (
+        const warehouse
+        of logisticCluster.warehouses
+          ?? []
+      ) {
+
+        const warehouseId =
+          String(
+            warehouse.warehouse_id
+            ?? ""
+          )
+            .trim();
+
+
+        if (!warehouseId) {
+          continue;
+        }
+
+
+        const newInfo:
+          WarehouseClusterInfo =
+          {
+
+            cluster_id:
+              clusterId,
+
+            cluster_name:
+              clusterName
+              ||
+              `Кластер ${clusterId}`,
+
+            cluster_type:
+              clusterType,
+
+            warehouse_name:
+              String(
+                warehouse.name
+                ?? ""
+              )
+                .trim()
+              || null,
+
+          };
+
+
+        const existing =
+          warehouseMap.get(
+            warehouseId
+          );
+
+
+        // Если один warehouse_id внезапно
+        // относится к двум разным кластерам,
+        // это подозрительная ситуация.
+        if (
+          existing
+          &&
+          existing.cluster_id
+            !==
+          newInfo.cluster_id
+        ) {
+
+          throw new Error(
+            `Склад ${warehouseId} найден сразу в двух кластерах: ${existing.cluster_id} и ${newInfo.cluster_id}`
+          );
+
+        }
+
+
+        warehouseMap.set(
+          warehouseId,
+          newInfo
+        );
+
+      }
+
+    }
+
+  }
+
+}
+
+
+// ============================================================
 // GET
-//
-// ТОЛЬКО ПРОВЕРКА.
-// НИЧЕГО НЕ ЗАПИСЫВАЕТ.
+// ТОЛЬКО ПРОВЕРКА
 // ============================================================
 
 export async function GET() {
@@ -679,6 +809,11 @@ export async function GET() {
 
       pageLimit:
         100,
+
+      clusterTypes: [
+        "CLUSTER_TYPE_OZON",
+        "CLUSTER_TYPE_CIS",
+      ],
     }
   );
 }
@@ -686,8 +821,6 @@ export async function GET() {
 
 // ============================================================
 // POST
-//
-// РЕАЛЬНАЯ СИНХРОНИЗАЦИЯ 28 ДНЕЙ
 // ============================================================
 
 export async function POST() {
@@ -705,10 +838,10 @@ export async function POST() {
 
 
     // ========================================================
-    // 2. ПОЛУЧАЕМ КЛАСТЕРЫ
+    // 2. ПОЛУЧАЕМ РОССИЙСКИЕ КЛАСТЕРЫ
     // ========================================================
 
-    const clusterResponse =
+    const russianClusterResponse =
       await ozonPost<
         OzonClusterResponse
       >(
@@ -720,29 +853,59 @@ export async function POST() {
       );
 
 
-    const clusters =
+    const russianClusters =
       Array.isArray(
-        clusterResponse.clusters
+        russianClusterResponse
+          .clusters
       )
-        ? clusterResponse.clusters
+        ? russianClusterResponse
+            .clusters
+        : [];
+
+
+    // ========================================================
+    // 3. ПОЛУЧАЕМ КЛАСТЕРЫ СНГ
+    // ========================================================
+
+    const cisClusterResponse =
+      await ozonPost<
+        OzonClusterResponse
+      >(
+        "/v1/cluster/list",
+        {
+          cluster_type:
+            "CLUSTER_TYPE_CIS",
+        }
+      );
+
+
+    const cisClusters =
+      Array.isArray(
+        cisClusterResponse
+          .clusters
+      )
+        ? cisClusterResponse
+            .clusters
         : [];
 
 
     if (
-      clusters.length === 0
+      russianClusters.length === 0
+      &&
+      cisClusters.length === 0
     ) {
 
       throw new Error(
-        "Ozon не вернул список кластеров"
+        "Ozon не вернул ни российских, ни СНГ-кластеров"
       );
 
     }
 
 
     // ========================================================
-    // 3. СТРОИМ:
+    // 4. СОБИРАЕМ ОБЩУЮ КАРТУ:
     //
-    // WAREHOUSE_ID → CLUSTER
+    // warehouse_id → cluster
     // ========================================================
 
     const warehouseMap =
@@ -752,83 +915,26 @@ export async function POST() {
       >();
 
 
-    for (
-      const cluster
-      of clusters
-    ) {
+    addClustersToWarehouseMap(
 
-      const clusterId =
-        String(
-          cluster.id
-          ?? ""
-        )
-          .trim();
+      russianClusters,
+
+      "CLUSTER_TYPE_OZON",
+
+      warehouseMap
+
+    );
 
 
-      const clusterName =
-        String(
-          cluster.name
-          ?? ""
-        )
-          .trim();
+    addClustersToWarehouseMap(
 
+      cisClusters,
 
-      if (!clusterId) {
-        continue;
-      }
+      "CLUSTER_TYPE_CIS",
 
+      warehouseMap
 
-      for (
-        const logisticCluster
-        of cluster.logistic_clusters
-          ?? []
-      ) {
-
-        for (
-          const warehouse
-          of logisticCluster.warehouses
-            ?? []
-        ) {
-
-          const warehouseId =
-            String(
-              warehouse.warehouse_id
-              ?? ""
-            )
-              .trim();
-
-
-          if (!warehouseId) {
-            continue;
-          }
-
-
-          warehouseMap.set(
-            warehouseId,
-            {
-              cluster_id:
-                clusterId,
-
-              cluster_name:
-                clusterName
-                ||
-                `Кластер ${clusterId}`,
-
-              warehouse_name:
-                String(
-                  warehouse.name
-                  ?? ""
-                )
-                  .trim()
-                || null,
-            }
-          );
-
-        }
-
-      }
-
-    }
+    );
 
 
     if (
@@ -843,10 +949,7 @@ export async function POST() {
 
 
     // ========================================================
-    // 4. ПОЛУЧАЕМ ВСЕ FBO-ОТПРАВЛЕНИЯ
-    //
-    // ВАЖНО:
-    // Ozon разрешает максимум 100 за запрос.
+    // 5. ПОЛУЧАЕМ ВСЕ FBO-ОТПРАВЛЕНИЯ
     // ========================================================
 
     const allPostings:
@@ -892,10 +995,6 @@ export async function POST() {
                 range.to,
 
             },
-
-            // =================================
-            // МАКСИМУМ ДЛЯ ЭТОГО OZON-МЕТОДА
-            // =================================
 
             limit:
               100,
@@ -990,9 +1089,6 @@ export async function POST() {
         nextCursor;
 
 
-      // Небольшая пауза,
-      // чтобы не долбить API десятками
-      // запросов подряд.
       await sleep(
         100
       );
@@ -1012,7 +1108,7 @@ export async function POST() {
 
 
     // ========================================================
-    // 5. ПРОВЕРКА
+    // 6. ПРОВЕРКА
     // ========================================================
 
     if (
@@ -1027,7 +1123,7 @@ export async function POST() {
 
 
     // ========================================================
-    // 6. ДЕДУПЛИКАЦИЯ POSTING_NUMBER
+    // 7. ДЕДУПЛИКАЦИЯ
     // ========================================================
 
     const postingsByNumber =
@@ -1052,8 +1148,7 @@ export async function POST() {
       const postingNumber =
         String(
           posting.posting_number
-          ??
-          ""
+          ?? ""
         )
           .trim();
 
@@ -1080,10 +1175,7 @@ export async function POST() {
 
 
     // ========================================================
-    // 7. ПРОВЕРЯЕМ ВСЕ СКЛАДЫ
-    //
-    // ЕСЛИ ХОТЬ ОДИН НЕ СОПОСТАВИЛСЯ —
-    // НЕ ПИШЕМ НИЧЕГО.
+    // 8. ПРОВЕРЯЕМ СКЛАДЫ
     // ========================================================
 
     const unmappedWarehouses =
@@ -1151,7 +1243,8 @@ export async function POST() {
 
 
     if (
-      postingsWithoutWarehouse.length > 0
+      postingsWithoutWarehouse.length >
+      0
     ) {
 
       throw new Error(
@@ -1189,14 +1282,14 @@ export async function POST() {
 
 
       throw new Error(
-        `Найдены склады Ozon без кластера: ${unmappedWarehouses.size}. Пример: ${example}`
+        `После загрузки Россия + СНГ всё ещё остались склады без кластера: ${unmappedWarehouses.size}. Пример: ${example}`
       );
 
     }
 
 
     // ========================================================
-    // 8. СЧЁТЧИКИ СТАТУСОВ
+    // 9. СЧЁТЧИКИ СТАТУСОВ
     // ========================================================
 
     const statusCounts:
@@ -1237,7 +1330,7 @@ export async function POST() {
 
       if (
         status ===
-          "cancelled"
+        "cancelled"
       ) {
 
         cancelledPostings++;
@@ -1248,7 +1341,7 @@ export async function POST() {
 
 
     // ========================================================
-    // 9. ТОВАРЫ ДЛЯ PRODUCTS
+    // 10. ТОВАРЫ
     // ========================================================
 
     const productsByOffer =
@@ -1259,9 +1352,7 @@ export async function POST() {
 
 
     // ========================================================
-    // 10. АГРЕГАЦИЯ
-    //
-    // ДАТА + OFFER_ID + CLUSTER_ID
+    // 11. АГРЕГАЦИЯ
     // ========================================================
 
     const aggregate =
@@ -1530,7 +1621,7 @@ export async function POST() {
 
 
     // ========================================================
-    // 11. ГОТОВИМ СТРОКИ ДЛЯ SUPABASE
+    // 12. ГОТОВИМ СТРОКИ SUPABASE
     // ========================================================
 
     const salesRows =
@@ -1599,7 +1690,7 @@ export async function POST() {
 
 
     // ========================================================
-    // 12. ИТОГОВЫЕ СЧЁТЧИКИ
+    // 13. ИТОГИ
     // ========================================================
 
     let totalSalesQuantity =
@@ -1637,7 +1728,7 @@ export async function POST() {
 
 
     // ========================================================
-    // 13. ТОЛЬКО ТЕПЕРЬ ПИШЕМ В SUPABASE
+    // 14. ТОЛЬКО ТЕПЕРЬ SUPABASE
     // ========================================================
 
     const saveResult =
@@ -1673,7 +1764,7 @@ export async function POST() {
 
 
     // ========================================================
-    // 14. УСПЕХ
+    // 15. УСПЕХ
     // ========================================================
 
     return NextResponse.json(
@@ -1696,6 +1787,19 @@ export async function POST() {
 
           dateTo:
             range.dateTo,
+
+        },
+
+        clusters: {
+
+          russianClusters:
+            russianClusters.length,
+
+          cisClusters:
+            cisClusters.length,
+
+          warehousesMapped:
+            warehouseMap.size,
 
         },
 
