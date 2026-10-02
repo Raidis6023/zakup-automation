@@ -18,6 +18,8 @@ import {
 // 6. Если хотя бы один склад не удалось
 //    сопоставить с кластером — ничего не сохраняем.
 // 7. Только после полной загрузки вызываем Supabase.
+// 8. /v3/posting/fbo/list запрашиваем максимум
+//    по 100 отправлений за страницу.
 // ============================================================
 
 
@@ -94,7 +96,8 @@ type OzonFboPosting = {
 
 
 type OzonFboResponse = {
-  postings?: OzonFboPosting[];
+  postings?:
+    OzonFboPosting[];
 
   cursor?: string;
 
@@ -259,7 +262,7 @@ function sleep(
 
 
 // ============================================================
-// OZON POST С RETRY
+// OZON POST С ПОВТОРНЫМИ ПОПЫТКАМИ
 // ============================================================
 
 async function ozonPost<T>(
@@ -353,6 +356,10 @@ async function ozonPost<T>(
 
     }
 
+
+    // ========================================================
+    // 429 И 5xx СЧИТАЕМ ВРЕМЕННЫМИ ОШИБКАМИ
+    // ========================================================
 
     const shouldRetry =
       response.status === 429
@@ -507,7 +514,7 @@ function getCompletedMoscowRange(
   numberOfDays: number
 ) {
 
-  // Москва всегда UTC+3.
+  // Москва — UTC+3.
   const moscowNow =
     new Date(
       Date.now()
@@ -516,7 +523,6 @@ function getCompletedMoscowRange(
     );
 
 
-  // Московское "сегодня".
   const todayMoscow =
     new Date(
       Date.UTC(
@@ -532,7 +538,7 @@ function getCompletedMoscowRange(
     );
 
 
-  // Последний завершённый день = вчера.
+  // Сегодня ещё не завершён.
   const endDate =
     new Date(
       todayMoscow
@@ -670,6 +676,9 @@ export async function GET() {
 
       timezone:
         "Europe/Moscow",
+
+      pageLimit:
+        100,
     }
   );
 }
@@ -835,6 +844,9 @@ export async function POST() {
 
     // ========================================================
     // 4. ПОЛУЧАЕМ ВСЕ FBO-ОТПРАВЛЕНИЯ
+    //
+    // ВАЖНО:
+    // Ozon разрешает максимум 100 за запрос.
     // ========================================================
 
     const allPostings:
@@ -850,7 +862,11 @@ export async function POST() {
 
 
     const maxPages =
-      1000;
+      5000;
+
+
+    let pagesLoaded =
+      0;
 
 
     for (
@@ -877,8 +893,12 @@ export async function POST() {
 
             },
 
+            // =================================
+            // МАКСИМУМ ДЛЯ ЭТОГО OZON-МЕТОДА
+            // =================================
+
             limit:
-              1000,
+              100,
 
             sort_dir:
               "asc",
@@ -900,6 +920,9 @@ export async function POST() {
             },
           }
         );
+
+
+      pagesLoaded++;
 
 
       const pagePostings =
@@ -967,9 +990,23 @@ export async function POST() {
         nextCursor;
 
 
+      // Небольшая пауза,
+      // чтобы не долбить API десятками
+      // запросов подряд.
       await sleep(
         100
       );
+
+
+      if (
+        page === maxPages
+      ) {
+
+        throw new Error(
+          `Достигнут защитный лимит ${maxPages} страниц Ozon`
+        );
+
+      }
 
     }
 
@@ -991,9 +1028,6 @@ export async function POST() {
 
     // ========================================================
     // 6. ДЕДУПЛИКАЦИЯ POSTING_NUMBER
-    //
-    // На всякий случай не позволяем
-    // одному отправлению попасть дважды.
     // ========================================================
 
     const postingsByNumber =
@@ -1048,7 +1082,7 @@ export async function POST() {
     // ========================================================
     // 7. ПРОВЕРЯЕМ ВСЕ СКЛАДЫ
     //
-    // Если хотя бы один не сопоставился,
+    // ЕСЛИ ХОТЬ ОДИН НЕ СОПОСТАВИЛСЯ —
     // НЕ ПИШЕМ НИЧЕГО.
     // ========================================================
 
@@ -1225,7 +1259,7 @@ export async function POST() {
 
 
     // ========================================================
-    // 10. АГРЕГАЦИЯ:
+    // 10. АГРЕГАЦИЯ
     //
     // ДАТА + OFFER_ID + CLUSTER_ID
     // ========================================================
@@ -1281,8 +1315,6 @@ export async function POST() {
         );
 
 
-      // Дополнительная защита:
-      // строка обязана попасть в наши 28 дней.
       if (
         saleDate <
           range.dateFrom
@@ -1319,8 +1351,6 @@ export async function POST() {
 
       if (!clusterInfo) {
 
-        // Сюда попасть уже не должны,
-        // поскольку проверили выше.
         throw new Error(
           `Не найден кластер для склада ${warehouseId}`
         );
@@ -1569,7 +1599,7 @@ export async function POST() {
 
 
     // ========================================================
-    // 12. СЧИТАЕМ ОБЩИЕ КОЛИЧЕСТВА
+    // 12. ИТОГОВЫЕ СЧЁТЧИКИ
     // ========================================================
 
     let totalSalesQuantity =
@@ -1643,7 +1673,7 @@ export async function POST() {
 
 
     // ========================================================
-    // 14. УСПЕШНЫЙ ОТВЕТ
+    // 14. УСПЕХ
     // ========================================================
 
     return NextResponse.json(
@@ -1670,6 +1700,8 @@ export async function POST() {
         },
 
         ozon: {
+
+          pagesLoaded,
 
           postingsReceived:
             allPostings.length,
