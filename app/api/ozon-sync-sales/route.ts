@@ -11,53 +11,23 @@ import {
 //
 // 1. Последние 28 ЗАВЕРШЁННЫХ дней.
 // 2. Часовой пояс расчёта — Москва UTC+3.
-// 3. Все статусы, кроме cancelled, считаются продажами.
-// 4. cancelled сохраняем отдельно.
-// 5. Группируем:
-//      дата + offer_id + кластер.
-// 6. Получаем кластеры:
-//      Россия + СНГ.
-// 7. Если хотя бы один склад не сопоставился
-//    с кластером — ничего не сохраняем.
-// 8. Только после полной проверки
-//    вызываем Supabase.
-// 9. /v3/posting/fbo/list:
-//      максимум 100 отправлений за страницу.
+// 3. cancelled НЕ входит в продажи.
+// 4. cancelled_quantity храним отдельно.
+// 5. Кластер берём непосредственно из:
+//      financial_data.cluster_from
+// 6. Группируем:
+//      дата + offer_id + cluster_from
+// 7. Проходим ВСЕ страницы Ozon.
+// 8. Никаких warehouse_id → cluster сопоставлений.
+// 9. Если хоть у одного товарного отправления
+//    нет cluster_from — ничего не сохраняем.
+// 10. Только после полной проверки
+//     вызываем Supabase.
 // ============================================================
 
 
 // ============================================================
-// OZON CLUSTERS
-// ============================================================
-
-type OzonWarehouse = {
-  warehouse_id?: number | string;
-  name?: string;
-};
-
-
-type OzonLogisticCluster = {
-  warehouses?: OzonWarehouse[];
-};
-
-
-type OzonCluster = {
-  id?: number | string;
-  name?: string;
-  type?: string;
-
-  logistic_clusters?:
-    OzonLogisticCluster[];
-};
-
-
-type OzonClusterResponse = {
-  clusters?: OzonCluster[];
-};
-
-
-// ============================================================
-// OZON FBO POSTINGS
+// ТИПЫ OZON
 // ============================================================
 
 type OzonPostingProduct = {
@@ -82,17 +52,36 @@ type OzonPostingAnalytics = {
 };
 
 
+type OzonPostingFinancialData = {
+  cluster_from?:
+    string;
+
+  cluster_to?:
+    string;
+
+  products?:
+    unknown[];
+};
+
+
 type OzonFboPosting = {
-  posting_number?: string;
+  posting_number?:
+    string;
 
-  order_number?: string;
+  order_number?:
+    string;
 
-  status?: string;
+  status?:
+    string;
 
-  created_at?: string;
+  created_at?:
+    string;
 
   analytics_data?:
     OzonPostingAnalytics;
+
+  financial_data?:
+    OzonPostingFinancialData;
 
   products?:
     OzonPostingProduct[];
@@ -103,9 +92,11 @@ type OzonFboResponse = {
   postings?:
     OzonFboPosting[];
 
-  cursor?: string;
+  cursor?:
+    string;
 
-  has_next?: boolean;
+  has_next?:
+    boolean;
 };
 
 
@@ -113,20 +104,9 @@ type OzonFboResponse = {
 // ВНУТРЕННИЕ ТИПЫ
 // ============================================================
 
-type WarehouseClusterInfo = {
-  cluster_id: string;
-
-  cluster_name: string;
-
-  cluster_type: string;
-
-  warehouse_name:
-    string | null;
-};
-
-
 type ProductForSupabase = {
-  offer_id: string;
+  offer_id:
+    string;
 
   name:
     string | null;
@@ -134,23 +114,34 @@ type ProductForSupabase = {
 
 
 type SalesAggregate = {
-  offer_id: string;
+  offer_id:
+    string;
 
-  sale_date: string;
+  sale_date:
+    string;
 
-  cluster_id: string;
+  cluster_id:
+    string;
 
-  cluster_name: string;
+  cluster_name:
+    string;
 
-  sales_quantity: number;
+  sales_quantity:
+    number;
 
-  cancelled_quantity: number;
+  cancelled_quantity:
+    number;
 
-  posting_count: number;
+  posting_count:
+    number;
 
-  cancelled_posting_count: number;
+  cancelled_posting_count:
+    number;
 
   warehouse_ids:
+    Set<string>;
+
+  warehouse_names:
     Set<string>;
 };
 
@@ -268,6 +259,29 @@ function sleep(
 
 
 // ============================================================
+// НОРМАЛИЗАЦИЯ ТЕКСТА
+// ============================================================
+
+function normalizeText(
+  value: unknown
+) {
+
+  return String(
+    value ?? ""
+  )
+    .replace(
+      /\u00A0/g,
+      " "
+    )
+    .replace(
+      /\s+/g,
+      " "
+    )
+    .trim();
+}
+
+
+// ============================================================
 // OZON POST С RETRY
 // ============================================================
 
@@ -299,7 +313,8 @@ async function ozonPost<T>(
         await fetch(
           `https://api-seller.ozon.ru${endpoint}`,
           {
-            method: "POST",
+            method:
+              "POST",
 
             headers:
               getOzonHeaders(),
@@ -363,6 +378,10 @@ async function ozonPost<T>(
     }
 
 
+    // ========================================================
+    // 429 И 5xx МОГУТ БЫТЬ ВРЕМЕННЫМИ
+    // ========================================================
+
     const shouldRetry =
       response.status === 429
       ||
@@ -420,7 +439,8 @@ async function supabaseRpc<T>(
     await fetch(
       `${supabaseUrl}/rest/v1/rpc/${functionName}`,
       {
-        method: "POST",
+        method:
+          "POST",
 
         headers: {
 
@@ -489,19 +509,21 @@ function formatDateUtc(
   const month =
     String(
       date.getUTCMonth() + 1
-    ).padStart(
-      2,
-      "0"
-    );
+    )
+      .padStart(
+        2,
+        "0"
+      );
 
 
   const day =
     String(
       date.getUTCDate()
-    ).padStart(
-      2,
-      "0"
-    );
+    )
+      .padStart(
+        2,
+        "0"
+      );
 
 
   return `${year}-${month}-${day}`;
@@ -516,6 +538,7 @@ function getCompletedMoscowRange(
   numberOfDays: number
 ) {
 
+  // Москва UTC+3
   const moscowNow =
     new Date(
       Date.now()
@@ -539,7 +562,8 @@ function getCompletedMoscowRange(
     );
 
 
-  // Сегодня не включаем.
+  // Сегодня ещё не завершён.
+  // Берём вчера.
   const endDate =
     new Date(
       todayMoscow
@@ -639,139 +663,10 @@ function getMoscowDateFromTimestamp(
 
 
 // ============================================================
-// ДОБАВЛЕНИЕ КЛАСТЕРОВ В КАРТУ СКЛАДОВ
-// ============================================================
-
-function addClustersToWarehouseMap(
-  clusters: OzonCluster[],
-
-  clusterType: string,
-
-  warehouseMap:
-    Map<
-      string,
-      WarehouseClusterInfo
-    >
-) {
-
-  for (
-    const cluster
-    of clusters
-  ) {
-
-    const clusterId =
-      String(
-        cluster.id
-        ?? ""
-      )
-        .trim();
-
-
-    const clusterName =
-      String(
-        cluster.name
-        ?? ""
-      )
-        .trim();
-
-
-    if (!clusterId) {
-      continue;
-    }
-
-
-    for (
-      const logisticCluster
-      of cluster.logistic_clusters
-        ?? []
-    ) {
-
-      for (
-        const warehouse
-        of logisticCluster.warehouses
-          ?? []
-      ) {
-
-        const warehouseId =
-          String(
-            warehouse.warehouse_id
-            ?? ""
-          )
-            .trim();
-
-
-        if (!warehouseId) {
-          continue;
-        }
-
-
-        const newInfo:
-          WarehouseClusterInfo =
-          {
-
-            cluster_id:
-              clusterId,
-
-            cluster_name:
-              clusterName
-              ||
-              `Кластер ${clusterId}`,
-
-            cluster_type:
-              clusterType,
-
-            warehouse_name:
-              String(
-                warehouse.name
-                ?? ""
-              )
-                .trim()
-              || null,
-
-          };
-
-
-        const existing =
-          warehouseMap.get(
-            warehouseId
-          );
-
-
-        // Если один warehouse_id внезапно
-        // относится к двум разным кластерам,
-        // это подозрительная ситуация.
-        if (
-          existing
-          &&
-          existing.cluster_id
-            !==
-          newInfo.cluster_id
-        ) {
-
-          throw new Error(
-            `Склад ${warehouseId} найден сразу в двух кластерах: ${existing.cluster_id} и ${newInfo.cluster_id}`
-          );
-
-        }
-
-
-        warehouseMap.set(
-          warehouseId,
-          newInfo
-        );
-
-      }
-
-    }
-
-  }
-
-}
-
-
-// ============================================================
 // GET
-// ТОЛЬКО ПРОВЕРКА
+//
+// ТОЛЬКО ПРОВЕРКА.
+// НИЧЕГО НЕ ПИШЕМ.
 // ============================================================
 
 export async function GET() {
@@ -784,7 +679,8 @@ export async function GET() {
 
   return NextResponse.json(
     {
-      ok: true,
+      ok:
+        true,
 
       message:
         "Маршрут синхронизации продаж Ozon готов",
@@ -810,10 +706,8 @@ export async function GET() {
       pageLimit:
         100,
 
-      clusterTypes: [
-        "CLUSTER_TYPE_OZON",
-        "CLUSTER_TYPE_CIS",
-      ],
+      clusterSource:
+        "financial_data.cluster_from",
     }
   );
 }
@@ -821,6 +715,8 @@ export async function GET() {
 
 // ============================================================
 // POST
+//
+// РЕАЛЬНАЯ СИНХРОНИЗАЦИЯ
 // ============================================================
 
 export async function POST() {
@@ -838,122 +734,12 @@ export async function POST() {
 
 
     // ========================================================
-    // 2. ПОЛУЧАЕМ РОССИЙСКИЕ КЛАСТЕРЫ
-    // ========================================================
-
-    const russianClusterResponse =
-      await ozonPost<
-        OzonClusterResponse
-      >(
-        "/v1/cluster/list",
-        {
-          cluster_type:
-            "CLUSTER_TYPE_OZON",
-        }
-      );
-
-
-    const russianClusters =
-      Array.isArray(
-        russianClusterResponse
-          .clusters
-      )
-        ? russianClusterResponse
-            .clusters
-        : [];
-
-
-    // ========================================================
-    // 3. ПОЛУЧАЕМ КЛАСТЕРЫ СНГ
-    // ========================================================
-
-    const cisClusterResponse =
-      await ozonPost<
-        OzonClusterResponse
-      >(
-        "/v1/cluster/list",
-        {
-          cluster_type:
-            "CLUSTER_TYPE_CIS",
-        }
-      );
-
-
-    const cisClusters =
-      Array.isArray(
-        cisClusterResponse
-          .clusters
-      )
-        ? cisClusterResponse
-            .clusters
-        : [];
-
-
-    if (
-      russianClusters.length === 0
-      &&
-      cisClusters.length === 0
-    ) {
-
-      throw new Error(
-        "Ozon не вернул ни российских, ни СНГ-кластеров"
-      );
-
-    }
-
-
-    // ========================================================
-    // 4. СОБИРАЕМ ОБЩУЮ КАРТУ:
-    //
-    // warehouse_id → cluster
-    // ========================================================
-
-    const warehouseMap =
-      new Map<
-        string,
-        WarehouseClusterInfo
-      >();
-
-
-    addClustersToWarehouseMap(
-
-      russianClusters,
-
-      "CLUSTER_TYPE_OZON",
-
-      warehouseMap
-
-    );
-
-
-    addClustersToWarehouseMap(
-
-      cisClusters,
-
-      "CLUSTER_TYPE_CIS",
-
-      warehouseMap
-
-    );
-
-
-    if (
-      warehouseMap.size === 0
-    ) {
-
-      throw new Error(
-        "Не удалось построить карту складов Ozon"
-      );
-
-    }
-
-
-    // ========================================================
-    // 5. ПОЛУЧАЕМ ВСЕ FBO-ОТПРАВЛЕНИЯ
+    // 2. ПОЛУЧАЕМ ВСЕ FBO-ОТПРАВЛЕНИЯ
     // ========================================================
 
     const allPostings:
-      OzonFboPosting[] = [];
+      OzonFboPosting[] =
+        [];
 
 
     let cursor =
@@ -964,12 +750,12 @@ export async function POST() {
       new Set<string>();
 
 
-    const maxPages =
-      5000;
-
-
     let pagesLoaded =
       0;
+
+
+    const maxPages =
+      5000;
 
 
     for (
@@ -996,6 +782,8 @@ export async function POST() {
 
             },
 
+            // Максимум,
+            // подтверждённый самим Ozon.
             limit:
               100,
 
@@ -1010,8 +798,10 @@ export async function POST() {
               analytics_data:
                 true,
 
+              // ОБЯЗАТЕЛЬНО:
+              // отсюда берём cluster_from.
               financial_data:
-                false,
+                true,
 
               legal_info:
                 false,
@@ -1037,13 +827,9 @@ export async function POST() {
       );
 
 
-      const hasNext =
-        Boolean(
-          response.has_next
-        );
-
-
-      if (!hasNext) {
+      if (
+        !response.has_next
+      ) {
 
         break;
 
@@ -1051,11 +837,9 @@ export async function POST() {
 
 
       const nextCursor =
-        String(
+        normalizeText(
           response.cursor
-          ?? ""
-        )
-          .trim();
+        );
 
 
       if (!nextCursor) {
@@ -1089,6 +873,7 @@ export async function POST() {
         nextCursor;
 
 
+      // Небольшая пауза.
       await sleep(
         100
       );
@@ -1108,7 +893,7 @@ export async function POST() {
 
 
     // ========================================================
-    // 6. ПРОВЕРКА
+    // 3. ПРОВЕРЯЕМ, ЧТО ДАННЫЕ ЕСТЬ
     // ========================================================
 
     if (
@@ -1123,7 +908,7 @@ export async function POST() {
 
 
     // ========================================================
-    // 7. ДЕДУПЛИКАЦИЯ
+    // 4. ДЕДУПЛИКАЦИЯ POSTING_NUMBER
     // ========================================================
 
     const postingsByNumber =
@@ -1146,11 +931,9 @@ export async function POST() {
 
 
       const postingNumber =
-        String(
+        normalizeText(
           posting.posting_number
-          ?? ""
-        )
-          .trim();
+        );
 
 
       const key =
@@ -1175,18 +958,27 @@ export async function POST() {
 
 
     // ========================================================
-    // 8. ПРОВЕРЯЕМ СКЛАДЫ
+    // 5. ПРОВЕРЯЕМ CLUSTER_FROM
+    //
+    // Мы уже проверили первые 100.
+    // Теперь проверяем ВСЕ отправления.
+    //
+    // Если хоть где-нибудь отсутствует —
+    // НЕ ПИШЕМ В SUPABASE.
     // ========================================================
 
-    const unmappedWarehouses =
-      new Map<
-        string,
-        string
-      >();
+    const postingsWithoutCluster:
+      Array<{
+        posting_number:
+          string;
 
+        warehouse_id:
+          string;
 
-    const postingsWithoutWarehouse:
-      string[] = [];
+        warehouse_name:
+          string;
+      }> =
+        [];
 
 
     for (
@@ -1194,47 +986,59 @@ export async function POST() {
       of uniquePostings
     ) {
 
-      const warehouseId =
-        String(
-          posting
-            .analytics_data
-            ?.warehouse_id
-          ?? ""
+      // Если в отправлении вообще
+      // нет товаров, оно нам не влияет
+      // на товарные продажи.
+      if (
+        !Array.isArray(
+          posting.products
         )
-          .trim();
-
-
-      if (!warehouseId) {
-
-        postingsWithoutWarehouse.push(
-          String(
-            posting.posting_number
-            ?? "без номера"
-          )
-        );
-
+        ||
+        posting.products.length ===
+          0
+      ) {
         continue;
-
       }
 
 
-      if (
-        !warehouseMap.has(
-          warehouseId
-        )
-      ) {
+      const clusterFrom =
+        normalizeText(
+          posting
+            .financial_data
+            ?.cluster_from
+        );
 
-        unmappedWarehouses.set(
 
-          warehouseId,
+      if (!clusterFrom) {
 
-          String(
-            posting
-              .analytics_data
-              ?.warehouse_name
-            ?? "Без названия"
-          )
+        postingsWithoutCluster.push(
+          {
+            posting_number:
+              normalizeText(
+                posting
+                  .posting_number
+              )
+              ||
+              "без номера",
 
+            warehouse_id:
+              normalizeText(
+                posting
+                  .analytics_data
+                  ?.warehouse_id
+              )
+              ||
+              "—",
+
+            warehouse_name:
+              normalizeText(
+                posting
+                  .analytics_data
+                  ?.warehouse_name
+              )
+              ||
+              "—",
+          }
         );
 
       }
@@ -1243,53 +1047,36 @@ export async function POST() {
 
 
     if (
-      postingsWithoutWarehouse.length >
+      postingsWithoutCluster.length >
       0
     ) {
 
-      throw new Error(
-        `У ${postingsWithoutWarehouse.length} FBO-отправлений отсутствует warehouse_id. Пример: ${postingsWithoutWarehouse.slice(0, 5).join(", ")}`
-      );
-
-    }
-
-
-    if (
-      unmappedWarehouses.size > 0
-    ) {
-
-      const example =
-        Array.from(
-          unmappedWarehouses
-            .entries()
-        )
+      const examples =
+        postingsWithoutCluster
           .slice(
             0,
             10
           )
           .map(
             (
-              [
-                id,
-                name,
-              ]
+              item
             ) =>
-              `${id} (${name})`
+              `${item.posting_number}: ${item.warehouse_name}`
           )
           .join(
-            ", "
+            "; "
           );
 
 
       throw new Error(
-        `После загрузки Россия + СНГ всё ещё остались склады без кластера: ${unmappedWarehouses.size}. Пример: ${example}`
+        `У ${postingsWithoutCluster.length} отправлений отсутствует financial_data.cluster_from. Примеры: ${examples}`
       );
 
     }
 
 
     // ========================================================
-    // 9. СЧЁТЧИКИ СТАТУСОВ
+    // 6. СТАТУСЫ
     // ========================================================
 
     const statusCounts:
@@ -1309,11 +1096,12 @@ export async function POST() {
     ) {
 
       const status =
-        String(
+        normalizeText(
           posting.status
-          ?? "unknown"
         )
-          .toLowerCase();
+          .toLowerCase()
+        ||
+        "unknown";
 
 
       statusCounts[
@@ -1341,7 +1129,7 @@ export async function POST() {
 
 
     // ========================================================
-    // 10. ТОВАРЫ
+    // 7. СОБИРАЕМ PRODUCTS
     // ========================================================
 
     const productsByOffer =
@@ -1352,7 +1140,19 @@ export async function POST() {
 
 
     // ========================================================
-    // 11. АГРЕГАЦИЯ
+    // 8. АГРЕГАЦИЯ
+    //
+    // КЛЮЧ:
+    //
+    // sale_date
+    // +
+    // offer_id
+    // +
+    // cluster_from
+    //
+    // ВАЖНО:
+    // cluster_from — строковый идентификатор
+    // нашего кластера продаж.
     // ========================================================
 
     const aggregate =
@@ -1367,33 +1167,52 @@ export async function POST() {
       of uniquePostings
     ) {
 
+      const products =
+        Array.isArray(
+          posting.products
+        )
+          ? posting.products
+          : [];
+
+
+      if (
+        products.length === 0
+      ) {
+        continue;
+      }
+
+
       const status =
-        String(
+        normalizeText(
           posting.status
-          ?? ""
         )
           .toLowerCase();
 
 
       const isCancelled =
         status ===
-          "cancelled";
+        "cancelled";
 
+
+      // ======================================================
+      // ДАТА
+      // ======================================================
 
       const createdAt =
-        String(
+        normalizeText(
           posting.created_at
-          ?? ""
-        )
-          .trim();
+        );
 
 
       if (!createdAt) {
 
         throw new Error(
           `У отправления ${
-            posting.posting_number
-            ?? "без номера"
+            normalizeText(
+              posting.posting_number
+            )
+            ||
+            "без номера"
           } отсутствует created_at`
         );
 
@@ -1416,59 +1235,88 @@ export async function POST() {
 
         throw new Error(
           `Отправление ${
-            posting.posting_number
-            ?? "без номера"
+            normalizeText(
+              posting.posting_number
+            )
+            ||
+            "без номера"
           } попало за пределы периода: ${saleDate}`
         );
 
       }
 
 
-      const warehouseId =
-        String(
+      // ======================================================
+      // КЛАСТЕР
+      // ======================================================
+
+      const clusterFrom =
+        normalizeText(
           posting
-            .analytics_data
-            ?.warehouse_id
-          ?? ""
-        )
-          .trim();
-
-
-      const clusterInfo =
-        warehouseMap.get(
-          warehouseId
+            .financial_data
+            ?.cluster_from
         );
 
 
-      if (!clusterInfo) {
+      if (!clusterFrom) {
 
+        // До сюда уже не должны дойти,
+        // потому что проверили выше.
         throw new Error(
-          `Не найден кластер для склада ${warehouseId}`
+          `Отсутствует cluster_from у отправления ${
+            normalizeText(
+              posting.posting_number
+            )
+          }`
         );
 
       }
 
 
+      // ======================================================
+      // СКЛАД
+      // ======================================================
+
+      const warehouseId =
+        normalizeText(
+          posting
+            .analytics_data
+            ?.warehouse_id
+        );
+
+
+      const warehouseName =
+        normalizeText(
+          posting
+            .analytics_data
+            ?.warehouse_name
+        );
+
+
+      // ======================================================
+      // ТОВАРЫ
+      // ======================================================
+
       for (
         const product
-        of posting.products
-          ?? []
+        of products
       ) {
 
         const offerId =
-          String(
+          normalizeText(
             product.offer_id
-            ?? ""
-          )
-            .trim();
+          );
 
 
         if (!offerId) {
 
           throw new Error(
             `В отправлении ${
-              posting.posting_number
-              ?? "без номера"
+              normalizeText(
+                posting.posting_number
+              )
+              ||
+              "без номера"
             } найден товар без offer_id`
           );
 
@@ -1476,11 +1324,9 @@ export async function POST() {
 
 
         const productName =
-          String(
+          normalizeText(
             product.name
-            ?? ""
-          )
-            .trim();
+          );
 
 
         if (
@@ -1504,6 +1350,10 @@ export async function POST() {
         }
 
 
+        // ====================================================
+        // QUANTITY
+        // ====================================================
+
         const rawQuantity =
           Number(
             product.quantity
@@ -1520,7 +1370,7 @@ export async function POST() {
         ) {
 
           throw new Error(
-            `Некорректное количество по ${offerId}`
+            `Некорректное количество по артикулу ${offerId}`
           );
 
         }
@@ -1532,11 +1382,32 @@ export async function POST() {
           );
 
 
+        // ====================================================
+        // ВАЖНО:
+        //
+        // Для продаж cluster_id пока используем
+        // само нормализованное название cluster_from.
+        //
+        // Это стабильный ключ именно исторической
+        // записи отправления.
+        //
+        // cluster_name = такое же значение.
+        //
+        // Позже, когда будем делать распределение
+        // поставок Ozon по кластерам, создадим
+        // отдельный единый справочник кластеров
+        // и свяжем его и с остатками, и с продажами.
+        // ====================================================
+
+        const clusterKey =
+          clusterFrom;
+
+
         const key =
           [
             saleDate,
             offerId,
-            clusterInfo.cluster_id,
+            clusterKey,
           ]
             .join(
               "::"
@@ -1556,12 +1427,10 @@ export async function POST() {
               saleDate,
 
             cluster_id:
-              clusterInfo
-                .cluster_id,
+              clusterKey,
 
             cluster_name:
-              clusterInfo
-                .cluster_name,
+              clusterFrom,
 
             sales_quantity:
               0,
@@ -1576,6 +1445,9 @@ export async function POST() {
               0,
 
             warehouse_ids:
+              new Set<string>(),
+
+            warehouse_names:
               new Set<string>(),
           };
 
@@ -1592,6 +1464,9 @@ export async function POST() {
 
         } else {
 
+          // Пользовательское правило:
+          // всё, кроме cancelled,
+          // считается продажами.
           existing
             .sales_quantity
             += quantity;
@@ -1603,11 +1478,26 @@ export async function POST() {
         }
 
 
-        existing
-          .warehouse_ids
-          .add(
-            warehouseId
-          );
+        if (warehouseId) {
+
+          existing
+            .warehouse_ids
+            .add(
+              warehouseId
+            );
+
+        }
+
+
+        if (warehouseName) {
+
+          existing
+            .warehouse_names
+            .add(
+              warehouseName
+            );
+
+        }
 
 
         aggregate.set(
@@ -1621,7 +1511,7 @@ export async function POST() {
 
 
     // ========================================================
-    // 12. ГОТОВИМ СТРОКИ SUPABASE
+    // 9. ГОТОВИМ СТРОКИ SUPABASE
     // ========================================================
 
     const salesRows =
@@ -1655,6 +1545,9 @@ export async function POST() {
               source:
                 "v3/posting/fbo/list",
 
+              cluster_source:
+                "financial_data.cluster_from",
+
               posting_count:
                 row.posting_count,
 
@@ -1664,6 +1557,11 @@ export async function POST() {
               warehouse_ids:
                 Array.from(
                   row.warehouse_ids
+                ),
+
+              warehouse_names:
+                Array.from(
+                  row.warehouse_names
                 ),
 
             },
@@ -1684,13 +1582,12 @@ export async function POST() {
 
     const products =
       Array.from(
-        productsByOffer
-          .values()
+        productsByOffer.values()
       );
 
 
     // ========================================================
-    // 13. ИТОГИ
+    // 10. ИТОГОВЫЕ ПОКАЗАТЕЛИ
     // ========================================================
 
     let totalSalesQuantity =
@@ -1716,19 +1613,19 @@ export async function POST() {
     }
 
 
-    const uniqueClusterIds =
+    const uniqueClusters =
       new Set(
         salesRows.map(
           (
             row
           ) =>
-            row.cluster_id
+            row.cluster_name
         )
       );
 
 
     // ========================================================
-    // 14. ТОЛЬКО ТЕПЕРЬ SUPABASE
+    // 11. ТОЛЬКО ТЕПЕРЬ ПИШЕМ В SUPABASE
     // ========================================================
 
     const saveResult =
@@ -1764,12 +1661,13 @@ export async function POST() {
 
 
     // ========================================================
-    // 15. УСПЕХ
+    // 12. УСПЕХ
     // ========================================================
 
     return NextResponse.json(
       {
-        ok: true,
+        ok:
+          true,
 
         message:
           "Продажи Ozon успешно синхронизированы",
@@ -1787,19 +1685,6 @@ export async function POST() {
 
           dateTo:
             range.dateTo,
-
-        },
-
-        clusters: {
-
-          russianClusters:
-            russianClusters.length,
-
-          cisClusters:
-            cisClusters.length,
-
-          warehousesMapped:
-            warehouseMap.size,
 
         },
 
@@ -1821,7 +1706,7 @@ export async function POST() {
             products.length,
 
           uniqueClusters:
-            uniqueClusterIds.size,
+            uniqueClusters.size,
 
           aggregatedRows:
             salesRows.length,
@@ -1832,6 +1717,9 @@ export async function POST() {
           cancelledQuantity:
             totalCancelledQuantity,
 
+          clusterSource:
+            "financial_data.cluster_from",
+
         },
 
         supabase:
@@ -1839,7 +1727,8 @@ export async function POST() {
 
       },
       {
-        status: 200,
+        status:
+          200,
       }
     );
 
@@ -1854,7 +1743,8 @@ export async function POST() {
 
     return NextResponse.json(
       {
-        ok: false,
+        ok:
+          false,
 
         message:
           "Продажи Ozon не обновлены",
@@ -1865,7 +1755,8 @@ export async function POST() {
             : "Неизвестная ошибка синхронизации продаж Ozon",
       },
       {
-        status: 500,
+        status:
+          500,
       }
     );
 
