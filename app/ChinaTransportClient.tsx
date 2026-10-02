@@ -87,7 +87,9 @@ function formatNumber(
     ||
     value === undefined
   ) {
+
     return "—";
+
   }
 
 
@@ -108,13 +110,20 @@ function formatNumber(
 
 function parseInputNumber(
   value: string
-) {
+): number | null {
 
   const normalized =
     value
       .trim()
       .replace(/\s/g, "")
       .replace(",", ".");
+
+
+  if (!normalized) {
+
+    return null;
+
+  }
 
 
   const parsed =
@@ -124,7 +133,9 @@ function parseInputNumber(
   if (
     !Number.isFinite(parsed)
   ) {
+
     return null;
+
   }
 
 
@@ -165,9 +176,8 @@ async function requestTransportDecision(
     );
 
 
-  const data =
-    await response.json()
-      as TransportDecision;
+  const data: TransportDecision =
+    await response.json();
 
 
   if (
@@ -207,9 +217,9 @@ export default function ChinaTransportClient() {
     decision,
     setDecision,
   ] =
-    useState<
-      TransportDecision | null
-    >(null);
+    useState<TransportDecision | null>(
+      null
+    );
 
 
   const [
@@ -227,7 +237,7 @@ export default function ChinaTransportClient() {
 
 
   // ==========================================================
-  // ПЕРВИЧНЫЙ РАСЧЁТ
+  // ПЕРВИЧНЫЙ РАСЧЁТ ПРИ ОТКРЫТИИ
   // ==========================================================
 
   useEffect(
@@ -236,6 +246,7 @@ export default function ChinaTransportClient() {
       async function loadInitial() {
 
         setLoading(true);
+
         setError("");
 
 
@@ -247,22 +258,28 @@ export default function ChinaTransportClient() {
             );
 
 
-          setDecision(data);
+          setDecision(
+            data
+          );
 
-        } catch (error) {
+        } catch (caughtError) {
 
-          setDecision(null);
+          setDecision(
+            null
+          );
 
 
           setError(
-            error instanceof Error
-              ? error.message
+            caughtError instanceof Error
+              ? caughtError.message
               : "Неизвестная ошибка"
           );
 
         } finally {
 
-          setLoading(false);
+          setLoading(
+            false
+          );
 
         }
 
@@ -314,8 +331,13 @@ export default function ChinaTransportClient() {
     }
 
 
-    setLoading(true);
-    setError("");
+    setLoading(
+      true
+    );
+
+    setError(
+      ""
+    );
 
 
     try {
@@ -326,22 +348,28 @@ export default function ChinaTransportClient() {
         );
 
 
-      setDecision(data);
+      setDecision(
+        data
+      );
 
-    } catch (error) {
+    } catch (caughtError) {
 
-      setDecision(null);
+      setDecision(
+        null
+      );
 
 
       setError(
-        error instanceof Error
-          ? error.message
+        caughtError instanceof Error
+          ? caughtError.message
           : "Неизвестная ошибка"
       );
 
     } finally {
 
-      setLoading(false);
+      setLoading(
+        false
+      );
 
     }
 
@@ -353,8 +381,7 @@ export default function ChinaTransportClient() {
   // ==========================================================
 
   const containerExisting =
-    decision
-      ?.container
+    decision?.container
       ?.existing_products_volume_m3
     ??
     decision
@@ -362,8 +389,7 @@ export default function ChinaTransportClient() {
 
 
   const containerTotal =
-    decision
-      ?.container
+    decision?.container
       ?.total_volume_m3
     ??
     decision
@@ -371,8 +397,7 @@ export default function ChinaTransportClient() {
 
 
   const truckExisting =
-    decision
-      ?.truck
+    decision?.truck
       ?.existing_products_volume_m3
     ??
     decision
@@ -380,8 +405,7 @@ export default function ChinaTransportClient() {
 
 
   const truckTotal =
-    decision
-      ?.truck
+    decision?.truck
       ?.total_volume_m3
     ??
     decision
@@ -395,7 +419,6 @@ export default function ChinaTransportClient() {
   return (
 
     <>
-
 
       {/* ======================================================
           УПРАВЛЕНИЕ
@@ -446,6 +469,7 @@ export default function ChinaTransportClient() {
 
             <input
               type="text"
+
               inputMode="decimal"
 
               value={
@@ -457,14 +481,10 @@ export default function ChinaTransportClient() {
               }
 
               onChange={
-                (
-                  event
-                ) => {
+                (event) => {
 
                   setInputValue(
-                    event
-                      .target
-                      .value
+                    event.target.value
                   );
 
                 }
@@ -475,12 +495,16 @@ export default function ChinaTransportClient() {
                 minHeight: "44px",
                 padding: "0 14px",
                 borderRadius: "10px",
+
                 border:
                   "1px solid var(--border)",
+
                 background:
                   "var(--card)",
+
                 color:
                   "var(--text)",
+
                 fontSize: "16px",
               }}
             />
@@ -499,7 +523,9 @@ export default function ChinaTransportClient() {
 
             onClick={
               () => {
+
                 void calculateTransport();
+
               }
             }
           >
@@ -549,6 +575,9 @@ export default function ChinaTransportClient() {
 
         <>
 
+          {/* ==================================================
+              ГЛАВНОЕ РЕШЕНИЕ
+              ================================================== */}
 
           <section className="section">
 
@@ -680,7 +709,7 @@ export default function ChinaTransportClient() {
 
 
           {/* ==================================================
-              СРАВНЕНИЕ
+              СРАВНЕНИЕ СЦЕНАРИЕВ
               ================================================== */}
 
           <section className="section">
@@ -884,7 +913,7 @@ export default function ChinaTransportClient() {
 
 
           {/* ==================================================
-              ПЕРЕКЛЮЧЕНИЕ НА ФУРУ
+              ПЕРЕСЧЁТ ПОД ФУРУ
               ================================================== */}
 
           {decision.switched_to_truck && (
@@ -925,7 +954,7 @@ export default function ChinaTransportClient() {
 
 
                 <div className="reason-text">
-                  Объём новых товаров не изменяется.
+                  Объём новых товаров при этом не изменяется.
                 </div>
 
               </div>
@@ -1105,7 +1134,7 @@ export default function ChinaTransportClient() {
 
 
           {/* ==================================================
-              VERSION
+              ВЕРСИЯ
               ================================================== */}
 
           <section className="section">
