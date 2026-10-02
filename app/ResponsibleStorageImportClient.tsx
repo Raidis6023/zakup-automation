@@ -174,7 +174,7 @@ type ApplyResult = {
 
 
 // ============================================================
-// TEXT
+// НОРМАЛИЗАЦИЯ ТЕКСТА
 // ============================================================
 
 function normalizeText(
@@ -209,7 +209,7 @@ function normalizeText(
 
 
 // ============================================================
-// NUMBER
+// ЧИСЛО
 // ============================================================
 
 function parseNumber(
@@ -274,7 +274,6 @@ function parseNumber(
 
 
 // ============================================================
-// DATE
 // DD.MM.YYYY → YYYY-MM-DD
 // ============================================================
 
@@ -301,7 +300,7 @@ function convertRussianDate(
 
 
 // ============================================================
-// ДАТА СНИМКА ИЗ "ПЕРИОД ОТЧЕТА"
+// ДАТА СНИМКА
 // ============================================================
 
 function findSnapshotDate(
@@ -438,8 +437,8 @@ function findColumn(
 // ============================================================
 // ЯВНЫЙ АРТИКУЛ ИЗ НАЗВАНИЯ
 //
-// Например:
-// "Сучкорез,60см.,артикул RMCA-0631"
+// Пример:
+// Сучкорез,60см.,артикул RMCA-0631
 // ============================================================
 
 function extractExplicitArticle(
@@ -473,7 +472,7 @@ function extractExplicitArticle(
 
 
 // ============================================================
-// WAREHOUSE
+// СКЛАД
 // ============================================================
 
 function isWarehouseRow(
@@ -490,24 +489,42 @@ function isWarehouseRow(
 
 
 // ============================================================
-// ЗАЯВКА
+// СЛУЖЕБНЫЙ ДОКУМЕНТ
+//
+// В отчёте ОХ встречаются:
+//
+// 1. Заявка на хранение
+// 2. Возврат товаров поставщику
+//
+// Это НЕ товары.
+// Их конечные остатки являются детализацией
+// вышестоящего товара и повторно учитывать их нельзя.
 // ============================================================
 
-function isRequestRow(
+function isDocumentRow(
   value: string
 ) {
 
-  return value
-    .toLowerCase()
-    .startsWith(
-      "заявка"
-    );
+  const normalized =
+    value
+      .toLowerCase();
+
+
+  return (
+    normalized.startsWith(
+      "заявка на хранение"
+    )
+    ||
+    normalized.startsWith(
+      "возврат товаров поставщику"
+    )
+  );
 
 }
 
 
 // ============================================================
-// СЛУЖЕБНЫЕ ИТОГОВЫЕ СТРОКИ
+// ИТОГОВАЯ СТРОКА
 // ============================================================
 
 function isSummaryRow(
@@ -535,7 +552,11 @@ function isSummaryRow(
 
 
 // ============================================================
-// СЛЕДУЮЩАЯ НЕПУСТАЯ A
+// СЛЕДУЮЩЕЕ НЕПУСТОЕ НАЗВАНИЕ
+//
+// Используется для определения поставщика:
+// если следующая строка — СКЛАД,
+// текущая строка считается владельцем.
 // ============================================================
 
 function findNextText(
@@ -728,7 +749,7 @@ export default function ResponsibleStorageImportClient() {
 
 
   // ==========================================================
-  // FILE
+  // ЧТЕНИЕ ФАЙЛА
   // ==========================================================
 
   async function handleFile(
@@ -853,7 +874,7 @@ export default function ResponsibleStorageImportClient() {
 
 
       // ======================================================
-      // 2. DATE
+      // 2. ДАТА
       // ======================================================
 
       const detectedDate =
@@ -872,7 +893,7 @@ export default function ResponsibleStorageImportClient() {
 
 
       // ======================================================
-      // 3. COLUMNS
+      // 3. КОЛОНКИ
       // ======================================================
 
       const nomenclatureHeader =
@@ -967,7 +988,7 @@ export default function ResponsibleStorageImportClient() {
 
 
       // ======================================================
-      // 4. PARSER
+      // 4. РАЗБИРАЕМ ИЕРАРХИЮ
       // ======================================================
 
       let currentOwner =
@@ -1014,7 +1035,7 @@ export default function ResponsibleStorageImportClient() {
           );
 
 
-        const quantity =
+        const rawQuantity =
           parseNumber(
             row[
               quantityColumn
@@ -1022,12 +1043,16 @@ export default function ResponsibleStorageImportClient() {
           );
 
 
+        // ====================================================
+        // ПОЛНОСТЬЮ ПУСТАЯ СТРОКА
+        // ====================================================
+
         if (
           !itemName
           &&
           !articleFromCell
           &&
-          quantity === null
+          rawQuantity === null
         ) {
 
           continue;
@@ -1035,12 +1060,16 @@ export default function ResponsibleStorageImportClient() {
         }
 
 
-        // =================================
-        // ЗАЯВКА — НЕ ТОВАР.
-        // =================================
+        // ====================================================
+        // СЛУЖЕБНЫЕ ДОКУМЕНТЫ
+        //
+        // Очень важно:
+        // их остатки уже включены в строку товара.
+        // Второй раз их учитывать нельзя.
+        // ====================================================
 
         if (
-          isRequestRow(
+          isDocumentRow(
             itemName
           )
         ) {
@@ -1050,9 +1079,9 @@ export default function ResponsibleStorageImportClient() {
         }
 
 
-        // =================================
-        // СКЛАД.
-        // =================================
+        // ====================================================
+        // СКЛАД
+        // ====================================================
 
         if (
           isWarehouseRow(
@@ -1068,9 +1097,9 @@ export default function ResponsibleStorageImportClient() {
         }
 
 
-        // =================================
-        // ИТОГ.
-        // =================================
+        // ====================================================
+        // ИТОГ
+        // ====================================================
 
         if (
           isSummaryRow(
@@ -1083,12 +1112,12 @@ export default function ResponsibleStorageImportClient() {
         }
 
 
-        // =================================
-        // ПОСТАВЩИК.
+        // ====================================================
+        // ПОСТАВЩИК / ВЛАДЕЛЕЦ
         //
-        // В иерархическом отчёте после
-        // поставщика идёт строка склада.
-        // =================================
+        // После строки владельца
+        // в этом отчёте идёт строка склада.
+        // ====================================================
 
         const nextText =
           findNextText(
@@ -1117,9 +1146,9 @@ export default function ResponsibleStorageImportClient() {
         }
 
 
-        // =================================
-        // ТОВАР.
-        // =================================
+        // ====================================================
+        // С ЭТОГО МОМЕНТА СТРОКА СЧИТАЕТСЯ ТОВАРОМ
+        // ====================================================
 
         let offerId =
           articleFromCell;
@@ -1159,6 +1188,30 @@ export default function ResponsibleStorageImportClient() {
           }
 
         }
+
+
+        // ====================================================
+        // КОНЕЧНЫЙ ОСТАТОК
+        //
+        // В отчёте 1С нулевой остаток может
+        // отображаться пустой ячейкой.
+        //
+        // Пример:
+        // начальный остаток = 1
+        // расход = 1
+        // конечный остаток = пусто
+        //
+        // Это означает 0, а не ошибку.
+        //
+        // ВАЖНО:
+        // мы делаем это только ПОСЛЕ того,
+        // как служебные строки уже исключены.
+        // ====================================================
+
+        const quantity =
+          rawQuantity === null
+            ? 0
+            : rawQuantity;
 
 
         parsedRows.push(
@@ -1204,6 +1257,26 @@ export default function ResponsibleStorageImportClient() {
       }
 
 
+      // ======================================================
+      // 5. ЛОКАЛЬНАЯ КОНТРОЛЬНАЯ СУММА
+      // ======================================================
+
+      const parsedTotalQuantity =
+        parsedRows.reduce(
+          (
+            sum,
+            row
+          ) =>
+            sum
+            +
+            (
+              row.quantity
+              ?? 0
+            ),
+          0
+        );
+
+
       setRows(
         parsedRows
       );
@@ -1215,12 +1288,12 @@ export default function ResponsibleStorageImportClient() {
 
 
       setMessage(
-        `Найдено товарных строк: ${parsedRows.length}. Проверяем базу...`
+        `Найдено товарных строк: ${parsedRows.length}. Конечный остаток: ${parsedTotalQuantity.toLocaleString("ru-RU")} шт. Проверяем базу...`
       );
 
 
       // ======================================================
-      // 5. PREVIEW
+      // 6. PREVIEW
       // ======================================================
 
       const response =
@@ -1309,7 +1382,7 @@ export default function ResponsibleStorageImportClient() {
 
 
   // ==========================================================
-  // APPLY
+  // ПОДТВЕРЖДЕНИЕ
   // ==========================================================
 
   async function applyImport() {
@@ -1334,7 +1407,8 @@ export default function ResponsibleStorageImportClient() {
 
       setResult(
         {
-          ok: false,
+          ok:
+            false,
 
           error:
             "Импорт заблокирован: в отчёте есть некорректные строки.",
@@ -1419,7 +1493,8 @@ export default function ResponsibleStorageImportClient() {
 
       setResult(
         {
-          ok: false,
+          ok:
+            false,
 
           error:
             error instanceof Error
@@ -1449,7 +1524,7 @@ export default function ResponsibleStorageImportClient() {
 
 
       {/* ======================================================
-          FILE
+          ЗАГРУЗКА
           ====================================================== */}
 
       <section className="controls">
@@ -1471,8 +1546,9 @@ export default function ResponsibleStorageImportClient() {
 
           <div className="muted">
 
-            Заявки на хранение
-            автоматически пропускаются.
+            Заявки на хранение и возвраты
+            поставщику автоматически
+            исключаются.
 
           </div>
 
@@ -1550,6 +1626,7 @@ export default function ResponsibleStorageImportClient() {
           <div className="reason-text">
 
             Дата снимка:{" "}
+
             <strong>
               {snapshotDate}
             </strong>
@@ -1562,7 +1639,7 @@ export default function ResponsibleStorageImportClient() {
 
 
       {/* ======================================================
-          SUMMARY
+          PREVIEW
           ====================================================== */}
 
       {preview && (
@@ -1644,9 +1721,11 @@ export default function ResponsibleStorageImportClient() {
               </div>
 
               <div className="big-number">
+
                 {formatNumber(
                   preview.total_quantity
                 )}
+
               </div>
 
               <div className="muted">
@@ -1663,9 +1742,11 @@ export default function ResponsibleStorageImportClient() {
               </div>
 
               <div className="big-number">
+
                 {formatNumber(
                   preview.ready_quantity
                 )}
+
               </div>
 
               <div className="muted">
@@ -1682,9 +1763,11 @@ export default function ResponsibleStorageImportClient() {
               </div>
 
               <div className="big-number">
+
                 {formatNumber(
                   preview.unmatched_quantity
                 )}
+
               </div>
 
               <div className="muted">
@@ -1697,7 +1780,7 @@ export default function ResponsibleStorageImportClient() {
 
 
           {/* ==================================================
-              WARNING
+              ПРЕДУПРЕЖДЕНИЕ
               ================================================== */}
 
           {preview.unmatched_rows >
@@ -1714,10 +1797,9 @@ export default function ResponsibleStorageImportClient() {
 
                 <strong>
 
-                  Они не потеряются,
+                  Они сохранятся отдельно,
                   но пока не будут участвовать
-                  в расчёте Китая и пополнении
-                  маркетплейсов.
+                  в автоматических расчётах.
 
                 </strong>
 
@@ -1733,6 +1815,7 @@ export default function ResponsibleStorageImportClient() {
                 <div className="reason-text">
 
                   Остаток:{" "}
+
                   {formatNumber(
                     preview.unmatched_quantity
                   )} шт.
@@ -1781,45 +1864,80 @@ export default function ResponsibleStorageImportClient() {
 
                   <tr>
 
-                    <th style={{
-                      textAlign: "left",
-                      padding: "10px",
-                    }}>
+                    <th
+                      style={{
+                        textAlign:
+                          "left",
+
+                        padding:
+                          "10px",
+                      }}
+                    >
                       Строка
                     </th>
 
-                    <th style={{
-                      textAlign: "left",
-                      padding: "10px",
-                    }}>
+
+                    <th
+                      style={{
+                        textAlign:
+                          "left",
+
+                        padding:
+                          "10px",
+                      }}
+                    >
                       Владелец
                     </th>
 
-                    <th style={{
-                      textAlign: "left",
-                      padding: "10px",
-                    }}>
+
+                    <th
+                      style={{
+                        textAlign:
+                          "left",
+
+                        padding:
+                          "10px",
+                      }}
+                    >
                       Артикул
                     </th>
 
-                    <th style={{
-                      textAlign: "left",
-                      padding: "10px",
-                    }}>
+
+                    <th
+                      style={{
+                        textAlign:
+                          "left",
+
+                        padding:
+                          "10px",
+                      }}
+                    >
                       Товар
                     </th>
 
-                    <th style={{
-                      textAlign: "right",
-                      padding: "10px",
-                    }}>
+
+                    <th
+                      style={{
+                        textAlign:
+                          "right",
+
+                        padding:
+                          "10px",
+                      }}
+                    >
                       Остаток
                     </th>
 
-                    <th style={{
-                      textAlign: "left",
-                      padding: "10px",
-                    }}>
+
+                    <th
+                      style={{
+                        textAlign:
+                          "left",
+
+                        padding:
+                          "10px",
+                      }}
+                    >
                       Статус
                     </th>
 
@@ -1842,65 +1960,98 @@ export default function ResponsibleStorageImportClient() {
                         }
                       >
 
-                        <td style={{
-                          padding: "10px",
-                        }}>
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+                          }}
+                        >
+
                           {row.source_row}
+
                         </td>
 
 
-                        <td style={{
-                          padding: "10px",
-                        }}>
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+                          }}
+                        >
+
                           {row.owner_name
                             ?? "—"}
+
                         </td>
 
 
-                        <td style={{
-                          padding: "10px",
-                        }}>
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+                          }}
+                        >
 
                           {row.offer_id
                             ?? "—"}
 
+
                           {row.article_source ===
                             "name_explicit" && (
+
                             <div className="muted">
                               из наименования
                             </div>
+
                           )}
 
                         </td>
 
 
-                        <td style={{
-                          padding: "10px",
-                        }}>
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+                          }}
+                        >
+
                           {row.database_name
                             ??
                             row.item_name
                             ??
                             "—"}
+
                         </td>
 
 
-                        <td style={{
-                          padding: "10px",
-                          textAlign: "right",
-                        }}>
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+
+                            textAlign:
+                              "right",
+                          }}
+                        >
+
                           {formatNumber(
                             row.quantity
                           )}
+
                         </td>
 
 
-                        <td style={{
-                          padding: "10px",
-                        }}>
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+                          }}
+                        >
+
                           {statusText(
                             row
                           )}
+
                         </td>
 
                       </tr>
@@ -1932,17 +2083,16 @@ export default function ResponsibleStorageImportClient() {
 
               <div className="muted">
 
-                Сопоставленные строки
-                попадут в остаток ОХ.
+                Сопоставленные товары
+                попадут в остатки ОХ.
 
               </div>
 
 
               <div className="muted">
 
-                Несопоставленные строки
-                сохранятся отдельно
-                для дальнейшего исправления.
+                Товары без артикула
+                сохранятся отдельно.
 
               </div>
 
@@ -2018,14 +2168,17 @@ export default function ResponsibleStorageImportClient() {
               <>
 
                 <strong>
+
                   Снимок ответственного
                   хранения записан
+
                 </strong>
 
 
                 <div className="reason-text">
 
                   Дата:{" "}
+
                   {result.snapshot_date
                     ?? "—"}
 
@@ -2035,6 +2188,7 @@ export default function ResponsibleStorageImportClient() {
                 <div className="reason-text">
 
                   Товарных строк:{" "}
+
                   {result.source_rows
                     ?? 0}
 
@@ -2044,6 +2198,7 @@ export default function ResponsibleStorageImportClient() {
                 <div className="reason-text">
 
                   Сопоставлено:{" "}
+
                   {result.matched_rows
                     ?? 0}
 
