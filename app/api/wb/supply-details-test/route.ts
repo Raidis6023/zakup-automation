@@ -15,8 +15,6 @@ export async function GET() {
     );
   }
 
-  // Берём последнюю запланированную поставку
-  // из уже полученного нами списка.
   const supplyId = 41513381;
 
   const url =
@@ -42,13 +40,35 @@ export async function GET() {
       data = text;
     }
 
+    // Читаем служебные заголовки лимитов WB
+    const rateLimitRetry =
+      response.headers.get("x-ratelimit-retry");
+
+    const rateLimitReset =
+      response.headers.get("x-ratelimit-reset");
+
+    const rateLimitLimit =
+      response.headers.get("x-ratelimit-limit");
+
+    const rateLimitRemaining =
+      response.headers.get("x-ratelimit-remaining");
+
+    const rateLimit = {
+      retryAfterSeconds: rateLimitRetry,
+      resetAfterSeconds: rateLimitReset,
+      burstLimit: rateLimitLimit,
+      remaining: rateLimitRemaining,
+    };
+
     if (!response.ok) {
       return NextResponse.json(
         {
           ok: false,
-          message: "Wildberries вернул ошибку при чтении деталей поставки",
+          message:
+            "Wildberries вернул ошибку при чтении деталей поставки",
           supplyId,
           wbStatus: response.status,
+          rateLimit,
           wbResponse: data,
         },
         { status: response.status }
@@ -60,6 +80,7 @@ export async function GET() {
       message: "Детали FBW-поставки получены",
       supplyId,
       wbStatus: response.status,
+      rateLimit,
       supply: data,
     });
   } catch (error) {
