@@ -6,10 +6,10 @@ import {
 
 
 // ============================================================
-// ТИП РЕЗУЛЬТАТА СИНХРОНИЗАЦИИ
+// ОСТАТКИ
 // ============================================================
 
-type SyncResult = {
+type StockSyncResult = {
 
   ok: boolean;
 
@@ -69,36 +69,173 @@ type SyncResult = {
 
 
 // ============================================================
+// ПРОДАЖИ
+// ============================================================
+
+type SalesSyncResult = {
+
+  ok: boolean;
+
+  message?: string;
+
+  error?: string;
+
+  period?: {
+
+    completedDays:
+      number;
+
+    timezone:
+      string;
+
+    dateFrom:
+      string;
+
+    dateTo:
+      string;
+
+  };
+
+  ozon?: {
+
+    postingsReceived:
+      number;
+
+    uniquePostings:
+      number;
+
+    cancelledPostings:
+      number;
+
+    statusCounts:
+      Record<string, number>;
+
+    uniqueProducts:
+      number;
+
+    uniqueClusters:
+      number;
+
+    aggregatedRows:
+      number;
+
+    salesQuantityExcludingCancelled:
+      number;
+
+    cancelledQuantity:
+      number;
+
+  };
+
+  supabase?: {
+
+    ok?: boolean;
+
+    sync_run_id?: string;
+
+    date_from?: string;
+
+    date_to?: string;
+
+    completed_days?: number;
+
+    postings_received?: number;
+
+    cancelled_postings?: number;
+
+    aggregated_rows_saved?: number;
+
+  };
+
+};
+
+
+// ============================================================
+// ФОРМАТ ЧИСЛА
+// ============================================================
+
+function formatNumber(
+  value:
+    | number
+    | null
+    | undefined
+) {
+
+  if (
+    value === null ||
+    value === undefined
+  ) {
+    return "—";
+  }
+
+
+  return Number(
+    value
+  ).toLocaleString(
+    "ru-RU"
+  );
+}
+
+
+// ============================================================
 // КОМПОНЕНТ
 // ============================================================
 
 export default function OzonStockSyncClient() {
 
+  // ==========================================================
+  // ОСТАТКИ
+  // ==========================================================
+
   const [
-    loading,
-    setLoading,
+    stockLoading,
+    setStockLoading,
   ] =
     useState(false);
 
 
   const [
-    result,
-    setResult,
+    stockResult,
+    setStockResult,
   ] =
     useState<
-      SyncResult | null
+      StockSyncResult | null
     >(null);
 
 
   // ==========================================================
-  // ЗАПУСК СИНХРОНИЗАЦИИ
+  // ПРОДАЖИ
   // ==========================================================
 
-  async function runSync() {
+  const [
+    salesLoading,
+    setSalesLoading,
+  ] =
+    useState(false);
 
-    setLoading(true);
 
-    setResult(null);
+  const [
+    salesResult,
+    setSalesResult,
+  ] =
+    useState<
+      SalesSyncResult | null
+    >(null);
+
+
+  // ==========================================================
+  // ЗАПУСК ОСТАТКОВ
+  // ==========================================================
+
+  async function runStockSync() {
+
+    setStockLoading(
+      true
+    );
+
+    setStockResult(
+      null
+    );
 
 
     try {
@@ -107,7 +244,8 @@ export default function OzonStockSyncClient() {
         await fetch(
           "/api/ozon-sync-stocks",
           {
-            method: "POST",
+            method:
+              "POST",
 
             headers: {
               "Content-Type":
@@ -121,31 +259,34 @@ export default function OzonStockSyncClient() {
 
 
       const data =
-        await response.json() as
-          SyncResult;
+        await response
+          .json() as
+          StockSyncResult;
 
 
-      setResult(
+      setStockResult(
         data
       );
 
 
     } catch (error) {
 
-      setResult(
+      setStockResult(
         {
           ok: false,
 
           error:
             error instanceof Error
               ? error.message
-              : "Неизвестная ошибка синхронизации",
+              : "Неизвестная ошибка синхронизации остатков",
         }
       );
 
     } finally {
 
-      setLoading(false);
+      setStockLoading(
+        false
+      );
 
     }
 
@@ -153,12 +294,83 @@ export default function OzonStockSyncClient() {
 
 
   // ==========================================================
-  // ИНТЕРФЕЙС
+  // ЗАПУСК ПРОДАЖ
   // ==========================================================
+
+  async function runSalesSync() {
+
+    setSalesLoading(
+      true
+    );
+
+    setSalesResult(
+      null
+    );
+
+
+    try {
+
+      const response =
+        await fetch(
+          "/api/ozon-sync-sales",
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            cache:
+              "no-store",
+          }
+        );
+
+
+      const data =
+        await response
+          .json() as
+          SalesSyncResult;
+
+
+      setSalesResult(
+        data
+      );
+
+
+    } catch (error) {
+
+      setSalesResult(
+        {
+          ok: false,
+
+          error:
+            error instanceof Error
+              ? error.message
+              : "Неизвестная ошибка синхронизации продаж",
+        }
+      );
+
+    } finally {
+
+      setSalesLoading(
+        false
+      );
+
+    }
+
+  }
+
 
   return (
 
     <>
+
+
+      {/* ======================================================
+          ОСТАТКИ OZON
+          ====================================================== */}
 
       <section className="controls">
 
@@ -171,9 +383,9 @@ export default function OzonStockSyncClient() {
 
           <div className="muted">
 
-            Система получит все товары
-            кабинета, FBO SKU и остатки
-            по складам и кластерам.
+            Все товары кабинета,
+            FBO SKU и доступные остатки
+            по кластерам.
 
           </div>
 
@@ -186,18 +398,19 @@ export default function OzonStockSyncClient() {
           className="primary-button"
 
           disabled={
-            loading
+            stockLoading ||
+            salesLoading
           }
 
           onClick={
             () => {
-              void runSync();
+              void runStockSync();
             }
           }
         >
 
-          {loading
-            ? "Загружаем Ozon..."
+          {stockLoading
+            ? "Загружаем остатки..."
             : "Обновить остатки Ozon"}
 
         </button>
@@ -205,30 +418,29 @@ export default function OzonStockSyncClient() {
       </section>
 
 
-      {loading && (
+      {stockLoading && (
 
         <section className="section">
 
           <h2 className="section-title">
-            Синхронизация выполняется
+            Загружаем остатки Ozon
           </h2>
 
 
           <div className="reason-text">
 
-            Получаем товары Ozon,
-            собираем FBO SKU,
-            запрашиваем остатки
-            и группируем их по кластерам.
+            Получаем товары,
+            FBO SKU и данные
+            analytics/stocks.
 
           </div>
 
 
           <div className="reason-text">
 
-            Пока процесс не завершён,
-            в Supabase новый снимок
-            не записывается.
+            Новый снимок будет записан
+            только после успешного
+            завершения всех запросов.
 
           </div>
 
@@ -237,27 +449,31 @@ export default function OzonStockSyncClient() {
       )}
 
 
-      {result && !result.ok && (
+      {stockResult &&
+        !stockResult.ok && (
 
         <section className="section">
 
           <h2 className="section-title">
-            Ошибка синхронизации
+            Ошибка остатков Ozon
           </h2>
 
 
           <div className="reason-box">
 
             <strong>
-              Данные не обновлены
+              Остатки не обновлены
             </strong>
 
 
             <div className="reason-text">
 
               {
-                result.error
-                ?? "Неизвестная ошибка"
+                stockResult.error
+                ??
+                stockResult.message
+                ??
+                "Неизвестная ошибка"
               }
 
             </div>
@@ -269,7 +485,7 @@ export default function OzonStockSyncClient() {
       )}
 
 
-      {result?.ok && (
+      {stockResult?.ok && (
 
         <>
 
@@ -284,12 +500,11 @@ export default function OzonStockSyncClient() {
 
               <div className="big-number">
 
-                {
-                  result
+                {formatNumber(
+                  stockResult
                     .ozon
                     ?.reportedTotalProducts
-                  ?? "—"
-                }
+                )}
 
               </div>
 
@@ -304,12 +519,11 @@ export default function OzonStockSyncClient() {
 
               <div className="big-number">
 
-                {
-                  result
+                {formatNumber(
+                  stockResult
                     .ozon
                     ?.productsReceived
-                  ?? "—"
-                }
+                )}
 
               </div>
 
@@ -324,12 +538,11 @@ export default function OzonStockSyncClient() {
 
               <div className="big-number">
 
-                {
-                  result
+                {formatNumber(
+                  stockResult
                     .ozon
                     ?.uniqueOffers
-                  ?? "—"
-                }
+                )}
 
               </div>
 
@@ -344,12 +557,11 @@ export default function OzonStockSyncClient() {
 
               <div className="big-number">
 
-                {
-                  result
+                {formatNumber(
+                  stockResult
                     .ozon
                     ?.fboSkuCount
-                  ?? "—"
-                }
+                )}
 
               </div>
 
@@ -364,12 +576,11 @@ export default function OzonStockSyncClient() {
 
               <div className="big-number">
 
-                {
-                  result
+                {formatNumber(
+                  stockResult
                     .ozon
                     ?.analyticsRequests
-                  ?? "—"
-                }
+                )}
 
               </div>
 
@@ -384,12 +595,11 @@ export default function OzonStockSyncClient() {
 
               <div className="big-number">
 
-                {
-                  result
+                {formatNumber(
+                  stockResult
                     .ozon
                     ?.analyticsRows
-                  ?? "—"
-                }
+                )}
 
               </div>
 
@@ -404,12 +614,11 @@ export default function OzonStockSyncClient() {
 
               <div className="big-number">
 
-                {
-                  result
+                {formatNumber(
+                  stockResult
                     .ozon
                     ?.uniqueClusters
-                  ?? "—"
-                }
+                )}
 
               </div>
 
@@ -424,17 +633,15 @@ export default function OzonStockSyncClient() {
 
               <div className="big-number">
 
-                {
-                  result
+                {formatNumber(
+                  stockResult
                     .supabase
                     ?.cluster_rows_saved
                   ??
-                  result
+                  stockResult
                     .ozon
                     ?.clusterRowsPrepared
-                  ??
-                  "—"
-                }
+                )}
 
               </div>
 
@@ -446,7 +653,7 @@ export default function OzonStockSyncClient() {
           <section className="section">
 
             <h2 className="section-title">
-              Синхронизация завершена
+              Остатки синхронизированы
             </h2>
 
 
@@ -463,9 +670,10 @@ export default function OzonStockSyncClient() {
                 Дата снимка:{" "}
 
                 {
-                  result.snapshotDate
+                  stockResult
+                    .snapshotDate
                   ??
-                  result
+                  stockResult
                     .supabase
                     ?.snapshot_date
                   ??
@@ -474,21 +682,368 @@ export default function OzonStockSyncClient() {
 
               </div>
 
+            </div>
+
+          </section>
+
+        </>
+
+      )}
+
+
+      {/* ======================================================
+          ПРОДАЖИ OZON
+          ====================================================== */}
+
+      <section className="controls">
+
+        <div>
+
+          <h2 className="controls-title">
+            Продажи Ozon
+          </h2>
+
+
+          <div className="muted">
+
+            Последние 28 завершённых
+            московских дней.
+            Отменённые отправления
+            считаются отдельно.
+
+          </div>
+
+        </div>
+
+
+        <button
+          type="button"
+
+          className="primary-button"
+
+          disabled={
+            salesLoading ||
+            stockLoading
+          }
+
+          onClick={
+            () => {
+              void runSalesSync();
+            }
+          }
+        >
+
+          {salesLoading
+            ? "Загружаем продажи..."
+            : "Обновить продажи Ozon"}
+
+        </button>
+
+      </section>
+
+
+      {salesLoading && (
+
+        <section className="section">
+
+          <h2 className="section-title">
+            Загружаем продажи Ozon
+          </h2>
+
+
+          <div className="reason-text">
+
+            Получаем все FBO-отправления
+            за 28 завершённых дней
+            и проходим все страницы API.
+
+          </div>
+
+
+          <div className="reason-text">
+
+            Затем сопоставляем склады
+            с кластерами и считаем
+            продажи по каждому товару,
+            дню и кластеру.
+
+          </div>
+
+
+          <div className="reason-text">
+
+            Статус cancelled
+            в продажи не включается
+            и хранится отдельно.
+
+          </div>
+
+        </section>
+
+      )}
+
+
+      {salesResult &&
+        !salesResult.ok && (
+
+        <section className="section">
+
+          <h2 className="section-title">
+            Ошибка продаж Ozon
+          </h2>
+
+
+          <div className="reason-box">
+
+            <strong>
+              Продажи не обновлены
+            </strong>
+
+
+            <div className="reason-text">
+
+              {
+                salesResult.error
+                ??
+                salesResult.message
+                ??
+                "Неизвестная ошибка"
+              }
+
+            </div>
+
+          </div>
+
+        </section>
+
+      )}
+
+
+      {salesResult?.ok && (
+
+        <>
+
+          <section className="summary-grid">
+
+
+            <div className="card">
+
+              <div className="card-label">
+                Период
+              </div>
+
+              <div className="big-number">
+
+                {
+                  salesResult
+                    .period
+                    ?.completedDays
+                  ?? 28
+                } дней
+
+              </div>
+
+
+              <div className="muted">
+
+                {
+                  salesResult
+                    .period
+                    ?.dateFrom
+                  ?? "—"
+                }
+
+                {" → "}
+
+                {
+                  salesResult
+                    .period
+                    ?.dateTo
+                  ?? "—"
+                }
+
+              </div>
+
+            </div>
+
+
+            <div className="card">
+
+              <div className="card-label">
+                FBO-отправлений
+              </div>
+
+              <div className="big-number">
+
+                {formatNumber(
+                  salesResult
+                    .ozon
+                    ?.uniquePostings
+                )}
+
+              </div>
+
+            </div>
+
+
+            <div className="card">
+
+              <div className="card-label">
+                Отменённых отправлений
+              </div>
+
+              <div className="big-number">
+
+                {formatNumber(
+                  salesResult
+                    .ozon
+                    ?.cancelledPostings
+                )}
+
+              </div>
+
+            </div>
+
+
+            <div className="card">
+
+              <div className="card-label">
+                Товаров с продажами
+              </div>
+
+              <div className="big-number">
+
+                {formatNumber(
+                  salesResult
+                    .ozon
+                    ?.uniqueProducts
+                )}
+
+              </div>
+
+            </div>
+
+
+            <div className="card">
+
+              <div className="card-label">
+                Кластеров
+              </div>
+
+              <div className="big-number">
+
+                {formatNumber(
+                  salesResult
+                    .ozon
+                    ?.uniqueClusters
+                )}
+
+              </div>
+
+            </div>
+
+
+            <div className="card">
+
+              <div className="card-label">
+                Продано, шт.
+              </div>
+
+              <div className="big-number">
+
+                {formatNumber(
+                  salesResult
+                    .ozon
+                    ?.salesQuantityExcludingCancelled
+                )}
+
+              </div>
+
+
+              <div className="muted">
+                Без cancelled
+              </div>
+
+            </div>
+
+
+            <div className="card">
+
+              <div className="card-label">
+                Отменено, шт.
+              </div>
+
+              <div className="big-number">
+
+                {formatNumber(
+                  salesResult
+                    .ozon
+                    ?.cancelledQuantity
+                )}
+
+              </div>
+
+            </div>
+
+
+            <div className="card">
+
+              <div className="card-label">
+                Строк сохранено
+              </div>
+
+              <div className="big-number">
+
+                {formatNumber(
+                  salesResult
+                    .supabase
+                    ?.aggregated_rows_saved
+                  ??
+                  salesResult
+                    .ozon
+                    ?.aggregatedRows
+                )}
+
+              </div>
+
+            </div>
+
+          </section>
+
+
+          <section className="section">
+
+            <h2 className="section-title">
+              Продажи синхронизированы
+            </h2>
+
+
+            <div className="reason-box">
+
+              <strong>
+                Продажи Ozon успешно
+                записаны в Supabase
+              </strong>
+
 
               <div className="reason-text">
 
-                Товаров обработано:{" "}
+                Период:{" "}
 
                 {
-                  result
-                    .supabase
-                    ?.products_received
-                  ??
-                  result
-                    .ozon
-                    ?.productsReceived
-                  ??
-                  "—"
+                  salesResult
+                    .period
+                    ?.dateFrom
+                  ?? "—"
+                }
+
+                {" — "}
+
+                {
+                  salesResult
+                    .period
+                    ?.dateTo
+                  ?? "—"
                 }
 
               </div>
@@ -496,61 +1051,106 @@ export default function OzonStockSyncClient() {
 
               <div className="reason-text">
 
-                FBO SKU:{" "}
+                Продажи без отмен:{" "}
 
-                {
-                  result
-                    .supabase
-                    ?.fbo_skus_received
-                  ??
-                  result
+                {formatNumber(
+                  salesResult
                     .ozon
-                    ?.fboSkuCount
-                  ??
-                  "—"
-                }
+                    ?.salesQuantityExcludingCancelled
+                )} шт.
 
               </div>
 
 
               <div className="reason-text">
 
-                Исходных строк
-                analytics/stocks:{" "}
+                Отменено:{" "}
 
-                {
-                  result
-                    .supabase
-                    ?.analytics_rows_received
-                  ??
-                  result
+                {formatNumber(
+                  salesResult
                     .ozon
-                    ?.analyticsRows
-                  ??
-                  "—"
-                }
+                    ?.cancelledQuantity
+                )} шт.
 
               </div>
 
 
               <div className="reason-text">
 
-                Итоговых строк
-                товар + кластер:{" "}
+                Строк
+                день + товар + кластер:{" "}
 
-                {
-                  result
+                {formatNumber(
+                  salesResult
                     .supabase
-                    ?.cluster_rows_saved
+                    ?.aggregated_rows_saved
                   ??
-                  result
+                  salesResult
                     .ozon
-                    ?.clusterRowsPrepared
-                  ??
-                  "—"
-                }
+                    ?.aggregatedRows
+                )}
 
               </div>
+
+            </div>
+
+          </section>
+
+
+          <section className="section">
+
+            <h2 className="section-title">
+              Статусы отправлений
+            </h2>
+
+
+            <div className="transport-grid">
+
+              {
+                Object.entries(
+                  salesResult
+                    .ozon
+                    ?.statusCounts
+                  ?? {}
+                )
+                  .sort(
+                    (
+                      a,
+                      b
+                    ) =>
+                      b[1] - a[1]
+                  )
+                  .map(
+                    (
+                      [
+                        status,
+                        count,
+                      ]
+                    ) => (
+
+                      <div
+                        className="transport-card"
+                        key={status}
+                      >
+
+                        <span className="card-label">
+                          {status}
+                        </span>
+
+
+                        <strong className="transport-value">
+
+                          {formatNumber(
+                            count
+                          )}
+
+                        </strong>
+
+                      </div>
+
+                    )
+                  )
+              }
 
             </div>
 
