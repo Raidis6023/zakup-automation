@@ -4,53 +4,34 @@ import {
 
 
 // ============================================================
-// ТЕСТ КЛАСТЕРОВ ПРОДАЖ OZON
+// БЫСТРЫЙ ТЕСТ CLUSTER_FROM OZON
 //
-// НИЧЕГО НЕ ЗАПИСЫВАЕТ В SUPABASE.
-//
-// ЦЕЛЬ:
-// проверить financial_data.cluster_from
-// на ВСЕХ FBO-отправлениях за 28 завершённых дней.
-// ============================================================
-
-
-// ============================================================
-// ТИПЫ
+// НИЧЕГО НЕ ПИШЕТ В SUPABASE.
+// Берёт максимум 100 FBO-отправлений.
 // ============================================================
 
 type OzonPostingProduct = {
   sku?: number | string;
-
   name?: string;
-
   quantity?: number;
-
   offer_id?: string;
 };
 
 
 type OzonPostingAnalytics = {
   warehouse_id?: number | string;
-
   warehouse_name?: string;
-
-  city?: string;
 };
 
 
 type OzonPostingFinancialData = {
   cluster_from?: string;
-
   cluster_to?: string;
-
-  products?: unknown[];
 };
 
 
 type OzonFboPosting = {
   posting_number?: string;
-
-  order_number?: string;
 
   status?: string;
 
@@ -68,8 +49,7 @@ type OzonFboPosting = {
 
 
 type OzonFboResponse = {
-  postings?:
-    OzonFboPosting[];
+  postings?: OzonFboPosting[];
 
   cursor?: string;
 
@@ -91,25 +71,20 @@ function getOzonHeaders() {
 
 
   if (!clientId) {
-
     throw new Error(
       "Vercel не видит OZON_CLIENT_ID"
     );
-
   }
 
 
   if (!apiKey) {
-
     throw new Error(
       "Vercel не видит OZON_API_KEY"
     );
-
   }
 
 
   return {
-
     "Client-Id":
       clientId,
 
@@ -121,167 +96,12 @@ function getOzonHeaders() {
 
     Accept:
       "application/json",
-
   };
 }
 
 
 // ============================================================
-// ПАУЗА
-// ============================================================
-
-function sleep(
-  milliseconds: number
-) {
-
-  return new Promise<void>(
-    (
-      resolve
-    ) => {
-
-      setTimeout(
-        resolve,
-        milliseconds
-      );
-
-    }
-  );
-}
-
-
-// ============================================================
-// POST В OZON
-// ============================================================
-
-async function ozonPost<T>(
-  endpoint: string,
-
-  body:
-    Record<string, unknown>
-):
-  Promise<T> {
-
-  const maxAttempts =
-    3;
-
-
-  for (
-    let attempt = 1;
-    attempt <= maxAttempts;
-    attempt++
-  ) {
-
-    let response:
-      Response;
-
-
-    try {
-
-      response =
-        await fetch(
-          `https://api-seller.ozon.ru${endpoint}`,
-          {
-            method:
-              "POST",
-
-            headers:
-              getOzonHeaders(),
-
-            body:
-              JSON.stringify(
-                body
-              ),
-
-            cache:
-              "no-store",
-          }
-        );
-
-    } catch (error) {
-
-      if (
-        attempt === maxAttempts
-      ) {
-
-        throw new Error(
-          `Сетевая ошибка Ozon ${endpoint}: ${
-            error instanceof Error
-              ? error.message
-              : "неизвестная ошибка"
-          }`
-        );
-
-      }
-
-
-      await sleep(
-        1000 * attempt
-      );
-
-      continue;
-
-    }
-
-
-    const text =
-      await response.text();
-
-
-    if (response.ok) {
-
-      try {
-
-        return JSON.parse(
-          text
-        ) as T;
-
-      } catch {
-
-        throw new Error(
-          `Ozon ${endpoint} вернул некорректный JSON`
-        );
-
-      }
-
-    }
-
-
-    const shouldRetry =
-      response.status === 429
-      ||
-      response.status >= 500;
-
-
-    if (
-      shouldRetry
-      &&
-      attempt < maxAttempts
-    ) {
-
-      await sleep(
-        1000 * attempt
-      );
-
-      continue;
-
-    }
-
-
-    throw new Error(
-      `Ошибка Ozon ${endpoint}. HTTP ${response.status}. ${text}`
-    );
-
-  }
-
-
-  throw new Error(
-    `Не удалось выполнить Ozon ${endpoint}`
-  );
-}
-
-
-// ============================================================
-// YYYY-MM-DD
+// ДАТЫ
 // ============================================================
 
 function formatDateUtc(
@@ -291,7 +111,6 @@ function formatDateUtc(
   const year =
     date.getUTCFullYear();
 
-
   const month =
     String(
       date.getUTCMonth() + 1
@@ -299,7 +118,6 @@ function formatDateUtc(
       2,
       "0"
     );
-
 
   const day =
     String(
@@ -313,10 +131,6 @@ function formatDateUtc(
   return `${year}-${month}-${day}`;
 }
 
-
-// ============================================================
-// 28 ЗАВЕРШЁННЫХ ДНЕЙ ПО МОСКВЕ
-// ============================================================
 
 function getCompletedMoscowRange(
   numberOfDays: number
@@ -333,14 +147,9 @@ function getCompletedMoscowRange(
   const todayMoscow =
     new Date(
       Date.UTC(
-        moscowNow
-          .getUTCFullYear(),
-
-        moscowNow
-          .getUTCMonth(),
-
-        moscowNow
-          .getUTCDate()
+        moscowNow.getUTCFullYear(),
+        moscowNow.getUTCMonth(),
+        moscowNow.getUTCDate()
       )
     );
 
@@ -365,9 +174,7 @@ function getCompletedMoscowRange(
   startDate.setUTCDate(
     startDate.getUTCDate()
     -
-    (
-      numberOfDays - 1
-    )
+    (numberOfDays - 1)
   );
 
 
@@ -384,7 +191,6 @@ function getCompletedMoscowRange(
 
 
   return {
-
     dateFrom,
 
     dateTo,
@@ -394,13 +200,12 @@ function getCompletedMoscowRange(
 
     to:
       `${dateTo}T23:59:59.999+03:00`,
-
   };
 }
 
 
 // ============================================================
-// GET — ТЕСТ ВСЕХ 28 ДНЕЙ
+// GET
 // ============================================================
 
 export async function GET() {
@@ -413,201 +218,97 @@ export async function GET() {
       );
 
 
-    // ========================================================
-    // 1. ПОЛУЧАЕМ ВСЕ СТРАНИЦЫ
-    // ========================================================
+    const response =
+      await fetch(
+        "https://api-seller.ozon.ru/v3/posting/fbo/list",
+        {
+          method:
+            "POST",
 
-    const allPostings:
-      OzonFboPosting[] = [];
+          headers:
+            getOzonHeaders(),
 
+          body:
+            JSON.stringify(
+              {
+                cursor:
+                  "",
 
-    let cursor =
-      "";
+                filter: {
+                  since:
+                    range.since,
 
+                  to:
+                    range.to,
+                },
 
-    const seenCursors =
-      new Set<string>();
+                limit:
+                  100,
 
+                sort_dir:
+                  "asc",
 
-    let pagesLoaded =
-      0;
+                translit:
+                  false,
 
+                with: {
+                  analytics_data:
+                    true,
 
-    const maxPages =
-      5000;
+                  financial_data:
+                    true,
 
+                  legal_info:
+                    false,
+                },
+              }
+            ),
 
-    for (
-      let page = 1;
-      page <= maxPages;
-      page++
-    ) {
-
-      const response =
-        await ozonPost<
-          OzonFboResponse
-        >(
-          "/v3/posting/fbo/list",
-          {
-            cursor,
-
-            filter: {
-
-              since:
-                range.since,
-
-              to:
-                range.to,
-
-            },
-
-            limit:
-              100,
-
-            sort_dir:
-              "asc",
-
-            translit:
-              false,
-
-            with: {
-
-              analytics_data:
-                true,
-
-              // =================================
-              // ВАЖНО:
-              // включаем financial_data,
-              // чтобы получить cluster_from.
-              // =================================
-
-              financial_data:
-                true,
-
-              legal_info:
-                false,
-
-            },
-          }
-        );
-
-
-      pagesLoaded++;
-
-
-      const postings =
-        Array.isArray(
-          response.postings
-        )
-          ? response.postings
-          : [];
-
-
-      allPostings.push(
-        ...postings
+          cache:
+            "no-store",
+        }
       );
 
 
-      if (
-        !response.has_next
-      ) {
-
-        break;
-
-      }
+    const text =
+      await response.text();
 
 
-      const nextCursor =
-        String(
-          response.cursor
-          ?? ""
-        )
-          .trim();
+    if (!response.ok) {
 
+      return NextResponse.json(
+        {
+          ok:
+            false,
 
-      if (!nextCursor) {
+          ozonStatus:
+            response.status,
 
-        throw new Error(
-          "Ozon сообщил has_next=true, но cursor пуст"
-        );
-
-      }
-
-
-      if (
-        seenCursors.has(
-          nextCursor
-        )
-      ) {
-
-        throw new Error(
-          "Ozon вернул повторяющийся cursor"
-        );
-
-      }
-
-
-      seenCursors.add(
-        nextCursor
-      );
-
-
-      cursor =
-        nextCursor;
-
-
-      await sleep(
-        100
+          ozonResponse:
+            text,
+        },
+        {
+          status:
+            response.status,
+        }
       );
 
     }
 
 
-    // ========================================================
-    // 2. ДЕДУПЛИЦИРУЕМ
-    // ========================================================
-
-    const postingsByNumber =
-      new Map<
-        string,
-        OzonFboPosting
-      >();
-
-
-    allPostings.forEach(
-      (
-        posting,
-        index
-      ) => {
-
-        const postingNumber =
-          String(
-            posting.posting_number
-            ?? ""
-          )
-            .trim();
-
-
-        postingsByNumber.set(
-          postingNumber
-          ||
-          `NO_NUMBER_${index}`,
-          posting
-        );
-
-      }
-    );
+    const data =
+      JSON.parse(
+        text
+      ) as OzonFboResponse;
 
 
     const postings =
-      Array.from(
-        postingsByNumber.values()
-      );
+      Array.isArray(
+        data.postings
+      )
+        ? data.postings
+        : [];
 
-
-    // ========================================================
-    // 3. ПРОВЕРЯЕМ CLUSTER_FROM
-    // ========================================================
 
     let withClusterFrom =
       0;
@@ -617,9 +318,19 @@ export async function GET() {
       0;
 
 
-    const missingExamples:
+    const clusters =
+      new Map<
+        string,
+        number
+      >();
+
+
+    const examples:
       Array<{
         posting_number:
+          string | null;
+
+        status:
           string | null;
 
         warehouse_id:
@@ -628,16 +339,12 @@ export async function GET() {
         warehouse_name:
           string | null;
 
-        status:
+        cluster_from:
+          string | null;
+
+        cluster_to:
           string | null;
       }> = [];
-
-
-    const clusterCounts =
-      new Map<
-        string,
-        number
-      >();
 
 
     for (
@@ -651,8 +358,7 @@ export async function GET() {
             .financial_data
             ?.cluster_from
           ?? ""
-        )
-          .trim();
+        ).trim();
 
 
       if (clusterFrom) {
@@ -660,152 +366,92 @@ export async function GET() {
         withClusterFrom++;
 
 
-        clusterCounts.set(
-
+        clusters.set(
           clusterFrom,
 
           (
-            clusterCounts.get(
+            clusters.get(
               clusterFrom
             )
             ?? 0
           )
           + 1
-
         );
 
       } else {
 
         withoutClusterFrom++;
 
+      }
 
-        if (
-          missingExamples.length <
-          20
-        ) {
 
-          missingExamples.push(
-            {
-              posting_number:
+      if (
+        examples.length < 20
+      ) {
+
+        examples.push(
+          {
+            posting_number:
+              posting
+                .posting_number
+              ?? null,
+
+            status:
+              posting.status
+              ?? null,
+
+            warehouse_id:
+              posting
+                .analytics_data
+                ?.warehouse_id
+              !== undefined
+
+                ? String(
+                    posting
+                      .analytics_data
+                      ?.warehouse_id
+                  )
+
+                : null,
+
+            warehouse_name:
+              posting
+                .analytics_data
+                ?.warehouse_name
+              ?? null,
+
+            cluster_from:
+              clusterFrom
+              || null,
+
+            cluster_to:
+              String(
                 posting
-                  .posting_number
-                ?? null,
-
-              warehouse_id:
-                posting
-                  .analytics_data
-                  ?.warehouse_id
-                !== undefined
-                  ? String(
-                      posting
-                        .analytics_data
-                        ?.warehouse_id
-                    )
-                  : null,
-
-              warehouse_name:
-                posting
-                  .analytics_data
-                  ?.warehouse_name
-                ?? null,
-
-              status:
-                posting.status
-                ?? null,
-            }
-          );
-
-        }
+                  .financial_data
+                  ?.cluster_to
+                ?? ""
+              ).trim()
+              || null,
+          }
+        );
 
       }
 
     }
 
 
-    // ========================================================
-    // 4. СТАТУСЫ
-    // ========================================================
-
-    const statusCounts:
-      Record<
-        string,
-        number
-      > = {};
-
-
-    for (
-      const posting
-      of postings
-    ) {
-
-      const status =
-        String(
-          posting.status
-          ?? "unknown"
-        )
-          .toLowerCase();
-
-
-      statusCounts[
-        status
-      ] =
-        (
-          statusCounts[
-            status
-          ]
-          ?? 0
-        )
-        + 1;
-
-    }
-
-
-    // ========================================================
-    // 5. СПИСОК КЛАСТЕРОВ
-    // ========================================================
-
-    const clusters =
-      Array.from(
-        clusterCounts.entries()
-      )
-        .map(
-          (
-            [
-              cluster,
-              postingsCount,
-            ]
-          ) => ({
-            cluster,
-            postingsCount,
-          })
-        )
-        .sort(
-          (
-            a,
-            b
-          ) =>
-            b.postingsCount
-            -
-            a.postingsCount
-        );
-
-
-    // ========================================================
-    // 6. РЕЗУЛЬТАТ
-    // ========================================================
-
     return NextResponse.json(
       {
-        ok: true,
+        ok:
+          true,
 
         message:
-          "Проверка cluster_from завершена",
+          "Быстрый тест cluster_from завершён",
 
         writesData:
           false,
 
         period: {
-
           completedDays:
             28,
 
@@ -814,41 +460,44 @@ export async function GET() {
 
           dateTo:
             range.dateTo,
-
-          timezone:
-            "Europe/Moscow",
-
         },
 
-        pagesLoaded,
+        receivedPostings:
+          postings.length,
 
-        postings: {
+        hasNext:
+          Boolean(
+            data.has_next
+          ),
 
-          received:
-            allPostings.length,
+        withClusterFrom,
 
-          unique:
-            postings.length,
+        withoutClusterFrom,
 
-          withClusterFrom,
+        uniqueClusters:
+          clusters.size,
 
-          withoutClusterFrom,
+        clusters:
+          Array.from(
+            clusters.entries()
+          )
+            .map(
+              (
+                [
+                  cluster,
+                  count,
+                ]
+              ) => ({
+                cluster,
+                count,
+              })
+            ),
 
-        },
-
-        statusCounts,
-
-        uniqueClusterFromValues:
-          clusters.length,
-
-        clusters,
-
-        missingClusterFromExamples:
-          missingExamples,
-
+        examples,
       },
       {
-        status: 200,
+        status:
+          200,
       }
     );
 
@@ -857,7 +506,8 @@ export async function GET() {
 
     return NextResponse.json(
       {
-        ok: false,
+        ok:
+          false,
 
         writesData:
           false,
@@ -865,10 +515,11 @@ export async function GET() {
         error:
           error instanceof Error
             ? error.message
-            : "Неизвестная ошибка проверки cluster_from",
+            : "Неизвестная ошибка",
       },
       {
-        status: 500,
+        status:
+          500,
       }
     );
 
