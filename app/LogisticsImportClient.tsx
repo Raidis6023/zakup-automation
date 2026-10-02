@@ -9,7 +9,7 @@ import * as XLSX
 
 
 // ============================================================
-// ТИП СТРОКИ EXCEL
+// СТРОКА ИЗ EXCEL
 // ============================================================
 
 type ImportRow = {
@@ -30,7 +30,7 @@ type ImportRow = {
 
 
 // ============================================================
-// ТИП СТРОКИ PREVIEW
+// СТРОКА PREVIEW
 // ============================================================
 
 type PreviewRow = {
@@ -59,9 +59,12 @@ type PreviewRow = {
   current_transport_carton_volume_m3:
     number | null;
 
+  current_supply_origin:
+    string | null;
+
   status:
-    "matched"
-    | "not_found"
+    | "existing"
+    | "new"
     | "invalid";
 
   error:
@@ -71,7 +74,7 @@ type PreviewRow = {
 
 
 // ============================================================
-// ТИП PREVIEW
+// РЕЗУЛЬТАТ PREVIEW
 // ============================================================
 
 type PreviewResult = {
@@ -82,13 +85,16 @@ type PreviewResult = {
   total_rows:
     number;
 
-  matched_rows:
+  existing_rows:
     number;
 
-  not_found_rows:
+  new_rows:
     number;
 
   invalid_rows:
+    number;
+
+  ready_rows:
     number;
 
   rows:
@@ -101,7 +107,7 @@ type PreviewResult = {
 
 
 // ============================================================
-// ТИП РЕЗУЛЬТАТА ИМПОРТА
+// РЕЗУЛЬТАТ ИМПОРТА
 // ============================================================
 
 type ApplyResult = {
@@ -112,14 +118,20 @@ type ApplyResult = {
   total_rows?:
     number;
 
-  imported_rows?:
+  existing_updated?:
     number;
 
-  not_found_rows?:
+  new_products_created?:
+    number;
+
+  imported_rows?:
     number;
 
   invalid_rows?:
     number;
+
+  supply_origin?:
+    string;
 
   source?:
     string;
@@ -234,35 +246,73 @@ function parseNumber(
 
 
 // ============================================================
-// СТАТУС
+// ФОРМАТ ЧИСЛА
 // ============================================================
 
-function statusText(
-  status:
-    PreviewRow["status"]
+function formatNumber(
+  value:
+    | number
+    | null
+    | undefined,
+
+  maximumFractionDigits =
+    6
 ) {
 
   if (
-    status ===
-      "matched"
+    value === null
+    ||
+    value === undefined
   ) {
 
-    return "Найден";
+    return "—";
+
+  }
+
+
+  return Number(
+    value
+  ).toLocaleString(
+    "ru-RU",
+    {
+      maximumFractionDigits,
+    }
+  );
+
+}
+
+
+// ============================================================
+// ТЕКСТ СТАТУСА
+// ============================================================
+
+function getStatusText(
+  row: PreviewRow
+) {
+
+  if (
+    row.status ===
+      "existing"
+  ) {
+
+    return "Есть в базе — будет обновлён";
 
   }
 
 
   if (
-    status ===
-      "not_found"
+    row.status ===
+      "new"
   ) {
 
-    return "Не найден";
+    return "Новый товар — будет создан";
 
   }
 
 
-  return "Ошибка";
+  return row.error
+    ? `Ошибка — ${row.error}`
+    : "Ошибка";
 
 }
 
@@ -365,6 +415,10 @@ export default function LogisticsImportClient() {
 
     try {
 
+      // ======================================================
+      // 1. ЧИТАЕМ ФАЙЛ
+      // ======================================================
+
       const buffer =
         await file
           .arrayBuffer();
@@ -382,6 +436,10 @@ export default function LogisticsImportClient() {
           }
         );
 
+
+      // ======================================================
+      // 2. ВЫБИРАЕМ ЛИСТ
+      // ======================================================
 
       const sheetName =
         workbook
@@ -421,6 +479,10 @@ export default function LogisticsImportClient() {
       }
 
 
+      // ======================================================
+      // 3. ПРЕОБРАЗУЕМ В МАССИВ
+      // ======================================================
+
       const excelRows =
         XLSX.utils
           .sheet_to_json<
@@ -456,7 +518,7 @@ export default function LogisticsImportClient() {
 
 
       // ======================================================
-      // ИЩЕМ СТРОКУ ЗАГОЛОВКОВ
+      // 4. ИЩЕМ ЗАГОЛОВКИ
       // ======================================================
 
       let headerRowIndex =
@@ -504,7 +566,9 @@ export default function LogisticsImportClient() {
             row
           )
         ) {
+
           continue;
+
         }
 
 
@@ -621,7 +685,7 @@ export default function LogisticsImportClient() {
 
 
       // ======================================================
-      // ЧИТАЕМ ТОВАРЫ
+      // 5. ЧИТАЕМ ТОВАРНЫЕ СТРОКИ
       // ======================================================
 
       const parsedRows:
@@ -649,7 +713,9 @@ export default function LogisticsImportClient() {
             row
           )
         ) {
+
           continue;
+
         }
 
 
@@ -685,8 +751,7 @@ export default function LogisticsImportClient() {
           );
 
 
-        // Полностью пустую строку
-        // пропускаем.
+        // Полностью пустую строку пропускаем.
         if (
           !offerId
           &&
@@ -736,7 +801,7 @@ export default function LogisticsImportClient() {
 
 
       // ======================================================
-      // ПРОВЕРЯЕМ ДУБЛИ АРТИКУЛОВ
+      // 6. ПРОВЕРЯЕМ ДУБЛИ АРТИКУЛОВ
       // ======================================================
 
       const articleCounts =
@@ -754,7 +819,9 @@ export default function LogisticsImportClient() {
         if (
           !row.offer_id
         ) {
+
           continue;
+
         }
 
 
@@ -815,12 +882,12 @@ export default function LogisticsImportClient() {
 
 
       setMessage(
-        `Найдено строк: ${parsedRows.length}. Проверяем соответствие с базой...`
+        `Найдено строк: ${parsedRows.length}. Проверяем товары в базе...`
       );
 
 
       // ======================================================
-      // PREVIEW
+      // 7. PREVIEW
       // ======================================================
 
       const response =
@@ -905,15 +972,41 @@ export default function LogisticsImportClient() {
 
 
   // ==========================================================
-  // ПОДТВЕРЖДЕНИЕ
+  // ПОДТВЕРЖДЕНИЕ ИМПОРТА
   // ==========================================================
 
   async function applyImport() {
 
     if (
       rows.length === 0
+      ||
+      !preview
     ) {
+
       return;
+
+    }
+
+
+    // Если есть ошибки —
+    // вообще не запускаем импорт.
+    if (
+      preview.invalid_rows >
+        0
+    ) {
+
+      setResult(
+        {
+          ok:
+            false,
+
+          error:
+            "Импорт заблокирован: сначала исправьте ошибки в Excel.",
+        }
+      );
+
+      return;
+
     }
 
 
@@ -1006,6 +1099,10 @@ export default function LogisticsImportClient() {
   }
 
 
+  // ==========================================================
+  // ИНТЕРФЕЙС
+  // ==========================================================
+
   return (
 
     <>
@@ -1026,9 +1123,17 @@ export default function LogisticsImportClient() {
 
           <div className="muted">
 
-            Импортируются только
-            вложимость и объём
-            транспортной коробки.
+            Товары из файла считаются
+            собственным импортом.
+
+          </div>
+
+
+          <div className="muted">
+
+            Существующие товары будут
+            обновлены, отсутствующие —
+            созданы автоматически.
 
           </div>
 
@@ -1132,11 +1237,15 @@ export default function LogisticsImportClient() {
             <div className="card">
 
               <div className="card-label">
-                Найдено товаров
+                Уже есть в базе
               </div>
 
               <div className="big-number">
-                {preview.matched_rows}
+                {preview.existing_rows}
+              </div>
+
+              <div className="muted">
+                Будут обновлены
               </div>
 
             </div>
@@ -1145,11 +1254,15 @@ export default function LogisticsImportClient() {
             <div className="card">
 
               <div className="card-label">
-                Не найдено
+                Новые товары
               </div>
 
               <div className="big-number">
-                {preview.not_found_rows}
+                {preview.new_rows}
+              </div>
+
+              <div className="muted">
+                Будут созданы
               </div>
 
             </div>
@@ -1169,6 +1282,37 @@ export default function LogisticsImportClient() {
 
           </section>
 
+
+          <section className="section">
+
+            <h2 className="section-title">
+              Готово к импорту
+            </h2>
+
+
+            <div className="big-number">
+
+              {preview.ready_rows}
+              {" "}
+              товаров
+
+            </div>
+
+
+            <div className="reason-text">
+
+              Все успешно импортированные
+              товары получат признак
+              «Собственный импорт».
+
+            </div>
+
+          </section>
+
+
+          {/* ==================================================
+              ТАБЛИЦА
+              ================================================== */}
 
           <section className="section">
 
@@ -1205,6 +1349,7 @@ export default function LogisticsImportClient() {
                       style={{
                         textAlign:
                           "left",
+
                         padding:
                           "10px",
                       }}
@@ -1217,6 +1362,7 @@ export default function LogisticsImportClient() {
                       style={{
                         textAlign:
                           "left",
+
                         padding:
                           "10px",
                       }}
@@ -1229,6 +1375,7 @@ export default function LogisticsImportClient() {
                       style={{
                         textAlign:
                           "right",
+
                         padding:
                           "10px",
                       }}
@@ -1241,6 +1388,7 @@ export default function LogisticsImportClient() {
                       style={{
                         textAlign:
                           "right",
+
                         padding:
                           "10px",
                       }}
@@ -1253,6 +1401,7 @@ export default function LogisticsImportClient() {
                       style={{
                         textAlign:
                           "left",
+
                         padding:
                           "10px",
                       }}
@@ -1271,87 +1420,103 @@ export default function LogisticsImportClient() {
                     (
                       row,
                       index
-                    ) => (
+                    ) => {
 
-                      <tr
-                        key={
-                          `${row.offer_id}-${index}`
-                        }
-                      >
-
-                        <td
-                          style={{
-                            padding:
-                              "10px",
-                          }}
-                        >
-                          {row.offer_id
-                            ?? "—"}
-                        </td>
+                      const productName =
+                        row.database_name
+                        ??
+                        row.imported_name
+                        ??
+                        "—";
 
 
-                        <td
-                          style={{
-                            padding:
-                              "10px",
-                          }}
-                        >
-                          {row.database_name
-                            ??
-                            row.imported_name
-                            ??
-                            "—"}
-                        </td>
+                      return (
 
-
-                        <td
-                          style={{
-                            padding:
-                              "10px",
-
-                            textAlign:
-                              "right",
-                          }}
-                        >
-                          {row.units_per_carton
-                            ?? "—"}
-                        </td>
-
-
-                        <td
-                          style={{
-                            padding:
-                              "10px",
-
-                            textAlign:
-                              "right",
-                          }}
-                        >
-                          {row.transport_carton_volume_m3
-                            ?? "—"}
-                        </td>
-
-
-                        <td
-                          style={{
-                            padding:
-                              "10px",
-                          }}
+                        <tr
+                          key={
+                            `${row.offer_id}-${index}`
+                          }
                         >
 
-                          {statusText(
-                            row.status
-                          )}
+                          <td
+                            style={{
+                              padding:
+                                "10px",
+                            }}
+                          >
 
-                          {row.error
-                            ? ` — ${row.error}`
-                            : ""}
+                            {row.offer_id
+                              ?? "—"}
 
-                        </td>
+                          </td>
 
-                      </tr>
 
-                    )
+                          <td
+                            style={{
+                              padding:
+                                "10px",
+                            }}
+                          >
+
+                            {productName}
+
+                          </td>
+
+
+                          <td
+                            style={{
+                              padding:
+                                "10px",
+
+                              textAlign:
+                                "right",
+                            }}
+                          >
+
+                            {formatNumber(
+                              row.units_per_carton,
+                              0
+                            )}
+
+                          </td>
+
+
+                          <td
+                            style={{
+                              padding:
+                                "10px",
+
+                              textAlign:
+                                "right",
+                            }}
+                          >
+
+                            {formatNumber(
+                              row.transport_carton_volume_m3,
+                              6
+                            )}
+
+                          </td>
+
+
+                          <td
+                            style={{
+                              padding:
+                                "10px",
+                            }}
+                          >
+
+                            {getStatusText(
+                              row
+                            )}
+
+                          </td>
+
+                        </tr>
+
+                      );
+
+                    }
                   )}
 
                 </tbody>
@@ -1363,22 +1528,59 @@ export default function LogisticsImportClient() {
           </section>
 
 
+          {/* ==================================================
+              ПОДТВЕРЖДЕНИЕ
+              ================================================== */}
+
           <section className="controls">
 
             <div>
 
               <h2 className="controls-title">
-                Подтверждение
+                Подтверждение импорта
               </h2>
 
 
-              <div className="muted">
+              {preview.invalid_rows ===
+                0 ? (
 
-                Будут обновлены только
-                товары, найденные по
-                точному артикулу.
+                <>
 
-              </div>
+                  <div className="muted">
+
+                    Будет обновлено:{" "}
+                    {preview.existing_rows}
+
+                  </div>
+
+
+                  <div className="muted">
+
+                    Будет создано:{" "}
+                    {preview.new_rows}
+
+                  </div>
+
+
+                  <div className="muted">
+
+                    Всего:{" "}
+                    {preview.ready_rows}
+
+                  </div>
+
+                </>
+
+              ) : (
+
+                <div className="muted">
+
+                  Импорт недоступен,
+                  пока в файле есть ошибки.
+
+                </div>
+
+              )}
 
             </div>
 
@@ -1392,7 +1594,10 @@ export default function LogisticsImportClient() {
               disabled={
                 applying
                 ||
-                preview.matched_rows ===
+                preview.invalid_rows >
+                  0
+                ||
+                preview.ready_rows ===
                   0
               }
 
@@ -1405,7 +1610,7 @@ export default function LogisticsImportClient() {
 
               {applying
                 ? "Записываем..."
-                : `Подтвердить импорт (${preview.matched_rows})`}
+                : `Подтвердить импорт (${preview.ready_rows})`}
 
             </button>
 
@@ -1441,13 +1646,13 @@ export default function LogisticsImportClient() {
 
                 <strong>
                   Логистические данные
-                  записаны в Supabase
+                  успешно записаны
                 </strong>
 
 
                 <div className="reason-text">
 
-                  Обновлено товаров:{" "}
+                  Всего обработано:{" "}
 
                   {result.imported_rows
                     ?? 0}
@@ -1457,9 +1662,21 @@ export default function LogisticsImportClient() {
 
                 <div className="reason-text">
 
-                  Не найдено:{" "}
+                  Существующих товаров
+                  обновлено:{" "}
 
-                  {result.not_found_rows
+                  {result.existing_updated
+                    ?? 0}
+
+                </div>
+
+
+                <div className="reason-text">
+
+                  Новых товаров
+                  создано:{" "}
+
+                  {result.new_products_created
                     ?? 0}
 
                 </div>
@@ -1471,6 +1688,22 @@ export default function LogisticsImportClient() {
 
                   {result.invalid_rows
                     ?? 0}
+
+                </div>
+
+
+                <div className="reason-text">
+
+                  Тип снабжения:{" "}
+                  собственный импорт
+
+                </div>
+
+
+                <div className="reason-text">
+
+                  Источник логистики:{" "}
+                  упаковочные листы
 
                 </div>
 
