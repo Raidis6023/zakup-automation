@@ -153,6 +153,12 @@ type VedOrderItem = {
   coverage_after_order_days:
     number | null;
 
+  is_partial_fill:
+    boolean;
+
+  manual_cartons_override:
+    boolean;
+
   incoterm:
     string | null;
 
@@ -246,12 +252,137 @@ type VedOrderResponse = {
 
 
 // ============================================================
+// MOQ / PRICE PREVIEW
+// ============================================================
+
+type TermsPreview = {
+  ok:
+    boolean;
+
+  error?:
+    string;
+
+  item_id?:
+    string;
+
+  our_article?:
+    string | null;
+
+  product_name?:
+    string | null;
+
+  scenario?:
+    string;
+
+  target_days?:
+    number;
+
+  selected_demand_units?:
+    number;
+
+  units_per_carton?:
+    number;
+
+  moq_quantity?:
+    number;
+
+  unit_price_cny?:
+    number;
+
+  standard_cartons?:
+    number;
+
+  standard_quantity?:
+    number;
+
+  moq_changed_quantity?:
+    boolean;
+
+  final_cartons?:
+    number;
+
+  final_quantity?:
+    number;
+
+  coverage_after_order_days?:
+    number | null;
+
+  target_coverage_days?:
+    number;
+
+  moq_review_required?:
+    boolean;
+
+  total_price_cny?:
+    number;
+
+  total_volume_m3?:
+    number | null;
+
+  total_weight_tons?:
+    number | null;
+
+  terms_confirmed?:
+    boolean;
+
+  moq_review_status?:
+    string;
+
+  proposed_cartons?:
+    number;
+
+  proposed_quantity?:
+    number;
+
+  accepted_cartons?:
+    number;
+
+  accepted_quantity?:
+    number;
+
+  ready_for_transport?:
+    boolean;
+};
+
+
+// ============================================================
+// EDITOR STATE
+// ============================================================
+
+type ItemEditorState = {
+  moq:
+    string;
+
+  price:
+    string;
+
+  loadingPreview:
+    boolean;
+
+  loadingConfirm:
+    boolean;
+
+  error:
+    string;
+
+  preview:
+    TermsPreview | null;
+};
+
+
+type EditorsState = {
+  [itemId: string]:
+    ItemEditorState;
+};
+
+
+// ============================================================
 // FORMAT
 // ============================================================
 
 function formatNumber(
   value:
-    | number
+    number
     | null
     | undefined,
 
@@ -315,6 +446,56 @@ function formatDate(
     .toLocaleDateString(
       "ru-RU"
     );
+
+}
+
+
+function parsePositiveNumber(
+  value:
+    string
+):
+  number | null {
+
+  const normalized =
+    value
+      .trim()
+      .replace(
+        /\s/g,
+        ""
+      )
+      .replace(
+        ",",
+        "."
+      );
+
+
+  if (!normalized) {
+
+    return null;
+
+  }
+
+
+  const parsed =
+    Number(
+      normalized
+    );
+
+
+  if (
+    !Number.isFinite(
+      parsed
+    )
+    ||
+    parsed <= 0
+  ) {
+
+    return null;
+
+  }
+
+
+  return parsed;
 
 }
 
@@ -433,9 +614,7 @@ export default function VedOrderDetailClient(
     data,
     setData,
   ] =
-    useState<
-      VedOrderResponse | null
-    >(
+    useState<VedOrderResponse | null>(
       null
     );
 
@@ -458,8 +637,17 @@ export default function VedOrderDetailClient(
     );
 
 
+  const [
+    editors,
+    setEditors,
+  ] =
+    useState<EditorsState>(
+      {}
+    );
+
+
   // ==========================================================
-  // LOAD
+  // LOAD ORDER
   // ==========================================================
 
   async function loadOrder() {
@@ -467,6 +655,7 @@ export default function VedOrderDetailClient(
     setLoading(
       true
     );
+
 
     setError(
       ""
@@ -513,6 +702,57 @@ export default function VedOrderDetailClient(
       );
 
 
+      const nextEditors:
+        EditorsState =
+          {};
+
+
+      for (
+        const item
+        of result.items ?? []
+      ) {
+
+        nextEditors[
+          item.id
+        ] = {
+
+          moq:
+            item.moq_quantity ===
+            null
+              ? ""
+              : String(
+                  item.moq_quantity
+                ),
+
+          price:
+            item.unit_price_cny ===
+            null
+              ? ""
+              : String(
+                  item.unit_price_cny
+                ),
+
+          loadingPreview:
+            false,
+
+          loadingConfirm:
+            false,
+
+          error:
+            "",
+
+          preview:
+            null,
+        };
+
+      }
+
+
+      setEditors(
+        nextEditors
+      );
+
+
     } catch (
       caughtError
     ) {
@@ -550,6 +790,461 @@ export default function VedOrderDetailClient(
       orderId,
     ]
   );
+
+
+  // ==========================================================
+  // UPDATE EDITOR
+  // ==========================================================
+
+  function updateEditor(
+    itemId:
+      string,
+
+    patch:
+      Partial<ItemEditorState>
+  ) {
+
+    setEditors(
+      (
+        current
+      ) => ({
+
+        ...current,
+
+        [itemId]: {
+
+          ...(current[
+            itemId
+          ] ?? {
+
+            moq:
+              "",
+
+            price:
+              "",
+
+            loadingPreview:
+              false,
+
+            loadingConfirm:
+              false,
+
+            error:
+              "",
+
+            preview:
+              null,
+
+          }),
+
+          ...patch,
+
+        },
+
+      })
+    );
+
+  }
+
+
+  // ==========================================================
+  // PREVIEW TERMS
+  // ==========================================================
+
+  async function previewTerms(
+    item:
+      VedOrderItem
+  ) {
+
+    const editor =
+      editors[
+        item.id
+      ];
+
+
+    if (!editor) {
+
+      return;
+
+    }
+
+
+    const moq =
+      parsePositiveNumber(
+        editor.moq
+      );
+
+
+    const price =
+      parsePositiveNumber(
+        editor.price
+      );
+
+
+    if (
+      moq === null
+      ||
+      !Number.isInteger(
+        moq
+      )
+    ) {
+
+      updateEditor(
+        item.id,
+        {
+          error:
+            "MOQ должен быть целым числом больше 0",
+        }
+      );
+
+      return;
+
+    }
+
+
+    if (
+      price === null
+    ) {
+
+      updateEditor(
+        item.id,
+        {
+          error:
+            "Укажите цену за единицу в юанях",
+        }
+      );
+
+      return;
+
+    }
+
+
+    updateEditor(
+      item.id,
+      {
+        loadingPreview:
+          true,
+
+        error:
+          "",
+
+        preview:
+          null,
+      }
+    );
+
+
+    try {
+
+      const response =
+        await fetch(
+          `/api/ved-orders/items/${item.id}/terms`,
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify(
+                {
+                  action:
+                    "preview",
+
+                  moqQuantity:
+                    moq,
+
+                  unitPriceCny:
+                    price,
+                }
+              ),
+
+            cache:
+              "no-store",
+          }
+        );
+
+
+      const result:
+        TermsPreview =
+          await response.json();
+
+
+      if (
+        !response.ok
+        ||
+        !result.ok
+      ) {
+
+        throw new Error(
+          result.error
+          ||
+          "Не удалось выполнить расчёт"
+        );
+
+      }
+
+
+      updateEditor(
+        item.id,
+        {
+          preview:
+            result,
+
+          error:
+            "",
+        }
+      );
+
+
+    } catch (
+      caughtError
+    ) {
+
+      updateEditor(
+        item.id,
+        {
+          error:
+
+            caughtError
+            instanceof Error
+
+              ? caughtError.message
+
+              : "Неизвестная ошибка расчёта",
+        }
+      );
+
+    } finally {
+
+      updateEditor(
+        item.id,
+        {
+          loadingPreview:
+            false,
+        }
+      );
+
+    }
+
+  }
+
+
+  // ==========================================================
+  // CONFIRM TERMS
+  // ==========================================================
+
+  async function confirmTerms(
+    item:
+      VedOrderItem
+  ) {
+
+    const editor =
+      editors[
+        item.id
+      ];
+
+
+    if (!editor) {
+
+      return;
+
+    }
+
+
+    const moq =
+      parsePositiveNumber(
+        editor.moq
+      );
+
+
+    const price =
+      parsePositiveNumber(
+        editor.price
+      );
+
+
+    if (
+      moq === null
+      ||
+      !Number.isInteger(
+        moq
+      )
+    ) {
+
+      updateEditor(
+        item.id,
+        {
+          error:
+            "MOQ должен быть целым числом больше 0",
+        }
+      );
+
+      return;
+
+    }
+
+
+    if (
+      price === null
+    ) {
+
+      updateEditor(
+        item.id,
+        {
+          error:
+            "Укажите цену за единицу в юанях",
+        }
+      );
+
+      return;
+
+    }
+
+
+    const actorName =
+      data
+        ?.order
+        ?.preparation_responsible_name
+        ?.trim();
+
+
+    if (!actorName) {
+
+      updateEditor(
+        item.id,
+        {
+          error:
+            "У заказа не указан ответственный сотрудник",
+        }
+      );
+
+      return;
+
+    }
+
+
+    const actorRole =
+      data
+        ?.order
+        ?.preparation_department ===
+        "procurement"
+
+        ? "procurement"
+
+        : "analytics";
+
+
+    updateEditor(
+      item.id,
+      {
+        loadingConfirm:
+          true,
+
+        error:
+          "",
+      }
+    );
+
+
+    try {
+
+      const response =
+        await fetch(
+          `/api/ved-orders/items/${item.id}/terms`,
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify(
+                {
+                  action:
+                    "confirm",
+
+                  moqQuantity:
+                    moq,
+
+                  unitPriceCny:
+                    price,
+
+                  actorName,
+
+                  actorUserId:
+                    null,
+
+                  actorRole,
+                }
+              ),
+
+            cache:
+              "no-store",
+          }
+        );
+
+
+      const result:
+        TermsPreview =
+          await response.json();
+
+
+      if (
+        !response.ok
+        ||
+        !result.ok
+      ) {
+
+        throw new Error(
+          result.error
+          ||
+          "Не удалось подтвердить MOQ и цену"
+        );
+
+      }
+
+
+      await loadOrder();
+
+
+    } catch (
+      caughtError
+    ) {
+
+      updateEditor(
+        item.id,
+        {
+          error:
+
+            caughtError
+            instanceof Error
+
+              ? caughtError.message
+
+              : "Неизвестная ошибка подтверждения",
+        }
+      );
+
+    } finally {
+
+      updateEditor(
+        item.id,
+        {
+          loadingConfirm:
+            false,
+        }
+      );
+
+    }
+
+  }
 
 
   // ==========================================================
@@ -592,6 +1287,7 @@ export default function VedOrderDetailClient(
         <h2 className="section-title">
           Не удалось открыть заказ
         </h2>
+
 
         <div className="reason-box">
 
@@ -672,9 +1368,11 @@ export default function VedOrderDetailClient(
           Статус:{" "}
 
           <strong>
+
             {getWorkflowLabel(
               order.workflow_status
             )}
+
           </strong>
 
         </div>
@@ -1081,9 +1779,9 @@ export default function VedOrderDetailClient(
 
         <div className="reason-text">
 
-          Сейчас это просмотр черновика.
-          Редактирование MOQ, цены и коробов
-          добавим следующим шагом.
+          Введите MOQ и цену в юанях,
+          выполните предварительный расчёт
+          и только после проверки подтвердите условия.
 
         </div>
 
@@ -1104,7 +1802,7 @@ export default function VedOrderDetailClient(
                 "100%",
 
               minWidth:
-                "1800px",
+                "2150px",
 
               borderCollapse:
                 "collapse",
@@ -1131,17 +1829,17 @@ export default function VedOrderDetailClient(
 
                   "MOQ",
                   "Цена CNY",
+
                   "Статус",
 
                   "Коробов",
                   "К заказу",
 
                   "Покрытие",
+                  "Стоимость",
                   "Объём, м³",
-                  "Вес, т",
 
-                  "FOB / FCA",
-                  "Порт",
+                  "Действия",
                 ].map(
                   (
                     title
@@ -1154,7 +1852,7 @@ export default function VedOrderDetailClient(
 
                       style={{
                         textAlign:
-                          "right",
+                          "left",
 
                         padding:
                           "10px",
@@ -1183,314 +1881,827 @@ export default function VedOrderDetailClient(
                   item
                 ) => {
 
+                  const editor =
+                    editors[
+                      item.id
+                    ];
+
+
                   const termsStatus =
                     getTermsStatus(
                       item
                     );
 
 
+                  const preview =
+                    editor
+                      ?.preview;
+
+
                   return (
 
-                    <tr
-                      key={
-                        item.id
-                      }
-                    >
-
-
-                      <td
-                        style={{
-                          padding:
-                            "10px",
-
-                          textAlign:
-                            "left",
-                        }}
+                    <>
+                      <tr
+                        key={
+                          item.id
+                        }
                       >
 
-                        {item
-                          .chinese_article_snapshot
-                          ??
-                          "—"}
 
-                      </td>
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+                          }}
+                        >
 
+                          {item
+                            .chinese_article_snapshot
+                            ??
+                            "—"}
 
-                      <td
-                        style={{
-                          padding:
-                            "10px",
-
-                          textAlign:
-                            "left",
-
-                          fontWeight:
-                            600,
-                        }}
-                      >
-
-                        {item
-                          .our_article_snapshot
-                          ??
-                          "—"}
-
-                      </td>
+                        </td>
 
 
-                      <td
-                        style={{
-                          padding:
-                            "10px",
+                        <td
+                          style={{
+                            padding:
+                              "10px",
 
-                          textAlign:
-                            "left",
+                            fontWeight:
+                              600,
+                          }}
+                        >
 
-                          minWidth:
-                            "320px",
-                        }}
-                      >
+                          {item
+                            .our_article_snapshot
+                            ??
+                            "—"}
 
-                        {item
-                          .product_name_snapshot
-                          ??
-                          "—"}
-
-                      </td>
+                        </td>
 
 
-                      <td style={{
-                        padding:
-                          "10px",
-                        textAlign:
-                          "right",
-                      }}>
+                        <td
+                          style={{
+                            padding:
+                              "10px",
 
-                        {formatNumber(
-                          item
-                            .demand_container_units
-                        )}
+                            minWidth:
+                              "300px",
+                          }}
+                        >
 
-                      </td>
+                          {item
+                            .product_name_snapshot
+                            ??
+                            "—"}
 
-
-                      <td style={{
-                        padding:
-                          "10px",
-                        textAlign:
-                          "right",
-                      }}>
-
-                        {formatNumber(
-                          item
-                            .demand_truck_units
-                        )}
-
-                      </td>
+                        </td>
 
 
-                      <td style={{
-                        padding:
-                          "10px",
-                        textAlign:
-                          "right",
-                      }}>
+                        <td
+                          style={{
+                            padding:
+                              "10px",
 
-                        {formatNumber(
-                          item
-                            .selected_demand_units
-                        )}
+                            textAlign:
+                              "right",
+                          }}
+                        >
 
-                      </td>
+                          {formatNumber(
+                            item
+                              .demand_container_units
+                          )}
 
-
-                      <td style={{
-                        padding:
-                          "10px",
-                        textAlign:
-                          "right",
-                      }}>
-
-                        {formatNumber(
-                          item
-                            .units_per_carton_snapshot
-                        )}
-
-                      </td>
+                        </td>
 
 
-                      <td style={{
-                        padding:
-                          "10px",
-                        textAlign:
-                          "right",
-                      }}>
+                        <td
+                          style={{
+                            padding:
+                              "10px",
 
-                        {formatNumber(
-                          item
-                            .moq_quantity
-                        )}
+                            textAlign:
+                              "right",
+                          }}
+                        >
 
-                      </td>
+                          {formatNumber(
+                            item
+                              .demand_truck_units
+                          )}
 
-
-                      <td style={{
-                        padding:
-                          "10px",
-                        textAlign:
-                          "right",
-                      }}>
-
-                        {item
-                          .unit_price_cny ===
-                          null
-
-                          ? "—"
-
-                          : `${formatNumber(
-                              item
-                                .unit_price_cny,
-                              4
-                            )} ¥`}
-
-                      </td>
+                        </td>
 
 
-                      <td
-                        style={{
-                          padding:
-                            "10px",
+                        <td
+                          style={{
+                            padding:
+                              "10px",
 
-                          textAlign:
-                            "left",
+                            textAlign:
+                              "right",
 
-                          whiteSpace:
-                            "nowrap",
-                        }}
-                      >
+                            fontWeight:
+                              600,
+                          }}
+                        >
 
-                        {termsStatus}
+                          {formatNumber(
+                            item
+                              .selected_demand_units
+                          )}
 
-                      </td>
-
-
-                      <td style={{
-                        padding:
-                          "10px",
-                        textAlign:
-                          "right",
-                      }}>
-
-                        {formatNumber(
-                          item.cartons
-                        )}
-
-                      </td>
+                        </td>
 
 
-                      <td style={{
-                        padding:
-                          "10px",
-                        textAlign:
-                          "right",
-                      }}>
+                        <td
+                          style={{
+                            padding:
+                              "10px",
 
-                        <strong>
+                            textAlign:
+                              "right",
+                          }}
+                        >
+
+                          {formatNumber(
+                            item
+                              .units_per_carton_snapshot
+                          )}
+
+                        </td>
+
+
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+                          }}
+                        >
+
+                          <input
+                            type="text"
+
+                            inputMode="numeric"
+
+                            value={
+                              editor
+                                ?.moq
+                              ??
+                              ""
+                            }
+
+                            disabled={
+                              editor
+                                ?.loadingPreview
+                              ||
+                              editor
+                                ?.loadingConfirm
+                            }
+
+                            onChange={
+                              (
+                                event
+                              ) => {
+
+                                updateEditor(
+                                  item.id,
+                                  {
+                                    moq:
+                                      event
+                                        .target
+                                        .value,
+
+                                    preview:
+                                      null,
+
+                                    error:
+                                      "",
+                                  }
+                                );
+
+                              }
+                            }
+
+                            style={{
+                              width:
+                                "100px",
+
+                              minHeight:
+                                "38px",
+
+                              padding:
+                                "0 10px",
+
+                              borderRadius:
+                                "8px",
+
+                              border:
+                                "1px solid var(--border)",
+
+                              background:
+                                "var(--card)",
+
+                              color:
+                                "var(--text)",
+                            }}
+                          />
+
+                        </td>
+
+
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+                          }}
+                        >
+
+                          <input
+                            type="text"
+
+                            inputMode="decimal"
+
+                            value={
+                              editor
+                                ?.price
+                              ??
+                              ""
+                            }
+
+                            disabled={
+                              editor
+                                ?.loadingPreview
+                              ||
+                              editor
+                                ?.loadingConfirm
+                            }
+
+                            onChange={
+                              (
+                                event
+                              ) => {
+
+                                updateEditor(
+                                  item.id,
+                                  {
+                                    price:
+                                      event
+                                        .target
+                                        .value,
+
+                                    preview:
+                                      null,
+
+                                    error:
+                                      "",
+                                  }
+                                );
+
+                              }
+                            }
+
+                            style={{
+                              width:
+                                "105px",
+
+                              minHeight:
+                                "38px",
+
+                              padding:
+                                "0 10px",
+
+                              borderRadius:
+                                "8px",
+
+                              border:
+                                "1px solid var(--border)",
+
+                              background:
+                                "var(--card)",
+
+                              color:
+                                "var(--text)",
+                            }}
+                          />
+
+                        </td>
+
+
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+
+                            minWidth:
+                              "165px",
+                          }}
+                        >
+
+                          {termsStatus}
+
+                        </td>
+
+
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+
+                            textAlign:
+                              "right",
+                          }}
+                        >
+
+                          {formatNumber(
+                            item.cartons
+                          )}
+
+                        </td>
+
+
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+
+                            textAlign:
+                              "right",
+
+                            fontWeight:
+                              700,
+                          }}
+                        >
 
                           {formatNumber(
                             item
                               .order_quantity
                           )}
 
-                        </strong>
-
-                      </td>
+                        </td>
 
 
-                      <td style={{
-                        padding:
-                          "10px",
-                        textAlign:
-                          "right",
-                      }}>
+                        <td
+                          style={{
+                            padding:
+                              "10px",
 
-                        {item
-                          .coverage_after_order_days
-                          === null
+                            textAlign:
+                              "right",
+                          }}
+                        >
 
-                          ? "—"
+                          {item
+                            .coverage_after_order_days
+                            === null
 
-                          : `${formatNumber(
-                              item
-                                .coverage_after_order_days,
-                              1
-                            )} дн.`}
+                            ? "—"
 
-                      </td>
+                            : `${formatNumber(
+                                item
+                                  .coverage_after_order_days,
+                                1
+                              )} дн.`}
 
-
-                      <td style={{
-                        padding:
-                          "10px",
-                        textAlign:
-                          "right",
-                      }}>
-
-                        {formatNumber(
-                          item
-                            .total_volume_m3,
-                          6
-                        )}
-
-                      </td>
+                        </td>
 
 
-                      <td style={{
-                        padding:
-                          "10px",
-                        textAlign:
-                          "right",
-                      }}>
+                        <td
+                          style={{
+                            padding:
+                              "10px",
 
-                        {formatNumber(
-                          item
-                            .total_weight_tons,
-                          6
-                        )}
+                            textAlign:
+                              "right",
+                          }}
+                        >
 
-                      </td>
+                          {item
+                            .total_price_cny
+                            === null
 
+                            ? "—"
 
-                      <td style={{
-                        padding:
-                          "10px",
-                        textAlign:
-                          "center",
-                      }}>
+                            : `${formatNumber(
+                                item
+                                  .total_price_cny,
+                                2
+                              )} CNY`}
 
-                        {item.incoterm
-                          ??
-                          "—"}
-
-                      </td>
+                        </td>
 
 
-                      <td
-                        style={{
-                          padding:
-                            "10px",
+                        <td
+                          style={{
+                            padding:
+                              "10px",
 
-                          textAlign:
-                            "left",
-                        }}
-                      >
+                            textAlign:
+                              "right",
+                          }}
+                        >
 
-                        {item.port
-                          ??
-                          "—"}
+                          {formatNumber(
+                            item
+                              .total_volume_m3,
+                            6
+                          )}
 
-                      </td>
+                        </td>
 
-                    </tr>
+
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+
+                            minWidth:
+                              "250px",
+                          }}
+                        >
+
+                          <div
+                            style={{
+                              display:
+                                "flex",
+
+                              gap:
+                                "8px",
+
+                              flexWrap:
+                                "wrap",
+                            }}
+                          >
+
+                            <button
+                              type="button"
+
+                              className=
+                                "secondary-button"
+
+                              disabled={
+                                editor
+                                  ?.loadingPreview
+                                ||
+                                editor
+                                  ?.loadingConfirm
+                              }
+
+                              onClick={
+                                () => {
+
+                                  void previewTerms(
+                                    item
+                                  );
+
+                                }
+                              }
+                            >
+
+                              {editor
+                                ?.loadingPreview
+
+                                ? "Считаем..."
+
+                                : "Рассчитать"}
+
+                            </button>
+
+
+                            {preview && (
+
+                              <button
+                                type="button"
+
+                                className=
+                                  "primary-button"
+
+                                disabled={
+                                  editor
+                                    ?.loadingConfirm
+                                }
+
+                                onClick={
+                                  () => {
+
+                                    void confirmTerms(
+                                      item
+                                    );
+
+                                  }
+                                }
+                              >
+
+                                {editor
+                                  ?.loadingConfirm
+
+                                  ? "Подтверждаем..."
+
+                                  : "Подтвердить"}
+
+                              </button>
+
+                            )}
+
+                          </div>
+
+
+                          {editor
+                            ?.error && (
+
+                            <div
+                              style={{
+                                marginTop:
+                                  "8px",
+
+                                color:
+                                  "#d64545",
+
+                                maxWidth:
+                                  "260px",
+                              }}
+                            >
+
+                              {editor.error}
+
+                            </div>
+
+                          )}
+
+                        </td>
+
+                      </tr>
+
+
+                      {/* ======================================
+                          PREVIEW ROW
+                          ====================================== */}
+
+                      {preview && (
+
+                        <tr
+                          key={
+                            `${item.id}-preview`
+                          }
+                        >
+
+                          <td
+                            colSpan={
+                              16
+                            }
+
+                            style={{
+                              padding:
+                                "12px 18px 18px",
+
+                              background:
+                                "var(--card)",
+                            }}
+                          >
+
+                            <div className="small-label">
+                              ПРЕДВАРИТЕЛЬНЫЙ РАСЧЁТ
+                            </div>
+
+
+                            <div
+                              style={{
+                                display:
+                                  "grid",
+
+                                gridTemplateColumns:
+                                  "repeat(auto-fit, minmax(150px, 1fr))",
+
+                                gap:
+                                  "12px",
+
+                                marginTop:
+                                  "12px",
+                              }}
+                            >
+
+
+                              <div>
+
+                                <div className="card-label">
+                                  Потребность
+                                </div>
+
+                                <strong>
+
+                                  {formatNumber(
+                                    preview
+                                      .selected_demand_units
+                                  )}
+
+                                </strong>
+
+                              </div>
+
+
+                              <div>
+
+                                <div className="card-label">
+                                  Обычное округление
+                                </div>
+
+                                <strong>
+
+                                  {formatNumber(
+                                    preview
+                                      .standard_cartons
+                                  )} кор.
+
+                                </strong>
+
+                                <div className="muted">
+
+                                  {formatNumber(
+                                    preview
+                                      .standard_quantity
+                                  )} шт.
+
+                                </div>
+
+                              </div>
+
+
+                              <div>
+
+                                <div className="card-label">
+                                  После MOQ
+                                </div>
+
+                                <strong>
+
+                                  {formatNumber(
+                                    preview
+                                      .final_cartons
+                                  )} кор.
+
+                                </strong>
+
+                                <div className="muted">
+
+                                  {formatNumber(
+                                    preview
+                                      .final_quantity
+                                  )} шт.
+
+                                </div>
+
+                              </div>
+
+
+                              <div>
+
+                                <div className="card-label">
+                                  Покрытие после заказа
+                                </div>
+
+                                <strong>
+
+                                  {preview
+                                    .coverage_after_order_days
+                                    === null
+                                    ||
+                                    preview
+                                      .coverage_after_order_days
+                                      === undefined
+
+                                    ? "—"
+
+                                    : `${formatNumber(
+                                        preview
+                                          .coverage_after_order_days,
+                                        1
+                                      )} дн.`}
+
+                                </strong>
+
+                                <div className="muted">
+
+                                  Цель:{" "}
+
+                                  {formatNumber(
+                                    preview
+                                      .target_coverage_days
+                                  )} дн.
+
+                                </div>
+
+                              </div>
+
+
+                              <div>
+
+                                <div className="card-label">
+                                  Стоимость
+                                </div>
+
+                                <strong>
+
+                                  {formatNumber(
+                                    preview
+                                      .total_price_cny,
+                                    2
+                                  )} CNY
+
+                                </strong>
+
+                              </div>
+
+
+                              <div>
+
+                                <div className="card-label">
+                                  Объём
+                                </div>
+
+                                <strong>
+
+                                  {formatNumber(
+                                    preview
+                                      .total_volume_m3,
+                                    6
+                                  )} м³
+
+                                </strong>
+
+                              </div>
+
+
+                            </div>
+
+
+                            {preview
+                              .moq_review_required && (
+
+                              <div
+                                className="reason-box"
+
+                                style={{
+                                  marginTop:
+                                    "14px",
+                                }}
+                              >
+
+                                <strong>
+                                  Требуется ручное решение по MOQ
+                                </strong>
+
+
+                                <div className="reason-text">
+
+                                  MOQ увеличивает количество
+                                  относительно обычного расчёта,
+                                  а запас после поставки превышает
+                                  целевой горизонт.
+
+                                </div>
+
+                                <div className="reason-text">
+
+                                  После подтверждения MOQ и цены
+                                  товар пока не попадёт
+                                  в транспортный расчёт.
+
+                                </div>
+
+                              </div>
+
+                            )}
+
+
+                            {!preview
+                              .moq_review_required && (
+
+                              <div
+                                className="muted"
+
+                                style={{
+                                  marginTop:
+                                    "14px",
+                                }}
+                              >
+
+                                MOQ не требует отдельного решения.
+                                После подтверждения товар будет
+                                включён в заказ автоматически.
+
+                              </div>
+
+                            )}
+
+                          </td>
+
+                        </tr>
+
+                      )}
+
+                    </>
 
                   );
 
@@ -1537,9 +2748,11 @@ export default function VedOrderDetailClient(
             </div>
 
             <strong>
+
               {formatDate(
                 order.first_sent_to_ved_at
               )}
+
             </strong>
 
           </div>
@@ -1552,9 +2765,11 @@ export default function VedOrderDetailClient(
             </div>
 
             <strong>
+
               {formatDate(
                 order.production_handoff_date
               )}
+
             </strong>
 
           </div>
@@ -1567,9 +2782,11 @@ export default function VedOrderDetailClient(
             </div>
 
             <strong>
+
               {formatDate(
                 order.expected_arrival_date
               )}
+
             </strong>
 
           </div>
@@ -1582,9 +2799,11 @@ export default function VedOrderDetailClient(
             </div>
 
             <strong>
+
               {formatDate(
                 order.actual_arrival_date
               )}
+
             </strong>
 
           </div>
