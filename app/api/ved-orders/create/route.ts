@@ -26,6 +26,36 @@ type CreateOrderRequest = {
 };
 
 
+type PhotoSyncResponse = {
+  ok:
+    boolean;
+
+  error?:
+    string;
+
+  order_id?:
+    string;
+
+  existing_items?:
+    number;
+
+  already_had_photo?:
+    number;
+
+  copied_from_product?:
+    number;
+
+  loaded_from_ozon?:
+    number;
+
+  missing_in_ozon?:
+    number;
+
+  missing_offer_id?:
+    number;
+};
+
+
 type CreateOrderResponse = {
   ok:
     boolean;
@@ -59,6 +89,12 @@ type CreateOrderResponse = {
 
   items_without_chinese_article?:
     number;
+
+  photo_sync?:
+    PhotoSyncResponse | null;
+
+  photo_sync_error?:
+    string | null;
 };
 
 
@@ -105,6 +141,185 @@ function getSupabaseConfig() {
 
 
 // ============================================================
+// AUTO PHOTO SYNC
+//
+// ВАЖНО:
+//
+// Ошибка фотографий НЕ должна отменять создание заказа.
+// Заказ уже создан в Supabase.
+//
+// Если Ozon временно недоступен,
+// пользователь просто увидит блокер «Нет фото».
+// ============================================================
+
+async function trySyncPhotos(
+
+  request:
+    NextRequest,
+
+  orderId:
+    string
+
+):
+  Promise<{
+    result:
+      PhotoSyncResponse | null;
+
+    error:
+      string | null;
+  }> {
+
+  const controller =
+    new AbortController();
+
+
+  const timeout =
+    setTimeout(
+      () => {
+
+        controller.abort();
+
+      },
+      15000
+    );
+
+
+  try {
+
+    const syncUrl =
+      new URL(
+        `/api/ved-orders/${orderId}/sync-photos`,
+        request.nextUrl.origin
+      );
+
+
+    const response =
+      await fetch(
+        syncUrl,
+        {
+          method:
+            "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          cache:
+            "no-store",
+
+          signal:
+            controller.signal,
+        }
+      );
+
+
+    const text =
+      await response.text();
+
+
+    if (!response.ok) {
+
+      return {
+        result:
+          null,
+
+        error:
+          `Автозагрузка фото не выполнена. HTTP ${response.status}. ${text}`,
+      };
+
+    }
+
+
+    if (!text.trim()) {
+
+      return {
+        result:
+          null,
+
+        error:
+          "Автозагрузка фото вернула пустой ответ",
+      };
+
+    }
+
+
+    const data:
+      PhotoSyncResponse =
+        JSON.parse(
+          text
+        );
+
+
+    if (!data.ok) {
+
+      return {
+        result:
+          data,
+
+        error:
+          data.error
+          ??
+          "Не удалось автоматически загрузить фотографии",
+      };
+
+    }
+
+
+    return {
+      result:
+        data,
+
+      error:
+        null,
+    };
+
+
+  } catch (
+    error
+  ) {
+
+    if (
+      error instanceof Error
+      &&
+      error.name ===
+        "AbortError"
+    ) {
+
+      return {
+        result:
+          null,
+
+        error:
+          "Автозагрузка фотографий превысила 15 секунд. Заказ создан без ожидания фотографий.",
+      };
+
+    }
+
+
+    return {
+      result:
+        null,
+
+      error:
+        error instanceof Error
+          ? error.message
+          : "Неизвестная ошибка автоматической загрузки фотографий",
+    };
+
+
+  } finally {
+
+    clearTimeout(
+      timeout
+    );
+
+  }
+
+}
+
+
+// ============================================================
 // POST
 // ============================================================
 
@@ -121,7 +336,7 @@ export async function POST(
 
 
     // ========================================================
-    // SCENARIO
+    // 1. SCENARIO
     // ========================================================
 
     const scenario =
@@ -129,9 +344,11 @@ export async function POST(
 
 
     if (
-      scenario !== "container"
+      scenario !==
+        "container"
       &&
-      scenario !== "truck"
+      scenario !==
+        "truck"
     ) {
 
       return NextResponse.json(
@@ -152,7 +369,7 @@ export async function POST(
 
 
     // ========================================================
-    // DEPARTMENT
+    // 2. DEPARTMENT
     // ========================================================
 
     const department =
@@ -160,9 +377,11 @@ export async function POST(
 
 
     if (
-      department !== "analytics"
+      department !==
+        "analytics"
       &&
-      department !== "procurement"
+      department !==
+        "procurement"
     ) {
 
       return NextResponse.json(
@@ -183,7 +402,7 @@ export async function POST(
 
 
     // ========================================================
-    // RESPONSIBLE
+    // 3. RESPONSIBLE
     // ========================================================
 
     const createdByName =
@@ -211,7 +430,7 @@ export async function POST(
 
 
     // ========================================================
-    // NEW PRODUCTS VOLUME
+    // 4. NEW PRODUCTS VOLUME
     // ========================================================
 
     const newProductsVolumeM3 =
@@ -227,7 +446,8 @@ export async function POST(
         newProductsVolumeM3
       )
       ||
-      newProductsVolumeM3 < 0
+      newProductsVolumeM3 <
+        0
     ) {
 
       return NextResponse.json(
@@ -248,7 +468,7 @@ export async function POST(
 
 
     // ========================================================
-    // SUPABASE
+    // 5. SUPABASE
     // ========================================================
 
     const {
@@ -257,6 +477,10 @@ export async function POST(
     } =
       getSupabaseConfig();
 
+
+    // ========================================================
+    // 6. CREATE DRAFT
+    // ========================================================
 
     const response =
       await fetch(
@@ -329,6 +553,25 @@ export async function POST(
     }
 
 
+    if (!text.trim()) {
+
+      return NextResponse.json(
+        {
+          ok:
+            false,
+
+          error:
+            "Supabase вернул пустой ответ при создании заказа",
+        },
+        {
+          status:
+            500,
+        }
+      );
+
+    }
+
+
     const data:
       CreateOrderResponse =
         JSON.parse(
@@ -361,8 +604,53 @@ export async function POST(
     }
 
 
+    // ========================================================
+    // 7. AUTO PHOTO SYNC
+    //
+    // Черновик УЖЕ создан.
+    //
+    // Здесь пытаемся автоматически получить фотографии
+    // только для существующих товаров.
+    //
+    // Новые товары sync-photos специально игнорирует.
+    // ========================================================
+
+    const photoSync =
+      await trySyncPhotos(
+        request,
+        data.order_id
+      );
+
+
+    if (
+      photoSync.error
+    ) {
+
+      console.error(
+        "VED order created, but automatic photo sync failed:",
+        photoSync.error
+      );
+
+    }
+
+
+    // ========================================================
+    // 8. SUCCESS
+    //
+    // Даже если фотографии получить не удалось,
+    // создание заказа считается успешным.
+    // ========================================================
+
     return NextResponse.json(
-      data,
+      {
+        ...data,
+
+        photo_sync:
+          photoSync.result,
+
+        photo_sync_error:
+          photoSync.error,
+      },
       {
         status:
           200,
