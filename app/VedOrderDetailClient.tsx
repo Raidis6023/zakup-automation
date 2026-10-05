@@ -142,23 +142,10 @@ type TermsPreview = {
 
   item_id?: string;
 
-  our_article?: string | null;
-  product_name?: string | null;
-
-  scenario?: string;
-
-  target_days?: number;
-
   selected_demand_units?: number;
-  units_per_carton?: number;
-
-  moq_quantity?: number;
-  unit_price_cny?: number;
 
   standard_cartons?: number;
   standard_quantity?: number;
-
-  moq_changed_quantity?: boolean;
 
   final_cartons?: number;
   final_quantity?: number;
@@ -171,17 +158,6 @@ type TermsPreview = {
   total_price_cny?: number;
   total_volume_m3?: number | null;
   total_weight_tons?: number | null;
-
-  terms_confirmed?: boolean;
-  moq_review_status?: string;
-
-  proposed_cartons?: number;
-  proposed_quantity?: number;
-
-  accepted_cartons?: number;
-  accepted_quantity?: number;
-
-  ready_for_transport?: boolean;
 };
 
 
@@ -207,25 +183,6 @@ type PreparationResponse = {
 // TYPES: HANDOFF
 // ============================================================
 
-type HandoffBlockers = {
-  terms_pending?: number;
-  moq_review_pending?: number;
-
-  missing_chinese_article?: number;
-  missing_name?: number;
-  missing_photo?: number;
-
-  missing_units_per_carton?: number;
-  missing_carton_volume?: number;
-  missing_carton_weight?: number;
-
-  missing_cartons?: number;
-  missing_order_quantity?: number;
-
-  missing_incoterm?: number;
-};
-
-
 type HandoffProblemItem = {
   item_id?: string;
 
@@ -249,8 +206,6 @@ type HandoffReadiness = {
   included_items?: number;
   excluded_items?: number;
 
-  blockers?: HandoffBlockers;
-
   problem_items?: HandoffProblemItem[];
 };
 
@@ -264,15 +219,12 @@ type HandoffSendResponse = {
   order_id?: string;
   workflow_status?: string;
 
-  first_sent_to_ved_at?: string;
-  last_sent_to_ved_at?: string;
-
   readiness?: HandoffReadiness;
 };
 
 
 // ============================================================
-// EDITOR STATE
+// EDITORS
 // ============================================================
 
 type ItemEditorState = {
@@ -300,7 +252,7 @@ type EditorsState = {
 
 
 // ============================================================
-// FORMAT
+// HELPERS
 // ============================================================
 
 function formatNumber(
@@ -405,9 +357,7 @@ function parsePositiveNumber(
 
 
   if (
-    !Number.isFinite(
-      parsed
-    )
+    !Number.isFinite(parsed)
     ||
     parsed <= 0
   ) {
@@ -421,10 +371,6 @@ function parsePositiveNumber(
 
 }
 
-
-// ============================================================
-// STATUS
-// ============================================================
 
 function getWorkflowLabel(
   status:
@@ -514,6 +460,148 @@ function getTermsStatus(
 
 
   return "Условия подтверждены";
+
+}
+
+
+// ============================================================
+// PHOTO
+// ============================================================
+
+function ProductPhoto(
+  {
+    url,
+    article,
+  }:
+  {
+    url: string | null;
+    article: string | null;
+  }
+) {
+
+  const photoUrl =
+    url?.trim();
+
+
+  if (!photoUrl) {
+
+    return (
+
+      <div
+        style={{
+          width:
+            "74px",
+
+          height:
+            "74px",
+
+          border:
+            "1px solid var(--border)",
+
+          borderRadius:
+            "10px",
+
+          display:
+            "flex",
+
+          alignItems:
+            "center",
+
+          justifyContent:
+            "center",
+
+          textAlign:
+            "center",
+
+          padding:
+            "6px",
+
+          fontSize:
+            "11px",
+
+          color:
+            "var(--muted)",
+        }}
+      >
+
+        Нет фото
+
+      </div>
+
+    );
+
+  }
+
+
+  return (
+
+    <a
+      href={
+        photoUrl
+      }
+
+      target="_blank"
+
+      rel="noreferrer"
+
+      title={
+        article
+          ? `Открыть фото ${article}`
+          : "Открыть фото"
+      }
+
+      style={{
+        display:
+          "block",
+
+        width:
+          "74px",
+
+        height:
+          "74px",
+
+        border:
+          "1px solid var(--border)",
+
+        borderRadius:
+          "10px",
+
+        overflow:
+          "hidden",
+
+        background:
+          "var(--card)",
+
+        textDecoration:
+          "none",
+      }}
+    >
+
+      <div
+        style={{
+          width:
+            "100%",
+
+          height:
+            "100%",
+
+          backgroundImage:
+            `url("${photoUrl}")`,
+
+          backgroundSize:
+            "contain",
+
+          backgroundPosition:
+            "center",
+
+          backgroundRepeat:
+            "no-repeat",
+        }}
+      />
+
+    </a>
+
+  );
 
 }
 
@@ -701,7 +789,8 @@ export default function VedOrderDetailClient(
                 ),
 
           moq:
-            item.moq_quantity ===
+            item
+              .moq_quantity ===
             null
 
               ? ""
@@ -711,7 +800,8 @@ export default function VedOrderDetailClient(
                 ),
 
           price:
-            item.unit_price_cny ===
+            item
+              .unit_price_cny ===
             null
 
               ? ""
@@ -774,7 +864,7 @@ export default function VedOrderDetailClient(
 
 
   // ==========================================================
-  // LOAD HANDOFF READINESS
+  // HANDOFF READINESS
   // ==========================================================
 
   async function loadHandoffReadiness() {
@@ -873,10 +963,6 @@ export default function VedOrderDetailClient(
   );
 
 
-  // ==========================================================
-  // REFRESH ORDER + READINESS
-  // ==========================================================
-
   async function refreshAll() {
 
     await loadOrder();
@@ -887,7 +973,7 @@ export default function VedOrderDetailClient(
 
 
   // ==========================================================
-  // UPDATE EDITOR
+  // EDITOR
   // ==========================================================
 
   function updateEditor(
@@ -907,9 +993,7 @@ export default function VedOrderDetailClient(
 
         [itemId]: {
 
-          ...(current[
-            itemId
-          ] ?? {
+          ...(current[itemId] ?? {
 
             chineseArticle:
               "",
@@ -953,10 +1037,6 @@ export default function VedOrderDetailClient(
   }
 
 
-  // ==========================================================
-  // ACTOR
-  // ==========================================================
-
   function getActor() {
 
     const actorName =
@@ -986,7 +1066,7 @@ export default function VedOrderDetailClient(
 
 
   // ==========================================================
-  // SAVE PREPARATION DATA
+  // PREPARATION DATA
   // ==========================================================
 
   async function savePreparationData(
@@ -1796,9 +1876,7 @@ export default function VedOrderDetailClient(
           await response.json();
 
 
-      if (
-        !response.ok
-      ) {
+      if (!response.ok) {
 
         throw new Error(
           result.error
@@ -1870,7 +1948,7 @@ export default function VedOrderDetailClient(
 
 
   // ==========================================================
-  // LOADING
+  // LOADING / ERROR
   // ==========================================================
 
   if (loading) {
@@ -1890,10 +1968,6 @@ export default function VedOrderDetailClient(
   }
 
 
-  // ==========================================================
-  // ERROR
-  // ==========================================================
-
   if (
     error
     ||
@@ -1909,7 +1983,6 @@ export default function VedOrderDetailClient(
         <h2 className="section-title">
           Не удалось открыть заказ
         </h2>
-
 
         <div className="reason-box">
 
@@ -1961,9 +2034,7 @@ export default function VedOrderDetailClient(
     <>
 
 
-      {/* ======================================================
-          HEADER
-          ====================================================== */}
+      {/* HEADER */}
 
       <section className="section">
 
@@ -2010,12 +2081,9 @@ export default function VedOrderDetailClient(
       </section>
 
 
-      {/* ======================================================
-          MAIN INFO
-          ====================================================== */}
+      {/* MAIN INFO */}
 
       <section className="summary-grid">
-
 
         <div className="card">
 
@@ -2135,9 +2203,7 @@ export default function VedOrderDetailClient(
       </section>
 
 
-      {/* ======================================================
-          READINESS SUMMARY
-          ====================================================== */}
+      {/* READINESS SUMMARY */}
 
       {statistics && (
 
@@ -2153,7 +2219,6 @@ export default function VedOrderDetailClient(
 
 
           <section className="summary-grid">
-
 
             <div className="card">
 
@@ -2268,9 +2333,7 @@ export default function VedOrderDetailClient(
       )}
 
 
-      {/* ======================================================
-          TOTALS
-          ====================================================== */}
+      {/* TOTALS */}
 
       {totals && (
 
@@ -2286,7 +2349,6 @@ export default function VedOrderDetailClient(
 
 
           <section className="summary-grid">
-
 
             <div className="card">
 
@@ -2378,9 +2440,7 @@ export default function VedOrderDetailClient(
       )}
 
 
-      {/* ======================================================
-          HANDOFF TO VED
-          ====================================================== */}
+      {/* HANDOFF */}
 
       <section className="section">
 
@@ -2404,13 +2464,7 @@ export default function VedOrderDetailClient(
 
           <>
 
-            <div
-              className="reason-box"
-              style={{
-                marginTop:
-                  "14px",
-              }}
-            >
+            <div className="reason-box">
 
               <div className="reason-text">
 
@@ -2585,33 +2639,6 @@ export default function VedOrderDetailClient(
             )}
 
 
-            {handoff.ready && (
-
-              <div
-                className="reason-box"
-                style={{
-                  marginTop:
-                    "16px",
-                }}
-              >
-
-                <strong>
-                  Все обязательные данные заполнены.
-                </strong>
-
-                <div className="reason-text">
-                  После передачи заказ станет доступен ВЭД для взятия в работу.
-                </div>
-
-                <div className="reason-text">
-                  Количество ВЭД ещё не попадёт в остатки «в пути» — это произойдёт только после подтверждения передачи заказа в производство.
-                </div>
-
-              </div>
-
-            )}
-
-
             <div
               style={{
                 display:
@@ -2710,7 +2737,9 @@ export default function VedOrderDetailClient(
                 600,
             }}
           >
+
             {handoffError}
+
           </div>
 
         )}
@@ -2727,7 +2756,9 @@ export default function VedOrderDetailClient(
                 700,
             }}
           >
+
             {handoffMessage}
+
           </div>
 
         )}
@@ -2735,9 +2766,7 @@ export default function VedOrderDetailClient(
       </section>
 
 
-      {/* ======================================================
-          ITEMS
-          ====================================================== */}
+      {/* ITEMS */}
 
       <section className="section">
 
@@ -2748,8 +2777,8 @@ export default function VedOrderDetailClient(
 
         <div className="reason-text">
 
-          Заполните обязательные данные товара,
-          затем подтвердите MOQ и цену.
+          Нажмите на фотографию,
+          чтобы открыть её в полном размере.
 
         </div>
 
@@ -2770,7 +2799,7 @@ export default function VedOrderDetailClient(
                 "100%",
 
               minWidth:
-                "2450px",
+                "2580px",
 
               borderCollapse:
                 "collapse",
@@ -2785,6 +2814,7 @@ export default function VedOrderDetailClient(
               <tr>
 
                 {[
+                  "Фото",
                   "Китайский арт.",
                   "Наш артикул",
                   "Товар",
@@ -2910,6 +2940,33 @@ export default function VedOrderDetailClient(
                       <tr>
 
 
+                        {/* PHOTO */}
+
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+
+                            width:
+                              "95px",
+                          }}
+                        >
+
+                          <ProductPhoto
+                            url={
+                              item.photo_url
+                            }
+
+                            article={
+                              item.our_article_snapshot
+                            }
+                          />
+
+                        </td>
+
+
+                        {/* CHINESE ARTICLE */}
+
                         <td
                           style={{
                             padding:
@@ -2997,6 +3054,8 @@ export default function VedOrderDetailClient(
                         </td>
 
 
+                        {/* OUR ARTICLE */}
+
                         <td
                           style={{
                             padding:
@@ -3018,6 +3077,8 @@ export default function VedOrderDetailClient(
                         </td>
 
 
+                        {/* PRODUCT */}
+
                         <td
                           style={{
                             padding:
@@ -3035,6 +3096,8 @@ export default function VedOrderDetailClient(
 
                         </td>
 
+
+                        {/* DEMANDS */}
 
                         <td
                           style={{
@@ -3092,6 +3155,8 @@ export default function VedOrderDetailClient(
 
                         </td>
 
+
+                        {/* PACKING */}
 
                         <td
                           style={{
@@ -3186,6 +3251,8 @@ export default function VedOrderDetailClient(
                         </td>
 
 
+                        {/* MOQ */}
+
                         <td
                           style={{
                             padding:
@@ -3260,6 +3327,8 @@ export default function VedOrderDetailClient(
 
                         </td>
 
+
+                        {/* PRICE */}
 
                         <td
                           style={{
@@ -3336,6 +3405,8 @@ export default function VedOrderDetailClient(
                         </td>
 
 
+                        {/* STATUS */}
+
                         <td
                           style={{
                             padding:
@@ -3350,6 +3421,8 @@ export default function VedOrderDetailClient(
 
                         </td>
 
+
+                        {/* FINAL */}
 
                         <td
                           style={{
@@ -3476,6 +3549,8 @@ export default function VedOrderDetailClient(
 
                         </td>
 
+
+                        {/* ACTIONS */}
 
                         <td
                           style={{
@@ -3725,13 +3800,15 @@ export default function VedOrderDetailClient(
                       </tr>
 
 
+                      {/* PREVIEW */}
+
                       {preview && (
 
                         <tr>
 
                           <td
                             colSpan={
-                              18
+                              19
                             }
 
                             style={{
@@ -3763,7 +3840,6 @@ export default function VedOrderDetailClient(
                                   "12px",
                               }}
                             >
-
 
                               <div>
 
@@ -3962,31 +4038,6 @@ export default function VedOrderDetailClient(
 
                                 </div>
 
-
-                                {item
-                                  .moq_review_status ===
-                                  "pending" ? (
-
-                                  <div className="reason-text">
-
-                                    Выберите:
-                                    включить увеличенное количество
-                                    в заказ или не заказывать SKU.
-
-                                  </div>
-
-                                ) : (
-
-                                  <div className="reason-text">
-
-                                    Сначала подтвердите MOQ и цену.
-                                    После этого позиция перейдёт
-                                    на ручное решение.
-
-                                  </div>
-
-                                )}
-
                               </div>
 
                             )}
@@ -4041,18 +4092,15 @@ export default function VedOrderDetailClient(
           }}
         >
 
-          Китайский артикул после первого сохранения
-          для существующего товара фиксируется.
-          Вес транспортного короба можно уточнять позднее.
+          Фото сохранено в позиции текущего заказа.
+          Нажмите на изображение для просмотра оригинала.
 
         </div>
 
       </section>
 
 
-      {/* ======================================================
-          DATES
-          ====================================================== */}
+      {/* DATES */}
 
       <section className="section">
 
@@ -4081,11 +4129,9 @@ export default function VedOrderDetailClient(
             </div>
 
             <strong>
-
               {formatDate(
                 order.first_sent_to_ved_at
               )}
-
             </strong>
 
           </div>
@@ -4098,11 +4144,9 @@ export default function VedOrderDetailClient(
             </div>
 
             <strong>
-
               {formatDate(
                 order.production_handoff_date
               )}
-
             </strong>
 
           </div>
@@ -4115,11 +4159,9 @@ export default function VedOrderDetailClient(
             </div>
 
             <strong>
-
               {formatDate(
                 order.expected_arrival_date
               )}
-
             </strong>
 
           </div>
@@ -4132,11 +4174,9 @@ export default function VedOrderDetailClient(
             </div>
 
             <strong>
-
               {formatDate(
                 order.actual_arrival_date
               )}
-
             </strong>
 
           </div>
