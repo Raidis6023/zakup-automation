@@ -3,17 +3,15 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  // Поддерживаем оба распространённых варианта названия URL.
-  const supabaseUrl =
+  const supabaseUrlRaw =
     process.env.SUPABASE_URL ??
     process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-  // И два распространённых варианта серверного секретного ключа.
-  const supabaseKey =
+  const supabaseKeyRaw =
     process.env.SUPABASE_SERVICE_ROLE_KEY ??
     process.env.SUPABASE_SECRET_KEY;
 
-  if (!supabaseUrl) {
+  if (!supabaseUrlRaw) {
     return NextResponse.json(
       {
         ok: false,
@@ -24,7 +22,7 @@ export async function GET() {
     );
   }
 
-  if (!supabaseKey) {
+  if (!supabaseKeyRaw) {
     return NextResponse.json(
       {
         ok: false,
@@ -34,6 +32,11 @@ export async function GET() {
       { status: 500 }
     );
   }
+
+  // После проверок создаём переменные,
+  // которые TypeScript уже точно считает строками.
+  const supabaseUrl: string = supabaseUrlRaw;
+  const supabaseKey: string = supabaseKeyRaw;
 
   async function checkTable(tableName: string) {
     const url =
@@ -69,10 +72,11 @@ export async function GET() {
   }
 
   try {
-    const ordersTable = await checkTable("wb_orders");
-    const stocksTable = await checkTable(
-      "wb_stock_snapshots"
-    );
+    const ordersTable =
+      await checkTable("wb_orders");
+
+    const stocksTable =
+      await checkTable("wb_stock_snapshots");
 
     const allOk =
       ordersTable.ok && stocksTable.ok;
