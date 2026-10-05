@@ -131,8 +131,6 @@ function HeaderDecoration() {
 
         <defs>
 
-          {/* ПЕРВЫЙ БЛОК */}
-
           <linearGradient
             id="homeDecor1"
             x1="0%"
@@ -151,8 +149,6 @@ function HeaderDecoration() {
             />
           </linearGradient>
 
-
-          {/* ВТОРОЙ БЛОК */}
 
           <linearGradient
             id="homeDecor2"
@@ -173,8 +169,6 @@ function HeaderDecoration() {
           </linearGradient>
 
 
-          {/* ТРЕТИЙ БЛОК */}
-
           <linearGradient
             id="homeDecor3"
             x1="0%"
@@ -193,8 +187,6 @@ function HeaderDecoration() {
             />
           </linearGradient>
 
-
-          {/* ЧЕТВЁРТЫЙ БЛОК */}
 
           <linearGradient
             id="homeDecor4"
@@ -223,7 +215,7 @@ function HeaderDecoration() {
 
 
         {/* ==================================================
-            1 — КОРОТКИЙ
+            1
         =================================================== */}
 
         <path
@@ -235,15 +227,15 @@ function HeaderDecoration() {
             Q 41 14
               47 14
 
-            L 97 14
+            L 102 14
 
-            Q 102 14
-              99 18
+            Q 107 14
+              104 18
 
-            L 76 53
+            L 78 53
 
-            Q 73 58
-              67 58
+            Q 75 58
+              69 58
 
             L 19 58
 
@@ -262,27 +254,27 @@ function HeaderDecoration() {
 
         <path
           d="
-            M 108 53
+            M 84 53
 
-            L 131 18
+            L 108 18
 
-            Q 134 14
-              140 14
+            Q 111 14
+              117 14
 
-            L 229 14
+            L 238 14
 
-            Q 234 14
-              231 18
+            Q 243 14
+              240 18
 
-            L 208 53
+            L 214 53
 
-            Q 205 58
-              199 58
+            Q 211 58
+              205 58
 
-            L 112 58
+            L 88 58
 
-            Q 105 58
-              108 53
+            Q 81 58
+              84 53
 
             Z
           "
@@ -296,27 +288,27 @@ function HeaderDecoration() {
 
         <path
           d="
-            M 240 53
+            M 220 53
 
-            L 263 18
+            L 244 18
 
-            Q 266 14
-              272 14
+            Q 247 14
+              253 14
 
-            L 405 14
+            L 410 14
 
-            Q 410 14
-              407 18
+            Q 415 14
+              412 18
 
-            L 384 53
+            L 386 53
 
-            Q 381 58
-              375 58
+            Q 383 58
+              377 58
 
-            L 244 58
+            L 224 58
 
-            Q 237 58
-              240 53
+            Q 217 58
+              220 53
 
             Z
           "
@@ -330,27 +322,27 @@ function HeaderDecoration() {
 
         <path
           d="
-            M 416 53
+            M 392 53
 
-            L 439 18
+            L 416 18
 
-            Q 442 14
-              448 14
+            Q 419 14
+              425 14
 
             L 549 14
 
             Q 554 14
               551 18
 
-            L 528 53
+            L 525 53
 
-            Q 525 58
-              519 58
+            Q 522 58
+              516 58
 
-            L 420 58
+            L 396 58
 
-            Q 413 58
-              416 53
+            Q 389 58
+              392 53
 
             Z
           "
