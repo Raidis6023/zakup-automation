@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Fragment,
   useEffect,
   useState,
 } from "react";
@@ -12,242 +13,122 @@ import {
 
 type VedOrder = {
   id: string;
+  order_number: string | null;
+  status: string;
+  workflow_status: string;
 
-  order_number:
-    string | null;
+  created_by_name: string | null;
 
-  status:
-    string;
+  preparation_department: string | null;
+  preparation_responsible_name: string | null;
+  ved_responsible_name: string | null;
 
-  workflow_status:
-    string;
+  calculation_scenario: string | null;
+  transport_mode: string | null;
+  transport_variant: string | null;
 
-  created_by_name:
-    string | null;
+  transport_units: number | null;
+  selected_capacity_m3: number | null;
+  new_products_volume_m3: number;
 
-  preparation_department:
-    string | null;
+  first_sent_to_ved_at: string | null;
+  last_sent_to_ved_at: string | null;
 
-  preparation_responsible_name:
-    string | null;
+  production_handoff_date: string | null;
+  production_confirmed_at: string | null;
 
-  ved_responsible_name:
-    string | null;
+  expected_arrival_date: string | null;
+  actual_arrival_date: string | null;
 
-  calculation_scenario:
-    string | null;
-
-  transport_mode:
-    string | null;
-
-  transport_variant:
-    string | null;
-
-  transport_units:
-    number | null;
-
-  selected_capacity_m3:
-    number | null;
-
-  new_products_volume_m3:
-    number;
-
-  first_sent_to_ved_at:
-    string | null;
-
-  last_sent_to_ved_at:
-    string | null;
-
-  production_handoff_date:
-    string | null;
-
-  production_confirmed_at:
-    string | null;
-
-  expected_arrival_date:
-    string | null;
-
-  actual_arrival_date:
-    string | null;
-
-  created_at:
-    string;
-
-  updated_at:
-    string;
+  created_at: string;
+  updated_at: string;
 };
 
 
 type VedOrderItem = {
   id: string;
+  product_id: string | null;
 
-  product_id:
-    string | null;
+  status: string;
+  item_kind: string;
 
-  status:
-    string;
+  chinese_article_snapshot: string | null;
+  our_article_snapshot: string | null;
+  product_name_snapshot: string | null;
 
-  item_kind:
-    string;
+  photo_url: string | null;
 
-  chinese_article_snapshot:
-    string | null;
+  priority_group: string | null;
+  position_sort: number | null;
 
-  our_article_snapshot:
-    string | null;
+  demand_container_units: number | null;
+  demand_truck_units: number | null;
+  selected_demand_units: number | null;
 
-  product_name_snapshot:
-    string | null;
+  moq_quantity: number | null;
+  moq_confirmed_at: string | null;
 
-  photo_url:
-    string | null;
+  unit_price_cny: number | null;
+  price_confirmed_at: string | null;
 
-  priority_group:
-    string | null;
+  moq_excess_review_required: boolean;
+  moq_review_status: string;
 
-  position_sort:
-    number | null;
+  units_per_carton_snapshot: number | null;
+  carton_volume_m3_snapshot: number | null;
+  carton_weight_kg_snapshot: number | null;
 
-  demand_container_units:
-    number | null;
+  cartons: number | null;
+  order_quantity: number;
 
-  demand_truck_units:
-    number | null;
+  coverage_after_order_days: number | null;
 
-  selected_demand_units:
-    number | null;
+  is_partial_fill: boolean;
+  manual_cartons_override: boolean;
 
-  moq_quantity:
-    number | null;
+  incoterm: string | null;
+  port: string | null;
 
-  moq_confirmed_at:
-    string | null;
+  analytics_comment: string | null;
+  ved_comment: string | null;
 
-  unit_price_cny:
-    number | null;
+  total_price_cny: number | null;
+  total_volume_m3: number | null;
+  total_weight_tons: number | null;
 
-  price_confirmed_at:
-    string | null;
-
-  moq_excess_review_required:
-    boolean;
-
-  moq_review_status:
-    string;
-
-  units_per_carton_snapshot:
-    number | null;
-
-  carton_volume_m3_snapshot:
-    number | null;
-
-  carton_weight_kg_snapshot:
-    number | null;
-
-  cartons:
-    number | null;
-
-  order_quantity:
-    number;
-
-  coverage_after_order_days:
-    number | null;
-
-  is_partial_fill:
-    boolean;
-
-  manual_cartons_override:
-    boolean;
-
-  incoterm:
-    string | null;
-
-  port:
-    string | null;
-
-  analytics_comment:
-    string | null;
-
-  ved_comment:
-    string | null;
-
-  total_price_cny:
-    number | null;
-
-  total_volume_m3:
-    number | null;
-
-  total_weight_tons:
-    number | null;
-
-  quantity:
-    number;
+  quantity: number;
 };
 
 
 type VedOrderTotals = {
-  items_count:
-    number;
-
-  total_units:
-    number;
-
-  total_cartons:
-    number;
-
-  total_price_cny:
-    number;
-
-  total_volume_m3:
-    number;
-
-  total_weight_tons:
-    number;
+  items_count: number;
+  total_units: number;
+  total_cartons: number;
+  total_price_cny: number;
+  total_volume_m3: number;
+  total_weight_tons: number;
 };
 
 
 type VedOrderStatistics = {
-  items_count:
-    number;
-
-  terms_confirmed:
-    number;
-
-  terms_pending:
-    number;
-
-  moq_review_pending:
-    number;
-
-  ready_for_transport:
-    number;
-
-  missing_chinese_article:
-    number;
-
-  missing_weight:
-    number;
+  items_count: number;
+  terms_confirmed: number;
+  terms_pending: number;
+  moq_review_pending: number;
+  ready_for_transport: number;
+  missing_chinese_article: number;
+  missing_weight: number;
 };
 
 
 type VedOrderResponse = {
-  ok:
-    boolean;
+  ok: boolean;
+  error?: string;
 
-  error?:
-    string;
-
-  order?:
-    VedOrder;
-
-  totals?:
-    VedOrderTotals;
-
-  statistics?:
-    VedOrderStatistics;
-
-  items?:
-    VedOrderItem[];
+  order?: VedOrder;
+  totals?: VedOrderTotals;
+  statistics?: VedOrderStatistics;
+  items?: VedOrderItem[];
 };
 
 
@@ -256,92 +137,51 @@ type VedOrderResponse = {
 // ============================================================
 
 type TermsPreview = {
-  ok:
-    boolean;
+  ok: boolean;
+  error?: string;
 
-  error?:
-    string;
+  item_id?: string;
 
-  item_id?:
-    string;
+  our_article?: string | null;
+  product_name?: string | null;
 
-  our_article?:
-    string | null;
+  scenario?: string;
 
-  product_name?:
-    string | null;
+  target_days?: number;
 
-  scenario?:
-    string;
+  selected_demand_units?: number;
+  units_per_carton?: number;
 
-  target_days?:
-    number;
+  moq_quantity?: number;
+  unit_price_cny?: number;
 
-  selected_demand_units?:
-    number;
+  standard_cartons?: number;
+  standard_quantity?: number;
 
-  units_per_carton?:
-    number;
+  moq_changed_quantity?: boolean;
 
-  moq_quantity?:
-    number;
+  final_cartons?: number;
+  final_quantity?: number;
 
-  unit_price_cny?:
-    number;
+  coverage_after_order_days?: number | null;
+  target_coverage_days?: number;
 
-  standard_cartons?:
-    number;
+  moq_review_required?: boolean;
 
-  standard_quantity?:
-    number;
+  total_price_cny?: number;
+  total_volume_m3?: number | null;
+  total_weight_tons?: number | null;
 
-  moq_changed_quantity?:
-    boolean;
+  terms_confirmed?: boolean;
+  moq_review_status?: string;
 
-  final_cartons?:
-    number;
+  proposed_cartons?: number;
+  proposed_quantity?: number;
 
-  final_quantity?:
-    number;
+  accepted_cartons?: number;
+  accepted_quantity?: number;
 
-  coverage_after_order_days?:
-    number | null;
-
-  target_coverage_days?:
-    number;
-
-  moq_review_required?:
-    boolean;
-
-  total_price_cny?:
-    number;
-
-  total_volume_m3?:
-    number | null;
-
-  total_weight_tons?:
-    number | null;
-
-  terms_confirmed?:
-    boolean;
-
-  moq_review_status?:
-    string;
-
-  proposed_cartons?:
-    number;
-
-  proposed_quantity?:
-    number;
-
-  accepted_cartons?:
-    number;
-
-  accepted_quantity?:
-    number;
-
-  ready_for_transport?:
-    boolean;
+  ready_for_transport?: boolean;
 };
 
 
@@ -350,29 +190,21 @@ type TermsPreview = {
 // ============================================================
 
 type ItemEditorState = {
-  moq:
-    string;
+  moq: string;
+  price: string;
 
-  price:
-    string;
+  loadingPreview: boolean;
+  loadingConfirm: boolean;
+  loadingReview: boolean;
 
-  loadingPreview:
-    boolean;
+  error: string;
 
-  loadingConfirm:
-    boolean;
-
-  error:
-    string;
-
-  preview:
-    TermsPreview | null;
+  preview: TermsPreview | null;
 };
 
 
 type EditorsState = {
-  [itemId: string]:
-    ItemEditorState;
+  [itemId: string]: ItemEditorState;
 };
 
 
@@ -381,13 +213,8 @@ type EditorsState = {
 // ============================================================
 
 function formatNumber(
-  value:
-    number
-    | null
-    | undefined,
-
-  digits =
-    0
+  value: number | null | undefined,
+  digits = 0
 ) {
 
   if (
@@ -395,18 +222,14 @@ function formatNumber(
     ||
     value === undefined
   ) {
-
     return "—";
-
   }
-
 
   return Number(value)
     .toLocaleString(
       "ru-RU",
       {
-        maximumFractionDigits:
-          digits,
+        maximumFractionDigits: digits,
       }
     );
 
@@ -414,33 +237,23 @@ function formatNumber(
 
 
 function formatDate(
-  value:
-    string
-    | null
-    | undefined
+  value: string | null | undefined
 ) {
 
   if (!value) {
-
     return "—";
-
   }
-
 
   const date =
     new Date(value);
-
 
   if (
     Number.isNaN(
       date.getTime()
     )
   ) {
-
     return value;
-
   }
-
 
   return date
     .toLocaleDateString(
@@ -451,8 +264,7 @@ function formatDate(
 
 
 function parsePositiveNumber(
-  value:
-    string
+  value: string
 ):
   number | null {
 
@@ -468,32 +280,20 @@ function parsePositiveNumber(
         "."
       );
 
-
   if (!normalized) {
-
     return null;
-
   }
 
-
   const parsed =
-    Number(
-      normalized
-    );
-
+    Number(normalized);
 
   if (
-    !Number.isFinite(
-      parsed
-    )
+    !Number.isFinite(parsed)
     ||
     parsed <= 0
   ) {
-
     return null;
-
   }
-
 
   return parsed;
 
@@ -505,8 +305,7 @@ function parsePositiveNumber(
 // ============================================================
 
 function getWorkflowLabel(
-  status:
-    string
+  status: string
 ) {
 
   switch (status) {
@@ -547,8 +346,7 @@ function getWorkflowLabel(
 
 
 function getTermsStatus(
-  item:
-    VedOrderItem
+  item: VedOrderItem
 ) {
 
   if (
@@ -556,40 +354,28 @@ function getTermsStatus(
     ||
     !item.price_confirmed_at
   ) {
-
     return "Требует подтверждения";
-
   }
-
 
   if (
     item.moq_review_status ===
     "pending"
   ) {
-
     return "Требует решения";
-
   }
-
 
   if (
     item.moq_review_status ===
     "rejected"
   ) {
-
     return "Не заказывать";
-
   }
-
 
   if (
     item.order_quantity > 0
   ) {
-
     return "Готов к заказу";
-
   }
-
 
   return "Условия подтверждены";
 
@@ -605,8 +391,7 @@ export default function VedOrderDetailClient(
     orderId,
   }:
   {
-    orderId:
-      string;
+    orderId: string;
   }
 ) {
 
@@ -656,7 +441,6 @@ export default function VedOrderDetailClient(
       true
     );
 
-
     setError(
       ""
     );
@@ -668,11 +452,8 @@ export default function VedOrderDetailClient(
         await fetch(
           `/api/ved-orders/${orderId}`,
           {
-            method:
-              "GET",
-
-            cache:
-              "no-store",
+            method: "GET",
+            cache: "no-store",
           }
         );
 
@@ -717,16 +498,14 @@ export default function VedOrderDetailClient(
         ] = {
 
           moq:
-            item.moq_quantity ===
-            null
+            item.moq_quantity === null
               ? ""
               : String(
                   item.moq_quantity
                 ),
 
           price:
-            item.unit_price_cny ===
-            null
+            item.unit_price_cny === null
               ? ""
               : String(
                   item.unit_price_cny
@@ -736,6 +515,9 @@ export default function VedOrderDetailClient(
             false,
 
           loadingConfirm:
+            false,
+
+          loadingReview:
             false,
 
           error:
@@ -758,14 +540,9 @@ export default function VedOrderDetailClient(
     ) {
 
       setError(
-
-        caughtError
-        instanceof Error
-
+        caughtError instanceof Error
           ? caughtError.message
-
           : "Неизвестная ошибка"
-
       );
 
     } finally {
@@ -797,11 +574,8 @@ export default function VedOrderDetailClient(
   // ==========================================================
 
   function updateEditor(
-    itemId:
-      string,
-
-    patch:
-      Partial<ItemEditorState>
+    itemId: string,
+    patch: Partial<ItemEditorState>
   ) {
 
     setEditors(
@@ -813,15 +587,10 @@ export default function VedOrderDetailClient(
 
         [itemId]: {
 
-          ...(current[
-            itemId
-          ] ?? {
+          ...(current[itemId] ?? {
 
-            moq:
-              "",
-
-            price:
-              "",
+            moq: "",
+            price: "",
 
             loadingPreview:
               false,
@@ -829,8 +598,10 @@ export default function VedOrderDetailClient(
             loadingConfirm:
               false,
 
-            error:
-              "",
+            loadingReview:
+              false,
+
+            error: "",
 
             preview:
               null,
@@ -848,12 +619,43 @@ export default function VedOrderDetailClient(
 
 
   // ==========================================================
+  // ACTOR
+  // ==========================================================
+
+  function getActor() {
+
+    const actorName =
+      data
+        ?.order
+        ?.preparation_responsible_name
+        ?.trim();
+
+
+    const actorRole =
+      data
+        ?.order
+        ?.preparation_department ===
+        "procurement"
+
+        ? "procurement"
+
+        : "analytics";
+
+
+    return {
+      actorName,
+      actorRole,
+    };
+
+  }
+
+
+  // ==========================================================
   // PREVIEW TERMS
   // ==========================================================
 
   async function previewTerms(
-    item:
-      VedOrderItem
+    item: VedOrderItem
   ) {
 
     const editor =
@@ -863,9 +665,7 @@ export default function VedOrderDetailClient(
 
 
     if (!editor) {
-
       return;
-
     }
 
 
@@ -884,9 +684,7 @@ export default function VedOrderDetailClient(
     if (
       moq === null
       ||
-      !Number.isInteger(
-        moq
-      )
+      !Number.isInteger(moq)
     ) {
 
       updateEditor(
@@ -940,8 +738,7 @@ export default function VedOrderDetailClient(
         await fetch(
           `/api/ved-orders/items/${item.id}/terms`,
           {
-            method:
-              "POST",
+            method: "POST",
 
             headers: {
               "Content-Type":
@@ -1008,12 +805,8 @@ export default function VedOrderDetailClient(
         item.id,
         {
           error:
-
-            caughtError
-            instanceof Error
-
+            caughtError instanceof Error
               ? caughtError.message
-
               : "Неизвестная ошибка расчёта",
         }
       );
@@ -1038,8 +831,7 @@ export default function VedOrderDetailClient(
   // ==========================================================
 
   async function confirmTerms(
-    item:
-      VedOrderItem
+    item: VedOrderItem
   ) {
 
     const editor =
@@ -1049,9 +841,7 @@ export default function VedOrderDetailClient(
 
 
     if (!editor) {
-
       return;
-
     }
 
 
@@ -1070,9 +860,7 @@ export default function VedOrderDetailClient(
     if (
       moq === null
       ||
-      !Number.isInteger(
-        moq
-      )
+      !Number.isInteger(moq)
     ) {
 
       updateEditor(
@@ -1105,11 +893,11 @@ export default function VedOrderDetailClient(
     }
 
 
-    const actorName =
-      data
-        ?.order
-        ?.preparation_responsible_name
-        ?.trim();
+    const {
+      actorName,
+      actorRole,
+    } =
+      getActor();
 
 
     if (!actorName) {
@@ -1125,17 +913,6 @@ export default function VedOrderDetailClient(
       return;
 
     }
-
-
-    const actorRole =
-      data
-        ?.order
-        ?.preparation_department ===
-        "procurement"
-
-        ? "procurement"
-
-        : "analytics";
 
 
     updateEditor(
@@ -1156,8 +933,7 @@ export default function VedOrderDetailClient(
         await fetch(
           `/api/ved-orders/items/${item.id}/terms`,
           {
-            method:
-              "POST",
+            method: "POST",
 
             headers: {
               "Content-Type":
@@ -1222,12 +998,8 @@ export default function VedOrderDetailClient(
         item.id,
         {
           error:
-
-            caughtError
-            instanceof Error
-
+            caughtError instanceof Error
               ? caughtError.message
-
               : "Неизвестная ошибка подтверждения",
         }
       );
@@ -1238,6 +1010,139 @@ export default function VedOrderDetailClient(
         item.id,
         {
           loadingConfirm:
+            false,
+        }
+      );
+
+    }
+
+  }
+
+
+  // ==========================================================
+  // RESOLVE MOQ REVIEW
+  // ==========================================================
+
+  async function resolveMoqReview(
+    item: VedOrderItem,
+    decision:
+      "approve" | "reject"
+  ) {
+
+    const {
+      actorName,
+      actorRole,
+    } =
+      getActor();
+
+
+    if (!actorName) {
+
+      updateEditor(
+        item.id,
+        {
+          error:
+            "У заказа не указан ответственный сотрудник",
+        }
+      );
+
+      return;
+
+    }
+
+
+    updateEditor(
+      item.id,
+      {
+        loadingReview:
+          true,
+
+        error:
+          "",
+      }
+    );
+
+
+    try {
+
+      const response =
+        await fetch(
+          `/api/ved-orders/items/${item.id}/moq-review`,
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify(
+                {
+                  decision,
+
+                  actorName,
+
+                  actorUserId:
+                    null,
+
+                  actorRole,
+
+                  comment:
+                    null,
+                }
+              ),
+
+            cache:
+              "no-store",
+          }
+        );
+
+
+      const result:
+        TermsPreview =
+          await response.json();
+
+
+      if (
+        !response.ok
+        ||
+        !result.ok
+      ) {
+
+        throw new Error(
+          result.error
+          ||
+          "Не удалось сохранить решение по MOQ"
+        );
+
+      }
+
+
+      await loadOrder();
+
+
+    } catch (
+      caughtError
+    ) {
+
+      updateEditor(
+        item.id,
+        {
+          error:
+            caughtError instanceof Error
+              ? caughtError.message
+              : "Неизвестная ошибка решения по MOQ",
+        }
+      );
+
+    } finally {
+
+      updateEditor(
+        item.id,
+        {
+          loadingReview:
             false,
         }
       );
@@ -1287,7 +1192,6 @@ export default function VedOrderDetailClient(
         <h2 className="section-title">
           Не удалось открыть заказ
         </h2>
-
 
         <div className="reason-box">
 
@@ -1368,11 +1272,9 @@ export default function VedOrderDetailClient(
           Статус:{" "}
 
           <strong>
-
             {getWorkflowLabel(
               order.workflow_status
             )}
-
           </strong>
 
         </div>
@@ -1532,11 +1434,9 @@ export default function VedOrderDetailClient(
               </div>
 
               <div className="big-number">
-
                 {formatNumber(
                   statistics.items_count
                 )}
-
               </div>
 
             </div>
@@ -1549,11 +1449,9 @@ export default function VedOrderDetailClient(
               </div>
 
               <div className="big-number">
-
                 {formatNumber(
                   statistics.terms_confirmed
                 )}
-
               </div>
 
             </div>
@@ -1566,11 +1464,9 @@ export default function VedOrderDetailClient(
               </div>
 
               <div className="big-number">
-
                 {formatNumber(
                   statistics.terms_pending
                 )}
-
               </div>
 
             </div>
@@ -1583,11 +1479,9 @@ export default function VedOrderDetailClient(
               </div>
 
               <div className="big-number">
-
                 {formatNumber(
                   statistics.ready_for_transport
                 )}
-
               </div>
 
             </div>
@@ -1600,12 +1494,10 @@ export default function VedOrderDetailClient(
               </div>
 
               <div className="big-number">
-
                 {formatNumber(
                   statistics
                     .missing_chinese_article
                 )}
-
               </div>
 
             </div>
@@ -1618,11 +1510,9 @@ export default function VedOrderDetailClient(
               </div>
 
               <div className="big-number">
-
                 {formatNumber(
                   statistics.missing_weight
                 )}
-
               </div>
 
             </div>
@@ -1635,12 +1525,10 @@ export default function VedOrderDetailClient(
               </div>
 
               <div className="big-number">
-
                 {formatNumber(
                   statistics
                     .moq_review_pending
                 )}
-
               </div>
 
             </div>
@@ -1679,11 +1567,9 @@ export default function VedOrderDetailClient(
               </div>
 
               <div className="big-number">
-
                 {formatNumber(
                   totals.total_cartons
                 )}
-
               </div>
 
             </div>
@@ -1696,11 +1582,9 @@ export default function VedOrderDetailClient(
               </div>
 
               <div className="big-number">
-
                 {formatNumber(
                   totals.total_units
                 )}
-
               </div>
 
             </div>
@@ -1779,9 +1663,9 @@ export default function VedOrderDetailClient(
 
         <div className="reason-text">
 
-          Введите MOQ и цену в юанях,
+          Введите MOQ и цену,
           выполните предварительный расчёт
-          и только после проверки подтвердите условия.
+          и после проверки подтвердите условия.
 
         </div>
 
@@ -1898,22 +1782,34 @@ export default function VedOrderDetailClient(
                       ?.preview;
 
 
+                  const busy =
+                    Boolean(
+                      editor
+                        ?.loadingPreview
+                      ||
+                      editor
+                        ?.loadingConfirm
+                      ||
+                      editor
+                        ?.loadingReview
+                    );
+
+
                   return (
 
-                    <>
-                      <tr
-                        key={
-                          item.id
-                        }
-                      >
+                    <Fragment
+                      key={
+                        item.id
+                      }
+                    >
+
+                      <tr>
 
 
-                        <td
-                          style={{
-                            padding:
-                              "10px",
-                          }}
-                        >
+                        <td style={{
+                          padding:
+                            "10px",
+                        }}>
 
                           {item
                             .chinese_article_snapshot
@@ -1923,15 +1819,13 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td
-                          style={{
-                            padding:
-                              "10px",
+                        <td style={{
+                          padding:
+                            "10px",
 
-                            fontWeight:
-                              600,
-                          }}
-                        >
+                          fontWeight:
+                            600,
+                        }}>
 
                           {item
                             .our_article_snapshot
@@ -1941,15 +1835,13 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td
-                          style={{
-                            padding:
-                              "10px",
+                        <td style={{
+                          padding:
+                            "10px",
 
-                            minWidth:
-                              "300px",
-                          }}
-                        >
+                          minWidth:
+                            "300px",
+                        }}>
 
                           {item
                             .product_name_snapshot
@@ -1959,15 +1851,13 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td
-                          style={{
-                            padding:
-                              "10px",
+                        <td style={{
+                          padding:
+                            "10px",
 
-                            textAlign:
-                              "right",
-                          }}
-                        >
+                          textAlign:
+                            "right",
+                        }}>
 
                           {formatNumber(
                             item
@@ -1977,15 +1867,13 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td
-                          style={{
-                            padding:
-                              "10px",
+                        <td style={{
+                          padding:
+                            "10px",
 
-                            textAlign:
-                              "right",
-                          }}
-                        >
+                          textAlign:
+                            "right",
+                        }}>
 
                           {formatNumber(
                             item
@@ -1995,18 +1883,16 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td
-                          style={{
-                            padding:
-                              "10px",
+                        <td style={{
+                          padding:
+                            "10px",
 
-                            textAlign:
-                              "right",
+                          textAlign:
+                            "right",
 
-                            fontWeight:
-                              600,
-                          }}
-                        >
+                          fontWeight:
+                            600,
+                        }}>
 
                           {formatNumber(
                             item
@@ -2016,15 +1902,13 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td
-                          style={{
-                            padding:
-                              "10px",
+                        <td style={{
+                          padding:
+                            "10px",
 
-                            textAlign:
-                              "right",
-                          }}
-                        >
+                          textAlign:
+                            "right",
+                        }}>
 
                           {formatNumber(
                             item
@@ -2034,17 +1918,16 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td
-                          style={{
-                            padding:
-                              "10px",
-                          }}
-                        >
+                        <td style={{
+                          padding:
+                            "10px",
+                        }}>
 
                           <input
                             type="text"
 
-                            inputMode="numeric"
+                            inputMode=
+                              "numeric"
 
                             value={
                               editor
@@ -2054,11 +1937,7 @@ export default function VedOrderDetailClient(
                             }
 
                             disabled={
-                              editor
-                                ?.loadingPreview
-                              ||
-                              editor
-                                ?.loadingConfirm
+                              busy
                             }
 
                             onChange={
@@ -2112,17 +1991,16 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td
-                          style={{
-                            padding:
-                              "10px",
-                          }}
-                        >
+                        <td style={{
+                          padding:
+                            "10px",
+                        }}>
 
                           <input
                             type="text"
 
-                            inputMode="decimal"
+                            inputMode=
+                              "decimal"
 
                             value={
                               editor
@@ -2132,11 +2010,7 @@ export default function VedOrderDetailClient(
                             }
 
                             disabled={
-                              editor
-                                ?.loadingPreview
-                              ||
-                              editor
-                                ?.loadingConfirm
+                              busy
                             }
 
                             onChange={
@@ -2190,30 +2064,26 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td
-                          style={{
-                            padding:
-                              "10px",
+                        <td style={{
+                          padding:
+                            "10px",
 
-                            minWidth:
-                              "165px",
-                          }}
-                        >
+                          minWidth:
+                            "165px",
+                        }}>
 
                           {termsStatus}
 
                         </td>
 
 
-                        <td
-                          style={{
-                            padding:
-                              "10px",
+                        <td style={{
+                          padding:
+                            "10px",
 
-                            textAlign:
-                              "right",
-                          }}
-                        >
+                          textAlign:
+                            "right",
+                        }}>
 
                           {formatNumber(
                             item.cartons
@@ -2222,18 +2092,16 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td
-                          style={{
-                            padding:
-                              "10px",
+                        <td style={{
+                          padding:
+                            "10px",
 
-                            textAlign:
-                              "right",
+                          textAlign:
+                            "right",
 
-                            fontWeight:
-                              700,
-                          }}
-                        >
+                          fontWeight:
+                            700,
+                        }}>
 
                           {formatNumber(
                             item
@@ -2243,15 +2111,13 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td
-                          style={{
-                            padding:
-                              "10px",
+                        <td style={{
+                          padding:
+                            "10px",
 
-                            textAlign:
-                              "right",
-                          }}
-                        >
+                          textAlign:
+                            "right",
+                        }}>
 
                           {item
                             .coverage_after_order_days
@@ -2268,15 +2134,13 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td
-                          style={{
-                            padding:
-                              "10px",
+                        <td style={{
+                          padding:
+                            "10px",
 
-                            textAlign:
-                              "right",
-                          }}
-                        >
+                          textAlign:
+                            "right",
+                        }}>
 
                           {item
                             .total_price_cny
@@ -2293,15 +2157,13 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td
-                          style={{
-                            padding:
-                              "10px",
+                        <td style={{
+                          padding:
+                            "10px",
 
-                            textAlign:
-                              "right",
-                          }}
-                        >
+                          textAlign:
+                            "right",
+                        }}>
 
                           {formatNumber(
                             item
@@ -2312,15 +2174,13 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td
-                          style={{
-                            padding:
-                              "10px",
+                        <td style={{
+                          padding:
+                            "10px",
 
-                            minWidth:
-                              "250px",
-                          }}
-                        >
+                          minWidth:
+                            "280px",
+                        }}>
 
                           <div
                             style={{
@@ -2342,11 +2202,7 @@ export default function VedOrderDetailClient(
                                 "secondary-button"
 
                               disabled={
-                                editor
-                                  ?.loadingPreview
-                                ||
-                                editor
-                                  ?.loadingConfirm
+                                busy
                               }
 
                               onClick={
@@ -2370,7 +2226,12 @@ export default function VedOrderDetailClient(
                             </button>
 
 
-                            {preview && (
+                            {preview
+                              &&
+                              item
+                                .moq_review_status
+                                !==
+                                "pending" && (
 
                               <button
                                 type="button"
@@ -2379,8 +2240,7 @@ export default function VedOrderDetailClient(
                                   "primary-button"
 
                                 disabled={
-                                  editor
-                                    ?.loadingConfirm
+                                  busy
                                 }
 
                                 onClick={
@@ -2405,7 +2265,101 @@ export default function VedOrderDetailClient(
 
                             )}
 
+
+                            {item
+                              .moq_review_status ===
+                              "pending"
+                              &&
+                              preview && (
+
+                              <>
+
+                                <button
+                                  type="button"
+
+                                  className=
+                                    "primary-button"
+
+                                  disabled={
+                                    busy
+                                  }
+
+                                  onClick={
+                                    () => {
+
+                                      void resolveMoqReview(
+                                        item,
+                                        "approve"
+                                      );
+
+                                    }
+                                  }
+                                >
+
+                                  {editor
+                                    ?.loadingReview
+
+                                    ? "Сохраняем..."
+
+                                    : "Включить в заказ"}
+
+                                </button>
+
+
+                                <button
+                                  type="button"
+
+                                  className=
+                                    "secondary-button"
+
+                                  disabled={
+                                    busy
+                                  }
+
+                                  onClick={
+                                    () => {
+
+                                      void resolveMoqReview(
+                                        item,
+                                        "reject"
+                                      );
+
+                                    }
+                                  }
+                                >
+                                  Не заказывать
+                                </button>
+
+                              </>
+
+                            )}
+
                           </div>
+
+
+                          {item
+                            .moq_review_status ===
+                            "pending"
+                            &&
+                            !preview && (
+
+                            <div
+                              className="muted"
+
+                              style={{
+                                marginTop:
+                                  "8px",
+                              }}
+                            >
+
+                              Условия подтверждены.
+                              Нажмите «Рассчитать»,
+                              чтобы увидеть предложение
+                              перед ручным решением.
+
+                            </div>
+
+                          )}
 
 
                           {editor
@@ -2420,7 +2374,7 @@ export default function VedOrderDetailClient(
                                   "#d64545",
 
                                 maxWidth:
-                                  "260px",
+                                  "280px",
                               }}
                             >
 
@@ -2441,11 +2395,7 @@ export default function VedOrderDetailClient(
 
                       {preview && (
 
-                        <tr
-                          key={
-                            `${item.id}-preview`
-                          }
-                        >
+                        <tr>
 
                           <td
                             colSpan={
@@ -2454,7 +2404,7 @@ export default function VedOrderDetailClient(
 
                             style={{
                               padding:
-                                "12px 18px 18px",
+                                "14px 20px 20px",
 
                               background:
                                 "var(--card)",
@@ -2632,7 +2582,6 @@ export default function VedOrderDetailClient(
 
                               </div>
 
-
                             </div>
 
 
@@ -2662,13 +2611,31 @@ export default function VedOrderDetailClient(
 
                                 </div>
 
-                                <div className="reason-text">
 
-                                  После подтверждения MOQ и цены
-                                  товар пока не попадёт
-                                  в транспортный расчёт.
+                                {item
+                                  .moq_review_status ===
+                                  "pending" ? (
 
-                                </div>
+                                  <div className="reason-text">
+
+                                    Выберите:
+                                    включить увеличенное количество
+                                    в заказ или не заказывать
+                                    этот SKU.
+
+                                  </div>
+
+                                ) : (
+
+                                  <div className="reason-text">
+
+                                    Сначала подтвердите MOQ и цену.
+                                    После этого позиция перейдёт
+                                    на ручное решение.
+
+                                  </div>
+
+                                )}
 
                               </div>
 
@@ -2688,8 +2655,8 @@ export default function VedOrderDetailClient(
                               >
 
                                 MOQ не требует отдельного решения.
-                                После подтверждения товар будет
-                                включён в заказ автоматически.
+                                После подтверждения товар
+                                автоматически попадёт в заказ.
 
                               </div>
 
@@ -2701,7 +2668,7 @@ export default function VedOrderDetailClient(
 
                       )}
 
-                    </>
+                    </Fragment>
 
                   );
 
@@ -2741,6 +2708,7 @@ export default function VedOrderDetailClient(
           }}
         >
 
+
           <div>
 
             <div className="card-label">
@@ -2748,11 +2716,9 @@ export default function VedOrderDetailClient(
             </div>
 
             <strong>
-
               {formatDate(
                 order.first_sent_to_ved_at
               )}
-
             </strong>
 
           </div>
@@ -2765,11 +2731,9 @@ export default function VedOrderDetailClient(
             </div>
 
             <strong>
-
               {formatDate(
                 order.production_handoff_date
               )}
-
             </strong>
 
           </div>
@@ -2782,11 +2746,9 @@ export default function VedOrderDetailClient(
             </div>
 
             <strong>
-
               {formatDate(
                 order.expected_arrival_date
               )}
-
             </strong>
 
           </div>
@@ -2799,11 +2761,9 @@ export default function VedOrderDetailClient(
             </div>
 
             <strong>
-
               {formatDate(
                 order.actual_arrival_date
               )}
-
             </strong>
 
           </div>
