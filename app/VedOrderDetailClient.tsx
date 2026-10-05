@@ -20,6 +20,8 @@ type VedOrder = {
 
   preparation_department: string | null;
   preparation_responsible_name: string | null;
+
+  ved_responsible_user_id: string | null;
   ved_responsible_name: string | null;
 
   calculation_scenario: string | null;
@@ -32,6 +34,8 @@ type VedOrder = {
 
   first_sent_to_ved_at: string | null;
   last_sent_to_ved_at: string | null;
+
+  ved_taken_at: string | null;
 
   production_handoff_date: string | null;
   production_confirmed_at: string | null;
@@ -132,7 +136,7 @@ type VedOrderResponse = {
 
 
 // ============================================================
-// TYPES: TERMS
+// TYPES: PREPARATION
 // ============================================================
 
 type TermsPreview = {
@@ -160,10 +164,6 @@ type TermsPreview = {
 };
 
 
-// ============================================================
-// TYPES: PREPARATION
-// ============================================================
-
 type PreparationResponse = {
   ok: boolean;
   error?: string;
@@ -172,6 +172,34 @@ type PreparationResponse = {
 
   chinese_article?: string | null;
   carton_weight_kg?: number | null;
+};
+
+
+// ============================================================
+// TYPES: VED EDIT
+// ============================================================
+
+type VedEditResponse = {
+  ok: boolean;
+  error?: string;
+
+  item_id?: string;
+  order_id?: string;
+
+  our_article?: string | null;
+
+  unit_price_cny?: number;
+  units_per_carton?: number;
+
+  carton_volume_m3?: number;
+  carton_weight_kg?: number;
+
+  order_quantity?: number;
+
+  incoterm?: string;
+
+  port?: string | null;
+  ved_comment?: string | null;
 };
 
 
@@ -220,7 +248,7 @@ type HandoffSendResponse = {
 
 
 // ============================================================
-// EDITORS
+// PREPARATION EDITORS
 // ============================================================
 
 type ItemEditorState = {
@@ -244,6 +272,35 @@ type ItemEditorState = {
 type EditorsState = {
   [itemId: string]:
     ItemEditorState;
+};
+
+
+// ============================================================
+// VED EDITORS
+// ============================================================
+
+type VedEditorState = {
+  ourArticle: string;
+
+  unitPriceCny: string;
+  unitsPerCarton: string;
+
+  cartonVolumeM3: string;
+  cartonWeightKg: string;
+
+  incoterm: string;
+
+  port: string;
+  vedComment: string;
+
+  loading: boolean;
+  error: string;
+};
+
+
+type VedEditorsState = {
+  [itemId: string]:
+    VedEditorState;
 };
 
 
@@ -350,6 +407,34 @@ function parsePositiveNumber(
     )
     ||
     parsed <= 0
+  ) {
+    return null;
+  }
+
+
+  return parsed;
+
+}
+
+
+function parsePositiveInteger(
+  value:
+    string
+):
+  number | null {
+
+  const parsed =
+    parsePositiveNumber(
+      value
+    );
+
+
+  if (
+    parsed === null
+    ||
+    !Number.isInteger(
+      parsed
+    )
   ) {
     return null;
   }
@@ -493,7 +578,7 @@ function getItemListStatus(
 
 
 // ============================================================
-// SMALL UI
+// SMALL COMPONENTS
 // ============================================================
 
 function CompactMetric(
@@ -530,6 +615,7 @@ function CompactMetric(
 
       <div
         className="muted"
+
         style={{
           fontSize:
             "11px",
@@ -552,6 +638,64 @@ function CompactMetric(
 
           fontWeight:
             700,
+        }}
+      >
+        {value}
+      </div>
+
+    </div>
+
+  );
+
+}
+
+
+function ReadOnlyField(
+  {
+    label,
+    value,
+  }:
+  {
+    label: string;
+    value: string;
+  }
+) {
+
+  return (
+
+    <div>
+
+      <div
+        className="card-label"
+
+        style={{
+          marginBottom:
+            "6px",
+        }}
+      >
+        {label}
+      </div>
+
+
+      <div
+        style={{
+          minHeight:
+            "40px",
+
+          display:
+            "flex",
+
+          alignItems:
+            "center",
+
+          padding:
+            "0 11px",
+
+          border:
+            "1px solid var(--border)",
+
+          borderRadius:
+            "8px",
         }}
       >
         {value}
@@ -763,6 +907,15 @@ export default function VedOrderDetailClient(
 
 
   const [
+    vedEditors,
+    setVedEditors,
+  ] =
+    useState<VedEditorsState>(
+      {}
+    );
+
+
+  const [
     selectedItemId,
     setSelectedItemId,
   ] =
@@ -825,6 +978,15 @@ export default function VedOrderDetailClient(
     );
 
 
+  const [
+    vedSaveMessage,
+    setVedSaveMessage,
+  ] =
+    useState(
+      ""
+    );
+
+
   // ==========================================================
   // LOAD ORDER
   // ==========================================================
@@ -837,9 +999,11 @@ export default function VedOrderDetailClient(
     if (
       showPageLoader
     ) {
+
       setLoading(
         true
       );
+
     }
 
 
@@ -894,8 +1058,21 @@ export default function VedOrderDetailClient(
         [];
 
 
+      // ======================================================
+      // PREPARATION EDITORS
+      // ======================================================
+
       const nextEditors:
         EditorsState =
+          {};
+
+
+      // ======================================================
+      // VED EDITORS
+      // ======================================================
+
+      const nextVedEditors:
+        VedEditorsState =
           {};
 
 
@@ -969,11 +1146,105 @@ export default function VedOrderDetailClient(
             null,
         };
 
+
+        nextVedEditors[
+          item.id
+        ] = {
+
+          ourArticle:
+            item
+              .our_article_snapshot
+            ??
+            "",
+
+          unitPriceCny:
+            item
+              .unit_price_cny
+            === null
+
+              ? ""
+
+              : String(
+                  item
+                    .unit_price_cny
+                ),
+
+          unitsPerCarton:
+            item
+              .units_per_carton_snapshot
+            === null
+
+              ? ""
+
+              : String(
+                  item
+                    .units_per_carton_snapshot
+                ),
+
+          cartonVolumeM3:
+            item
+              .carton_volume_m3_snapshot
+            === null
+
+              ? ""
+
+              : String(
+                  item
+                    .carton_volume_m3_snapshot
+                ),
+
+          cartonWeightKg:
+            item
+              .carton_weight_kg_snapshot
+            === null
+
+              ? ""
+
+              : String(
+                  item
+                    .carton_weight_kg_snapshot
+                ),
+
+          incoterm:
+            item.incoterm
+            ??
+            (
+              result.order
+                ?.calculation_scenario ===
+                "truck"
+
+                ? "FCA"
+
+                : "FOB"
+            ),
+
+          port:
+            item.port
+            ??
+            "",
+
+          vedComment:
+            item.ved_comment
+            ??
+            "",
+
+          loading:
+            false,
+
+          error:
+            "",
+        };
+
       }
 
 
       setEditors(
         nextEditors
+      );
+
+
+      setVedEditors(
+        nextVedEditors
       );
 
 
@@ -993,7 +1264,9 @@ export default function VedOrderDetailClient(
                 current
             )
           ) {
+
             return current;
+
           }
 
 
@@ -1146,7 +1419,7 @@ export default function VedOrderDetailClient(
 
 
   // ==========================================================
-  // EDITOR
+  // EDITOR UPDATES
   // ==========================================================
 
   function updateEditor(
@@ -1212,7 +1485,70 @@ export default function VedOrderDetailClient(
   }
 
 
-  function getActor() {
+  function updateVedEditor(
+    itemId:
+      string,
+
+    patch:
+      Partial<VedEditorState>
+  ) {
+
+    setVedEditors(
+      (
+        current
+      ) => ({
+
+        ...current,
+
+        [itemId]: {
+
+          ...(current[
+            itemId
+          ] ?? {
+
+            ourArticle:
+              "",
+
+            unitPriceCny:
+              "",
+
+            unitsPerCarton:
+              "",
+
+            cartonVolumeM3:
+              "",
+
+            cartonWeightKg:
+              "",
+
+            incoterm:
+              "FOB",
+
+            port:
+              "",
+
+            vedComment:
+              "",
+
+            loading:
+              false,
+
+            error:
+              "",
+
+          }),
+
+          ...patch,
+
+        },
+
+      })
+    );
+
+  }
+
+
+  function getPreparationActor() {
 
     const actorName =
       data
@@ -1241,7 +1577,7 @@ export default function VedOrderDetailClient(
 
 
   // ==========================================================
-  // SAVE PREPARATION
+  // SAVE PREPARATION DATA
   // ==========================================================
 
   async function savePreparationData(
@@ -1310,7 +1646,7 @@ export default function VedOrderDetailClient(
       actorName,
       actorRole,
     } =
-      getActor();
+      getPreparationActor();
 
 
     if (!actorName) {
@@ -1682,7 +2018,7 @@ export default function VedOrderDetailClient(
       actorName,
       actorRole,
     } =
-      getActor();
+      getPreparationActor();
 
 
     if (!actorName) {
@@ -1823,7 +2159,7 @@ export default function VedOrderDetailClient(
       actorName,
       actorRole,
     } =
-      getActor();
+      getPreparationActor();
 
 
     if (!actorName) {
@@ -1943,6 +2279,314 @@ export default function VedOrderDetailClient(
 
 
   // ==========================================================
+  // SAVE VED ITEM
+  // ==========================================================
+
+  async function saveVedItem(
+    item:
+      VedOrderItem
+  ) {
+
+    const editor =
+      vedEditors[
+        item.id
+      ];
+
+
+    if (!editor) {
+      return;
+    }
+
+
+    const actorName =
+      data
+        ?.order
+        ?.ved_responsible_name
+        ?.trim();
+
+
+    if (!actorName) {
+
+      updateVedEditor(
+        item.id,
+        {
+          error:
+            "У заказа не назначен ответственный ВЭД",
+        }
+      );
+
+      return;
+
+    }
+
+
+    const unitPriceCny =
+      parsePositiveNumber(
+        editor.unitPriceCny
+      );
+
+
+    if (
+      unitPriceCny ===
+      null
+    ) {
+
+      updateVedEditor(
+        item.id,
+        {
+          error:
+            "Укажите цену за 1 шт.",
+        }
+      );
+
+      return;
+
+    }
+
+
+    const unitsPerCarton =
+      parsePositiveInteger(
+        editor.unitsPerCarton
+      );
+
+
+    if (
+      unitsPerCarton ===
+      null
+    ) {
+
+      updateVedEditor(
+        item.id,
+        {
+          error:
+            "Вложимость должна быть целым числом больше 0",
+        }
+      );
+
+      return;
+
+    }
+
+
+    const cartonVolumeM3 =
+      parsePositiveNumber(
+        editor.cartonVolumeM3
+      );
+
+
+    if (
+      cartonVolumeM3 ===
+      null
+    ) {
+
+      updateVedEditor(
+        item.id,
+        {
+          error:
+            "Укажите объём транспортного короба",
+        }
+      );
+
+      return;
+
+    }
+
+
+    const cartonWeightKg =
+      parsePositiveNumber(
+        editor.cartonWeightKg
+      );
+
+
+    if (
+      cartonWeightKg ===
+      null
+    ) {
+
+      updateVedEditor(
+        item.id,
+        {
+          error:
+            "Укажите вес транспортного короба",
+        }
+      );
+
+      return;
+
+    }
+
+
+    const incoterm =
+      editor
+        .incoterm
+        .trim()
+        .toUpperCase();
+
+
+    if (
+      incoterm !==
+        "FOB"
+      &&
+      incoterm !==
+        "FCA"
+    ) {
+
+      updateVedEditor(
+        item.id,
+        {
+          error:
+            "Условия поставки должны быть FOB или FCA",
+        }
+      );
+
+      return;
+
+    }
+
+
+    setVedSaveMessage(
+      ""
+    );
+
+
+    updateVedEditor(
+      item.id,
+      {
+        loading:
+          true,
+
+        error:
+          "",
+      }
+    );
+
+
+    try {
+
+      const response =
+        await fetch(
+          `/api/ved-orders/items/${item.id}/ved-edit`,
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify(
+                {
+                  ourArticle:
+                    editor
+                      .ourArticle
+                      .trim()
+                    ||
+                    null,
+
+                  unitPriceCny,
+
+                  unitsPerCarton,
+
+                  cartonVolumeM3,
+
+                  cartonWeightKg,
+
+                  incoterm,
+
+                  port:
+                    editor
+                      .port
+                      .trim()
+                    ||
+                    null,
+
+                  vedComment:
+                    editor
+                      .vedComment
+                      .trim()
+                    ||
+                    null,
+
+                  actorName,
+
+                  actorUserId:
+                    data
+                      ?.order
+                      ?.ved_responsible_user_id
+                    ??
+                    null,
+
+                  actorRole:
+                    "ved",
+                }
+              ),
+
+            cache:
+              "no-store",
+          }
+        );
+
+
+      const result:
+        VedEditResponse =
+          await response.json();
+
+
+      if (
+        !response.ok
+        ||
+        !result.ok
+      ) {
+
+        throw new Error(
+          result.error
+          ||
+          "Не удалось сохранить изменения ВЭД"
+        );
+
+      }
+
+
+      await refreshAll();
+
+
+      setVedSaveMessage(
+        `Изменения ${item.our_article_snapshot ?? "позиции"} сохранены`
+      );
+
+
+    } catch (
+      caughtError
+    ) {
+
+      updateVedEditor(
+        item.id,
+        {
+          error:
+            caughtError instanceof Error
+              ? caughtError.message
+              : "Неизвестная ошибка сохранения ВЭД",
+        }
+      );
+
+    } finally {
+
+      updateVedEditor(
+        item.id,
+        {
+          loading:
+            false,
+        }
+      );
+
+    }
+
+  }
+
+
+  // ==========================================================
   // SEND TO VED
   // ==========================================================
 
@@ -1967,7 +2611,7 @@ export default function VedOrderDetailClient(
       actorName,
       actorRole,
     } =
-      getActor();
+      getPreparationActor();
 
 
     if (!actorName) {
@@ -2098,7 +2742,7 @@ export default function VedOrderDetailClient(
 
 
   // ==========================================================
-  // LOADING
+  // LOADING / ERROR
   // ==========================================================
 
   if (
@@ -2191,6 +2835,14 @@ export default function VedOrderDetailClient(
       : null;
 
 
+  const selectedVedEditor =
+    selectedItem
+      ? vedEditors[
+          selectedItem.id
+        ]
+      : null;
+
+
   const selectedPreview =
     selectedEditor
       ?.preview
@@ -2230,12 +2882,32 @@ export default function VedOrderDetailClient(
       : 70;
 
 
-  const canSendToVedStatus =
+  const preparationEditable =
     order.workflow_status ===
       "draft"
     ||
     order.workflow_status ===
       "returned_for_edit";
+
+
+  const vedWaiting =
+    order.workflow_status ===
+      "sent_to_ved";
+
+
+  const vedEditable =
+    order.workflow_status ===
+      "ved_in_work"
+    ||
+    order.workflow_status ===
+      "production_confirmed"
+    ||
+    order.workflow_status ===
+      "in_transit";
+
+
+  const canSendToVedStatus =
+    preparationEditable;
 
 
   const problemCount =
@@ -2270,110 +2942,86 @@ export default function VedOrderDetailClient(
 
 
       {/* ======================================================
-          COMPACT ORDER HEADER
+          ORDER HEADER
           ====================================================== */}
 
       <section
         className="section"
+
         style={{
           padding:
             "18px 20px",
         }}
       >
 
+        <div className="small-label">
+          ЗАКАЗ В КИТАЙ
+        </div>
+
+
         <div
           style={{
             display:
               "flex",
 
-            justifyContent:
-              "space-between",
-
             alignItems:
-              "flex-start",
+              "center",
 
             gap:
-              "16px",
+              "12px",
 
             flexWrap:
               "wrap",
+
+            marginTop:
+              "5px",
           }}
         >
 
-          <div>
+          <h2
+            style={{
+              margin:
+                0,
 
-            <div className="small-label">
-              ЗАКАЗ В КИТАЙ
-            </div>
+              fontSize:
+                "25px",
 
+              lineHeight:
+                1.15,
+            }}
+          >
 
-            <div
-              style={{
-                display:
-                  "flex",
+            {order.order_number
 
-                alignItems:
-                  "center",
+              ? `Заказ ${order.order_number}`
 
-                gap:
-                  "12px",
+              : "Черновик заказа"}
 
-                flexWrap:
-                  "wrap",
-
-                marginTop:
-                  "5px",
-              }}
-            >
-
-              <h2
-                style={{
-                  margin:
-                    0,
-
-                  fontSize:
-                    "25px",
-
-                  lineHeight:
-                    1.15,
-                }}
-              >
-
-                {order.order_number
-
-                  ? `Заказ ${order.order_number}`
-
-                  : "Черновик заказа"}
-
-              </h2>
+          </h2>
 
 
-              <div
-                style={{
-                  padding:
-                    "5px 9px",
+          <div
+            style={{
+              padding:
+                "5px 9px",
 
-                  border:
-                    "1px solid var(--border)",
+              border:
+                "1px solid var(--border)",
 
-                  borderRadius:
-                    "999px",
+              borderRadius:
+                "999px",
 
-                  fontSize:
-                    "12px",
+              fontSize:
+                "12px",
 
-                  fontWeight:
-                    700,
-                }}
-              >
+              fontWeight:
+                700,
+            }}
+          >
 
-                {getWorkflowLabel(
-                  order.workflow_status
-                )}
-
-              </div>
-
-            </div>
+            {getWorkflowLabel(
+              order.workflow_status
+            )}
 
           </div>
 
@@ -2523,24 +3171,13 @@ export default function VedOrderDetailClient(
 
           <div
             style={{
-              display:
-                "flex",
-
-              justifyContent:
-                "space-between",
-
-              alignItems:
-                "center",
-
               marginBottom:
                 "7px",
             }}
           >
-
             <strong>
               Готовность
             </strong>
-
           </div>
 
 
@@ -2601,7 +3238,8 @@ export default function VedOrderDetailClient(
               label="Нет кит. артикула"
               value={
                 formatNumber(
-                  statistics.missing_chinese_article
+                  statistics
+                    .missing_chinese_article
                 )
               }
             />
@@ -2621,7 +3259,8 @@ export default function VedOrderDetailClient(
               label="Проверка MOQ"
               value={
                 formatNumber(
-                  statistics.moq_review_pending
+                  statistics
+                    .moq_review_pending
                 )
               }
             />
@@ -2634,7 +3273,7 @@ export default function VedOrderDetailClient(
 
 
       {/* ======================================================
-          COMPACT TOTALS
+          TOTALS
           ====================================================== */}
 
       {totals && (
@@ -2652,11 +3291,9 @@ export default function VedOrderDetailClient(
                 "7px",
             }}
           >
-
             <strong>
               Итоги
             </strong>
-
           </div>
 
 
@@ -2733,11 +3370,12 @@ export default function VedOrderDetailClient(
 
 
       {/* ======================================================
-          ORDER ITEMS LIST
+          ITEMS LIST
           ====================================================== */}
 
       <section
         className="section"
+
         style={{
           marginTop:
             "18px",
@@ -2765,6 +3403,7 @@ export default function VedOrderDetailClient(
 
           <h2
             className="section-title"
+
             style={{
               margin:
                 0,
@@ -2785,6 +3424,7 @@ export default function VedOrderDetailClient(
 
         <div
           className="muted"
+
           style={{
             marginTop:
               "5px",
@@ -2901,6 +3541,10 @@ export default function VedOrderDetailClient(
                             item.id
                           );
 
+                          setVedSaveMessage(
+                            ""
+                          );
+
                         }
                       }
 
@@ -2956,12 +3600,10 @@ export default function VedOrderDetailClient(
                             "nowrap",
                         }}
                       >
-
                         {item
                           .chinese_article_snapshot
                           ??
                           "—"}
-
                       </td>
 
 
@@ -2977,12 +3619,10 @@ export default function VedOrderDetailClient(
                             700,
                         }}
                       >
-
                         {item
                           .our_article_snapshot
                           ??
                           "—"}
-
                       </td>
 
 
@@ -2995,12 +3635,10 @@ export default function VedOrderDetailClient(
                             "260px",
                         }}
                       >
-
                         {item
                           .product_name_snapshot
                           ??
                           "—"}
-
                       </td>
 
 
@@ -3013,11 +3651,9 @@ export default function VedOrderDetailClient(
                             "nowrap",
                         }}
                       >
-
                         {formatNumber(
                           item.cartons
                         )}
-
                       </td>
 
 
@@ -3033,11 +3669,9 @@ export default function VedOrderDetailClient(
                             700,
                         }}
                       >
-
                         {formatNumber(
                           item.order_quantity
                         )}
-
                       </td>
 
 
@@ -3079,11 +3713,9 @@ export default function VedOrderDetailClient(
                             600,
                         }}
                       >
-
                         {getItemListStatus(
                           item
                         )}
-
                       </td>
 
                     </tr>
@@ -3103,53 +3735,53 @@ export default function VedOrderDetailClient(
 
 
       {/* ======================================================
-          SELECTED PRODUCT CARD
+          SELECTED ITEM
           ====================================================== */}
 
-      {selectedItem
-        &&
-        selectedEditor && (
+      {selectedItem && (
 
         <section
           className="section"
+
           style={{
             marginTop:
               "18px",
           }}
         >
 
-          {/* PRODUCT HEADER */}
+          {/* HEADER */}
 
           <div
             style={{
               display:
                 "flex",
 
-              justifyContent:
-                "space-between",
+              gap:
+                "16px",
 
               alignItems:
                 "flex-start",
-
-              gap:
-                "18px",
-
-              flexWrap:
-                "wrap",
             }}
           >
 
+            <ProductPhoto
+              url={
+                selectedItem.photo_url
+              }
+
+              article={
+                selectedItem
+                  .our_article_snapshot
+              }
+
+              size={
+                120
+              }
+            />
+
+
             <div
               style={{
-                display:
-                  "flex",
-
-                gap:
-                  "16px",
-
-                alignItems:
-                  "flex-start",
-
                 minWidth:
                   0,
 
@@ -3158,774 +3790,60 @@ export default function VedOrderDetailClient(
               }}
             >
 
-              <ProductPhoto
-                url={
-                  selectedItem.photo_url
-                }
+              <div className="small-label">
+                КАРТОЧКА ТОВАРА
+              </div>
 
-                article={
-                  selectedItem
-                    .our_article_snapshot
-                }
 
-                size={
-                  120
-                }
-              />
+              <h2
+                style={{
+                  margin:
+                    "5px 0",
+
+                  fontSize:
+                    "22px",
+                }}
+              >
+                {selectedItem
+                  .our_article_snapshot
+                  ??
+                  "Без артикула"}
+              </h2>
 
 
               <div
                 style={{
-                  minWidth:
-                    0,
+                  fontWeight:
+                    600,
+
+                  lineHeight:
+                    1.35,
+
+                  maxWidth:
+                    "800px",
                 }}
               >
-
-                <div className="small-label">
-                  КАРТОЧКА ТОВАРА
-                </div>
-
-
-                <h2
-                  style={{
-                    margin:
-                      "5px 0 5px",
-
-                    fontSize:
-                      "22px",
-                  }}
-                >
-
-                  {selectedItem
-                    .our_article_snapshot
-                    ??
-                    "Без артикула"}
-
-                </h2>
-
-
-                <div
-                  style={{
-                    fontWeight:
-                      600,
-
-                    lineHeight:
-                      1.35,
-
-                    maxWidth:
-                      "760px",
-                  }}
-                >
-
-                  {selectedItem
-                    .product_name_snapshot
-                    ??
-                    "Наименование не указано"}
-
-                </div>
-
-
-                <div
-                  className="muted"
-                  style={{
-                    marginTop:
-                      "8px",
-                  }}
-                >
-
-                  Статус:{" "}
-
-                  <strong>
-                    {getTermsStatus(
-                      selectedItem
-                    )}
-                  </strong>
-
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
-
-
-          {/* PREPARATION DATA */}
-
-          <div
-            style={{
-              marginTop:
-                "22px",
-
-              paddingTop:
-                "18px",
-
-              borderTop:
-                "1px solid var(--border)",
-            }}
-          >
-
-            <div
-              style={{
-                fontWeight:
-                  700,
-
-                marginBottom:
-                  "12px",
-              }}
-            >
-              Данные товара
-            </div>
-
-
-            <div
-              style={{
-                display:
-                  "grid",
-
-                gridTemplateColumns:
-                  "repeat(auto-fit, minmax(210px, 1fr))",
-
-                gap:
-                  "14px",
-              }}
-            >
-
-              <div>
-
-                <div
-                  className="card-label"
-                  style={{
-                    marginBottom:
-                      "6px",
-                  }}
-                >
-                  Китайский артикул
-                </div>
-
-
-                <input
-                  type="text"
-
-                  value={
-                    selectedEditor
-                      .chineseArticle
-                  }
-
-                  disabled={
-                    selectedBusy
-                    ||
-                    chineseArticleLocked
-                  }
-
-                  placeholder=
-                    "Введите китайский артикул"
-
-                  onChange={
-                    (
-                      event
-                    ) => {
-
-                      updateEditor(
-                        selectedItem.id,
-                        {
-                          chineseArticle:
-                            event.target.value,
-
-                          error:
-                            "",
-                        }
-                      );
-
-                    }
-                  }
-
-                  style={{
-                    width:
-                      "100%",
-
-                    minHeight:
-                      "40px",
-
-                    padding:
-                      "0 11px",
-
-                    border:
-                      "1px solid var(--border)",
-
-                    borderRadius:
-                      "8px",
-
-                    background:
-                      "var(--background)",
-
-                    color:
-                      "var(--text)",
-                  }}
-                />
-
+                {selectedItem
+                  .product_name_snapshot
+                  ??
+                  "Наименование не указано"}
               </div>
 
 
-              <div>
-
-                <div
-                  className="card-label"
-                  style={{
-                    marginBottom:
-                      "6px",
-                  }}
-                >
-                  Наш артикул
-                </div>
-
-
-                <div
-                  style={{
-                    minHeight:
-                      "40px",
-
-                    display:
-                      "flex",
-
-                    alignItems:
-                      "center",
-
-                    padding:
-                      "0 11px",
-
-                    border:
-                      "1px solid var(--border)",
-
-                    borderRadius:
-                      "8px",
-                  }}
-                >
-
-                  <strong>
-                    {selectedItem
-                      .our_article_snapshot
-                      ??
-                      "—"}
-                  </strong>
-
-                </div>
-
-              </div>
-
-
-              <div>
-
-                <div
-                  className="card-label"
-                  style={{
-                    marginBottom:
-                      "6px",
-                  }}
-                >
-                  Вес 1 короба, кг
-                </div>
-
-
-                <input
-                  type="text"
-
-                  inputMode="decimal"
-
-                  value={
-                    selectedEditor
-                      .cartonWeightKg
-                  }
-
-                  disabled={
-                    selectedBusy
-                  }
-
-                  placeholder="Вес"
-
-                  onChange={
-                    (
-                      event
-                    ) => {
-
-                      updateEditor(
-                        selectedItem.id,
-                        {
-                          cartonWeightKg:
-                            event.target.value,
-
-                          error:
-                            "",
-                        }
-                      );
-
-                    }
-                  }
-
-                  style={{
-                    width:
-                      "100%",
-
-                    minHeight:
-                      "40px",
-
-                    padding:
-                      "0 11px",
-
-                    border:
-                      "1px solid var(--border)",
-
-                    borderRadius:
-                      "8px",
-
-                    background:
-                      "var(--background)",
-
-                    color:
-                      "var(--text)",
-                  }}
-                />
-
-              </div>
-
-
-              <div>
-
-                <div
-                  className="card-label"
-                  style={{
-                    marginBottom:
-                      "6px",
-                  }}
-                >
-                  В 1 коробе
-                </div>
-
-
-                <div
-                  style={{
-                    minHeight:
-                      "40px",
-
-                    display:
-                      "flex",
-
-                    alignItems:
-                      "center",
-
-                    padding:
-                      "0 11px",
-
-                    border:
-                      "1px solid var(--border)",
-
-                    borderRadius:
-                      "8px",
-                  }}
-                >
-
-                  {formatNumber(
-                    selectedItem
-                      .units_per_carton_snapshot
-                  )} шт.
-
-                </div>
-
-              </div>
-
-
-              <div>
-
-                <div
-                  className="card-label"
-                  style={{
-                    marginBottom:
-                      "6px",
-                  }}
-                >
-                  Объём 1 короба
-                </div>
-
-
-                <div
-                  style={{
-                    minHeight:
-                      "40px",
-
-                    display:
-                      "flex",
-
-                    alignItems:
-                      "center",
-
-                    padding:
-                      "0 11px",
-
-                    border:
-                      "1px solid var(--border)",
-
-                    borderRadius:
-                      "8px",
-                  }}
-                >
-
-                  {formatNumber(
-                    selectedItem
-                      .carton_volume_m3_snapshot,
-                    6
-                  )} м³
-
-                </div>
-
-              </div>
-
-
-              <div>
-
-                <div
-                  className="card-label"
-                  style={{
-                    marginBottom:
-                      "6px",
-                  }}
-                >
-                  Условия поставки
-                </div>
-
-
-                <div
-                  style={{
-                    minHeight:
-                      "40px",
-
-                    display:
-                      "flex",
-
-                    alignItems:
-                      "center",
-
-                    padding:
-                      "0 11px",
-
-                    border:
-                      "1px solid var(--border)",
-
-                    borderRadius:
-                      "8px",
-                  }}
-                >
-
-                  {selectedItem
-                    .incoterm
-                    ??
-                    "—"}
-
-                </div>
-
-              </div>
-
-            </div>
-
-
-            <div
-              style={{
-                marginTop:
-                  "12px",
-
-                display:
-                  "flex",
-
-                gap:
-                  "10px",
-
-                alignItems:
-                  "center",
-
-                flexWrap:
-                  "wrap",
-              }}
-            >
-
-              <button
-                type="button"
-
-                className=
-                  "secondary-button"
-
-                disabled={
-                  selectedBusy
-                }
-
-                onClick={
-                  () => {
-
-                    void savePreparationData(
-                      selectedItem
-                    );
-
-                  }
-                }
+              <div
+                className="muted"
+
+                style={{
+                  marginTop:
+                    "8px",
+                }}
               >
-
-                {selectedEditor
-                  .loadingPreparation
-
-                  ? "Сохраняем..."
-
-                  : "Сохранить данные"}
-
-              </button>
-
-
-              {chineseArticleLocked && (
-
-                <span className="muted">
-                  Китайский артикул уже зафиксирован.
-                </span>
-
-              )}
-
-            </div>
-
-          </div>
-
-
-          {/* ORDER TERMS */}
-
-          <div
-            style={{
-              marginTop:
-                "22px",
-
-              paddingTop:
-                "18px",
-
-              borderTop:
-                "1px solid var(--border)",
-            }}
-          >
-
-            <div
-              style={{
-                fontWeight:
-                  700,
-
-                marginBottom:
-                  "12px",
-              }}
-            >
-              Условия заказа
-            </div>
-
-
-            <div
-              style={{
-                display:
-                  "grid",
-
-                gridTemplateColumns:
-                  "repeat(auto-fit, minmax(210px, 1fr))",
-
-                gap:
-                  "14px",
-              }}
-            >
-
-              <div>
-
-                <div
-                  className="card-label"
-                  style={{
-                    marginBottom:
-                      "6px",
-                  }}
-                >
-                  MOQ
-                </div>
-
-
-                <input
-                  type="text"
-
-                  inputMode="numeric"
-
-                  value={
-                    selectedEditor.moq
-                  }
-
-                  disabled={
-                    selectedBusy
-                  }
-
-                  placeholder="MOQ"
-
-                  onChange={
-                    (
-                      event
-                    ) => {
-
-                      updateEditor(
-                        selectedItem.id,
-                        {
-                          moq:
-                            event.target.value,
-
-                          preview:
-                            null,
-
-                          error:
-                            "",
-                        }
-                      );
-
-                    }
-                  }
-
-                  style={{
-                    width:
-                      "100%",
-
-                    minHeight:
-                      "40px",
-
-                    padding:
-                      "0 11px",
-
-                    border:
-                      "1px solid var(--border)",
-
-                    borderRadius:
-                      "8px",
-
-                    background:
-                      "var(--background)",
-
-                    color:
-                      "var(--text)",
-                  }}
-                />
-
-              </div>
-
-
-              <div>
-
-                <div
-                  className="card-label"
-                  style={{
-                    marginBottom:
-                      "6px",
-                  }}
-                >
-                  Цена за 1 шт., CNY
-                </div>
-
-
-                <input
-                  type="text"
-
-                  inputMode="decimal"
-
-                  value={
-                    selectedEditor.price
-                  }
-
-                  disabled={
-                    selectedBusy
-                  }
-
-                  placeholder="Цена"
-
-                  onChange={
-                    (
-                      event
-                    ) => {
-
-                      updateEditor(
-                        selectedItem.id,
-                        {
-                          price:
-                            event.target.value,
-
-                          preview:
-                            null,
-
-                          error:
-                            "",
-                        }
-                      );
-
-                    }
-                  }
-
-                  style={{
-                    width:
-                      "100%",
-
-                    minHeight:
-                      "40px",
-
-                    padding:
-                      "0 11px",
-
-                    border:
-                      "1px solid var(--border)",
-
-                    borderRadius:
-                      "8px",
-
-                    background:
-                      "var(--background)",
-
-                    color:
-                      "var(--text)",
-                  }}
-                />
-
-              </div>
-
-
-              <div>
-
-                <div
-                  className="card-label"
-                  style={{
-                    marginBottom:
-                      "6px",
-                  }}
-                >
-                  Порт
-                </div>
-
-
-                <div
-                  style={{
-                    minHeight:
-                      "40px",
-
-                    display:
-                      "flex",
-
-                    alignItems:
-                      "center",
-
-                    padding:
-                      "0 11px",
-
-                    border:
-                      "1px solid var(--border)",
-
-                    borderRadius:
-                      "8px",
-                  }}
-                >
-
-                  {selectedItem.port
-                    ??
-                    "—"}
-
-                </div>
-
+                Статус:{" "}
+                <strong>
+                  {getTermsStatus(
+                    selectedItem
+                  )}
+                </strong>
               </div>
 
             </div>
@@ -3933,107 +3851,41 @@ export default function VedOrderDetailClient(
           </div>
 
 
-          {/* CALCULATION */}
+          {/* ==================================================
+              PREPARATION MODE
+              ================================================== */}
 
-          <div
-            style={{
-              marginTop:
-                "22px",
+          {preparationEditable
+            &&
+            selectedEditor && (
 
-              paddingTop:
-                "18px",
-
-              borderTop:
-                "1px solid var(--border)",
-            }}
-          >
-
-            <div
-              style={{
-                fontWeight:
-                  700,
-
-                marginBottom:
-                  "12px",
-              }}
-            >
-              Расчёт
-            </div>
-
-
-            <div
-              style={{
-                display:
-                  "grid",
-
-                gridTemplateColumns:
-                  "repeat(auto-fit, minmax(145px, 1fr))",
-
-                gap:
-                  "8px",
-              }}
-            >
-
-              <CompactMetric
-                label="Потребность 100"
-                value={
-                  `${formatNumber(
-                    selectedItem
-                      .demand_container_units
-                  )} шт.`
-                }
-              />
-
-
-              <CompactMetric
-                label="Потребность 70"
-                value={
-                  `${formatNumber(
-                    selectedItem
-                      .demand_truck_units
-                  )} шт.`
-                }
-              />
-
-
-              <CompactMetric
-                label="Выбрано"
-                value={
-                  `${formatNumber(
-                    selectedItem
-                      .selected_demand_units
-                  )} шт.`
-                }
-              />
-
-
-              <CompactMetric
-                label="Целевой горизонт"
-                value={
-                  `${targetDays} дн.`
-                }
-              />
-
-            </div>
-
-
-            {selectedPreview && (
+            <>
 
               <div
                 style={{
                   marginTop:
-                    "12px",
+                    "22px",
 
-                  padding:
-                    "14px",
+                  paddingTop:
+                    "18px",
 
-                  border:
+                  borderTop:
                     "1px solid var(--border)",
-
-                  borderRadius:
-                    "10px",
                 }}
               >
+
+                <div
+                  style={{
+                    fontWeight:
+                      700,
+
+                    marginBottom:
+                      "12px",
+                  }}
+                >
+                  Данные товара
+                </div>
+
 
                 <div
                   style={{
@@ -4041,247 +3893,219 @@ export default function VedOrderDetailClient(
                       "grid",
 
                     gridTemplateColumns:
-                      "repeat(auto-fit, minmax(140px, 1fr))",
+                      "repeat(auto-fit, minmax(210px, 1fr))",
 
                     gap:
-                      "8px",
+                      "14px",
                   }}
                 >
 
-                  <CompactMetric
-                    label="Обычное округление"
+                  <div>
+
+                    <div
+                      className="card-label"
+
+                      style={{
+                        marginBottom:
+                          "6px",
+                      }}
+                    >
+                      Китайский артикул
+                    </div>
+
+
+                    <input
+                      type="text"
+
+                      value={
+                        selectedEditor
+                          .chineseArticle
+                      }
+
+                      disabled={
+                        selectedBusy
+                        ||
+                        chineseArticleLocked
+                      }
+
+                      placeholder=
+                        "Введите китайский артикул"
+
+                      onChange={
+                        (
+                          event
+                        ) => {
+
+                          updateEditor(
+                            selectedItem.id,
+                            {
+                              chineseArticle:
+                                event.target.value,
+
+                              error:
+                                "",
+                            }
+                          );
+
+                        }
+                      }
+
+                      style={{
+                        width:
+                          "100%",
+
+                        minHeight:
+                          "40px",
+
+                        padding:
+                          "0 11px",
+
+                        border:
+                          "1px solid var(--border)",
+
+                        borderRadius:
+                          "8px",
+
+                        background:
+                          "var(--background)",
+
+                        color:
+                          "var(--text)",
+                      }}
+                    />
+
+                  </div>
+
+
+                  <ReadOnlyField
+                    label="Наш артикул"
+                    value={
+                      selectedItem
+                        .our_article_snapshot
+                      ??
+                      "—"
+                    }
+                  />
+
+
+                  <div>
+
+                    <div
+                      className="card-label"
+
+                      style={{
+                        marginBottom:
+                          "6px",
+                      }}
+                    >
+                      Вес 1 короба, кг
+                    </div>
+
+
+                    <input
+                      type="text"
+
+                      inputMode="decimal"
+
+                      value={
+                        selectedEditor
+                          .cartonWeightKg
+                      }
+
+                      disabled={
+                        selectedBusy
+                      }
+
+                      placeholder="Вес"
+
+                      onChange={
+                        (
+                          event
+                        ) => {
+
+                          updateEditor(
+                            selectedItem.id,
+                            {
+                              cartonWeightKg:
+                                event.target.value,
+
+                              error:
+                                "",
+                            }
+                          );
+
+                        }
+                      }
+
+                      style={{
+                        width:
+                          "100%",
+
+                        minHeight:
+                          "40px",
+
+                        padding:
+                          "0 11px",
+
+                        border:
+                          "1px solid var(--border)",
+
+                        borderRadius:
+                          "8px",
+
+                        background:
+                          "var(--background)",
+
+                        color:
+                          "var(--text)",
+                      }}
+                    />
+
+                  </div>
+
+
+                  <ReadOnlyField
+                    label="В 1 коробе"
                     value={
                       `${formatNumber(
-                        selectedPreview
-                          .standard_cartons
-                      )} кор. / ${formatNumber(
-                        selectedPreview
-                          .standard_quantity
+                        selectedItem
+                          .units_per_carton_snapshot
                       )} шт.`
                     }
                   />
 
 
-                  <CompactMetric
-                    label="После MOQ"
+                  <ReadOnlyField
+                    label="Объём 1 короба"
                     value={
                       `${formatNumber(
-                        selectedPreview
-                          .final_cartons
-                      )} кор. / ${formatNumber(
-                        selectedPreview
-                          .final_quantity
-                      )} шт.`
-                    }
-                  />
-
-
-                  <CompactMetric
-                    label="Покрытие"
-                    value={
-                      `${formatNumber(
-                        selectedPreview
-                          .coverage_after_order_days,
-                        1
-                      )} дн.`
-                    }
-                  />
-
-
-                  <CompactMetric
-                    label="Стоимость"
-                    value={
-                      `${formatNumber(
-                        selectedPreview
-                          .total_price_cny,
-                        2
-                      )} CNY`
-                    }
-                  />
-
-
-                  <CompactMetric
-                    label="Объём"
-                    value={
-                      `${formatNumber(
-                        selectedPreview
-                          .total_volume_m3,
+                        selectedItem
+                          .carton_volume_m3_snapshot,
                         6
                       )} м³`
                     }
                   />
 
 
-                  <CompactMetric
-                    label="Вес"
+                  <ReadOnlyField
+                    label="Условия поставки"
                     value={
-                      `${formatNumber(
-                        selectedPreview
-                          .total_weight_tons,
-                        6
-                      )} т`
+                      selectedItem
+                        .incoterm
+                      ??
+                      "—"
                     }
                   />
 
                 </div>
 
 
-                {selectedPreview
-                  .moq_review_required && (
-
-                  <div
-                    className="reason-box"
-                    style={{
-                      marginTop:
-                        "12px",
-                    }}
-                  >
-
-                    <strong>
-                      Требуется ручное решение по MOQ
-                    </strong>
-
-
-                    <div className="reason-text">
-                      MOQ значительно увеличивает запас относительно обычного расчёта.
-                    </div>
-
-                  </div>
-
-                )}
-
-              </div>
-
-            )}
-
-
-            <div
-              style={{
-                display:
-                  "flex",
-
-                gap:
-                  "9px",
-
-                flexWrap:
-                  "wrap",
-
-                marginTop:
-                  "12px",
-              }}
-            >
-
-              <button
-                type="button"
-
-                className=
-                  "secondary-button"
-
-                disabled={
-                  selectedBusy
-                }
-
-                onClick={
-                  () => {
-
-                    void previewTerms(
-                      selectedItem
-                    );
-
-                  }
-                }
-              >
-
-                {selectedEditor
-                  .loadingPreview
-
-                  ? "Считаем..."
-
-                  : "Рассчитать"}
-
-              </button>
-
-
-              {selectedPreview
-                &&
-                selectedItem
-                  .moq_review_status !==
-                  "pending" && (
-
-                <button
-                  type="button"
-
-                  className=
-                    "primary-button"
-
-                  disabled={
-                    selectedBusy
-                  }
-
-                  onClick={
-                    () => {
-
-                      void confirmTerms(
-                        selectedItem
-                      );
-
-                    }
-                  }
+                <div
+                  style={{
+                    marginTop:
+                      "12px",
+                  }}
                 >
-
-                  {selectedEditor
-                    .loadingConfirm
-
-                    ? "Подтверждаем..."
-
-                    : "Подтвердить MOQ и цену"}
-
-                </button>
-
-              )}
-
-
-              {selectedItem
-                .moq_review_status ===
-                "pending"
-                &&
-                selectedPreview && (
-
-                <>
-
-                  <button
-                    type="button"
-
-                    className=
-                      "primary-button"
-
-                    disabled={
-                      selectedBusy
-                    }
-
-                    onClick={
-                      () => {
-
-                        void resolveMoqReview(
-                          selectedItem,
-                          "approve"
-                        );
-
-                      }
-                    }
-                  >
-
-                    {selectedEditor
-                      .loadingReview
-
-                      ? "Сохраняем..."
-
-                      : `Включить ${formatNumber(
-                          selectedPreview.final_cartons
-                        )} кор. в заказ`}
-
-                  </button>
-
 
                   <button
                     type="button"
@@ -4296,66 +4120,1594 @@ export default function VedOrderDetailClient(
                     onClick={
                       () => {
 
-                        void resolveMoqReview(
-                          selectedItem,
-                          "reject"
+                        void savePreparationData(
+                          selectedItem
                         );
 
                       }
                     }
                   >
-                    Не заказывать
+
+                    {selectedEditor
+                      .loadingPreparation
+
+                      ? "Сохраняем..."
+
+                      : "Сохранить данные"}
+
                   </button>
 
-                </>
+                </div>
+
+              </div>
+
+
+              {/* TERMS */}
+
+              <div
+                style={{
+                  marginTop:
+                    "22px",
+
+                  paddingTop:
+                    "18px",
+
+                  borderTop:
+                    "1px solid var(--border)",
+                }}
+              >
+
+                <div
+                  style={{
+                    fontWeight:
+                      700,
+
+                    marginBottom:
+                      "12px",
+                  }}
+                >
+                  Условия заказа
+                </div>
+
+
+                <div
+                  style={{
+                    display:
+                      "grid",
+
+                    gridTemplateColumns:
+                      "repeat(auto-fit, minmax(210px, 1fr))",
+
+                    gap:
+                      "14px",
+                  }}
+                >
+
+                  <div>
+
+                    <div
+                      className="card-label"
+
+                      style={{
+                        marginBottom:
+                          "6px",
+                      }}
+                    >
+                      MOQ
+                    </div>
+
+
+                    <input
+                      type="text"
+
+                      inputMode="numeric"
+
+                      value={
+                        selectedEditor.moq
+                      }
+
+                      disabled={
+                        selectedBusy
+                      }
+
+                      placeholder="MOQ"
+
+                      onChange={
+                        (
+                          event
+                        ) => {
+
+                          updateEditor(
+                            selectedItem.id,
+                            {
+                              moq:
+                                event.target.value,
+
+                              preview:
+                                null,
+
+                              error:
+                                "",
+                            }
+                          );
+
+                        }
+                      }
+
+                      style={{
+                        width:
+                          "100%",
+
+                        minHeight:
+                          "40px",
+
+                        padding:
+                          "0 11px",
+
+                        border:
+                          "1px solid var(--border)",
+
+                        borderRadius:
+                          "8px",
+
+                        background:
+                          "var(--background)",
+
+                        color:
+                          "var(--text)",
+                      }}
+                    />
+
+                  </div>
+
+
+                  <div>
+
+                    <div
+                      className="card-label"
+
+                      style={{
+                        marginBottom:
+                          "6px",
+                      }}
+                    >
+                      Цена за 1 шт., CNY
+                    </div>
+
+
+                    <input
+                      type="text"
+
+                      inputMode="decimal"
+
+                      value={
+                        selectedEditor.price
+                      }
+
+                      disabled={
+                        selectedBusy
+                      }
+
+                      placeholder="Цена"
+
+                      onChange={
+                        (
+                          event
+                        ) => {
+
+                          updateEditor(
+                            selectedItem.id,
+                            {
+                              price:
+                                event.target.value,
+
+                              preview:
+                                null,
+
+                              error:
+                                "",
+                            }
+                          );
+
+                        }
+                      }
+
+                      style={{
+                        width:
+                          "100%",
+
+                        minHeight:
+                          "40px",
+
+                        padding:
+                          "0 11px",
+
+                        border:
+                          "1px solid var(--border)",
+
+                        borderRadius:
+                          "8px",
+
+                        background:
+                          "var(--background)",
+
+                        color:
+                          "var(--text)",
+                      }}
+                    />
+
+                  </div>
+
+
+                  <ReadOnlyField
+                    label="Порт"
+                    value={
+                      selectedItem.port
+                      ??
+                      "—"
+                    }
+                  />
+
+                </div>
+
+
+                {/* CALCULATION */}
+
+                <div
+                  style={{
+                    marginTop:
+                      "18px",
+                  }}
+                >
+
+                  <div
+                    style={{
+                      fontWeight:
+                        700,
+
+                      marginBottom:
+                        "10px",
+                    }}
+                  >
+                    Расчёт
+                  </div>
+
+
+                  <div
+                    style={{
+                      display:
+                        "grid",
+
+                      gridTemplateColumns:
+                        "repeat(auto-fit, minmax(145px, 1fr))",
+
+                      gap:
+                        "8px",
+                    }}
+                  >
+
+                    <CompactMetric
+                      label="Потребность 100"
+                      value={
+                        `${formatNumber(
+                          selectedItem
+                            .demand_container_units
+                        )} шт.`
+                      }
+                    />
+
+
+                    <CompactMetric
+                      label="Потребность 70"
+                      value={
+                        `${formatNumber(
+                          selectedItem
+                            .demand_truck_units
+                        )} шт.`
+                      }
+                    />
+
+
+                    <CompactMetric
+                      label="Выбрано"
+                      value={
+                        `${formatNumber(
+                          selectedItem
+                            .selected_demand_units
+                        )} шт.`
+                      }
+                    />
+
+
+                    <CompactMetric
+                      label="Целевой горизонт"
+                      value={
+                        `${targetDays} дн.`
+                      }
+                    />
+
+                  </div>
+
+
+                  {selectedPreview && (
+
+                    <div
+                      style={{
+                        marginTop:
+                          "12px",
+
+                        padding:
+                          "14px",
+
+                        border:
+                          "1px solid var(--border)",
+
+                        borderRadius:
+                          "10px",
+                      }}
+                    >
+
+                      <div
+                        style={{
+                          display:
+                            "grid",
+
+                          gridTemplateColumns:
+                            "repeat(auto-fit, minmax(140px, 1fr))",
+
+                          gap:
+                            "8px",
+                        }}
+                      >
+
+                        <CompactMetric
+                          label="Обычное округление"
+                          value={
+                            `${formatNumber(
+                              selectedPreview
+                                .standard_cartons
+                            )} кор. / ${formatNumber(
+                              selectedPreview
+                                .standard_quantity
+                            )} шт.`
+                          }
+                        />
+
+
+                        <CompactMetric
+                          label="После MOQ"
+                          value={
+                            `${formatNumber(
+                              selectedPreview
+                                .final_cartons
+                            )} кор. / ${formatNumber(
+                              selectedPreview
+                                .final_quantity
+                            )} шт.`
+                          }
+                        />
+
+
+                        <CompactMetric
+                          label="Покрытие"
+                          value={
+                            `${formatNumber(
+                              selectedPreview
+                                .coverage_after_order_days,
+                              1
+                            )} дн.`
+                          }
+                        />
+
+
+                        <CompactMetric
+                          label="Стоимость"
+                          value={
+                            `${formatNumber(
+                              selectedPreview
+                                .total_price_cny,
+                              2
+                            )} CNY`
+                          }
+                        />
+
+
+                        <CompactMetric
+                          label="Объём"
+                          value={
+                            `${formatNumber(
+                              selectedPreview
+                                .total_volume_m3,
+                              6
+                            )} м³`
+                          }
+                        />
+
+
+                        <CompactMetric
+                          label="Вес"
+                          value={
+                            `${formatNumber(
+                              selectedPreview
+                                .total_weight_tons,
+                              6
+                            )} т`
+                          }
+                        />
+
+                      </div>
+
+
+                      {selectedPreview
+                        .moq_review_required && (
+
+                        <div
+                          className="reason-box"
+
+                          style={{
+                            marginTop:
+                              "12px",
+                          }}
+                        >
+
+                          <strong>
+                            Требуется ручное решение по MOQ
+                          </strong>
+
+                        </div>
+
+                      )}
+
+                    </div>
+
+                  )}
+
+
+                  <div
+                    style={{
+                      display:
+                        "flex",
+
+                      gap:
+                        "9px",
+
+                      flexWrap:
+                        "wrap",
+
+                      marginTop:
+                        "12px",
+                    }}
+                  >
+
+                    <button
+                      type="button"
+
+                      className=
+                        "secondary-button"
+
+                      disabled={
+                        selectedBusy
+                      }
+
+                      onClick={
+                        () => {
+
+                          void previewTerms(
+                            selectedItem
+                          );
+
+                        }
+                      }
+                    >
+
+                      {selectedEditor
+                        .loadingPreview
+
+                        ? "Считаем..."
+
+                        : "Рассчитать"}
+
+                    </button>
+
+
+                    {selectedPreview
+                      &&
+                      selectedItem
+                        .moq_review_status !==
+                        "pending" && (
+
+                      <button
+                        type="button"
+
+                        className=
+                          "primary-button"
+
+                        disabled={
+                          selectedBusy
+                        }
+
+                        onClick={
+                          () => {
+
+                            void confirmTerms(
+                              selectedItem
+                            );
+
+                          }
+                        }
+                      >
+                        Подтвердить MOQ и цену
+                      </button>
+
+                    )}
+
+
+                    {selectedItem
+                      .moq_review_status ===
+                      "pending"
+                      &&
+                      selectedPreview && (
+
+                      <>
+
+                        <button
+                          type="button"
+
+                          className=
+                            "primary-button"
+
+                          disabled={
+                            selectedBusy
+                          }
+
+                          onClick={
+                            () => {
+
+                              void resolveMoqReview(
+                                selectedItem,
+                                "approve"
+                              );
+
+                            }
+                          }
+                        >
+                          Включить в заказ
+                        </button>
+
+
+                        <button
+                          type="button"
+
+                          className=
+                            "secondary-button"
+
+                          disabled={
+                            selectedBusy
+                          }
+
+                          onClick={
+                            () => {
+
+                              void resolveMoqReview(
+                                selectedItem,
+                                "reject"
+                              );
+
+                            }
+                          }
+                        >
+                          Не заказывать
+                        </button>
+
+                      </>
+
+                    )}
+
+                  </div>
+
+
+                  {selectedEditor.error && (
+
+                    <div
+                      style={{
+                        marginTop:
+                          "10px",
+
+                        color:
+                          "#d64545",
+
+                        fontWeight:
+                          600,
+                      }}
+                    >
+                      {selectedEditor.error}
+                    </div>
+
+                  )}
+
+                </div>
+
+              </div>
+
+            </>
+
+          )}
+
+
+          {/* ==================================================
+              WAITING FOR VED
+              ================================================== */}
+
+          {vedWaiting && (
+
+            <div
+              className="reason-box"
+
+              style={{
+                marginTop:
+                  "22px",
+              }}
+            >
+
+              <strong>
+                Заказ передан в ВЭД
+              </strong>
+
+
+              <div className="reason-text">
+                Редактирование позиции станет доступно после того,
+                как сотрудник ВЭД нажмёт «Взять в работу».
+              </div>
+
+            </div>
+
+          )}
+
+
+          {/* ==================================================
+              VED MODE
+              ================================================== */}
+
+          {vedEditable
+            &&
+            selectedVedEditor && (
+
+            <div
+              style={{
+                marginTop:
+                  "22px",
+
+                paddingTop:
+                  "18px",
+
+                borderTop:
+                  "1px solid var(--border)",
+              }}
+            >
+
+              <div
+                style={{
+                  display:
+                    "flex",
+
+                  justifyContent:
+                    "space-between",
+
+                  gap:
+                    "12px",
+
+                  alignItems:
+                    "center",
+
+                  flexWrap:
+                    "wrap",
+
+                  marginBottom:
+                    "14px",
+                }}
+              >
+
+                <div>
+
+                  <div
+                    style={{
+                      fontWeight:
+                        700,
+
+                      fontSize:
+                        "17px",
+                    }}
+                  >
+                    Работа ВЭД
+                  </div>
+
+
+                  <div
+                    className="muted"
+
+                    style={{
+                      marginTop:
+                        "3px",
+                    }}
+                  >
+                    Ответственный:{" "}
+                    {order
+                      .ved_responsible_name
+                      ??
+                      "—"}
+                  </div>
+
+                </div>
+
+
+                <div
+                  style={{
+                    padding:
+                      "5px 9px",
+
+                    border:
+                      "1px solid var(--border)",
+
+                    borderRadius:
+                      "999px",
+
+                    fontSize:
+                      "12px",
+
+                    fontWeight:
+                      700,
+                  }}
+                >
+                  {getWorkflowLabel(
+                    order.workflow_status
+                  )}
+                </div>
+
+              </div>
+
+
+              <div
+                style={{
+                  display:
+                    "grid",
+
+                  gridTemplateColumns:
+                    "repeat(auto-fit, minmax(220px, 1fr))",
+
+                  gap:
+                    "14px",
+                }}
+              >
+
+                {/* OUR ARTICLE */}
+
+                <div>
+
+                  <div
+                    className="card-label"
+
+                    style={{
+                      marginBottom:
+                        "6px",
+                    }}
+                  >
+                    Наш артикул
+                  </div>
+
+
+                  <input
+                    type="text"
+
+                    value={
+                      selectedVedEditor
+                        .ourArticle
+                    }
+
+                    disabled={
+                      selectedVedEditor.loading
+                      ||
+                      (
+                        selectedItem.item_kind ===
+                          "existing"
+                        &&
+                        Boolean(
+                          selectedItem
+                            .our_article_snapshot
+                        )
+                      )
+                    }
+
+                    onChange={
+                      (
+                        event
+                      ) => {
+
+                        updateVedEditor(
+                          selectedItem.id,
+                          {
+                            ourArticle:
+                              event.target.value,
+
+                            error:
+                              "",
+                          }
+                        );
+
+                      }
+                    }
+
+                    style={{
+                      width:
+                        "100%",
+
+                      minHeight:
+                        "40px",
+
+                      padding:
+                        "0 11px",
+
+                      border:
+                        "1px solid var(--border)",
+
+                      borderRadius:
+                        "8px",
+
+                      background:
+                        "var(--background)",
+
+                      color:
+                        "var(--text)",
+                    }}
+                  />
+
+                </div>
+
+
+                <ReadOnlyField
+                  label="Китайский артикул"
+                  value={
+                    selectedItem
+                      .chinese_article_snapshot
+                    ??
+                    "—"
+                  }
+                />
+
+
+                {/* PRICE */}
+
+                <div>
+
+                  <div
+                    className="card-label"
+
+                    style={{
+                      marginBottom:
+                        "6px",
+                    }}
+                  >
+                    Цена за 1 шт., CNY
+                  </div>
+
+
+                  <input
+                    type="text"
+
+                    inputMode="decimal"
+
+                    value={
+                      selectedVedEditor
+                        .unitPriceCny
+                    }
+
+                    disabled={
+                      selectedVedEditor.loading
+                    }
+
+                    onChange={
+                      (
+                        event
+                      ) => {
+
+                        updateVedEditor(
+                          selectedItem.id,
+                          {
+                            unitPriceCny:
+                              event.target.value,
+
+                            error:
+                              "",
+                          }
+                        );
+
+                      }
+                    }
+
+                    style={{
+                      width:
+                        "100%",
+
+                      minHeight:
+                        "40px",
+
+                      padding:
+                        "0 11px",
+
+                      border:
+                        "1px solid var(--border)",
+
+                      borderRadius:
+                        "8px",
+
+                      background:
+                        "var(--background)",
+
+                      color:
+                        "var(--text)",
+                    }}
+                  />
+
+                </div>
+
+
+                {/* UNITS PER CARTON */}
+
+                <div>
+
+                  <div
+                    className="card-label"
+
+                    style={{
+                      marginBottom:
+                        "6px",
+                    }}
+                  >
+                    В 1 коробе, шт.
+                  </div>
+
+
+                  <input
+                    type="text"
+
+                    inputMode="numeric"
+
+                    value={
+                      selectedVedEditor
+                        .unitsPerCarton
+                    }
+
+                    disabled={
+                      selectedVedEditor.loading
+                    }
+
+                    onChange={
+                      (
+                        event
+                      ) => {
+
+                        updateVedEditor(
+                          selectedItem.id,
+                          {
+                            unitsPerCarton:
+                              event.target.value,
+
+                            error:
+                              "",
+                          }
+                        );
+
+                      }
+                    }
+
+                    style={{
+                      width:
+                        "100%",
+
+                      minHeight:
+                        "40px",
+
+                      padding:
+                        "0 11px",
+
+                      border:
+                        "1px solid var(--border)",
+
+                      borderRadius:
+                        "8px",
+
+                      background:
+                        "var(--background)",
+
+                      color:
+                        "var(--text)",
+                    }}
+                  />
+
+                </div>
+
+
+                {/* VOLUME */}
+
+                <div>
+
+                  <div
+                    className="card-label"
+
+                    style={{
+                      marginBottom:
+                        "6px",
+                    }}
+                  >
+                    Объём 1 короба, м³
+                  </div>
+
+
+                  <input
+                    type="text"
+
+                    inputMode="decimal"
+
+                    value={
+                      selectedVedEditor
+                        .cartonVolumeM3
+                    }
+
+                    disabled={
+                      selectedVedEditor.loading
+                    }
+
+                    onChange={
+                      (
+                        event
+                      ) => {
+
+                        updateVedEditor(
+                          selectedItem.id,
+                          {
+                            cartonVolumeM3:
+                              event.target.value,
+
+                            error:
+                              "",
+                          }
+                        );
+
+                      }
+                    }
+
+                    style={{
+                      width:
+                        "100%",
+
+                      minHeight:
+                        "40px",
+
+                      padding:
+                        "0 11px",
+
+                      border:
+                        "1px solid var(--border)",
+
+                      borderRadius:
+                        "8px",
+
+                      background:
+                        "var(--background)",
+
+                      color:
+                        "var(--text)",
+                    }}
+                  />
+
+                </div>
+
+
+                {/* WEIGHT */}
+
+                <div>
+
+                  <div
+                    className="card-label"
+
+                    style={{
+                      marginBottom:
+                        "6px",
+                    }}
+                  >
+                    Вес 1 короба, кг
+                  </div>
+
+
+                  <input
+                    type="text"
+
+                    inputMode="decimal"
+
+                    value={
+                      selectedVedEditor
+                        .cartonWeightKg
+                    }
+
+                    disabled={
+                      selectedVedEditor.loading
+                    }
+
+                    onChange={
+                      (
+                        event
+                      ) => {
+
+                        updateVedEditor(
+                          selectedItem.id,
+                          {
+                            cartonWeightKg:
+                              event.target.value,
+
+                            error:
+                              "",
+                          }
+                        );
+
+                      }
+                    }
+
+                    style={{
+                      width:
+                        "100%",
+
+                      minHeight:
+                        "40px",
+
+                      padding:
+                        "0 11px",
+
+                      border:
+                        "1px solid var(--border)",
+
+                      borderRadius:
+                        "8px",
+
+                      background:
+                        "var(--background)",
+
+                      color:
+                        "var(--text)",
+                    }}
+                  />
+
+                </div>
+
+
+                {/* INCOTERM */}
+
+                <div>
+
+                  <div
+                    className="card-label"
+
+                    style={{
+                      marginBottom:
+                        "6px",
+                    }}
+                  >
+                    Условия поставки
+                  </div>
+
+
+                  <select
+                    value={
+                      selectedVedEditor
+                        .incoterm
+                    }
+
+                    disabled={
+                      selectedVedEditor.loading
+                    }
+
+                    onChange={
+                      (
+                        event
+                      ) => {
+
+                        updateVedEditor(
+                          selectedItem.id,
+                          {
+                            incoterm:
+                              event.target.value,
+
+                            error:
+                              "",
+                          }
+                        );
+
+                      }
+                    }
+
+                    style={{
+                      width:
+                        "100%",
+
+                      minHeight:
+                        "40px",
+
+                      padding:
+                        "0 11px",
+
+                      border:
+                        "1px solid var(--border)",
+
+                      borderRadius:
+                        "8px",
+
+                      background:
+                        "var(--background)",
+
+                      color:
+                        "var(--text)",
+                    }}
+                  >
+
+                    <option value="FOB">
+                      FOB
+                    </option>
+
+                    <option value="FCA">
+                      FCA
+                    </option>
+
+                  </select>
+
+                </div>
+
+
+                {/* PORT */}
+
+                <div>
+
+                  <div
+                    className="card-label"
+
+                    style={{
+                      marginBottom:
+                        "6px",
+                    }}
+                  >
+                    Порт
+                  </div>
+
+
+                  <input
+                    type="text"
+
+                    value={
+                      selectedVedEditor.port
+                    }
+
+                    disabled={
+                      selectedVedEditor.loading
+                    }
+
+                    placeholder=
+                      "Укажите порт"
+
+                    onChange={
+                      (
+                        event
+                      ) => {
+
+                        updateVedEditor(
+                          selectedItem.id,
+                          {
+                            port:
+                              event.target.value,
+
+                            error:
+                              "",
+                          }
+                        );
+
+                      }
+                    }
+
+                    style={{
+                      width:
+                        "100%",
+
+                      minHeight:
+                        "40px",
+
+                      padding:
+                        "0 11px",
+
+                      border:
+                        "1px solid var(--border)",
+
+                      borderRadius:
+                        "8px",
+
+                      background:
+                        "var(--background)",
+
+                      color:
+                        "var(--text)",
+                    }}
+                  />
+
+                </div>
+
+              </div>
+
+
+              {/* MOQ READ ONLY FOR NOW */}
+
+              <div
+                style={{
+                  marginTop:
+                    "14px",
+
+                  display:
+                    "grid",
+
+                  gridTemplateColumns:
+                    "repeat(auto-fit, minmax(180px, 1fr))",
+
+                  gap:
+                    "8px",
+                }}
+              >
+
+                <CompactMetric
+                  label="MOQ"
+                  value={
+                    formatNumber(
+                      selectedItem.moq_quantity
+                    )
+                  }
+                />
+
+
+                <CompactMetric
+                  label="Коробов"
+                  value={
+                    formatNumber(
+                      selectedItem.cartons
+                    )
+                  }
+                />
+
+
+                <CompactMetric
+                  label="К заказу"
+                  value={
+                    `${formatNumber(
+                      selectedItem
+                        .order_quantity
+                    )} шт.`
+                  }
+                />
+
+
+                <CompactMetric
+                  label="Стоимость"
+                  value={
+                    selectedItem
+                      .total_price_cny ===
+                      null
+
+                      ? "—"
+
+                      : `${formatNumber(
+                          selectedItem
+                            .total_price_cny,
+                          2
+                        )} CNY`
+                  }
+                />
+
+
+                <CompactMetric
+                  label="Объём"
+                  value={
+                    `${formatNumber(
+                      selectedItem
+                        .total_volume_m3,
+                      6
+                    )} м³`
+                  }
+                />
+
+
+                <CompactMetric
+                  label="Вес"
+                  value={
+                    `${formatNumber(
+                      selectedItem
+                        .total_weight_tons,
+                      6
+                    )} т`
+                  }
+                />
+
+              </div>
+
+
+              {/* VED COMMENT */}
+
+              <div
+                style={{
+                  marginTop:
+                    "16px",
+                }}
+              >
+
+                <div
+                  className="card-label"
+
+                  style={{
+                    marginBottom:
+                      "6px",
+                  }}
+                >
+                  Комментарий ВЭД
+                </div>
+
+
+                <textarea
+                  value={
+                    selectedVedEditor
+                      .vedComment
+                  }
+
+                  disabled={
+                    selectedVedEditor.loading
+                  }
+
+                  placeholder=
+                    "Комментарий ВЭД по позиции"
+
+                  rows={
+                    4
+                  }
+
+                  onChange={
+                    (
+                      event
+                    ) => {
+
+                      updateVedEditor(
+                        selectedItem.id,
+                        {
+                          vedComment:
+                            event.target.value,
+
+                          error:
+                            "",
+                        }
+                      );
+
+                    }
+                  }
+
+                  style={{
+                    width:
+                      "100%",
+
+                    padding:
+                      "10px 11px",
+
+                    border:
+                      "1px solid var(--border)",
+
+                    borderRadius:
+                      "8px",
+
+                    resize:
+                      "vertical",
+
+                    background:
+                      "var(--background)",
+
+                    color:
+                      "var(--text)",
+
+                    font:
+                      "inherit",
+                  }}
+                />
+
+              </div>
+
+
+              <div
+                style={{
+                  display:
+                    "flex",
+
+                  alignItems:
+                    "center",
+
+                  gap:
+                    "12px",
+
+                  flexWrap:
+                    "wrap",
+
+                  marginTop:
+                    "12px",
+                }}
+              >
+
+                <button
+                  type="button"
+
+                  className=
+                    "primary-button"
+
+                  disabled={
+                    selectedVedEditor.loading
+                  }
+
+                  onClick={
+                    () => {
+
+                      void saveVedItem(
+                        selectedItem
+                      );
+
+                    }
+                  }
+                >
+
+                  {selectedVedEditor.loading
+                    ? "Сохраняем..."
+                    : "Сохранить изменения ВЭД"}
+
+                </button>
+
+
+                {vedSaveMessage && (
+
+                  <span
+                    style={{
+                      fontWeight:
+                        600,
+                    }}
+                  >
+                    {vedSaveMessage}
+                  </span>
+
+                )}
+
+              </div>
+
+
+              {selectedVedEditor.error && (
+
+                <div
+                  style={{
+                    marginTop:
+                      "10px",
+
+                    color:
+                      "#d64545",
+
+                    fontWeight:
+                      600,
+                  }}
+                >
+                  {selectedVedEditor.error}
+                </div>
 
               )}
 
             </div>
 
-
-            {selectedItem
-              .moq_review_status ===
-              "pending"
-              &&
-              !selectedPreview && (
-
-              <div
-                className="muted"
-                style={{
-                  marginTop:
-                    "9px",
-                }}
-              >
-                Для принятия решения по MOQ нажмите «Рассчитать».
-              </div>
-
-            )}
+          )}
 
 
-            {selectedEditor.error && (
-
-              <div
-                style={{
-                  marginTop:
-                    "10px",
-
-                  color:
-                    "#d64545",
-
-                  fontWeight:
-                    600,
-                }}
-              >
-                {selectedEditor.error}
-              </div>
-
-            )}
-
-          </div>
-
-
-          {/* ITEM TOTAL */}
+          {/* ==================================================
+              ITEM TOTAL
+              ================================================== */}
 
           <div
             style={{
@@ -4410,8 +5762,7 @@ export default function VedOrderDetailClient(
                 label="К заказу"
                 value={
                   `${formatNumber(
-                    selectedItem
-                      .order_quantity
+                    selectedItem.order_quantity
                   )} шт.`
                 }
               />
@@ -4481,112 +5832,39 @@ export default function VedOrderDetailClient(
           </div>
 
 
-          {/* COMMENTS */}
+          {/* ANALYTICS COMMENT */}
 
           <div
             style={{
               marginTop:
-                "22px",
+                "18px",
 
               paddingTop:
-                "18px",
+                "16px",
 
               borderTop:
                 "1px solid var(--border)",
             }}
           >
 
-            <div
-              style={{
-                fontWeight:
-                  700,
-
-                marginBottom:
-                  "12px",
-              }}
-            >
-              Комментарии
+            <div className="card-label">
+              Комментарий аналитики
             </div>
 
 
             <div
               style={{
-                display:
-                  "grid",
+                marginTop:
+                  "6px",
 
-                gridTemplateColumns:
-                  "repeat(auto-fit, minmax(280px, 1fr))",
-
-                gap:
-                  "12px",
+                whiteSpace:
+                  "pre-wrap",
               }}
             >
-
-              <div
-                className="card"
-                style={{
-                  padding:
-                    "14px",
-                }}
-              >
-
-                <div className="card-label">
-                  Комментарий аналитики
-                </div>
-
-
-                <div
-                  style={{
-                    marginTop:
-                      "8px",
-
-                    whiteSpace:
-                      "pre-wrap",
-                  }}
-                >
-
-                  {selectedItem
-                    .analytics_comment
-                    ??
-                    "—"}
-
-                </div>
-
-              </div>
-
-
-              <div
-                className="card"
-                style={{
-                  padding:
-                    "14px",
-                }}
-              >
-
-                <div className="card-label">
-                  Комментарий ВЭД
-                </div>
-
-
-                <div
-                  style={{
-                    marginTop:
-                      "8px",
-
-                    whiteSpace:
-                      "pre-wrap",
-                  }}
-                >
-
-                  {selectedItem
-                    .ved_comment
-                    ??
-                    "—"}
-
-                </div>
-
-              </div>
-
+              {selectedItem
+                .analytics_comment
+                ??
+                "—"}
             </div>
 
           </div>
@@ -4602,6 +5880,7 @@ export default function VedOrderDetailClient(
 
       <section
         className="section"
+
         style={{
           marginTop:
             "18px",
@@ -4647,6 +5926,7 @@ export default function VedOrderDetailClient(
 
             <div
               className="muted"
+
               style={{
                 marginTop:
                   "4px",
@@ -4706,11 +5986,9 @@ export default function VedOrderDetailClient(
                   }
                 }
               >
-
                 {showProblems
                   ? "Скрыть проблемы"
                   : "Показать проблемы"}
-
               </button>
 
             )}
@@ -4764,11 +6042,9 @@ export default function VedOrderDetailClient(
                   }
                 }
               >
-
                 {sendingHandoff
                   ? "Передаём..."
                   : "Передать в ВЭД"}
-
               </button>
 
             )}
@@ -4831,28 +6107,25 @@ export default function VedOrderDetailClient(
                   >
 
                     <strong>
-
                       {problemItem
                         .our_article
                         ??
                         "Без нашего артикула"}
-
                     </strong>
 
 
                     <div
                       className="muted"
+
                       style={{
                         marginTop:
                           "3px",
                       }}
                     >
-
                       {problemItem
                         .product_name
                         ??
                         "Наименование не указано"}
-
                     </div>
 
 
@@ -4951,6 +6224,7 @@ export default function VedOrderDetailClient(
 
       <section
         className="section"
+
         style={{
           marginTop:
             "14px",
@@ -4982,6 +6256,21 @@ export default function VedOrderDetailClient(
             <strong>
               {formatDate(
                 order.first_sent_to_ved_at
+              )}
+            </strong>
+
+          </div>
+
+
+          <div>
+
+            <div className="card-label">
+              Взял в работу ВЭД
+            </div>
+
+            <strong>
+              {formatDate(
+                order.ved_taken_at
               )}
             </strong>
 
