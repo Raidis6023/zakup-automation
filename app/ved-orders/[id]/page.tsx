@@ -7,9 +7,6 @@ from "../../ThemeToggle";
 import VedOrderDetailClient
 from "../../VedOrderDetailClient";
 
-import OzonPhotoSyncButton
-from "../../OzonPhotoSyncButton";
-
 
 // ============================================================
 // PAGE
@@ -80,48 +77,6 @@ export default async function VedOrderPage(
           </div>
 
         </header>
-
-
-        {/* ====================================================
-            OZON PHOTOS
-            ==================================================== */}
-
-        <section className="section">
-
-          <h2 className="section-title">
-            Фотографии товаров
-          </h2>
-
-
-          <div
-            className="reason-text"
-            style={{
-              marginBottom:
-                "14px",
-            }}
-          >
-            Для уже продающихся товаров главное фото
-            автоматически загружается из карточки Ozon
-            и сохраняется в заказе ВЭД.
-          </div>
-
-
-          <div
-            style={{
-              maxWidth:
-                "360px",
-            }}
-          >
-
-            <OzonPhotoSyncButton
-              orderId={
-                id
-              }
-            />
-
-          </div>
-
-        </section>
 
 
         {/* ====================================================
