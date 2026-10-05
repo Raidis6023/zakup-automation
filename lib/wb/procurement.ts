@@ -63,6 +63,23 @@ export type WBNeedResult = {
     | "BETWEEN_10_AND_30_DAYS";
 };
 
+export type WBSkuProcurementResult = {
+  nmId: number;
+  supplierArticle: string;
+  vendorCode: string;
+  barcode: string;
+
+  ordersCount: number;
+  dailySales: number;
+
+  totalStock: number;
+
+  daysOfStock: number | null;
+  need: number;
+
+  rule: WBNeedResult["rule"];
+};
+
 
 // ============================================================
 // 1. СРЕДНИЕ ПРОДАЖИ
@@ -85,12 +102,12 @@ export function calculateAverageDailySales(
   >();
 
   for (const order of orders) {
-    // Для автоматизации FBW нас интересует только склад WB.
+    // Берём только FBW.
     if (order.warehouseType !== "Склад WB") {
       continue;
     }
 
-    // Отменённые заказы не считаем.
+    // Отменённые заказы исключаем.
     if (order.isCancel === true) {
       continue;
     }
@@ -119,7 +136,7 @@ export function calculateAverageDailySales(
 
 
 // ============================================================
-// 2. РАЗБОР ОСТАТКОВ WB
+// 2. РАЗБОР ОСТАТКОВ
 // ============================================================
 
 function detectWarehouseType(
@@ -182,10 +199,41 @@ export function getPhysicalWarehouseStocks(
 
 
 // ============================================================
-// 4. РАСЧЁТ ПОТРЕБНОСТИ
+// 4. ОБЩИЙ ОСТАТОК SKU
 // ============================================================
 //
-// Формула пользователя:
+// Используем строку WB:
+// "Всего находится на складах"
+//
+// НЕ складываем физические склады вручную,
+// чтобы не получить двойной учёт.
+// ============================================================
+
+export function getTotalStockBySku(
+  items: WBRemainItem[]
+): Map<number, number> {
+  const result = new Map<number, number>();
+
+  for (const item of items) {
+    const totalRow = item.warehouses?.find(
+      (warehouse) =>
+        warehouse.warehouseName ===
+        "Всего находится на складах"
+    );
+
+    result.set(
+      item.nmId,
+      totalRow?.quantity ?? 0
+    );
+  }
+
+  return result;
+}
+
+
+// ============================================================
+// 5. РАСЧЁТ ПОТРЕБНОСТИ
+// ============================================================
 //
 // ЕСЛИ(Остатки / Продажи > 30;
 //      0;
@@ -196,15 +244,12 @@ export function getPhysicalWarehouseStocks(
 //      )
 // )
 //
-// Здесь dailySales = средние продажи в сутки.
-//
 // ============================================================
 
 export function calculateNeed(
   stock: number,
   dailySales: number
 ): WBNeedResult {
-  // Если продаж нет, потребность автоматически не создаём.
   if (dailySales <= 0) {
     return {
       stock,
@@ -217,7 +262,6 @@ export function calculateNeed(
 
   const daysOfStock = stock / dailySales;
 
-  // Остатка больше чем на 30 дней.
   if (daysOfStock > 30) {
     return {
       stock,
@@ -228,28 +272,100 @@ export function calculateNeed(
     };
   }
 
-  // Остатка меньше чем на 10 дней.
   if (daysOfStock < 10) {
-    const need = dailySales * 30;
-
     return {
       stock,
       dailySales,
       daysOfStock,
-      need,
+      need: dailySales * 30,
       rule: "LESS_THAN_10_DAYS",
     };
   }
-
-  // Остаток от 10 до 30 дней включительно.
-  const need =
-    (40 - daysOfStock) * dailySales;
 
   return {
     stock,
     dailySales,
     daysOfStock,
-    need,
+    need:
+      (40 - daysOfStock) * dailySales,
     rule: "BETWEEN_10_AND_30_DAYS",
   };
+}
+
+
+// ============================================================
+// 6. ИТОГОВЫЙ РАСЧЁТ ПО SKU
+// ============================================================
+
+export function calculateProcurementBySku(
+  orders: WBOrder[],
+  remains: WBRemainItem[],
+  days: number
+): WBSkuProcurementResult[] {
+  const sales =
+    calculateAverageDailySales(orders, days);
+
+  const salesMap = new Map(
+    sales.map((item) => [item.nmId, item])
+  );
+
+  const totalStocks =
+    getTotalStockBySku(remains);
+
+  const result: WBSkuProcurementResult[] = [];
+
+  // Берём ассортимент из остатков WB.
+  for (const item of remains) {
+    const sale = salesMap.get(item.nmId);
+
+    const ordersCount =
+      sale?.ordersCount ?? 0;
+
+    const dailySales =
+      sale?.dailySales ?? 0;
+
+    const totalStock =
+      totalStocks.get(item.nmId) ?? 0;
+
+    const needResult =
+      calculateNeed(totalStock, dailySales);
+
+    result.push({
+      nmId: item.nmId,
+
+      supplierArticle:
+        sale?.supplierArticle ??
+        item.vendorCode ??
+        "",
+
+      vendorCode:
+        item.vendorCode ?? "",
+
+      barcode:
+        item.barcode ?? "",
+
+      ordersCount,
+      dailySales,
+
+      totalStock,
+
+      daysOfStock:
+        needResult.daysOfStock,
+
+      need:
+        needResult.need,
+
+      rule:
+        needResult.rule,
+    });
+  }
+
+  return result.sort((a, b) => {
+    // Сначала товары, которым требуется поставка.
+    if (a.need !== b.need) {
+      return b.need - a.need;
+    }
+
+    return b.dailySales - a.dailySales;
+  });
 }
