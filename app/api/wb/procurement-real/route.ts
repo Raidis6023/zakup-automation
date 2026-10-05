@@ -13,6 +13,9 @@ export const maxDuration = 60;
 
 const SALES_DAYS = 28;
 
+// Данные заказов и остатков должны быть не старше 24 часов.
+const MAX_DATA_AGE_HOURS = 24;
+
 const PAGE_SIZE = 1000;
 const MAX_PAGES = 100;
 
@@ -217,18 +220,31 @@ function getAgeHours(
     return null;
   }
 
+  return (
+    Date.now() -
+    time
+  ) / (
+    1000 *
+    60 *
+    60
+  );
+}
+
+function formatAgeHours(
+  value:
+    | number
+    | null
+): number | null {
+  if (
+    value === null
+  ) {
+    return null;
+  }
+
   return Number(
-    (
-      (
-        Date.now() -
-        time
-      ) /
-      (
-        1000 *
-        60 *
-        60
-      )
-    ).toFixed(2)
+    value.toFixed(
+      2
+    )
   );
 }
 
@@ -402,7 +418,7 @@ export async function GET() {
 
   try {
     // ========================================================
-    // 1. ЧИТАЕМ СОСТОЯНИЕ ORDERS И STOCKS
+    // 1. ЧИТАЕМ СОСТОЯНИЕ СИНХРОНИЗАЦИЙ ORDERS И STOCKS
     // ========================================================
 
     const stateParams =
@@ -478,7 +494,7 @@ export async function GET() {
       );
 
     // ========================================================
-    // 2. ЗАЩИТА ОТ ОТСУТСТВУЮЩИХ ДАННЫХ
+    // 2. ПРОВЕРЯЕМ, ЧТО СИНХРОНИЗАЦИИ ВООБЩЕ ЕСТЬ
     // ========================================================
 
     if (
@@ -564,11 +580,9 @@ export async function GET() {
     }
 
     // ========================================================
-    // 3. ЕСЛИ ПОСЛЕДНЯЯ ПОПЫТКА СИНХРОНИЗАЦИИ ЗАВЕРШИЛАСЬ
-    //    ОШИБКОЙ — АВТОМАТИЧЕСКИЙ РАСЧЁТ НЕ ДЕЛАЕМ
+    // 3. ПРОВЕРЯЕМ ПОСЛЕДНИЙ HTTP-СТАТУС
     //
-    // Это соответствует принятому принципу:
-    // ошибка API не должна превращаться в нулевой остаток.
+    // Ошибка API не должна превращаться в нулевой остаток.
     // ========================================================
 
     if (
@@ -619,6 +633,203 @@ export async function GET() {
       );
     }
 
+    // ========================================================
+    // 4. ПРОВЕРЯЕМ СВЕЖЕСТЬ ДАННЫХ
+    //
+    // Правило:
+    // и заказы, и остатки должны быть обновлены
+    // не более 24 часов назад.
+    // ========================================================
+
+    const ordersAgeHours =
+      getAgeHours(
+        ordersState
+          .last_success_at
+      );
+
+    const stocksAgeHours =
+      getAgeHours(
+        stocksState
+          .last_success_at
+      );
+
+    if (
+      ordersAgeHours ===
+      null
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+
+          calculationBlocked:
+            true,
+
+          message:
+            "Расчёт заблокирован: не удалось определить возраст данных заказов WB",
+
+          wildberriesRequestSent:
+            false,
+        },
+        { status: 409 }
+      );
+    }
+
+    if (
+      stocksAgeHours ===
+      null
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+
+          calculationBlocked:
+            true,
+
+          message:
+            "Расчёт заблокирован: не удалось определить возраст данных остатков WB",
+
+          wildberriesRequestSent:
+            false,
+        },
+        { status: 409 }
+      );
+    }
+
+    if (
+      ordersAgeHours <
+      0
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+
+          calculationBlocked:
+            true,
+
+          message:
+            "Расчёт заблокирован: дата успешной синхронизации заказов находится в будущем",
+
+          ordersAgeHours:
+            formatAgeHours(
+              ordersAgeHours
+            ),
+
+          wildberriesRequestSent:
+            false,
+        },
+        { status: 409 }
+      );
+    }
+
+    if (
+      stocksAgeHours <
+      0
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+
+          calculationBlocked:
+            true,
+
+          message:
+            "Расчёт заблокирован: дата успешной синхронизации остатков находится в будущем",
+
+          stocksAgeHours:
+            formatAgeHours(
+              stocksAgeHours
+            ),
+
+          wildberriesRequestSent:
+            false,
+        },
+        { status: 409 }
+      );
+    }
+
+    const staleSources:
+      string[] = [];
+
+    if (
+      ordersAgeHours >
+      MAX_DATA_AGE_HOURS
+    ) {
+      staleSources.push(
+        "orders"
+      );
+    }
+
+    if (
+      stocksAgeHours >
+      MAX_DATA_AGE_HOURS
+    ) {
+      staleSources.push(
+        "stocks"
+      );
+    }
+
+    if (
+      staleSources.length >
+      0
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+
+          calculationBlocked:
+            true,
+
+          message:
+            "Расчёт заблокирован: данные Wildberries старше 24 часов. Сначала необходимо обновить данные.",
+
+          freshness: {
+            maxAgeHours:
+              MAX_DATA_AGE_HOURS,
+
+            staleSources,
+
+            orders: {
+              lastSuccessAt:
+                ordersState
+                  .last_success_at,
+
+              ageHours:
+                formatAgeHours(
+                  ordersAgeHours
+                ),
+
+              fresh:
+                ordersAgeHours <=
+                MAX_DATA_AGE_HOURS,
+            },
+
+            stocks: {
+              lastSuccessAt:
+                stocksState
+                  .last_success_at,
+
+              ageHours:
+                formatAgeHours(
+                  stocksAgeHours
+                ),
+
+              fresh:
+                stocksAgeHours <=
+                MAX_DATA_AGE_HOURS,
+            },
+          },
+
+          wildberriesRequestSent:
+            false,
+        },
+        { status: 409 }
+      );
+    }
+
+    // ========================================================
+    // 5. ПРОВЕРЯЕМ SNAPSHOT ОСТАТКОВ
+    // ========================================================
+
     const snapshotId =
       stocksState
         .last_snapshot_id;
@@ -644,7 +855,7 @@ export async function GET() {
     }
 
     // ========================================================
-    // 4. ФИКСИРУЕМ РАСЧЁТНЫЕ 28 ДНЕЙ
+    // 6. ФИКСИРУЕМ РАСЧЁТНЫЕ 28 ДНЕЙ
     // ========================================================
 
     const periodEnd =
@@ -686,12 +897,12 @@ export async function GET() {
       );
 
     // ========================================================
-    // 5. ЧИТАЕМ ЗАКАЗЫ FBW ЗА РАСЧЁТНЫЕ 28 ДНЕЙ
+    // 7. ЧИТАЕМ FBW-ЗАКАЗЫ ЗА 28 ДНЕЙ
     //
     // ВАЖНО:
-    // здесь фильтр именно по order_date.
+    // фильтр именно по order_date.
     //
-    // Склад продавца нам не нужен.
+    // "Свой склад" / FBS сюда НЕ входит.
     // ========================================================
 
     const orderParams =
@@ -748,7 +959,7 @@ export async function GET() {
       );
 
     // ========================================================
-    // 6. ЧИТАЕМ ПОСЛЕДНИЙ СНИМОК ОСТАТКОВ
+    // 8. ЧИТАЕМ ПОСЛЕДНИЙ СНИМОК ОСТАТКОВ WB
     // ========================================================
 
     const stockParams =
@@ -804,7 +1015,7 @@ export async function GET() {
     }
 
     // ========================================================
-    // 7. ПРОДАЖИ ПО SKU
+    // 9. СЧИТАЕМ ПРОДАЖИ ПО SKU
     //
     // Каждая неотменённая строка orders = 1 единица.
     // ========================================================
@@ -862,19 +1073,11 @@ export async function GET() {
     }
 
     // ========================================================
-    // 8. ОСТАТКИ ПО SKU
+    // 10. СОБИРАЕМ ОСТАТКИ ПО SKU
     //
-    // ВАЖНО:
+    // В формулу идёт ТОЛЬКО totalStock.
     //
-    // totalStock — единственное значение,
-    // которое идёт в формулу.
-    //
-    // physical / wbRussiaAggregate / toClient / returning
-    // храним только для контроля.
-    //
-    // Если у одного nmId когда-нибудь будет несколько
-    // barcode/размеров, строки total суммируются,
-    // а не перезаписывают друг друга.
+    // "Свой склад" / FBS здесь не учитывается.
     // ========================================================
 
     const stockBySku =
@@ -1033,7 +1236,7 @@ export async function GET() {
     }
 
     // ========================================================
-    // 9. ОБЪЕДИНЯЕМ SKU ИЗ ПРОДАЖ И ИЗ ОСТАТКОВ
+    // 11. ОБЪЕДИНЯЕМ SKU ИЗ ПРОДАЖ И ОСТАТКОВ
     // ========================================================
 
     const allSku =
@@ -1058,7 +1261,15 @@ export async function GET() {
     }
 
     // ========================================================
-    // 10. РЕАЛЬНЫЙ РАСЧЁТ ПОТРЕБНОСТИ
+    // 12. РАСЧЁТ ПОТРЕБНОСТИ
+    //
+    // needRaw = математический результат формулы.
+    // needRoundedUp = реальное количество в целых штуках.
+    //
+    // Пример:
+    // 422.14 -> 423
+    // 1.01   -> 2
+    // 0      -> 0
     // ========================================================
 
     const items =
@@ -1100,19 +1311,12 @@ export async function GET() {
           } else if (
             stockInfo
           ) {
-            // SKU присутствует в успешном snapshot,
-            // но строки "Всего находится на складах" нет.
             totalStock =
               0;
 
             stockSource =
               "TOTAL_ROW_MISSING_ASSUMED_ZERO";
           } else {
-            // SKU продавался, но полностью отсутствует
-            // в успешном snapshot остатков.
-            //
-            // Для расчёта считаем складской остаток 0,
-            // но явно помечаем источник этого нуля.
             totalStock =
               0;
 
@@ -1125,6 +1329,14 @@ export async function GET() {
               totalStock,
               dailySales
             );
+
+          const needRoundedUp =
+            needResult.need >
+            0
+              ? Math.ceil(
+                  needResult.need
+                )
+              : 0;
 
           return {
             nmId,
@@ -1194,8 +1406,10 @@ export async function GET() {
               daysOfStock:
                 needResult.daysOfStock,
 
-              need:
+              needRaw:
                 needResult.need,
+
+              needRoundedUp,
 
               rule:
                 needResult.rule,
@@ -1205,10 +1419,11 @@ export async function GET() {
       );
 
     // ========================================================
-    // 11. СОРТИРОВКА
+    // 13. СОРТИРОВКА
     //
-    // Сначала самая большая потребность.
-    // При равной потребности — больше средних продаж.
+    // Сначала самая большая округлённая потребность.
+    // При равенстве — больший сырой расчёт.
+    // Затем — больше средних продаж.
     // ========================================================
 
     items.sort(
@@ -1216,15 +1431,30 @@ export async function GET() {
         a,
         b
       ) => {
-        const byNeed =
-          b.calculation.need -
-          a.calculation.need;
+        const byRoundedNeed =
+          b.calculation
+            .needRoundedUp -
+          a.calculation
+            .needRoundedUp;
 
         if (
-          byNeed !==
+          byRoundedNeed !==
           0
         ) {
-          return byNeed;
+          return byRoundedNeed;
+        }
+
+        const byRawNeed =
+          b.calculation
+            .needRaw -
+          a.calculation
+            .needRaw;
+
+        if (
+          byRawNeed !==
+          0
+        ) {
+          return byRawNeed;
         }
 
         return (
@@ -1235,13 +1465,14 @@ export async function GET() {
     );
 
     // ========================================================
-    // 12. КОНТРОЛЬ КАЧЕСТВА ДАННЫХ
+    // 14. КОНТРОЛЬ КАЧЕСТВА
     // ========================================================
 
     const skuWithNeed =
       items.filter(
         (item) =>
-          item.calculation.need >
+          item.calculation
+            .needRaw >
           0
       );
 
@@ -1296,12 +1527,28 @@ export async function GET() {
           item
         ) =>
           sum +
-          item.calculation.need,
+          item.calculation
+            .needRaw,
+        0
+      );
+
+    // ВАЖНО:
+    // округляем вверх каждый SKU отдельно,
+    // а затем суммируем.
+    const totalNeedRoundedUp =
+      skuWithNeed.reduce(
+        (
+          sum,
+          item
+        ) =>
+          sum +
+          item.calculation
+            .needRoundedUp,
         0
       );
 
     // ========================================================
-    // 13. ВОЗВРАЩАЕМ РЕЗУЛЬТАТ
+    // 15. ВОЗВРАЩАЕМ РЕЗУЛЬТАТ
     // ========================================================
 
     return NextResponse.json({
@@ -1319,6 +1566,9 @@ export async function GET() {
 
         fulfillment:
           "FBW / Склад WB",
+
+        ownWarehouseFbsIncluded:
+          false,
 
         granularity:
           "SKU × весь Wildberries",
@@ -1338,6 +1588,9 @@ export async function GET() {
           true,
 
         sellerWarehouseExcluded:
+          true,
+
+        ownWarehouseFbsExcluded:
           true,
 
         stockUsed:
@@ -1361,20 +1614,28 @@ export async function GET() {
         },
 
         rounding:
-          "Не применяется. Правило округления/кратности коробов ещё не зафиксировано.",
+          "Каждая положительная потребность округляется вверх до целого количества единиц.",
       },
 
-      dataStatus: {
+      freshness: {
+        maxAgeHours:
+          MAX_DATA_AGE_HOURS,
+
+        allSourcesFresh:
+          true,
+
         orders: {
           lastSuccessAt:
             ordersState
               .last_success_at,
 
           ageHours:
-            getAgeHours(
-              ordersState
-                .last_success_at
+            formatAgeHours(
+              ordersAgeHours
             ),
+
+          fresh:
+            true,
 
           lastHttpStatus:
             ordersState
@@ -1387,10 +1648,12 @@ export async function GET() {
               .last_success_at,
 
           ageHours:
-            getAgeHours(
-              stocksState
-                .last_success_at
+            formatAgeHours(
+              stocksAgeHours
             ),
+
+          fresh:
+            true,
 
           lastHttpStatus:
             stocksState
@@ -1398,12 +1661,6 @@ export async function GET() {
 
           snapshotId,
         },
-
-        freshnessThresholdConfigured:
-          false,
-
-        freshnessNote:
-          "Порог устаревания в часах пока не задан бизнес-правилом. Расчёт блокируется при отсутствии успешной синхронизации или если последняя попытка API завершилась ошибкой.",
       },
 
       period: {
@@ -1447,7 +1704,14 @@ export async function GET() {
         skuWithNeed:
           skuWithNeed.length,
 
-        totalNeedRaw,
+        totalNeedRaw:
+          Number(
+            totalNeedRaw.toFixed(
+              6
+            )
+          ),
+
+        totalNeedRoundedUp,
 
         rules: {
           noSales:
@@ -1475,7 +1739,7 @@ export async function GET() {
           salesSkuAbsentFromSnapshot.length,
 
         note:
-          "Нулевой остаток предполагается только внутри успешно полученного snapshot. Ошибка синхронизации блокирует расчёт.",
+          "Нулевой FBW-остаток допускается только внутри успешно полученного снимка. Остатки и продажи FBS / «Свой склад» сейчас не участвуют в расчёте.",
       },
 
       topNeed:
