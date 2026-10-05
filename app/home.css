@@ -18,7 +18,7 @@
   background:
     linear-gradient(
       180deg,
-      var(--surface) 0,
+      var(--surface) 0%,
       var(--background) 100%
     );
 
@@ -84,6 +84,7 @@
   text-decoration: none;
 
   font-size: 14px;
+
   font-weight: 600;
 
   transition:
@@ -112,9 +113,11 @@
   display: inline-flex;
 
   align-items: center;
+
   justify-content: center;
 
   width: 34px;
+
   height: 34px;
 
   flex:
@@ -127,6 +130,7 @@
 
 .home-workspace-icon svg {
   width: 25px;
+
   height: 25px;
 
   fill: none;
@@ -137,6 +141,7 @@
   stroke-width: 1.8;
 
   stroke-linecap: round;
+
   stroke-linejoin: round;
 }
 
@@ -145,9 +150,11 @@
   display: inline-flex;
 
   align-items: center;
+
   justify-content: center;
 
   width: 34px;
+
   height: 34px;
 
   flex:
@@ -166,6 +173,7 @@
   display: block;
 
   width: 100%;
+
   height: 100%;
 
   object-fit: cover;
@@ -198,6 +206,7 @@
   display: flex;
 
   align-items: center;
+
   justify-content: space-between;
 
   gap: 28px;
@@ -266,9 +275,11 @@
   display: inline-flex;
 
   align-items: center;
+
   justify-content: center;
 
   width: 30px;
+
   height: 30px;
 
   color:
@@ -278,6 +289,7 @@
 
 .home-search-icon svg {
   width: 22px;
+
   height: 22px;
 
   fill: none;
@@ -288,6 +300,7 @@
   stroke-width: 1.8;
 
   stroke-linecap: round;
+
   stroke-linejoin: round;
 }
 
@@ -327,6 +340,7 @@
   display: inline-flex;
 
   align-items: center;
+
   justify-content: center;
 
   min-height: 29px;
@@ -382,9 +396,11 @@
   display: inline-flex;
 
   align-items: center;
+
   justify-content: center;
 
   width: 40px;
+
   height: 40px;
 
   padding: 0;
@@ -416,6 +432,7 @@
 
 .home-icon-button svg {
   width: 24px;
+
   height: 24px;
 
   fill: none;
@@ -426,6 +443,7 @@
   stroke-width: 1.7;
 
   stroke-linecap: round;
+
   stroke-linejoin: round;
 }
 
@@ -434,14 +452,17 @@
   position: absolute;
 
   top: 1px;
+
   right: 0;
 
   display: inline-flex;
 
   align-items: center;
+
   justify-content: center;
 
   min-width: 18px;
+
   height: 18px;
 
   padding:
@@ -455,19 +476,21 @@
     #ff4e4e;
 
   color:
-    white;
+    #ffffff;
 
   border:
     2px solid
     var(--surface);
 
   font-size: 10px;
+
   font-weight: 700;
 }
 
 
 .home-topbar-divider {
   width: 1px;
+
   height: 31px;
 
   margin:
@@ -486,7 +509,11 @@
 .home-popup {
   position: absolute;
 
-  top: calc(100% + 12px);
+  top:
+    calc(
+      100% + 12px
+    );
+
   right: 0;
 
   z-index: 200;
@@ -559,9 +586,11 @@ html[data-theme="dark"]
   display: flex;
 
   align-items: center;
+
   justify-content: center;
 
   width: 48px;
+
   height: 48px;
 
   margin-bottom: 13px;
@@ -578,6 +607,7 @@ html[data-theme="dark"]
 
 .home-notifications-empty-icon svg {
   width: 23px;
+
   height: 23px;
 
   fill: none;
@@ -588,6 +618,7 @@ html[data-theme="dark"]
   stroke-width: 1.7;
 
   stroke-linecap: round;
+
   stroke-linejoin: round;
 }
 
@@ -668,8 +699,7 @@ html[data-theme="dark"]
 .home-calendar-popup {
   width: 320px;
 
-  padding:
-    15px;
+  padding: 15px;
 }
 
 
@@ -703,9 +733,11 @@ html[data-theme="dark"]
   display: inline-flex;
 
   align-items: center;
+
   justify-content: center;
 
   width: 34px;
+
   height: 34px;
 
   padding: 0;
@@ -732,6 +764,7 @@ html[data-theme="dark"]
 
 .home-calendar-arrow svg {
   width: 18px;
+
   height: 18px;
 
   fill: none;
@@ -742,6 +775,7 @@ html[data-theme="dark"]
   stroke-width: 1.9;
 
   stroke-linecap: round;
+
   stroke-linejoin: round;
 }
 
@@ -767,6 +801,7 @@ html[data-theme="dark"]
   display: flex;
 
   align-items: center;
+
   justify-content: center;
 
   height: 28px;
@@ -784,9 +819,11 @@ html[data-theme="dark"]
   display: flex;
 
   align-items: center;
+
   justify-content: center;
 
   width: 34px;
+
   height: 34px;
 
   margin:
@@ -896,9 +933,11 @@ html[data-theme="dark"]
   display: inline-flex;
 
   align-items: center;
+
   justify-content: center;
 
   width: 34px;
+
   height: 30px;
 
   padding: 0;
@@ -932,6 +971,7 @@ html[data-theme="dark"]
 
 .home-theme-toggle svg {
   width: 18px;
+
   height: 18px;
 
   fill: none;
@@ -942,6 +982,7 @@ html[data-theme="dark"]
   stroke-width: 1.7;
 
   stroke-linecap: round;
+
   stroke-linejoin: round;
 }
 
@@ -992,9 +1033,11 @@ html[data-theme="dark"]
   display: inline-flex;
 
   align-items: center;
+
   justify-content: center;
 
   width: 42px;
+
   height: 42px;
 
   flex:
@@ -1013,6 +1056,7 @@ html[data-theme="dark"]
     #285b8b;
 
   font-size: 13px;
+
   font-weight: 700;
 }
 
@@ -1069,6 +1113,7 @@ html[data-theme="dark"]
 
 .home-profile-chevron svg {
   width: 18px;
+
   height: 18px;
 
   fill: none;
@@ -1079,6 +1124,7 @@ html[data-theme="dark"]
   stroke-width: 1.9;
 
   stroke-linecap: round;
+
   stroke-linejoin: round;
 }
 
@@ -1099,6 +1145,7 @@ html[data-theme="dark"]
   display: flex;
 
   align-items: center;
+
   justify-content: space-between;
 
   gap: 28px;
@@ -1144,247 +1191,46 @@ html[data-theme="dark"]
 
 
 /* ============================================================
-   DECORATION
-   ============================================================ */
-
-/* ============================================================
-   DECORATION
+   HEADER DECORATION
    ============================================================ */
 
 .home-decoration {
-  position: relative;
+  width:
+    min(
+      500px,
+      40vw
+    );
+
+  height: 66px;
 
   display: flex;
 
   align-items: center;
 
-  width:
-    min(
-      430px,
-      36vw
-    );
+  justify-content: flex-end;
 
-  height: 58px;
-
-  overflow: hidden;
-
-  isolation: isolate;
-}
-
-
-/*
-   Мягкая общая голубая подложка.
-   Она визуально связывает отдельные элементы
-   в одну цельную ленту.
-*/
-
-.home-decoration::before {
-  content: "";
-
-  position: absolute;
-
-  left: 18px;
-  right: 0;
-
-  top: 50%;
-
-  height: 38px;
-
-  transform:
-    translateY(-50%);
-
-  background:
-    linear-gradient(
-      90deg,
-
-      rgba(12, 137, 239, 0.16) 0%,
-
-      rgba(64, 169, 239, 0.18) 25%,
-
-      rgba(139, 208, 247, 0.18) 55%,
-
-      rgba(204, 234, 250, 0.13) 78%,
-
-      rgba(226, 243, 252, 0) 100%
-    );
-
-  filter:
-    blur(10px);
-
-  z-index: -1;
-}
-
-
-/* ------------------------------------------------------------
-   ОБЩАЯ ФОРМА СЕГМЕНТОВ
-   ------------------------------------------------------------ */
-
-.home-decoration span {
-  position: relative;
-
-  display: block;
-
-  height: 34px;
+  overflow: visible;
 
   flex-shrink: 0;
-
-  margin-right: -9px;
-
-  clip-path:
-    polygon(
-      15% 0,
-      100% 0,
-      85% 100%,
-      0 100%
-    );
-
-  transform:
-    translateZ(0);
 }
 
 
-/* ------------------------------------------------------------
-   ПЕРВАЯ КОРОТКАЯ СИНЯЯ ПОЛОСКА
-   ------------------------------------------------------------ */
+.home-decoration svg {
+  display: block;
 
-.home-decoration span:nth-child(1) {
-  width: 58px;
-
-  z-index: 4;
-
-  background:
-    linear-gradient(
-      110deg,
-
-      #0584ec 0%,
-
-      #0b91f2 42%,
-
-      #30a5f2 100%
-    );
-}
-
-
-/* ------------------------------------------------------------
-   ВТОРАЯ ПОЛОСКА
-   ------------------------------------------------------------ */
-
-.home-decoration span:nth-child(2) {
-  width: 112px;
-
-  z-index: 3;
-
-  background:
-    linear-gradient(
-      105deg,
-
-      rgba(55, 164, 238, 0.96) 0%,
-
-      rgba(100, 191, 243, 0.9) 46%,
-
-      rgba(145, 211, 247, 0.76) 100%
-    );
-}
-
-
-/* ------------------------------------------------------------
-   ТРЕТЬЯ — ОСНОВНАЯ ШИРОКАЯ
-   ------------------------------------------------------------ */
-
-.home-decoration span:nth-child(3) {
-  width: 174px;
-
-  z-index: 2;
-
-  background:
-    linear-gradient(
-      102deg,
-
-      rgba(125, 202, 244, 0.84) 0%,
-
-      rgba(166, 220, 249, 0.72) 44%,
-
-      rgba(204, 235, 251, 0.55) 100%
-    );
-}
-
-
-/* ------------------------------------------------------------
-   ПОСЛЕДНЯЯ — ПЛАВНО ИСЧЕЗАЕТ
-   ------------------------------------------------------------ */
-
-.home-decoration span:nth-child(4) {
-  width: 128px;
-
-  z-index: 1;
-
-  background:
-    linear-gradient(
-      100deg,
-
-      rgba(193, 230, 250, 0.58) 0%,
-
-      rgba(216, 239, 252, 0.38) 48%,
-
-      rgba(232, 246, 253, 0.08) 85%,
-
-      rgba(232, 246, 253, 0) 100%
-    );
-}
-
-
-/* ------------------------------------------------------------
-   ЛЁГКОЕ СМЯГЧЕНИЕ СТЫКОВ
-   ------------------------------------------------------------ */
-
-.home-decoration span::after {
-  content: "";
-
-  position: absolute;
-
-  top: 0;
-  right: 0;
-
-  width: 28%;
+  width: 100%;
 
   height: 100%;
 
-  background:
-    linear-gradient(
-      90deg,
-      transparent,
-      rgba(255, 255, 255, 0.09)
-    );
-
-  pointer-events: none;
-}
-
-
-/* ------------------------------------------------------------
-   DARK THEME
-   ------------------------------------------------------------ */
-
-html[data-theme="dark"]
-.home-decoration::before {
-  opacity: 0.7;
+  overflow: visible;
 }
 
 
 html[data-theme="dark"]
-.home-decoration span:nth-child(4) {
-  background:
-    linear-gradient(
-      100deg,
-
-      rgba(126, 171, 202, 0.52) 0%,
-
-      rgba(112, 149, 177, 0.33) 48%,
-
-      rgba(87, 112, 132, 0.12) 82%,
-
-      rgba(87, 112, 132, 0) 100%
-    );
+.home-decoration {
+  opacity: 0.95;
 }
+
 
 /* ============================================================
    EMPTY CONTENT
@@ -1421,13 +1267,6 @@ html[data-theme="dark"]
 }
 
 
-html[data-theme="dark"]
-.home-decoration span:nth-child(4) {
-  background:
-    #6f8da4;
-}
-
-
 /* ============================================================
    RESPONSIVE
    ============================================================ */
@@ -1444,11 +1283,9 @@ html[data-theme="dark"]
 
 
   .home-topbar {
-    padding-left:
-      20px;
+    padding-left: 20px;
 
-    padding-right:
-      20px;
+    padding-right: 20px;
   }
 
 
@@ -1459,6 +1296,15 @@ html[data-theme="dark"]
 
   .home-profile-text {
     display: none;
+  }
+
+
+  .home-decoration {
+    width:
+      min(
+        390px,
+        36vw
+      );
   }
 
 }
@@ -1498,7 +1344,8 @@ html[data-theme="dark"]
 
 
   .home-workspace-link {
-    min-width: max-content;
+    min-width:
+      max-content;
   }
 
 
@@ -1541,7 +1388,11 @@ html[data-theme="dark"]
 
 
   .home-decoration {
-    width: 100%;
+    width:
+      min(
+        500px,
+        100%
+      );
   }
 
 }
@@ -1559,7 +1410,8 @@ html[data-theme="dark"]
 
 
   .home-topbar-right {
-    justify-content: space-between;
+    justify-content:
+      space-between;
   }
 
 
