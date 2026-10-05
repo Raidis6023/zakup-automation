@@ -8,7 +8,7 @@ import {
 
 
 // ============================================================
-// TYPES
+// TYPES: ORDER
 // ============================================================
 
 type VedOrder = {
@@ -133,7 +133,7 @@ type VedOrderResponse = {
 
 
 // ============================================================
-// MOQ / PRICE
+// TYPES: MOQ / PRICE
 // ============================================================
 
 type TermsPreview = {
@@ -186,7 +186,7 @@ type TermsPreview = {
 
 
 // ============================================================
-// PREPARATION DATA
+// TYPES: PREPARATION
 // ============================================================
 
 type PreparationResponse = {
@@ -200,6 +200,74 @@ type PreparationResponse = {
   chinese_article?: string | null;
 
   carton_weight_kg?: number | null;
+};
+
+
+// ============================================================
+// TYPES: HANDOFF
+// ============================================================
+
+type HandoffBlockers = {
+  terms_pending?: number;
+  moq_review_pending?: number;
+
+  missing_chinese_article?: number;
+  missing_name?: number;
+  missing_photo?: number;
+
+  missing_units_per_carton?: number;
+  missing_carton_volume?: number;
+  missing_carton_weight?: number;
+
+  missing_cartons?: number;
+  missing_order_quantity?: number;
+
+  missing_incoterm?: number;
+};
+
+
+type HandoffProblemItem = {
+  item_id?: string;
+
+  our_article?: string | null;
+  product_name?: string | null;
+
+  problems?: string[];
+};
+
+
+type HandoffReadiness = {
+  ok: boolean;
+  error?: string;
+
+  order_id?: string;
+  workflow_status?: string;
+
+  ready?: boolean;
+
+  total_items?: number;
+  included_items?: number;
+  excluded_items?: number;
+
+  blockers?: HandoffBlockers;
+
+  problem_items?: HandoffProblemItem[];
+};
+
+
+type HandoffSendResponse = {
+  ok: boolean;
+  error?: string;
+
+  sent?: boolean;
+
+  order_id?: string;
+  workflow_status?: string;
+
+  first_sent_to_ved_at?: string;
+  last_sent_to_ved_at?: string;
+
+  readiness?: HandoffReadiness;
 };
 
 
@@ -500,6 +568,51 @@ export default function VedOrderDetailClient(
     );
 
 
+  const [
+    handoff,
+    setHandoff,
+  ] =
+    useState<HandoffReadiness | null>(
+      null
+    );
+
+
+  const [
+    loadingHandoff,
+    setLoadingHandoff,
+  ] =
+    useState(
+      false
+    );
+
+
+  const [
+    sendingHandoff,
+    setSendingHandoff,
+  ] =
+    useState(
+      false
+    );
+
+
+  const [
+    handoffError,
+    setHandoffError,
+  ] =
+    useState(
+      ""
+    );
+
+
+  const [
+    handoffMessage,
+    setHandoffMessage,
+  ] =
+    useState(
+      ""
+    );
+
+
   // ==========================================================
   // LOAD ORDER
   // ==========================================================
@@ -660,10 +773,97 @@ export default function VedOrderDetailClient(
   }
 
 
+  // ==========================================================
+  // LOAD HANDOFF READINESS
+  // ==========================================================
+
+  async function loadHandoffReadiness() {
+
+    setLoadingHandoff(
+      true
+    );
+
+    setHandoffError(
+      ""
+    );
+
+
+    try {
+
+      const response =
+        await fetch(
+          `/api/ved-orders/${orderId}/handoff`,
+          {
+            method:
+              "GET",
+
+            cache:
+              "no-store",
+          }
+        );
+
+
+      const result:
+        HandoffReadiness =
+          await response.json();
+
+
+      if (
+        !response.ok
+        ||
+        !result.ok
+      ) {
+
+        throw new Error(
+          result.error
+          ||
+          "Не удалось проверить готовность заказа"
+        );
+
+      }
+
+
+      setHandoff(
+        result
+      );
+
+
+    } catch (
+      caughtError
+    ) {
+
+      setHandoffError(
+
+        caughtError
+        instanceof Error
+
+          ? caughtError.message
+
+          : "Неизвестная ошибка проверки готовности"
+
+      );
+
+    } finally {
+
+      setLoadingHandoff(
+        false
+      );
+
+    }
+
+  }
+
+
+  // ==========================================================
+  // INITIAL LOAD
+  // ==========================================================
+
   useEffect(
     () => {
 
       void loadOrder();
+
+      void loadHandoffReadiness();
 
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
@@ -671,6 +871,19 @@ export default function VedOrderDetailClient(
       orderId,
     ]
   );
+
+
+  // ==========================================================
+  // REFRESH ORDER + READINESS
+  // ==========================================================
+
+  async function refreshAll() {
+
+    await loadOrder();
+
+    await loadHandoffReadiness();
+
+  }
 
 
   // ==========================================================
@@ -928,7 +1141,7 @@ export default function VedOrderDetailClient(
       }
 
 
-      await loadOrder();
+      await refreshAll();
 
 
     } catch (
@@ -1317,7 +1530,7 @@ export default function VedOrderDetailClient(
       }
 
 
-      await loadOrder();
+      await refreshAll();
 
 
     } catch (
@@ -1458,7 +1671,7 @@ export default function VedOrderDetailClient(
       }
 
 
-      await loadOrder();
+      await refreshAll();
 
 
     } catch (
@@ -1487,6 +1700,168 @@ export default function VedOrderDetailClient(
           loadingReview:
             false,
         }
+      );
+
+    }
+
+  }
+
+
+  // ==========================================================
+  // SEND TO VED
+  // ==========================================================
+
+  async function sendToVed() {
+
+    if (
+      !handoff
+      ||
+      !handoff.ready
+    ) {
+
+      setHandoffError(
+        "Заказ пока не готов к передаче в ВЭД"
+      );
+
+      return;
+
+    }
+
+
+    const {
+      actorName,
+      actorRole,
+    } =
+      getActor();
+
+
+    if (!actorName) {
+
+      setHandoffError(
+        "У заказа не указан ответственный сотрудник"
+      );
+
+      return;
+
+    }
+
+
+    setSendingHandoff(
+      true
+    );
+
+    setHandoffError(
+      ""
+    );
+
+    setHandoffMessage(
+      ""
+    );
+
+
+    try {
+
+      const response =
+        await fetch(
+          `/api/ved-orders/${orderId}/handoff`,
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify(
+                {
+                  actorName,
+
+                  actorUserId:
+                    null,
+
+                  actorRole,
+                }
+              ),
+
+            cache:
+              "no-store",
+          }
+        );
+
+
+      const result:
+        HandoffSendResponse =
+          await response.json();
+
+
+      if (
+        !response.ok
+      ) {
+
+        throw new Error(
+          result.error
+          ||
+          "Не удалось передать заказ в ВЭД"
+        );
+
+      }
+
+
+      if (
+        !result.ok
+        ||
+        !result.sent
+      ) {
+
+        if (
+          result.readiness
+        ) {
+
+          setHandoff(
+            result.readiness
+          );
+
+        }
+
+
+        throw new Error(
+          result.error
+          ||
+          "Заказ не готов к передаче в ВЭД"
+        );
+
+      }
+
+
+      setHandoffMessage(
+        "Заказ успешно передан в ВЭД"
+      );
+
+
+      await refreshAll();
+
+
+    } catch (
+      caughtError
+    ) {
+
+      setHandoffError(
+
+        caughtError
+        instanceof Error
+
+          ? caughtError.message
+
+          : "Неизвестная ошибка передачи заказа"
+
+      );
+
+    } finally {
+
+      setSendingHandoff(
+        false
       );
 
     }
@@ -1567,6 +1942,14 @@ export default function VedOrderDetailClient(
     data.items
     ??
     [];
+
+
+  const canSendToVedStatus =
+    order.workflow_status ===
+      "draft"
+    ||
+    order.workflow_status ===
+      "returned_for_edit";
 
 
   // ==========================================================
@@ -1753,7 +2136,7 @@ export default function VedOrderDetailClient(
 
 
       {/* ======================================================
-          READINESS
+          READINESS SUMMARY
           ====================================================== */}
 
       {statistics && (
@@ -1996,6 +2379,363 @@ export default function VedOrderDetailClient(
 
 
       {/* ======================================================
+          HANDOFF TO VED
+          ====================================================== */}
+
+      <section className="section">
+
+        <h2 className="section-title">
+          Готовность к передаче в ВЭД
+        </h2>
+
+
+        {loadingHandoff && (
+
+          <div className="muted">
+            Проверяем готовность заказа...
+          </div>
+
+        )}
+
+
+        {!loadingHandoff
+          &&
+          handoff && (
+
+          <>
+
+            <div
+              className="reason-box"
+              style={{
+                marginTop:
+                  "14px",
+              }}
+            >
+
+              <div className="reason-text">
+
+                Включено в заказ:{" "}
+
+                <strong>
+                  {formatNumber(
+                    handoff.included_items
+                  )}
+                </strong>
+
+                {" "}из{" "}
+
+                <strong>
+                  {formatNumber(
+                    handoff.total_items
+                  )}
+                </strong>
+
+              </div>
+
+
+              <div className="reason-text">
+
+                Исключено вручную:{" "}
+
+                <strong>
+                  {formatNumber(
+                    handoff.excluded_items
+                  )}
+                </strong>
+
+              </div>
+
+
+              <div
+                style={{
+                  marginTop:
+                    "10px",
+
+                  fontWeight:
+                    700,
+                }}
+              >
+
+                {handoff.ready
+
+                  ? "Заказ готов к передаче в ВЭД"
+
+                  : "Заказ пока не готов к передаче в ВЭД"}
+
+              </div>
+
+            </div>
+
+
+            {!handoff.ready
+              &&
+              handoff.problem_items
+              &&
+              handoff.problem_items.length >
+                0 && (
+
+              <div
+                style={{
+                  display:
+                    "grid",
+
+                  gap:
+                    "12px",
+
+                  marginTop:
+                    "16px",
+                }}
+              >
+
+                {handoff
+                  .problem_items
+                  .map(
+                    (
+                      problemItem
+                    ) => (
+
+                      <div
+                        key={
+                          problemItem.item_id
+                          ??
+                          problemItem.our_article
+                          ??
+                          problemItem.product_name
+                          ??
+                          "problem"
+                        }
+
+                        className="card"
+                      >
+
+                        <div
+                          style={{
+                            fontWeight:
+                              700,
+
+                            marginBottom:
+                              "6px",
+                          }}
+                        >
+
+                          {problemItem
+                            .our_article
+                            ??
+                            "Без нашего артикула"}
+
+                        </div>
+
+
+                        <div
+                          className="muted"
+                          style={{
+                            marginBottom:
+                              "8px",
+                          }}
+                        >
+
+                          {problemItem
+                            .product_name
+                            ??
+                            "Наименование не указано"}
+
+                        </div>
+
+
+                        <div
+                          style={{
+                            display:
+                              "grid",
+
+                            gap:
+                              "5px",
+                          }}
+                        >
+
+                          {problemItem
+                            .problems
+                            ?.map(
+                              (
+                                problem,
+                                index
+                              ) => (
+
+                                <div
+                                  key={
+                                    `${problem}-${index}`
+                                  }
+
+                                  className="reason-text"
+                                >
+                                  • {problem}
+                                </div>
+
+                              )
+                            )}
+
+                        </div>
+
+                      </div>
+
+                    )
+                  )}
+
+              </div>
+
+            )}
+
+
+            {handoff.ready && (
+
+              <div
+                className="reason-box"
+                style={{
+                  marginTop:
+                    "16px",
+                }}
+              >
+
+                <strong>
+                  Все обязательные данные заполнены.
+                </strong>
+
+                <div className="reason-text">
+                  После передачи заказ станет доступен ВЭД для взятия в работу.
+                </div>
+
+                <div className="reason-text">
+                  Количество ВЭД ещё не попадёт в остатки «в пути» — это произойдёт только после подтверждения передачи заказа в производство.
+                </div>
+
+              </div>
+
+            )}
+
+
+            <div
+              style={{
+                display:
+                  "flex",
+
+                gap:
+                  "10px",
+
+                flexWrap:
+                  "wrap",
+
+                marginTop:
+                  "16px",
+              }}
+            >
+
+              <button
+                type="button"
+
+                className=
+                  "secondary-button"
+
+                disabled={
+                  loadingHandoff
+                  ||
+                  sendingHandoff
+                }
+
+                onClick={
+                  () => {
+
+                    void loadHandoffReadiness();
+
+                  }
+                }
+              >
+
+                {loadingHandoff
+                  ? "Проверяем..."
+                  : "Проверить готовность"}
+
+              </button>
+
+
+              {canSendToVedStatus && (
+
+                <button
+                  type="button"
+
+                  className=
+                    "primary-button"
+
+                  disabled={
+                    !handoff.ready
+                    ||
+                    sendingHandoff
+                    ||
+                    loadingHandoff
+                  }
+
+                  onClick={
+                    () => {
+
+                      void sendToVed();
+
+                    }
+                  }
+                >
+
+                  {sendingHandoff
+                    ? "Передаём..."
+                    : "Передать в ВЭД"}
+
+                </button>
+
+              )}
+
+            </div>
+
+          </>
+
+        )}
+
+
+        {handoffError && (
+
+          <div
+            style={{
+              marginTop:
+                "12px",
+
+              color:
+                "#d64545",
+
+              fontWeight:
+                600,
+            }}
+          >
+            {handoffError}
+          </div>
+
+        )}
+
+
+        {handoffMessage && (
+
+          <div
+            style={{
+              marginTop:
+                "12px",
+
+              fontWeight:
+                700,
+            }}
+          >
+            {handoffMessage}
+          </div>
+
+        )}
+
+      </section>
+
+
+      {/* ======================================================
           ITEMS
           ====================================================== */}
 
@@ -2170,10 +2910,6 @@ export default function VedOrderDetailClient(
                       <tr>
 
 
-                        {/* ======================================
-                            CHINESE ARTICLE
-                            ====================================== */}
-
                         <td
                           style={{
                             padding:
@@ -2261,10 +2997,6 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        {/* ======================================
-                            OUR ARTICLE
-                            ====================================== */}
-
                         <td
                           style={{
                             padding:
@@ -2286,10 +3018,6 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        {/* ======================================
-                            PRODUCT
-                            ====================================== */}
-
                         <td
                           style={{
                             padding:
@@ -2307,10 +3035,6 @@ export default function VedOrderDetailClient(
 
                         </td>
 
-
-                        {/* ======================================
-                            DEMANDS
-                            ====================================== */}
 
                         <td
                           style={{
@@ -2368,10 +3092,6 @@ export default function VedOrderDetailClient(
 
                         </td>
 
-
-                        {/* ======================================
-                            PACKING
-                            ====================================== */}
 
                         <td
                           style={{
@@ -2466,10 +3186,6 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        {/* ======================================
-                            MOQ
-                            ====================================== */}
-
                         <td
                           style={{
                             padding:
@@ -2544,10 +3260,6 @@ export default function VedOrderDetailClient(
 
                         </td>
 
-
-                        {/* ======================================
-                            PRICE
-                            ====================================== */}
 
                         <td
                           style={{
@@ -2624,10 +3336,6 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        {/* ======================================
-                            STATUS
-                            ====================================== */}
-
                         <td
                           style={{
                             padding:
@@ -2642,10 +3350,6 @@ export default function VedOrderDetailClient(
 
                         </td>
 
-
-                        {/* ======================================
-                            FINAL
-                            ====================================== */}
 
                         <td
                           style={{
@@ -2772,10 +3476,6 @@ export default function VedOrderDetailClient(
 
                         </td>
 
-
-                        {/* ======================================
-                            ACTIONS
-                            ====================================== */}
 
                         <td
                           style={{
@@ -3024,10 +3724,6 @@ export default function VedOrderDetailClient(
 
                       </tr>
 
-
-                      {/* ======================================
-                          PREVIEW
-                          ====================================== */}
 
                       {preview && (
 
