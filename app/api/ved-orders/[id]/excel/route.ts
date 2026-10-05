@@ -4,6 +4,7 @@ import {
 } from "next/server";
 
 import ExcelJS from "exceljs";
+import sharp from "sharp";
 
 
 export const runtime = "nodejs";
@@ -93,7 +94,6 @@ type VedOrderItem = {
 
 type HandoffReadiness = {
   ok?: boolean;
-
   ready?: boolean;
 };
 
@@ -143,7 +143,8 @@ function getSupabaseHeaders(
 ) {
 
   return {
-    apikey: secretKey,
+    apikey:
+      secretKey,
 
     Authorization:
       `Bearer ${secretKey}`,
@@ -264,7 +265,8 @@ function getTransportLabel(
 
 
   const value =
-    rawValue.toLowerCase();
+    rawValue
+      .toLowerCase();
 
 
   if (
@@ -319,6 +321,7 @@ function sanitizeFilename(
 function numberOrZero(
   value:
     number
+    | string
     | null
     | undefined
 ) {
@@ -328,10 +331,23 @@ function numberOrZero(
     ||
     value === undefined
     ||
+    value === ""
+  ) {
+
+    return 0;
+
+  }
+
+
+  const result =
+    Number(
+      value
+    );
+
+
+  if (
     Number.isNaN(
-      Number(
-        value
-      )
+      result
     )
   ) {
 
@@ -340,66 +356,75 @@ function numberOrZero(
   }
 
 
-  return Number(
-    value
-  );
+  return result;
+
+}
+
+
+// ============================================================
+// EXCEL COLUMN LETTER
+// ============================================================
+
+function getExcelColumnLetter(
+  columnNumber: number
+) {
+
+  let result =
+    "";
+
+
+  let number =
+    columnNumber;
+
+
+  while (
+    number > 0
+  ) {
+
+    const remainder =
+      (
+        number - 1
+      )
+      %
+      26;
+
+
+    result =
+      String.fromCharCode(
+        65 + remainder
+      )
+      +
+      result;
+
+
+    number =
+      Math.floor(
+        (
+          number - 1
+        )
+        /
+        26
+      );
+
+  }
+
+
+  return result;
 
 }
 
 
 // ============================================================
 // IMAGE
+//
+// Любое изображение, которое понимает Sharp,
+// преобразовываем в PNG.
+//
+// Благодаря этому ExcelJS не зависит от того,
+// пришёл ли с Ozon JPEG, WEBP, AVIF и т. д.
 // ============================================================
 
-function getImageExtension(
-  contentType:
-    string | null
-):
-  "png"
-  | "jpeg"
-  | null {
-
-  const type =
-    (
-      contentType
-      ??
-      ""
-    )
-      .toLowerCase();
-
-
-  if (
-    type.includes(
-      "png"
-    )
-  ) {
-
-    return "png";
-
-  }
-
-
-  if (
-    type.includes(
-      "jpeg"
-    )
-    ||
-    type.includes(
-      "jpg"
-    )
-  ) {
-
-    return "jpeg";
-
-  }
-
-
-  return null;
-
-}
-
-
-async function loadImage(
+async function loadImageAsPng(
   url: string
 ) {
 
@@ -415,30 +440,22 @@ async function loadImage(
           cache:
             "no-store",
 
+          headers: {
+            Accept:
+              "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+          },
+
           signal:
             AbortSignal.timeout(
-              8000
+              10000
             ),
         }
       );
 
 
-    if (!response.ok) {
-
-      return null;
-
-    }
-
-
-    const extension =
-      getImageExtension(
-        response.headers.get(
-          "content-type"
-        )
-      );
-
-
-    if (!extension) {
+    if (
+      !response.ok
+    ) {
 
       return null;
 
@@ -449,30 +466,54 @@ async function loadImage(
       await response.arrayBuffer();
 
 
+    if (
+      arrayBuffer.byteLength === 0
+    ) {
+
+      return null;
+
+    }
+
+
+    const originalBuffer =
+      Buffer.from(
+        arrayBuffer
+      );
+
+
+    const pngBuffer =
+      await sharp(
+        originalBuffer
+      )
+        .rotate()
+        .png()
+        .toBuffer();
+
+
     const base64 =
-      Buffer
-        .from(
-          arrayBuffer
-        )
-        .toString(
-          "base64"
-        );
-
-
-    const mimeType =
-      extension === "png"
-        ? "image/png"
-        : "image/jpeg";
+      pngBuffer.toString(
+        "base64"
+      );
 
 
     return {
       base64:
-        `data:${mimeType};base64,${base64}`,
+        `data:image/png;base64,${base64}`,
 
-      extension,
+      extension:
+        "png" as const,
     };
 
-  } catch {
+  } catch (
+    error
+  ) {
+
+    console.error(
+      "Не удалось обработать фото для Excel:",
+      url,
+      error
+    );
+
 
     return null;
 
@@ -574,7 +615,9 @@ export async function GET(
       );
 
 
-    if (!orderResponse.ok) {
+    if (
+      !orderResponse.ok
+    ) {
 
       const text =
         await orderResponse.text();
@@ -617,6 +660,12 @@ export async function GET(
 
     // ========================================================
     // 4. DRAFT READINESS
+    //
+    // В черновике экспорт разрешён только после того,
+    // как заполнены обязательные данные.
+    //
+    // После выхода из draft экспорт остаётся доступным
+    // на всех дальнейших этапах, включая arrived.
     // ========================================================
 
     if (
@@ -669,8 +718,7 @@ export async function GET(
 
 
       if (
-        readiness.ready !==
-          true
+        readiness.ready !== true
       ) {
 
         return NextResponse.json(
@@ -717,7 +765,9 @@ export async function GET(
       );
 
 
-    if (!itemsResponse.ok) {
+    if (
+      !itemsResponse.ok
+    ) {
 
       const text =
         await itemsResponse.text();
@@ -783,8 +833,7 @@ export async function GET(
 
 
     if (
-      items.length ===
-        0
+      items.length === 0
     ) {
 
       return NextResponse.json(
@@ -820,6 +869,11 @@ export async function GET(
       new Date();
 
 
+    workbook.calcProperties
+      .fullCalcOnLoad =
+        true;
+
+
     const worksheet =
       workbook.addWorksheet(
         "Заказ"
@@ -834,6 +888,10 @@ export async function GET(
     // ========================================================
     // 8. COLUMNS
     // ========================================================
+
+    const firstProductColumn =
+      2;
+
 
     const lastProductColumn =
       items.length + 1;
@@ -850,8 +908,12 @@ export async function GET(
 
 
     for (
-      let column = 2;
-      column <= lastProductColumn;
+      let column =
+        firstProductColumn;
+
+      column <=
+        lastProductColumn;
+
       column++
     ) {
 
@@ -1010,6 +1072,8 @@ export async function GET(
 
     // ========================================================
     // 11. TABLE HEADER
+    //
+    // Больше не повторяем китайский артикул.
     // ========================================================
 
     const tableHeaderRow =
@@ -1025,7 +1089,7 @@ export async function GET(
 
     items.forEach(
       (
-        item,
+        _item,
         index
       ) => {
 
@@ -1033,10 +1097,6 @@ export async function GET(
           tableHeaderRow,
           index + 2
         ).value =
-          item.chinese_article_snapshot
-          ??
-          item.our_article_snapshot
-          ??
           `Товар ${index + 1}`;
 
       }
@@ -1376,8 +1436,64 @@ export async function GET(
 
 
     // ========================================================
-    // 15. TOTALS
+    // 15. TOTAL FORMULAS
+    //
+    // Это именно Excel-формулы.
+    //
+    // В файле хранится:
+    // SUM(B14:C14)
+    //
+    // В русской версии Excel пользователь увидит:
+    // СУММ(B14:C14)
     // ========================================================
+
+    const firstProductLetter =
+      getExcelColumnLetter(
+        firstProductColumn
+      );
+
+
+    const lastProductLetter =
+      getExcelColumnLetter(
+        lastProductColumn
+      );
+
+
+    function setSumFormula(
+      key: string,
+
+      cachedResult: number
+    ) {
+
+      const row =
+        rowByKey.get(
+          key
+        );
+
+
+      if (!row) {
+        return;
+      }
+
+
+      const formula =
+        `SUM(` +
+        `${firstProductLetter}${row}:` +
+        `${lastProductLetter}${row}` +
+        `)`;
+
+
+      worksheet.getCell(
+        row,
+        totalColumn
+      ).value = {
+        formula,
+        result:
+          cachedResult,
+      };
+
+    }
+
 
     const totalQuantity =
       items.reduce(
@@ -1449,55 +1565,42 @@ export async function GET(
       );
 
 
-    setValue(
-      totalColumn,
+    setSumFormula(
       "quantity",
       totalQuantity
     );
 
 
-    setValue(
-      totalColumn,
+    setSumFormula(
       "cartons",
       totalCartons
     );
 
 
-    setValue(
-      totalColumn,
+    setSumFormula(
       "total_price",
-      Number(
-        totalPrice.toFixed(
-          2
-        )
-      )
+      totalPrice
     );
 
 
-    setValue(
-      totalColumn,
+    setSumFormula(
       "total_volume",
-      Number(
-        totalVolume.toFixed(
-          6
-        )
-      )
+      totalVolume
     );
 
 
-    setValue(
-      totalColumn,
+    setSumFormula(
       "total_weight",
-      Number(
-        totalWeight.toFixed(
-          6
-        )
-      )
+      totalWeight
     );
 
 
     // ========================================================
     // 16. PHOTOS
+    //
+    // Загружаем исходное фото.
+    // Sharp преобразовывает его в PNG.
+    // Затем PNG встраивается прямо в XLSX.
     // ========================================================
 
     const photoRow =
@@ -1506,7 +1609,9 @@ export async function GET(
       );
 
 
-    if (photoRow) {
+    if (
+      photoRow
+    ) {
 
       worksheet.getRow(
         photoRow
@@ -1536,12 +1641,14 @@ export async function GET(
 
 
             const image =
-              await loadImage(
+              await loadImageAsPng(
                 item.photo_url
               );
 
 
-            if (!image) {
+            if (
+              !image
+            ) {
 
               worksheet.getCell(
                 photoRow,
@@ -1608,7 +1715,7 @@ export async function GET(
 
 
     // ========================================================
-    // 17. HEIGHTS
+    // 17. ROW HEIGHTS
     // ========================================================
 
     const nameRow =
@@ -1617,7 +1724,9 @@ export async function GET(
       );
 
 
-    if (nameRow) {
+    if (
+      nameRow
+    ) {
 
       worksheet.getRow(
         nameRow
@@ -1664,7 +1773,7 @@ export async function GET(
 
 
     // ========================================================
-    // 18. STYLES
+    // 18. HEADER STYLE
     // ========================================================
 
     const headerRow =
@@ -1747,11 +1856,18 @@ export async function GET(
     }
 
 
+    // ========================================================
+    // 19. TABLE STYLE
+    // ========================================================
+
     for (
-      let row = firstDataRow;
+      let row =
+        firstDataRow;
+
       row <
         firstDataRow +
         rows.length;
+
       row++
     ) {
 
@@ -1857,7 +1973,15 @@ export async function GET(
 
 
     // ========================================================
-    // 19. NUMBER FORMATS
+    // 20. NUMBER FORMATS
+    //
+    // Максимум 2 знака после запятой.
+    //
+    // Например:
+    // 6
+    // 7,35
+    // 0,08
+    // 15
     // ========================================================
 
     const integerKeys = [
@@ -1902,47 +2026,9 @@ export async function GET(
     );
 
 
-    const moneyKeys = [
+    const decimalKeys = [
       "unit_price",
       "total_price",
-    ];
-
-
-    moneyKeys.forEach(
-      (
-        key
-      ) => {
-
-        const row =
-          rowByKey.get(
-            key
-          );
-
-
-        if (!row) {
-          return;
-        }
-
-
-        for (
-          let column = 2;
-          column <= totalColumn;
-          column++
-        ) {
-
-          worksheet.getCell(
-            row,
-            column
-          ).numFmt =
-            "#,##0.00";
-
-        }
-
-      }
-    );
-
-
-    const decimalKeys = [
       "carton_volume",
       "carton_weight",
       "total_volume",
@@ -1976,7 +2062,7 @@ export async function GET(
             row,
             column
           ).numFmt =
-            "#,##0.000000";
+            "#,##0.##";
 
         }
 
@@ -1985,7 +2071,7 @@ export async function GET(
 
 
     // ========================================================
-    // 20. FREEZE
+    // 21. FREEZE
     // ========================================================
 
     worksheet.views = [
@@ -2003,7 +2089,7 @@ export async function GET(
 
 
     // ========================================================
-    // 21. PRINT
+    // 22. PRINT
     // ========================================================
 
     worksheet.pageSetup = {
@@ -2045,7 +2131,7 @@ export async function GET(
 
 
     // ========================================================
-    // 22. FILENAME
+    // 23. FILENAME
     // ========================================================
 
     const fileDate =
@@ -2070,7 +2156,7 @@ export async function GET(
 
 
     // ========================================================
-    // 23. WRITE
+    // 24. WRITE
     // ========================================================
 
     const excelBuffer =
