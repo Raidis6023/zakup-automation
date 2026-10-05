@@ -24,21 +24,75 @@ function parseJson(text: string): unknown {
   }
 }
 
-function normalizeCancelDate(
+/**
+ * Statistics API Wildberries отдаёт даты вида:
+ *
+ * 2026-10-05T07:42:48
+ *
+ * без явного часового пояса.
+ *
+ * Для этих методов время WB трактуем как московское UTC+3.
+ *
+ * В Supabase сохраняем уже нормальный UTC ISO:
+ *
+ * 2026-10-05T07:42:48 Москва
+ * ->
+ * 2026-10-05T04:42:48.000Z
+ *
+ * Если WB когда-нибудь начнёт присылать явный Z или offset,
+ * второй раз часовой пояс не добавляем.
+ */
+function normalizeWbDate(
   value: unknown
 ): string | null {
   if (
     typeof value !== "string" ||
-    !value
+    value.trim() === ""
   ) {
     return null;
   }
 
-  if (value.startsWith("0001-01-01")) {
+  const trimmed =
+    value.trim();
+
+  if (
+    trimmed.startsWith(
+      "0001-01-01"
+    )
+  ) {
     return null;
   }
 
-  return value;
+  const hasExplicitTimezone =
+    /(?:[zZ]|[+-]\d{2}:\d{2})$/.test(
+      trimmed
+    );
+
+  const valueWithTimezone =
+    hasExplicitTimezone
+      ? trimmed
+      : `${trimmed}+03:00`;
+
+  const date =
+    new Date(
+      valueWithTimezone
+    );
+
+  if (
+    !Number.isFinite(
+      date.getTime()
+    )
+  ) {
+    return null;
+  }
+
+  return date.toISOString();
+}
+
+function normalizeCancelDate(
+  value: unknown
+): string | null {
+  return normalizeWbDate(value);
 }
 
 function splitIntoBatches<T>(
@@ -53,7 +107,10 @@ function splitIntoBatches<T>(
     i += size
   ) {
     batches.push(
-      items.slice(i, i + size)
+      items.slice(
+        i,
+        i + size
+      )
     );
   }
 
@@ -118,6 +175,10 @@ export async function GET() {
   const supabaseKey: string =
     supabaseKeyRaw;
 
+  // ==========================================================
+  // СОХРАНЕНИЕ СОСТОЯНИЯ СИНХРОНИЗАЦИИ
+  // ==========================================================
+
   async function saveSyncState(data: {
     lastAttemptAt?: string | null;
     lastSuccessAt?: string | null;
@@ -127,59 +188,70 @@ export async function GET() {
     lastMessage?: string | null;
   }) {
     const body = {
-      sync_key: SYNC_KEY,
+      sync_key:
+        SYNC_KEY,
 
       last_attempt_at:
-        data.lastAttemptAt ?? null,
+        data.lastAttemptAt ??
+        null,
 
       last_success_at:
-        data.lastSuccessAt ?? null,
+        data.lastSuccessAt ??
+        null,
 
       next_allowed_at:
-        data.nextAllowedAt ?? null,
+        data.nextAllowedAt ??
+        null,
 
       last_http_status:
-        data.lastHttpStatus ?? null,
+        data.lastHttpStatus ??
+        null,
 
       retry_after_seconds:
-        data.retryAfterSeconds ?? null,
+        data.retryAfterSeconds ??
+        null,
 
       last_message:
-        data.lastMessage ?? null,
+        data.lastMessage ??
+        null,
 
       updated_at:
         new Date().toISOString(),
     };
 
-    const response = await fetch(
-      `${supabaseUrl}/rest/v1/wb_sync_state?on_conflict=sync_key`,
-      {
-        method: "POST",
+    const response =
+      await fetch(
+        `${supabaseUrl}/rest/v1/wb_sync_state?on_conflict=sync_key`,
+        {
+          method:
+            "POST",
 
-        headers: {
-          apikey:
-            supabaseKey,
+          headers: {
+            apikey:
+              supabaseKey,
 
-          Authorization:
-            `Bearer ${supabaseKey}`,
+            Authorization:
+              `Bearer ${supabaseKey}`,
 
-          Accept:
-            "application/json",
+            Accept:
+              "application/json",
 
-          "Content-Type":
-            "application/json",
+            "Content-Type":
+              "application/json",
 
-          Prefer:
-            "resolution=merge-duplicates,return=minimal",
-        },
+            Prefer:
+              "resolution=merge-duplicates,return=minimal",
+          },
 
-        body:
-          JSON.stringify(body),
+          body:
+            JSON.stringify(
+              body
+            ),
 
-        cache:
-          "no-store",
-      }
-    );
+          cache:
+            "no-store",
+        }
+      );
 
     if (!response.ok) {
       const text =
@@ -206,7 +278,8 @@ export async function GET() {
       await fetch(
         stateUrl,
         {
-          method: "GET",
+          method:
+            "GET",
 
           headers: {
             apikey:
@@ -249,13 +322,16 @@ export async function GET() {
       await stateResponse.json();
 
     const state =
-      stateRows[0] ?? null;
+      stateRows[0] ??
+      null;
 
     // ========================================================
     // 2. БЛОКИРОВКА ПО 429
     // ========================================================
 
-    if (state?.next_allowed_at) {
+    if (
+      state?.next_allowed_at
+    ) {
       const nextAllowed =
         new Date(
           state.next_allowed_at
@@ -324,7 +400,8 @@ export async function GET() {
       await fetch(
         latestSyncUrl,
         {
-          method: "GET",
+          method:
+            "GET",
 
           headers: {
             apikey:
@@ -372,7 +449,8 @@ export async function GET() {
     ) {
       const latestSyncTime =
         new Date(
-          latestRows[0].synced_at
+          latestRows[0]
+            .synced_at
         ).getTime();
 
       const hoursSinceLastSync =
@@ -453,7 +531,14 @@ export async function GET() {
     });
 
     // ========================================================
-    // 5. ДАТА НАЧАЛА
+    // 5. ДАТА НАЧАЛА ЗАПРОСА
+    //
+    // ВАЖНО:
+    // flag=0 позволяет WB вернуть в том числе старые заказы,
+    // если их lastChangeDate попал в этот период.
+    //
+    // Поэтому этот dateFrom используется для синхронизации,
+    // а не как окончательный фильтр продаж.
     // ========================================================
 
     const dateFrom =
@@ -489,7 +574,8 @@ export async function GET() {
       await fetch(
         wbUrl.toString(),
         {
-          method: "GET",
+          method:
+            "GET",
 
           headers: {
             Authorization:
@@ -508,7 +594,9 @@ export async function GET() {
       await wbResponse.text();
 
     const wbData: any =
-      parseJson(wbText);
+      parseJson(
+        wbText
+      );
 
     const retryHeader =
       wbResponse.headers.get(
@@ -543,7 +631,8 @@ export async function GET() {
     // ========================================================
 
     if (
-      wbResponse.status === 429
+      wbResponse.status ===
+      429
     ) {
       const retrySecondsRaw =
         retryHeader ??
@@ -557,7 +646,8 @@ export async function GET() {
           : null;
 
       let nextAllowedAt:
-        string | null = null;
+        string | null =
+        null;
 
       if (
         retrySeconds !== null &&
@@ -624,7 +714,9 @@ export async function GET() {
     // 8. ДРУГАЯ ОШИБКА WB
     // ========================================================
 
-    if (!wbResponse.ok) {
+    if (
+      !wbResponse.ok
+    ) {
       await saveSyncState({
         lastAttemptAt:
           attemptAt,
@@ -677,7 +769,11 @@ export async function GET() {
     // 9. ПРОВЕРЯЕМ ФОРМАТ
     // ========================================================
 
-    if (!Array.isArray(wbData)) {
+    if (
+      !Array.isArray(
+        wbData
+      )
+    ) {
       await saveSyncState({
         lastAttemptAt:
           attemptAt,
@@ -717,84 +813,125 @@ export async function GET() {
 
     // ========================================================
     // 10. ПОДГОТОВКА ДАННЫХ
+    //
+    // Здесь исправляем главный найденный баг:
+    // даты WB без timezone считаем московскими UTC+3
+    // и только после этого сохраняем в timestamptz.
     // ========================================================
 
     const syncedAt =
       new Date().toISOString();
 
+    const validSridOrders =
+      wbData.filter(
+        (order: any) =>
+          typeof order?.srid ===
+            "string" &&
+          order.srid.trim() !==
+            ""
+      );
+
     const rows =
-      wbData
-        .filter(
-          (order: any) =>
-            typeof order?.srid ===
-              "string" &&
-            order.srid.trim() !==
-              ""
-        )
+      validSridOrders
         .map(
-          (order: any) => ({
-            srid:
-              order.srid,
+          (order: any) => {
+            const orderDate =
+              normalizeWbDate(
+                order.date
+              );
 
-            order_date:
-              order.date,
+            if (!orderDate) {
+              return null;
+            }
 
-            last_change_date:
-              order.lastChangeDate ??
-              null,
+            return {
+              srid:
+                order.srid,
 
-            nm_id:
-              Number(
-                order.nmId
-              ),
+              order_date:
+                orderDate,
 
-            supplier_article:
-              order.supplierArticle ??
-              null,
+              last_change_date:
+                normalizeWbDate(
+                  order.lastChangeDate
+                ),
 
-            barcode:
-              order.barcode ??
-              null,
+              nm_id:
+                Number(
+                  order.nmId
+                ),
 
-            warehouse_name:
-              order.warehouseName ??
-              null,
+              supplier_article:
+                order.supplierArticle ??
+                null,
 
-            warehouse_type:
-              order.warehouseType ??
-              null,
+              barcode:
+                order.barcode ??
+                null,
 
-            is_cancel:
-              order.isCancel ===
-              true,
+              warehouse_name:
+                order.warehouseName ??
+                null,
 
-            cancel_date:
-              normalizeCancelDate(
-                order.cancelDate
-              ),
+              warehouse_type:
+                order.warehouseType ??
+                null,
 
-            income_id:
-              typeof order.incomeID ===
-              "number"
-                ? order.incomeID
-                : null,
+              is_cancel:
+                order.isCancel ===
+                true,
 
-            raw:
-              order,
+              cancel_date:
+                normalizeCancelDate(
+                  order.cancelDate
+                ),
 
-            synced_at:
-              syncedAt,
-          })
+              income_id:
+                typeof order.incomeID ===
+                  "number"
+                  ? order.incomeID
+                  : null,
+
+              // Исходную запись WB обязательно сохраняем.
+              // Это позволяет позже перепроверять парсинг.
+              raw:
+                order,
+
+              synced_at:
+                syncedAt,
+            };
+          }
+        )
+        .filter(
+          (
+            row
+          ): row is NonNullable<
+            typeof row
+          > =>
+            row !== null
         );
 
+    const skippedWithoutSrid =
+      wbData.length -
+      validSridOrders.length;
+
+    const skippedInvalidOrderDate =
+      validSridOrders.length -
+      rows.length;
+
     // ========================================================
-    // 11. УБИРАЕМ ДУБЛИКАТЫ
+    // 11. УБИРАЕМ ДУБЛИКАТЫ ПО srid
     // ========================================================
 
     const uniqueBySrid =
-      new Map<string, any>();
+      new Map<
+        string,
+        any
+      >();
 
-    for (const row of rows) {
+    for (
+      const row of rows
+    ) {
       uniqueBySrid.set(
         row.srid,
         row
@@ -805,10 +942,6 @@ export async function GET() {
       Array.from(
         uniqueBySrid.values()
       );
-
-    const skippedWithoutSrid =
-      wbData.length -
-      rows.length;
 
     const duplicatesInsideResponse =
       rows.length -
@@ -921,7 +1054,9 @@ export async function GET() {
               upsertResponse.status,
 
             supabaseResponse:
-              parseJson(text),
+              parseJson(
+                text
+              ),
 
             wbOrdersReceived:
               wbData.length,
@@ -937,39 +1072,137 @@ export async function GET() {
     }
 
     // ========================================================
-    // 13. СТАТИСТИКА
+    // 13. СТАТИСТИКА ВСЕГО ОТВЕТА WB
+    //
+    // Эта статистика НЕ является продажами ровно за 28 дней,
+    // потому что flag=0 ориентируется на lastChangeDate.
     // ========================================================
 
-    const fbwOrders =
+    const allFbwOrders =
       uniqueRows.filter(
         (row: any) =>
           row.warehouse_type ===
           "Склад WB"
       );
 
-    const sellerOrders =
+    const allSellerOrders =
       uniqueRows.filter(
         (row: any) =>
           row.warehouse_type ===
           "Склад продавца"
       );
 
-    const cancelledOrders =
+    const allCancelledOrders =
       uniqueRows.filter(
         (row: any) =>
-          row.is_cancel === true
+          row.is_cancel ===
+          true
       );
 
-    const activeFbwOrders =
+    const allActiveFbwOrders =
       uniqueRows.filter(
         (row: any) =>
           row.warehouse_type ===
             "Склад WB" &&
-          row.is_cancel === false
+          row.is_cancel ===
+            false
       );
 
     // ========================================================
-    // 14. УСПЕШНОЕ СОСТОЯНИЕ
+    // 14. СТАТИСТИКА ИМЕННО ДЛЯ РАСЧЁТНЫХ 28 ДНЕЙ
+    //
+    // Фильтруем уже по order_date.
+    // Это логика, которая соответствует расчёту Ozon.
+    // ========================================================
+
+    const periodEnd =
+      new Date(
+        attemptAt
+      );
+
+    const periodStart =
+      new Date(
+        periodEnd.getTime() -
+          DAYS_TO_LOAD *
+            24 *
+            60 *
+            60 *
+            1000
+      );
+
+    const calculationRows =
+      uniqueRows.filter(
+        (row: any) => {
+          const orderTime =
+            new Date(
+              row.order_date
+            ).getTime();
+
+          return (
+            Number.isFinite(
+              orderTime
+            ) &&
+            orderTime >=
+              periodStart.getTime() &&
+            orderTime <=
+              periodEnd.getTime()
+          );
+        }
+      );
+
+    const calculationFbwOrders =
+      calculationRows.filter(
+        (row: any) =>
+          row.warehouse_type ===
+          "Склад WB"
+      );
+
+    const calculationActiveFbwOrders =
+      calculationFbwOrders.filter(
+        (row: any) =>
+          row.is_cancel ===
+          false
+      );
+
+    const calculationCancelledFbwOrders =
+      calculationFbwOrders.filter(
+        (row: any) =>
+          row.is_cancel ===
+          true
+      );
+
+    const calculationSellerOrders =
+      calculationRows.filter(
+        (row: any) =>
+          row.warehouse_type ===
+          "Склад продавца"
+      );
+
+    const calculationSku =
+      new Set<number>();
+
+    for (
+      const row of
+      calculationActiveFbwOrders
+    ) {
+      const nmId =
+        Number(
+          row.nm_id
+        );
+
+      if (
+        Number.isFinite(
+          nmId
+        )
+      ) {
+        calculationSku.add(
+          nmId
+        );
+      }
+    }
+
+    // ========================================================
+    // 15. УСПЕШНОЕ СОСТОЯНИЕ
     // ========================================================
 
     await saveSyncState({
@@ -993,7 +1226,7 @@ export async function GET() {
     });
 
     // ========================================================
-    // 15. ОТВЕТ
+    // 16. ОТВЕТ
     // ========================================================
 
     return NextResponse.json({
@@ -1007,6 +1240,15 @@ export async function GET() {
           DAYS_TO_LOAD,
 
         dateFrom,
+
+        calculationStart:
+          periodStart.toISOString(),
+
+        calculationEnd:
+          periodEnd.toISOString(),
+
+        note:
+          "dateFrom используется для синхронизации по изменениям WB; расчётные 28 дней дополнительно фильтруются по order_date",
       },
 
       wildberries: {
@@ -1020,6 +1262,9 @@ export async function GET() {
       },
 
       processing: {
+        validSridRows:
+          validSridOrders.length,
+
         validRows:
           rows.length,
 
@@ -1027,6 +1272,8 @@ export async function GET() {
           uniqueRows.length,
 
         skippedWithoutSrid,
+
+        skippedInvalidOrderDate,
 
         duplicatesInsideResponse,
 
@@ -1041,18 +1288,44 @@ export async function GET() {
         syncedAt,
       },
 
-      statistics: {
+      responseStatistics: {
+        note:
+          "Статистика всего ответа WB. Может включать старые заказы с недавним lastChangeDate.",
+
         fbwOrders:
-          fbwOrders.length,
+          allFbwOrders.length,
 
         sellerWarehouseOrders:
-          sellerOrders.length,
+          allSellerOrders.length,
 
         cancelledOrders:
-          cancelledOrders.length,
+          allCancelledOrders.length,
 
         activeFbwOrders:
-          activeFbwOrders.length,
+          allActiveFbwOrders.length,
+      },
+
+      calculationStatistics28Days: {
+        note:
+          "Эти показатели уже отфильтрованы по order_date и подходят для расчёта средних продаж.",
+
+        allOrders:
+          calculationRows.length,
+
+        fbwOrders:
+          calculationFbwOrders.length,
+
+        activeFbwOrders:
+          calculationActiveFbwOrders.length,
+
+        cancelledFbwOrders:
+          calculationCancelledFbwOrders.length,
+
+        sellerWarehouseOrders:
+          calculationSellerOrders.length,
+
+        activeFbwSkuCount:
+          calculationSku.size,
       },
     });
   } catch (error) {
