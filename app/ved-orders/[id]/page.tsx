@@ -4,6 +4,9 @@ from "next/link";
 import ThemeToggle
 from "../../ThemeToggle";
 
+import VedTakeInWorkPanel
+from "../../VedTakeInWorkPanel";
+
 import VedOrderDetailClient
 from "../../VedOrderDetailClient";
 
@@ -77,6 +80,17 @@ export default async function VedOrderPage(
           </div>
 
         </header>
+
+
+        {/* ====================================================
+            VED TAKE IN WORK
+            ==================================================== */}
+
+        <VedTakeInWorkPanel
+          orderId={
+            id
+          }
+        />
 
 
         {/* ====================================================
