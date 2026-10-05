@@ -113,6 +113,33 @@ type ArrivalResponse = {
 };
 
 
+type StockBridgeResponse = {
+  ok: boolean;
+
+  error?: string;
+
+  order_id?: string;
+
+  order_number?: string;
+
+  workflow_status?: string;
+
+  bridge_applicable?: boolean;
+
+  stock_bridge_active?: boolean;
+
+  stock_bridge_completed?: boolean;
+
+  actual_arrival_date?: string | null;
+
+  arrival_confirmed_at?: string | null;
+
+  warehouse_snapshot_date?: string | null;
+
+  warehouse_snapshot_imported_at?: string | null;
+};
+
+
 // ============================================================
 // HELPERS
 // ============================================================
@@ -169,6 +196,15 @@ export default function VedProductionPanel(
     setOrder,
   ] =
     useState<VedOrder | null>(
+      null
+    );
+
+
+  const [
+    stockBridge,
+    setStockBridge,
+  ] =
+    useState<StockBridgeResponse | null>(
       null
     );
 
@@ -237,6 +273,15 @@ export default function VedProductionPanel(
 
 
   const [
+    stockBridgeError,
+    setStockBridgeError,
+  ] =
+    useState(
+      ""
+    );
+
+
+  const [
     productionDateError,
     setProductionDateError,
   ] =
@@ -279,6 +324,11 @@ export default function VedProductionPanel(
     );
 
 
+    setStockBridgeError(
+      ""
+    );
+
+
     try {
 
       const response =
@@ -316,37 +366,116 @@ export default function VedProductionPanel(
       }
 
 
+      const loadedOrder =
+        result.order;
+
+
       setOrder(
-        result.order
+        loadedOrder
       );
 
 
       setOrderNumber(
-        result.order.order_number
+        loadedOrder.order_number
         ??
         ""
       );
 
 
       setProductionDate(
-        result.order.production_handoff_date
+        loadedOrder.production_handoff_date
         ??
         ""
       );
 
 
       setTransitDate(
-        result.order.transit_departure_date
+        loadedOrder.transit_departure_date
         ??
         ""
       );
 
 
       setArrivalDate(
-        result.order.actual_arrival_date
+        loadedOrder.actual_arrival_date
         ??
         ""
       );
+
+
+      // ======================================================
+      // STOCK BRIDGE
+      // ======================================================
+
+      if (
+        loadedOrder.workflow_status ===
+          "arrived"
+      ) {
+
+        try {
+
+          const bridgeResponse =
+            await fetch(
+              `/api/ved-orders/${orderId}/stock-bridge`,
+              {
+                method:
+                  "GET",
+
+                cache:
+                  "no-store",
+              }
+            );
+
+
+          const bridgeResult:
+            StockBridgeResponse =
+              await bridgeResponse.json();
+
+
+          if (
+            !bridgeResponse.ok
+            ||
+            !bridgeResult.ok
+          ) {
+
+            throw new Error(
+              bridgeResult.error
+              ||
+              "Не удалось получить состояние склада"
+            );
+
+          }
+
+
+          setStockBridge(
+            bridgeResult
+          );
+
+
+        } catch (
+          bridgeCaughtError
+        ) {
+
+          setStockBridge(
+            null
+          );
+
+
+          setStockBridgeError(
+            bridgeCaughtError instanceof Error
+              ? bridgeCaughtError.message
+              : "Не удалось получить состояние складского моста"
+          );
+
+        }
+
+      } else {
+
+        setStockBridge(
+          null
+        );
+
+      }
 
 
     } catch (
@@ -1043,6 +1172,172 @@ export default function VedProductionPanel(
           </div>
 
         </div>
+
+
+        {/* ==================================================
+            STOCK BRIDGE STATUS
+        ================================================== */}
+
+        <div
+          style={{
+            marginTop:
+              "18px",
+
+            paddingTop:
+              "16px",
+
+            borderTop:
+              "1px solid var(--border)",
+          }}
+        >
+
+          {stockBridge?.stock_bridge_completed ? (
+
+            <div>
+
+              <div
+                style={{
+                  fontSize:
+                    "16px",
+
+                  fontWeight:
+                    700,
+                }}
+              >
+                Учтён на собственном складе
+              </div>
+
+
+              <div
+                className="muted"
+
+                style={{
+                  marginTop:
+                    "4px",
+                }}
+              >
+                Складской мост завершён. Заказ больше не учитывается как активный ВЭД.
+              </div>
+
+
+              <div
+                style={{
+                  marginTop:
+                    "10px",
+
+                  display:
+                    "flex",
+
+                  gap:
+                    "28px",
+
+                  flexWrap:
+                    "wrap",
+                }}
+              >
+
+                <div>
+
+                  <div className="card-label">
+                    Снимок склада
+                  </div>
+
+                  <strong>
+                    {formatDate(
+                      stockBridge
+                        .warehouse_snapshot_date
+                    )}
+                  </strong>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          ) : stockBridge?.stock_bridge_active ? (
+
+            <div>
+
+              <div
+                style={{
+                  fontSize:
+                    "16px",
+
+                  fontWeight:
+                    700,
+                }}
+              >
+                Ожидает обновления собственного склада
+              </div>
+
+
+              <div
+                className="muted"
+
+                style={{
+                  marginTop:
+                    "4px",
+                }}
+              >
+                До появления нового полного снимка склада товары продолжают временно учитываться как активный ВЭД.
+              </div>
+
+            </div>
+
+          ) : (
+
+            <div>
+
+              <div
+                style={{
+                  fontSize:
+                    "16px",
+
+                  fontWeight:
+                    700,
+                }}
+              >
+                Состояние склада
+              </div>
+
+
+              <div
+                className="muted"
+
+                style={{
+                  marginTop:
+                    "4px",
+                }}
+              >
+                Состояние складского моста пока не определено.
+              </div>
+
+            </div>
+
+          )}
+
+        </div>
+
+
+        {stockBridgeError && (
+
+          <div
+            style={{
+              marginTop:
+                "12px",
+
+              color:
+                "#d64545",
+
+              fontWeight:
+                700,
+            }}
+          >
+            {stockBridgeError}
+          </div>
+
+        )}
 
 
         {error && (
@@ -1884,8 +2179,6 @@ export default function VedProductionPanel(
         }}
       >
 
-        {/* ORDER NUMBER */}
-
         <div>
 
           <div
@@ -1957,8 +2250,6 @@ export default function VedProductionPanel(
 
         </div>
 
-
-        {/* PRODUCTION DATE */}
 
         <div>
 
