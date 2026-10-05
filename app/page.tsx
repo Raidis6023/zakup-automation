@@ -1,6 +1,7 @@
 import Link from "next/link";
 
-import HomeThemeToggle from "./HomeThemeToggle";
+import HomeHeaderActions
+  from "./HomeHeaderActions";
 
 import "./home.css";
 
@@ -31,50 +32,6 @@ function SearchIcon() {
 }
 
 
-function BellIcon() {
-
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-      <path
-        d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"
-      />
-
-      <path
-        d="M10 21h4"
-      />
-    </svg>
-  );
-
-}
-
-
-function CalendarIcon() {
-
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-      <rect
-        x="3"
-        y="5"
-        width="18"
-        height="16"
-        rx="2"
-      />
-
-      <path
-        d="M16 3v4M8 3v4M3 10h18"
-      />
-    </svg>
-  );
-
-}
-
-
 function CartIcon() {
 
   return (
@@ -83,7 +40,14 @@ function CartIcon() {
       aria-hidden="true"
     >
       <path
-        d="M3 4h2l2.1 10.1a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L20 8H7"
+        d="
+          M3 4h2
+          l2.1 10.1
+          a2 2 0 0 0 2 1.6
+          h7.7
+          a2 2 0 0 0 2-1.5
+          L20 8H7
+        "
       />
 
       <circle
@@ -121,27 +85,25 @@ function GlobeIcon() {
       />
 
       <path
-        d="M12 3c2.4 2.5 3.6 5.5 3.6 9S14.4 18.5 12 21"
+        d="
+          M12 3
+          c2.4 2.5
+          3.6 5.5
+          3.6 9
+          S14.4 18.5
+          12 21
+        "
       />
 
       <path
-        d="M12 3C9.6 5.5 8.4 8.5 8.4 12S9.6 18.5 12 21"
-      />
-    </svg>
-  );
-
-}
-
-
-function ChevronIcon() {
-
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-      <path
-        d="m7 9 5 5 5-5"
+        d="
+          M12 3
+          C9.6 5.5
+          8.4 8.5
+          8.4 12
+          S9.6 18.5
+          12 21
+        "
       />
     </svg>
   );
@@ -176,7 +138,11 @@ export default function Home() {
             className="home-workspace-link"
           >
 
-            <span className="home-workspace-icon">
+            <span
+              className="
+                home-workspace-icon
+              "
+            >
               <CartIcon />
             </span>
 
@@ -192,7 +158,11 @@ export default function Home() {
             className="home-workspace-link"
           >
 
-            <span className="home-workspace-icon">
+            <span
+              className="
+                home-workspace-icon
+              "
+            >
               <GlobeIcon />
             </span>
 
@@ -212,8 +182,11 @@ export default function Home() {
 
               <img
                 src="/logos/ozon.png"
-                alt=""
-                className="home-brand-image"
+                alt="Ozon"
+
+                className="
+                  home-brand-image
+                "
               />
 
             </span>
@@ -234,8 +207,11 @@ export default function Home() {
 
               <img
                 src="/logos/wildberries.png"
-                alt=""
-                className="home-brand-image"
+                alt="Wildberries"
+
+                className="
+                  home-brand-image
+                "
               />
 
             </span>
@@ -256,8 +232,11 @@ export default function Home() {
 
               <img
                 src="/logos/yandex-market.png"
-                alt=""
-                className="home-brand-image"
+                alt="Яндекс Маркет"
+
+                className="
+                  home-brand-image
+                "
               />
 
             </span>
@@ -287,8 +266,6 @@ export default function Home() {
         <header className="home-topbar">
 
 
-          {/* SEARCH */}
-
           <div className="home-search">
 
             <span className="home-search-icon">
@@ -298,94 +275,28 @@ export default function Home() {
 
             <input
               type="text"
-              placeholder="Поиск по товарам, SKU, документам, разделам..."
+
+              placeholder="
+                Поиск по товарам, SKU,
+                документам, разделам...
+              "
+
               aria-label="Поиск"
             />
 
 
-            <span className="home-search-shortcut">
+            <span
+              className="
+                home-search-shortcut
+              "
+            >
               Ctrl + K
             </span>
 
           </div>
 
 
-          {/* RIGHT SIDE */}
-
-          <div className="home-topbar-right">
-
-
-            {/* NOTIFICATIONS */}
-
-            <button
-              type="button"
-              className="home-icon-button"
-              aria-label="Уведомления"
-            >
-
-              <BellIcon />
-
-              <span className="home-notification-badge">
-                3
-              </span>
-
-            </button>
-
-
-            {/* CALENDAR */}
-
-            <button
-              type="button"
-              className="home-icon-button"
-              aria-label="Календарь"
-            >
-              <CalendarIcon />
-            </button>
-
-
-            <div className="home-topbar-divider" />
-
-
-            {/* THEME */}
-
-            <HomeThemeToggle />
-
-
-            <div className="home-topbar-divider" />
-
-
-            {/* PROFILE */}
-
-            <button
-              type="button"
-              className="home-profile"
-            >
-
-              <span className="home-avatar">
-                ИП
-              </span>
-
-
-              <span className="home-profile-text">
-
-                <strong>
-                  Иван Петров
-                </strong>
-
-                <span>
-                  Аналитик
-                </span>
-
-              </span>
-
-
-              <span className="home-profile-chevron">
-                <ChevronIcon />
-              </span>
-
-            </button>
-
-          </div>
+          <HomeHeaderActions />
 
         </header>
 
@@ -397,8 +308,6 @@ export default function Home() {
         <section className="home-content">
 
 
-          {/* TITLE */}
-
           <div className="home-title-row">
 
             <div>
@@ -407,9 +316,11 @@ export default function Home() {
                 Главная страница
               </h1>
 
+
               <p>
                 Основные рабочие пространства
-                и быстрый доступ к разделам системы
+                и быстрый доступ
+                к разделам системы
               </p>
 
             </div>
@@ -430,87 +341,9 @@ export default function Home() {
           </div>
 
 
-          {/* PLACEHOLDERS */}
-
-          <div className="home-placeholder-grid">
-
-            <div className="home-placeholder-card">
-
-              <div className="home-placeholder-head">
-
-                <span className="home-placeholder-circle" />
-
-                <div>
-                  <span className="home-placeholder-line short" />
-                  <span className="home-placeholder-line tiny" />
-                </div>
-
-              </div>
-
-              <span className="home-placeholder-line" />
-              <span className="home-placeholder-line" />
-
-            </div>
-
-
-            <div className="home-placeholder-card">
-
-              <div className="home-placeholder-head">
-
-                <span className="home-placeholder-circle" />
-
-                <div>
-                  <span className="home-placeholder-line short" />
-                  <span className="home-placeholder-line tiny" />
-                </div>
-
-              </div>
-
-              <span className="home-placeholder-line" />
-              <span className="home-placeholder-line" />
-
-            </div>
-
-
-            <div className="home-placeholder-card">
-
-              <div className="home-placeholder-head">
-
-                <span className="home-placeholder-circle" />
-
-                <div>
-                  <span className="home-placeholder-line short" />
-                  <span className="home-placeholder-line tiny" />
-                </div>
-
-              </div>
-
-              <span className="home-placeholder-line" />
-              <span className="home-placeholder-line" />
-
-            </div>
-
-          </div>
-
-
-          <div className="home-placeholder-wide">
-
-            <div className="home-placeholder-head">
-
-              <span className="home-placeholder-circle" />
-
-              <div>
-                <span className="home-placeholder-line short" />
-                <span className="home-placeholder-line tiny" />
-              </div>
-
-            </div>
-
-            <span className="home-placeholder-line" />
-            <span className="home-placeholder-line" />
-            <span className="home-placeholder-line" />
-
-          </div>
+          <div
+            className="home-empty-space"
+          />
 
         </section>
 
