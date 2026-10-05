@@ -3,8 +3,7 @@ import {
   NextResponse,
 } from "next/server";
 
-import ExcelJS
-from "exceljs";
+import ExcelJS from "exceljs";
 
 
 export const runtime =
@@ -138,7 +137,7 @@ type HandoffReadiness = {
 
 
 // ============================================================
-// SUPABASE CONFIG
+// SUPABASE
 // ============================================================
 
 function getSupabaseConfig() {
@@ -179,17 +178,12 @@ function getSupabaseConfig() {
 }
 
 
-// ============================================================
-// SUPABASE HEADERS
-// ============================================================
-
 function getSupabaseHeaders(
   secretKey:
     string
 ) {
 
   return {
-
     apikey:
       secretKey,
 
@@ -201,14 +195,13 @@ function getSupabaseHeaders(
 
     "Content-Type":
       "application/json",
-
   };
 
 }
 
 
 // ============================================================
-// DATE
+// HELPERS
 // ============================================================
 
 function formatDateRu(
@@ -223,17 +216,15 @@ function formatDateRu(
   }
 
 
-  const shortValue =
-    value.substring(
-      0,
-      10
-    );
-
-
   const parts =
-    shortValue.split(
-      "-"
-    );
+    value
+      .substring(
+        0,
+        10
+      )
+      .split(
+        "-"
+      );
 
 
   if (
@@ -241,7 +232,7 @@ function formatDateRu(
       3
   ) {
 
-    return shortValue;
+    return value;
 
   }
 
@@ -254,10 +245,6 @@ function formatDateRu(
 
 }
 
-
-// ============================================================
-// STATUS
-// ============================================================
 
 function getWorkflowStatusLabel(
   status:
@@ -309,25 +296,23 @@ function getWorkflowStatusLabel(
 }
 
 
-// ============================================================
-// TRANSPORT
-// ============================================================
-
 function getTransportLabel(
   order:
     VedOrder
 ) {
 
+  const rawValue =
+    order.transport_mode
+    ??
+    order.calculation_scenario
+    ??
+    order.transport_variant
+    ??
+    "";
+
+
   const value =
-    (
-      order.transport_mode
-      ??
-      order.calculation_scenario
-      ??
-      order.transport_variant
-      ??
-      ""
-    )
+    rawValue
       .toLowerCase();
 
 
@@ -354,21 +339,13 @@ function getTransportLabel(
 
 
   return (
-    order.transport_mode
-    ??
-    order.calculation_scenario
-    ??
-    order.transport_variant
-    ??
+    rawValue
+    ||
     "—"
   );
 
 }
 
-
-// ============================================================
-// FILENAME
-// ============================================================
 
 function sanitizeFilename(
   value:
@@ -389,8 +366,39 @@ function sanitizeFilename(
 }
 
 
+function numberOrZero(
+  value:
+    number
+    | null
+    | undefined
+) {
+
+  if (
+    value === null
+    ||
+    value === undefined
+    ||
+    Number.isNaN(
+      Number(
+        value
+      )
+    )
+  ) {
+
+    return 0;
+
+  }
+
+
+  return Number(
+    value
+  );
+
+}
+
+
 // ============================================================
-// IMAGE EXTENSION
+// IMAGE
 // ============================================================
 
 function getImageExtension(
@@ -440,10 +448,6 @@ function getImageExtension(
 
 }
 
-
-// ============================================================
-// DOWNLOAD IMAGE
-// ============================================================
 
 async function loadImage(
   url:
@@ -497,14 +501,12 @@ async function loadImage(
 
 
     return {
-
       buffer:
         Buffer.from(
           arrayBuffer
         ),
 
       extension,
-
     };
 
   } catch {
@@ -512,41 +514,6 @@ async function loadImage(
     return null;
 
   }
-
-}
-
-
-// ============================================================
-// NUMBER
-// ============================================================
-
-function numberOrZero(
-  value:
-    number
-    | null
-    | undefined
-) {
-
-  if (
-    value === null
-    ||
-    value === undefined
-    ||
-    Number.isNaN(
-      Number(
-        value
-      )
-    )
-  ) {
-
-    return 0;
-
-  }
-
-
-  return Number(
-    value
-  );
 
 }
 
@@ -605,7 +572,7 @@ export async function GET(
 
 
     // ========================================================
-    // 2. CONFIG
+    // 2. SUPABASE
     // ========================================================
 
     const {
@@ -627,14 +594,12 @@ export async function GET(
 
     const orderResponse =
       await fetch(
-
         `${supabaseUrl}` +
         `/rest/v1/ved_orders` +
         `?id=eq.${encodeURIComponent(
           orderId
         )}` +
         `&select=*`,
-
         {
           method:
             "GET",
@@ -689,13 +654,17 @@ export async function GET(
 
 
     // ========================================================
-    // 4. DRAFT MUST BE READY
+    // 4. DRAFT READINESS
     //
-    // В черновике экспорт появляется только тогда,
-    // когда заказ готов к передаче в ВЭД.
+    // В draft Excel доступен только после полной подготовки.
     //
-    // После выхода из draft экспорт остаётся доступным
-    // постоянно, в том числе после приезда.
+    // После выхода из draft экспорт остаётся доступным всегда:
+    //
+    // sent_to_ved
+    // ved_in_work
+    // production_confirmed
+    // in_transit
+    // arrived
     // ========================================================
 
     if (
@@ -705,10 +674,8 @@ export async function GET(
 
       const readinessResponse =
         await fetch(
-
           `${supabaseUrl}` +
           `/rest/v1/rpc/get_ved_order_handoff_readiness`,
-
           {
             method:
               "POST",
@@ -779,7 +746,6 @@ export async function GET(
 
     const itemsResponse =
       await fetch(
-
         `${supabaseUrl}` +
         `/rest/v1/ved_order_items` +
         `?ved_order_id=eq.${encodeURIComponent(
@@ -787,7 +753,6 @@ export async function GET(
         )}` +
         `&select=*` +
         `&order=position_sort.asc.nullslast`,
-
         {
           method:
             "GET",
@@ -819,7 +784,7 @@ export async function GET(
 
 
     // ========================================================
-    // 6. ONLY INCLUDED ITEMS
+    // 6. INCLUDED ITEMS ONLY
     // ========================================================
 
     const items =
@@ -909,26 +874,13 @@ export async function GET(
       );
 
 
-    worksheet.views = [
-      {
-        state:
-          "frozen",
-
-        xSplit:
-          1,
-
-        ySplit:
-          7,
-      },
-    ];
-
-
-    worksheet.properties.defaultRowHeight =
-      22;
+    worksheet.properties
+      .defaultRowHeight =
+        22;
 
 
     // ========================================================
-    // 8. HEADER
+    // 8. COLUMNS
     // ========================================================
 
     const lastProductColumn =
@@ -938,6 +890,36 @@ export async function GET(
     const totalColumn =
       lastProductColumn + 1;
 
+
+    worksheet.getColumn(
+      1
+    ).width =
+      30;
+
+
+    for (
+      let column = 2;
+      column <= lastProductColumn;
+      column++
+    ) {
+
+      worksheet.getColumn(
+        column
+      ).width =
+        27;
+
+    }
+
+
+    worksheet.getColumn(
+      totalColumn
+    ).width =
+      18;
+
+
+    // ========================================================
+    // 9. TITLE
+    // ========================================================
 
     worksheet.mergeCells(
       1,
@@ -983,7 +965,7 @@ export async function GET(
 
 
     // ========================================================
-    // 9. ORDER INFO
+    // 10. ORDER META
     // ========================================================
 
     const exportDateSource =
@@ -992,83 +974,90 @@ export async function GET(
       order.created_at;
 
 
-    const orderInfo = [
+    const orderInfo:
+      Array<
+        [
+          string,
+          string
+        ]
+      > = [
 
-      [
-        "Номер заказа",
-        order.order_number
-        ??
-        "Черновик",
-      ],
+        [
+          "Номер заказа",
+          order.order_number
+          ??
+          "Черновик",
+        ],
 
-      [
-        "Дата заказа",
-        formatDateRu(
-          exportDateSource
-        ),
-      ],
+        [
+          "Дата заказа",
+          formatDateRu(
+            exportDateSource
+          ),
+        ],
 
-      [
-        "Статус",
-        getWorkflowStatusLabel(
-          order.workflow_status
-        ),
-      ],
+        [
+          "Статус",
+          getWorkflowStatusLabel(
+            order.workflow_status
+          ),
+        ],
 
-      [
-        "Транспорт",
-        getTransportLabel(
-          order
-        ),
-      ],
+        [
+          "Транспорт",
+          getTransportLabel(
+            order
+          ),
+        ],
 
-      [
-        "Ответственный ВЭД",
-        order.ved_responsible_name
-        ??
-        "—",
-      ],
+        [
+          "Ответственный ВЭД",
+          order.ved_responsible_name
+          ??
+          "—",
+        ],
 
-    ];
-
-
-    for (
-      let index = 0;
-      index < orderInfo.length;
-      index++
-    ) {
-
-      const rowNumber =
-        index + 2;
+      ];
 
 
-      worksheet.getCell(
-        rowNumber,
-        1
-      ).value =
-        orderInfo[index][0];
+    orderInfo.forEach(
+      (
+        row,
+        index
+      ) => {
+
+        const rowNumber =
+          index + 2;
 
 
-      worksheet.getCell(
-        rowNumber,
-        2
-      ).value =
-        orderInfo[index][1];
+        worksheet.getCell(
+          rowNumber,
+          1
+        ).value =
+          row[0];
 
 
-      worksheet.getCell(
-        rowNumber,
-        1
-      ).font = {
-        bold:
-          true,
-      };
+        worksheet.getCell(
+          rowNumber,
+          2
+        ).value =
+          row[1];
 
-    }
+
+        worksheet.getCell(
+          rowNumber,
+          1
+        ).font = {
+          bold:
+            true,
+        };
+
+      }
+    );
 
 
     // ========================================================
-    // 10. TABLE HEADER
+    // 11. TABLE HEADER
     // ========================================================
 
     const tableHeaderRow =
@@ -1088,13 +1077,9 @@ export async function GET(
         index
       ) => {
 
-        const column =
-          index + 2;
-
-
         worksheet.getCell(
           tableHeaderRow,
-          column
+          index + 2
         ).value =
           item.chinese_article_snapshot
           ??
@@ -1114,154 +1099,100 @@ export async function GET(
 
 
     // ========================================================
-    // 11. ROWS
+    // 12. ROW DEFINITIONS
     // ========================================================
 
     const rows = [
 
-      {
-        key:
-          "chinese_article",
+      [
+        "chinese_article",
+        "Китайский артикул",
+      ],
 
-        label:
-          "Китайский артикул",
-      },
+      [
+        "our_article",
+        "Наш артикул",
+      ],
 
-      {
-        key:
-          "our_article",
+      [
+        "name",
+        "Наименование",
+      ],
 
-        label:
-          "Наш артикул",
-      },
+      [
+        "photo",
+        "Фото",
+      ],
 
-      {
-        key:
-          "name",
+      [
+        "incoterm",
+        "Incoterm",
+      ],
 
-        label:
-          "Наименование",
-      },
+      [
+        "port",
+        "Порт",
+      ],
 
-      {
-        key:
-          "photo",
+      [
+        "quantity",
+        "Итоговое количество, шт.",
+      ],
 
-        label:
-          "Фото",
-      },
+      [
+        "cartons",
+        "Коробов",
+      ],
 
-      {
-        key:
-          "incoterm",
+      [
+        "unit_price",
+        "Цена за 1 шт., CNY",
+      ],
 
-        label:
-          "Incoterm",
-      },
+      [
+        "total_price",
+        "Сумма, CNY",
+      ],
 
-      {
-        key:
-          "port",
+      [
+        "units_per_carton",
+        "В 1 коробе, шт.",
+      ],
 
-        label:
-          "Порт",
-      },
+      [
+        "carton_volume",
+        "Объём 1 короба, м³",
+      ],
 
-      {
-        key:
-          "quantity",
+      [
+        "carton_weight",
+        "Вес 1 короба, кг",
+      ],
 
-        label:
-          "Итоговое количество, шт.",
-      },
+      [
+        "total_volume",
+        "Общий объём, м³",
+      ],
 
-      {
-        key:
-          "cartons",
+      [
+        "total_weight",
+        "Общий вес, т",
+      ],
 
-        label:
-          "Коробов",
-      },
+      [
+        "moq",
+        "MOQ",
+      ],
 
-      {
-        key:
-          "unit_price",
+      [
+        "analytics_comment",
+        "Комментарий аналитики",
+      ],
 
-        label:
-          "Цена за 1 шт., CNY",
-      },
-
-      {
-        key:
-          "total_price",
-
-        label:
-          "Сумма, CNY",
-      },
-
-      {
-        key:
-          "units_per_carton",
-
-        label:
-          "В 1 коробе, шт.",
-      },
-
-      {
-        key:
-          "carton_volume",
-
-        label:
-          "Объём 1 короба, м³",
-      },
-
-      {
-        key:
-          "carton_weight",
-
-        label:
-          "Вес 1 короба, кг",
-      },
-
-      {
-        key:
-          "total_volume",
-
-        label:
-          "Общий объём, м³",
-      },
-
-      {
-        key:
-          "total_weight",
-
-        label:
-          "Общий вес, т",
-      },
-
-      {
-        key:
-          "moq",
-
-        label:
-          "MOQ",
-      },
-
-      {
-        key:
-          "analytics_comment",
-
-        label:
-          "Комментарий аналитики",
-      },
-
-      {
-        key:
-          "ved_comment",
-
-        label:
-          "Комментарий ВЭД",
-      },
+      [
+        "ved_comment",
+        "Комментарий ВЭД",
+      ],
 
     ] as const;
 
@@ -1289,22 +1220,23 @@ export async function GET(
 
 
         rowByKey.set(
-          row.key,
+          row[0],
           rowNumber
         );
 
 
-        worksheet.getCell(
-          rowNumber,
-          1
-        ).value =
-          row.label;
+        const labelCell =
+          worksheet.getCell(
+            rowNumber,
+            1
+          );
 
 
-        worksheet.getCell(
-          rowNumber,
-          1
-        ).font = {
+        labelCell.value =
+          row[1];
+
+
+        labelCell.font = {
           bold:
             true,
         };
@@ -1314,7 +1246,7 @@ export async function GET(
 
 
     // ========================================================
-    // 12. ITEM VALUES
+    // 13. SET VALUE
     // ========================================================
 
     function setValue(
@@ -1352,6 +1284,10 @@ export async function GET(
 
     }
 
+
+    // ========================================================
+    // 14. PRODUCTS
+    // ========================================================
 
     items.forEach(
       (
@@ -1490,7 +1426,7 @@ export async function GET(
 
 
     // ========================================================
-    // 13. TOTALS
+    // 15. TOTALS
     // ========================================================
 
     const totalQuantity =
@@ -1580,7 +1516,11 @@ export async function GET(
     setValue(
       totalColumn,
       "total_price",
-      totalPrice
+      Number(
+        totalPrice.toFixed(
+          2
+        )
+      )
     );
 
 
@@ -1607,7 +1547,7 @@ export async function GET(
 
 
     // ========================================================
-    // 14. PHOTOS
+    // 16. PHOTOS
     // ========================================================
 
     const photoRow =
@@ -1641,30 +1581,41 @@ export async function GET(
             }
 
 
+            const column =
+              index + 2;
+
+
             const image =
               await loadImage(
                 item.photo_url
               );
 
 
-            const column =
-              index + 2;
-
+            // =================================================
+            // ЕСЛИ КАРТИНКУ НЕ УДАЛОСЬ ВСТРОИТЬ,
+            // СОХРАНЯЕМ КЛИКАБЕЛЬНУЮ ССЫЛКУ.
+            //
+            // В ExcelJS hyperlink НЕ назначается
+            // через cell.hyperlink.
+            //
+            // Нужно присваивать объект CellValue.
+            // =================================================
 
             if (!image) {
 
               worksheet.getCell(
                 photoRow,
                 column
-              ).value =
-                "Фото недоступно";
+              ).value = {
+                text:
+                  "Открыть фото",
 
+                hyperlink:
+                  item.photo_url,
 
-              worksheet.getCell(
-                photoRow,
-                column
-              ).hyperlink =
-                item.photo_url;
+                tooltip:
+                  "Открыть изображение товара",
+              };
 
 
               return;
@@ -1717,34 +1668,8 @@ export async function GET(
 
 
     // ========================================================
-    // 15. SIZES
+    // 17. HEIGHTS
     // ========================================================
-
-    worksheet.getColumn(
-      1
-    ).width =
-      30;
-
-
-    for (
-      let column = 2;
-      column <= lastProductColumn;
-      column++
-    ) {
-
-      worksheet.getColumn(
-        column
-      ).width =
-        27;
-
-    }
-
-
-    worksheet.getColumn(
-      totalColumn
-    ).width =
-      18;
-
 
     const nameRow =
       rowByKey.get(
@@ -1799,7 +1724,7 @@ export async function GET(
 
 
     // ========================================================
-    // 16. STYLES
+    // 18. STYLES
     // ========================================================
 
     const headerRow =
@@ -1858,7 +1783,6 @@ export async function GET(
 
 
       cell.border = {
-
         top: {
           style:
             "thin",
@@ -1878,7 +1802,6 @@ export async function GET(
           style:
             "thin",
         },
-
       };
 
     }
@@ -1906,7 +1829,6 @@ export async function GET(
 
 
         cell.alignment = {
-
           vertical:
             "middle",
 
@@ -1917,12 +1839,10 @@ export async function GET(
 
           wrapText:
             true,
-
         };
 
 
         cell.border = {
-
           top: {
             style:
               "thin",
@@ -1942,7 +1862,6 @@ export async function GET(
             style:
               "thin",
           },
-
         };
 
 
@@ -1998,7 +1917,7 @@ export async function GET(
 
 
     // ========================================================
-    // 17. NUMBER FORMATS
+    // 19. NUMBER FORMATS
     // ========================================================
 
     const integerKeys = [
@@ -2043,13 +1962,13 @@ export async function GET(
     );
 
 
-    const moneyRows = [
+    const moneyKeys = [
       "unit_price",
       "total_price",
     ];
 
 
-    moneyRows.forEach(
+    moneyKeys.forEach(
       (
         key
       ) => {
@@ -2083,7 +2002,7 @@ export async function GET(
     );
 
 
-    const decimalRows = [
+    const decimalKeys = [
       "carton_volume",
       "carton_weight",
       "total_volume",
@@ -2091,7 +2010,7 @@ export async function GET(
     ];
 
 
-    decimalRows.forEach(
+    decimalKeys.forEach(
       (
         key
       ) => {
@@ -2126,11 +2045,28 @@ export async function GET(
 
 
     // ========================================================
-    // 18. PRINT SETTINGS
+    // 20. FREEZE
+    // ========================================================
+
+    worksheet.views = [
+      {
+        state:
+          "frozen",
+
+        xSplit:
+          1,
+
+        ySplit:
+          tableHeaderRow,
+      },
+    ];
+
+
+    // ========================================================
+    // 21. PRINT
     // ========================================================
 
     worksheet.pageSetup = {
-
       orientation:
         "landscape",
 
@@ -2147,7 +2083,6 @@ export async function GET(
         9,
 
       margins: {
-
         left:
           0.25,
 
@@ -2165,14 +2100,12 @@ export async function GET(
 
         footer:
           0.2,
-
       },
-
     };
 
 
     // ========================================================
-    // 19. FILE NAME
+    // 22. FILENAME
     // ========================================================
 
     const fileDate =
@@ -2197,7 +2130,7 @@ export async function GET(
 
 
     // ========================================================
-    // 20. WRITE
+    // 23. WRITE
     // ========================================================
 
     const excelBuffer =
@@ -2205,20 +2138,15 @@ export async function GET(
         .writeBuffer();
 
 
-    const responseBuffer =
+    return new NextResponse(
       Buffer.from(
         excelBuffer
-      );
-
-
-    return new NextResponse(
-      responseBuffer,
+      ),
       {
         status:
           200,
 
         headers: {
-
           "Content-Type":
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 
@@ -2229,7 +2157,6 @@ export async function GET(
 
           "Cache-Control":
             "no-store",
-
         },
       }
     );
