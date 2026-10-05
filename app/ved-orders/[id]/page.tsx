@@ -43,6 +43,10 @@ export default async function VedOrderPage(
       <div className="container">
 
 
+        {/* ====================================================
+            HEADER
+            ==================================================== */}
+
         <header className="header">
 
           <div>
@@ -82,7 +86,7 @@ export default async function VedOrderPage(
 
 
         {/* ====================================================
-            VED TAKES ORDER
+            TAKE IN WORK
             ==================================================== */}
 
         <VedTakeInWorkPanel
