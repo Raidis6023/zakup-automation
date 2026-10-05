@@ -12,7 +12,9 @@ import {
 
 type VedOrder = {
   id: string;
+
   order_number: string | null;
+
   status: string;
   workflow_status: string;
 
@@ -105,8 +107,10 @@ type VedOrderItem = {
 
 type VedOrderTotals = {
   items_count: number;
+
   total_units: number;
   total_cartons: number;
+
   total_price_cny: number;
   total_volume_m3: number;
   total_weight_tons: number;
@@ -115,10 +119,14 @@ type VedOrderTotals = {
 
 type VedOrderStatistics = {
   items_count: number;
+
   terms_confirmed: number;
   terms_pending: number;
+
   moq_review_pending: number;
+
   ready_for_transport: number;
+
   missing_chinese_article: number;
   missing_weight: number;
 };
@@ -129,14 +137,16 @@ type VedOrderResponse = {
   error?: string;
 
   order?: VedOrder;
+
   totals?: VedOrderTotals;
   statistics?: VedOrderStatistics;
+
   items?: VedOrderItem[];
 };
 
 
 // ============================================================
-// TYPES: PREPARATION
+// PREPARATION TYPES
 // ============================================================
 
 type TermsPreview = {
@@ -154,6 +164,7 @@ type TermsPreview = {
   final_quantity?: number;
 
   coverage_after_order_days?: number | null;
+
   target_coverage_days?: number;
 
   moq_review_required?: boolean;
@@ -176,7 +187,7 @@ type PreparationResponse = {
 
 
 // ============================================================
-// TYPES: VED EDIT
+// VED TYPES
 // ============================================================
 
 type VedEditResponse = {
@@ -203,8 +214,31 @@ type VedEditResponse = {
 };
 
 
+type VedMoqResponse = {
+  ok: boolean;
+  error?: string;
+
+  item_id?: string;
+  order_id?: string;
+
+  moq_quantity?: number;
+
+  cartons?: number;
+  order_quantity?: number;
+
+  coverage_after_order_days?: number | null;
+
+  moq_review_required?: boolean;
+  moq_review_status?: string;
+
+  total_price_cny?: number | null;
+  total_volume_m3?: number | null;
+  total_weight_tons?: number | null;
+};
+
+
 // ============================================================
-// TYPES: HANDOFF
+// HANDOFF TYPES
 // ============================================================
 
 type HandoffProblemItem = {
@@ -253,6 +287,7 @@ type HandoffSendResponse = {
 
 type ItemEditorState = {
   chineseArticle: string;
+
   cartonWeightKg: string;
 
   moq: string;
@@ -283,17 +318,23 @@ type VedEditorState = {
   ourArticle: string;
 
   unitPriceCny: string;
+
   unitsPerCarton: string;
 
   cartonVolumeM3: string;
   cartonWeightKg: string;
 
+  moqQuantity: string;
+
   incoterm: string;
 
   port: string;
+
   vedComment: string;
 
   loading: boolean;
+  loadingMoq: boolean;
+
   error: string;
 };
 
@@ -322,7 +363,9 @@ function formatNumber(
     ||
     value === undefined
   ) {
+
     return "—";
+
   }
 
 
@@ -346,7 +389,9 @@ function formatDate(
 ) {
 
   if (!value) {
+
     return "—";
+
   }
 
 
@@ -359,7 +404,9 @@ function formatDate(
       date.getTime()
     )
   ) {
+
     return value;
+
   }
 
 
@@ -391,7 +438,9 @@ function parsePositiveNumber(
 
 
   if (!normalized) {
+
     return null;
+
   }
 
 
@@ -408,7 +457,9 @@ function parsePositiveNumber(
     ||
     parsed <= 0
   ) {
+
     return null;
+
   }
 
 
@@ -436,7 +487,9 @@ function parsePositiveInteger(
       parsed
     )
   ) {
+
     return null;
+
   }
 
 
@@ -496,7 +549,9 @@ function getTermsStatus(
     item.moq_review_status ===
     "rejected"
   ) {
+
     return "Не заказывать";
+
   }
 
 
@@ -505,7 +560,9 @@ function getTermsStatus(
     ||
     !item.price_confirmed_at
   ) {
+
     return "Требует подтверждения";
+
   }
 
 
@@ -513,14 +570,18 @@ function getTermsStatus(
     item.moq_review_status ===
     "pending"
   ) {
+
     return "Решение по MOQ";
+
   }
 
 
   if (
     item.order_quantity > 0
   ) {
+
     return "Готов к заказу";
+
   }
 
 
@@ -538,7 +599,9 @@ function getItemListStatus(
     item.moq_review_status ===
     "rejected"
   ) {
+
     return "Не заказывать";
+
   }
 
 
@@ -546,7 +609,9 @@ function getItemListStatus(
     item.moq_review_status ===
     "pending"
   ) {
+
     return "Решение по MOQ";
+
   }
 
 
@@ -561,14 +626,18 @@ function getItemListStatus(
     ||
     !item.photo_url
   ) {
+
     return "Нужно заполнить";
+
   }
 
 
   if (
     item.order_quantity > 0
   ) {
+
     return "Готов";
+
   }
 
 
@@ -578,7 +647,7 @@ function getItemListStatus(
 
 
 // ============================================================
-// SMALL COMPONENTS
+// SMALL UI
 // ============================================================
 
 function CompactMetric(
@@ -865,8 +934,7 @@ export default function VedOrderDetailClient(
     orderId,
   }:
   {
-    orderId:
-      string;
+    orderId: string;
   }
 ) {
 
@@ -1058,18 +1126,10 @@ export default function VedOrderDetailClient(
         [];
 
 
-      // ======================================================
-      // PREPARATION EDITORS
-      // ======================================================
-
       const nextEditors:
         EditorsState =
           {};
 
-
-      // ======================================================
-      // VED EDITORS
-      // ======================================================
 
       const nextVedEditors:
         VedEditorsState =
@@ -1205,6 +1265,18 @@ export default function VedOrderDetailClient(
                     .carton_weight_kg_snapshot
                 ),
 
+          moqQuantity:
+            item
+              .moq_quantity
+            === null
+
+              ? ""
+
+              : String(
+                  item
+                    .moq_quantity
+                ),
+
           incoterm:
             item.incoterm
             ??
@@ -1229,6 +1301,9 @@ export default function VedOrderDetailClient(
             "",
 
           loading:
+            false,
+
+          loadingMoq:
             false,
 
           error:
@@ -1419,7 +1494,7 @@ export default function VedOrderDetailClient(
 
 
   // ==========================================================
-  // EDITOR UPDATES
+  // UPDATE PREPARATION EDITOR
   // ==========================================================
 
   function updateEditor(
@@ -1485,6 +1560,10 @@ export default function VedOrderDetailClient(
   }
 
 
+  // ==========================================================
+  // UPDATE VED EDITOR
+  // ==========================================================
+
   function updateVedEditor(
     itemId:
       string,
@@ -1521,6 +1600,9 @@ export default function VedOrderDetailClient(
             cartonWeightKg:
               "",
 
+            moqQuantity:
+              "",
+
             incoterm:
               "FOB",
 
@@ -1531,6 +1613,9 @@ export default function VedOrderDetailClient(
               "",
 
             loading:
+              false,
+
+            loadingMoq:
               false,
 
             error:
@@ -1577,7 +1662,7 @@ export default function VedOrderDetailClient(
 
 
   // ==========================================================
-  // SAVE PREPARATION DATA
+  // SAVE PREPARATION
   // ==========================================================
 
   async function savePreparationData(
@@ -1592,7 +1677,9 @@ export default function VedOrderDetailClient(
 
 
     if (!editor) {
+
       return;
+
     }
 
 
@@ -1780,7 +1867,9 @@ export default function VedOrderDetailClient(
 
 
     if (!editor) {
+
       return;
+
     }
 
 
@@ -1960,7 +2049,9 @@ export default function VedOrderDetailClient(
 
 
     if (!editor) {
+
       return;
+
     }
 
 
@@ -2279,7 +2370,7 @@ export default function VedOrderDetailClient(
 
 
   // ==========================================================
-  // SAVE VED ITEM
+  // SAVE VED DATA
   // ==========================================================
 
   async function saveVedItem(
@@ -2294,7 +2385,9 @@ export default function VedOrderDetailClient(
 
 
     if (!editor) {
+
       return;
+
     }
 
 
@@ -2553,7 +2646,7 @@ export default function VedOrderDetailClient(
 
 
       setVedSaveMessage(
-        `Изменения ${item.our_article_snapshot ?? "позиции"} сохранены`
+        "Изменения ВЭД сохранены"
       );
 
 
@@ -2577,6 +2670,209 @@ export default function VedOrderDetailClient(
         item.id,
         {
           loading:
+            false,
+        }
+      );
+
+    }
+
+  }
+
+
+  // ==========================================================
+  // SAVE VED MOQ
+  // ==========================================================
+
+  async function saveVedMoq(
+    item:
+      VedOrderItem
+  ) {
+
+    const editor =
+      vedEditors[
+        item.id
+      ];
+
+
+    if (!editor) {
+
+      return;
+
+    }
+
+
+    if (
+      data
+        ?.order
+        ?.workflow_status !==
+        "ved_in_work"
+    ) {
+
+      updateVedEditor(
+        item.id,
+        {
+          error:
+            "MOQ можно менять только до передачи заказа в производство",
+        }
+      );
+
+      return;
+
+    }
+
+
+    const actorName =
+      data
+        ?.order
+        ?.ved_responsible_name
+        ?.trim();
+
+
+    if (!actorName) {
+
+      updateVedEditor(
+        item.id,
+        {
+          error:
+            "У заказа не назначен ответственный ВЭД",
+        }
+      );
+
+      return;
+
+    }
+
+
+    const moqQuantity =
+      parsePositiveInteger(
+        editor.moqQuantity
+      );
+
+
+    if (
+      moqQuantity ===
+      null
+    ) {
+
+      updateVedEditor(
+        item.id,
+        {
+          error:
+            "MOQ должен быть целым числом больше 0",
+        }
+      );
+
+      return;
+
+    }
+
+
+    setVedSaveMessage(
+      ""
+    );
+
+
+    updateVedEditor(
+      item.id,
+      {
+        loadingMoq:
+          true,
+
+        error:
+          "",
+      }
+    );
+
+
+    try {
+
+      const response =
+        await fetch(
+          `/api/ved-orders/items/${item.id}/ved-moq`,
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify(
+                {
+                  moqQuantity,
+
+                  actorName,
+
+                  actorUserId:
+                    data
+                      ?.order
+                      ?.ved_responsible_user_id
+                    ??
+                    null,
+
+                  actorRole:
+                    "ved",
+                }
+              ),
+
+            cache:
+              "no-store",
+          }
+        );
+
+
+      const result:
+        VedMoqResponse =
+          await response.json();
+
+
+      if (
+        !response.ok
+        ||
+        !result.ok
+      ) {
+
+        throw new Error(
+          result.error
+          ||
+          "Не удалось изменить MOQ"
+        );
+
+      }
+
+
+      await refreshAll();
+
+
+      setVedSaveMessage(
+        `MOQ изменён на ${formatNumber(
+          result.moq_quantity
+        )}. Количество заказа пересчитано.`
+      );
+
+
+    } catch (
+      caughtError
+    ) {
+
+      updateVedEditor(
+        item.id,
+        {
+          error:
+            caughtError instanceof Error
+              ? caughtError.message
+              : "Неизвестная ошибка изменения MOQ",
+        }
+      );
+
+    } finally {
+
+      updateVedEditor(
+        item.id,
+        {
+          loadingMoq:
             false,
         }
       );
@@ -2742,7 +3038,7 @@ export default function VedOrderDetailClient(
 
 
   // ==========================================================
-  // LOADING / ERROR
+  // LOADING
   // ==========================================================
 
   if (
@@ -2779,6 +3075,7 @@ export default function VedOrderDetailClient(
         <h2 className="section-title">
           Не удалось открыть заказ
         </h2>
+
 
         <div className="reason-box">
 
@@ -2866,6 +3163,16 @@ export default function VedOrderDetailClient(
     );
 
 
+  const selectedVedBusy =
+    Boolean(
+      selectedVedEditor
+        ?.loading
+      ||
+      selectedVedEditor
+        ?.loadingMoq
+    );
+
+
   const chineseArticleLocked =
     Boolean(
       selectedItem
@@ -2904,6 +3211,11 @@ export default function VedOrderDetailClient(
     ||
     order.workflow_status ===
       "in_transit";
+
+
+  const vedMoqEditable =
+    order.workflow_status ===
+      "ved_in_work";
 
 
   const canSendToVedStatus =
@@ -3157,7 +3469,7 @@ export default function VedOrderDetailClient(
 
 
       {/* ======================================================
-          COMPACT READINESS
+          READINESS
           ====================================================== */}
 
       {statistics && (
@@ -3370,7 +3682,7 @@ export default function VedOrderDetailClient(
 
 
       {/* ======================================================
-          ITEMS LIST
+          ITEMS
           ====================================================== */}
 
       <section
@@ -3580,7 +3892,8 @@ export default function VedOrderDetailClient(
                           }
 
                           article={
-                            item.our_article_snapshot
+                            item
+                              .our_article_snapshot
                           }
 
                           size={
@@ -3685,13 +3998,15 @@ export default function VedOrderDetailClient(
                         }}
                       >
 
-                        {item.total_price_cny ===
+                        {item
+                          .total_price_cny ===
                         null
 
                           ? "—"
 
                           : `${formatNumber(
-                              item.total_price_cny,
+                              item
+                                .total_price_cny,
                               2
                             )} CNY`}
 
@@ -3735,7 +4050,7 @@ export default function VedOrderDetailClient(
 
 
       {/* ======================================================
-          SELECTED ITEM
+          ITEM CARD
           ====================================================== */}
 
       {selectedItem && (
@@ -3748,8 +4063,6 @@ export default function VedOrderDetailClient(
               "18px",
           }}
         >
-
-          {/* HEADER */}
 
           <div
             style={{
@@ -3839,6 +4152,7 @@ export default function VedOrderDetailClient(
                 }}
               >
                 Статус:{" "}
+
                 <strong>
                   {getTermsStatus(
                     selectedItem
@@ -3852,7 +4166,7 @@ export default function VedOrderDetailClient(
 
 
           {/* ==================================================
-              PREPARATION MODE
+              PREPARATION
               ================================================== */}
 
           {preparationEditable
@@ -3940,7 +4254,9 @@ export default function VedOrderDetailClient(
                             selectedItem.id,
                             {
                               chineseArticle:
-                                event.target.value,
+                                event
+                                  .target
+                                  .value,
 
                               error:
                                 "",
@@ -4027,7 +4343,9 @@ export default function VedOrderDetailClient(
                             selectedItem.id,
                             {
                               cartonWeightKg:
-                                event.target.value,
+                                event
+                                  .target
+                                  .value,
 
                               error:
                                 "",
@@ -4142,8 +4460,6 @@ export default function VedOrderDetailClient(
               </div>
 
 
-              {/* TERMS */}
-
               <div
                 style={{
                   marginTop:
@@ -4221,7 +4537,9 @@ export default function VedOrderDetailClient(
                             selectedItem.id,
                             {
                               moq:
-                                event.target.value,
+                                event
+                                  .target
+                                  .value,
 
                               preview:
                                 null,
@@ -4299,7 +4617,9 @@ export default function VedOrderDetailClient(
                             selectedItem.id,
                             {
                               price:
-                                event.target.value,
+                                event
+                                  .target
+                                  .value,
 
                               preview:
                                 null,
@@ -4350,8 +4670,6 @@ export default function VedOrderDetailClient(
 
                 </div>
 
-
-                {/* CALCULATION */}
 
                 <div
                   style={{
@@ -4537,27 +4855,6 @@ export default function VedOrderDetailClient(
 
                       </div>
 
-
-                      {selectedPreview
-                        .moq_review_required && (
-
-                        <div
-                          className="reason-box"
-
-                          style={{
-                            marginTop:
-                              "12px",
-                          }}
-                        >
-
-                          <strong>
-                            Требуется ручное решение по MOQ
-                          </strong>
-
-                        </div>
-
-                      )}
-
                     </div>
 
                   )}
@@ -4599,14 +4896,7 @@ export default function VedOrderDetailClient(
                         }
                       }
                     >
-
-                      {selectedEditor
-                        .loadingPreview
-
-                        ? "Считаем..."
-
-                        : "Рассчитать"}
-
+                      Рассчитать
                     </button>
 
 
@@ -4831,6 +5121,7 @@ export default function VedOrderDetailClient(
                     }}
                   >
                     Ответственный:{" "}
+
                     {order
                       .ved_responsible_name
                       ??
@@ -4879,8 +5170,6 @@ export default function VedOrderDetailClient(
                 }}
               >
 
-                {/* OUR ARTICLE */}
-
                 <div>
 
                   <div
@@ -4904,7 +5193,7 @@ export default function VedOrderDetailClient(
                     }
 
                     disabled={
-                      selectedVedEditor.loading
+                      selectedVedBusy
                       ||
                       (
                         selectedItem.item_kind ===
@@ -4926,7 +5215,9 @@ export default function VedOrderDetailClient(
                           selectedItem.id,
                           {
                             ourArticle:
-                              event.target.value,
+                              event
+                                .target
+                                .value,
 
                             error:
                               "",
@@ -4974,8 +5265,6 @@ export default function VedOrderDetailClient(
                 />
 
 
-                {/* PRICE */}
-
                 <div>
 
                   <div
@@ -5001,7 +5290,7 @@ export default function VedOrderDetailClient(
                     }
 
                     disabled={
-                      selectedVedEditor.loading
+                      selectedVedBusy
                     }
 
                     onChange={
@@ -5013,7 +5302,9 @@ export default function VedOrderDetailClient(
                           selectedItem.id,
                           {
                             unitPriceCny:
-                              event.target.value,
+                              event
+                                .target
+                                .value,
 
                             error:
                               "",
@@ -5050,7 +5341,101 @@ export default function VedOrderDetailClient(
                 </div>
 
 
-                {/* UNITS PER CARTON */}
+                {/* =================================================
+                    MOQ
+                    ================================================= */}
+
+                {vedMoqEditable ? (
+
+                  <div>
+
+                    <div
+                      className="card-label"
+
+                      style={{
+                        marginBottom:
+                          "6px",
+                      }}
+                    >
+                      MOQ
+                    </div>
+
+
+                    <input
+                      type="text"
+
+                      inputMode="numeric"
+
+                      value={
+                        selectedVedEditor
+                          .moqQuantity
+                      }
+
+                      disabled={
+                        selectedVedBusy
+                      }
+
+                      onChange={
+                        (
+                          event
+                        ) => {
+
+                          updateVedEditor(
+                            selectedItem.id,
+                            {
+                              moqQuantity:
+                                event
+                                  .target
+                                  .value,
+
+                              error:
+                                "",
+                            }
+                          );
+
+                        }
+                      }
+
+                      style={{
+                        width:
+                          "100%",
+
+                        minHeight:
+                          "40px",
+
+                        padding:
+                          "0 11px",
+
+                        border:
+                          "1px solid var(--border)",
+
+                        borderRadius:
+                          "8px",
+
+                        background:
+                          "var(--background)",
+
+                        color:
+                          "var(--text)",
+                      }}
+                    />
+
+                  </div>
+
+                ) : (
+
+                  <ReadOnlyField
+                    label="MOQ"
+                    value={
+                      formatNumber(
+                        selectedItem
+                          .moq_quantity
+                      )
+                    }
+                  />
+
+                )}
+
 
                 <div>
 
@@ -5077,7 +5462,7 @@ export default function VedOrderDetailClient(
                     }
 
                     disabled={
-                      selectedVedEditor.loading
+                      selectedVedBusy
                     }
 
                     onChange={
@@ -5089,7 +5474,9 @@ export default function VedOrderDetailClient(
                           selectedItem.id,
                           {
                             unitsPerCarton:
-                              event.target.value,
+                              event
+                                .target
+                                .value,
 
                             error:
                               "",
@@ -5125,8 +5512,6 @@ export default function VedOrderDetailClient(
 
                 </div>
 
-
-                {/* VOLUME */}
 
                 <div>
 
@@ -5153,7 +5538,7 @@ export default function VedOrderDetailClient(
                     }
 
                     disabled={
-                      selectedVedEditor.loading
+                      selectedVedBusy
                     }
 
                     onChange={
@@ -5165,7 +5550,9 @@ export default function VedOrderDetailClient(
                           selectedItem.id,
                           {
                             cartonVolumeM3:
-                              event.target.value,
+                              event
+                                .target
+                                .value,
 
                             error:
                               "",
@@ -5201,8 +5588,6 @@ export default function VedOrderDetailClient(
 
                 </div>
 
-
-                {/* WEIGHT */}
 
                 <div>
 
@@ -5229,7 +5614,7 @@ export default function VedOrderDetailClient(
                     }
 
                     disabled={
-                      selectedVedEditor.loading
+                      selectedVedBusy
                     }
 
                     onChange={
@@ -5241,7 +5626,9 @@ export default function VedOrderDetailClient(
                           selectedItem.id,
                           {
                             cartonWeightKg:
-                              event.target.value,
+                              event
+                                .target
+                                .value,
 
                             error:
                               "",
@@ -5278,8 +5665,6 @@ export default function VedOrderDetailClient(
                 </div>
 
 
-                {/* INCOTERM */}
-
                 <div>
 
                   <div
@@ -5301,7 +5686,7 @@ export default function VedOrderDetailClient(
                     }
 
                     disabled={
-                      selectedVedEditor.loading
+                      selectedVedBusy
                     }
 
                     onChange={
@@ -5313,7 +5698,9 @@ export default function VedOrderDetailClient(
                           selectedItem.id,
                           {
                             incoterm:
-                              event.target.value,
+                              event
+                                .target
+                                .value,
 
                             error:
                               "",
@@ -5360,8 +5747,6 @@ export default function VedOrderDetailClient(
                 </div>
 
 
-                {/* PORT */}
-
                 <div>
 
                   <div
@@ -5384,7 +5769,7 @@ export default function VedOrderDetailClient(
                     }
 
                     disabled={
-                      selectedVedEditor.loading
+                      selectedVedBusy
                     }
 
                     placeholder=
@@ -5399,7 +5784,9 @@ export default function VedOrderDetailClient(
                           selectedItem.id,
                           {
                             port:
-                              event.target.value,
+                              event
+                                .target
+                                .value,
 
                             error:
                               "",
@@ -5438,100 +5825,315 @@ export default function VedOrderDetailClient(
               </div>
 
 
-              {/* MOQ READ ONLY FOR NOW */}
+              {/* ==================================================
+                  VED ACTIONS
+                  ================================================== */}
 
               <div
                 style={{
-                  marginTop:
-                    "14px",
-
                   display:
-                    "grid",
-
-                  gridTemplateColumns:
-                    "repeat(auto-fit, minmax(180px, 1fr))",
+                    "flex",
 
                   gap:
-                    "8px",
+                    "9px",
+
+                  flexWrap:
+                    "wrap",
+
+                  alignItems:
+                    "center",
+
+                  marginTop:
+                    "14px",
                 }}
               >
 
-                <CompactMetric
-                  label="MOQ"
-                  value={
-                    formatNumber(
-                      selectedItem.moq_quantity
-                    )
+                <button
+                  type="button"
+
+                  className=
+                    "primary-button"
+
+                  disabled={
+                    selectedVedBusy
                   }
-                />
 
+                  onClick={
+                    () => {
 
-                <CompactMetric
-                  label="Коробов"
-                  value={
-                    formatNumber(
-                      selectedItem.cartons
-                    )
+                      void saveVedItem(
+                        selectedItem
+                      );
+
+                    }
                   }
-                />
+                >
+
+                  {selectedVedEditor.loading
+
+                    ? "Сохраняем..."
+
+                    : "Сохранить изменения ВЭД"}
+
+                </button>
 
 
-                <CompactMetric
-                  label="К заказу"
-                  value={
-                    `${formatNumber(
-                      selectedItem
-                        .order_quantity
-                    )} шт.`
-                  }
-                />
+                {vedMoqEditable && (
 
+                  <button
+                    type="button"
 
-                <CompactMetric
-                  label="Стоимость"
-                  value={
-                    selectedItem
-                      .total_price_cny ===
-                      null
+                    className=
+                      "secondary-button"
 
-                      ? "—"
+                    disabled={
+                      selectedVedBusy
+                    }
 
-                      : `${formatNumber(
+                    onClick={
+                      () => {
+
+                        void saveVedMoq(
                           selectedItem
-                            .total_price_cny,
-                          2
-                        )} CNY`
-                  }
-                />
+                        );
 
+                      }
+                    }
+                  >
 
-                <CompactMetric
-                  label="Объём"
-                  value={
-                    `${formatNumber(
-                      selectedItem
-                        .total_volume_m3,
-                      6
-                    )} м³`
-                  }
-                />
+                    {selectedVedEditor
+                      .loadingMoq
 
+                      ? "Пересчитываем..."
 
-                <CompactMetric
-                  label="Вес"
-                  value={
-                    `${formatNumber(
-                      selectedItem
-                        .total_weight_tons,
-                      6
-                    )} т`
-                  }
-                />
+                      : "Пересчитать по новому MOQ"}
+
+                  </button>
+
+                )}
 
               </div>
 
 
-              {/* VED COMMENT */}
+              {vedMoqEditable && (
+
+                <div
+                  className="muted"
+
+                  style={{
+                    marginTop:
+                      "8px",
+
+                    fontSize:
+                      "12px",
+                  }}
+                >
+                  Если вы изменили цену или данные упаковки,
+                  сначала нажмите «Сохранить изменения ВЭД»,
+                  а затем меняйте MOQ.
+                </div>
+
+              )}
+
+
+              {!vedMoqEditable && (
+
+                <div
+                  className="muted"
+
+                  style={{
+                    marginTop:
+                      "8px",
+
+                    fontSize:
+                      "12px",
+                  }}
+                >
+                  После передачи заказа в производство изменение MOQ заблокировано.
+                </div>
+
+              )}
+
+
+              {vedSaveMessage && (
+
+                <div
+                  style={{
+                    marginTop:
+                      "10px",
+
+                    fontWeight:
+                      700,
+                  }}
+                >
+                  {vedSaveMessage}
+                </div>
+
+              )}
+
+
+              {selectedVedEditor.error && (
+
+                <div
+                  style={{
+                    marginTop:
+                      "10px",
+
+                    color:
+                      "#d64545",
+
+                    fontWeight:
+                      600,
+                  }}
+                >
+                  {selectedVedEditor.error}
+                </div>
+
+              )}
+
+
+              {/* ==================================================
+                  CURRENT RESULT
+                  ================================================== */}
+
+              <div
+                style={{
+                  marginTop:
+                    "18px",
+
+                  paddingTop:
+                    "16px",
+
+                  borderTop:
+                    "1px solid var(--border)",
+                }}
+              >
+
+                <div
+                  style={{
+                    fontWeight:
+                      700,
+
+                    marginBottom:
+                      "10px",
+                  }}
+                >
+                  Текущий результат
+                </div>
+
+
+                <div
+                  style={{
+                    display:
+                      "grid",
+
+                    gridTemplateColumns:
+                      "repeat(auto-fit, minmax(135px, 1fr))",
+
+                    gap:
+                      "8px",
+                  }}
+                >
+
+                  <CompactMetric
+                    label="MOQ"
+                    value={
+                      formatNumber(
+                        selectedItem
+                          .moq_quantity
+                      )
+                    }
+                  />
+
+
+                  <CompactMetric
+                    label="Коробов"
+                    value={
+                      formatNumber(
+                        selectedItem.cartons
+                      )
+                    }
+                  />
+
+
+                  <CompactMetric
+                    label="К заказу"
+                    value={
+                      `${formatNumber(
+                        selectedItem
+                          .order_quantity
+                      )} шт.`
+                    }
+                  />
+
+
+                  <CompactMetric
+                    label="Стоимость"
+                    value={
+                      selectedItem
+                        .total_price_cny ===
+                        null
+
+                        ? "—"
+
+                        : `${formatNumber(
+                            selectedItem
+                              .total_price_cny,
+                            2
+                          )} CNY`
+                    }
+                  />
+
+
+                  <CompactMetric
+                    label="Объём"
+                    value={
+                      `${formatNumber(
+                        selectedItem
+                          .total_volume_m3,
+                        6
+                      )} м³`
+                    }
+                  />
+
+
+                  <CompactMetric
+                    label="Вес"
+                    value={
+                      `${formatNumber(
+                        selectedItem
+                          .total_weight_tons,
+                        6
+                      )} т`
+                    }
+                  />
+
+
+                  <CompactMetric
+                    label="Покрытие"
+                    value={
+                      selectedItem
+                        .coverage_after_order_days ===
+                        null
+
+                        ? "—"
+
+                        : `${formatNumber(
+                            selectedItem
+                              .coverage_after_order_days,
+                            1
+                          )} дн.`
+                    }
+                  />
+
+                </div>
+
+              </div>
+
+
+              {/* ==================================================
+                  COMMENT
+                  ================================================== */}
 
               <div
                 style={{
@@ -5559,7 +6161,7 @@ export default function VedOrderDetailClient(
                   }
 
                   disabled={
-                    selectedVedEditor.loading
+                    selectedVedBusy
                   }
 
                   placeholder=
@@ -5578,7 +6180,9 @@ export default function VedOrderDetailClient(
                         selectedItem.id,
                         {
                           vedComment:
-                            event.target.value,
+                            event
+                              .target
+                              .value,
 
                           error:
                             "",
@@ -5616,89 +6220,6 @@ export default function VedOrderDetailClient(
                 />
 
               </div>
-
-
-              <div
-                style={{
-                  display:
-                    "flex",
-
-                  alignItems:
-                    "center",
-
-                  gap:
-                    "12px",
-
-                  flexWrap:
-                    "wrap",
-
-                  marginTop:
-                    "12px",
-                }}
-              >
-
-                <button
-                  type="button"
-
-                  className=
-                    "primary-button"
-
-                  disabled={
-                    selectedVedEditor.loading
-                  }
-
-                  onClick={
-                    () => {
-
-                      void saveVedItem(
-                        selectedItem
-                      );
-
-                    }
-                  }
-                >
-
-                  {selectedVedEditor.loading
-                    ? "Сохраняем..."
-                    : "Сохранить изменения ВЭД"}
-
-                </button>
-
-
-                {vedSaveMessage && (
-
-                  <span
-                    style={{
-                      fontWeight:
-                        600,
-                    }}
-                  >
-                    {vedSaveMessage}
-                  </span>
-
-                )}
-
-              </div>
-
-
-              {selectedVedEditor.error && (
-
-                <div
-                  style={{
-                    marginTop:
-                      "10px",
-
-                    color:
-                      "#d64545",
-
-                    fontWeight:
-                      600,
-                  }}
-                >
-                  {selectedVedEditor.error}
-                </div>
-
-              )}
 
             </div>
 
@@ -5762,7 +6283,8 @@ export default function VedOrderDetailClient(
                 label="К заказу"
                 value={
                   `${formatNumber(
-                    selectedItem.order_quantity
+                    selectedItem
+                      .order_quantity
                   )} шт.`
                 }
               />
@@ -5832,7 +6354,9 @@ export default function VedOrderDetailClient(
           </div>
 
 
-          {/* ANALYTICS COMMENT */}
+          {/* ==================================================
+              ANALYTICS COMMENT
+              ================================================== */}
 
           <div
             style={{
