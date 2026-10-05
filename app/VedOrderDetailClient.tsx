@@ -133,7 +133,7 @@ type VedOrderResponse = {
 
 
 // ============================================================
-// MOQ / PRICE PREVIEW
+// MOQ / PRICE
 // ============================================================
 
 type TermsPreview = {
@@ -186,13 +186,35 @@ type TermsPreview = {
 
 
 // ============================================================
+// PREPARATION DATA
+// ============================================================
+
+type PreparationResponse = {
+  ok: boolean;
+  error?: string;
+
+  item_id?: string;
+
+  our_article?: string | null;
+
+  chinese_article?: string | null;
+
+  carton_weight_kg?: number | null;
+};
+
+
+// ============================================================
 // EDITOR STATE
 // ============================================================
 
 type ItemEditorState = {
+  chineseArticle: string;
+  cartonWeightKg: string;
+
   moq: string;
   price: string;
 
+  loadingPreparation: boolean;
   loadingPreview: boolean;
   loadingConfirm: boolean;
   loadingReview: boolean;
@@ -204,7 +226,8 @@ type ItemEditorState = {
 
 
 type EditorsState = {
-  [itemId: string]: ItemEditorState;
+  [itemId: string]:
+    ItemEditorState;
 };
 
 
@@ -213,7 +236,11 @@ type EditorsState = {
 // ============================================================
 
 function formatNumber(
-  value: number | null | undefined,
+  value:
+    number
+    | null
+    | undefined,
+
   digits = 0
 ) {
 
@@ -222,14 +249,18 @@ function formatNumber(
     ||
     value === undefined
   ) {
+
     return "—";
+
   }
+
 
   return Number(value)
     .toLocaleString(
       "ru-RU",
       {
-        maximumFractionDigits: digits,
+        maximumFractionDigits:
+          digits,
       }
     );
 
@@ -237,23 +268,33 @@ function formatNumber(
 
 
 function formatDate(
-  value: string | null | undefined
+  value:
+    string
+    | null
+    | undefined
 ) {
 
   if (!value) {
+
     return "—";
+
   }
+
 
   const date =
     new Date(value);
+
 
   if (
     Number.isNaN(
       date.getTime()
     )
   ) {
+
     return value;
+
   }
+
 
   return date
     .toLocaleDateString(
@@ -264,7 +305,8 @@ function formatDate(
 
 
 function parsePositiveNumber(
-  value: string
+  value:
+    string
 ):
   number | null {
 
@@ -280,20 +322,32 @@ function parsePositiveNumber(
         "."
       );
 
+
   if (!normalized) {
+
     return null;
+
   }
 
+
   const parsed =
-    Number(normalized);
+    Number(
+      normalized
+    );
+
 
   if (
-    !Number.isFinite(parsed)
+    !Number.isFinite(
+      parsed
+    )
     ||
     parsed <= 0
   ) {
+
     return null;
+
   }
+
 
   return parsed;
 
@@ -305,7 +359,8 @@ function parsePositiveNumber(
 // ============================================================
 
 function getWorkflowLabel(
-  status: string
+  status:
+    string
 ) {
 
   switch (status) {
@@ -346,7 +401,8 @@ function getWorkflowLabel(
 
 
 function getTermsStatus(
-  item: VedOrderItem
+  item:
+    VedOrderItem
 ) {
 
   if (
@@ -354,28 +410,40 @@ function getTermsStatus(
     ||
     !item.price_confirmed_at
   ) {
+
     return "Требует подтверждения";
+
   }
+
 
   if (
     item.moq_review_status ===
     "pending"
   ) {
+
     return "Требует решения";
+
   }
+
 
   if (
     item.moq_review_status ===
     "rejected"
   ) {
+
     return "Не заказывать";
+
   }
+
 
   if (
     item.order_quantity > 0
   ) {
+
     return "Готов к заказу";
+
   }
+
 
   return "Условия подтверждены";
 
@@ -391,7 +459,8 @@ export default function VedOrderDetailClient(
     orderId,
   }:
   {
-    orderId: string;
+    orderId:
+      string;
   }
 ) {
 
@@ -452,8 +521,11 @@ export default function VedOrderDetailClient(
         await fetch(
           `/api/ved-orders/${orderId}`,
           {
-            method: "GET",
-            cache: "no-store",
+            method:
+              "GET",
+
+            cache:
+              "no-store",
           }
         );
 
@@ -497,19 +569,46 @@ export default function VedOrderDetailClient(
           item.id
         ] = {
 
-          moq:
-            item.moq_quantity === null
+          chineseArticle:
+            item
+              .chinese_article_snapshot
+            ??
+            "",
+
+          cartonWeightKg:
+            item
+              .carton_weight_kg_snapshot
+            === null
+
               ? ""
+
+              : String(
+                  item
+                    .carton_weight_kg_snapshot
+                ),
+
+          moq:
+            item.moq_quantity ===
+            null
+
+              ? ""
+
               : String(
                   item.moq_quantity
                 ),
 
           price:
-            item.unit_price_cny === null
+            item.unit_price_cny ===
+            null
+
               ? ""
+
               : String(
                   item.unit_price_cny
                 ),
+
+          loadingPreparation:
+            false,
 
           loadingPreview:
             false,
@@ -540,9 +639,14 @@ export default function VedOrderDetailClient(
     ) {
 
       setError(
-        caughtError instanceof Error
+
+        caughtError
+        instanceof Error
+
           ? caughtError.message
+
           : "Неизвестная ошибка"
+
       );
 
     } finally {
@@ -574,8 +678,11 @@ export default function VedOrderDetailClient(
   // ==========================================================
 
   function updateEditor(
-    itemId: string,
-    patch: Partial<ItemEditorState>
+    itemId:
+      string,
+
+    patch:
+      Partial<ItemEditorState>
   ) {
 
     setEditors(
@@ -587,10 +694,24 @@ export default function VedOrderDetailClient(
 
         [itemId]: {
 
-          ...(current[itemId] ?? {
+          ...(current[
+            itemId
+          ] ?? {
 
-            moq: "",
-            price: "",
+            chineseArticle:
+              "",
+
+            cartonWeightKg:
+              "",
+
+            moq:
+              "",
+
+            price:
+              "",
+
+            loadingPreparation:
+              false,
 
             loadingPreview:
               false,
@@ -601,7 +722,8 @@ export default function VedOrderDetailClient(
             loadingReview:
               false,
 
-            error: "",
+            error:
+              "",
 
             preview:
               null,
@@ -651,11 +773,12 @@ export default function VedOrderDetailClient(
 
 
   // ==========================================================
-  // PREVIEW TERMS
+  // SAVE PREPARATION DATA
   // ==========================================================
 
-  async function previewTerms(
-    item: VedOrderItem
+  async function savePreparationData(
+    item:
+      VedOrderItem
   ) {
 
     const editor =
@@ -665,7 +788,201 @@ export default function VedOrderDetailClient(
 
 
     if (!editor) {
+
       return;
+
+    }
+
+
+    const chineseArticle =
+      editor
+        .chineseArticle
+        .trim();
+
+
+    if (!chineseArticle) {
+
+      updateEditor(
+        item.id,
+        {
+          error:
+            "Укажите китайский артикул",
+        }
+      );
+
+      return;
+
+    }
+
+
+    const cartonWeightKg =
+      parsePositiveNumber(
+        editor.cartonWeightKg
+      );
+
+
+    if (
+      cartonWeightKg === null
+    ) {
+
+      updateEditor(
+        item.id,
+        {
+          error:
+            "Укажите вес транспортного короба",
+        }
+      );
+
+      return;
+
+    }
+
+
+    const {
+      actorName,
+      actorRole,
+    } =
+      getActor();
+
+
+    if (!actorName) {
+
+      updateEditor(
+        item.id,
+        {
+          error:
+            "У заказа не указан ответственный сотрудник",
+        }
+      );
+
+      return;
+
+    }
+
+
+    updateEditor(
+      item.id,
+      {
+        loadingPreparation:
+          true,
+
+        error:
+          "",
+      }
+    );
+
+
+    try {
+
+      const response =
+        await fetch(
+          `/api/ved-orders/items/${item.id}/preparation`,
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify(
+                {
+                  chineseArticle,
+
+                  cartonWeightKg,
+
+                  actorName,
+
+                  actorUserId:
+                    null,
+
+                  actorRole,
+                }
+              ),
+
+            cache:
+              "no-store",
+          }
+        );
+
+
+      const result:
+        PreparationResponse =
+          await response.json();
+
+
+      if (
+        !response.ok
+        ||
+        !result.ok
+      ) {
+
+        throw new Error(
+          result.error
+          ||
+          "Не удалось сохранить данные позиции"
+        );
+
+      }
+
+
+      await loadOrder();
+
+
+    } catch (
+      caughtError
+    ) {
+
+      updateEditor(
+        item.id,
+        {
+          error:
+
+            caughtError
+            instanceof Error
+
+              ? caughtError.message
+
+              : "Неизвестная ошибка сохранения",
+        }
+      );
+
+    } finally {
+
+      updateEditor(
+        item.id,
+        {
+          loadingPreparation:
+            false,
+        }
+      );
+
+    }
+
+  }
+
+
+  // ==========================================================
+  // PREVIEW TERMS
+  // ==========================================================
+
+  async function previewTerms(
+    item:
+      VedOrderItem
+  ) {
+
+    const editor =
+      editors[
+        item.id
+      ];
+
+
+    if (!editor) {
+
+      return;
+
     }
 
 
@@ -684,7 +1001,9 @@ export default function VedOrderDetailClient(
     if (
       moq === null
       ||
-      !Number.isInteger(moq)
+      !Number.isInteger(
+        moq
+      )
     ) {
 
       updateEditor(
@@ -738,7 +1057,8 @@ export default function VedOrderDetailClient(
         await fetch(
           `/api/ved-orders/items/${item.id}/terms`,
           {
-            method: "POST",
+            method:
+              "POST",
 
             headers: {
               "Content-Type":
@@ -805,8 +1125,12 @@ export default function VedOrderDetailClient(
         item.id,
         {
           error:
-            caughtError instanceof Error
+
+            caughtError
+            instanceof Error
+
               ? caughtError.message
+
               : "Неизвестная ошибка расчёта",
         }
       );
@@ -831,7 +1155,8 @@ export default function VedOrderDetailClient(
   // ==========================================================
 
   async function confirmTerms(
-    item: VedOrderItem
+    item:
+      VedOrderItem
   ) {
 
     const editor =
@@ -841,7 +1166,9 @@ export default function VedOrderDetailClient(
 
 
     if (!editor) {
+
       return;
+
     }
 
 
@@ -860,7 +1187,9 @@ export default function VedOrderDetailClient(
     if (
       moq === null
       ||
-      !Number.isInteger(moq)
+      !Number.isInteger(
+        moq
+      )
     ) {
 
       updateEditor(
@@ -933,7 +1262,8 @@ export default function VedOrderDetailClient(
         await fetch(
           `/api/ved-orders/items/${item.id}/terms`,
           {
-            method: "POST",
+            method:
+              "POST",
 
             headers: {
               "Content-Type":
@@ -998,8 +1328,12 @@ export default function VedOrderDetailClient(
         item.id,
         {
           error:
-            caughtError instanceof Error
+
+            caughtError
+            instanceof Error
+
               ? caughtError.message
+
               : "Неизвестная ошибка подтверждения",
         }
       );
@@ -1020,13 +1354,17 @@ export default function VedOrderDetailClient(
 
 
   // ==========================================================
-  // RESOLVE MOQ REVIEW
+  // MOQ REVIEW
   // ==========================================================
 
   async function resolveMoqReview(
-    item: VedOrderItem,
+    item:
+      VedOrderItem,
+
     decision:
-      "approve" | "reject"
+      "approve"
+      |
+      "reject"
   ) {
 
     const {
@@ -1131,8 +1469,12 @@ export default function VedOrderDetailClient(
         item.id,
         {
           error:
-            caughtError instanceof Error
+
+            caughtError
+            instanceof Error
+
               ? caughtError.message
+
               : "Неизвестная ошибка решения по MOQ",
         }
       );
@@ -1193,6 +1535,7 @@ export default function VedOrderDetailClient(
           Не удалось открыть заказ
         </h2>
 
+
         <div className="reason-box">
 
           <div className="reason-text">
@@ -1236,7 +1579,7 @@ export default function VedOrderDetailClient(
 
 
       {/* ======================================================
-          ORDER HEADER
+          HEADER
           ====================================================== */}
 
       <section className="section">
@@ -1272,9 +1615,11 @@ export default function VedOrderDetailClient(
           Статус:{" "}
 
           <strong>
+
             {getWorkflowLabel(
               order.workflow_status
             )}
+
           </strong>
 
         </div>
@@ -1663,9 +2008,8 @@ export default function VedOrderDetailClient(
 
         <div className="reason-text">
 
-          Введите MOQ и цену,
-          выполните предварительный расчёт
-          и после проверки подтвердите условия.
+          Заполните обязательные данные товара,
+          затем подтвердите MOQ и цену.
 
         </div>
 
@@ -1686,7 +2030,7 @@ export default function VedOrderDetailClient(
                 "100%",
 
               minWidth:
-                "2150px",
+                "2450px",
 
               borderCollapse:
                 "collapse",
@@ -1710,6 +2054,7 @@ export default function VedOrderDetailClient(
                   "Выбрано",
 
                   "В коробе",
+                  "Вес кор., кг",
 
                   "MOQ",
                   "Цена CNY",
@@ -1722,6 +2067,7 @@ export default function VedOrderDetailClient(
                   "Покрытие",
                   "Стоимость",
                   "Объём, м³",
+                  "Вес, т",
 
                   "Действия",
                 ].map(
@@ -1784,14 +2130,32 @@ export default function VedOrderDetailClient(
 
                   const busy =
                     Boolean(
+
+                      editor
+                        ?.loadingPreparation
+
+                      ||
+
                       editor
                         ?.loadingPreview
+
                       ||
+
                       editor
                         ?.loadingConfirm
+
                       ||
+
                       editor
                         ?.loadingReview
+
+                    );
+
+
+                  const chineseArticleLocked =
+                    Boolean(
+                      item
+                        .chinese_article_snapshot
                     );
 
 
@@ -1806,26 +2170,113 @@ export default function VedOrderDetailClient(
                       <tr>
 
 
-                        <td style={{
-                          padding:
-                            "10px",
-                        }}>
+                        {/* ======================================
+                            CHINESE ARTICLE
+                            ====================================== */}
 
-                          {item
-                            .chinese_article_snapshot
-                            ??
-                            "—"}
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+
+                            minWidth:
+                              "150px",
+                          }}
+                        >
+
+                          <input
+                            type="text"
+
+                            value={
+                              editor
+                                ?.chineseArticle
+                              ??
+                              ""
+                            }
+
+                            disabled={
+                              busy
+                              ||
+                              chineseArticleLocked
+                            }
+
+                            title={
+                              chineseArticleLocked
+
+                                ? "Китайский артикул уже зафиксирован"
+
+                                : "Введите китайский артикул"
+                            }
+
+                            placeholder=
+                              "Китайский арт."
+
+                            onChange={
+                              (
+                                event
+                              ) => {
+
+                                updateEditor(
+                                  item.id,
+                                  {
+                                    chineseArticle:
+                                      event
+                                        .target
+                                        .value,
+
+                                    error:
+                                      "",
+                                  }
+                                );
+
+                              }
+                            }
+
+                            style={{
+                              width:
+                                "140px",
+
+                              minHeight:
+                                "38px",
+
+                              padding:
+                                "0 10px",
+
+                              borderRadius:
+                                "8px",
+
+                              border:
+                                "1px solid var(--border)",
+
+                              background:
+                                chineseArticleLocked
+                                  ? "var(--card)"
+                                  : "var(--background)",
+
+                              color:
+                                "var(--text)",
+                            }}
+                          />
 
                         </td>
 
 
-                        <td style={{
-                          padding:
-                            "10px",
+                        {/* ======================================
+                            OUR ARTICLE
+                            ====================================== */}
 
-                          fontWeight:
-                            600,
-                        }}>
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+
+                            fontWeight:
+                              600,
+
+                            whiteSpace:
+                              "nowrap",
+                          }}
+                        >
 
                           {item
                             .our_article_snapshot
@@ -1835,13 +2286,19 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td style={{
-                          padding:
-                            "10px",
+                        {/* ======================================
+                            PRODUCT
+                            ====================================== */}
 
-                          minWidth:
-                            "300px",
-                        }}>
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+
+                            minWidth:
+                              "300px",
+                          }}
+                        >
 
                           {item
                             .product_name_snapshot
@@ -1851,13 +2308,19 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td style={{
-                          padding:
-                            "10px",
+                        {/* ======================================
+                            DEMANDS
+                            ====================================== */}
 
-                          textAlign:
-                            "right",
-                        }}>
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+
+                            textAlign:
+                              "right",
+                          }}
+                        >
 
                           {formatNumber(
                             item
@@ -1867,13 +2330,15 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td style={{
-                          padding:
-                            "10px",
+                        <td
+                          style={{
+                            padding:
+                              "10px",
 
-                          textAlign:
-                            "right",
-                        }}>
+                            textAlign:
+                              "right",
+                          }}
+                        >
 
                           {formatNumber(
                             item
@@ -1883,16 +2348,18 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td style={{
-                          padding:
-                            "10px",
+                        <td
+                          style={{
+                            padding:
+                              "10px",
 
-                          textAlign:
-                            "right",
+                            textAlign:
+                              "right",
 
-                          fontWeight:
-                            600,
-                        }}>
+                            fontWeight:
+                              600,
+                          }}
+                        >
 
                           {formatNumber(
                             item
@@ -1902,13 +2369,19 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td style={{
-                          padding:
-                            "10px",
+                        {/* ======================================
+                            PACKING
+                            ====================================== */}
 
-                          textAlign:
-                            "right",
-                        }}>
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+
+                            textAlign:
+                              "right",
+                          }}
+                        >
 
                           {formatNumber(
                             item
@@ -1918,10 +2391,91 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td style={{
-                          padding:
-                            "10px",
-                        }}>
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+                          }}
+                        >
+
+                          <input
+                            type="text"
+
+                            inputMode=
+                              "decimal"
+
+                            value={
+                              editor
+                                ?.cartonWeightKg
+                              ??
+                              ""
+                            }
+
+                            disabled={
+                              busy
+                            }
+
+                            placeholder=
+                              "кг"
+
+                            onChange={
+                              (
+                                event
+                              ) => {
+
+                                updateEditor(
+                                  item.id,
+                                  {
+                                    cartonWeightKg:
+                                      event
+                                        .target
+                                        .value,
+
+                                    error:
+                                      "",
+                                  }
+                                );
+
+                              }
+                            }
+
+                            style={{
+                              width:
+                                "95px",
+
+                              minHeight:
+                                "38px",
+
+                              padding:
+                                "0 10px",
+
+                              borderRadius:
+                                "8px",
+
+                              border:
+                                "1px solid var(--border)",
+
+                              background:
+                                "var(--background)",
+
+                              color:
+                                "var(--text)",
+                            }}
+                          />
+
+                        </td>
+
+
+                        {/* ======================================
+                            MOQ
+                            ====================================== */}
+
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+                          }}
+                        >
 
                           <input
                             type="text"
@@ -1981,7 +2535,7 @@ export default function VedOrderDetailClient(
                                 "1px solid var(--border)",
 
                               background:
-                                "var(--card)",
+                                "var(--background)",
 
                               color:
                                 "var(--text)",
@@ -1991,10 +2545,16 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td style={{
-                          padding:
-                            "10px",
-                        }}>
+                        {/* ======================================
+                            PRICE
+                            ====================================== */}
+
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+                          }}
+                        >
 
                           <input
                             type="text"
@@ -2054,7 +2614,7 @@ export default function VedOrderDetailClient(
                                 "1px solid var(--border)",
 
                               background:
-                                "var(--card)",
+                                "var(--background)",
 
                               color:
                                 "var(--text)",
@@ -2064,26 +2624,38 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td style={{
-                          padding:
-                            "10px",
+                        {/* ======================================
+                            STATUS
+                            ====================================== */}
 
-                          minWidth:
-                            "165px",
-                        }}>
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+
+                            minWidth:
+                              "165px",
+                          }}
+                        >
 
                           {termsStatus}
 
                         </td>
 
 
-                        <td style={{
-                          padding:
-                            "10px",
+                        {/* ======================================
+                            FINAL
+                            ====================================== */}
 
-                          textAlign:
-                            "right",
-                        }}>
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+
+                            textAlign:
+                              "right",
+                          }}
+                        >
 
                           {formatNumber(
                             item.cartons
@@ -2092,16 +2664,18 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td style={{
-                          padding:
-                            "10px",
+                        <td
+                          style={{
+                            padding:
+                              "10px",
 
-                          textAlign:
-                            "right",
+                            textAlign:
+                              "right",
 
-                          fontWeight:
-                            700,
-                        }}>
+                            fontWeight:
+                              700,
+                          }}
+                        >
 
                           {formatNumber(
                             item
@@ -2111,13 +2685,15 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td style={{
-                          padding:
-                            "10px",
+                        <td
+                          style={{
+                            padding:
+                              "10px",
 
-                          textAlign:
-                            "right",
-                        }}>
+                            textAlign:
+                              "right",
+                          }}
+                        >
 
                           {item
                             .coverage_after_order_days
@@ -2134,13 +2710,15 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td style={{
-                          padding:
-                            "10px",
+                        <td
+                          style={{
+                            padding:
+                              "10px",
 
-                          textAlign:
-                            "right",
-                        }}>
+                            textAlign:
+                              "right",
+                          }}
+                        >
 
                           {item
                             .total_price_cny
@@ -2157,13 +2735,15 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td style={{
-                          padding:
-                            "10px",
+                        <td
+                          style={{
+                            padding:
+                              "10px",
 
-                          textAlign:
-                            "right",
-                        }}>
+                            textAlign:
+                              "right",
+                          }}
+                        >
 
                           {formatNumber(
                             item
@@ -2174,13 +2754,38 @@ export default function VedOrderDetailClient(
                         </td>
 
 
-                        <td style={{
-                          padding:
-                            "10px",
+                        <td
+                          style={{
+                            padding:
+                              "10px",
 
-                          minWidth:
-                            "280px",
-                        }}>
+                            textAlign:
+                              "right",
+                          }}
+                        >
+
+                          {formatNumber(
+                            item
+                              .total_weight_tons,
+                            6
+                          )}
+
+                        </td>
+
+
+                        {/* ======================================
+                            ACTIONS
+                            ====================================== */}
+
+                        <td
+                          style={{
+                            padding:
+                              "10px",
+
+                            minWidth:
+                              "310px",
+                          }}
+                        >
 
                           <div
                             style={{
@@ -2194,6 +2799,37 @@ export default function VedOrderDetailClient(
                                 "wrap",
                             }}
                           >
+
+                            <button
+                              type="button"
+
+                              className=
+                                "secondary-button"
+
+                              disabled={
+                                busy
+                              }
+
+                              onClick={
+                                () => {
+
+                                  void savePreparationData(
+                                    item
+                                  );
+
+                                }
+                              }
+                            >
+
+                              {editor
+                                ?.loadingPreparation
+
+                                ? "Сохраняем..."
+
+                                : "Сохранить данные"}
+
+                            </button>
+
 
                             <button
                               type="button"
@@ -2327,7 +2963,9 @@ export default function VedOrderDetailClient(
                                     }
                                   }
                                 >
+
                                   Не заказывать
+
                                 </button>
 
                               </>
@@ -2352,10 +2990,8 @@ export default function VedOrderDetailClient(
                               }}
                             >
 
-                              Условия подтверждены.
                               Нажмите «Рассчитать»,
-                              чтобы увидеть предложение
-                              перед ручным решением.
+                              чтобы принять решение по MOQ.
 
                             </div>
 
@@ -2374,7 +3010,7 @@ export default function VedOrderDetailClient(
                                   "#d64545",
 
                                 maxWidth:
-                                  "280px",
+                                  "300px",
                               }}
                             >
 
@@ -2390,7 +3026,7 @@ export default function VedOrderDetailClient(
 
 
                       {/* ======================================
-                          PREVIEW ROW
+                          PREVIEW
                           ====================================== */}
 
                       {preview && (
@@ -2399,7 +3035,7 @@ export default function VedOrderDetailClient(
 
                           <td
                             colSpan={
-                              16
+                              18
                             }
 
                             style={{
@@ -2582,6 +3218,25 @@ export default function VedOrderDetailClient(
 
                               </div>
 
+
+                              <div>
+
+                                <div className="card-label">
+                                  Вес
+                                </div>
+
+                                <strong>
+
+                                  {formatNumber(
+                                    preview
+                                      .total_weight_tons,
+                                    6
+                                  )} т
+
+                                </strong>
+
+                              </div>
+
                             </div>
 
 
@@ -2620,8 +3275,7 @@ export default function VedOrderDetailClient(
 
                                     Выберите:
                                     включить увеличенное количество
-                                    в заказ или не заказывать
-                                    этот SKU.
+                                    в заказ или не заказывать SKU.
 
                                   </div>
 
@@ -2681,6 +3335,22 @@ export default function VedOrderDetailClient(
 
         </div>
 
+
+        <div
+          className="muted"
+
+          style={{
+            marginTop:
+              "14px",
+          }}
+        >
+
+          Китайский артикул после первого сохранения
+          для существующего товара фиксируется.
+          Вес транспортного короба можно уточнять позднее.
+
+        </div>
+
       </section>
 
 
@@ -2708,7 +3378,6 @@ export default function VedOrderDetailClient(
           }}
         >
 
-
           <div>
 
             <div className="card-label">
@@ -2716,9 +3385,11 @@ export default function VedOrderDetailClient(
             </div>
 
             <strong>
+
               {formatDate(
                 order.first_sent_to_ved_at
               )}
+
             </strong>
 
           </div>
@@ -2731,9 +3402,11 @@ export default function VedOrderDetailClient(
             </div>
 
             <strong>
+
               {formatDate(
                 order.production_handoff_date
               )}
+
             </strong>
 
           </div>
@@ -2746,9 +3419,11 @@ export default function VedOrderDetailClient(
             </div>
 
             <strong>
+
               {formatDate(
                 order.expected_arrival_date
               )}
+
             </strong>
 
           </div>
@@ -2761,9 +3436,11 @@ export default function VedOrderDetailClient(
             </div>
 
             <strong>
+
               {formatDate(
                 order.actual_arrival_date
               )}
+
             </strong>
 
           </div>
