@@ -3,6 +3,36 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 const SALES_DAYS = 28;
+const PAGE_SIZE = 1000;
+const MAX_PAGES = 50;
+
+type WBOrderRow = {
+  srid: string;
+  order_date: string;
+  last_change_date: string | null;
+  nm_id: number | string;
+  supplier_article: string | null;
+  warehouse_name: string | null;
+  warehouse_type: string | null;
+  is_cancel: boolean | null;
+  cancel_date: string | null;
+  income_id: number | string | null;
+  synced_at: string | null;
+};
+
+function parseDateMs(
+  value: string | null | undefined
+): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const time = new Date(value).getTime();
+
+  return Number.isFinite(time)
+    ? time
+    : null;
+}
 
 export async function GET() {
   const supabaseUrlRaw =
@@ -49,14 +79,20 @@ export async function GET() {
 
   try {
     // ========================================================
-    // 1. ПОСЛЕДНЯЯ УСПЕШНАЯ СИНХРОНИЗАЦИЯ ORDERS
+    // 1. СОСТОЯНИЕ ПОСЛЕДНЕЙ СИНХРОНИЗАЦИИ ORDERS
     // ========================================================
 
+    const stateParams =
+      new URLSearchParams({
+        sync_key: "eq.orders",
+        select:
+          "last_success_at,last_attempt_at,last_http_status,last_message",
+        limit: "1",
+      });
+
     const stateUrl =
-      `${supabaseUrl}/rest/v1/wb_sync_state` +
-      "?sync_key=eq.orders" +
-      "&select=last_success_at,last_attempt_at,last_http_status,last_message" +
-      "&limit=1";
+      `${supabaseUrl}/rest/v1/wb_sync_state?` +
+      stateParams.toString();
 
     const stateResponse =
       await fetch(stateUrl, {
@@ -65,10 +101,10 @@ export async function GET() {
         cache: "no-store",
       });
 
-    if (!stateResponse.ok) {
-      const text =
-        await stateResponse.text();
+    const stateText =
+      await stateResponse.text();
 
+    if (!stateResponse.ok) {
       return NextResponse.json(
         {
           ok: false,
@@ -77,22 +113,29 @@ export async function GET() {
           supabaseStatus:
             stateResponse.status,
           supabaseResponse:
-            text,
+            stateText,
         },
         { status: 500 }
       );
     }
 
     const stateRows =
-      await stateResponse.json();
+      JSON.parse(stateText);
 
     const state =
       Array.isArray(stateRows)
         ? stateRows[0]
         : null;
 
-    const lastSuccessAt =
-      state?.last_success_at;
+    const lastSuccessAt:
+      string | null =
+      state?.last_success_at ??
+      null;
+
+    const lastAttemptAt:
+      string | null =
+      state?.last_attempt_at ??
+      null;
 
     if (!lastSuccessAt) {
       return NextResponse.json(
@@ -106,11 +149,21 @@ export async function GET() {
     }
 
     // ========================================================
-    // 2. ФИКСИРУЕМ ТОЧНОЕ ОКНО 28 ДНЕЙ
+    // 2. ОКНО РАСЧЁТА
+    //
+    // Для конца периода используем время начала успешного
+    // обращения к WB. Оно ближе всего к dateFrom, который
+    // использовался при запросе.
     // ========================================================
 
+    const periodEndSource =
+      lastAttemptAt ??
+      lastSuccessAt;
+
     const periodEnd =
-      new Date(lastSuccessAt);
+      new Date(
+        periodEndSource
+      );
 
     const periodStart =
       new Date(
@@ -123,194 +176,310 @@ export async function GET() {
       );
 
     // ========================================================
-    // 3. ЧИТАЕМ ВСЕ СОХРАНЁННЫЕ ЗАКАЗЫ
+    // 3. ЧИТАЕМ ВСЕ wb_orders СТРАНИЦАМИ ПО 1000
     // ========================================================
 
-    const ordersUrl =
-      `${supabaseUrl}/rest/v1/wb_orders` +
-      "?select=srid,order_date,last_change_date,nm_id,supplier_article,warehouse_name,warehouse_type,is_cancel,cancel_date,income_id,synced_at" +
-      "&limit=20000";
+    const allOrders:
+      WBOrderRow[] = [];
 
-    const ordersResponse =
-      await fetch(ordersUrl, {
-        method: "GET",
-        headers,
-        cache: "no-store",
-      });
+    let pagesRead = 0;
 
-    if (!ordersResponse.ok) {
-      const text =
-        await ordersResponse.text();
+    for (
+      let page = 0;
+      page < MAX_PAGES;
+      page++
+    ) {
+      const offset =
+        page * PAGE_SIZE;
 
-      return NextResponse.json(
-        {
-          ok: false,
-          message:
-            "Не удалось получить wb_orders из Supabase",
-          supabaseStatus:
-            ordersResponse.status,
-          supabaseResponse:
-            text,
-        },
-        { status: 500 }
-      );
-    }
+      const orderParams =
+        new URLSearchParams({
+          select:
+            "srid,order_date,last_change_date,nm_id,supplier_article,warehouse_name,warehouse_type,is_cancel,cancel_date,income_id,synced_at",
 
-    const orders =
-      await ordersResponse.json();
+          order:
+            "order_date.asc,srid.asc",
 
-    if (!Array.isArray(orders)) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message:
-            "Supabase вернул неожиданный формат wb_orders",
-        },
-        { status: 500 }
-      );
-    }
+          limit:
+            String(PAGE_SIZE),
 
-    // ========================================================
-    // 4. АУДИТ ДАТ
-    // ========================================================
+          offset:
+            String(offset),
+        });
 
-    const validDates =
-      orders
-        .map((order: any) => ({
-          ...order,
+      const ordersUrl =
+        `${supabaseUrl}/rest/v1/wb_orders?` +
+        orderParams.toString();
 
-          orderTime:
-            new Date(
-              order.order_date
-            ).getTime(),
-
-          changeTime:
-            order.last_change_date
-              ? new Date(
-                  order.last_change_date
-                ).getTime()
-              : null,
-        }))
-        .filter(
-          (order: any) =>
-            Number.isFinite(
-              order.orderTime
-            )
+      const ordersResponse =
+        await fetch(
+          ordersUrl,
+          {
+            method: "GET",
+            headers,
+            cache: "no-store",
+          }
         );
 
+      const ordersText =
+        await ordersResponse.text();
+
+      if (
+        !ordersResponse.ok
+      ) {
+        return NextResponse.json(
+          {
+            ok: false,
+
+            message:
+              "Не удалось получить страницу wb_orders из Supabase",
+
+            page:
+              page + 1,
+
+            offset,
+
+            supabaseStatus:
+              ordersResponse.status,
+
+            supabaseResponse:
+              ordersText,
+          },
+          { status: 500 }
+        );
+      }
+
+      const pageRows =
+        JSON.parse(
+          ordersText
+        );
+
+      if (
+        !Array.isArray(pageRows)
+      ) {
+        return NextResponse.json(
+          {
+            ok: false,
+
+            message:
+              "Supabase вернул неожиданный формат wb_orders",
+
+            page:
+              page + 1,
+          },
+          { status: 500 }
+        );
+      }
+
+      pagesRead++;
+
+      allOrders.push(
+        ...pageRows
+      );
+
+      // Последняя страница.
+      if (
+        pageRows.length <
+        PAGE_SIZE
+      ) {
+        break;
+      }
+
+      if (
+        page ===
+        MAX_PAGES - 1
+      ) {
+        return NextResponse.json(
+          {
+            ok: false,
+
+            message:
+              "Достигнут защитный лимит MAX_PAGES. Аудит остановлен.",
+
+            rowsRead:
+              allOrders.length,
+
+            maxPages:
+              MAX_PAGES,
+          },
+          { status: 500 }
+        );
+      }
+    }
+
+    // ========================================================
+    // 4. ПРОВЕРЯЕМ ДАТЫ ЗАКАЗОВ
+    // ========================================================
+
+    const ordersWithDates =
+      allOrders
+        .map(
+          (
+            order:
+              WBOrderRow
+          ) => ({
+            ...order,
+
+            orderTime:
+              parseDateMs(
+                order.order_date
+              ),
+
+            changeTime:
+              parseDateMs(
+                order.last_change_date
+              ),
+          })
+        )
+        .filter(
+          (
+            order
+          ) =>
+            order.orderTime !==
+            null
+        );
+
+    const invalidOrderDateCount =
+      allOrders.length -
+      ordersWithDates.length;
+
+    // ========================================================
+    // 5. РАЗБИВАЕМ НА 28 ДНЕЙ / СТАРЫЕ / БУДУЩИЕ
+    // ========================================================
+
     const insidePeriod =
-      validDates.filter(
-        (order: any) =>
-          order.orderTime >=
+      ordersWithDates.filter(
+        (order) =>
+          order.orderTime! >=
             periodStart.getTime() &&
-          order.orderTime <=
+          order.orderTime! <=
             periodEnd.getTime()
       );
 
-    const outsidePeriod =
-      validDates.filter(
-        (order: any) =>
-          order.orderTime <
-            periodStart.getTime() ||
-          order.orderTime >
-            periodEnd.getTime()
+    const olderThanPeriod =
+      ordersWithDates.filter(
+        (order) =>
+          order.orderTime! <
+          periodStart.getTime()
+      );
+
+    const newerThanPeriod =
+      ordersWithDates.filter(
+        (order) =>
+          order.orderTime! >
+          periodEnd.getTime()
       );
 
     // ========================================================
-    // 5. FBW ЗА НУЖНЫЕ 28 ДНЕЙ
+    // 6. НУЖНЫЕ НАМ ПРОДАЖИ FBW
     // ========================================================
 
     const fbwInside =
       insidePeriod.filter(
-        (order: any) =>
+        (order) =>
           order.warehouse_type ===
           "Склад WB"
       );
 
     const activeFbwInside =
       fbwInside.filter(
-        (order: any) =>
-          order.is_cancel !== true
+        (order) =>
+          order.is_cancel !==
+          true
       );
 
     const cancelledFbwInside =
       fbwInside.filter(
-        (order: any) =>
-          order.is_cancel === true
+        (order) =>
+          order.is_cancel ===
+          true
       );
 
     const sellerInside =
       insidePeriod.filter(
-        (order: any) =>
+        (order) =>
           order.warehouse_type ===
           "Склад продавца"
       );
 
     // ========================================================
-    // 6. УНИКАЛЬНЫЕ SKU
+    // 7. УНИКАЛЬНЫЕ SKU С АКТИВНЫМИ FBW-ЗАКАЗАМИ
     // ========================================================
 
     const activeFbwSku =
       new Set<number>();
 
     for (
-      const order of activeFbwInside
+      const order of
+      activeFbwInside
     ) {
       const nmId =
-        Number(order.nm_id);
+        Number(
+          order.nm_id
+        );
 
       if (
-        Number.isFinite(nmId)
+        Number.isFinite(
+          nmId
+        )
       ) {
-        activeFbwSku.add(nmId);
+        activeFbwSku.add(
+          nmId
+        );
       }
     }
 
     // ========================================================
-    // 7. МИНИМАЛЬНАЯ / МАКСИМАЛЬНАЯ ДАТА
+    // 8. МИНИМАЛЬНАЯ / МАКСИМАЛЬНАЯ ДАТА В БАЗЕ
     // ========================================================
 
-    const orderTimes =
-      validDates.map(
-        (order: any) =>
-          order.orderTime
-      );
+    const allOrderTimes =
+      ordersWithDates
+        .map(
+          (order) =>
+            order.orderTime
+        )
+        .filter(
+          (
+            value
+          ): value is number =>
+            value !== null
+        );
 
     const minOrderDate =
-      orderTimes.length > 0
+      allOrderTimes.length >
+      0
         ? new Date(
             Math.min(
-              ...orderTimes
+              ...allOrderTimes
             )
           ).toISOString()
         : null;
 
     const maxOrderDate =
-      orderTimes.length > 0
+      allOrderTimes.length >
+      0
         ? new Date(
             Math.max(
-              ...orderTimes
+              ...allOrderTimes
             )
           ).toISOString()
         : null;
 
     // ========================================================
-    // 8. ПРИМЕРЫ СТАРЫХ ЗАКАЗОВ
+    // 9. ПРИМЕРЫ СТАРЫХ ЗАКАЗОВ
     // ========================================================
 
-    const outsideSample =
-      outsidePeriod
+    const oldOrdersSample =
+      [...olderThanPeriod]
         .sort(
-          (
-            a: any,
-            b: any
-          ) =>
-            a.orderTime -
-            b.orderTime
+          (a, b) =>
+            a.orderTime! -
+            b.orderTime!
         )
         .slice(0, 20)
         .map(
-          (order: any) => ({
+          (order) => ({
             srid:
               order.srid,
 
@@ -335,25 +504,29 @@ export async function GET() {
         );
 
     // ========================================================
-    // 9. РЕЗУЛЬТАТ
+    // 10. РЕЗУЛЬТАТ
     // ========================================================
 
     return NextResponse.json({
       ok: true,
 
       message:
-        "Аудит заказов WB выполнен только по данным Supabase",
+        "Полный аудит заказов WB выполнен только по данным Supabase",
 
       wildberriesRequestSent:
         false,
 
       synchronization: {
         lastSuccessAt,
-        lastAttemptAt:
-          state?.last_attempt_at ??
-          null,
+
+        lastAttemptAt,
+
         lastHttpStatus:
           state?.last_http_status ??
+          null,
+
+        lastMessage:
+          state?.last_message ??
           null,
       },
 
@@ -366,14 +539,27 @@ export async function GET() {
 
         end:
           periodEnd.toISOString(),
+
+        basedOn:
+          lastAttemptAt
+            ? "last_attempt_at"
+            : "last_success_at",
       },
 
       database: {
         totalRows:
-          orders.length,
+          allOrders.length,
+
+        pagesRead,
+
+        pageSize:
+          PAGE_SIZE,
 
         validOrderDates:
-          validDates.length,
+          ordersWithDates.length,
+
+        invalidOrderDates:
+          invalidOrderDateCount,
 
         minOrderDate,
 
@@ -384,8 +570,15 @@ export async function GET() {
         inside28Days:
           insidePeriod.length,
 
+        olderThan28Days:
+          olderThanPeriod.length,
+
+        newerThanPeriod:
+          newerThanPeriod.length,
+
         outside28Days:
-          outsidePeriod.length,
+          olderThanPeriod.length +
+          newerThanPeriod.length,
       },
 
       inside28Days: {
@@ -405,8 +598,7 @@ export async function GET() {
           activeFbwSku.size,
       },
 
-      outsidePeriodSample:
-        outsideSample,
+      oldOrdersSample,
     });
   } catch (error) {
     return NextResponse.json(
@@ -414,7 +606,7 @@ export async function GET() {
         ok: false,
 
         message:
-          "Ошибка аудита заказов WB",
+          "Ошибка полного аудита заказов WB",
 
         error:
           error instanceof Error
