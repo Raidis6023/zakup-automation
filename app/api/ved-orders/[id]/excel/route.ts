@@ -6,8 +6,7 @@ import {
 import ExcelJS from "exceljs";
 
 
-export const runtime =
-  "nodejs";
+export const runtime = "nodejs";
 
 
 // ============================================================
@@ -17,122 +16,85 @@ export const runtime =
 type VedOrder = {
   id: string;
 
-  order_number:
-    string | null;
+  order_number: string | null;
 
-  status:
-    string;
+  status: string;
 
-  workflow_status:
-    string;
+  workflow_status: string;
 
-  calculation_scenario:
-    string | null;
+  calculation_scenario: string | null;
 
-  transport_mode:
-    string | null;
+  transport_mode: string | null;
 
-  transport_variant:
-    string | null;
+  transport_variant: string | null;
 
-  preparation_responsible_name:
-    string | null;
+  preparation_responsible_name: string | null;
 
-  ved_responsible_name:
-    string | null;
+  ved_responsible_name: string | null;
 
-  created_at:
-    string;
+  created_at: string;
 
-  first_sent_to_ved_at:
-    string | null;
+  first_sent_to_ved_at: string | null;
 
-  production_handoff_date:
-    string | null;
+  production_handoff_date: string | null;
 
-  expected_arrival_date:
-    string | null;
+  expected_arrival_date: string | null;
 };
 
 
 type VedOrderItem = {
-  id:
-    string;
+  id: string;
 
-  product_id:
-    string | null;
+  product_id: string | null;
 
-  position_sort:
-    number | null;
+  position_sort: number | null;
 
-  status:
-    string;
+  status: string;
 
-  moq_review_status:
-    string | null;
+  moq_review_status: string | null;
 
-  chinese_article_snapshot:
-    string | null;
+  chinese_article_snapshot: string | null;
 
-  our_article_snapshot:
-    string | null;
+  our_article_snapshot: string | null;
 
-  product_name_snapshot:
-    string | null;
+  product_name_snapshot: string | null;
 
-  photo_url:
-    string | null;
+  photo_url: string | null;
 
-  incoterm:
-    string | null;
+  incoterm: string | null;
 
-  port:
-    string | null;
+  port: string | null;
 
-  order_quantity:
-    number;
+  order_quantity: number;
 
-  cartons:
-    number | null;
+  cartons: number | null;
 
-  unit_price_cny:
-    number | null;
+  unit_price_cny: number | null;
 
-  total_price_cny:
-    number | null;
+  total_price_cny: number | null;
 
-  units_per_carton_snapshot:
-    number | null;
+  units_per_carton_snapshot: number | null;
 
-  carton_volume_m3_snapshot:
-    number | null;
+  carton_volume_m3_snapshot: number | null;
 
-  carton_weight_kg_snapshot:
-    number | null;
+  carton_weight_kg_snapshot: number | null;
 
-  total_volume_m3:
-    number | null;
+  total_volume_m3: number | null;
 
-  total_weight_tons:
-    number | null;
+  total_weight_tons: number | null;
 
-  moq_quantity:
-    number | null;
+  moq_quantity: number | null;
 
-  analytics_comment:
-    string | null;
+  analytics_comment: string | null;
 
-  ved_comment:
-    string | null;
+  ved_comment: string | null;
 };
 
 
 type HandoffReadiness = {
-  ok?:
-    boolean;
+  ok?: boolean;
 
-  ready?:
-    boolean;
+  ready?: boolean;
 };
 
 
@@ -143,13 +105,11 @@ type HandoffReadiness = {
 function getSupabaseConfig() {
 
   const supabaseUrl =
-    process.env
-      .NEXT_PUBLIC_SUPABASE_URL;
+    process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 
   const supabaseSecretKey =
-    process.env
-      .SUPABASE_SECRET_KEY;
+    process.env.SUPABASE_SECRET_KEY;
 
 
   if (!supabaseUrl) {
@@ -179,13 +139,11 @@ function getSupabaseConfig() {
 
 
 function getSupabaseHeaders(
-  secretKey:
-    string
+  secretKey: string
 ) {
 
   return {
-    apikey:
-      secretKey,
+    apikey: secretKey,
 
     Authorization:
       `Bearer ${secretKey}`,
@@ -228,8 +186,7 @@ function formatDateRu(
 
 
   if (
-    parts.length !==
-      3
+    parts.length !== 3
   ) {
 
     return value;
@@ -247,15 +204,11 @@ function formatDateRu(
 
 
 function getWorkflowStatusLabel(
-  status:
-    string
+  status: string
 ) {
 
   const labels:
-    Record<
-      string,
-      string
-    > = {
+    Record<string, string> = {
 
       draft:
         "Черновик",
@@ -297,8 +250,7 @@ function getWorkflowStatusLabel(
 
 
 function getTransportLabel(
-  order:
-    VedOrder
+  order: VedOrder
 ) {
 
   const rawValue =
@@ -312,8 +264,7 @@ function getTransportLabel(
 
 
   const value =
-    rawValue
-      .toLowerCase();
+    rawValue.toLowerCase();
 
 
   if (
@@ -348,8 +299,7 @@ function getTransportLabel(
 
 
 function sanitizeFilename(
-  value:
-    string
+  value: string
 ) {
 
   return value
@@ -450,8 +400,7 @@ function getImageExtension(
 
 
 async function loadImage(
-  url:
-    string
+  url: string
 ) {
 
   try {
@@ -500,11 +449,25 @@ async function loadImage(
       await response.arrayBuffer();
 
 
-    return {
-      buffer:
-        Buffer.from(
+    const base64 =
+      Buffer
+        .from(
           arrayBuffer
-        ),
+        )
+        .toString(
+          "base64"
+        );
+
+
+    const mimeType =
+      extension === "png"
+        ? "image/png"
+        : "image/jpeg";
+
+
+    return {
+      base64:
+        `data:${mimeType};base64,${base64}`,
 
       extension,
     };
@@ -524,8 +487,7 @@ async function loadImage(
 
 export async function GET(
 
-  _request:
-    NextRequest,
+  _request: NextRequest,
 
   context: {
     params:
@@ -655,16 +617,6 @@ export async function GET(
 
     // ========================================================
     // 4. DRAFT READINESS
-    //
-    // В draft Excel доступен только после полной подготовки.
-    //
-    // После выхода из draft экспорт остаётся доступным всегда:
-    //
-    // sent_to_ved
-    // ved_in_work
-    // production_confirmed
-    // in_transit
-    // arrived
     // ========================================================
 
     if (
@@ -784,7 +736,7 @@ export async function GET(
 
 
     // ========================================================
-    // 6. INCLUDED ITEMS ONLY
+    // 6. INCLUDED ITEMS
     // ========================================================
 
     const items =
@@ -1099,7 +1051,7 @@ export async function GET(
 
 
     // ========================================================
-    // 12. ROW DEFINITIONS
+    // 12. ROWS
     // ========================================================
 
     const rows = [
@@ -1250,11 +1202,9 @@ export async function GET(
     // ========================================================
 
     function setValue(
-      column:
-        number,
+      column: number,
 
-      key:
-        string,
+      key: string,
 
       value:
         string
@@ -1286,7 +1236,7 @@ export async function GET(
 
 
     // ========================================================
-    // 14. PRODUCTS
+    // 14. PRODUCT VALUES
     // ========================================================
 
     items.forEach(
@@ -1591,16 +1541,6 @@ export async function GET(
               );
 
 
-            // =================================================
-            // ЕСЛИ КАРТИНКУ НЕ УДАЛОСЬ ВСТРОИТЬ,
-            // СОХРАНЯЕМ КЛИКАБЕЛЬНУЮ ССЫЛКУ.
-            //
-            // В ExcelJS hyperlink НЕ назначается
-            // через cell.hyperlink.
-            //
-            // Нужно присваивать объект CellValue.
-            // =================================================
-
             if (!image) {
 
               worksheet.getCell(
@@ -1626,8 +1566,8 @@ export async function GET(
             const imageId =
               workbook.addImage(
                 {
-                  buffer:
-                    image.buffer,
+                  base64:
+                    image.base64,
 
                   extension:
                     image.extension,
