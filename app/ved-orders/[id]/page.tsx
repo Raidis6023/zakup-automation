@@ -7,6 +7,9 @@ from "../../ThemeToggle";
 import VedTakeInWorkPanel
 from "../../VedTakeInWorkPanel";
 
+import VedProductionPanel
+from "../../VedProductionPanel";
+
 import VedOrderDetailClient
 from "../../VedOrderDetailClient";
 
@@ -39,10 +42,6 @@ export default async function VedOrderPage(
 
       <div className="container">
 
-
-        {/* ====================================================
-            HEADER
-            ==================================================== */}
 
         <header className="header">
 
@@ -83,7 +82,7 @@ export default async function VedOrderPage(
 
 
         {/* ====================================================
-            VED TAKE IN WORK
+            VED TAKES ORDER
             ==================================================== */}
 
         <VedTakeInWorkPanel
@@ -94,7 +93,18 @@ export default async function VedOrderPage(
 
 
         {/* ====================================================
-            ORDER
+            PRODUCTION
+            ==================================================== */}
+
+        <VedProductionPanel
+          orderId={
+            id
+          }
+        />
+
+
+        {/* ====================================================
+            ORDER DETAILS
             ==================================================== */}
 
         <VedOrderDetailClient
