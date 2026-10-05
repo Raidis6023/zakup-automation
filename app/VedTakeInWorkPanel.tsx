@@ -300,23 +300,89 @@ export default function VedTakeInWorkPanel(
 
 
   // ==========================================================
-  // NOTHING TO SHOW
+  // LOADING
+  // ==========================================================
+
+  if (loading) {
+
+    return (
+
+      <section
+        className="section"
+
+        style={{
+          padding:
+            "14px 20px",
+
+          marginBottom:
+            "14px",
+        }}
+      >
+
+        <div className="muted">
+          Проверяем статус ВЭД...
+        </div>
+
+      </section>
+
+    );
+
+  }
+
+
+  // ==========================================================
+  // LOAD ERROR
   // ==========================================================
 
   if (
-    loading
-    ||
+    error
+    &&
     !order
   ) {
+
+    return (
+
+      <section
+        className="section"
+
+        style={{
+          padding:
+            "14px 20px",
+
+          marginBottom:
+            "14px",
+        }}
+      >
+
+        <div
+          style={{
+            color:
+              "#d64545",
+
+            fontWeight:
+              700,
+          }}
+        >
+          Ошибка блока ВЭД: {error}
+        </div>
+
+      </section>
+
+    );
+
+  }
+
+
+  if (!order) {
 
     return null;
 
   }
 
 
-  // Панель нужна только тогда,
-  // когда заказ уже передан в ВЭД,
-  // но сотрудник ВЭД ещё не взял его в работу.
+  // ==========================================================
+  // PANEL IS ONLY NEEDED AFTER HANDOFF
+  // ==========================================================
 
   if (
     order.workflow_status !==
