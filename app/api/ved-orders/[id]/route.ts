@@ -29,6 +29,9 @@ type VedOrder = {
   preparation_responsible_name:
     string | null;
 
+  ved_responsible_user_id:
+    string | null;
+
   ved_responsible_name:
     string | null;
 
@@ -74,10 +77,22 @@ type VedOrder = {
   production_confirmed_at:
     string | null;
 
+  planned_lead_days:
+    number | null;
+
+  transit_departure_date:
+    string | null;
+
+  transit_started_at:
+    string | null;
+
   expected_arrival_date:
     string | null;
 
   actual_arrival_date:
+    string | null;
+
+  arrival_confirmed_at:
     string | null;
 
   actual_arrival_confirmed_at:
@@ -95,7 +110,8 @@ type VedOrder = {
 
 
 type VedOrderItem = {
-  id: string;
+  id:
+    string;
 
   ved_order_id:
     string;
@@ -284,7 +300,8 @@ function getSupabaseConfig() {
 // ============================================================
 
 async function supabaseGet<T>(
-  path: string
+  path:
+    string
 ):
   Promise<T> {
 
@@ -353,7 +370,8 @@ export async function GET(
   context: {
     params:
       Promise<{
-        id: string;
+        id:
+          string;
       }>;
   }
 
@@ -410,53 +428,110 @@ export async function GET(
       >(
         [
           "ved_orders",
+
           `?id=eq.${orderId}`,
+
           "&select=",
+
           [
+
             "id",
+
             "order_number",
+
             "status",
+
             "workflow_status",
+
 
             "created_by_name",
 
+
             "preparation_department",
+
             "preparation_responsible_name",
+
+            "ved_responsible_user_id",
+
             "ved_responsible_name",
 
+
             "calculation_run_id",
+
             "calculation_scenario",
 
+
             "transport_mode",
+
             "transport_variant",
+
             "transport_units",
+
             "selected_capacity_m3",
+
 
             "new_products_volume_m3",
 
+
             "first_sent_to_ved_at",
+
             "last_sent_to_ved_at",
+
 
             "ved_taken_at",
 
+
             "returned_for_edit_at",
+
             "return_reason",
 
+
+            // ================================================
+            // ПРОИЗВОДСТВО
+            // ================================================
+
             "production_handoff_date",
+
             "production_confirmed_at",
+
+            "planned_lead_days",
+
+
+            // ================================================
+            // В ПУТИ
+            // ================================================
+
+            "transit_departure_date",
+
+            "transit_started_at",
+
+
+            // ================================================
+            // ПРИБЫТИЕ
+            // ================================================
 
             "expected_arrival_date",
 
             "actual_arrival_date",
+
+            "arrival_confirmed_at",
+
+
+            // Старое поле пока оставляем для совместимости.
             "actual_arrival_confirmed_at",
+
 
             "notes",
 
+
             "created_at",
+
             "updated_at",
+
           ].join(
             ","
           ),
+
         ].join(
           ""
         )
@@ -498,66 +573,109 @@ export async function GET(
       >(
         [
           "ved_order_items",
+
           `?ved_order_id=eq.${orderId}`,
+
           "&select=",
+
           [
+
             "id",
+
             "ved_order_id",
+
             "product_id",
 
+
             "status",
+
             "item_kind",
 
+
             "chinese_article_snapshot",
+
             "our_article_snapshot",
+
             "product_name_snapshot",
+
             "photo_url",
 
+
             "priority_group",
+
             "priority_rank",
+
             "position_sort",
 
+
             "demand_container_units",
+
             "demand_truck_units",
+
             "selected_demand_units",
 
+
             "moq_quantity",
+
             "moq_confirmed_at",
 
+
             "unit_price_cny",
+
             "price_confirmed_at",
 
+
             "moq_excess_review_required",
+
             "moq_review_status",
 
+
             "units_per_carton_snapshot",
+
             "carton_volume_m3_snapshot",
+
             "carton_weight_kg_snapshot",
 
+
             "cartons",
+
             "order_quantity",
+
 
             "coverage_after_order_days",
 
+
             "is_partial_fill",
+
             "manual_cartons_override",
 
+
             "incoterm",
+
             "port",
 
+
             "analytics_comment",
+
             "ved_comment",
 
+
             "total_price_cny",
+
             "total_volume_m3",
+
             "total_weight_tons",
 
+
             "quantity",
+
           ].join(
             ","
           ),
 
+
           "&order=position_sort.asc.nullslast,priority_rank.asc.nullslast",
+
         ].join(
           ""
         )
@@ -574,8 +692,11 @@ export async function GET(
       >(
         [
           "ved_order_totals",
+
           `?ved_order_id=eq.${orderId}`,
+
           "&select=*",
+
         ].join(
           ""
         )
@@ -586,6 +707,7 @@ export async function GET(
       totalsRows.length
         ? totalsRows[0]
         : {
+
             ved_order_id:
               order.id,
 
@@ -612,6 +734,7 @@ export async function GET(
 
             total_weight_tons:
               0,
+
           };
 
 
@@ -642,7 +765,7 @@ export async function GET(
           item
         ) =>
           item.moq_review_status ===
-          "pending"
+            "pending"
       ).length;
 
 
