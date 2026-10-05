@@ -112,7 +112,7 @@ function GlobeIcon() {
 
 
 // ============================================================
-// DECORATION
+// HEADER DECORATION
 // ============================================================
 
 function HeaderDecoration() {
@@ -131,159 +131,10 @@ function HeaderDecoration() {
 
         <defs>
 
-
-          {/* ================================================
-              FIRST
-          ================================================= */}
+          {/* ПЕРВЫЙ БЛОК */}
 
           <linearGradient
-            id="homeRibbonFirst"
-            x1="0%"
-            y1="50%"
-            x2="100%"
-            y2="50%"
-          >
-            <stop
-              offset="0%"
-              stopColor="#0789f3"
-            />
-
-            <stop
-              offset="55%"
-              stopColor="#119af2"
-            />
-
-            <stop
-              offset="100%"
-              stopColor="#39aff4"
-            />
-          </linearGradient>
-
-
-          {/* ================================================
-              SECOND
-          ================================================= */}
-
-          <linearGradient
-            id="homeRibbonSecond"
-            x1="0%"
-            y1="50%"
-            x2="100%"
-            y2="50%"
-          >
-            <stop
-              offset="0%"
-              stopColor="#47b2f4"
-              stopOpacity="0.98"
-            />
-
-            <stop
-              offset="45%"
-              stopColor="#74c4f5"
-              stopOpacity="0.94"
-            />
-
-            <stop
-              offset="100%"
-              stopColor="#a6dcf9"
-              stopOpacity="0.82"
-            />
-          </linearGradient>
-
-
-          {/* ================================================
-              THIRD
-          ================================================= */}
-
-          <linearGradient
-            id="homeRibbonThird"
-            x1="0%"
-            y1="50%"
-            x2="100%"
-            y2="50%"
-          >
-            <stop
-              offset="0%"
-              stopColor="#8ccff4"
-              stopOpacity="0.9"
-            />
-
-            <stop
-              offset="42%"
-              stopColor="#acdff8"
-              stopOpacity="0.82"
-            />
-
-            <stop
-              offset="78%"
-              stopColor="#d0ebfb"
-              stopOpacity="0.63"
-            />
-
-            <stop
-              offset="100%"
-              stopColor="#e4f3fc"
-              stopOpacity="0.4"
-            />
-          </linearGradient>
-
-
-          {/* ================================================
-              FOURTH
-          ================================================= */}
-
-          <linearGradient
-            id="homeRibbonFourth"
-            x1="0%"
-            y1="50%"
-            x2="100%"
-            y2="50%"
-          >
-            <stop
-              offset="0%"
-              stopColor="#cbe9fa"
-              stopOpacity="0.52"
-            />
-
-            <stop
-              offset="36%"
-              stopColor="#d9effb"
-              stopOpacity="0.4"
-            />
-
-            <stop
-              offset="72%"
-              stopColor="#e8f6fd"
-              stopOpacity="0.18"
-            />
-
-            <stop
-              offset="100%"
-              stopColor="#ffffff"
-              stopOpacity="0"
-            />
-          </linearGradient>
-
-
-          {/* ================================================
-              LIGHT SOFTNESS
-          ================================================= */}
-
-          <filter
-            id="homeRibbonSoftGlow"
-            x="-20%"
-            y="-60%"
-            width="140%"
-            height="220%"
-          >
-            <feGaussianBlur
-              stdDeviation="7"
-            />
-          </filter>
-
-
-          <linearGradient
-            id="homeRibbonGlow"
+            id="homeDecor1"
             x1="0%"
             y1="0%"
             x2="100%"
@@ -291,20 +142,80 @@ function HeaderDecoration() {
           >
             <stop
               offset="0%"
-              stopColor="#149cf1"
-              stopOpacity="0.12"
-            />
-
-            <stop
-              offset="45%"
-              stopColor="#83cdf6"
-              stopOpacity="0.12"
+              stopColor="#078bf2"
             />
 
             <stop
               offset="100%"
-              stopColor="#dff2fc"
-              stopOpacity="0"
+              stopColor="#159bf0"
+            />
+          </linearGradient>
+
+
+          {/* ВТОРОЙ БЛОК */}
+
+          <linearGradient
+            id="homeDecor2"
+            x1="0%"
+            y1="0%"
+            x2="100%"
+            y2="0%"
+          >
+            <stop
+              offset="0%"
+              stopColor="#4cb2ef"
+            />
+
+            <stop
+              offset="100%"
+              stopColor="#82c9f3"
+            />
+          </linearGradient>
+
+
+          {/* ТРЕТИЙ БЛОК */}
+
+          <linearGradient
+            id="homeDecor3"
+            x1="0%"
+            y1="0%"
+            x2="100%"
+            y2="0%"
+          >
+            <stop
+              offset="0%"
+              stopColor="#92d2f4"
+            />
+
+            <stop
+              offset="100%"
+              stopColor="#c7e7f8"
+            />
+          </linearGradient>
+
+
+          {/* ЧЕТВЁРТЫЙ БЛОК */}
+
+          <linearGradient
+            id="homeDecor4"
+            x1="0%"
+            y1="0%"
+            x2="100%"
+            y2="0%"
+          >
+            <stop
+              offset="0%"
+              stopColor="#9cb8cc"
+            />
+
+            <stop
+              offset="55%"
+              stopColor="#8099ad"
+            />
+
+            <stop
+              offset="100%"
+              stopColor="#657b8d"
             />
           </linearGradient>
 
@@ -312,155 +223,138 @@ function HeaderDecoration() {
 
 
         {/* ==================================================
-            SOFT BACKGROUND GLOW
+            1 — КОРОТКИЙ
         =================================================== */}
 
         <path
           d="
-            M 20 55
-            L 55 15
-            L 535 15
-            L 498 55
+            M 15 53
+
+            L 38 18
+
+            Q 41 14
+              47 14
+
+            L 97 14
+
+            Q 102 14
+              99 18
+
+            L 76 53
+
+            Q 73 58
+              67 58
+
+            L 19 58
+
+            Q 12 58
+              15 53
+
             Z
           "
-          fill="url(#homeRibbonGlow)"
-          filter="url(#homeRibbonSoftGlow)"
+          fill="url(#homeDecor1)"
         />
 
 
         {/* ==================================================
-            FIRST SHORT RIBBON
+            2
         =================================================== */}
 
         <path
           d="
-            M 14 54
+            M 108 53
 
-            L 43 17
+            L 131 18
 
-            Q 46 13
-              51 13
+            Q 134 14
+              140 14
 
-            L 91 13
+            L 229 14
 
-            Q 95 13
-              92 17
+            Q 234 14
+              231 18
 
-            L 63 54
+            L 208 53
 
-            Q 60 58
-              55 58
+            Q 205 58
+              199 58
 
-            L 18 58
+            L 112 58
 
-            Q 11 58
-              14 54
+            Q 105 58
+              108 53
 
             Z
           "
-          fill="url(#homeRibbonFirst)"
+          fill="url(#homeDecor2)"
         />
 
 
         {/* ==================================================
-            SECOND RIBBON
+            3
         =================================================== */}
 
         <path
           d="
-            M 63 54
+            M 240 53
 
-            L 95 14
+            L 263 18
 
-            Q 98 10
-              104 10
+            Q 266 14
+              272 14
 
-            L 211 10
+            L 405 14
 
-            Q 217 10
-              213 15
+            Q 410 14
+              407 18
 
-            L 182 54
+            L 384 53
 
-            Q 179 58
-              173 58
+            Q 381 58
+              375 58
 
-            L 67 58
+            L 244 58
 
-            Q 60 58
-              63 54
+            Q 237 58
+              240 53
 
             Z
           "
-          fill="url(#homeRibbonSecond)"
+          fill="url(#homeDecor3)"
         />
 
 
         {/* ==================================================
-            THIRD LARGE RIBBON
+            4
         =================================================== */}
 
         <path
           d="
-            M 165 54
+            M 416 53
 
-            L 198 14
+            L 439 18
 
-            Q 202 9
-              209 9
+            Q 442 14
+              448 14
 
-            L 397 9
+            L 549 14
 
-            Q 404 9
-              400 14
+            Q 554 14
+              551 18
 
-            L 370 53
+            L 528 53
 
-            Q 366 58
-              358 58
+            Q 525 58
+              519 58
 
-            L 170 58
+            L 420 58
 
-            Q 162 58
-              165 54
-
-            Z
-          "
-          fill="url(#homeRibbonThird)"
-        />
-
-
-        {/* ==================================================
-            FOURTH FADING RIBBON
-        =================================================== */}
-
-        <path
-          d="
-            M 350 54
-
-            L 383 15
-
-            Q 387 10
-              394 10
-
-            L 546 10
-
-            Q 552 10
-              548 15
-
-            L 518 53
-
-            Q 514 58
-              506 58
-
-            L 355 58
-
-            Q 347 58
-              350 54
+            Q 413 58
+              416 53
 
             Z
           "
-          fill="url(#homeRibbonFourth)"
+          fill="url(#homeDecor4)"
         />
 
       </svg>
@@ -613,9 +507,6 @@ export default function Home() {
 
         <header className="home-topbar">
 
-
-          {/* SEARCH */}
-
           <div className="home-search">
 
             <span className="home-search-icon">
@@ -637,8 +528,6 @@ export default function Home() {
           </div>
 
 
-          {/* ACTIONS */}
-
           <HomeHeaderActions />
 
         </header>
@@ -649,7 +538,6 @@ export default function Home() {
         ==================================================== */}
 
         <section className="home-content">
-
 
           <div className="home-title-row">
 
