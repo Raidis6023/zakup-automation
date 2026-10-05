@@ -1147,83 +1147,244 @@ html[data-theme="dark"]
    DECORATION
    ============================================================ */
 
+/* ============================================================
+   DECORATION
+   ============================================================ */
+
 .home-decoration {
+  position: relative;
+
   display: flex;
 
   align-items: center;
 
   width:
     min(
-      390px,
-      34vw
+      430px,
+      36vw
     );
 
-  height: 54px;
+  height: 58px;
 
-  overflow: visible;
+  overflow: hidden;
 
-  padding-left: 4px;
+  isolation: isolate;
 }
 
 
+/*
+   Мягкая общая голубая подложка.
+   Она визуально связывает отдельные элементы
+   в одну цельную ленту.
+*/
+
+.home-decoration::before {
+  content: "";
+
+  position: absolute;
+
+  left: 18px;
+  right: 0;
+
+  top: 50%;
+
+  height: 38px;
+
+  transform:
+    translateY(-50%);
+
+  background:
+    linear-gradient(
+      90deg,
+
+      rgba(12, 137, 239, 0.16) 0%,
+
+      rgba(64, 169, 239, 0.18) 25%,
+
+      rgba(139, 208, 247, 0.18) 55%,
+
+      rgba(204, 234, 250, 0.13) 78%,
+
+      rgba(226, 243, 252, 0) 100%
+    );
+
+  filter:
+    blur(10px);
+
+  z-index: -1;
+}
+
+
+/* ------------------------------------------------------------
+   ОБЩАЯ ФОРМА СЕГМЕНТОВ
+   ------------------------------------------------------------ */
+
 .home-decoration span {
+  position: relative;
+
   display: block;
 
-  height: 32px;
-
-  margin-right: 7px;
+  height: 34px;
 
   flex-shrink: 0;
 
+  margin-right: -9px;
+
   clip-path:
     polygon(
-      18% 0,
+      15% 0,
       100% 0,
-      82% 100%,
+      85% 100%,
       0 100%
     );
+
+  transform:
+    translateZ(0);
 }
 
+
+/* ------------------------------------------------------------
+   ПЕРВАЯ КОРОТКАЯ СИНЯЯ ПОЛОСКА
+   ------------------------------------------------------------ */
 
 .home-decoration span:nth-child(1) {
-  width: 52px;
+  width: 58px;
+
+  z-index: 4;
 
   background:
-    #0e8bf2;
+    linear-gradient(
+      110deg,
+
+      #0584ec 0%,
+
+      #0b91f2 42%,
+
+      #30a5f2 100%
+    );
 }
 
+
+/* ------------------------------------------------------------
+   ВТОРАЯ ПОЛОСКА
+   ------------------------------------------------------------ */
 
 .home-decoration span:nth-child(2) {
-  width: 86px;
+  width: 112px;
+
+  z-index: 3;
 
   background:
     linear-gradient(
-      90deg,
-      #5fb9f4,
-      #94cef5
+      105deg,
+
+      rgba(55, 164, 238, 0.96) 0%,
+
+      rgba(100, 191, 243, 0.9) 46%,
+
+      rgba(145, 211, 247, 0.76) 100%
     );
 }
 
+
+/* ------------------------------------------------------------
+   ТРЕТЬЯ — ОСНОВНАЯ ШИРОКАЯ
+   ------------------------------------------------------------ */
 
 .home-decoration span:nth-child(3) {
-  width: 128px;
+  width: 174px;
+
+  z-index: 2;
 
   background:
     linear-gradient(
-      90deg,
-      #a6d8f7,
-      #c8e6f9
+      102deg,
+
+      rgba(125, 202, 244, 0.84) 0%,
+
+      rgba(166, 220, 249, 0.72) 44%,
+
+      rgba(204, 235, 251, 0.55) 100%
     );
 }
 
 
+/* ------------------------------------------------------------
+   ПОСЛЕДНЯЯ — ПЛАВНО ИСЧЕЗАЕТ
+   ------------------------------------------------------------ */
+
 .home-decoration span:nth-child(4) {
-  width: 102px;
+  width: 128px;
+
+  z-index: 1;
 
   background:
-    #e1f0fa;
+    linear-gradient(
+      100deg,
+
+      rgba(193, 230, 250, 0.58) 0%,
+
+      rgba(216, 239, 252, 0.38) 48%,
+
+      rgba(232, 246, 253, 0.08) 85%,
+
+      rgba(232, 246, 253, 0) 100%
+    );
 }
 
+
+/* ------------------------------------------------------------
+   ЛЁГКОЕ СМЯГЧЕНИЕ СТЫКОВ
+   ------------------------------------------------------------ */
+
+.home-decoration span::after {
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+  right: 0;
+
+  width: 28%;
+
+  height: 100%;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.09)
+    );
+
+  pointer-events: none;
+}
+
+
+/* ------------------------------------------------------------
+   DARK THEME
+   ------------------------------------------------------------ */
+
+html[data-theme="dark"]
+.home-decoration::before {
+  opacity: 0.7;
+}
+
+
+html[data-theme="dark"]
+.home-decoration span:nth-child(4) {
+  background:
+    linear-gradient(
+      100deg,
+
+      rgba(126, 171, 202, 0.52) 0%,
+
+      rgba(112, 149, 177, 0.33) 48%,
+
+      rgba(87, 112, 132, 0.12) 82%,
+
+      rgba(87, 112, 132, 0) 100%
+    );
+}
 
 /* ============================================================
    EMPTY CONTENT
