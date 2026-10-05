@@ -16,78 +16,44 @@ export const runtime = "nodejs";
 
 type VedOrder = {
   id: string;
-
   order_number: string | null;
-
   status: string;
-
   workflow_status: string;
-
   calculation_scenario: string | null;
-
   transport_mode: string | null;
-
   transport_variant: string | null;
-
   preparation_responsible_name: string | null;
-
   ved_responsible_name: string | null;
-
   created_at: string;
-
   first_sent_to_ved_at: string | null;
-
   production_handoff_date: string | null;
-
   expected_arrival_date: string | null;
 };
 
 
 type VedOrderItem = {
   id: string;
-
   product_id: string | null;
-
   position_sort: number | null;
-
   status: string;
-
   moq_review_status: string | null;
-
   chinese_article_snapshot: string | null;
-
   our_article_snapshot: string | null;
-
   product_name_snapshot: string | null;
-
   photo_url: string | null;
-
   incoterm: string | null;
-
   port: string | null;
-
   order_quantity: number;
-
   cartons: number | null;
-
   unit_price_cny: number | null;
-
   total_price_cny: number | null;
-
   units_per_carton_snapshot: number | null;
-
   carton_volume_m3_snapshot: number | null;
-
   carton_weight_kg_snapshot: number | null;
-
   total_volume_m3: number | null;
-
   total_weight_tons: number | null;
-
   moq_quantity: number | null;
-
   analytics_comment: string | null;
-
   ved_comment: string | null;
 };
 
@@ -113,20 +79,16 @@ function getSupabaseConfig() {
 
 
   if (!supabaseUrl) {
-
     throw new Error(
       "Vercel не видит NEXT_PUBLIC_SUPABASE_URL"
     );
-
   }
 
 
   if (!supabaseSecretKey) {
-
     throw new Error(
       "Vercel не видит SUPABASE_SECRET_KEY"
     );
-
   }
 
 
@@ -181,17 +143,13 @@ function formatDateRu(
         0,
         10
       )
-      .split(
-        "-"
-      );
+      .split("-");
 
 
   if (
     parts.length !== 3
   ) {
-
     return value;
-
   }
 
 
@@ -265,8 +223,7 @@ function getTransportLabel(
 
 
   const value =
-    rawValue
-      .toLowerCase();
+    rawValue.toLowerCase();
 
 
   if (
@@ -274,9 +231,7 @@ function getTransportLabel(
       "container"
     )
   ) {
-
     return "Контейнер";
-
   }
 
 
@@ -285,9 +240,7 @@ function getTransportLabel(
       "truck"
     )
   ) {
-
     return "Фура";
-
   }
 
 
@@ -333,16 +286,12 @@ function numberOrZero(
     ||
     value === ""
   ) {
-
     return 0;
-
   }
 
 
   const result =
-    Number(
-      value
-    );
+    Number(value);
 
 
   if (
@@ -350,13 +299,104 @@ function numberOrZero(
       result
     )
   ) {
-
     return 0;
-
   }
 
 
   return result;
+
+}
+
+
+// ============================================================
+// SMART NUMBER FORMAT
+//
+// Целое:
+// 7200 -> 7 200
+//
+// Дробное:
+// 7.35 -> 7,35
+//
+// Максимум два знака после запятой.
+// ============================================================
+
+function getNumericValueFromCell(
+  value: unknown
+):
+  number | null {
+
+  if (
+    typeof value === "number"
+    &&
+    Number.isFinite(value)
+  ) {
+    return value;
+  }
+
+
+  if (
+    typeof value === "object"
+    &&
+    value !== null
+    &&
+    "result" in value
+  ) {
+
+    const result =
+      (
+        value as {
+          result?: unknown;
+        }
+      ).result;
+
+
+    if (
+      typeof result === "number"
+      &&
+      Number.isFinite(result)
+    ) {
+      return result;
+    }
+
+  }
+
+
+  return null;
+
+}
+
+
+function applySmartNumberFormat(
+  cell: ExcelJS.Cell
+) {
+
+  const value =
+    getNumericValueFromCell(
+      cell.value
+    );
+
+
+  if (
+    value === null
+  ) {
+    return;
+  }
+
+
+  if (
+    Number.isInteger(value)
+  ) {
+
+    cell.numFmt =
+      "#,##0";
+
+    return;
+
+  }
+
+
+  cell.numFmt =
+    "#,##0.##";
 
 }
 
@@ -416,12 +456,6 @@ function getExcelColumnLetter(
 
 // ============================================================
 // IMAGE
-//
-// Любое изображение, которое понимает Sharp,
-// преобразовываем в PNG.
-//
-// Благодаря этому ExcelJS не зависит от того,
-// пришёл ли с Ozon JPEG, WEBP, AVIF и т. д.
 // ============================================================
 
 async function loadImageAsPng(
@@ -456,9 +490,7 @@ async function loadImageAsPng(
     if (
       !response.ok
     ) {
-
       return null;
-
     }
 
 
@@ -469,9 +501,7 @@ async function loadImageAsPng(
     if (
       arrayBuffer.byteLength === 0
     ) {
-
       return null;
-
     }
 
 
@@ -660,12 +690,6 @@ export async function GET(
 
     // ========================================================
     // 4. DRAFT READINESS
-    //
-    // В черновике экспорт разрешён только после того,
-    // как заполнены обязательные данные.
-    //
-    // После выхода из draft экспорт остаётся доступным
-    // на всех дальнейших этапах, включая arrived.
     // ========================================================
 
     if (
@@ -785,10 +809,6 @@ export async function GET(
         await itemsResponse.json();
 
 
-    // ========================================================
-    // 6. INCLUDED ITEMS
-    // ========================================================
-
     const items =
       allItems.filter(
         (
@@ -799,9 +819,7 @@ export async function GET(
             item.status ===
               "rejected"
           ) {
-
             return false;
-
           }
 
 
@@ -809,9 +827,7 @@ export async function GET(
             item.moq_review_status ===
               "rejected"
           ) {
-
             return false;
-
           }
 
 
@@ -820,9 +836,7 @@ export async function GET(
               item.order_quantity
             ) <= 0
           ) {
-
             return false;
-
           }
 
 
@@ -854,7 +868,7 @@ export async function GET(
 
 
     // ========================================================
-    // 7. WORKBOOK
+    // 6. WORKBOOK
     // ========================================================
 
     const workbook =
@@ -886,7 +900,7 @@ export async function GET(
 
 
     // ========================================================
-    // 8. COLUMNS
+    // 7. COLUMNS
     // ========================================================
 
     const firstProductColumn =
@@ -932,7 +946,7 @@ export async function GET(
 
 
     // ========================================================
-    // 9. TITLE
+    // 8. TITLE
     // ========================================================
 
     worksheet.mergeCells(
@@ -979,7 +993,7 @@ export async function GET(
 
 
     // ========================================================
-    // 10. ORDER META
+    // 9. ORDER META
     // ========================================================
 
     const exportDateSource =
@@ -1071,9 +1085,7 @@ export async function GET(
 
 
     // ========================================================
-    // 11. TABLE HEADER
-    //
-    // Больше не повторяем китайский артикул.
+    // 10. TABLE HEADER
     // ========================================================
 
     const tableHeaderRow =
@@ -1111,7 +1123,7 @@ export async function GET(
 
 
     // ========================================================
-    // 12. ROWS
+    // 11. ROWS
     // ========================================================
 
     const rows = [
@@ -1258,7 +1270,7 @@ export async function GET(
 
 
     // ========================================================
-    // 13. SET VALUE
+    // 12. SET VALUE
     // ========================================================
 
     function setValue(
@@ -1296,7 +1308,7 @@ export async function GET(
 
 
     // ========================================================
-    // 14. PRODUCT VALUES
+    // 13. PRODUCT VALUES
     // ========================================================
 
     items.forEach(
@@ -1436,15 +1448,7 @@ export async function GET(
 
 
     // ========================================================
-    // 15. TOTAL FORMULAS
-    //
-    // Это именно Excel-формулы.
-    //
-    // В файле хранится:
-    // SUM(B14:C14)
-    //
-    // В русской версии Excel пользователь увидит:
-    // СУММ(B14:C14)
+    // 14. TOTAL FORMULAS
     // ========================================================
 
     const firstProductLetter =
@@ -1476,20 +1480,20 @@ export async function GET(
       }
 
 
-      const formula =
-        `SUM(` +
-        `${firstProductLetter}${row}:` +
-        `${lastProductLetter}${row}` +
-        `)`;
-
-
       worksheet.getCell(
         row,
         totalColumn
       ).value = {
-        formula,
+
+        formula:
+          `SUM(` +
+          `${firstProductLetter}${row}:` +
+          `${lastProductLetter}${row}` +
+          `)`,
+
         result:
           cachedResult,
+
       };
 
     }
@@ -1596,11 +1600,7 @@ export async function GET(
 
 
     // ========================================================
-    // 16. PHOTOS
-    //
-    // Загружаем исходное фото.
-    // Sharp преобразовывает его в PNG.
-    // Затем PNG встраивается прямо в XLSX.
+    // 15. PHOTOS
     // ========================================================
 
     const photoRow =
@@ -1630,9 +1630,7 @@ export async function GET(
             if (
               !item.photo_url
             ) {
-
               return;
-
             }
 
 
@@ -1654,6 +1652,7 @@ export async function GET(
                 photoRow,
                 column
               ).value = {
+
                 text:
                   "Открыть фото",
 
@@ -1662,6 +1661,7 @@ export async function GET(
 
                 tooltip:
                   "Открыть изображение товара",
+
               };
 
 
@@ -1715,7 +1715,7 @@ export async function GET(
 
 
     // ========================================================
-    // 17. ROW HEIGHTS
+    // 16. HEIGHTS
     // ========================================================
 
     const nameRow =
@@ -1773,7 +1773,7 @@ export async function GET(
 
 
     // ========================================================
-    // 18. HEADER STYLE
+    // 17. HEADER STYLE
     // ========================================================
 
     const headerRow =
@@ -1857,7 +1857,7 @@ export async function GET(
 
 
     // ========================================================
-    // 19. TABLE STYLE
+    // 18. TABLE STYLE
     // ========================================================
 
     for (
@@ -1973,15 +1973,7 @@ export async function GET(
 
 
     // ========================================================
-    // 20. NUMBER FORMATS
-    //
-    // Максимум 2 знака после запятой.
-    //
-    // Например:
-    // 6
-    // 7,35
-    // 0,08
-    // 15
+    // 19. NUMBER FORMATS
     // ========================================================
 
     const integerKeys = [
@@ -2026,7 +2018,14 @@ export async function GET(
     );
 
 
-    const decimalKeys = [
+    // ========================================================
+    // УМНОЕ ФОРМАТИРОВАНИЕ
+    //
+    // Целое число -> без запятой.
+    // Дробное -> максимум 2 цифры.
+    // ========================================================
+
+    const smartDecimalKeys = [
       "unit_price",
       "total_price",
       "carton_volume",
@@ -2036,7 +2035,7 @@ export async function GET(
     ];
 
 
-    decimalKeys.forEach(
+    smartDecimalKeys.forEach(
       (
         key
       ) => {
@@ -2058,11 +2057,12 @@ export async function GET(
           column++
         ) {
 
-          worksheet.getCell(
-            row,
-            column
-          ).numFmt =
-            "#,##0.##";
+          applySmartNumberFormat(
+            worksheet.getCell(
+              row,
+              column
+            )
+          );
 
         }
 
@@ -2071,7 +2071,7 @@ export async function GET(
 
 
     // ========================================================
-    // 21. FREEZE
+    // 20. FREEZE
     // ========================================================
 
     worksheet.views = [
@@ -2089,7 +2089,7 @@ export async function GET(
 
 
     // ========================================================
-    // 22. PRINT
+    // 21. PRINT
     // ========================================================
 
     worksheet.pageSetup = {
@@ -2131,7 +2131,7 @@ export async function GET(
 
 
     // ========================================================
-    // 23. FILENAME
+    // 22. FILENAME
     // ========================================================
 
     const fileDate =
@@ -2156,7 +2156,7 @@ export async function GET(
 
 
     // ========================================================
-    // 24. WRITE
+    // 23. WRITE
     // ========================================================
 
     const excelBuffer =
