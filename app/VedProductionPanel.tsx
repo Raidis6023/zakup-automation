@@ -23,7 +23,13 @@ type VedOrder = {
   production_handoff_date: string | null;
   production_confirmed_at: string | null;
 
+  transit_departure_date: string | null;
+  transit_started_at: string | null;
+
   expected_arrival_date: string | null;
+
+  actual_arrival_date: string | null;
+  arrival_confirmed_at: string | null;
 
   planned_lead_days?: number | null;
 };
@@ -58,6 +64,52 @@ type ProductionResponse = {
   expected_arrival_date?: string;
 
   included_items?: number;
+};
+
+
+type TransitResponse = {
+  ok: boolean;
+
+  error?: string;
+
+  order_id?: string;
+
+  order_number?: string;
+
+  workflow_status?: string;
+
+  transit_departure_date?: string;
+
+  transit_started_at?: string;
+
+  expected_arrival_date?: string;
+
+  included_items?: number;
+};
+
+
+type ArrivalResponse = {
+  ok: boolean;
+
+  error?: string;
+
+  order_id?: string;
+
+  order_number?: string;
+
+  workflow_status?: string;
+
+  item_status?: string;
+
+  actual_arrival_date?: string;
+
+  arrival_confirmed_at?: string;
+
+  expected_arrival_date?: string;
+
+  included_items?: number;
+
+  stock_bridge_active?: boolean;
 };
 
 
@@ -140,6 +192,24 @@ export default function VedProductionPanel(
 
 
   const [
+    transitDate,
+    setTransitDate,
+  ] =
+    useState(
+      ""
+    );
+
+
+  const [
+    arrivalDate,
+    setArrivalDate,
+  ] =
+    useState(
+      ""
+    );
+
+
+  const [
     loading,
     setLoading,
   ] =
@@ -167,8 +237,26 @@ export default function VedProductionPanel(
 
 
   const [
-    dateError,
-    setDateError,
+    productionDateError,
+    setProductionDateError,
+  ] =
+    useState(
+      false
+    );
+
+
+  const [
+    transitDateError,
+    setTransitDateError,
+  ] =
+    useState(
+      false
+    );
+
+
+  const [
+    arrivalDateError,
+    setArrivalDateError,
   ] =
     useState(
       false
@@ -184,6 +272,7 @@ export default function VedProductionPanel(
     setLoading(
       true
     );
+
 
     setError(
       ""
@@ -241,6 +330,20 @@ export default function VedProductionPanel(
 
       setProductionDate(
         result.order.production_handoff_date
+        ??
+        ""
+      );
+
+
+      setTransitDate(
+        result.order.transit_departure_date
+        ??
+        ""
+      );
+
+
+      setArrivalDate(
+        result.order.actual_arrival_date
         ??
         ""
       );
@@ -309,13 +412,15 @@ export default function VedProductionPanel(
 
     if (!productionDate) {
 
-      setDateError(
+      setProductionDateError(
         true
       );
+
 
       setError(
         ""
       );
+
 
       return;
 
@@ -343,11 +448,13 @@ export default function VedProductionPanel(
       true
     );
 
+
     setError(
       ""
     );
 
-    setDateError(
+
+    setProductionDateError(
       false
     );
 
@@ -439,6 +546,292 @@ export default function VedProductionPanel(
 
 
   // ==========================================================
+  // CONFIRM TRANSIT
+  // ==========================================================
+
+  async function confirmTransit() {
+
+    if (!order) {
+      return;
+    }
+
+
+    if (!transitDate) {
+
+      setTransitDateError(
+        true
+      );
+
+
+      setError(
+        ""
+      );
+
+
+      return;
+
+    }
+
+
+    const actorName =
+      order
+        .ved_responsible_name
+        ?.trim();
+
+
+    if (!actorName) {
+
+      setError(
+        "У заказа не назначен ответственный ВЭД"
+      );
+
+      return;
+
+    }
+
+
+    setSubmitting(
+      true
+    );
+
+
+    setError(
+      ""
+    );
+
+
+    setTransitDateError(
+      false
+    );
+
+
+    try {
+
+      const response =
+        await fetch(
+          `/api/ved-orders/${orderId}/transit`,
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify(
+                {
+                  transitDepartureDate:
+                    transitDate,
+
+                  actorName,
+
+                  actorUserId:
+                    order
+                      .ved_responsible_user_id
+                    ??
+                    null,
+
+                  actorRole:
+                    "ved",
+                }
+              ),
+
+            cache:
+              "no-store",
+          }
+        );
+
+
+      const result:
+        TransitResponse =
+          await response.json();
+
+
+      if (
+        !response.ok
+        ||
+        !result.ok
+      ) {
+
+        throw new Error(
+          result.error
+          ||
+          "Не удалось подтвердить отправку заказа"
+        );
+
+      }
+
+
+      window.location.reload();
+
+
+    } catch (
+      caughtError
+    ) {
+
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Неизвестная ошибка подтверждения отправки заказа"
+      );
+
+    } finally {
+
+      setSubmitting(
+        false
+      );
+
+    }
+
+  }
+
+
+  // ==========================================================
+  // CONFIRM ARRIVAL
+  // ==========================================================
+
+  async function confirmArrival() {
+
+    if (!order) {
+      return;
+    }
+
+
+    if (!arrivalDate) {
+
+      setArrivalDateError(
+        true
+      );
+
+
+      setError(
+        ""
+      );
+
+
+      return;
+
+    }
+
+
+    const actorName =
+      order
+        .ved_responsible_name
+        ?.trim();
+
+
+    if (!actorName) {
+
+      setError(
+        "У заказа не назначен ответственный ВЭД"
+      );
+
+      return;
+
+    }
+
+
+    setSubmitting(
+      true
+    );
+
+
+    setError(
+      ""
+    );
+
+
+    setArrivalDateError(
+      false
+    );
+
+
+    try {
+
+      const response =
+        await fetch(
+          `/api/ved-orders/${orderId}/arrival`,
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify(
+                {
+                  actualArrivalDate:
+                    arrivalDate,
+
+                  actorName,
+
+                  actorUserId:
+                    order
+                      .ved_responsible_user_id
+                    ??
+                    null,
+
+                  actorRole:
+                    "ved",
+                }
+              ),
+
+            cache:
+              "no-store",
+          }
+        );
+
+
+      const result:
+        ArrivalResponse =
+          await response.json();
+
+
+      if (
+        !response.ok
+        ||
+        !result.ok
+      ) {
+
+        throw new Error(
+          result.error
+          ||
+          "Не удалось подтвердить прибытие заказа"
+        );
+
+      }
+
+
+      window.location.reload();
+
+
+    } catch (
+      caughtError
+    ) {
+
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Неизвестная ошибка подтверждения прибытия заказа"
+      );
+
+    } finally {
+
+      setSubmitting(
+        false
+      );
+
+    }
+
+  }
+
+
+  // ==========================================================
   // LOADING
   // ==========================================================
 
@@ -480,16 +873,10 @@ export default function VedProductionPanel(
 
 
   // ==========================================================
-  // ALREADY CONFIRMED
+  // ARRIVED
   // ==========================================================
 
   if (
-    order.workflow_status ===
-      "production_confirmed"
-    ||
-    order.workflow_status ===
-      "in_transit"
-    ||
     order.workflow_status ===
       "arrived"
   ) {
@@ -502,6 +889,577 @@ export default function VedProductionPanel(
         style={{
           padding:
             "16px 20px",
+
+          marginBottom:
+            "14px",
+        }}
+      >
+
+        <div
+          className="small-label"
+        >
+          ПРИБЫТИЕ
+        </div>
+
+
+        <div
+          style={{
+            display:
+              "flex",
+
+            justifyContent:
+              "space-between",
+
+            alignItems:
+              "center",
+
+            gap:
+              "18px",
+
+            flexWrap:
+              "wrap",
+
+            marginTop:
+              "8px",
+          }}
+        >
+
+          <div>
+
+            <div
+              style={{
+                fontSize:
+                  "18px",
+
+                fontWeight:
+                  700,
+              }}
+            >
+              Заказ прибыл
+            </div>
+
+
+            <div
+              className="muted"
+
+              style={{
+                marginTop:
+                  "4px",
+              }}
+            >
+              Фактическое прибытие заказа подтверждено.
+            </div>
+
+          </div>
+
+
+          <div
+            style={{
+              display:
+                "flex",
+
+              gap:
+                "28px",
+
+              flexWrap:
+                "wrap",
+            }}
+          >
+
+            <div>
+
+              <div className="card-label">
+                Номер заказа
+              </div>
+
+              <strong>
+                {order.order_number
+                ??
+                "—"}
+              </strong>
+
+            </div>
+
+
+            <div>
+
+              <div className="card-label">
+                Передан в производство
+              </div>
+
+              <strong>
+                {formatDate(
+                  order.production_handoff_date
+                )}
+              </strong>
+
+            </div>
+
+
+            <div>
+
+              <div className="card-label">
+                Отправлен
+              </div>
+
+              <strong>
+                {formatDate(
+                  order.transit_departure_date
+                )}
+              </strong>
+
+            </div>
+
+
+            <div>
+
+              <div className="card-label">
+                Ожидалось
+              </div>
+
+              <strong>
+                {formatDate(
+                  order.expected_arrival_date
+                )}
+              </strong>
+
+            </div>
+
+
+            <div>
+
+              <div className="card-label">
+                Фактически прибыл
+              </div>
+
+              <strong>
+                {formatDate(
+                  order.actual_arrival_date
+                )}
+              </strong>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        {error && (
+
+          <div
+            style={{
+              marginTop:
+                "12px",
+
+              color:
+                "#d64545",
+
+              fontWeight:
+                700,
+            }}
+          >
+            {error}
+          </div>
+
+        )}
+
+      </section>
+
+    );
+
+  }
+
+
+  // ==========================================================
+  // IN TRANSIT
+  // ==========================================================
+
+  if (
+    order.workflow_status ===
+      "in_transit"
+  ) {
+
+    return (
+
+      <section
+        className="section"
+
+        style={{
+          padding:
+            "18px 20px",
+
+          marginBottom:
+            "14px",
+        }}
+      >
+
+        <div
+          className="small-label"
+        >
+          ЛОГИСТИКА
+        </div>
+
+
+        <div
+          style={{
+            display:
+              "flex",
+
+            justifyContent:
+              "space-between",
+
+            alignItems:
+              "center",
+
+            gap:
+              "18px",
+
+            flexWrap:
+              "wrap",
+
+            marginTop:
+              "8px",
+          }}
+        >
+
+          <div>
+
+            <div
+              style={{
+                fontSize:
+                  "18px",
+
+                fontWeight:
+                  700,
+              }}
+            >
+              Заказ в пути
+            </div>
+
+
+            <div
+              className="muted"
+
+              style={{
+                marginTop:
+                  "4px",
+              }}
+            >
+              Заказ продолжает учитываться как активный ВЭД.
+            </div>
+
+          </div>
+
+
+          <div
+            style={{
+              display:
+                "flex",
+
+              gap:
+                "28px",
+
+              flexWrap:
+                "wrap",
+            }}
+          >
+
+            <div>
+
+              <div className="card-label">
+                Номер заказа
+              </div>
+
+              <strong>
+                {order.order_number
+                ??
+                "—"}
+              </strong>
+
+            </div>
+
+
+            <div>
+
+              <div className="card-label">
+                Передан в производство
+              </div>
+
+              <strong>
+                {formatDate(
+                  order.production_handoff_date
+                )}
+              </strong>
+
+            </div>
+
+
+            <div>
+
+              <div className="card-label">
+                Отправлен
+              </div>
+
+              <strong>
+                {formatDate(
+                  order.transit_departure_date
+                )}
+              </strong>
+
+            </div>
+
+
+            <div>
+
+              <div className="card-label">
+                Ожидаемое прибытие
+              </div>
+
+              <strong>
+                {formatDate(
+                  order.expected_arrival_date
+                )}
+              </strong>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <div
+          style={{
+            marginTop:
+              "18px",
+
+            paddingTop:
+              "16px",
+
+            borderTop:
+              "1px solid var(--border)",
+          }}
+        >
+
+          <div
+            style={{
+              fontSize:
+                "16px",
+
+              fontWeight:
+                700,
+            }}
+          >
+            Подтверждение прибытия
+          </div>
+
+
+          <div
+            className="muted"
+
+            style={{
+              marginTop:
+                "4px",
+            }}
+          >
+            Укажите фактическую дату прибытия заказа.
+          </div>
+
+
+          <div
+            style={{
+              display:
+                "flex",
+
+              alignItems:
+                "flex-end",
+
+              gap:
+                "12px",
+
+              flexWrap:
+                "wrap",
+
+              marginTop:
+                "14px",
+            }}
+          >
+
+            <div
+              style={{
+                minWidth:
+                  "240px",
+              }}
+            >
+
+              <div
+                className="card-label"
+
+                style={{
+                  marginBottom:
+                    "6px",
+                }}
+              >
+                Фактическая дата прибытия
+              </div>
+
+
+              <input
+                type="date"
+
+                value={
+                  arrivalDate
+                }
+
+                disabled={
+                  submitting
+                }
+
+                onChange={
+                  (
+                    event
+                  ) => {
+
+                    setArrivalDate(
+                      event.target.value
+                    );
+
+
+                    setArrivalDateError(
+                      false
+                    );
+
+
+                    setError(
+                      ""
+                    );
+
+                  }
+                }
+
+                style={{
+                  width:
+                    "100%",
+
+                  minHeight:
+                    "42px",
+
+                  padding:
+                    "0 11px",
+
+                  border:
+                    arrivalDateError
+                      ? "1px solid #d64545"
+                      : "1px solid var(--border)",
+
+                  borderRadius:
+                    "8px",
+
+                  background:
+                    "var(--background)",
+
+                  color:
+                    "var(--text)",
+                }}
+              />
+
+
+              {arrivalDateError && (
+
+                <div
+                  style={{
+                    marginTop:
+                      "6px",
+
+                    color:
+                      "#d64545",
+
+                    fontWeight:
+                      700,
+
+                    fontSize:
+                      "13px",
+                  }}
+                >
+                  Укажите фактическую дату прибытия заказа
+                </div>
+
+              )}
+
+            </div>
+
+
+            <button
+              type="button"
+
+              className="primary-button"
+
+              disabled={
+                submitting
+              }
+
+              onClick={
+                () => {
+
+                  void confirmArrival();
+
+                }
+              }
+            >
+              {submitting
+                ? "Подтверждаем..."
+                : "Подтвердить прибытие"}
+            </button>
+
+          </div>
+
+        </div>
+
+
+        {error && (
+
+          <div
+            style={{
+              marginTop:
+                "12px",
+
+              color:
+                "#d64545",
+
+              fontWeight:
+                700,
+            }}
+          >
+            {error}
+          </div>
+
+        )}
+
+      </section>
+
+    );
+
+  }
+
+
+  // ==========================================================
+  // PRODUCTION CONFIRMED
+  // ==========================================================
+
+  if (
+    order.workflow_status ===
+      "production_confirmed"
+  ) {
+
+    return (
+
+      <section
+        className="section"
+
+        style={{
+          padding:
+            "18px 20px",
 
           marginBottom:
             "14px",
@@ -642,6 +1600,214 @@ export default function VedProductionPanel(
 
         </div>
 
+
+        <div
+          style={{
+            marginTop:
+              "18px",
+
+            paddingTop:
+              "16px",
+
+            borderTop:
+              "1px solid var(--border)",
+          }}
+        >
+
+          <div
+            style={{
+              fontSize:
+                "16px",
+
+              fontWeight:
+                700,
+            }}
+          >
+            Отправка заказа
+          </div>
+
+
+          <div
+            className="muted"
+
+            style={{
+              marginTop:
+                "4px",
+            }}
+          >
+            Укажите фактическую дату отправки заказа из Китая.
+          </div>
+
+
+          <div
+            style={{
+              display:
+                "flex",
+
+              alignItems:
+                "flex-end",
+
+              gap:
+                "12px",
+
+              flexWrap:
+                "wrap",
+
+              marginTop:
+                "14px",
+            }}
+          >
+
+            <div
+              style={{
+                minWidth:
+                  "240px",
+              }}
+            >
+
+              <div
+                className="card-label"
+
+                style={{
+                  marginBottom:
+                    "6px",
+                }}
+              >
+                Фактическая дата отправки
+              </div>
+
+
+              <input
+                type="date"
+
+                value={
+                  transitDate
+                }
+
+                disabled={
+                  submitting
+                }
+
+                onChange={
+                  (
+                    event
+                  ) => {
+
+                    setTransitDate(
+                      event.target.value
+                    );
+
+
+                    setTransitDateError(
+                      false
+                    );
+
+
+                    setError(
+                      ""
+                    );
+
+                  }
+                }
+
+                style={{
+                  width:
+                    "100%",
+
+                  minHeight:
+                    "42px",
+
+                  padding:
+                    "0 11px",
+
+                  border:
+                    transitDateError
+                      ? "1px solid #d64545"
+                      : "1px solid var(--border)",
+
+                  borderRadius:
+                    "8px",
+
+                  background:
+                    "var(--background)",
+
+                  color:
+                    "var(--text)",
+                }}
+              />
+
+
+              {transitDateError && (
+
+                <div
+                  style={{
+                    marginTop:
+                      "6px",
+
+                    color:
+                      "#d64545",
+
+                    fontWeight:
+                      700,
+
+                    fontSize:
+                      "13px",
+                  }}
+                >
+                  Укажите дату фактической отправки заказа
+                </div>
+
+              )}
+
+            </div>
+
+
+            <button
+              type="button"
+
+              className="primary-button"
+
+              disabled={
+                submitting
+              }
+
+              onClick={
+                () => {
+
+                  void confirmTransit();
+
+                }
+              }
+            >
+              {submitting
+                ? "Подтверждаем..."
+                : "Подтвердить отправку"}
+            </button>
+
+          </div>
+
+        </div>
+
+
+        {error && (
+
+          <div
+            style={{
+              marginTop:
+                "12px",
+
+              color:
+                "#d64545",
+
+              fontWeight:
+                700,
+            }}
+          >
+            {error}
+          </div>
+
+        )}
+
       </section>
 
     );
@@ -757,6 +1923,7 @@ export default function VedProductionPanel(
                   event.target.value
                 );
 
+
                 setError(
                   ""
                 );
@@ -827,9 +1994,11 @@ export default function VedProductionPanel(
                   event.target.value
                 );
 
-                setDateError(
+
+                setProductionDateError(
                   false
                 );
+
 
                 setError(
                   ""
@@ -849,7 +2018,7 @@ export default function VedProductionPanel(
                 "0 11px",
 
               border:
-                dateError
+                productionDateError
                   ? "1px solid #d64545"
                   : "1px solid var(--border)",
 
@@ -865,7 +2034,7 @@ export default function VedProductionPanel(
           />
 
 
-          {dateError && (
+          {productionDateError && (
 
             <div
               style={{
