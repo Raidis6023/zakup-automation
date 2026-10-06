@@ -3,131 +3,262 @@ export const dynamic = "force-dynamic";
 
 
 // ============================================================
+// НАСТРОЙКИ
+// ============================================================
+
+const OZON_MAX_RETRIES =
+  5;
+
+
+// Между пачками остатков.
+// Специально не пытаемся выиграть чемпионат
+// по количеству HTTP-запросов в секунду.
+const STOCK_BATCH_DELAY_MS =
+  1600;
+
+
+// Базовая пауза после HTTP 429.
+const RATE_LIMIT_RETRY_MS =
+  1800;
+
+
+// ============================================================
 // ТИПЫ
 // ============================================================
 
 type ProductRow = {
   id: string;
+
   offer_id: string;
-  ozon_product_id: number | string | null;
-  name: string | null;
+
+  ozon_product_id:
+    number
+    | string
+    | null;
+
+  name:
+    string
+    | null;
 };
 
 
 type OzonClusterWarehouse = {
-  warehouse_id?: number | string;
-  name?: string;
+  warehouse_id?:
+    number
+    | string;
+
+  name?:
+    string;
 };
 
 
 type OzonLogisticCluster = {
-  warehouses?: OzonClusterWarehouse[];
+  warehouses?:
+    OzonClusterWarehouse[];
 };
 
 
 type OzonCluster = {
-  id?: number | string;
-  name?: string;
-  logistic_clusters?: OzonLogisticCluster[];
+  id?:
+    number
+    | string;
+
+  name?:
+    string;
+
+  logistic_clusters?:
+    OzonLogisticCluster[];
 };
 
 
 type OzonClusterResponse = {
-  clusters?: OzonCluster[];
+  clusters?:
+    OzonCluster[];
 };
 
 
 type FboPostingProduct = {
-  sku?: number | string;
-  offer_id?: string;
-  name?: string;
-  quantity?: number;
+  sku?:
+    number
+    | string;
+
+  offer_id?:
+    string;
+
+  name?:
+    string;
+
+  quantity?:
+    number;
 };
 
 
 type FboPostingAnalytics = {
-  warehouse_id?: number | string;
-  warehouse_name?: string;
+  warehouse_id?:
+    number
+    | string;
+
+  warehouse_name?:
+    string;
 };
 
 
 type FboPosting = {
-  posting_number?: string;
-  order_number?: string;
-  status?: string;
-  created_at?: string;
-  products?: FboPostingProduct[];
-  analytics_data?: FboPostingAnalytics | null;
+  posting_number?:
+    string;
+
+  order_number?:
+    string;
+
+  status?:
+    string;
+
+  created_at?:
+    string;
+
+  products?:
+    FboPostingProduct[];
+
+  analytics_data?:
+    FboPostingAnalytics
+    | null;
 };
 
 
 type FboPostingResponse = {
-  postings?: FboPosting[];
-  cursor?: string;
-  has_next?: boolean;
+  postings?:
+    FboPosting[];
+
+  cursor?:
+    string;
+
+  has_next?:
+    boolean;
 };
 
 
 type OzonStockItem = {
-  sku?: number | string;
+  sku?:
+    number
+    | string;
 
-  name?: string;
+  name?:
+    string;
 
-  warehouse_id?: number | string;
-  warehouse_name?: string;
+  warehouse_id?:
+    number
+    | string;
 
-  cluster_id?: number | string;
-  cluster_name?: string;
+  warehouse_name?:
+    string;
 
-  available_stock_count?: number;
+  cluster_id?:
+    number
+    | string;
 
-  [key: string]: unknown;
+  cluster_name?:
+    string;
+
+  available_stock_count?:
+    number;
+
+  [key: string]:
+    unknown;
 };
 
 
 type OzonStocksResponse = {
-  items?: OzonStockItem[];
+  items?:
+    OzonStockItem[];
 
-  [key: string]: unknown;
+  [key: string]:
+    unknown;
 };
 
 
 type SalesPreviewRow = {
-  product_id: string;
+  product_id:
+    string;
 
-  offer_id: string;
+  offer_id:
+    string;
 
-  ozon_sku: string;
+  ozon_sku:
+    string;
 
-  cluster_id: string;
+  cluster_id:
+    string;
 
-  cluster_name: string;
+  cluster_name:
+    string;
 
-  warehouse_id: string | null;
+  warehouse_id:
+    string
+    | null;
 
-  warehouse_name: string | null;
+  warehouse_name:
+    string
+    | null;
 
-  sales_quantity: number;
+  sales_quantity:
+    number;
 
-  cancelled_quantity: number;
+  cancelled_quantity:
+    number;
 };
 
 
 type UnmatchedPostingProduct = {
-  posting_number: string | null;
+  posting_number:
+    string
+    | null;
 
-  status: string | null;
+  status:
+    string
+    | null;
 
-  offer_id: string | null;
+  offer_id:
+    string
+    | null;
 
-  sku: string | null;
+  sku:
+    string
+    | null;
 
-  quantity: number;
+  quantity:
+    number;
 
-  warehouse_id: string | null;
+  warehouse_id:
+    string
+    | null;
 
-  warehouse_name: string | null;
+  warehouse_name:
+    string
+    | null;
 };
+
+
+// ============================================================
+// SLEEP
+// ============================================================
+
+function sleep(
+  milliseconds: number
+) {
+
+  return new Promise<void>(
+    (
+      resolve
+    ) => {
+
+      setTimeout(
+        resolve,
+        milliseconds
+      );
+
+    }
+  );
+}
 
 
 // ============================================================
@@ -137,19 +268,23 @@ type UnmatchedPostingProduct = {
 function getConfig() {
 
   const ozonClientId =
-    process.env.OZON_CLIENT_ID;
+    process.env
+      .OZON_CLIENT_ID;
 
 
   const ozonApiKey =
-    process.env.OZON_API_KEY;
+    process.env
+      .OZON_API_KEY;
 
 
   const supabaseUrl =
-    process.env.NEXT_PUBLIC_SUPABASE_URL;
+    process.env
+      .NEXT_PUBLIC_SUPABASE_URL;
 
 
   const supabaseSecretKey =
-    process.env.SUPABASE_SECRET_KEY;
+    process.env
+      .SUPABASE_SECRET_KEY;
 
 
   if (!ozonClientId) {
@@ -198,13 +333,96 @@ function getConfig() {
 
 
 // ============================================================
+// RETRY-AFTER
+// ============================================================
+
+function getRetryDelayMs(
+  response: Response,
+  attempt: number
+) {
+
+  const retryAfter =
+    response.headers.get(
+      "retry-after"
+    );
+
+
+  if (retryAfter) {
+
+    const seconds =
+      Number(
+        retryAfter
+      );
+
+
+    if (
+      Number.isFinite(
+        seconds
+      )
+      &&
+      seconds > 0
+    ) {
+
+      return Math.ceil(
+        seconds
+        * 1000
+      );
+
+    }
+
+
+    const retryDate =
+      new Date(
+        retryAfter
+      );
+
+
+    if (
+      !Number.isNaN(
+        retryDate.getTime()
+      )
+    ) {
+
+      const milliseconds =
+        retryDate.getTime()
+        -
+        Date.now();
+
+
+      if (
+        milliseconds > 0
+      ) {
+
+        return milliseconds;
+
+      }
+
+    }
+
+  }
+
+
+  return (
+    RATE_LIMIT_RETRY_MS
+    *
+    attempt
+  );
+}
+
+
+// ============================================================
 // OZON REQUEST
+//
+// ВАЖНО:
+// при HTTP 429 автоматически ждём
+// и повторяем запрос.
 // ============================================================
 
 async function ozonPost<T>(
   path: string,
   body: unknown
-): Promise<T> {
+):
+Promise<T> {
 
   const {
     ozonClientId,
@@ -213,107 +431,215 @@ async function ozonPost<T>(
     getConfig();
 
 
-  const controller =
-    new AbortController();
+  let lastErrorText =
+    "";
 
 
-  const timeout =
-    setTimeout(
-      () => {
-        controller.abort();
-      },
-      30000
-    );
+  for (
+    let attempt = 1;
+    attempt <= OZON_MAX_RETRIES;
+    attempt += 1
+  ) {
+
+    const controller =
+      new AbortController();
 
 
-  try {
+    const timeout =
+      setTimeout(
+        () => {
 
-    const response =
-      await fetch(
-        `https://api-seller.ozon.ru${path}`,
-        {
-          method:
-            "POST",
+          controller.abort();
 
-          headers: {
-            "Client-Id":
-              ozonClientId,
-
-            "Api-Key":
-              ozonApiKey,
-
-            "Content-Type":
-              "application/json",
-
-            Accept:
-              "application/json",
-          },
-
-          body:
-            JSON.stringify(
-              body
-            ),
-
-          cache:
-            "no-store",
-
-          signal:
-            controller.signal,
-        }
+        },
+        30000
       );
 
 
-    const text =
-      await response.text();
+    try {
+
+      const response =
+        await fetch(
+          `https://api-seller.ozon.ru${path}`,
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Client-Id":
+                ozonClientId,
+
+              "Api-Key":
+                ozonApiKey,
+
+              "Content-Type":
+                "application/json",
+
+              Accept:
+                "application/json",
+            },
+
+            body:
+              JSON.stringify(
+                body
+              ),
+
+            cache:
+              "no-store",
+
+            signal:
+              controller.signal,
+          }
+        );
 
 
-    let json:
-      unknown = null;
+      const text =
+        await response.text();
 
 
-    if (text) {
+      lastErrorText =
+        text;
 
-      try {
 
-        json =
-          JSON.parse(
-            text
-          );
+      let json:
+        unknown = null;
 
-      } catch {
 
-        json = {
-          raw:
-            text,
-        };
+      if (text) {
+
+        try {
+
+          json =
+            JSON.parse(
+              text
+            );
+
+        } catch {
+
+          json = {
+            raw:
+              text,
+          };
+
+        }
 
       }
 
-    }
+
+      // ======================================================
+      // RATE LIMIT
+      // ======================================================
+
+      if (
+        response.status ===
+        429
+      ) {
+
+        if (
+          attempt ===
+          OZON_MAX_RETRIES
+        ) {
+
+          throw new Error(
+            [
+              `Ozon API ${path}`,
+              "HTTP 429",
+              `лимит запросов не снялся после ${OZON_MAX_RETRIES} попыток`,
+              JSON.stringify(
+                json
+              ),
+            ].join(
+              ": "
+            )
+          );
+
+        }
 
 
-    if (!response.ok) {
+        const waitMs =
+          getRetryDelayMs(
+            response,
+            attempt
+          );
 
-      throw new Error(
-        [
-          `Ozon API ${path}`,
-          `HTTP ${response.status}`,
-          JSON.stringify(json),
-        ].join(": ")
+
+        console.warn(
+          [
+            "OZON RATE LIMIT",
+            path,
+            `попытка ${attempt}`,
+            `ждём ${waitMs} мс`,
+          ].join(
+            " | "
+          )
+        );
+
+
+        await sleep(
+          waitMs
+        );
+
+
+        continue;
+
+      }
+
+
+      // ======================================================
+      // ДРУГАЯ ОШИБКА
+      // ======================================================
+
+      if (!response.ok) {
+
+        throw new Error(
+          [
+            `Ozon API ${path}`,
+            `HTTP ${response.status}`,
+            JSON.stringify(
+              json
+            ),
+          ].join(
+            ": "
+          )
+        );
+
+      }
+
+
+      return json as T;
+
+    } catch (error) {
+
+      if (
+        error instanceof Error
+        &&
+        error.name ===
+          "AbortError"
+      ) {
+
+        throw new Error(
+          `Ozon API ${path}: превышено время ожидания запроса`
+        );
+
+      }
+
+
+      throw error;
+
+    } finally {
+
+      clearTimeout(
+        timeout
       );
 
     }
 
-
-    return json as T;
-
-  } finally {
-
-    clearTimeout(
-      timeout
-    );
-
   }
+
+
+  throw new Error(
+    `Ozon API ${path}: запрос завершился ошибкой. ${lastErrorText}`
+  );
 }
 
 
@@ -344,7 +670,9 @@ Promise<ProductRow[]> {
       "offer_id",
       "ozon_product_id",
       "name",
-    ].join(",")
+    ].join(
+      ","
+    )
   );
 
 
@@ -397,13 +725,9 @@ Promise<ProductRow[]> {
   }
 
 
-  const rows =
-    JSON.parse(
-      text
-    ) as ProductRow[];
-
-
-  return rows;
+  return JSON.parse(
+    text
+  ) as ProductRow[];
 }
 
 
@@ -446,7 +770,9 @@ string {
   const year =
     Number(
       parts.find(
-        (part) =>
+        (
+          part
+        ) =>
           part.type ===
           "year"
       )?.value
@@ -456,7 +782,9 @@ string {
   const month =
     Number(
       parts.find(
-        (part) =>
+        (
+          part
+        ) =>
           part.type ===
           "month"
       )?.value
@@ -466,7 +794,9 @@ string {
   const day =
     Number(
       parts.find(
-        (part) =>
+        (
+          part
+        ) =>
           part.type ===
           "day"
       )?.value
@@ -520,9 +850,14 @@ async function getOzonClusters() {
     new Map<
       string,
       {
-        clusterId: string;
-        clusterName: string;
-        warehouseName: string;
+        clusterId:
+          string;
+
+        clusterName:
+          string;
+
+        warehouseName:
+          string;
       }
     >();
 
@@ -602,7 +937,6 @@ async function getOzonClusters() {
 
 
   return {
-    response,
     clusters,
     warehouseToCluster,
   };
@@ -667,10 +1001,6 @@ Promise<FboPosting[]> {
             since,
             to,
           },
-
-          // ==================================================
-          // OZON РАЗРЕШАЕТ МАКСИМУМ 100
-          // ==================================================
 
           limit:
             100,
@@ -808,14 +1138,32 @@ async function getOzonStocks(
     OzonStockItem[] = [];
 
 
-  const rawResponses:
-    OzonStocksResponse[] = [];
-
-
   for (
-    const batch
-    of batches
+    let batchIndex = 0;
+    batchIndex < batches.length;
+    batchIndex += 1
   ) {
+
+    const batch =
+      batches[
+        batchIndex
+      ];
+
+
+    // ========================================================
+    // OZON ОГРАНИЧИВАЕТ ЧАСТОТУ ЭТОГО МЕТОДА
+    // ========================================================
+
+    if (
+      batchIndex > 0
+    ) {
+
+      await sleep(
+        STOCK_BATCH_DELAY_MS
+      );
+
+    }
+
 
     const response =
       await ozonPost<
@@ -827,11 +1175,6 @@ async function getOzonStocks(
             batch,
         }
       );
-
-
-    rawResponses.push(
-      response
-    );
 
 
     const items =
@@ -852,26 +1195,33 @@ async function getOzonStocks(
 
     items:
       allItems,
-
-    rawResponses,
   };
 }
 
 
 // ============================================================
-// АГРЕГАЦИЯ ПРОДАЖ ДЛЯ PREVIEW
+// АГРЕГАЦИЯ ПРОДАЖ
 // ============================================================
 
 function buildSalesPreview(
-  postings: FboPosting[],
-  products: ProductRow[],
+  postings:
+    FboPosting[],
+
+  products:
+    ProductRow[],
+
   warehouseToCluster:
     Map<
       string,
       {
-        clusterId: string;
-        clusterName: string;
-        warehouseName: string;
+        clusterId:
+          string;
+
+        clusterName:
+          string;
+
+        warehouseName:
+          string;
       }
     >
 ) {
@@ -1034,19 +1384,17 @@ function buildSalesPreview(
       const product =
         (
           offerId
-            ? productByOffer
-                .get(
-                  offerId
-                )
+            ? productByOffer.get(
+                offerId
+              )
             : undefined
         )
         ??
         (
           sku
-            ? productByOzonSku
-                .get(
-                  sku
-                )
+            ? productByOzonSku.get(
+                sku
+              )
             : undefined
         );
 
@@ -1222,7 +1570,9 @@ export async function GET() {
 
     const productsWithOzonId =
       products.filter(
-        (product) =>
+        (
+          product
+        ) =>
           product
             .ozon_product_id
           != null
@@ -1231,7 +1581,9 @@ export async function GET() {
 
     const productsWithoutOzonId =
       products.filter(
-        (product) =>
+        (
+          product
+        ) =>
           product
             .ozon_product_id
           == null
@@ -1266,12 +1618,23 @@ export async function GET() {
 
 
     // ========================================================
+    // НЕМНОГО РАЗНОСИМ МЕТОДЫ OZON ПО ВРЕМЕНИ
+    // ========================================================
+
+    await sleep(
+      STOCK_BATCH_DELAY_MS
+    );
+
+
+    // ========================================================
     // 3. ОСТАТКИ OZON
     // ========================================================
 
     const skus =
       productsWithOzonId.map(
-        (product) =>
+        (
+          product
+        ) =>
           String(
             product
               .ozon_product_id
@@ -1291,7 +1654,9 @@ export async function GET() {
 
     const cancelledPostings =
       postings.filter(
-        (posting) =>
+        (
+          posting
+        ) =>
           String(
             posting.status
             ?? ""
@@ -1304,7 +1669,9 @@ export async function GET() {
 
     const activePostings =
       postings.filter(
-        (posting) =>
+        (
+          posting
+        ) =>
           String(
             posting.status
             ?? ""
@@ -1335,6 +1702,21 @@ export async function GET() {
           date,
 
 
+        rate_limit_protection: {
+          enabled:
+            true,
+
+          max_retries:
+            OZON_MAX_RETRIES,
+
+          stock_batch_delay_ms:
+            STOCK_BATCH_DELAY_MS,
+
+          retry_base_ms:
+            RATE_LIMIT_RETRY_MS,
+        },
+
+
         products: {
           total_active:
             products.length,
@@ -1354,7 +1736,9 @@ export async function GET() {
                 20
               )
               .map(
-                (product) => ({
+                (
+                  product
+                ) => ({
                   id:
                     product.id,
 
@@ -1387,7 +1771,9 @@ export async function GET() {
                 10
               )
               .map(
-                (cluster) => ({
+                (
+                  cluster
+                ) => ({
                   id:
                     cluster.id,
 
@@ -1460,7 +1846,9 @@ export async function GET() {
                 10
               )
               .map(
-                (posting) => ({
+                (
+                  posting
+                ) => ({
                   posting_number:
                     posting
                       .posting_number,
