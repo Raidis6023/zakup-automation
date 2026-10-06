@@ -32,7 +32,7 @@ type AuditCheck = {
   name: string;
   status: AuditStatus;
   message: string;
-  details?: any;
+  details?: unknown;
 };
 
 
@@ -48,7 +48,7 @@ type WBOrder = {
   is_cancel: boolean | null;
   cancel_date: string | null;
   income_id: number | null;
-  raw: any;
+  raw: unknown;
   synced_at: string | null;
 };
 
@@ -64,7 +64,7 @@ type WBStock = {
   to_client_count: number;
   from_client_count: number;
   availability: string | null;
-  raw: any;
+  raw: unknown;
 };
 
 
@@ -102,13 +102,29 @@ type AuditSkuResult = {
 };
 
 
+type ProductionAssumedZeroRow = {
+  nmId?: number | string;
+};
+
+
+type FormulaTest = {
+  name: string;
+  stock: number;
+  dailySales: number;
+  expectedDays: number | null;
+  expectedRaw: number;
+  expectedRounded: number;
+  expectedRule: NeedRule;
+};
+
+
 // ============================================================
-// ОБЩИЕ ФУНКЦИИ
+// JSON
 // ============================================================
 
 function parseJson(
   text: string
-): any {
+): unknown {
 
   try {
 
@@ -119,7 +135,8 @@ function parseJson(
   } catch {
 
     return {
-      rawText: text,
+      rawText:
+        text,
     };
 
   }
@@ -127,11 +144,15 @@ function parseJson(
 }
 
 
+// ============================================================
+// ЧИСЛА
+// ============================================================
+
 function safeNumber(
   value: unknown
 ): number {
 
-  const number =
+  const result =
     Number(
       value
     );
@@ -139,7 +160,7 @@ function safeNumber(
 
   if (
     !Number.isFinite(
-      number
+      result
     )
   ) {
 
@@ -148,15 +169,20 @@ function safeNumber(
   }
 
 
-  return number;
+  return result;
 
 }
 
 
+// ============================================================
+// СРАВНЕНИЕ FLOAT
+// ============================================================
+
 function approximatelyEqual(
   a: number | null | undefined,
   b: number | null | undefined,
-  tolerance = FLOAT_TOLERANCE
+  tolerance =
+    FLOAT_TOLERANCE
 ): boolean {
 
   if (
@@ -196,12 +222,17 @@ function approximatelyEqual(
 }
 
 
-function getNested(
-  object: any,
-  path: string[]
-): any {
+// ============================================================
+// ЧТЕНИЕ RAW JSON
+// ============================================================
 
-  let current =
+function getNested(
+  object: unknown,
+  path: string[]
+): unknown {
+
+  let current:
+    unknown =
     object;
 
 
@@ -223,9 +254,16 @@ function getNested(
     }
 
 
+    const record =
+      current as Record<
+        string,
+        unknown
+      >;
+
+
     if (
       !Object.prototype.hasOwnProperty.call(
-        current,
+        record,
         key
       )
     ) {
@@ -236,7 +274,7 @@ function getNested(
 
 
     current =
-      current[key];
+      record[key];
 
   }
 
@@ -247,9 +285,9 @@ function getNested(
 
 
 function firstDefined(
-  object: any,
+  object: unknown,
   paths: string[][]
-): any {
+): unknown {
 
   for (
     const path
@@ -280,7 +318,7 @@ function firstDefined(
 
 
 // ============================================================
-// SUPABASE
+// SUPABASE CONFIG
 // ============================================================
 
 function getSupabaseConfig() {
@@ -323,6 +361,10 @@ function getSupabaseConfig() {
 }
 
 
+// ============================================================
+// SUPABASE GET
+// ============================================================
+
 async function supabaseGet<T>(
   path: string
 ): Promise<T> {
@@ -338,7 +380,8 @@ async function supabaseGet<T>(
     await fetch(
       `${supabaseUrl}/rest/v1/${path}`,
       {
-        method: "GET",
+        method:
+          "GET",
 
         headers: {
           apikey:
@@ -370,12 +413,16 @@ async function supabaseGet<T>(
   }
 
 
-  return parseJson(
+  return JSON.parse(
     text
   ) as T;
 
 }
 
+
+// ============================================================
+// ТОЧНЫЙ COUNT SUPABASE
+// ============================================================
 
 async function getExactCount(
   table: string,
@@ -394,7 +441,8 @@ async function getExactCount(
     await fetch(
       `${supabaseUrl}/rest/v1/${table}?select=${selectColumn}&${query}`,
       {
-        method: "GET",
+        method:
+          "GET",
 
         headers: {
           apikey:
@@ -447,10 +495,14 @@ async function getExactCount(
   }
 
 
+  const totalRaw =
+    contentRange
+      .split("/")[1];
+
+
   const total =
     Number(
-      contentRange
-        .split("/")[1]
+      totalRaw
     );
 
 
@@ -472,6 +524,10 @@ async function getExactCount(
 }
 
 
+// ============================================================
+// ПАГИНАЦИЯ SUPABASE
+// ============================================================
+
 async function supabaseGetAll<T>(
   basePath: string,
   orderBy: string
@@ -480,7 +536,7 @@ async function supabaseGetAll<T>(
   pages: number;
 }> {
 
-  const rows:
+  const allRows:
     T[] =
     [];
 
@@ -507,7 +563,7 @@ async function supabaseGetAll<T>(
         "?";
 
 
-    const page =
+    const pageRows =
       await supabaseGet<T[]>(
         basePath
         +
@@ -523,13 +579,13 @@ async function supabaseGetAll<T>(
       );
 
 
-    rows.push(
-      ...page
+    allRows.push(
+      ...pageRows
     );
 
 
     if (
-      page.length
+      pageRows.length
       <
       PAGE_SIZE
     ) {
@@ -546,7 +602,9 @@ async function supabaseGetAll<T>(
 
 
   return {
-    rows,
+    rows:
+      allRows,
+
     pages,
   };
 
@@ -554,18 +612,24 @@ async function supabaseGetAll<T>(
 
 
 // ============================================================
-// РАБОЧИЙ PROCUREMENT-REAL
+// PRODUCTION PROCUREMENT
 // ============================================================
 
 async function getProductionCalculation(
   origin: string
-) {
+): Promise<{
+  httpStatus: number;
+  responseOk: boolean;
+  ok: boolean;
+  data: Record<string, any>;
+}> {
 
   const response =
     await fetch(
       `${origin}/api/wb/procurement-real`,
       {
-        method: "GET",
+        method:
+          "GET",
 
         headers: {
           Accept:
@@ -582,10 +646,25 @@ async function getProductionCalculation(
     await response.text();
 
 
-  const data =
+  const parsed =
     parseJson(
       text
     );
+
+
+  const data =
+    (
+      parsed
+      &&
+      typeof parsed === "object"
+    )
+      ?
+      parsed as Record<
+        string,
+        any
+      >
+      :
+      {};
 
 
   return {
@@ -598,7 +677,7 @@ async function getProductionCalculation(
     ok:
       response.ok
       &&
-      data?.ok === true,
+      data.ok === true,
 
     data,
   };
@@ -608,8 +687,6 @@ async function getProductionCalculation(
 
 // ============================================================
 // ЭТАЛОННАЯ ФОРМУЛА
-//
-// ЭТО ОТДЕЛЬНЫЙ РАСЧЁТ ДЛЯ АУДИТА.
 // ============================================================
 
 function referenceNeed(
@@ -636,7 +713,9 @@ function referenceNeed(
 
 
   if (
-    safeDailySales <= 0
+    safeDailySales
+    <=
+    0
   ) {
 
     return {
@@ -662,8 +741,8 @@ function referenceNeed(
     safeDailySales;
 
 
-  let needRaw:
-    number;
+  let needRaw =
+    0;
 
 
   let rule:
@@ -671,7 +750,9 @@ function referenceNeed(
 
 
   if (
-    daysOfStock > 30
+    daysOfStock
+    >
+    30
   ) {
 
     needRaw =
@@ -683,7 +764,9 @@ function referenceNeed(
   }
 
   else if (
-    daysOfStock < 10
+    daysOfStock
+    <
+    10
   ) {
 
     needRaw =
@@ -748,200 +831,202 @@ function referenceNeed(
 
 function runFormulaTests() {
 
-  const cases = [
+  const cases:
+    FormulaTest[] =
+    [
 
-    {
-      name:
-        "Нет продаж",
+      {
+        name:
+          "Нет продаж",
 
-      stock:
-        100,
+        stock:
+          100,
 
-      dailySales:
-        0,
+        dailySales:
+          0,
 
-      expectedDays:
-        null,
+        expectedDays:
+          null,
 
-      expectedRaw:
-        0,
+        expectedRaw:
+          0,
 
-      expectedRounded:
-        0,
+        expectedRounded:
+          0,
 
-      expectedRule:
-        "NO_SALES",
-    },
+        expectedRule:
+          "NO_SALES",
+      },
 
 
-    {
-      name:
-        "5 дней запаса",
+      {
+        name:
+          "5 дней запаса",
 
-      stock:
-        50,
+        stock:
+          50,
 
-      dailySales:
-        10,
+        dailySales:
+          10,
 
-      expectedDays:
-        5,
+        expectedDays:
+          5,
 
-      expectedRaw:
-        300,
+        expectedRaw:
+          300,
 
-      expectedRounded:
-        300,
+        expectedRounded:
+          300,
 
-      expectedRule:
-        "LESS_THAN_10_DAYS",
-    },
+        expectedRule:
+          "LESS_THAN_10_DAYS",
+      },
 
 
-    {
-      name:
-        "Ровно 10 дней",
+      {
+        name:
+          "Ровно 10 дней",
 
-      stock:
-        100,
+        stock:
+          100,
 
-      dailySales:
-        10,
+        dailySales:
+          10,
 
-      expectedDays:
-        10,
+        expectedDays:
+          10,
 
-      expectedRaw:
-        300,
+        expectedRaw:
+          300,
 
-      expectedRounded:
-        300,
+        expectedRounded:
+          300,
 
-      expectedRule:
-        "BETWEEN_10_AND_30_DAYS",
-    },
+        expectedRule:
+          "BETWEEN_10_AND_30_DAYS",
+      },
 
 
-    {
-      name:
-        "20 дней",
+      {
+        name:
+          "20 дней",
 
-      stock:
-        200,
+        stock:
+          200,
 
-      dailySales:
-        10,
+        dailySales:
+          10,
 
-      expectedDays:
-        20,
+        expectedDays:
+          20,
 
-      expectedRaw:
-        200,
+        expectedRaw:
+          200,
 
-      expectedRounded:
-        200,
+        expectedRounded:
+          200,
 
-      expectedRule:
-        "BETWEEN_10_AND_30_DAYS",
-    },
+        expectedRule:
+          "BETWEEN_10_AND_30_DAYS",
+      },
 
 
-    {
-      name:
-        "Ровно 30 дней",
+      {
+        name:
+          "Ровно 30 дней",
 
-      stock:
-        300,
+        stock:
+          300,
 
-      dailySales:
-        10,
+        dailySales:
+          10,
 
-      expectedDays:
-        30,
+        expectedDays:
+          30,
 
-      expectedRaw:
-        100,
+        expectedRaw:
+          100,
 
-      expectedRounded:
-        100,
+        expectedRounded:
+          100,
 
-      expectedRule:
-        "BETWEEN_10_AND_30_DAYS",
-    },
+        expectedRule:
+          "BETWEEN_10_AND_30_DAYS",
+      },
 
 
-    {
-      name:
-        "Чуть больше 30 дней",
+      {
+        name:
+          "Чуть больше 30 дней",
 
-      stock:
-        301,
+        stock:
+          301,
 
-      dailySales:
-        10,
+        dailySales:
+          10,
 
-      expectedDays:
-        30.1,
+        expectedDays:
+          30.1,
 
-      expectedRaw:
-        0,
+        expectedRaw:
+          0,
 
-      expectedRounded:
-        0,
+        expectedRounded:
+          0,
 
-      expectedRule:
-        "MORE_THAN_30_DAYS",
-    },
+        expectedRule:
+          "MORE_THAN_30_DAYS",
+      },
 
 
-    {
-      name:
-        "Одна продажа за 28 дней при нулевом остатке",
+      {
+        name:
+          "Одна продажа за 28 дней при нулевом остатке",
 
-      stock:
-        0,
+        stock:
+          0,
 
-      dailySales:
-        1 / 28,
+        dailySales:
+          1 / 28,
 
-      expectedDays:
-        0,
+        expectedDays:
+          0,
 
-      expectedRaw:
-        30 / 28,
+        expectedRaw:
+          30 / 28,
 
-      expectedRounded:
-        2,
+        expectedRounded:
+          2,
 
-      expectedRule:
-        "LESS_THAN_10_DAYS",
-    },
+        expectedRule:
+          "LESS_THAN_10_DAYS",
+      },
 
 
-    {
-      name:
-        "Одна продажа за 28 дней и одна штука остатка",
+      {
+        name:
+          "Одна продажа за 28 дней и одна штука остатка",
 
-      stock:
-        1,
+        stock:
+          1,
 
-      dailySales:
-        1 / 28,
+        dailySales:
+          1 / 28,
 
-      expectedDays:
-        28,
+        expectedDays:
+          28,
 
-      expectedRaw:
-        12 / 28,
+        expectedRaw:
+          12 / 28,
 
-      expectedRounded:
-        1,
+        expectedRounded:
+          1,
 
-      expectedRule:
-        "BETWEEN_10_AND_30_DAYS",
-    },
+        expectedRule:
+          "BETWEEN_10_AND_30_DAYS",
+      },
 
-  ];
+    ];
 
 
   return cases.map(
@@ -1004,7 +1089,7 @@ export async function GET(
   try {
 
     // ========================================================
-    // 1. ПОЛУЧАЕМ РЕЗУЛЬТАТ РАБОЧЕГО РАСЧЁТА
+    // 1. PRODUCTION
     // ========================================================
 
     const origin =
@@ -1069,27 +1154,38 @@ export async function GET(
 
 
     // ========================================================
-    // 2. ФИКСИРУЕМ ТОЧНО ТЕ ЖЕ ДАННЫЕ,
-    // КОТОРЫЕ ИСПОЛЬЗОВАЛ PRODUCTION
+    // 2. ТОТ ЖЕ ПЕРИОД И SNAPSHOT
     // ========================================================
 
     const periodStart =
-      productionData
-        ?.period
-        ?.start;
+      String(
+        productionData
+          ?.period
+          ?.start
+        ??
+        ""
+      );
 
 
     const periodEnd =
-      productionData
-        ?.period
-        ?.end;
+      String(
+        productionData
+          ?.period
+          ?.end
+        ??
+        ""
+      );
 
 
     const snapshotId =
-      productionData
-        ?.freshness
-        ?.stocks
-        ?.snapshotId;
+      String(
+        productionData
+          ?.freshness
+          ?.stocks
+          ?.snapshotId
+        ??
+        ""
+      );
 
 
     if (
@@ -1108,7 +1204,7 @@ export async function GET(
 
 
     // ========================================================
-    // 3. ТОЧНЫЕ COUNTS ЗАКАЗОВ
+    // 3. ФИЛЬТР ЗАКАЗОВ
     // ========================================================
 
     const ordersFilter =
@@ -1124,6 +1220,10 @@ export async function GET(
         "Склад WB"
       )}`;
 
+
+    // ========================================================
+    // 4. ТОЧНЫЕ COUNTS
+    // ========================================================
 
     const [
       exactTotalOrders,
@@ -1167,7 +1267,7 @@ export async function GET(
 
 
     // ========================================================
-    // 4. ЗАГРУЖАЕМ ЗАКАЗЫ НЕЗАВИСИМО
+    // 5. ЗАГРУЖАЕМ ЗАКАЗЫ
     // ========================================================
 
     const ordersResult =
@@ -1234,7 +1334,7 @@ export async function GET(
 
 
     // ========================================================
-    // 5. ПРОВЕРКА PAGINATION
+    // 6. PAGINATION
     // ========================================================
 
     const orderCountsMatch =
@@ -1312,7 +1412,7 @@ export async function GET(
 
 
     // ========================================================
-    // 6. ДУБЛИ SRID
+    // 7. ДУБЛИ ЗАКАЗОВ
     // ========================================================
 
     const sridCounts =
@@ -1399,7 +1499,7 @@ export async function GET(
 
 
     // ========================================================
-    // 7. FBW / FBS
+    // 8. FBW/FBS
     // ========================================================
 
     const nonFbwRows =
@@ -1440,7 +1540,7 @@ export async function GET(
 
 
     // ========================================================
-    // 8. RAW ЗАКАЗЫ VS НОРМАЛИЗОВАННЫЕ ПОЛЯ
+    // 9. RAW ЗАКАЗЫ
     // ========================================================
 
     let orderRawFieldsChecked =
@@ -1452,7 +1552,10 @@ export async function GET(
 
 
     const orderRawMismatches:
-      any[] =
+      Record<
+        string,
+        unknown
+      >[] =
       [];
 
 
@@ -1461,7 +1564,11 @@ export async function GET(
       of orders
     ) {
 
-      if (!row.raw) {
+      if (
+        row.raw === null
+        ||
+        row.raw === undefined
+      ) {
 
         orderRawMissing +=
           1;
@@ -1659,7 +1766,7 @@ export async function GET(
 
 
     // ========================================================
-    // 9. ОСТАТКИ ТОГО ЖЕ SNAPSHOT
+    // 10. SNAPSHOT ОСТАТКОВ
     // ========================================================
 
     const stockFilter =
@@ -1751,7 +1858,7 @@ export async function GET(
 
 
     // ========================================================
-    // 10. ДУБЛИ NMID В SNAPSHOT
+    // 11. ДУБЛИ NMID В SNAPSHOT
     // ========================================================
 
     const stockNmCounts =
@@ -1835,7 +1942,7 @@ export async function GET(
 
 
     // ========================================================
-    // 11. ВАЛИДНОСТЬ ОСТАТКОВ
+    // 12. ВАЛИДНОСТЬ ОСТАТКОВ
     // ========================================================
 
     const invalidStockRows =
@@ -1947,7 +2054,7 @@ export async function GET(
 
 
     // ========================================================
-    // 12. RAW ОСТАТКИ VS НОРМАЛИЗОВАННЫЕ ПОЛЯ
+    // 13. RAW ОСТАТКИ
     // ========================================================
 
     let stockRawFieldsChecked =
@@ -1959,7 +2066,10 @@ export async function GET(
 
 
     const stockRawMismatches:
-      any[] =
+      Record<
+        string,
+        unknown
+      >[] =
       [];
 
 
@@ -1968,7 +2078,11 @@ export async function GET(
       of stockRows
     ) {
 
-      if (!row.raw) {
+      if (
+        row.raw === null
+        ||
+        row.raw === undefined
+      ) {
 
         stockRawMissing +=
           1;
@@ -2215,7 +2329,7 @@ export async function GET(
 
 
     // ========================================================
-    // 13. UNIT-ТЕСТЫ ИСХОДНОЙ ФОРМУЛЫ
+    // 14. UNIT-ТЕСТЫ ФОРМУЛЫ
     // ========================================================
 
     const formulaTests =
@@ -2258,7 +2372,7 @@ export async function GET(
 
 
     // ========================================================
-    // 14. НЕЗАВИСИМО СЧИТАЕМ ПРОДАЖИ
+    // 15. ПРОДАЖИ ПО NMID
     // ========================================================
 
     const salesByNmId =
@@ -2309,7 +2423,7 @@ export async function GET(
 
 
     // ========================================================
-    // 15. НЕЗАВИСИМО СОБИРАЕМ ОСТАТКИ
+    // 16. ОСТАТКИ ПО NMID
     // ========================================================
 
     const stockByNmId =
@@ -2324,10 +2438,27 @@ export async function GET(
       of stockRows
     ) {
 
-      stockByNmId.set(
+      const nmId =
         Number(
           stock.nm_id
-        ),
+        );
+
+
+      if (
+        !Number.isFinite(
+          nmId
+        )
+        ||
+        nmId <= 0
+      ) {
+
+        continue;
+
+      }
+
+
+      stockByNmId.set(
+        nmId,
         stock
       );
 
@@ -2335,7 +2466,7 @@ export async function GET(
 
 
     // ========================================================
-    // 16. ОБЪЕДИНЯЕМ SKU
+    // 17. ВСЕ SKU
     // ========================================================
 
     const allNmIds =
@@ -2367,7 +2498,7 @@ export async function GET(
 
 
     // ========================================================
-    // 17. НЕЗАВИСИМЫЙ РАСЧЁТ
+    // 18. НЕЗАВИСИМЫЙ РАСЧЁТ
     // ========================================================
 
     const auditRows:
@@ -2495,13 +2626,15 @@ export async function GET(
 
 
     // ========================================================
-    // 18. НЕЗАВИСИМАЯ СВОДКА
+    // 19. СВОДКА
     // ========================================================
 
     const auditNeedRows =
       auditRows.filter(
         (row) =>
-          row.calculation.needRoundedUp > 0
+          row.calculation.needRoundedUp
+          >
+          0
       );
 
 
@@ -2593,7 +2726,9 @@ export async function GET(
       skuWithActiveSales:
         auditRows.filter(
           (row) =>
-            row.sales.ordersCount > 0
+            row.sales.ordersCount
+            >
+            0
         ).length,
 
       skuWithNeed:
@@ -2647,22 +2782,27 @@ export async function GET(
 
 
     // ========================================================
-    // 19. СРАВНЕНИЕ SUMMARY С PRODUCTION
+    // 20. СРАВНЕНИЕ SUMMARY
     // ========================================================
 
     const productionSummary =
-      productionData.summary;
+      productionData.summary
+      ??
+      {};
 
 
     const summaryMismatches:
-      any[] =
+      Record<
+        string,
+        unknown
+      >[] =
       [];
 
 
     function compareExact(
       field: string,
-      expected: any,
-      actual: any
+      expected: unknown,
+      actual: unknown
     ) {
 
       if (
@@ -2671,6 +2811,7 @@ export async function GET(
 
         summaryMismatches.push({
           field,
+
           audit:
             expected,
 
@@ -2686,18 +2827,29 @@ export async function GET(
     function compareFloat(
       field: string,
       expected: number,
-      actual: number
+      actual: unknown
     ) {
 
+      const actualNumber =
+        Number(
+          actual
+        );
+
+
       if (
+        !Number.isFinite(
+          actualNumber
+        )
+        ||
         !approximatelyEqual(
           expected,
-          actual
+          actualNumber
         )
       ) {
 
         summaryMismatches.push({
           field,
+
           audit:
             expected,
 
@@ -2755,28 +2907,36 @@ export async function GET(
     compareExact(
       "rules.noSales",
       auditSummary.rules.noSales,
-      productionSummary.rules.noSales
+      productionSummary
+        ?.rules
+        ?.noSales
     );
 
 
     compareExact(
       "rules.moreThan30Days",
       auditSummary.rules.moreThan30Days,
-      productionSummary.rules.moreThan30Days
+      productionSummary
+        ?.rules
+        ?.moreThan30Days
     );
 
 
     compareExact(
       "rules.lessThan10Days",
       auditSummary.rules.lessThan10Days,
-      productionSummary.rules.lessThan10Days
+      productionSummary
+        ?.rules
+        ?.lessThan10Days
     );
 
 
     compareExact(
       "rules.between10And30Days",
       auditSummary.rules.between10And30Days,
-      productionSummary.rules.between10And30Days
+      productionSummary
+        ?.rules
+        ?.between10And30Days
     );
 
 
@@ -2813,11 +2973,13 @@ export async function GET(
 
 
     // ========================================================
-    // 20. СРАВНЕНИЕ ОБЩИХ ОСТАТКОВ
+    // 21. ОБЩИЕ ОСТАТКИ
     // ========================================================
 
     const productionStocks =
-      productionData.stocks;
+      productionData.stocks
+      ??
+      {};
 
 
     const stockTotalsMatch =
@@ -2892,10 +3054,14 @@ export async function GET(
 
 
     // ========================================================
-    // 21. СРАВНЕНИЕ ПО КАЖДОМУ SKU С ПОТРЕБНОСТЬЮ
+    // 22. СРАВНЕНИЕ ПО SKU
     // ========================================================
 
-    const productionTopNeed =
+    const productionTopNeed:
+      Record<
+        string,
+        any
+      >[] =
       Array.isArray(
         productionData.topNeed
       )
@@ -2908,7 +3074,10 @@ export async function GET(
     const productionNeedMap =
       new Map<
         number,
-        any
+        Record<
+          string,
+          any
+        >
       >();
 
 
@@ -2917,12 +3086,24 @@ export async function GET(
       of productionTopNeed
     ) {
 
-      productionNeedMap.set(
+      const nmId =
         Number(
           row.nmId
-        ),
-        row
-      );
+        );
+
+
+      if (
+        Number.isFinite(
+          nmId
+        )
+      ) {
+
+        productionNeedMap.set(
+          nmId,
+          row
+        );
+
+      }
 
     }
 
@@ -2935,7 +3116,10 @@ export async function GET(
 
 
     const skuMismatches:
-      any[] =
+      Record<
+        string,
+        unknown
+      >[] =
       [];
 
 
@@ -2973,7 +3157,11 @@ export async function GET(
       if (
         auditRow.sales.ordersCount
         !==
-        productionRow.sales.ordersCount
+        Number(
+          productionRow
+            ?.sales
+            ?.ordersCount
+        )
       ) {
 
         mismatchedFields.push(
@@ -2986,7 +3174,11 @@ export async function GET(
       if (
         !approximatelyEqual(
           auditRow.sales.dailySales,
-          productionRow.sales.dailySales
+          Number(
+            productionRow
+              ?.sales
+              ?.dailySales
+          )
         )
       ) {
 
@@ -3000,7 +3192,11 @@ export async function GET(
       if (
         auditRow.stock.stockCount
         !==
-        productionRow.stock.stockCount
+        Number(
+          productionRow
+            ?.stock
+            ?.stockCount
+        )
       ) {
 
         mismatchedFields.push(
@@ -3013,7 +3209,9 @@ export async function GET(
       if (
         auditRow.stock.source
         !==
-        productionRow.stock.source
+        productionRow
+          ?.stock
+          ?.source
       ) {
 
         mismatchedFields.push(
@@ -3023,10 +3221,28 @@ export async function GET(
       }
 
 
+      const productionDays =
+        productionRow
+          ?.calculation
+          ?.daysOfStock;
+
+
+      const normalizedProductionDays =
+        productionDays === null
+        ||
+        productionDays === undefined
+          ?
+          null
+          :
+          Number(
+            productionDays
+          );
+
+
       if (
         !approximatelyEqual(
           auditRow.calculation.daysOfStock,
-          productionRow.calculation.daysOfStock
+          normalizedProductionDays
         )
       ) {
 
@@ -3040,7 +3256,11 @@ export async function GET(
       if (
         !approximatelyEqual(
           auditRow.calculation.needRaw,
-          productionRow.calculation.needRaw
+          Number(
+            productionRow
+              ?.calculation
+              ?.needRaw
+          )
         )
       ) {
 
@@ -3054,7 +3274,11 @@ export async function GET(
       if (
         auditRow.calculation.needRoundedUp
         !==
-        productionRow.calculation.needRoundedUp
+        Number(
+          productionRow
+            ?.calculation
+            ?.needRoundedUp
+        )
       ) {
 
         mismatchedFields.push(
@@ -3067,7 +3291,9 @@ export async function GET(
       if (
         auditRow.calculation.rule
         !==
-        productionRow.calculation.rule
+        productionRow
+          ?.calculation
+          ?.rule
       ) {
 
         mismatchedFields.push(
@@ -3078,7 +3304,9 @@ export async function GET(
 
 
       if (
-        mismatchedFields.length > 0
+        mismatchedFields.length
+        >
+        0
       ) {
 
         skuMismatches.push({
@@ -3101,7 +3329,9 @@ export async function GET(
 
 
     const fullPositiveCoverage =
-      auditNeedRows.length <= 100;
+      auditNeedRows.length
+      <=
+      100;
 
 
     const productionNeedCountCorrect =
@@ -3114,7 +3344,9 @@ export async function GET(
 
 
     const skuComparisonPassed =
-      skuMismatches.length === 0
+      skuMismatches.length
+      ===
+      0
       &&
       productionNeedCountCorrect;
 
@@ -3177,32 +3409,17 @@ export async function GET(
 
 
     // ========================================================
-    // 22. ПРОВЕРКА ABSENT → ZERO
+    // 23. ABSENT FROM SNAPSHOT -> ZERO
+    //
+    // Здесь были проблемы типизации.
+    // Теперь Set явно имеет тип number.
     // ========================================================
 
-    const auditAssumedSet =
-      new Set(
+    const auditAssumedSet:
+      Set<number> =
+      new Set<number>(
         auditAssumedZeroRows.map(
           (row) =>
-            row.nmId
-        )
-      );
-
-
-    const productionAssumedRows =
-      Array.isArray(
-        productionData.assumedZeroFromAbsentSnapshot
-      )
-        ?
-        productionData.assumedZeroFromAbsentSnapshot
-        :
-        [];
-
-
-    const productionAssumedSet =
-      new Set(
-        productionAssumedRows.map(
-          (row: any) =>
             Number(
               row.nmId
             )
@@ -3210,24 +3427,61 @@ export async function GET(
       );
 
 
-    const missingInProduction =
+    const productionAssumedRows:
+      ProductionAssumedZeroRow[] =
+      Array.isArray(
+        productionData.assumedZeroFromAbsentSnapshot
+      )
+        ?
+        productionData.assumedZeroFromAbsentSnapshot as ProductionAssumedZeroRow[]
+        :
+        [];
+
+
+    const productionAssumedNmIds:
+      number[] =
+      productionAssumedRows
+        .map(
+          (row) =>
+            Number(
+              row.nmId
+            )
+        )
+        .filter(
+          (nmId) =>
+            Number.isFinite(
+              nmId
+            )
+        );
+
+
+    const productionAssumedSet:
+      Set<number> =
+      new Set<number>(
+        productionAssumedNmIds
+      );
+
+
+    const missingInProduction:
+      number[] =
       Array.from(
         auditAssumedSet
       )
       .filter(
-        (nmId) =>
+        (nmId: number) =>
           !productionAssumedSet.has(
             nmId
           )
       );
 
 
-    const extraInProduction =
+    const extraInProduction:
+      number[] =
       Array.from(
         productionAssumedSet
       )
       .filter(
-        (nmId) =>
+        (nmId: number) =>
           !auditAssumedSet.has(
             nmId
           )
@@ -3235,9 +3489,41 @@ export async function GET(
 
 
     const assumedZeroMatches =
-      missingInProduction.length === 0
+      missingInProduction.length
+      ===
+      0
       &&
-      extraInProduction.length === 0;
+      extraInProduction.length
+      ===
+      0;
+
+
+    const auditNmIdsSorted:
+      number[] =
+      Array.from(
+        auditAssumedSet
+      )
+      .sort(
+        (
+          a: number,
+          b: number
+        ) =>
+          a - b
+      );
+
+
+    const productionNmIdsSorted:
+      number[] =
+      Array.from(
+        productionAssumedSet
+      )
+      .sort(
+        (
+          a: number,
+          b: number
+        ) =>
+          a - b
+      );
 
 
     checks.push({
@@ -3263,28 +3549,10 @@ export async function GET(
 
       details: {
         auditNmIds:
-          Array.from(
-            auditAssumedSet
-          )
-          .sort(
-            (
-              a,
-              b
-            ) =>
-              a - b
-          ),
+          auditNmIdsSorted,
 
         productionNmIds:
-          Array.from(
-            productionAssumedSet
-          )
-          .sort(
-            (
-              a,
-              b
-            ) =>
-              a - b
-          ),
+          productionNmIdsSorted,
 
         missingInProduction,
 
@@ -3294,11 +3562,13 @@ export async function GET(
 
 
     // ========================================================
-    // 23. ПРОВЕРКА SOURCE ROWS PRODUCTION
+    // 24. SOURCE ROWS
     // ========================================================
 
     const sourceRows =
-      productionData.sourceRows;
+      productionData.sourceRows
+      ??
+      {};
 
 
     const sourceRowsMatch =
@@ -3369,7 +3639,7 @@ export async function GET(
 
 
     // ========================================================
-    // 24. ИТОГ
+    // 25. ИТОГ
     // ========================================================
 
     const failedChecks =
@@ -3390,9 +3660,20 @@ export async function GET(
       );
 
 
+    const passedChecks =
+      checks.filter(
+        (check) =>
+          check.status
+          ===
+          "PASS"
+      );
+
+
     const auditResult:
       "PASS" | "FAIL" =
-      failedChecks.length === 0
+      failedChecks.length
+      ===
+      0
         ?
         "PASS"
         :
@@ -3445,7 +3726,7 @@ export async function GET(
           false,
 
         note:
-          "Аудит не делает дополнительный прямой запрос к WB. Он проверяет рабочий procurement-real, исходные таблицы Supabase и сохранённые raw-ответы WB.",
+          "Аудит проверяет рабочий procurement-real, исходные таблицы Supabase и сохранённые raw-ответы WB.",
       },
 
 
@@ -3455,12 +3736,7 @@ export async function GET(
           checks.length,
 
         passed:
-          checks.filter(
-            (check) =>
-              check.status
-              ===
-              "PASS"
-          ).length,
+          passedChecks.length,
 
         warnings:
           warningChecks.length,
@@ -3474,6 +3750,7 @@ export async function GET(
       independentCalculation: {
 
         orders: {
+
           totalFbw:
             orders.length,
 
@@ -3492,6 +3769,7 @@ export async function GET(
 
 
         stocks: {
+
           skuInSnapshot:
             stockRows.length,
 
