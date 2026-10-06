@@ -14,11 +14,8 @@ export const maxDuration = 60;
 
 const SALES_DAYS = 28;
 
-// Если данные старше часа,
-// перед расчётом пытаемся обновить.
 const TARGET_FRESHNESS_HOURS = 1;
 
-// Аварийный порог для диагностики.
 const HARD_MAX_DATA_AGE_HOURS = 24;
 
 const SUPABASE_PAGE_SIZE = 1000;
@@ -71,7 +68,7 @@ type WBOrder = {
     string | null;
 
   is_cancel:
-    boolean;
+    boolean | null;
 };
 
 
@@ -224,11 +221,118 @@ async function supabaseGet<T>(
 
 
 // ============================================================
+// ТОЧНЫЙ COUNT SUPABASE
+// ============================================================
+
+async function getExactOrderCount(
+  query: string
+): Promise<number> {
+
+  const {
+    supabaseUrl,
+    supabaseKey,
+  } =
+    getSupabaseConfig();
+
+
+  const response =
+    await fetch(
+      `${supabaseUrl}/rest/v1/wb_orders?select=srid&${query}`,
+      {
+        method:
+          "GET",
+
+        headers: {
+          apikey:
+            supabaseKey,
+
+          Authorization:
+            `Bearer ${supabaseKey}`,
+
+          Accept:
+            "application/json",
+
+          Prefer:
+            "count=exact",
+
+          Range:
+            "0-0",
+        },
+
+        cache:
+          "no-store",
+      }
+    );
+
+
+  if (!response.ok) {
+
+    const text =
+      await response.text();
+
+
+    throw new Error(
+      `Ошибка точного подсчёта wb_orders HTTP ${response.status}: ${text}`
+    );
+
+  }
+
+
+  const contentRange =
+    response.headers.get(
+      "content-range"
+    );
+
+
+  if (!contentRange) {
+
+    throw new Error(
+      "Supabase не вернул Content-Range при проверке wb_orders"
+    );
+
+  }
+
+
+  const totalRaw =
+    contentRange
+      .split("/")[1];
+
+
+  const total =
+    Number(
+      totalRaw
+    );
+
+
+  if (
+    !Number.isFinite(
+      total
+    )
+  ) {
+
+    throw new Error(
+      `Не удалось определить точное количество wb_orders: ${contentRange}`
+    );
+
+  }
+
+
+  return total;
+
+}
+
+
+// ============================================================
 // ПАГИНАЦИЯ SUPABASE
+//
+// ВАЖНО:
+// каждая многостраничная выборка получает явную сортировку.
+// Без этого limit/offset использовать нельзя.
 // ============================================================
 
 async function supabaseGetAll<T>(
-  basePath: string
+  basePath: string,
+  orderBy: string
 ): Promise<{
   rows: T[];
   pages: number;
@@ -267,7 +371,11 @@ async function supabaseGetAll<T>(
         +
         separator
         +
-        `limit=${SUPABASE_PAGE_SIZE}`
+        `order=${encodeURIComponent(
+          orderBy
+        )}`
+        +
+        `&limit=${SUPABASE_PAGE_SIZE}`
         +
         `&offset=${offset}`
       );
@@ -356,12 +464,12 @@ function getAgeHours(
 
 
 // ============================================================
-// СОСТОЯНИЕ СИНХРОНИЗАЦИЙ WB
+// СОСТОЯНИЕ СИНХРОНИЗАЦИЙ
 // ============================================================
 
 async function getWBSyncStates() {
 
-  const syncStates =
+  const rows =
     await supabaseGet<
       SyncState[]
     >(
@@ -374,7 +482,7 @@ async function getWBSyncStates() {
 
 
   const orders =
-    syncStates.find(
+    rows.find(
       (row) =>
         row.sync_key
         ===
@@ -385,7 +493,7 @@ async function getWBSyncStates() {
 
 
   const stocks =
-    syncStates.find(
+    rows.find(
       (row) =>
         row.sync_key
         ===
@@ -461,9 +569,13 @@ async function runInternalSync(
       success:
         response.ok
         &&
-        data?.ok === true
+        data?.ok
+        ===
+        true
         &&
-        data?.blockedByRateLimit !== true,
+        data?.blockedByRateLimit
+        !==
+        true,
 
       httpStatus:
         response.status,
@@ -529,10 +641,6 @@ function calculateNeed(
     );
 
 
-  // ==========================================================
-  // НЕТ ПРОДАЖ
-  // ==========================================================
-
   if (
     safeDailySales
     <=
@@ -556,10 +664,6 @@ function calculateNeed(
   }
 
 
-  // ==========================================================
-  // ДНИ ЗАПАСА
-  // ==========================================================
-
   const daysOfStock =
     safeStock
     /
@@ -574,10 +678,6 @@ function calculateNeed(
     NeedRule;
 
 
-  // ==========================================================
-  // БОЛЬШЕ 30 ДНЕЙ
-  // ==========================================================
-
   if (
     daysOfStock
     >
@@ -591,11 +691,6 @@ function calculateNeed(
       "MORE_THAN_30_DAYS";
 
   }
-
-
-  // ==========================================================
-  // МЕНЬШЕ 10 ДНЕЙ
-  // ==========================================================
 
   else if (
     daysOfStock
@@ -612,11 +707,6 @@ function calculateNeed(
       "LESS_THAN_10_DAYS";
 
   }
-
-
-  // ==========================================================
-  // ОТ 10 ДО 30 ДНЕЙ
-  // ==========================================================
 
   else {
 
@@ -704,7 +794,7 @@ export async function GET(
 
 
     // ========================================================
-    // 2. НУЖНО ЛИ ОБНОВЛЕНИЕ
+    // 2. ОПРЕДЕЛЯЕМ, ЧТО НУЖНО ОБНОВИТЬ
     // ========================================================
 
     const needOrdersRefresh =
@@ -728,7 +818,7 @@ export async function GET(
 
 
     // ========================================================
-    // 3. АВТОМАТИЧЕСКОЕ ОБНОВЛЕНИЕ
+    // 3. АВТООБНОВЛЕНИЕ
     // ========================================================
 
     const origin =
@@ -790,13 +880,11 @@ export async function GET(
 
 
     const ordersState =
-      syncStates
-        .orders;
+      syncStates.orders;
 
 
     const stocksState =
-      syncStates
-        .stocks;
+      syncStates.stocks;
 
 
     const ordersAgeHours =
@@ -814,7 +902,7 @@ export async function GET(
 
 
     // ========================================================
-    // 5. ПРОВЕРЯЕМ СВЕЖЕСТЬ
+    // 5. СВЕЖЕСТЬ
     // ========================================================
 
     const ordersFresh =
@@ -950,7 +1038,7 @@ export async function GET(
 
 
     // ========================================================
-    // 6. ПЕРИОД 28 ДНЕЙ
+    // 6. ПЕРИОД
     // ========================================================
 
     const periodEnd =
@@ -988,7 +1076,7 @@ export async function GET(
 
 
     // ========================================================
-    // 7. ПОСЛЕДНИЙ ПОЛНЫЙ SNAPSHOT FBW
+    // 7. ПОСЛЕДНИЙ SNAPSHOT ОСТАТКОВ
     // ========================================================
 
     const latestSnapshotRows =
@@ -1023,7 +1111,7 @@ export async function GET(
             false,
 
           message:
-            "В wb_stock_product_snapshots нет снимков остатков",
+            "Нет успешного снимка остатков WB",
         },
         {
           status:
@@ -1039,7 +1127,9 @@ export async function GET(
 
 
     // ========================================================
-    // 8. ЧИТАЕМ ОСТАТКИ
+    // 8. ОСТАТКИ
+    //
+    // Даже остатки читаем с фиксированной сортировкой.
     // ========================================================
 
     const stockResult =
@@ -1049,8 +1139,7 @@ export async function GET(
         "wb_stock_product_snapshots"
         +
         `?snapshot_id=eq.${encodeURIComponent(
-          latestSnapshot
-            .snapshot_id
+          latestSnapshot.snapshot_id
         )}`
         +
         "&select="
@@ -1066,17 +1155,84 @@ export async function GET(
           "to_client_count",
           "from_client_count",
           "availability",
-        ].join(",")
+        ].join(","),
+
+        "nm_id.asc"
       );
 
 
     const stockRows =
-      stockResult
-        .rows;
+      stockResult.rows;
 
 
     // ========================================================
-    // 9. ЧИТАЕМ FBW ЗАКАЗЫ
+    // 9. ФИЛЬТР ЗАКАЗОВ
+    // ========================================================
+
+    const ordersFilter =
+      `order_date=gte.${encodeURIComponent(
+        periodStartIso
+      )}`
+      +
+      `&order_date=lte.${encodeURIComponent(
+        periodEndIso
+      )}`
+      +
+      "&warehouse_type=eq."
+      +
+      encodeURIComponent(
+        "Склад WB"
+      );
+
+
+    // ========================================================
+    // 10. ЭТАЛОННЫЕ COUNTS SUPABASE
+    //
+    // Они нужны, чтобы расчёт вообще не запускался,
+    // если постраничное чтение дало другой результат.
+    // ========================================================
+
+    const [
+      exactTotalFbw,
+      exactActiveFbw,
+      exactCancelledFbw,
+      exactNullCancelFbw,
+    ] =
+      await Promise.all([
+
+        getExactOrderCount(
+          ordersFilter
+        ),
+
+        getExactOrderCount(
+          ordersFilter
+          +
+          "&is_cancel=eq.false"
+        ),
+
+        getExactOrderCount(
+          ordersFilter
+          +
+          "&is_cancel=eq.true"
+        ),
+
+        getExactOrderCount(
+          ordersFilter
+          +
+          "&is_cancel=is.null"
+        ),
+
+      ]);
+
+
+    // ========================================================
+    // 11. ЧИТАЕМ ЗАКАЗЫ
+    //
+    // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ:
+    //
+    // order_date.asc,srid.asc
+    //
+    // Теперь каждая страница имеет однозначное место.
     // ========================================================
 
     const ordersResult =
@@ -1085,19 +1241,9 @@ export async function GET(
       >(
         "wb_orders"
         +
-        `?order_date=gte.${encodeURIComponent(
-          periodStartIso
-        )}`
+        "?"
         +
-        `&order_date=lte.${encodeURIComponent(
-          periodEndIso
-        )}`
-        +
-        "&warehouse_type=eq."
-        +
-        encodeURIComponent(
-          "Склад WB"
-        )
+        ordersFilter
         +
         "&select="
         +
@@ -1109,37 +1255,176 @@ export async function GET(
           "barcode",
           "warehouse_type",
           "is_cancel",
-        ].join(",")
+        ].join(","),
+
+        "order_date.asc,srid.asc"
       );
 
 
     const fbwOrders =
-      ordersResult
-        .rows;
+      ordersResult.rows;
 
+
+    // ========================================================
+    // 12. ПРОВЕРКА ДУБЛИКАТОВ
+    // ========================================================
+
+    const uniqueSrids =
+      new Set(
+        fbwOrders.map(
+          (row) =>
+            row.srid
+        )
+      );
+
+
+    const duplicateSridCount =
+      fbwOrders.length
+      -
+      uniqueSrids.size;
+
+
+    if (
+      duplicateSridCount
+      >
+      0
+    ) {
+
+      return NextResponse.json(
+        {
+          ok:
+            false,
+
+          message:
+            "Расчёт заблокирован: обнаружены дубли srid в wb_orders",
+
+          dataQuality: {
+            rows:
+              fbwOrders.length,
+
+            uniqueSrid:
+              uniqueSrids.size,
+
+            duplicateSridCount,
+          },
+        },
+        {
+          status:
+            409,
+        }
+      );
+
+    }
+
+
+    // ========================================================
+    // 13. АКТИВНЫЕ / ОТМЕНЁННЫЕ
+    // ========================================================
 
     const activeOrders =
       fbwOrders.filter(
         (order) =>
-          order
-            .is_cancel
-          !==
-          true
+          order.is_cancel
+          ===
+          false
       );
 
 
     const cancelledOrders =
       fbwOrders.filter(
         (order) =>
-          order
-            .is_cancel
+          order.is_cancel
           ===
           true
       );
 
 
+    const nullCancelOrders =
+      fbwOrders.filter(
+        (order) =>
+          order.is_cancel
+          ===
+          null
+      );
+
+
     // ========================================================
-    // 10. ПРОДАЖИ ПО NMID
+    // 14. ПРОВЕРКА COUNTS
+    //
+    // Если сервер говорит 5166 активных,
+    // а страницы дали 5236,
+    // расчёт больше НЕ продолжится.
+    // ========================================================
+
+    const paginationCountsMatch =
+      fbwOrders.length
+      ===
+      exactTotalFbw
+      &&
+      activeOrders.length
+      ===
+      exactActiveFbw
+      &&
+      cancelledOrders.length
+      ===
+      exactCancelledFbw
+      &&
+      nullCancelOrders.length
+      ===
+      exactNullCancelFbw;
+
+
+    if (
+      !paginationCountsMatch
+    ) {
+
+      return NextResponse.json(
+        {
+          ok:
+            false,
+
+          message:
+            "Расчёт заблокирован: постраничная загрузка wb_orders не совпала с точными count Supabase",
+
+          serverCounts: {
+            totalFbw:
+              exactTotalFbw,
+
+            active:
+              exactActiveFbw,
+
+            cancelled:
+              exactCancelledFbw,
+
+            nullIsCancel:
+              exactNullCancelFbw,
+          },
+
+          loadedCounts: {
+            totalFbw:
+              fbwOrders.length,
+
+            active:
+              activeOrders.length,
+
+            cancelled:
+              cancelledOrders.length,
+
+            nullIsCancel:
+              nullCancelOrders.length,
+          },
+        },
+        {
+          status:
+            409,
+        }
+      );
+
+    }
+
+
+    // ========================================================
+    // 15. ПРОДАЖИ ПО NM ID
     // ========================================================
 
     const salesByNmId =
@@ -1165,8 +1450,7 @@ export async function GET(
 
       const nmId =
         Number(
-          order
-            .nm_id
+          order.nm_id
         );
 
 
@@ -1207,33 +1491,25 @@ export async function GET(
 
 
       if (
-        !current
-          .supplierArticle
+        !current.supplierArticle
         &&
-        order
-          .supplier_article
+        order.supplier_article
       ) {
 
-        current
-          .supplierArticle =
-          order
-            .supplier_article;
+        current.supplierArticle =
+          order.supplier_article;
 
       }
 
 
       if (
-        !current
-          .barcode
+        !current.barcode
         &&
-        order
-          .barcode
+        order.barcode
       ) {
 
-        current
-          .barcode =
-          order
-            .barcode;
+        current.barcode =
+          order.barcode;
 
       }
 
@@ -1247,7 +1523,7 @@ export async function GET(
 
 
     // ========================================================
-    // 11. ОСТАТКИ ПО NMID
+    // 16. ОСТАТКИ ПО NM ID
     // ========================================================
 
     const stockByNmId =
@@ -1264,8 +1540,7 @@ export async function GET(
 
       const nmId =
         Number(
-          stock
-            .nm_id
+          stock.nm_id
         );
 
 
@@ -1293,13 +1568,11 @@ export async function GET(
 
 
     // ========================================================
-    // 12. ВСЕ SKU
+    // 17. ВСЕ SKU
     // ========================================================
 
     const allNmIds =
-      new Set<
-        number
-      >();
+      new Set<number>();
 
 
     for (
@@ -1327,7 +1600,7 @@ export async function GET(
 
 
     // ========================================================
-    // 13. РАСЧЁТ ПОТРЕБНОСТИ
+    // 18. РАСЧЁТ
     // ========================================================
 
     const result =
@@ -1350,8 +1623,7 @@ export async function GET(
 
 
           const ordersCount =
-            sales
-              ?.ordersCount
+            sales?.ordersCount
             ??
             0;
 
@@ -1363,12 +1635,14 @@ export async function GET(
 
 
           // ==================================================
-          // КЛЮЧЕВОЕ ПРАВИЛО:
+          // ПРАВИЛО FBW
           //
-          // Если полного SKU нет в успешном stockType=wb
-          // snapshot, считаем FBW-остаток равным 0.
+          // SKU отсутствует в успешном полном snapshot
+          // stockType=wb
           //
-          // FBS / "Свой склад" сюда НЕ входит.
+          // → FBW остаток = 0
+          //
+          // FBS / "Свой склад" НЕ учитываем.
           // ==================================================
 
           const stockSource:
@@ -1386,8 +1660,7 @@ export async function GET(
               Math.max(
                 0,
                 Number(
-                  stock
-                    .stock_count
+                  stock.stock_count
                 )
                 ||
                 0
@@ -1408,32 +1681,27 @@ export async function GET(
 
 
             supplierArticle:
-              sales
-                ?.supplierArticle
+              sales?.supplierArticle
               ??
-              stock
-                ?.vendor_code
+              stock?.vendor_code
               ??
               "",
 
 
             vendorCode:
-              stock
-                ?.vendor_code
+              stock?.vendor_code
               ??
               null,
 
 
             productName:
-              stock
-                ?.product_name
+              stock?.product_name
               ??
               null,
 
 
             barcode:
-              sales
-                ?.barcode
+              sales?.barcode
               ??
               "",
 
@@ -1466,8 +1734,7 @@ export async function GET(
                   Math.max(
                     0,
                     Number(
-                      stock
-                        .to_client_count
+                      stock.to_client_count
                     )
                     ||
                     0
@@ -1481,8 +1748,7 @@ export async function GET(
                   Math.max(
                     0,
                     Number(
-                      stock
-                        .from_client_count
+                      stock.from_client_count
                     )
                     ||
                     0
@@ -1491,8 +1757,7 @@ export async function GET(
                   0,
 
               availability:
-                stock
-                  ?.availability
+                stock?.availability
                 ??
                 null,
             },
@@ -1500,20 +1765,16 @@ export async function GET(
 
             calculation: {
               daysOfStock:
-                calculation
-                  .daysOfStock,
+                calculation.daysOfStock,
 
               needRaw:
-                calculation
-                  .needRaw,
+                calculation.needRaw,
 
               needRoundedUp:
-                calculation
-                  .needRoundedUp,
+                calculation.needRoundedUp,
 
               rule:
-                calculation
-                  .rule,
+                calculation.rule,
             },
           };
 
@@ -1522,7 +1783,7 @@ export async function GET(
 
 
     // ========================================================
-    // 14. СОРТИРОВКА
+    // 19. СОРТИРОВКА ПО ПОТРЕБНОСТИ
     // ========================================================
 
     result.sort(
@@ -1531,41 +1792,25 @@ export async function GET(
         b
       ) => {
 
-        const aNeed =
-          a
-            .calculation
-            .needRoundedUp;
-
-
-        const bNeed =
-          b
-            .calculation
-            .needRoundedUp;
-
-
         if (
-          bNeed
+          b.calculation.needRoundedUp
           !==
-          aNeed
+          a.calculation.needRoundedUp
         ) {
 
           return (
-            bNeed
+            b.calculation.needRoundedUp
             -
-            aNeed
+            a.calculation.needRoundedUp
           );
 
         }
 
 
         return (
-          b
-            .sales
-            .ordersCount
+          b.sales.ordersCount
           -
-          a
-            .sales
-            .ordersCount
+          a.sales.ordersCount
         );
 
       }
@@ -1573,37 +1818,29 @@ export async function GET(
 
 
     // ========================================================
-    // 15. SKU, КОТОРЫХ НЕТ В SNAPSHOT
+    // 20. СВОДНЫЕ ГРУППЫ
     // ========================================================
 
     const assumedZeroRows =
       result.filter(
         (row) =>
-          row
-            .stock
-            .source
+          row.stock.source
           ===
           "ABSENT_FROM_WB_SNAPSHOT_ASSUMED_ZERO"
       );
 
 
-    // ========================================================
-    // 16. SKU С ПОТРЕБНОСТЬЮ
-    // ========================================================
-
     const skuWithNeed =
       result.filter(
         (row) =>
-          row
-            .calculation
-            .needRoundedUp
+          row.calculation.needRoundedUp
           >
           0
       );
 
 
     // ========================================================
-    // 17. ИТОГОВАЯ ПОТРЕБНОСТЬ
+    // 21. ОБЩАЯ ПОТРЕБНОСТЬ
     // ========================================================
 
     const totalNeedRaw =
@@ -1614,9 +1851,7 @@ export async function GET(
         ) =>
           sum
           +
-          row
-            .calculation
-            .needRaw,
+          row.calculation.needRaw,
         0
       );
 
@@ -1629,15 +1864,13 @@ export async function GET(
         ) =>
           sum
           +
-          row
-            .calculation
-            .needRoundedUp,
+          row.calculation.needRoundedUp,
         0
       );
 
 
     // ========================================================
-    // 18. ПРАВИЛА
+    // 22. ПРАВИЛА
     // ========================================================
 
     const rules = {
@@ -1645,9 +1878,7 @@ export async function GET(
       noSales:
         result.filter(
           (row) =>
-            row
-              .calculation
-              .rule
+            row.calculation.rule
             ===
             "NO_SALES"
         ).length,
@@ -1656,9 +1887,7 @@ export async function GET(
       moreThan30Days:
         result.filter(
           (row) =>
-            row
-              .calculation
-              .rule
+            row.calculation.rule
             ===
             "MORE_THAN_30_DAYS"
         ).length,
@@ -1667,9 +1896,7 @@ export async function GET(
       lessThan10Days:
         result.filter(
           (row) =>
-            row
-              .calculation
-              .rule
+            row.calculation.rule
             ===
             "LESS_THAN_10_DAYS"
         ).length,
@@ -1678,9 +1905,7 @@ export async function GET(
       between10And30Days:
         result.filter(
           (row) =>
-            row
-              .calculation
-              .rule
+            row.calculation.rule
             ===
             "BETWEEN_10_AND_30_DAYS"
         ).length,
@@ -1689,7 +1914,7 @@ export async function GET(
 
 
     // ========================================================
-    // 19. ОБЩИЕ ОСТАТКИ
+    // 23. ОБЩИЕ ОСТАТКИ
     // ========================================================
 
     const totalCurrentStock =
@@ -1703,8 +1928,7 @@ export async function GET(
           Math.max(
             0,
             Number(
-              row
-                .stock_count
+              row.stock_count
             )
             ||
             0
@@ -1724,8 +1948,7 @@ export async function GET(
           Math.max(
             0,
             Number(
-              row
-                .to_client_count
+              row.to_client_count
             )
             ||
             0
@@ -1745,8 +1968,7 @@ export async function GET(
           Math.max(
             0,
             Number(
-              row
-                .from_client_count
+              row.from_client_count
             )
             ||
             0
@@ -1756,7 +1978,7 @@ export async function GET(
 
 
     // ========================================================
-    // 20. ОТВЕТ
+    // 24. ОТВЕТ
     // ========================================================
 
     return NextResponse.json({
@@ -1766,7 +1988,7 @@ export async function GET(
 
 
       message:
-        "Потребность WB рассчитана по полным FBW-остаткам",
+        "Потребность WB рассчитана по проверенным FBW-заказам и полным FBW-остаткам",
 
 
       wildberriesRequestSent:
@@ -1784,6 +2006,7 @@ export async function GET(
           result:
             ordersRefresh,
         },
+
 
         stocks: {
           requested:
@@ -1847,7 +2070,6 @@ export async function GET(
 
 
         rules: {
-
           moreThan30Days:
             "need = 0",
 
@@ -1856,7 +2078,6 @@ export async function GET(
 
           between10And30Days:
             "need = (40 - daysOfStock) × dailySales",
-
         },
 
 
@@ -1879,10 +2100,8 @@ export async function GET(
 
 
         orders: {
-
           lastSuccessAt:
-            ordersState
-              .last_success_at,
+            ordersState.last_success_at,
 
           ageHours:
             ordersAgeHours,
@@ -1891,17 +2110,13 @@ export async function GET(
             true,
 
           lastHttpStatus:
-            ordersState
-              .last_http_status,
-
+            ordersState.last_http_status,
         },
 
 
         stocks: {
-
           lastSuccessAt:
-            stocksState
-              .last_success_at,
+            stocksState.last_success_at,
 
           ageHours:
             stocksAgeHours,
@@ -1910,17 +2125,46 @@ export async function GET(
             true,
 
           lastHttpStatus:
-            stocksState
-              .last_http_status,
+            stocksState.last_http_status,
 
           snapshotId:
-            latestSnapshot
-              .snapshot_id,
+            latestSnapshot.snapshot_id,
 
           snapshotAt:
-            latestSnapshot
-              .snapshot_at,
+            latestSnapshot.snapshot_at,
+        },
 
+      },
+
+
+      orderDataValidation: {
+
+        deterministicPagination:
+          true,
+
+        orderBy:
+          "order_date.asc,srid.asc",
+
+        exactCountsChecked:
+          true,
+
+        countsMatch:
+          true,
+
+        duplicateSridCount,
+
+        serverCounts: {
+          totalFbw:
+            exactTotalFbw,
+
+          active:
+            exactActiveFbw,
+
+          cancelled:
+            exactCancelledFbw,
+
+          nullIsCancel:
+            exactNullCancelFbw,
         },
 
       },
@@ -1943,28 +2187,25 @@ export async function GET(
       sourceRows: {
 
         fbwOrdersInsidePeriod:
-          fbwOrders
-            .length,
+          fbwOrders.length,
 
         activeFbwOrders:
-          activeOrders
-            .length,
+          activeOrders.length,
 
         cancelledFbwOrders:
-          cancelledOrders
-            .length,
+          cancelledOrders.length,
+
+        nullCancelFbwOrders:
+          nullCancelOrders.length,
 
         orderPagesRead:
-          ordersResult
-            .pages,
+          ordersResult.pages,
 
         stockSnapshotRows:
-          stockRows
-            .length,
+          stockRows.length,
 
         stockPagesRead:
-          stockResult
-            .pages,
+          stockResult.pages,
 
       },
 
@@ -1972,12 +2213,10 @@ export async function GET(
       stocks: {
 
         skuInSnapshot:
-          stockRows
-            .length,
+          stockRows.length,
 
         skuAssumedZeroBecauseAbsent:
-          assumedZeroRows
-            .length,
+          assumedZeroRows.length,
 
         totalCurrentStock,
 
@@ -1991,26 +2230,21 @@ export async function GET(
       summary: {
 
         skuCount:
-          result
-            .length,
+          result.length,
 
         skuWithActiveSales:
           result.filter(
             (row) =>
-              row
-                .sales
-                .ordersCount
+              row.sales.ordersCount
               >
               0
           ).length,
 
         skuWithNeed:
-          skuWithNeed
-            .length,
+          skuWithNeed.length,
 
         skuAssumedZeroFromAbsentSnapshot:
-          assumedZeroRows
-            .length,
+          assumedZeroRows.length,
 
         totalNeedRaw,
 
@@ -2024,68 +2258,59 @@ export async function GET(
       dataQuality: {
 
         snapshotSkuCount:
-          stockRows
-            .length,
+          stockRows.length,
 
         zeroStockSkuInsideSnapshot:
           stockRows.filter(
             (row) =>
               Number(
-                row
-                  .stock_count
+                row.stock_count
               )
               ===
               0
           ).length,
 
         absentFromSnapshotAssumedZero:
-          assumedZeroRows
-            .length,
+          assumedZeroRows.length,
+
+        orderPaginationValidated:
+          true,
 
         note:
-          "Если SKU отсутствует в успешно полученном полном stockType=wb snapshot, его FBW-остаток считается равным 0. Остатки FBS / «Свой склад» в текущий расчёт не входят.",
+          "Заказы читаются с фиксированной сортировкой order_date + srid и сверяются с точными count Supabase. SKU вне полного stockType=wb snapshot считается с FBW-остатком 0. FBS / «Свой склад» не участвует.",
 
       },
 
 
       topNeed:
-        skuWithNeed
-          .slice(
-            0,
-            100
-          ),
+        skuWithNeed.slice(
+          0,
+          100
+        ),
 
 
       assumedZeroFromAbsentSnapshot:
-        assumedZeroRows
-          .map(
-            (row) => ({
+        assumedZeroRows.map(
+          (row) => ({
+            nmId:
+              row.nmId,
 
-              nmId:
-                row.nmId,
+            supplierArticle:
+              row.supplierArticle,
 
-              supplierArticle:
-                row
-                  .supplierArticle,
+            barcode:
+              row.barcode,
 
-              barcode:
-                row
-                  .barcode,
+            sales:
+              row.sales,
 
-              sales:
-                row
-                  .sales,
+            stock:
+              row.stock,
 
-              stock:
-                row
-                  .stock,
-
-              calculation:
-                row
-                  .calculation,
-
-            })
-          ),
+            calculation:
+              row.calculation,
+          })
+        ),
 
     });
 
