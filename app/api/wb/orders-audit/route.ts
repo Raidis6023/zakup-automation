@@ -1,619 +1,1020 @@
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
+
+// ============================================================
+// НАСТРОЙКИ
+// ============================================================
 
 const SALES_DAYS = 28;
 const PAGE_SIZE = 1000;
-const MAX_PAGES = 50;
 
-type WBOrderRow = {
+
+// ============================================================
+// ТИПЫ
+// ============================================================
+
+type WBOrder = {
   srid: string;
   order_date: string;
   last_change_date: string | null;
-  nm_id: number | string;
+  nm_id: number;
   supplier_article: string | null;
-  warehouse_name: string | null;
+  barcode: string | null;
   warehouse_type: string | null;
   is_cancel: boolean | null;
   cancel_date: string | null;
-  income_id: number | string | null;
   synced_at: string | null;
 };
 
-function parseDateMs(
-  value: string | null | undefined
-): number | null {
-  if (!value) {
-    return null;
-  }
 
-  const time = new Date(value).getTime();
+type SyncState = {
+  sync_key: string;
+  last_success_at: string | null;
+};
 
-  return Number.isFinite(time)
-    ? time
-    : null;
-}
 
-export async function GET() {
-  const supabaseUrlRaw =
-    process.env.SUPABASE_URL ??
+// ============================================================
+// SUPABASE CONFIG
+// ============================================================
+
+function getSupabaseConfig() {
+
+  const supabaseUrl =
+    process.env.SUPABASE_URL
+    ??
     process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-  const supabaseKeyRaw =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+
+  const supabaseKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+    ??
     process.env.SUPABASE_SECRET_KEY;
 
-  if (!supabaseUrlRaw) {
-    return NextResponse.json(
-      {
-        ok: false,
-        message:
-          "Не найдена SUPABASE_URL или NEXT_PUBLIC_SUPABASE_URL",
-      },
-      { status: 500 }
+
+  if (!supabaseUrl) {
+
+    throw new Error(
+      "Не найдена SUPABASE_URL или NEXT_PUBLIC_SUPABASE_URL"
     );
+
   }
 
-  if (!supabaseKeyRaw) {
-    return NextResponse.json(
-      {
-        ok: false,
-        message:
-          "Не найдена SUPABASE_SERVICE_ROLE_KEY или SUPABASE_SECRET_KEY",
-      },
-      { status: 500 }
+
+  if (!supabaseKey) {
+
+    throw new Error(
+      "Не найдена SUPABASE_SERVICE_ROLE_KEY или SUPABASE_SECRET_KEY"
     );
+
   }
 
-  const supabaseUrl: string =
-    supabaseUrlRaw;
 
-  const supabaseKey: string =
-    supabaseKeyRaw;
-
-  const headers = {
-    apikey: supabaseKey,
-    Authorization: `Bearer ${supabaseKey}`,
-    Accept: "application/json",
+  return {
+    supabaseUrl,
+    supabaseKey,
   };
 
+}
+
+
+// ============================================================
+// ОБЫЧНЫЙ GET
+// ============================================================
+
+async function supabaseGet<T>(
+  path: string
+): Promise<T> {
+
+  const {
+    supabaseUrl,
+    supabaseKey,
+  } =
+    getSupabaseConfig();
+
+
+  const response =
+    await fetch(
+      `${supabaseUrl}/rest/v1/${path}`,
+      {
+        method:
+          "GET",
+
+        headers: {
+          apikey:
+            supabaseKey,
+
+          Authorization:
+            `Bearer ${supabaseKey}`,
+
+          Accept:
+            "application/json",
+        },
+
+        cache:
+          "no-store",
+      }
+    );
+
+
+  const text =
+    await response.text();
+
+
+  if (!response.ok) {
+
+    throw new Error(
+      `Ошибка Supabase HTTP ${response.status}: ${text}`
+    );
+
+  }
+
+
+  return JSON.parse(
+    text
+  ) as T;
+
+}
+
+
+// ============================================================
+// ПОЛУЧАЕМ ТОЧНОЕ КОЛИЧЕСТВО СТРОК НА СТОРОНЕ SUPABASE
+// ============================================================
+
+async function getExactCount(
+  query: string
+): Promise<number> {
+
+  const {
+    supabaseUrl,
+    supabaseKey,
+  } =
+    getSupabaseConfig();
+
+
+  const response =
+    await fetch(
+      `${supabaseUrl}/rest/v1/wb_orders?select=srid&${query}`,
+      {
+        method:
+          "GET",
+
+        headers: {
+          apikey:
+            supabaseKey,
+
+          Authorization:
+            `Bearer ${supabaseKey}`,
+
+          Accept:
+            "application/json",
+
+          Prefer:
+            "count=exact",
+
+          Range:
+            "0-0",
+        },
+
+        cache:
+          "no-store",
+      }
+    );
+
+
+  if (!response.ok) {
+
+    const text =
+      await response.text();
+
+
+    throw new Error(
+      `Ошибка подсчёта Supabase HTTP ${response.status}: ${text}`
+    );
+
+  }
+
+
+  const contentRange =
+    response.headers.get(
+      "content-range"
+    );
+
+
+  if (!contentRange) {
+
+    throw new Error(
+      "Supabase не вернул Content-Range"
+    );
+
+  }
+
+
+  const parts =
+    contentRange.split(
+      "/"
+    );
+
+
+  const total =
+    Number(
+      parts[1]
+    );
+
+
+  if (
+    !Number.isFinite(
+      total
+    )
+  ) {
+
+    throw new Error(
+      `Не удалось разобрать Content-Range: ${contentRange}`
+    );
+
+  }
+
+
+  return total;
+
+}
+
+
+// ============================================================
+// ЧИТАЕМ ВСЕ СТРОКИ С ДЕТЕРМИНИРОВАННОЙ СОРТИРОВКОЙ
+// ============================================================
+
+async function loadAllOrders(
+  baseQuery: string
+): Promise<{
+  rows: WBOrder[];
+  pages: number;
+}> {
+
+  const rows:
+    WBOrder[] =
+    [];
+
+
+  let offset =
+    0;
+
+
+  let pages =
+    0;
+
+
+  while (true) {
+
+    pages +=
+      1;
+
+
+    const page =
+      await supabaseGet<
+        WBOrder[]
+      >(
+        "wb_orders"
+        +
+        "?"
+        +
+        baseQuery
+        +
+        "&order=order_date.asc,srid.asc"
+        +
+        `&limit=${PAGE_SIZE}`
+        +
+        `&offset=${offset}`
+      );
+
+
+    rows.push(
+      ...page
+    );
+
+
+    if (
+      page.length
+      <
+      PAGE_SIZE
+    ) {
+
+      break;
+
+    }
+
+
+    offset +=
+      PAGE_SIZE;
+
+  }
+
+
+  return {
+    rows,
+    pages,
+  };
+
+}
+
+
+// ============================================================
+// GET
+// ============================================================
+
+export async function GET() {
+
   try {
+
     // ========================================================
-    // 1. СОСТОЯНИЕ ПОСЛЕДНЕЙ СИНХРОНИЗАЦИИ ORDERS
+    // 1. ПОСЛЕДНЯЯ УСПЕШНАЯ СИНХРОНИЗАЦИЯ ORDERS
     // ========================================================
 
-    const stateParams =
-      new URLSearchParams({
-        sync_key: "eq.orders",
-        select:
-          "last_success_at,last_attempt_at,last_http_status,last_message",
-        limit: "1",
-      });
-
-    const stateUrl =
-      `${supabaseUrl}/rest/v1/wb_sync_state?` +
-      stateParams.toString();
-
-    const stateResponse =
-      await fetch(stateUrl, {
-        method: "GET",
-        headers,
-        cache: "no-store",
-      });
-
-    const stateText =
-      await stateResponse.text();
-
-    if (!stateResponse.ok) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message:
-            "Не удалось получить состояние синхронизации orders",
-          supabaseStatus:
-            stateResponse.status,
-          supabaseResponse:
-            stateText,
-        },
-        { status: 500 }
+    const states =
+      await supabaseGet<
+        SyncState[]
+      >(
+        "wb_sync_state"
+        +
+        "?sync_key=eq.orders"
+        +
+        "&select=sync_key,last_success_at"
+        +
+        "&limit=1"
       );
-    }
 
-    const stateRows =
-      JSON.parse(stateText);
 
-    const state =
-      Array.isArray(stateRows)
-        ? stateRows[0]
-        : null;
-
-    const lastSuccessAt:
-      string | null =
-      state?.last_success_at ??
+    const ordersState =
+      states[0]
+      ??
       null;
 
-    const lastAttemptAt:
-      string | null =
-      state?.last_attempt_at ??
-      null;
 
-    if (!lastSuccessAt) {
+    if (
+      !ordersState
+      ||
+      !ordersState.last_success_at
+    ) {
+
       return NextResponse.json(
         {
-          ok: false,
+          ok:
+            false,
+
           message:
-            "Успешная синхронизация заказов ещё не зафиксирована",
+            "Нет last_success_at для orders",
         },
-        { status: 404 }
+        {
+          status:
+            409,
+        }
       );
+
     }
 
-    // ========================================================
-    // 2. ОКНО РАСЧЁТА
-    //
-    // Для конца периода используем время начала успешного
-    // обращения к WB. Оно ближе всего к dateFrom, который
-    // использовался при запросе.
-    // ========================================================
 
-    const periodEndSource =
-      lastAttemptAt ??
-      lastSuccessAt;
+    // ========================================================
+    // 2. ТОТ ЖЕ ПЕРИОД 28 ДНЕЙ
+    // ========================================================
 
     const periodEnd =
       new Date(
-        periodEndSource
+        ordersState.last_success_at
       );
+
 
     const periodStart =
       new Date(
-        periodEnd.getTime() -
-          SALES_DAYS *
-            24 *
-            60 *
-            60 *
-            1000
+        periodEnd.getTime()
+        -
+        SALES_DAYS
+        *
+        24
+        *
+        60
+        *
+        60
+        *
+        1000
       );
 
+
+    const periodStartIso =
+      periodStart.toISOString();
+
+
+    const periodEndIso =
+      periodEnd.toISOString();
+
+
     // ========================================================
-    // 3. ЧИТАЕМ ВСЕ wb_orders СТРАНИЦАМИ ПО 1000
+    // 3. БАЗОВЫЙ ФИЛЬТР
     // ========================================================
 
-    const allOrders:
-      WBOrderRow[] = [];
+    const commonFilter =
+      `order_date=gte.${encodeURIComponent(periodStartIso)}`
+      +
+      `&order_date=lte.${encodeURIComponent(periodEndIso)}`
+      +
+      `&warehouse_type=eq.${encodeURIComponent("Склад WB")}`;
 
-    let pagesRead = 0;
 
-    for (
-      let page = 0;
-      page < MAX_PAGES;
-      page++
-    ) {
-      const offset =
-        page * PAGE_SIZE;
+    // ========================================================
+    // 4. ТОЧНЫЕ COUNTS НА СТОРОНЕ SUPABASE
+    // ========================================================
 
-      const orderParams =
-        new URLSearchParams({
-          select:
-            "srid,order_date,last_change_date,nm_id,supplier_article,warehouse_name,warehouse_type,is_cancel,cancel_date,income_id,synced_at",
+    const [
+      serverTotal,
+      serverCancelled,
+      serverActive,
+      serverNullCancel,
+    ] =
+      await Promise.all([
 
-          order:
-            "order_date.asc,srid.asc",
+        getExactCount(
+          commonFilter
+        ),
 
-          limit:
-            String(PAGE_SIZE),
+        getExactCount(
+          commonFilter
+          +
+          "&is_cancel=eq.true"
+        ),
 
-          offset:
-            String(offset),
-        });
+        getExactCount(
+          commonFilter
+          +
+          "&is_cancel=eq.false"
+        ),
 
-      const ordersUrl =
-        `${supabaseUrl}/rest/v1/wb_orders?` +
-        orderParams.toString();
+        getExactCount(
+          commonFilter
+          +
+          "&is_cancel=is.null"
+        ),
 
-      const ordersResponse =
-        await fetch(
-          ordersUrl,
-          {
-            method: "GET",
-            headers,
-            cache: "no-store",
-          }
-        );
+      ]);
 
-      const ordersText =
-        await ordersResponse.text();
 
-      if (
-        !ordersResponse.ok
-      ) {
-        return NextResponse.json(
-          {
-            ok: false,
+    // ========================================================
+    // 5. ЗАГРУЖАЕМ СТРОКИ С ЯВНОЙ СОРТИРОВКОЙ
+    // ========================================================
 
-            message:
-              "Не удалось получить страницу wb_orders из Supabase",
+    const select =
+      [
+        "srid",
+        "order_date",
+        "last_change_date",
+        "nm_id",
+        "supplier_article",
+        "barcode",
+        "warehouse_type",
+        "is_cancel",
+        "cancel_date",
+        "synced_at",
+      ].join(",");
 
-            page:
-              page + 1,
 
-            offset,
-
-            supabaseStatus:
-              ordersResponse.status,
-
-            supabaseResponse:
-              ordersText,
-          },
-          { status: 500 }
-        );
-      }
-
-      const pageRows =
-        JSON.parse(
-          ordersText
-        );
-
-      if (
-        !Array.isArray(pageRows)
-      ) {
-        return NextResponse.json(
-          {
-            ok: false,
-
-            message:
-              "Supabase вернул неожиданный формат wb_orders",
-
-            page:
-              page + 1,
-          },
-          { status: 500 }
-        );
-      }
-
-      pagesRead++;
-
-      allOrders.push(
-        ...pageRows
+    const loaded =
+      await loadAllOrders(
+        commonFilter
+        +
+        `&select=${select}`
       );
 
-      // Последняя страница.
-      if (
-        pageRows.length <
-        PAGE_SIZE
-      ) {
-        break;
-      }
 
-      if (
-        page ===
-        MAX_PAGES - 1
-      ) {
-        return NextResponse.json(
-          {
-            ok: false,
+    const rows =
+      loaded.rows;
 
-            message:
-              "Достигнут защитный лимит MAX_PAGES. Аудит остановлен.",
-
-            rowsRead:
-              allOrders.length,
-
-            maxPages:
-              MAX_PAGES,
-          },
-          { status: 500 }
-        );
-      }
-    }
 
     // ========================================================
-    // 4. ПРОВЕРЯЕМ ДАТЫ ЗАКАЗОВ
+    // 6. COUNTS ПО ЗАГРУЖЕННЫМ СТРОКАМ
     // ========================================================
 
-    const ordersWithDates =
-      allOrders
-        .map(
-          (
-            order:
-              WBOrderRow
-          ) => ({
-            ...order,
-
-            orderTime:
-              parseDateMs(
-                order.order_date
-              ),
-
-            changeTime:
-              parseDateMs(
-                order.last_change_date
-              ),
-          })
-        )
-        .filter(
-          (
-            order
-          ) =>
-            order.orderTime !==
-            null
-        );
-
-    const invalidOrderDateCount =
-      allOrders.length -
-      ordersWithDates.length;
-
-    // ========================================================
-    // 5. РАЗБИВАЕМ НА 28 ДНЕЙ / СТАРЫЕ / БУДУЩИЕ
-    // ========================================================
-
-    const insidePeriod =
-      ordersWithDates.filter(
-        (order) =>
-          order.orderTime! >=
-            periodStart.getTime() &&
-          order.orderTime! <=
-            periodEnd.getTime()
-      );
-
-    const olderThanPeriod =
-      ordersWithDates.filter(
-        (order) =>
-          order.orderTime! <
-          periodStart.getTime()
-      );
-
-    const newerThanPeriod =
-      ordersWithDates.filter(
-        (order) =>
-          order.orderTime! >
-          periodEnd.getTime()
-      );
-
-    // ========================================================
-    // 6. НУЖНЫЕ НАМ ПРОДАЖИ FBW
-    // ========================================================
-
-    const fbwInside =
-      insidePeriod.filter(
-        (order) =>
-          order.warehouse_type ===
-          "Склад WB"
-      );
-
-    const activeFbwInside =
-      fbwInside.filter(
-        (order) =>
-          order.is_cancel !==
+    const localCancelled =
+      rows.filter(
+        (row) =>
+          row.is_cancel
+          ===
           true
       );
 
-    const cancelledFbwInside =
-      fbwInside.filter(
-        (order) =>
-          order.is_cancel ===
-          true
+
+    const localActive =
+      rows.filter(
+        (row) =>
+          row.is_cancel
+          ===
+          false
       );
 
-    const sellerInside =
-      insidePeriod.filter(
-        (order) =>
-          order.warehouse_type ===
-          "Склад продавца"
+
+    const localNull =
+      rows.filter(
+        (row) =>
+          row.is_cancel
+          ===
+          null
       );
 
+
     // ========================================================
-    // 7. УНИКАЛЬНЫЕ SKU С АКТИВНЫМИ FBW-ЗАКАЗАМИ
+    // 7. ПРОВЕРЯЕМ ДУБЛИКАТЫ SRID
     // ========================================================
 
-    const activeFbwSku =
-      new Set<number>();
+    const sridCounts =
+      new Map<
+        string,
+        number
+      >();
+
 
     for (
-      const order of
-      activeFbwInside
+      const row
+      of rows
     ) {
-      const nmId =
-        Number(
-          order.nm_id
-        );
 
-      if (
-        Number.isFinite(
-          nmId
+      sridCounts.set(
+        row.srid,
+        (
+          sridCounts.get(
+            row.srid
+          )
+          ??
+          0
         )
-      ) {
-        activeFbwSku.add(
-          nmId
-        );
-      }
+        +
+        1
+      );
+
     }
 
+
+    const duplicateSrids =
+      Array.from(
+        sridCounts.entries()
+      )
+      .filter(
+        (
+          [, count]
+        ) =>
+          count
+          >
+          1
+      )
+      .map(
+        (
+          [srid, count]
+        ) => ({
+          srid,
+          count,
+        })
+      );
+
+
     // ========================================================
-    // 8. МИНИМАЛЬНАЯ / МАКСИМАЛЬНАЯ ДАТА В БАЗЕ
+    // 8. УНИКАЛЬНЫЕ SRID
     // ========================================================
 
-    const allOrderTimes =
-      ordersWithDates
-        .map(
-          (order) =>
-            order.orderTime
+    const uniqueSrids =
+      new Set(
+        rows.map(
+          (row) =>
+            row.srid
         )
-        .filter(
-          (
-            value
-          ): value is number =>
-            value !== null
-        );
+      );
 
-    const minOrderDate =
-      allOrderTimes.length >
-      0
-        ? new Date(
-            Math.min(
-              ...allOrderTimes
-            )
-          ).toISOString()
-        : null;
-
-    const maxOrderDate =
-      allOrderTimes.length >
-      0
-        ? new Date(
-            Math.max(
-              ...allOrderTimes
-            )
-          ).toISOString()
-        : null;
 
     // ========================================================
-    // 9. ПРИМЕРЫ СТАРЫХ ЗАКАЗОВ
+    // 9. СМОТРИМ ВРЕМЯ СИНХРОНИЗАЦИИ СТРОК
     // ========================================================
 
-    const oldOrdersSample =
-      [...olderThanPeriod]
-        .sort(
-          (a, b) =>
-            a.orderTime! -
-            b.orderTime!
+    const syncCounts =
+      new Map<
+        string,
+        number
+      >();
+
+
+    for (
+      const row
+      of rows
+    ) {
+
+      const key =
+        row.synced_at
+        ??
+        "NULL";
+
+
+      syncCounts.set(
+        key,
+        (
+          syncCounts.get(
+            key
+          )
+          ??
+          0
         )
-        .slice(0, 20)
-        .map(
-          (order) => ({
-            srid:
-              order.srid,
+        +
+        1
+      );
 
-            orderDate:
-              order.order_date,
+    }
 
-            lastChangeDate:
-              order.last_change_date,
 
-            nmId:
-              order.nm_id,
+    const syncVersions =
+      Array.from(
+        syncCounts.entries()
+      )
+      .map(
+        (
+          [syncedAt, count]
+        ) => ({
+          syncedAt,
+          count,
+        })
+      )
+      .sort(
+        (
+          a,
+          b
+        ) =>
+          String(
+            b.syncedAt
+          ).localeCompare(
+            String(
+              a.syncedAt
+            )
+          )
+      );
 
-            supplierArticle:
-              order.supplier_article,
-
-            warehouseType:
-              order.warehouse_type,
-
-            isCancel:
-              order.is_cancel,
-          })
-        );
 
     // ========================================================
-    // 10. РЕЗУЛЬТАТ
+    // 10. CANCEL_DATE VS IS_CANCEL
+    // ========================================================
+
+    const cancelledWithoutCancelDate =
+      localCancelled.filter(
+        (row) =>
+          !row.cancel_date
+      );
+
+
+    const activeWithCancelDate =
+      localActive.filter(
+        (row) =>
+          row.cancel_date
+          !==
+          null
+      );
+
+
+    // ========================================================
+    // 11. ПОСЛЕДНИЕ ОТМЕНЁННЫЕ
+    // ========================================================
+
+    const cancelledSample =
+      [...localCancelled]
+      .sort(
+        (
+          a,
+          b
+        ) =>
+          new Date(
+            b.last_change_date
+            ??
+            b.order_date
+          ).getTime()
+          -
+          new Date(
+            a.last_change_date
+            ??
+            a.order_date
+          ).getTime()
+      )
+      .slice(
+        0,
+        50
+      )
+      .map(
+        (row) => ({
+          srid:
+            row.srid,
+
+          nmId:
+            row.nm_id,
+
+          supplierArticle:
+            row.supplier_article,
+
+          orderDate:
+            row.order_date,
+
+          lastChangeDate:
+            row.last_change_date,
+
+          isCancel:
+            row.is_cancel,
+
+          cancelDate:
+            row.cancel_date,
+
+          syncedAt:
+            row.synced_at,
+        })
+      );
+
+
+    // ========================================================
+    // 12. СОПОСТАВЛЯЕМ SERVER COUNTS И ЗАГРУЗКУ
+    // ========================================================
+
+    const countsMatch =
+      serverTotal
+      ===
+      rows.length
+      &&
+      serverCancelled
+      ===
+      localCancelled.length
+      &&
+      serverActive
+      ===
+      localActive.length
+      &&
+      serverNullCancel
+      ===
+      localNull.length;
+
+
+    // ========================================================
+    // 13. ПРОВЕРКА МАТЕМАТИКИ
+    // ========================================================
+
+    const serverMathValid =
+      serverTotal
+      ===
+      (
+        serverCancelled
+        +
+        serverActive
+        +
+        serverNullCancel
+      );
+
+
+    const localMathValid =
+      rows.length
+      ===
+      (
+        localCancelled.length
+        +
+        localActive.length
+        +
+        localNull.length
+      );
+
+
+    // ========================================================
+    // 14. ПРЕДВАРИТЕЛЬНЫЙ ДИАГНОЗ
+    // ========================================================
+
+    let diagnosis:
+      string;
+
+
+    if (
+      !countsMatch
+    ) {
+
+      diagnosis =
+        "Пагинационная загрузка не совпадает с точными count Supabase. Наиболее вероятная причина — проблема чтения страниц.";
+
+    }
+
+    else if (
+      duplicateSrids.length
+      >
+      0
+    ) {
+
+      diagnosis =
+        "В выборке обнаружены повторяющиеся srid. Это может искажать расчёт продаж.";
+
+    }
+
+    else if (
+      syncVersions.length
+      >
+      1
+    ) {
+
+      diagnosis =
+        "В 28-дневной выборке присутствуют строки разных синхронизаций. Это нормально для upsert, но нужно проверить, корректно ли обновляются старые отменённые заказы.";
+
+    }
+
+    else {
+
+      diagnosis =
+        "Текущая выборка согласована с точными count Supabase. Если предыдущий procurement-real показал другие числа, наиболее вероятна нестабильная пагинация старого запроса без явной сортировки.";
+
+    }
+
+
+    // ========================================================
+    // 15. ОТВЕТ
     // ========================================================
 
     return NextResponse.json({
-      ok: true,
+
+      ok:
+        true,
+
 
       message:
-        "Полный аудит заказов WB выполнен только по данным Supabase",
+        "Аудит заказов WB завершён",
+
 
       wildberriesRequestSent:
         false,
 
-      synchronization: {
-        lastSuccessAt,
 
-        lastAttemptAt,
+      period: {
 
-        lastHttpStatus:
-          state?.last_http_status ??
-          null,
-
-        lastMessage:
-          state?.last_message ??
-          null,
-      },
-
-      calculationPeriod: {
         days:
           SALES_DAYS,
 
         start:
-          periodStart.toISOString(),
+          periodStartIso,
 
         end:
-          periodEnd.toISOString(),
+          periodEndIso,
 
-        basedOn:
-          lastAttemptAt
-            ? "last_attempt_at"
-            : "last_success_at",
+        ordersLastSuccessAt:
+          ordersState.last_success_at,
+
       },
 
-      database: {
-        totalRows:
-          allOrders.length,
 
-        pagesRead,
+      serverCounts: {
+
+        totalFbw:
+          serverTotal,
+
+        active:
+          serverActive,
+
+        cancelled:
+          serverCancelled,
+
+        nullIsCancel:
+          serverNullCancel,
+
+        mathValid:
+          serverMathValid,
+
+      },
+
+
+      loadedRows: {
+
+        total:
+          rows.length,
+
+        uniqueSrid:
+          uniqueSrids.size,
+
+        active:
+          localActive.length,
+
+        cancelled:
+          localCancelled.length,
+
+        nullIsCancel:
+          localNull.length,
+
+        pages:
+          loaded.pages,
 
         pageSize:
           PAGE_SIZE,
 
-        validOrderDates:
-          ordersWithDates.length,
+        deterministicOrder:
+          "order_date.asc,srid.asc",
 
-        invalidOrderDates:
-          invalidOrderDateCount,
+        mathValid:
+          localMathValid,
 
-        minOrderDate,
-
-        maxOrderDate,
       },
 
-      periodAudit: {
-        inside28Days:
-          insidePeriod.length,
 
-        olderThan28Days:
-          olderThanPeriod.length,
+      comparison: {
 
-        newerThanPeriod:
-          newerThanPeriod.length,
+        countsMatch,
 
-        outside28Days:
-          olderThanPeriod.length +
-          newerThanPeriod.length,
+        totalDifference:
+          rows.length
+          -
+          serverTotal,
+
+        activeDifference:
+          localActive.length
+          -
+          serverActive,
+
+        cancelledDifference:
+          localCancelled.length
+          -
+          serverCancelled,
+
+        nullDifference:
+          localNull.length
+          -
+          serverNullCancel,
+
       },
 
-      inside28Days: {
-        fbwOrders:
-          fbwInside.length,
 
-        activeFbwOrders:
-          activeFbwInside.length,
+      duplicates: {
 
-        cancelledFbwOrders:
-          cancelledFbwInside.length,
+        duplicateSridCount:
+          duplicateSrids.length,
 
-        sellerWarehouseOrders:
-          sellerInside.length,
+        sample:
+          duplicateSrids.slice(
+            0,
+            50
+          ),
 
-        activeFbwSkuCount:
-          activeFbwSku.size,
       },
 
-      oldOrdersSample,
+
+      cancelConsistency: {
+
+        cancelledWithoutCancelDate:
+          cancelledWithoutCancelDate.length,
+
+        activeWithCancelDate:
+          activeWithCancelDate.length,
+
+        note:
+          "is_cancel считается основным признаком отмены. cancel_date используется только как дополнительная диагностическая проверка.",
+
+      },
+
+
+      syncVersions: {
+
+        count:
+          syncVersions.length,
+
+        values:
+          syncVersions.slice(
+            0,
+            50
+          ),
+
+      },
+
+
+      diagnosis,
+
+
+      cancelledSample,
+
     });
+
   } catch (error) {
+
+    console.error(
+      "Ошибка orders-audit:",
+      error
+    );
+
+
     return NextResponse.json(
       {
-        ok: false,
+        ok:
+          false,
 
         message:
-          "Ошибка полного аудита заказов WB",
-
-        error:
           error instanceof Error
-            ? error.message
-            : "Неизвестная ошибка",
+            ?
+            error.message
+            :
+            "Неизвестная ошибка аудита заказов WB",
       },
-      { status: 500 }
+      {
+        status:
+          500,
+      }
     );
+
   }
+
 }
