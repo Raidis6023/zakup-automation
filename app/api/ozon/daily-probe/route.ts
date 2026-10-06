@@ -645,7 +645,7 @@ Promise<FboPosting[]> {
 
 
     if (
-      page > 100
+      page > 500
     ) {
 
       throw new Error(
@@ -668,8 +668,12 @@ Promise<FboPosting[]> {
             to,
           },
 
+          // ==================================================
+          // OZON РАЗРЕШАЕТ МАКСИМУМ 100
+          // ==================================================
+
           limit:
-            1000,
+            100,
 
           sort_dir:
             "asc",
@@ -941,7 +945,8 @@ function buildSalesPreview(
 
 
     const isCancelled =
-      status.toLowerCase()
+      status
+        .toLowerCase()
       ===
       "cancelled";
 
@@ -1290,7 +1295,8 @@ export async function GET() {
           String(
             posting.status
             ?? ""
-          ).toLowerCase()
+          )
+            .toLowerCase()
           ===
           "cancelled"
       );
@@ -1302,7 +1308,8 @@ export async function GET() {
           String(
             posting.status
             ?? ""
-          ).toLowerCase()
+          )
+            .toLowerCase()
           !==
           "cancelled"
       );
@@ -1393,18 +1400,18 @@ export async function GET() {
                         .logistic_clusters
                       ?? []
                     )
-                    .flatMap(
-                      (
-                        logisticCluster
-                      ) =>
-                        logisticCluster
-                          .warehouses
-                        ?? []
-                    )
-                    .slice(
-                      0,
-                      10
-                    ),
+                      .flatMap(
+                        (
+                          logisticCluster
+                        ) =>
+                          logisticCluster
+                            .warehouses
+                          ?? []
+                      )
+                      .slice(
+                        0,
+                        10
+                      ),
                 })
               ),
         },
