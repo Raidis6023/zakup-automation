@@ -6,8 +6,24 @@ export const maxDuration = 60;
 
 
 // ============================================================
-// SKU, КОТОРЫЕ ЕСТЬ В ПРОДАЖАХ,
-// НО НЕ ПОПАЛИ В ОСНОВНОЙ SNAPSHOT ОСТАТКОВ
+// НАСТРОЙКИ
+// ============================================================
+
+const PRODUCTS_URL =
+  "https://seller-analytics-api.wildberries.ru/api/v2/stocks-report/products/products";
+
+
+// Для Базового токена WB:
+// минимум 30 минут между запросами отчёта остатков.
+const MIN_INTERVAL_MINUTES = 30;
+
+
+// Небольшой запас, чтобы не попасть ровно в границу лимита.
+const SAFETY_SECONDS = 15;
+
+
+// ============================================================
+// ПРОБЛЕМНЫЕ SKU
 // ============================================================
 
 const MISSING_NM_IDS = [
@@ -18,14 +34,6 @@ const MISSING_NM_IDS = [
   914555171,
   1378037145,
 ];
-
-
-// ============================================================
-// WB API
-// ============================================================
-
-const WB_WAREHOUSES_URL =
-  "https://seller-analytics-api.wildberries.ru/api/analytics/v1/stocks-report/wb-warehouses";
 
 
 // ============================================================
@@ -45,8 +53,7 @@ function parseJson(
   } catch {
 
     return {
-      raw:
-        text,
+      raw: text,
     };
 
   }
@@ -55,33 +62,208 @@ function parseJson(
 
 
 // ============================================================
-// ЧИСЛО
+// ДАТА МОСКВЫ
 // ============================================================
 
-function safeNumber(
-  value: unknown
-): number {
+function getMoscowDate():
+  string {
 
-  const number =
-    Number(
-      value
+  const formatter =
+    new Intl.DateTimeFormat(
+      "en-CA",
+      {
+        timeZone:
+          "Europe/Moscow",
+
+        year:
+          "numeric",
+
+        month:
+          "2-digit",
+
+        day:
+          "2-digit",
+      }
     );
 
 
+  const parts =
+    formatter.formatToParts(
+      new Date()
+    );
+
+
+  const year =
+    parts.find(
+      (part) =>
+        part.type === "year"
+    )?.value;
+
+
+  const month =
+    parts.find(
+      (part) =>
+        part.type === "month"
+    )?.value;
+
+
+  const day =
+    parts.find(
+      (part) =>
+        part.type === "day"
+    )?.value;
+
+
   if (
-    !Number.isFinite(
-      number
-    )
+    !year
+    ||
+    !month
+    ||
+    !day
   ) {
 
-    return 0;
+    throw new Error(
+      "Не удалось определить дату Москвы"
+    );
 
   }
 
 
-  return Math.max(
-    0,
-    number
+  return `${year}-${month}-${day}`;
+
+}
+
+
+// ============================================================
+// SUPABASE CONFIG
+// ============================================================
+
+function getSupabaseConfig() {
+
+  const supabaseUrl =
+    process.env.SUPABASE_URL
+    ??
+    process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+
+  const supabaseKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+    ??
+    process.env.SUPABASE_SECRET_KEY;
+
+
+  if (!supabaseUrl) {
+
+    throw new Error(
+      "Не найдена SUPABASE_URL или NEXT_PUBLIC_SUPABASE_URL"
+    );
+
+  }
+
+
+  if (!supabaseKey) {
+
+    throw new Error(
+      "Не найдена SUPABASE_SERVICE_ROLE_KEY или SUPABASE_SECRET_KEY"
+    );
+
+  }
+
+
+  return {
+    supabaseUrl,
+    supabaseKey,
+  };
+
+}
+
+
+// ============================================================
+// ЧИТАЕМ ПОСЛЕДНЮЮ СИНХРОНИЗАЦИЮ ОСТАТКОВ
+// ============================================================
+
+async function getLastStocksSuccess():
+  Promise<string | null> {
+
+  const {
+    supabaseUrl,
+    supabaseKey,
+  } =
+    getSupabaseConfig();
+
+
+  const url =
+    `${supabaseUrl}/rest/v1/wb_sync_state`
+    +
+    "?sync_key=eq.stocks"
+    +
+    "&select=last_success_at"
+    +
+    "&limit=1";
+
+
+  const response =
+    await fetch(
+      url,
+      {
+        method: "GET",
+
+        headers: {
+
+          apikey:
+            supabaseKey,
+
+          Authorization:
+            `Bearer ${supabaseKey}`,
+
+          Accept:
+            "application/json",
+
+        },
+
+        cache:
+          "no-store",
+      }
+    );
+
+
+  const text =
+    await response.text();
+
+
+  if (!response.ok) {
+
+    throw new Error(
+      `Не удалось прочитать wb_sync_state: ${text}`
+    );
+
+  }
+
+
+  const rows =
+    parseJson(
+      text
+    );
+
+
+  if (
+    !Array.isArray(
+      rows
+    )
+    ||
+    rows.length === 0
+  ) {
+
+    return null;
+
+  }
+
+
+  return (
+    rows[0]
+      ?.last_success_at
+    ??
+    null
   );
 
 }
@@ -93,28 +275,21 @@ function safeNumber(
 
 export async function GET() {
 
-  // ==========================================================
-  // 1. TOKEN
-  // ==========================================================
-
   const wbToken =
-    process.env
-      .WB_READ_TOKEN;
+    process.env.WB_READ_TOKEN;
 
 
   if (!wbToken) {
 
     return NextResponse.json(
       {
-        ok:
-          false,
+        ok: false,
 
         message:
           "Не найден WB_READ_TOKEN в Vercel",
       },
       {
-        status:
-          500,
+        status: 500,
       }
     );
 
@@ -124,19 +299,179 @@ export async function GET() {
   try {
 
     // ========================================================
-    // 2. ЗАПРОС ТОЛЬКО К ТЕКУЩИМ ОСТАТКАМ СКЛАДОВ WB
+    // 1. ПРОВЕРЯЕМ, ПРОШЛО ЛИ 30 МИНУТ
     // ========================================================
+
+    const lastStocksSuccess =
+      await getLastStocksSuccess();
+
+
+    if (
+      lastStocksSuccess
+    ) {
+
+      const lastTime =
+        new Date(
+          lastStocksSuccess
+        ).getTime();
+
+
+      if (
+        Number.isFinite(
+          lastTime
+        )
+      ) {
+
+        const allowedAtMs =
+          lastTime
+          +
+          MIN_INTERVAL_MINUTES
+          *
+          60
+          *
+          1000
+          +
+          SAFETY_SECONDS
+          *
+          1000;
+
+
+        if (
+          Date.now()
+          <
+          allowedAtMs
+        ) {
+
+          const secondsRemaining =
+            Math.ceil(
+              (
+                allowedAtMs
+                -
+                Date.now()
+              )
+              /
+              1000
+            );
+
+
+          const minutesRemaining =
+            Math.ceil(
+              secondsRemaining
+              /
+              60
+            );
+
+
+          return NextResponse.json({
+
+            ok:
+              true,
+
+            skipped:
+              true,
+
+            wildberriesRequestSent:
+              false,
+
+            message:
+              "Диагностический запрос пока не отправлен, чтобы не нарушить лимит Базового токена WB",
+
+            rateLimitProtection: {
+
+              minIntervalMinutes:
+                MIN_INTERVAL_MINUTES,
+
+              safetySeconds:
+                SAFETY_SECONDS,
+
+              lastStocksSuccess,
+
+              nextAllowedAt:
+                new Date(
+                  allowedAtMs
+                ).toISOString(),
+
+              secondsRemaining,
+
+              minutesRemaining,
+
+            },
+
+            instruction:
+              `Повтори открытие этой ссылки примерно через ${minutesRemaining} мин.`,
+
+          });
+
+        }
+
+      }
+
+    }
+
+
+    // ========================================================
+    // 2. ФОРМИРУЕМ ТОЧЕЧНЫЙ ЗАПРОС
+    // ========================================================
+
+    const reportDate =
+      getMoscowDate();
+
 
     const requestBody = {
 
-      nmIds:
+      nmIDs:
         MISSING_NM_IDS,
 
-      chrtIds:
-        [],
+
+      currentPeriod: {
+
+        start:
+          reportDate,
+
+        end:
+          reportDate,
+
+      },
+
+
+      stockType:
+        "wb",
+
+
+      skipDeletedNm:
+        false,
+
+
+      availabilityFilters: [
+
+        "deficient",
+
+        "actual",
+
+        "balanced",
+
+        "nonActual",
+
+        "nonLiquid",
+
+        "invalidData",
+
+      ],
+
+
+      orderBy: {
+
+        field:
+          "avgOrders",
+
+        mode:
+          "desc",
+
+      },
+
 
       limit:
-        250000,
+        1000,
 
       offset:
         0,
@@ -144,9 +479,13 @@ export async function GET() {
     };
 
 
+    // ========================================================
+    // 3. ЗАПРОС К WB
+    // ========================================================
+
     const response =
       await fetch(
-        WB_WAREHOUSES_URL,
+        PRODUCTS_URL,
         {
           method:
             "POST",
@@ -175,8 +514,18 @@ export async function GET() {
       );
 
 
+    const text =
+      await response.text();
+
+
+    const data =
+      parseJson(
+        text
+      );
+
+
     // ========================================================
-    // 3. ЛИМИТЫ WB
+    // 4. RATE LIMIT HEADERS
     // ========================================================
 
     const retryHeader =
@@ -211,50 +560,13 @@ export async function GET() {
         );
 
 
-    const retrySecondsRaw =
-      retryHeader
-      ??
-      resetHeader;
-
-
-    const retrySeconds =
-      retrySecondsRaw
-        ?
-        Number(
-          retrySecondsRaw
-        )
-        :
-        null;
-
-
-    const nextAllowedAt =
-      retrySeconds !== null
-      &&
-      Number.isFinite(
-        retrySeconds
-      )
-      &&
-      retrySeconds
-      >
-      0
-        ?
-        new Date(
-          Date.now()
-          +
-          retrySeconds
-          *
-          1000
-        ).toISOString()
-        :
-        null;
-
-
     const rateLimit = {
 
-      retryAfterSeconds:
-        retrySeconds,
+      retry:
+        retryHeader,
 
-      nextAllowedAt,
+      reset:
+        resetHeader,
 
       limit:
         limitHeader,
@@ -266,108 +578,7 @@ export async function GET() {
 
 
     // ========================================================
-    // 4. 204 = ДАННЫХ НЕТ
-    // ========================================================
-
-    if (
-      response.status
-      ===
-      204
-    ) {
-
-      return NextResponse.json({
-
-        ok:
-          true,
-
-        message:
-          "WB не вернул ни одной строки остатков для проверяемых SKU",
-
-        wbStatus:
-          204,
-
-        source: {
-
-          endpoint:
-            WB_WAREHOUSES_URL,
-
-          nmIds:
-            MISSING_NM_IDS,
-
-        },
-
-        rateLimit,
-
-
-        summary: {
-
-          skuChecked:
-            MISSING_NM_IDS.length,
-
-          skuFound:
-            0,
-
-          skuAbsent:
-            MISSING_NM_IDS.length,
-
-          skuWithPositiveStock:
-            0,
-
-          skuWithZeroStock:
-            0,
-
-        },
-
-
-        checks:
-          MISSING_NM_IDS.map(
-            (nmId) => ({
-
-              nmId,
-
-              found:
-                false,
-
-              quantity:
-                null,
-
-              inWayToClient:
-                null,
-
-              inWayFromClient:
-                null,
-
-              warehouseRows:
-                0,
-
-              conclusion:
-                "SKU отсутствует и в основном отчёте, и в текущем отчёте складов WB. Пока автоматически считать остаток нулевым нельзя.",
-
-            })
-          ),
-
-      });
-
-    }
-
-
-    // ========================================================
-    // 5. ЧИТАЕМ ОТВЕТ
-    // ========================================================
-
-    const text =
-      await response
-        .text();
-
-
-    const data =
-      parseJson(
-        text
-      );
-
-
-    // ========================================================
-    // 6. 429
+    // 5. 429
     // ========================================================
 
     if (
@@ -383,19 +594,12 @@ export async function GET() {
             false,
 
           message:
-            "Wildberries временно ограничил запрос остатков",
+            "WB всё ещё ограничивает запрос по лимиту Базового токена",
 
           wbStatus:
             429,
 
           rateLimit,
-
-          recommendation:
-            nextAllowedAt
-              ?
-              `Повторить запрос после ${nextAllowedAt}`
-              :
-              "Повторить запрос позже",
 
           wbResponse:
             data,
@@ -411,7 +615,7 @@ export async function GET() {
 
 
     // ========================================================
-    // 7. ДРУГАЯ ОШИБКА
+    // 6. ДРУГАЯ ОШИБКА
     // ========================================================
 
     if (!response.ok) {
@@ -423,7 +627,7 @@ export async function GET() {
             false,
 
           message:
-            "Wildberries вернул ошибку при проверке отсутствующих SKU",
+            "Wildberries вернул ошибку при точечной проверке SKU",
 
           wbStatus:
             response.status,
@@ -444,7 +648,7 @@ export async function GET() {
 
 
     // ========================================================
-    // 8. ПРОВЕРЯЕМ ФОРМАТ
+    // 7. ЧИТАЕМ ТОВАРЫ
     // ========================================================
 
     const items =
@@ -462,18 +666,13 @@ export async function GET() {
 
 
     // ========================================================
-    // 9. ГРУППИРУЕМ ПО NM ID
-    //
-    // WB МОЖЕТ ВЕРНУТЬ НЕСКОЛЬКО СТРОК:
-    // размер × склад.
-    //
-    // Поэтому всё суммируем по nmId.
+    // 8. СОБИРАЕМ ПО NM ID
     // ========================================================
 
-    const rowsByNmId =
+    const byNmId =
       new Map<
         number,
-        any[]
+        any
       >();
 
 
@@ -485,18 +684,17 @@ export async function GET() {
       const nmId =
         Number(
           item
+            ?.nmID
+          ??
+          item
             ?.nmId
-        );
+      );
 
 
       if (
         !Number.isFinite(
           nmId
         )
-        ||
-        nmId
-        <=
-        0
       ) {
 
         continue;
@@ -504,109 +702,77 @@ export async function GET() {
       }
 
 
-      const current =
-        rowsByNmId.get(
-          nmId
-        )
-        ??
-        [];
-
-
-      current.push(
-        item
-      );
-
-
-      rowsByNmId.set(
+      byNmId.set(
         nmId,
-        current
+        item
       );
 
     }
 
 
     // ========================================================
-    // 10. РЕЗУЛЬТАТ ПО 6 SKU
+    // 9. ПРОВЕРЯЕМ КАЖДЫЙ ИЗ 6 SKU
     // ========================================================
 
     const checks =
       MISSING_NM_IDS.map(
         (nmId) => {
 
-          const rows =
-            rowsByNmId.get(
+          const product =
+            byNmId.get(
               nmId
             )
             ??
-            [];
+            null;
 
 
           const found =
-            rows.length
-            >
-            0;
+            product
+            !==
+            null;
 
 
-          const quantity =
-            rows.reduce(
-              (
-                sum:
-                  number,
-
-                row:
-                  any
-              ) =>
-                sum
-                +
-                safeNumber(
-                  row
-                    ?.quantity
-                ),
-              0
-            );
+          const stockCount =
+            found
+              ?
+              Number(
+                product
+                  ?.metrics
+                  ?.stockCount
+                ??
+                0
+              )
+              :
+              null;
 
 
-          const inWayToClient =
-            rows.reduce(
-              (
-                sum:
-                  number,
-
-                row:
-                  any
-              ) =>
-                sum
-                +
-                safeNumber(
-                  row
-                    ?.inWayToClient
-                ),
-              0
-            );
+          const toClientCount =
+            found
+              ?
+              Number(
+                product
+                  ?.metrics
+                  ?.toClientCount
+                ??
+                0
+              )
+              :
+              null;
 
 
-          const inWayFromClient =
-            rows.reduce(
-              (
-                sum:
-                  number,
+          const fromClientCount =
+            found
+              ?
+              Number(
+                product
+                  ?.metrics
+                  ?.fromClientCount
+                ??
+                0
+              )
+              :
+              null;
 
-                row:
-                  any
-              ) =>
-                sum
-                +
-                safeNumber(
-                  row
-                    ?.inWayFromClient
-                ),
-              0
-            );
-
-
-          // ==================================================
-          // ВЫВОД
-          // ==================================================
 
           let conclusion:
             string;
@@ -614,30 +780,15 @@ export async function GET() {
 
           if (
             found
-            &&
-            quantity
-            >
-            0
           ) {
 
             conclusion =
-              "WB показывает положительный физический остаток. Значит, отсутствие SKU в основном products/products нельзя трактовать как нулевой остаток.";
-
-          } else if (
-            found
-            &&
-            quantity
-            ===
-            0
-          ) {
-
-            conclusion =
-              "WB знает этот SKU, но текущий физический остаток по складам равен 0.";
+              "SKU найден при точечном запросе. Значит, его отсутствие в полном snapshot нужно отдельно объяснить логикой выдачи WB.";
 
           } else {
 
             conclusion =
-              "SKU не найден в текущем отчёте складов WB. Он также отсутствовал в основном products/products. Автоматически считать его нулевым пока не будем.";
+              "SKU не возвращён даже при прямом запросе по nmID. Пока не считаем это автоматически нулевым остатком.";
 
           }
 
@@ -648,68 +799,30 @@ export async function GET() {
 
             found,
 
-            warehouseRows:
-              rows.length,
+            vendorCode:
+              product
+                ?.vendorCode
+              ??
+              null,
 
-            quantity,
+            productName:
+              product
+                ?.name
+              ??
+              null,
 
-            inWayToClient,
+            stockCount,
 
-            inWayFromClient,
+            toClientCount,
 
+            fromClientCount,
 
-            warehouses:
-              rows.map(
-                (
-                  row:
-                    any
-                ) => ({
-
-                  chrtId:
-                    row
-                      ?.chrtId
-                    ??
-                    null,
-
-                  warehouseId:
-                    row
-                      ?.warehouseId
-                    ??
-                    null,
-
-                  warehouseName:
-                    row
-                      ?.warehouseName
-                    ??
-                    null,
-
-                  regionName:
-                    row
-                      ?.regionName
-                    ??
-                    null,
-
-                  quantity:
-                    safeNumber(
-                      row
-                        ?.quantity
-                    ),
-
-                  inWayToClient:
-                    safeNumber(
-                      row
-                        ?.inWayToClient
-                    ),
-
-                  inWayFromClient:
-                    safeNumber(
-                      row
-                        ?.inWayFromClient
-                    ),
-
-                })
-              ),
-
+            availability:
+              product
+                ?.metrics
+                ?.availability
+              ??
+              null,
 
             conclusion,
 
@@ -720,86 +833,55 @@ export async function GET() {
 
 
     // ========================================================
-    // 11. SUMMARY
+    // 10. SUMMARY
     // ========================================================
 
-    const skuFound =
+    const foundCount =
       checks.filter(
         (item) =>
           item.found
       ).length;
 
 
-    const skuAbsent =
+    const notFoundCount =
       checks.filter(
         (item) =>
           !item.found
       ).length;
 
 
-    const skuWithPositiveStock =
+    const foundWithStock =
       checks.filter(
         (item) =>
           item.found
           &&
-          item.quantity
+          (
+            item.stockCount
+            ??
+            0
+          )
           >
           0
       ).length;
 
 
-    const skuWithZeroStock =
+    const foundWithZeroStock =
       checks.filter(
         (item) =>
           item.found
           &&
-          item.quantity
+          (
+            item.stockCount
+            ??
+            0
+          )
           ===
           0
       ).length;
 
 
-    const totalQuantity =
-      checks.reduce(
-        (
-          sum,
-          item
-        ) =>
-          sum
-          +
-          item.quantity,
-        0
-      );
-
-
-    const totalToClient =
-      checks.reduce(
-        (
-          sum,
-          item
-        ) =>
-          sum
-          +
-          item.inWayToClient,
-        0
-      );
-
-
-    const totalFromClient =
-      checks.reduce(
-        (
-          sum,
-          item
-        ) =>
-          sum
-          +
-          item.inWayFromClient,
-        0
-      );
-
-
     // ========================================================
-    // 12. ОТВЕТ
+    // 11. ОТВЕТ
     // ========================================================
 
     return NextResponse.json({
@@ -808,16 +890,21 @@ export async function GET() {
         true,
 
       message:
-        "Проверка отсутствующих SKU через текущие остатки складов WB завершена",
+        "Точечная проверка отсутствующих SKU завершена",
+
+      wildberriesRequestSent:
+        true,
 
 
       source: {
 
         endpoint:
-          WB_WAREHOUSES_URL,
+          PRODUCTS_URL,
 
-        note:
-          "Один ответ может содержать несколько строк одного nmId: по размерам и складам. quantity суммируется по nmId.",
+        stockType:
+          "wb",
+
+        reportDate,
 
       },
 
@@ -830,19 +917,17 @@ export async function GET() {
         skuChecked:
           MISSING_NM_IDS.length,
 
-        skuFound,
+        found:
+          foundCount,
 
-        skuAbsent,
+        notFound:
+          notFoundCount,
 
-        skuWithPositiveStock,
+        foundWithPositiveStock:
+          foundWithStock,
 
-        skuWithZeroStock,
-
-        totalQuantity,
-
-        totalToClient,
-
-        totalFromClient,
+        foundWithZeroStock:
+          foundWithZeroStock,
 
       },
 
@@ -870,7 +955,7 @@ export async function GET() {
             ?
             error.message
             :
-            "Неизвестная ошибка проверки отсутствующих SKU",
+            "Неизвестная ошибка проверки SKU",
 
       },
       {
