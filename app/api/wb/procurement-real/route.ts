@@ -14,9 +14,22 @@ export const maxDuration = 60;
 
 const SALES_DAYS = 28;
 
-const TARGET_FRESHNESS_HOURS = 1;
 
+// Заказы WB допускаем возрастом до 3 часов.
+// Это соответствует фактическому лимиту текущего API/токена.
+const ORDERS_TARGET_FRESHNESS_HOURS = 3;
+
+
+// Остатки должны быть свежее.
+// Для них оставляем максимум 1 час.
+const STOCKS_TARGET_FRESHNESS_HOURS = 1;
+
+
+// Аварийный предел.
+// Если данные старше 24 часов,
+// считаем ситуацию критической.
 const HARD_MAX_DATA_AGE_HOURS = 24;
+
 
 const SUPABASE_PAGE_SIZE = 1000;
 
@@ -324,10 +337,6 @@ async function getExactOrderCount(
 
 // ============================================================
 // ПАГИНАЦИЯ SUPABASE
-//
-// ВАЖНО:
-// каждая многостраничная выборка получает явную сортировку.
-// Без этого limit/offset использовать нельзя.
 // ============================================================
 
 async function supabaseGetAll<T>(
@@ -804,7 +813,7 @@ export async function GET(
       ||
       ordersAgeBefore
       >
-      TARGET_FRESHNESS_HOURS;
+      ORDERS_TARGET_FRESHNESS_HOURS;
 
 
     const needStocksRefresh =
@@ -814,7 +823,7 @@ export async function GET(
       ||
       stocksAgeBefore
       >
-      TARGET_FRESHNESS_HOURS;
+      STOCKS_TARGET_FRESHNESS_HOURS;
 
 
     // ========================================================
@@ -912,7 +921,7 @@ export async function GET(
       &&
       ordersAgeHours
       <=
-      TARGET_FRESHNESS_HOURS;
+      ORDERS_TARGET_FRESHNESS_HOURS;
 
 
     const stocksFresh =
@@ -922,7 +931,7 @@ export async function GET(
       &&
       stocksAgeHours
       <=
-      TARGET_FRESHNESS_HOURS;
+      STOCKS_TARGET_FRESHNESS_HOURS;
 
 
     const ordersHardExpired =
@@ -970,8 +979,12 @@ export async function GET(
               "Расчёт заблокирован: не удалось получить достаточно свежие данные WB",
 
           freshnessPolicy: {
-            targetFreshnessHours:
-              TARGET_FRESHNESS_HOURS,
+
+            ordersTargetFreshnessHours:
+              ORDERS_TARGET_FRESHNESS_HOURS,
+
+            stocksTargetFreshnessHours:
+              STOCKS_TARGET_FRESHNESS_HOURS,
 
             hardMaxAgeHours:
               HARD_MAX_DATA_AGE_HOURS,
@@ -981,7 +994,9 @@ export async function GET(
           },
 
           freshness: {
+
             orders: {
+
               lastSuccessAt:
                 ordersState
                   ?.last_success_at
@@ -1004,7 +1019,9 @@ export async function GET(
                 ordersRefresh,
             },
 
+
             stocks: {
+
               lastSuccessAt:
                 stocksState
                   ?.last_success_at
@@ -1026,6 +1043,7 @@ export async function GET(
               refreshResult:
                 stocksRefresh,
             },
+
           },
         },
         {
@@ -1128,8 +1146,6 @@ export async function GET(
 
     // ========================================================
     // 8. ОСТАТКИ
-    //
-    // Даже остатки читаем с фиксированной сортировкой.
     // ========================================================
 
     const stockResult =
@@ -1187,9 +1203,6 @@ export async function GET(
 
     // ========================================================
     // 10. ЭТАЛОННЫЕ COUNTS SUPABASE
-    //
-    // Они нужны, чтобы расчёт вообще не запускался,
-    // если постраничное чтение дало другой результат.
     // ========================================================
 
     const [
@@ -1227,12 +1240,6 @@ export async function GET(
 
     // ========================================================
     // 11. ЧИТАЕМ ЗАКАЗЫ
-    //
-    // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ:
-    //
-    // order_date.asc,srid.asc
-    //
-    // Теперь каждая страница имеет однозначное место.
     // ========================================================
 
     const ordersResult =
@@ -1299,6 +1306,7 @@ export async function GET(
             "Расчёт заблокирован: обнаружены дубли srid в wb_orders",
 
           dataQuality: {
+
             rows:
               fbwOrders.length,
 
@@ -1349,11 +1357,7 @@ export async function GET(
 
 
     // ========================================================
-    // 14. ПРОВЕРКА COUNTS
-    //
-    // Если сервер говорит 5166 активных,
-    // а страницы дали 5236,
-    // расчёт больше НЕ продолжится.
+    // 14. ПРОВЕРКА PAGINATION COUNTS
     // ========================================================
 
     const paginationCountsMatch =
@@ -1387,6 +1391,7 @@ export async function GET(
             "Расчёт заблокирован: постраничная загрузка wb_orders не совпала с точными count Supabase",
 
           serverCounts: {
+
             totalFbw:
               exactTotalFbw,
 
@@ -1400,7 +1405,9 @@ export async function GET(
               exactNullCancelFbw,
           },
 
+
           loadedCounts: {
+
             totalFbw:
               fbwOrders.length,
 
@@ -1635,14 +1642,12 @@ export async function GET(
 
 
           // ==================================================
-          // ПРАВИЛО FBW
-          //
           // SKU отсутствует в успешном полном snapshot
-          // stockType=wb
+          // stockType = wb
           //
           // → FBW остаток = 0
           //
-          // FBS / "Свой склад" НЕ учитываем.
+          // "Свой склад" / FBS не учитывается.
           // ==================================================
 
           const stockSource:
@@ -1707,6 +1712,7 @@ export async function GET(
 
 
             sales: {
+
               periodDays:
                 SALES_DAYS,
 
@@ -1717,6 +1723,7 @@ export async function GET(
 
 
             stock: {
+
               dataAvailable:
                 true,
 
@@ -1764,6 +1771,7 @@ export async function GET(
 
 
             calculation: {
+
               daysOfStock:
                 calculation.daysOfStock,
 
@@ -1776,6 +1784,7 @@ export async function GET(
               rule:
                 calculation.rule,
             },
+
           };
 
         }
@@ -2000,6 +2009,7 @@ export async function GET(
       autoRefresh: {
 
         orders: {
+
           requested:
             needOrdersRefresh,
 
@@ -2009,6 +2019,7 @@ export async function GET(
 
 
         stocks: {
+
           requested:
             needStocksRefresh,
 
@@ -2038,7 +2049,6 @@ export async function GET(
 
         fbsIncluded:
           false,
-
       },
 
 
@@ -2070,6 +2080,7 @@ export async function GET(
 
 
         rules: {
+
           moreThan30Days:
             "need = 0",
 
@@ -2087,24 +2098,38 @@ export async function GET(
       },
 
 
-      freshness: {
+      freshnessPolicy: {
 
-        targetFreshnessHours:
-          TARGET_FRESHNESS_HOURS,
+        ordersTargetFreshnessHours:
+          ORDERS_TARGET_FRESHNESS_HOURS,
+
+        stocksTargetFreshnessHours:
+          STOCKS_TARGET_FRESHNESS_HOURS,
 
         hardMaxAgeHours:
           HARD_MAX_DATA_AGE_HOURS,
+
+        mode:
+          "strict",
+      },
+
+
+      freshness: {
 
         allSourcesFresh:
           true,
 
 
         orders: {
+
           lastSuccessAt:
             ordersState.last_success_at,
 
           ageHours:
             ordersAgeHours,
+
+          targetFreshnessHours:
+            ORDERS_TARGET_FRESHNESS_HOURS,
 
           fresh:
             true,
@@ -2115,11 +2140,15 @@ export async function GET(
 
 
         stocks: {
+
           lastSuccessAt:
             stocksState.last_success_at,
 
           ageHours:
             stocksAgeHours,
+
+          targetFreshnessHours:
+            STOCKS_TARGET_FRESHNESS_HOURS,
 
           fresh:
             true,
@@ -2153,7 +2182,9 @@ export async function GET(
 
         duplicateSridCount,
 
+
         serverCounts: {
+
           totalFbw:
             exactTotalFbw,
 
@@ -2180,7 +2211,6 @@ export async function GET(
 
         end:
           periodEndIso,
-
       },
 
 
@@ -2206,7 +2236,6 @@ export async function GET(
 
         stockPagesRead:
           stockResult.pages,
-
       },
 
 
@@ -2223,7 +2252,6 @@ export async function GET(
         totalToClient,
 
         totalFromClient,
-
       },
 
 
@@ -2251,7 +2279,6 @@ export async function GET(
         totalNeedRoundedUp,
 
         rules,
-
       },
 
 
@@ -2277,7 +2304,7 @@ export async function GET(
           true,
 
         note:
-          "Заказы читаются с фиксированной сортировкой order_date + srid и сверяются с точными count Supabase. SKU вне полного stockType=wb snapshot считается с FBW-остатком 0. FBS / «Свой склад» не участвует.",
+          "Заказы WB допускаются возрастом до 3 часов, остатки до 1 часа. Заказы читаются с фиксированной сортировкой order_date + srid и сверяются с точными count Supabase. SKU вне полного stockType=wb snapshot считается с FBW-остатком 0. FBS / «Свой склад» не участвует.",
 
       },
 
@@ -2292,6 +2319,7 @@ export async function GET(
       assumedZeroFromAbsentSnapshot:
         assumedZeroRows.map(
           (row) => ({
+
             nmId:
               row.nmId,
 
