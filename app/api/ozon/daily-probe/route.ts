@@ -2152,6 +2152,34 @@ export async function GET() {
                 product.ozon_product_id
                 == null
             ).length,
+
+          without_ozon_product_id_sample:
+            products
+              .filter(
+                (
+                  product
+                ) =>
+                  product.ozon_product_id
+                  == null
+              )
+              .map(
+                (
+                  product
+                ) => ({
+                  id:
+                    product.id,
+
+                  offer_id:
+                    product.offer_id,
+
+                  name:
+                    product.name,
+                })
+              )
+              .slice(
+                0,
+                300
+              ),
         },
 
 
