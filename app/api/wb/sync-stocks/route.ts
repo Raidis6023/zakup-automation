@@ -1,104 +1,112 @@
-import { NextResponse } from "next/server";
-import { randomUUID } from "crypto";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
 
-export const dynamic =
-  "force-dynamic";
-
-export const runtime =
-  "nodejs";
-
-export const maxDuration =
-  60;
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 
 // ============================================================
 // НАСТРОЙКИ
 // ============================================================
 
-const WB_URL =
-  "https://seller-analytics-api.wildberries.ru/api/v2/stocks-report/products/products";
-
 const SYNC_KEY =
   "stocks";
-
-const PAGE_LIMIT =
-  1000;
 
 const REPEAT_GUARD_HOURS =
   1;
 
-const SUPABASE_BATCH_SIZE =
+const PAGE_LIMIT =
   1000;
+
+const SUPABASE_BATCH_SIZE =
+  500;
+
+const SALES_PERIOD_DAYS =
+  28;
+
+const WB_URL =
+  "https://seller-analytics-api.wildberries.ru/api/v2/stocks-report/products/products";
 
 
 // ============================================================
 // ТИПЫ
 // ============================================================
 
-type WBMetrics = {
-  stockCount?: number | null;
+type SyncState = {
+  sync_key:
+    string;
 
-  toClientCount?: number | null;
+  last_attempt_at:
+    string | null;
 
-  fromClientCount?: number | null;
+  last_success_at:
+    string | null;
 
-  availability?: string | null;
+  next_allowed_at:
+    string | null;
+
+  last_http_status:
+    number | null;
+
+  retry_after_seconds:
+    number | null;
+
+  last_message:
+    string | null;
+
+  stage?:
+    string | null;
+
+  external_task_id?:
+    string | null;
+
+  last_snapshot_id?:
+    string | null;
 };
 
 
 type WBProduct = {
-  nmID?: number | null;
+  nmID?:
+    number;
 
-  isDeleted?: boolean | null;
+  vendorCode?:
+    string;
 
-  subjectName?: string | null;
+  name?:
+    string;
 
-  name?: string | null;
+  brandName?:
+    string;
 
-  vendorCode?: string | null;
+  metrics?: {
+    stockCount?:
+      number;
 
-  brandName?: string | null;
+    toClientCount?:
+      number;
 
-  mainPhoto?: string | null;
+    fromClientCount?:
+      number;
 
-  hasSizes?: boolean | null;
-
-  metrics?: WBMetrics | null;
-};
-
-
-type WBResponse = {
-  data?: {
-    items?: WBProduct[];
-    currency?: string | null;
+    availability?:
+      string;
   };
-};
 
-
-type SyncState = {
-  sync_key?: string;
-
-  last_attempt_at?: string | null;
-
-  last_success_at?: string | null;
-
-  next_allowed_at?: string | null;
-
-  last_http_status?: number | null;
-
-  retry_after_seconds?: number | null;
-
-  last_message?: string | null;
+  [key: string]:
+    unknown;
 };
 
 
 // ============================================================
-// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// JSON
 // ============================================================
 
 function parseJson(
   text: string
-): unknown {
+): any {
 
   try {
 
@@ -108,7 +116,10 @@ function parseJson(
 
   } catch {
 
-    return text;
+    return {
+      rawText:
+        text,
+    };
 
   }
 
@@ -116,357 +127,524 @@ function parseJson(
 
 
 // ============================================================
-// MOSCOW DATE
+// SUPABASE CONFIG
 // ============================================================
 
-function getMoscowDate():
-  string {
+function getSupabaseConfig() {
 
-  const formatter =
-    new Intl.DateTimeFormat(
-      "en-CA",
-      {
-        timeZone:
-          "Europe/Moscow",
-
-        year:
-          "numeric",
-
-        month:
-          "2-digit",
-
-        day:
-          "2-digit",
-      }
-    );
+  const supabaseUrl =
+    process.env.SUPABASE_URL
+    ??
+    process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 
-  const parts =
-    formatter.formatToParts(
-      new Date()
-    );
+  const supabaseKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+    ??
+    process.env.SUPABASE_SECRET_KEY;
 
 
-  const year =
-    parts.find(
-      (part) =>
-        part.type ===
-        "year"
-    )?.value;
-
-
-  const month =
-    parts.find(
-      (part) =>
-        part.type ===
-        "month"
-    )?.value;
-
-
-  const day =
-    parts.find(
-      (part) =>
-        part.type ===
-        "day"
-    )?.value;
-
-
-  if (
-    !year ||
-    !month ||
-    !day
-  ) {
+  if (!supabaseUrl) {
 
     throw new Error(
-      "Не удалось определить текущую дату Москвы"
+      "Не найдена SUPABASE_URL или NEXT_PUBLIC_SUPABASE_URL"
     );
 
   }
 
 
-  return (
-    `${year}-${month}-${day}`
-  );
+  if (!supabaseKey) {
+
+    throw new Error(
+      "Не найдена SUPABASE_SERVICE_ROLE_KEY или SUPABASE_SECRET_KEY"
+    );
+
+  }
+
+
+  return {
+    supabaseUrl,
+    supabaseKey,
+  };
 
 }
 
 
 // ============================================================
-// ПАУЗА
+// WB TOKEN
 // ============================================================
 
-function sleep(
-  ms: number
-) {
+function getWBToken() {
 
-  return new Promise<void>(
-    (resolve) => {
+  const token =
+    process.env.WB_READ_TOKEN;
 
-      setTimeout(
-        resolve,
-        ms
-      );
 
-    }
-  );
+  if (!token) {
+
+    throw new Error(
+      "Не найдена переменная окружения WB_READ_TOKEN"
+    );
+
+  }
+
+
+  return token;
 
 }
 
 
 // ============================================================
-// BATCH
+// UUID
+// ============================================================
+
+function makeUuid() {
+
+  return crypto.randomUUID();
+
+}
+
+
+// ============================================================
+// BATCHES
 // ============================================================
 
 function splitIntoBatches<T>(
-  items: T[],
-  size: number
+  rows: T[],
+  batchSize: number
 ): T[][] {
 
-  const batches:
+  const result:
     T[][] =
     [];
 
 
   for (
     let i = 0;
-    i < items.length;
-    i += size
+    i < rows.length;
+    i += batchSize
   ) {
 
-    batches.push(
-      items.slice(
+    result.push(
+      rows.slice(
         i,
-        i + size
+        i + batchSize
       )
     );
 
   }
 
 
-  return batches;
+  return result;
 
 }
 
 
 // ============================================================
-// ОСНОВНОЙ ROUTE
+// ЧИТАЕМ STATE
 // ============================================================
 
-export async function GET() {
+async function getSyncState():
+Promise<SyncState | null> {
 
-  // ==========================================================
-  // 1. ENV
-  // ==========================================================
-
-  const wbTokenRaw =
-    process.env
-      .WB_READ_TOKEN;
+  const {
+    supabaseUrl,
+    supabaseKey,
+  } =
+    getSupabaseConfig();
 
 
-  const supabaseUrlRaw =
-    process.env
-      .SUPABASE_URL
+  const response =
+    await fetch(
+      `${supabaseUrl}/rest/v1/wb_sync_state`
+      +
+      `?sync_key=eq.${SYNC_KEY}`
+      +
+      `&select=*`
+      +
+      `&limit=1`,
+      {
+        method:
+          "GET",
+
+        headers: {
+          apikey:
+            supabaseKey,
+
+          Authorization:
+            `Bearer ${supabaseKey}`,
+
+          Accept:
+            "application/json",
+        },
+
+        cache:
+          "no-store",
+      }
+    );
+
+
+  const text =
+    await response.text();
+
+
+  if (!response.ok) {
+
+    throw new Error(
+      `Не удалось прочитать wb_sync_state. HTTP ${response.status}: ${text}`
+    );
+
+  }
+
+
+  const rows =
+    parseJson(
+      text
+    );
+
+
+  if (
+    !Array.isArray(
+      rows
+    )
+  ) {
+
+    return null;
+
+  }
+
+
+  return (
+    rows[0]
     ??
-    process.env
-      .NEXT_PUBLIC_SUPABASE_URL;
+    null
+  );
+
+}
 
 
-  const supabaseKeyRaw =
-    process.env
-      .SUPABASE_SERVICE_ROLE_KEY
-    ??
-    process.env
-      .SUPABASE_SECRET_KEY;
+// ============================================================
+// СОХРАНЯЕМ STATE
+// ============================================================
 
+async function saveSyncState(
+  data: {
+    lastAttemptAt:
+      string | null;
 
-  if (!wbTokenRaw) {
+    lastSuccessAt:
+      string | null;
 
-    return NextResponse.json(
-      {
-        ok:
-          false,
+    nextAllowedAt:
+      string | null;
 
-        message:
-          "Не найден WB_READ_TOKEN в Vercel",
-      },
-      {
-        status:
-          500,
-      }
-    );
+    lastHttpStatus:
+      number | null;
 
+    retryAfterSeconds:
+      number | null;
+
+    lastMessage:
+      string | null;
+
+    stage?:
+      string | null;
+
+    lastSnapshotId?:
+      string | null;
   }
+) {
+
+  const {
+    supabaseUrl,
+    supabaseKey,
+  } =
+    getSupabaseConfig();
 
 
-  if (!supabaseUrlRaw) {
+  const body = {
+    sync_key:
+      SYNC_KEY,
 
-    return NextResponse.json(
-      {
-        ok:
-          false,
+    last_attempt_at:
+      data.lastAttemptAt,
 
-        message:
-          "Не найдена SUPABASE_URL или NEXT_PUBLIC_SUPABASE_URL",
-      },
-      {
-        status:
-          500,
-      }
-    );
+    last_success_at:
+      data.lastSuccessAt,
 
-  }
+    next_allowed_at:
+      data.nextAllowedAt,
 
+    last_http_status:
+      data.lastHttpStatus,
 
-  if (!supabaseKeyRaw) {
+    retry_after_seconds:
+      data.retryAfterSeconds,
 
-    return NextResponse.json(
-      {
-        ok:
-          false,
+    last_message:
+      data.lastMessage,
 
-        message:
-          "Не найдена SUPABASE_SERVICE_ROLE_KEY или SUPABASE_SECRET_KEY",
-      },
-      {
-        status:
-          500,
-      }
-    );
+    stage:
+      data.stage
+      ??
+      null,
 
-  }
+    external_task_id:
+      null,
 
+    last_snapshot_id:
+      data.lastSnapshotId
+      ??
+      null,
 
-  const wbToken:
-    string =
-    wbTokenRaw;
-
-
-  const supabaseUrl:
-    string =
-    supabaseUrlRaw;
-
-
-  const supabaseKey:
-    string =
-    supabaseKeyRaw;
-
-
-  // ==========================================================
-  // SUPABASE HEADERS
-  // ==========================================================
-
-  const supabaseHeaders = {
-
-    apikey:
-      supabaseKey,
-
-    Authorization:
-      `Bearer ${supabaseKey}`,
-
-    Accept:
-      "application/json",
-
-    "Content-Type":
-      "application/json",
-
+    updated_at:
+      new Date().toISOString(),
   };
 
 
-  // ==========================================================
-  // SAVE SYNC STATE
-  // ==========================================================
+  const response =
+    await fetch(
+      `${supabaseUrl}/rest/v1/wb_sync_state`
+      +
+      `?on_conflict=sync_key`,
+      {
+        method:
+          "POST",
 
-  async function saveSyncState(
-    data: {
-      lastAttemptAt?:
-        string | null;
+        headers: {
+          apikey:
+            supabaseKey,
 
-      lastSuccessAt?:
-        string | null;
+          Authorization:
+            `Bearer ${supabaseKey}`,
 
-      nextAllowedAt?:
-        string | null;
+          Accept:
+            "application/json",
 
-      lastHttpStatus?:
-        number | null;
+          "Content-Type":
+            "application/json",
 
-      retryAfterSeconds?:
-        number | null;
+          Prefer:
+            "resolution=merge-duplicates,return=minimal",
+        },
 
-      lastMessage?:
-        string | null;
-    }
+        body:
+          JSON.stringify(
+            body
+          ),
+
+        cache:
+          "no-store",
+      }
+    );
+
+
+  if (!response.ok) {
+
+    const text =
+      await response.text();
+
+
+    throw new Error(
+      `Не удалось сохранить wb_sync_state. HTTP ${response.status}: ${text}`
+    );
+
+  }
+
+}
+
+
+// ============================================================
+// ПОСЛЕДНИЙ SNAPSHOT
+// ============================================================
+
+async function getLatestSnapshot():
+Promise<{
+  snapshot_id: string;
+  snapshot_at: string;
+} | null> {
+
+  const {
+    supabaseUrl,
+    supabaseKey,
+  } =
+    getSupabaseConfig();
+
+
+  const response =
+    await fetch(
+      `${supabaseUrl}/rest/v1/wb_stock_product_snapshots`
+      +
+      `?select=snapshot_id,snapshot_at`
+      +
+      `&order=snapshot_at.desc`
+      +
+      `&limit=1`,
+      {
+        method:
+          "GET",
+
+        headers: {
+          apikey:
+            supabaseKey,
+
+          Authorization:
+            `Bearer ${supabaseKey}`,
+
+          Accept:
+            "application/json",
+        },
+
+        cache:
+          "no-store",
+      }
+    );
+
+
+  const text =
+    await response.text();
+
+
+  if (!response.ok) {
+
+    throw new Error(
+      `Не удалось прочитать последний snapshot остатков. HTTP ${response.status}: ${text}`
+    );
+
+  }
+
+
+  const rows =
+    parseJson(
+      text
+    );
+
+
+  if (
+    !Array.isArray(
+      rows
+    )
+    ||
+    rows.length === 0
   ) {
 
-    const body = {
+    return null;
 
-      sync_key:
-        SYNC_KEY,
-
-      last_attempt_at:
-        data.lastAttemptAt
-        ?? null,
-
-      last_success_at:
-        data.lastSuccessAt
-        ?? null,
-
-      next_allowed_at:
-        data.nextAllowedAt
-        ?? null,
-
-      last_http_status:
-        data.lastHttpStatus
-        ?? null,
-
-      retry_after_seconds:
-        data.retryAfterSeconds
-        ?? null,
-
-      last_message:
-        data.lastMessage
-        ?? null,
-
-      updated_at:
-        new Date()
-          .toISOString(),
-
-    };
+  }
 
 
-    const response =
-      await fetch(
-        `${supabaseUrl}/rest/v1/wb_sync_state?on_conflict=sync_key`,
-        {
-          method:
-            "POST",
+  return {
+    snapshot_id:
+      String(
+        rows[0].snapshot_id
+      ),
 
-          headers: {
-            ...supabaseHeaders,
+    snapshot_at:
+      String(
+        rows[0].snapshot_at
+      ),
+  };
 
-            Prefer:
-              "resolution=merge-duplicates,return=minimal",
-          },
+}
 
-          body:
-            JSON.stringify(
-              body
-            ),
 
-          cache:
-            "no-store",
-        }
+// ============================================================
+// УДАЛЕНИЕ НЕПОЛНОГО SNAPSHOT
+// ============================================================
+
+async function deleteSnapshot(
+  snapshotId: string
+) {
+
+  const {
+    supabaseUrl,
+    supabaseKey,
+  } =
+    getSupabaseConfig();
+
+
+  await fetch(
+    `${supabaseUrl}/rest/v1/wb_stock_product_snapshots`
+    +
+    `?snapshot_id=eq.${encodeURIComponent(
+      snapshotId
+    )}`,
+    {
+      method:
+        "DELETE",
+
+      headers: {
+        apikey:
+          supabaseKey,
+
+        Authorization:
+          `Bearer ${supabaseKey}`,
+
+        Accept:
+          "application/json",
+      },
+
+      cache:
+        "no-store",
+    }
+  );
+
+}
+
+
+// ============================================================
+// RATE LIMIT
+// ============================================================
+
+function parseRetrySeconds(
+  response: Response
+): number | null {
+
+  const candidates = [
+
+    response.headers.get(
+      "x-ratelimit-retry"
+    ),
+
+    response.headers.get(
+      "x-ratelimit-reset"
+    ),
+
+    response.headers.get(
+      "retry-after"
+    ),
+
+  ];
+
+
+  for (
+    const raw
+    of candidates
+  ) {
+
+    if (!raw) {
+
+      continue;
+
+    }
+
+
+    const value =
+      Number(
+        raw
       );
 
 
-    if (!response.ok) {
+    if (
+      Number.isFinite(
+        value
+      )
+      &&
+      value > 0
+    ) {
 
-      const text =
-        await response.text();
-
-
-      throw new Error(
-        `Не удалось сохранить wb_sync_state: ${text}`
+      return Math.ceil(
+        value
       );
 
     }
@@ -474,59 +652,100 @@ export async function GET() {
   }
 
 
+  return null;
+
+}
+
+
+// ============================================================
+// ПЕРИОД ДЛЯ WB REPORT
+// ============================================================
+
+function getReportPeriod() {
+
+  const end =
+    new Date();
+
+
+  const start =
+    new Date(
+      end.getTime()
+      -
+      SALES_PERIOD_DAYS
+      *
+      24
+      *
+      60
+      *
+      60
+      *
+      1000
+    );
+
+
+  return {
+    start:
+      start
+        .toISOString()
+        .slice(
+          0,
+          10
+        ),
+
+    end:
+      end
+        .toISOString()
+        .slice(
+          0,
+          10
+        ),
+  };
+
+}
+
+
+// ============================================================
+// GET
+// ============================================================
+
+export async function GET(
+  request: NextRequest
+) {
+
   try {
 
+    const force =
+      request
+        .nextUrl
+        .searchParams
+        .get(
+          "force"
+        )
+      ===
+      "1";
+
+
+    const wbToken =
+      getWBToken();
+
+
+    const {
+      supabaseUrl,
+      supabaseKey,
+    } =
+      getSupabaseConfig();
+
+
     // ========================================================
-    // 2. СОСТОЯНИЕ СИНХРОНИЗАЦИИ
+    // 1. ТЕКУЩЕЕ СОСТОЯНИЕ
     // ========================================================
-
-    const stateResponse =
-      await fetch(
-        `${supabaseUrl}/rest/v1/wb_sync_state`
-        +
-        `?sync_key=eq.${SYNC_KEY}`
-        +
-        `&select=*`
-        +
-        `&limit=1`,
-        {
-          method:
-            "GET",
-
-          headers:
-            supabaseHeaders,
-
-          cache:
-            "no-store",
-        }
-      );
-
-
-    if (!stateResponse.ok) {
-
-      const text =
-        await stateResponse.text();
-
-
-      throw new Error(
-        `Не удалось прочитать wb_sync_state: ${text}`
-      );
-
-    }
-
-
-    const stateRows:
-      SyncState[] =
-      await stateResponse.json();
-
 
     const state =
-      stateRows[0]
-      ?? null;
+      await getSyncState();
 
 
     // ========================================================
-    // 3. БЛОКИРОВКА ПО 429
+    // 2. НЕ ОБХОДИМ РЕАЛЬНЫЙ СОХРАНЁННЫЙ RATE LIMIT
     // ========================================================
 
     if (
@@ -535,22 +754,31 @@ export async function GET() {
 
       const nextAllowed =
         new Date(
-          state
-            .next_allowed_at
+          state.next_allowed_at
         );
 
 
       if (
         Number.isFinite(
-          nextAllowed
-            .getTime()
+          nextAllowed.getTime()
         )
         &&
-        nextAllowed
-          .getTime()
+        nextAllowed.getTime()
         >
         Date.now()
       ) {
+
+        const secondsRemaining =
+          Math.ceil(
+            (
+              nextAllowed.getTime()
+              -
+              Date.now()
+            )
+            /
+            1000
+          );
+
 
         return NextResponse.json({
           ok:
@@ -562,12 +790,19 @@ export async function GET() {
           blockedByRateLimit:
             true,
 
+          forced:
+            force,
+
           message:
-            "Синхронизация остатков пока заблокирована лимитом WB",
+            "Запрос к Wildberries не выполнен: сохранённый лимит API ещё не восстановился",
+
+          secondsRemaining,
 
           nextAllowedAt:
-            state
-              .next_allowed_at,
+            state.next_allowed_at,
+
+          lastHttpStatus:
+            state.last_http_status,
 
           wildberriesRequestSent:
             false,
@@ -579,26 +814,32 @@ export async function GET() {
 
 
     // ========================================================
-    // 4. ЗАЩИТА ОТ ЛИШНИХ ЗАПРОСОВ
+    // 3. ОБЫЧНЫЙ GUARD СВЕЖЕСТИ
+    //
+    // force=1 ЕГО ОБХОДИТ.
     // ========================================================
 
+    const latestSnapshot =
+      await getLatestSnapshot();
+
+
     if (
-      state?.last_success_at
+      !force
+      &&
+      latestSnapshot
     ) {
 
-      const lastSuccess =
+      const latestTime =
         new Date(
-          state
-            .last_success_at
-        );
+          latestSnapshot.snapshot_at
+        ).getTime();
 
 
-      const hoursPassed =
+      const hoursSinceLastSync =
         (
           Date.now()
           -
-          lastSuccess
-            .getTime()
+          latestTime
         )
         /
         (
@@ -612,10 +853,10 @@ export async function GET() {
 
       if (
         Number.isFinite(
-          hoursPassed
+          hoursSinceLastSync
         )
         &&
-        hoursPassed
+        hoursSinceLastSync
         <
         REPEAT_GUARD_HOURS
       ) {
@@ -627,20 +868,30 @@ export async function GET() {
           skipped:
             true,
 
+          blockedByRateLimit:
+            false,
+
+          forced:
+            false,
+
           message:
             "Свежий снимок остатков WB уже существует",
 
           latestSyncedAt:
-            state
-              .last_success_at,
+            latestSnapshot.snapshot_at,
+
+          latestSnapshotId:
+            latestSnapshot.snapshot_id,
 
           hoursSinceLastSync:
             Number(
-              hoursPassed
-                .toFixed(
-                  2
-                )
+              hoursSinceLastSync.toFixed(
+                2
+              )
             ),
+
+          repeatGuardHours:
+            REPEAT_GUARD_HOURS,
 
           wildberriesRequestSent:
             false,
@@ -652,12 +903,11 @@ export async function GET() {
 
 
     // ========================================================
-    // 5. НАЧАЛО ПОПЫТКИ
+    // 4. ФИКСИРУЕМ ПОПЫТКУ
     // ========================================================
 
     const attemptAt =
-      new Date()
-        .toISOString();
+      new Date().toISOString();
 
 
     await saveSyncState({
@@ -665,9 +915,9 @@ export async function GET() {
         attemptAt,
 
       lastSuccessAt:
-        state
-          ?.last_success_at
-        ?? null,
+        state?.last_success_at
+        ??
+        null,
 
       nextAllowedAt:
         null,
@@ -679,23 +929,35 @@ export async function GET() {
         null,
 
       lastMessage:
-        "Начало синхронизации поартикульных остатков WB",
+        force
+          ?
+          "Начало принудительной синхронизации остатков WB"
+          :
+          "Начало синхронизации остатков WB",
+
+      stage:
+        "loading",
+
+      lastSnapshotId:
+        state?.last_snapshot_id
+        ??
+        null,
     });
 
 
     // ========================================================
-    // 6. ДАТА ОТЧЁТА
+    // 5. ПЕРИОД
     // ========================================================
 
-    const reportDate =
-      getMoscowDate();
+    const currentPeriod =
+      getReportPeriod();
 
 
     // ========================================================
-    // 7. ПОЛУЧАЕМ ВСЕ ТОВАРЫ WB
+    // 6. ПОЛУЧАЕМ ВСЕ СТРАНИЦЫ WB
     // ========================================================
 
-    const allProducts:
+    const allItems:
       WBProduct[] =
       [];
 
@@ -704,45 +966,43 @@ export async function GET() {
       0;
 
 
-    let page =
+    let requestCount =
       0;
 
 
-    let lastWBStatus:
+    let lastWbStatus:
       number | null =
       null;
 
 
+    const rateLimitHeaders:
+      Record<string, string | null> =
+      {
+        limit:
+          null,
+
+        remaining:
+          null,
+
+        retry:
+          null,
+
+        reset:
+          null,
+      };
+
+
     while (true) {
 
-      page +=
-        1;
-
-
       const requestBody = {
+        currentPeriod,
 
-        currentPeriod: {
-          start:
-            reportDate,
-
-          end:
-            reportDate,
-        },
-
-
-        // Только склады Wildberries = FBW
         stockType:
           "wb",
 
-
-        // НЕ пропускаем удалённые карточки.
-        // Если на удалённой карточке остался товар,
-        // он нам всё равно нужен в остатках.
         skipDeletedNm:
-          false,
+          true,
 
-
-        // Берём вообще все категории доступности.
         availabilityFilters: [
           "deficient",
           "actual",
@@ -752,9 +1012,6 @@ export async function GET() {
           "invalidData",
         ],
 
-
-        // Сортировка для нас не важна,
-        // но WB требует orderBy.
         orderBy: {
           field:
             "avgOrders",
@@ -763,12 +1020,10 @@ export async function GET() {
             "desc",
         },
 
-
         limit:
           PAGE_LIMIT,
 
         offset,
-
       };
 
 
@@ -801,8 +1056,36 @@ export async function GET() {
         );
 
 
-      lastWBStatus =
+      requestCount +=
+        1;
+
+
+      lastWbStatus =
         wbResponse.status;
+
+
+      rateLimitHeaders.limit =
+        wbResponse.headers.get(
+          "x-ratelimit-limit"
+        );
+
+
+      rateLimitHeaders.remaining =
+        wbResponse.headers.get(
+          "x-ratelimit-remaining"
+        );
+
+
+      rateLimitHeaders.retry =
+        wbResponse.headers.get(
+          "x-ratelimit-retry"
+        );
+
+
+      rateLimitHeaders.reset =
+        wbResponse.headers.get(
+          "x-ratelimit-reset"
+        );
 
 
       const wbText =
@@ -816,7 +1099,7 @@ export async function GET() {
 
 
       // ======================================================
-      // 429
+      // 7. 429
       // ======================================================
 
       if (
@@ -825,32 +1108,26 @@ export async function GET() {
         429
       ) {
 
-        const retryAfterHeader =
-          wbResponse
-            .headers
-            .get(
-              "retry-after"
-            );
-
-
-        const retryAfterSeconds =
-          Math.max(
-            60,
-            Number(
-              retryAfterHeader
-            )
-            || 60
+        const retrySeconds =
+          parseRetrySeconds(
+            wbResponse
           );
 
 
         const nextAllowedAt =
-          new Date(
-            Date.now()
-            +
-            retryAfterSeconds
+          retrySeconds
+          !==
+          null
+            ?
+            new Date(
+              Date.now()
+              +
+              retrySeconds
               *
               1000
-          ).toISOString();
+            ).toISOString()
+            :
+            null;
 
 
         await saveSyncState({
@@ -858,58 +1135,72 @@ export async function GET() {
             attemptAt,
 
           lastSuccessAt:
-            state
-              ?.last_success_at
-            ?? null,
+            state?.last_success_at
+            ??
+            null,
 
           nextAllowedAt,
 
           lastHttpStatus:
             429,
 
-          retryAfterSeconds,
+          retryAfterSeconds:
+            retrySeconds,
 
           lastMessage:
-            "WB ограничил запрос остатков",
+            "Too Many Requests от Wildberries при загрузке остатков",
+
+          stage:
+            "rate_limited",
+
+          lastSnapshotId:
+            state?.last_snapshot_id
+            ??
+            null,
         });
 
 
-        return NextResponse.json(
-          {
-            ok:
-              false,
+        return NextResponse.json({
+          ok:
+            false,
 
-            message:
-              "Wildberries ограничил запрос остатков",
+          skipped:
+            false,
 
-            wbStatus:
-              429,
+          blockedByRateLimit:
+            true,
 
-            retryAfterSeconds,
+          forced:
+            force,
 
-            nextAllowedAt,
+          message:
+            "Wildberries не разрешил обновить остатки из-за лимита API",
 
-            page,
+          wbStatus:
+            429,
 
-            offset,
+          retryAfterSeconds:
+            retrySeconds,
 
-            wildberriesRequestSent:
-              true,
+          nextAllowedAt,
 
-            wbResponse:
-              wbData,
-          },
-          {
-            status:
-              429,
-          }
-        );
+          wildberriesRequestSent:
+            true,
+
+          requestCount,
+
+          rateLimit:
+            rateLimitHeaders,
+
+          wbResponse:
+            wbData,
+        });
 
       }
 
 
       // ======================================================
-      // ДРУГАЯ ОШИБКА
+      // 8. ПРОЧАЯ ОШИБКА WB
       // ======================================================
 
       if (!wbResponse.ok) {
@@ -919,9 +1210,9 @@ export async function GET() {
             attemptAt,
 
           lastSuccessAt:
-            state
-              ?.last_success_at
-            ?? null,
+            state?.last_success_at
+            ??
+            null,
 
           nextAllowedAt:
             null,
@@ -933,7 +1224,15 @@ export async function GET() {
             null,
 
           lastMessage:
-            `Ошибка WB HTTP ${wbResponse.status}`,
+            `Ошибка WB HTTP ${wbResponse.status} при загрузке остатков`,
+
+          stage:
+            "failed",
+
+          lastSnapshotId:
+            state?.last_snapshot_id
+            ??
+            null,
         });
 
 
@@ -941,6 +1240,15 @@ export async function GET() {
           {
             ok:
               false,
+
+            skipped:
+              false,
+
+            blockedByRateLimit:
+              false,
+
+            forced:
+              force,
 
             message:
               "Wildberries вернул ошибку при загрузке остатков",
@@ -948,21 +1256,19 @@ export async function GET() {
             wbStatus:
               wbResponse.status,
 
-            reportDate,
-
-            page,
-
-            offset,
-
             wildberriesRequestSent:
               true,
 
+            requestCount,
+
+            requestBody,
+
             wbResponse:
               wbData,
           },
           {
             status:
-              wbResponse.status,
+              502,
           }
         );
 
@@ -970,81 +1276,28 @@ export async function GET() {
 
 
       // ======================================================
-      // ФОРМАТ ОТВЕТА
+      // 9. ITEMS
       // ======================================================
 
-      const typed =
-        wbData as WBResponse;
-
-
-      const items =
-        typed
-          ?.data
-          ?.items;
-
-
-      if (
-        !Array.isArray(
-          items
+      const pageItems =
+        Array.isArray(
+          wbData
+            ?.data
+            ?.items
         )
-      ) {
-
-        await saveSyncState({
-          lastAttemptAt:
-            attemptAt,
-
-          lastSuccessAt:
-            state
-              ?.last_success_at
-            ?? null,
-
-          nextAllowedAt:
-            null,
-
-          lastHttpStatus:
-            wbResponse.status,
-
-          retryAfterSeconds:
-            null,
-
-          lastMessage:
-            "WB вернул неожиданный формат отчёта остатков",
-        });
+          ?
+          wbData.data.items as WBProduct[]
+          :
+          [];
 
 
-        return NextResponse.json(
-          {
-            ok:
-              false,
-
-            message:
-              "WB вернул неожиданный формат отчёта остатков",
-
-            wbStatus:
-              wbResponse.status,
-
-            reportDate,
-
-            wbResponse:
-              wbData,
-          },
-          {
-            status:
-              500,
-          }
-        );
-
-      }
-
-
-      allProducts.push(
-        ...items
+      allItems.push(
+        ...pageItems
       );
 
 
-      // Последняя страница
       if (
-        items.length
+        pageItems.length
         <
         PAGE_LIMIT
       ) {
@@ -1057,114 +1310,164 @@ export async function GET() {
       offset +=
         PAGE_LIMIT;
 
+    }
 
-      // WB разрешает 3 запроса в минуту.
-      // Без этой паузы можно довольно бодро
-      // прилететь в 429.
-      await sleep(
-        21_000
+
+    // ========================================================
+    // 10. ПРОВЕРКА ОТВЕТА
+    // ========================================================
+
+    if (
+      allItems.length
+      ===
+      0
+    ) {
+
+      await saveSyncState({
+        lastAttemptAt:
+          attemptAt,
+
+        lastSuccessAt:
+          state?.last_success_at
+          ??
+          null,
+
+        nextAllowedAt:
+          null,
+
+        lastHttpStatus:
+          lastWbStatus,
+
+        retryAfterSeconds:
+          null,
+
+        lastMessage:
+          "WB вернул пустой список товаров в отчёте остатков",
+
+        stage:
+          "failed",
+
+        lastSnapshotId:
+          state?.last_snapshot_id
+          ??
+          null,
+      });
+
+
+      return NextResponse.json(
+        {
+          ok:
+            false,
+
+          skipped:
+            false,
+
+          forced:
+            force,
+
+          message:
+            "Wildberries ответил успешно, но список товаров в остатках пуст",
+
+          wildberriesRequestSent:
+            true,
+
+          requestCount,
+        },
+        {
+          status:
+            502,
+        }
       );
 
     }
 
 
     // ========================================================
-    // 8. ПРОВЕРЯЕМ NM ID
-    // ========================================================
-
-    const validProducts =
-      allProducts.filter(
-        (
-          product
-        ): product is WBProduct & {
-          nmID: number;
-        } => {
-
-          return (
-            typeof product.nmID
-            ===
-            "number"
-            &&
-            Number.isFinite(
-              product.nmID
-            )
-            &&
-            product.nmID
-            >
-            0
-          );
-
-        }
-      );
-
-
-    // ========================================================
-    // 9. УБИРАЕМ ДУБЛИКАТЫ
+    // 11. УБИРАЕМ ДУБЛИ NMID
     // ========================================================
 
     const uniqueByNmId =
       new Map<
         number,
-        WBProduct & {
-          nmID: number;
-        }
+        WBProduct
       >();
 
 
+    let invalidNmIdRows =
+      0;
+
+
     for (
-      const product
-      of validProducts
+      const item
+      of allItems
     ) {
 
+      const nmId =
+        Number(
+          item.nmID
+        );
+
+
+      if (
+        !Number.isFinite(
+          nmId
+        )
+        ||
+        nmId <= 0
+      ) {
+
+        invalidNmIdRows +=
+          1;
+
+        continue;
+
+      }
+
+
       uniqueByNmId.set(
-        product.nmID,
-        product
+        nmId,
+        item
       );
 
     }
 
 
-    const products =
+    const uniqueItems =
       Array.from(
-        uniqueByNmId
-          .values()
+        uniqueByNmId.values()
       );
 
 
     // ========================================================
-    // 10. SNAPSHOT
+    // 12. СОЗДАЁМ НОВЫЙ SNAPSHOT
     // ========================================================
 
     const snapshotId =
-      randomUUID();
+      makeUuid();
 
 
     const snapshotAt =
-      new Date()
-        .toISOString();
+      new Date().toISOString();
 
-
-    // ========================================================
-    // 11. СОБИРАЕМ СТРОКИ
-    // ========================================================
 
     const rows =
-      products.map(
-        (product) => {
+      uniqueItems.map(
+        (item) => {
 
           const metrics =
-            product.metrics
-            ?? {};
+            item.metrics
+            ??
+            {};
 
 
           const stockCount =
             Math.max(
               0,
               Number(
-                metrics
-                  .stockCount
+                metrics.stockCount
               )
-              || 0
+              ||
+              0
             );
 
 
@@ -1172,10 +1475,10 @@ export async function GET() {
             Math.max(
               0,
               Number(
-                metrics
-                  .toClientCount
+                metrics.toClientCount
               )
-              || 0
+              ||
+              0
             );
 
 
@@ -1183,15 +1486,14 @@ export async function GET() {
             Math.max(
               0,
               Number(
-                metrics
-                  .fromClientCount
+                metrics.fromClientCount
               )
-              || 0
+              ||
+              0
             );
 
 
           return {
-
             snapshot_id:
               snapshotId,
 
@@ -1199,29 +1501,28 @@ export async function GET() {
               snapshotAt,
 
             nm_id:
-              product.nmID,
+              Number(
+                item.nmID
+              ),
 
             vendor_code:
-              product.vendorCode
-              ?? null,
+              item.vendorCode
+              ??
+              null,
 
             product_name:
-              product.name
-              ?? null,
+              item.name
+              ??
+              null,
 
             brand_name:
-              product.brandName
-              ?? null,
+              item.brandName
+              ??
+              null,
 
-
-            // ВОТ ЭТОТ ОСТАТОК
-            // ИДЁТ В ФОРМУЛУ ПОТРЕБНОСТИ
             stock_count:
               stockCount,
 
-
-            // Сохраняем отдельно.
-            // В stock_count их НЕ прибавляем.
             to_client_count:
               toClientCount,
 
@@ -1229,13 +1530,12 @@ export async function GET() {
               fromClientCount,
 
             availability:
-              metrics
-                .availability
-              ?? null,
+              metrics.availability
+              ??
+              null,
 
             raw:
-              product,
-
+              item,
           };
 
         }
@@ -1243,7 +1543,7 @@ export async function GET() {
 
 
     // ========================================================
-    // 12. ЗАПИСЬ В SUPABASE
+    // 13. ЗАПИСЬ SNAPSHOT В SUPABASE
     // ========================================================
 
     const batches =
@@ -1267,18 +1567,30 @@ export async function GET() {
         batches[i];
 
 
-      const insertResponse =
+      const response =
         await fetch(
-          `${supabaseUrl}/rest/v1/wb_stock_product_snapshots`,
+          `${supabaseUrl}/rest/v1/wb_stock_product_snapshots`
+          +
+          `?on_conflict=snapshot_id,nm_id`,
           {
             method:
               "POST",
 
             headers: {
-              ...supabaseHeaders,
+              apikey:
+                supabaseKey,
+
+              Authorization:
+                `Bearer ${supabaseKey}`,
+
+              Accept:
+                "application/json",
+
+              "Content-Type":
+                "application/json",
 
               Prefer:
-                "return=minimal",
+                "resolution=merge-duplicates,return=minimal",
             },
 
             body:
@@ -1292,12 +1604,15 @@ export async function GET() {
         );
 
 
-      if (
-        !insertResponse.ok
-      ) {
+      if (!response.ok) {
 
         const text =
-          await insertResponse.text();
+          await response.text();
+
+
+        await deleteSnapshot(
+          snapshotId
+        );
 
 
         await saveSyncState({
@@ -1305,21 +1620,29 @@ export async function GET() {
             attemptAt,
 
           lastSuccessAt:
-            state
-              ?.last_success_at
-            ?? null,
+            state?.last_success_at
+            ??
+            null,
 
           nextAllowedAt:
             null,
 
           lastHttpStatus:
-            lastWBStatus,
+            lastWbStatus,
 
           retryAfterSeconds:
             null,
 
           lastMessage:
-            "WB ответил успешно, но снимок остатков не записался в Supabase",
+            "WB ответил успешно, но snapshot остатков не удалось сохранить",
+
+          stage:
+            "failed",
+
+          lastSnapshotId:
+            state?.last_snapshot_id
+            ??
+            null,
         });
 
 
@@ -1328,10 +1651,11 @@ export async function GET() {
             ok:
               false,
 
-            message:
-              "Ошибка записи поартикульных остатков WB в Supabase",
+            forced:
+              force,
 
-            snapshotId,
+            message:
+              "Ошибка записи нового snapshot остатков в Supabase",
 
             failedBatch:
               i + 1,
@@ -1343,13 +1667,15 @@ export async function GET() {
               savedRows,
 
             supabaseStatus:
-              insertResponse
-                .status,
+              response.status,
 
             supabaseResponse:
               parseJson(
                 text
               ),
+
+            wildberriesRequestSent:
+              true,
           },
           {
             status:
@@ -1367,32 +1693,7 @@ export async function GET() {
 
 
     // ========================================================
-    // 13. УСПЕШНОЕ СОСТОЯНИЕ
-    // ========================================================
-
-    await saveSyncState({
-      lastAttemptAt:
-        attemptAt,
-
-      lastSuccessAt:
-        snapshotAt,
-
-      nextAllowedAt:
-        null,
-
-      lastHttpStatus:
-        lastWBStatus,
-
-      retryAfterSeconds:
-        null,
-
-      lastMessage:
-        `Успешно загружены поартикульные остатки WB: ${savedRows} SKU`,
-    });
-
-
-    // ========================================================
-    // 14. КОНТРОЛЬНЫЕ ПОКАЗАТЕЛИ
+    // 14. КОНТРОЛЬНЫЕ СУММЫ
     // ========================================================
 
     const totalStock =
@@ -1404,7 +1705,6 @@ export async function GET() {
           sum
           +
           row.stock_count,
-
         0
       );
 
@@ -1418,7 +1718,6 @@ export async function GET() {
           sum
           +
           row.to_client_count,
-
         0
       );
 
@@ -1432,12 +1731,11 @@ export async function GET() {
           sum
           +
           row.from_client_count,
-
         0
       );
 
 
-    const zeroStockCount =
+    const zeroStockSku =
       rows.filter(
         (row) =>
           row.stock_count
@@ -1447,48 +1745,121 @@ export async function GET() {
 
 
     // ========================================================
-    // 15. ОТВЕТ
+    // 15. УСПЕШНЫЙ STATE
+    // ========================================================
+
+    await saveSyncState({
+      lastAttemptAt:
+        attemptAt,
+
+      lastSuccessAt:
+        snapshotAt,
+
+      nextAllowedAt:
+        null,
+
+      lastHttpStatus:
+        lastWbStatus,
+
+      retryAfterSeconds:
+        null,
+
+      lastMessage:
+        `Успешно загружены поартикульные остатки WB: ${savedRows} SKU`,
+
+      stage:
+        "completed",
+
+      lastSnapshotId:
+        snapshotId,
+    });
+
+
+    // ========================================================
+    // 16. ОТВЕТ
     // ========================================================
 
     return NextResponse.json({
+
       ok:
         true,
 
+      skipped:
+        false,
+
+      blockedByRateLimit:
+        false,
+
+      forced:
+        force,
+
       message:
-        "Полные поартикульные остатки FBW Wildberries успешно загружены",
+        force
+          ?
+          "Остатки Wildberries принудительно обновлены"
+          :
+          "Остатки Wildberries успешно обновлены",
 
       wildberriesRequestSent:
         true,
 
-      source: {
-        endpoint:
-          WB_URL,
 
-        stockType:
-          "wb",
+      previousSnapshot: latestSnapshot
+        ?
+        {
+          snapshotId:
+            latestSnapshot.snapshot_id,
 
-        reportDate,
+          snapshotAt:
+            latestSnapshot.snapshot_at,
+        }
+        :
+        null,
 
-        pages:
-          page,
 
-        rawProductsReceived:
-          allProducts.length,
+      newSnapshot: {
 
-        uniqueSkuReceived:
-          products.length,
-      },
-
-      snapshot: {
         snapshotId,
 
         snapshotAt,
 
-        rowsSaved:
+        rows:
           savedRows,
       },
 
+
+      request: {
+
+        currentPeriod,
+
+        stockType:
+          "wb",
+
+        pages:
+          requestCount,
+
+        forced:
+          force,
+      },
+
+
+      processing: {
+
+        receivedRows:
+          allItems.length,
+
+        uniqueSku:
+          uniqueItems.length,
+
+        invalidNmIdRows,
+
+        batches:
+          batches.length,
+      },
+
+
       totals: {
+
         stockCount:
           totalStock,
 
@@ -1498,62 +1869,20 @@ export async function GET() {
         fromClientCount:
           totalFromClient,
 
-        zeroStockSkuCount:
-          zeroStockCount,
-      },
-
-      important: {
-        stockUsedForProcurement:
-          "metrics.stockCount",
-
-        toClientIncludedInStock:
-          false,
-
-        fromClientIncludedInStock:
-          false,
-
-        fbsIncluded:
-          false,
-
-        warehouseNamesUsed:
-          false,
+        zeroStockSku,
       },
 
 
-      // Чтобы глазами сразу проверить,
-      // что WB нам реально вернул.
-      sample:
-        rows
-          .slice(
-            0,
-            20
-          )
-          .map(
-            (row) => ({
-              nmId:
-                row.nm_id,
+      wildberries: {
 
-              vendorCode:
-                row.vendor_code,
+        status:
+          lastWbStatus,
 
-              productName:
-                row.product_name,
+        rateLimit:
+          rateLimitHeaders,
+      },
 
-              stockCount:
-                row.stock_count,
-
-              toClient:
-                row.to_client_count,
-
-              fromClient:
-                row.from_client_count,
-
-              availability:
-                row.availability,
-            })
-          ),
     });
-
 
   } catch (error) {
 
@@ -1569,11 +1898,14 @@ export async function GET() {
           false,
 
         message:
+          "Ошибка синхронизации остатков Wildberries",
+
+        error:
           error instanceof Error
             ?
             error.message
             :
-            "Неизвестная ошибка синхронизации остатков WB",
+            "Неизвестная ошибка",
       },
       {
         status:
