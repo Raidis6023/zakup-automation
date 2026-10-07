@@ -19,11 +19,8 @@ const RETRY_BASE_MS =
 const MAX_FBO_POSTING_PAGES =
   1000;
 
-const MAX_STOCK_PAGES =
+const ANALYTICS_STOCK_SKU_BATCH_SIZE =
   100;
-
-const STOCK_OFFER_BATCH_SIZE =
-  900;
 
 const PRODUCT_INFO_BATCH_SIZE =
   900;
@@ -138,47 +135,53 @@ type FboPostingResponse = {
 };
 
 
-type FboWarehouseStock = {
+type AnalyticsStock = {
   sku?:
     | number
     | string;
 
   offer_id?: string;
 
-  product_id?:
-    | number
-    | string;
-
   warehouse_id?:
     | number
     | string;
 
-  warehouse_name?: string;
+  warehouse_name?:
+    | string
+    | null;
 
-  present?: number;
+  cluster_id?:
+    | number
+    | string;
 
-  reserved?: number;
+  cluster_name?:
+    | string
+    | null;
+
+  available_stock_count?:
+    number;
 
   [key: string]:
     unknown;
 };
 
 
-type FboWarehouseStocksResponse = {
-  products?:
-    FboWarehouseStock[];
+type AnalyticsStocksResponse = {
+  items?:
+    AnalyticsStock[];
 
-  cursor?: string;
-
-  has_next?: boolean;
+  stocks?:
+    AnalyticsStock[];
 
   result?: {
-    products?:
-      FboWarehouseStock[];
+    items?:
+      AnalyticsStock[];
 
-    cursor?: string;
+    stocks?:
+      AnalyticsStock[];
 
-    has_next?: boolean;
+    [key: string]:
+      unknown;
   };
 
   [key: string]:
@@ -1639,6 +1642,86 @@ async function getProductInfoBySkus(
 
 
 // ============================================================
+// PRODUCT INFO ПО OFFER ID ДЛЯ ОСТАТКОВ
+// ============================================================
+
+async function getProductInfoByOfferIds(
+  offerIds:
+    string[]
+) {
+
+  const uniqueOfferIds =
+    Array.from(
+      new Set(
+        offerIds
+          .map(
+            normalizeKey
+          )
+          .filter(
+            Boolean
+          )
+      )
+    );
+
+
+  const batches =
+    chunkArray(
+      uniqueOfferIds,
+      PRODUCT_INFO_BATCH_SIZE
+    );
+
+
+  const items:
+    OzonProductInfoItem[] = [];
+
+
+  let requestsMade =
+    0;
+
+
+  for (
+    const batch
+    of batches
+  ) {
+
+    const response =
+      await ozonPost<
+        OzonProductInfoListResponse
+      >(
+        "/v3/product/info/list",
+        {
+          offer_id:
+            batch,
+        }
+      );
+
+
+    requestsMade +=
+      1;
+
+
+    items.push(
+      ...(
+        response.items
+        ?? []
+      )
+    );
+
+  }
+
+
+  return {
+    requestedOfferIds:
+      uniqueOfferIds.length,
+
+    requestsMade,
+
+    items,
+  };
+}
+
+
+// ============================================================
 // SKU → PRODUCT
 // ============================================================
 
@@ -2743,18 +2826,79 @@ function buildSalesData(
 
 
 // ============================================================
-// FBO STOCKS
+// FBO STOCKS — ДОСТУПНО К ПРОДАЖЕ
 // ============================================================
 
-async function getFboWarehouseStocks(
-  offerIds:
+function extractAnalyticsStockRows(
+  response:
+    AnalyticsStocksResponse
+): AnalyticsStock[] {
+
+  if (
+    Array.isArray(
+      response.items
+    )
+  ) {
+
+    return response.items;
+
+  }
+
+
+  if (
+    Array.isArray(
+      response.stocks
+    )
+  ) {
+
+    return response.stocks;
+
+  }
+
+
+  if (
+    response.result
+    &&
+    Array.isArray(
+      response.result.items
+    )
+  ) {
+
+    return response
+      .result
+      .items;
+
+  }
+
+
+  if (
+    response.result
+    &&
+    Array.isArray(
+      response.result.stocks
+    )
+  ) {
+
+    return response
+      .result
+      .stocks;
+
+  }
+
+
+  return [];
+}
+
+
+async function getFboAnalyticsStocks(
+  skus:
     string[]
 ) {
 
-  const uniqueOfferIds =
+  const uniqueSkus =
     Array.from(
       new Set(
-        offerIds
+        skus
           .map(
             normalizeKey
           )
@@ -2767,13 +2911,13 @@ async function getFboWarehouseStocks(
 
   const batches =
     chunkArray(
-      uniqueOfferIds,
-      STOCK_OFFER_BATCH_SIZE
+      uniqueSkus,
+      ANALYTICS_STOCK_SKU_BATCH_SIZE
     );
 
 
   const allStocks:
-    FboWarehouseStock[] = [];
+    AnalyticsStock[] = [];
 
 
   let requestsMade =
@@ -2785,117 +2929,38 @@ async function getFboWarehouseStocks(
     of batches
   ) {
 
-    let cursor =
-      "";
-
-
-    for (
-      let page = 1;
-      page <= MAX_STOCK_PAGES;
-      page += 1
-    ) {
-
-      const body:
-        Record<
-          string,
-          unknown
-        > = {
-          limit:
-            1000,
-
-          offer_ids:
+    const response =
+      await ozonPost<
+        AnalyticsStocksResponse
+      >(
+        "/v1/analytics/stocks",
+        {
+          skus:
             batch,
-        };
-
-
-      if (cursor) {
-
-        body.cursor =
-          cursor;
-
-      }
-
-
-      const response =
-        await ozonPost<
-          FboWarehouseStocksResponse
-        >(
-          "/v1/product/info/stocks-by-warehouse/fbo",
-          body
-        );
-
-
-      requestsMade +=
-        1;
-
-
-      const stockRows =
-        response.products
-        ??
-        response.result
-          ?.products
-        ??
-        [];
-
-
-      allStocks.push(
-        ...stockRows
+        }
       );
 
 
-      const nextCursor =
-        normalizeKey(
-          response.cursor
-          ??
-          response.result
-            ?.cursor
+    requestsMade +=
+      1;
+
+
+    const stockRows =
+      extractAnalyticsStockRows(
+        response
       );
 
 
-      const hasNext =
-        response.has_next
-        ??
-        response.result
-          ?.has_next
-        ??
-        Boolean(
-          nextCursor
-        );
-
-
-      if (
-        !hasNext
-        ||
-        !nextCursor
-      ) {
-
-        break;
-
-      }
-
-
-      if (
-        nextCursor === cursor
-      ) {
-
-        throw new Error(
-          "Ozon вернул тот же cursor для FBO stocks"
-        );
-
-      }
-
-
-      cursor =
-        nextCursor;
-
-    }
+    allStocks.push(
+      ...stockRows
+    );
 
   }
 
 
   return {
-    requestedOfferIds:
-      uniqueOfferIds.length,
+    requestedSkus:
+      uniqueSkus.length,
 
     batches:
       batches.length,
@@ -2909,15 +2974,219 @@ async function getFboWarehouseStocks(
 
 
 // ============================================================
+// SKU INDEX ДЛЯ ОСТАТКОВ
+// ============================================================
+
+function buildStockSkuIndex(
+  infoItems:
+    OzonProductInfoItem[],
+
+  activeProducts:
+    ProductRow[]
+) {
+
+  const {
+    byOffer,
+    byOzonProductId,
+  } =
+    buildProductIndexes(
+      activeProducts
+    );
+
+
+  const skuToProduct =
+    new Map<
+      string,
+      ProductRow
+    >();
+
+
+  const productIdsWithSku =
+    new Set<string>();
+
+
+  const unresolvedInfoItems:
+    Array<
+      Record<
+        string,
+        unknown
+      >
+    > = [];
+
+
+  const duplicateSkus:
+    Array<
+      Record<
+        string,
+        unknown
+      >
+    > = [];
+
+
+  for (
+    const item
+    of infoItems
+  ) {
+
+    const sku =
+      normalizeKey(
+        item.sku
+      );
+
+
+    const offerId =
+      normalizeKey(
+        item.offer_id
+      );
+
+
+    const ozonProductId =
+      normalizeKey(
+        item.id
+      );
+
+
+    const product =
+      (
+        offerId
+          ? byOffer.get(
+              offerId
+            )
+          : undefined
+      )
+      ??
+      (
+        ozonProductId
+          ? byOzonProductId.get(
+              ozonProductId
+            )
+          : undefined
+      );
+
+
+    if (
+      !sku
+      ||
+      !product
+    ) {
+
+      unresolvedInfoItems.push(
+        {
+          sku:
+            sku
+            || null,
+
+          offer_id:
+            offerId
+            || null,
+
+          ozon_product_id:
+            ozonProductId
+            || null,
+
+          reason:
+            !sku
+              ? "sku_missing"
+              : "product_not_resolved",
+        }
+      );
+
+
+      continue;
+
+    }
+
+
+    const existing =
+      skuToProduct.get(
+        sku
+      );
+
+
+    if (
+      existing
+      &&
+      existing.id !==
+        product.id
+    ) {
+
+      duplicateSkus.push(
+        {
+          sku,
+
+          first_product_id:
+            existing.id,
+
+          first_offer_id:
+            existing.offer_id,
+
+          second_product_id:
+            product.id,
+
+          second_offer_id:
+            product.offer_id,
+        }
+      );
+
+
+      continue;
+
+    }
+
+
+    skuToProduct.set(
+      sku,
+      product
+    );
+
+
+    productIdsWithSku.add(
+      product.id
+    );
+
+  }
+
+
+  const productsWithoutSku =
+    activeProducts.filter(
+      product =>
+        !productIdsWithSku.has(
+          product.id
+        )
+    );
+
+
+  return {
+    skuToProduct,
+
+    productsWithoutSku,
+
+    unresolvedInfoItems,
+
+    duplicateSkus,
+  };
+}
+
+
+// ============================================================
 // STOCK DATA
 // ============================================================
 
 function buildStockData(
   stocks:
-    FboWarehouseStock[],
+    AnalyticsStock[],
 
   activeProducts:
     ProductRow[],
+
+  skuToProduct:
+    Map<
+      string,
+      ProductRow
+    >,
+
+  clusters:
+    OzonCluster[],
 
   warehouseToCluster:
     Map<
@@ -2928,11 +3197,59 @@ function buildStockData(
 
   const {
     byOffer,
-    byOzonProductId,
   } =
     buildProductIndexes(
       activeProducts
     );
+
+
+  const clusterByName =
+    new Map<
+      string,
+      {
+        clusterId:
+          string;
+
+        clusterName:
+          string;
+      }
+    >();
+
+
+  for (
+    const cluster
+    of clusters
+  ) {
+
+    const clusterId =
+      normalizeKey(
+        cluster.id
+      );
+
+
+    const clusterName =
+      normalizeKey(
+        cluster.name
+      );
+
+
+    if (
+      clusterId
+      &&
+      clusterName
+    ) {
+
+      clusterByName.set(
+        clusterName,
+        {
+          clusterId,
+          clusterName,
+        }
+      );
+
+    }
+
+  }
 
 
   type StockWarehousePayload = {
@@ -2952,13 +3269,9 @@ function buildStockData(
       string
       | null;
 
-    ozon_product_id:
+    cluster_name:
       string
       | null;
-
-    present: number;
-
-    reserved: number;
 
     available_stock_count:
       number;
@@ -3003,12 +3316,8 @@ function buildStockData(
     new Set<string>();
 
 
-  let totalPresent =
-    0;
-
-
-  let totalReserved =
-    0;
+  const unmappedClusterNames =
+    new Set<string>();
 
 
   let totalAvailable =
@@ -3023,12 +3332,6 @@ function buildStockData(
     const offerId =
       normalizeKey(
         stock.offer_id
-      );
-
-
-    const ozonProductId =
-      normalizeKey(
-        stock.product_id
       );
 
 
@@ -3050,24 +3353,21 @@ function buildStockData(
       );
 
 
-    const present =
-      toSafeInteger(
-        stock.present
+    const analyticsClusterId =
+      normalizeKey(
+        stock.cluster_id
       );
 
 
-    const reserved =
-      toSafeInteger(
-        stock.reserved
+    const analyticsClusterName =
+      normalizeKey(
+        stock.cluster_name
       );
 
 
     const available =
-      Math.max(
-        present
-        -
-        reserved,
-        0
+      toSafeInteger(
+        stock.available_stock_count
       );
 
 
@@ -3081,9 +3381,9 @@ function buildStockData(
       )
       ??
       (
-        ozonProductId
-          ? byOzonProductId.get(
-              ozonProductId
+        sku
+          ? skuToProduct.get(
+              sku
             )
           : undefined
       );
@@ -3095,10 +3395,6 @@ function buildStockData(
         {
           offer_id:
             offerId
-            || null,
-
-          ozon_product_id:
-            ozonProductId
             || null,
 
           sku:
@@ -3113,11 +3409,16 @@ function buildStockData(
             warehouseName
             || null,
 
-          present,
+          cluster_id:
+            analyticsClusterId
+            || null,
 
-          reserved,
+          cluster_name:
+            analyticsClusterName
+            || null,
 
-          available,
+          available_stock_count:
+            available,
         }
       );
 
@@ -3127,7 +3428,7 @@ function buildStockData(
     }
 
 
-    const cluster =
+    const warehouseCluster =
       warehouseId
         ? warehouseToCluster.get(
             warehouseId
@@ -3135,10 +3436,18 @@ function buildStockData(
         : undefined;
 
 
+    const namedCluster =
+      analyticsClusterName
+        ? clusterByName.get(
+            analyticsClusterName
+          )
+        : undefined;
+
+
     if (
       warehouseId
       &&
-      !cluster
+      !warehouseCluster
     ) {
 
       unmappedWarehouseIds.add(
@@ -3148,18 +3457,47 @@ function buildStockData(
     }
 
 
+    if (
+      analyticsClusterName
+      &&
+      !namedCluster
+      &&
+      !warehouseCluster
+    ) {
+
+      unmappedClusterNames.add(
+        analyticsClusterName
+      );
+
+    }
+
+
     const clusterId =
-      cluster?.clusterId
+      warehouseCluster
+        ?.clusterId
+      ||
+      namedCluster
+        ?.clusterId
+      ||
+      analyticsClusterId
       ||
       (
-        warehouseId
-          ? `warehouse:${warehouseId}`
-          : "unknown"
+        analyticsClusterName
+          ? `name:${analyticsClusterName}`
+          : warehouseId
+            ? `warehouse:${warehouseId}`
+            : "unknown"
       );
 
 
     const clusterName =
-      cluster?.clusterName
+      analyticsClusterName
+      ||
+      warehouseCluster
+        ?.clusterName
+      ||
+      namedCluster
+        ?.clusterName
       ||
       warehouseName
       ||
@@ -3227,34 +3565,27 @@ function buildStockData(
         warehouse_name:
           warehouseName
           ||
-          cluster?.warehouseName
+          warehouseCluster
+            ?.warehouseName
           ||
           null,
 
         offer_id:
           offerId
+          || product.offer_id
           || null,
 
-        ozon_product_id:
-          ozonProductId
-          || null,
-
-        present,
-
-        reserved,
+        cluster_name:
+          analyticsClusterName
+          ||
+          clusterName
+          ||
+          null,
 
         available_stock_count:
           available,
       }
     );
-
-
-    totalPresent +=
-      present;
-
-
-    totalReserved +=
-      reserved;
 
 
     totalAvailable +=
@@ -3284,7 +3615,7 @@ function buildStockData(
 
           raw_payload: {
             source:
-              "v1/product/info/stocks-by-warehouse/fbo",
+              "v1/analytics/stocks",
 
             master_code:
               current.masterCode,
@@ -3337,9 +3668,10 @@ function buildStockData(
         unmappedWarehouseIds
       ),
 
-    totalPresent,
-
-    totalReserved,
+    unmappedClusterNames:
+      Array.from(
+        unmappedClusterNames
+      ),
 
     totalAvailable,
   };
@@ -3630,6 +3962,11 @@ async function runDailySync(
 
     // ========================================================
     // 7. STOCKS
+    //
+    // Берём именно готовое "доступно к продаже" из
+    // /v1/analytics/stocks.
+    //
+    // Никакого present - reserved здесь больше нет.
     // ========================================================
 
     const activeOfferIds =
@@ -3645,9 +3982,211 @@ async function runDailySync(
         );
 
 
-    const stockResult =
-      await getFboWarehouseStocks(
+    const stockProductInfoResult =
+      await getProductInfoByOfferIds(
         activeOfferIds
+      );
+
+
+    const stockSkuIndex =
+      buildStockSkuIndex(
+        stockProductInfoResult
+          .items,
+        activeProducts
+      );
+
+
+    if (
+      stockSkuIndex
+        .duplicateSkus
+        .length > 0
+    ) {
+
+      return Response.json(
+        {
+          ok:
+            false,
+
+          mode:
+            "write_sync",
+
+          writes_to_database:
+            false,
+
+          stage:
+            "stock_sku_validation",
+
+          error:
+            "Один Ozon SKU сопоставился с несколькими активными products. Запись отменена.",
+
+          count:
+            stockSkuIndex
+              .duplicateSkus
+              .length,
+
+          sample:
+            stockSkuIndex
+              .duplicateSkus
+              .slice(
+                0,
+                100
+              ),
+        },
+        {
+          status:
+            409,
+        }
+      );
+
+    }
+
+
+    if (
+      stockSkuIndex
+        .unresolvedInfoItems
+        .length > 0
+    ) {
+
+      return Response.json(
+        {
+          ok:
+            false,
+
+          mode:
+            "write_sync",
+
+          writes_to_database:
+            false,
+
+          stage:
+            "stock_sku_validation",
+
+          error:
+            "Не удалось однозначно сопоставить часть Ozon product info с активными products. Запись отменена.",
+
+          count:
+            stockSkuIndex
+              .unresolvedInfoItems
+              .length,
+
+          sample:
+            stockSkuIndex
+              .unresolvedInfoItems
+              .slice(
+                0,
+                100
+              ),
+        },
+        {
+          status:
+            409,
+        }
+      );
+
+    }
+
+
+    if (
+      stockSkuIndex
+        .productsWithoutSku
+        .length > 0
+    ) {
+
+      return Response.json(
+        {
+          ok:
+            false,
+
+          mode:
+            "write_sync",
+
+          writes_to_database:
+            false,
+
+          stage:
+            "stock_sku_validation",
+
+          error:
+            "Для части активных products Ozon не вернул SKU. Запись остатков отменена, чтобы не записать ложный ноль.",
+
+          count:
+            stockSkuIndex
+              .productsWithoutSku
+              .length,
+
+          sample:
+            stockSkuIndex
+              .productsWithoutSku
+              .slice(
+                0,
+                100
+              )
+              .map(
+                product => ({
+                  id:
+                    product.id,
+
+                  offer_id:
+                    product.offer_id,
+
+                  ozon_product_id:
+                    product.ozon_product_id,
+
+                  master_code:
+                    product.master_code,
+                })
+              ),
+        },
+        {
+          status:
+            409,
+        }
+      );
+
+    }
+
+
+    const stockSkus =
+      Array.from(
+        stockSkuIndex
+          .skuToProduct
+          .keys()
+      );
+
+
+    if (
+      stockSkus.length === 0
+    ) {
+
+      return Response.json(
+        {
+          ok:
+            false,
+
+          mode:
+            "write_sync",
+
+          writes_to_database:
+            false,
+
+          stage:
+            "stock_validation",
+
+          error:
+            "Не получено ни одного SKU для запроса FBO-остатков. Запись отменена.",
+        },
+        {
+          status:
+            409,
+        }
+      );
+
+    }
+
+
+    const stockResult =
+      await getFboAnalyticsStocks(
+        stockSkus
       );
 
 
@@ -3672,7 +4211,7 @@ async function runDailySync(
             "stock_validation",
 
           error:
-            "Ozon вернул 0 строк FBO stock. Запись отменена.",
+            "Ozon /v1/analytics/stocks вернул 0 строк. Запись отменена.",
         },
         {
           status:
@@ -3687,6 +4226,10 @@ async function runDailySync(
       buildStockData(
         stockResult.stocks,
         activeProducts,
+        stockSkuIndex
+          .skuToProduct,
+        clusterResult
+          .clusters,
         clusterResult
           .warehouseToCluster
       );
@@ -4102,11 +4645,29 @@ async function runDailySync(
 
         stocks_fbo: {
           method:
-            "/v1/product/info/stocks-by-warehouse/fbo",
+            "/v1/analytics/stocks",
 
           requested_offer_ids:
-            stockResult
+            stockProductInfoResult
               .requestedOfferIds,
+
+          product_info_requests:
+            stockProductInfoResult
+              .requestsMade,
+
+          product_info_items_received:
+            stockProductInfoResult
+              .items
+              .length,
+
+          resolved_stock_skus:
+            stockSkuIndex
+              .skuToProduct
+              .size,
+
+          requested_skus:
+            stockResult
+              .requestedSkus,
 
           batches:
             stockResult
@@ -4136,16 +4697,13 @@ async function runDailySync(
               .unmappedWarehouseIds
               .length,
 
+          unmapped_cluster_names_count:
+            stockData
+              .unmappedClusterNames
+              .length,
+
           totals: {
-            present:
-              stockData
-                .totalPresent,
-
-            reserved:
-              stockData
-                .totalReserved,
-
-            available:
+            available_stock_count:
               stockData
                 .totalAvailable,
           },
