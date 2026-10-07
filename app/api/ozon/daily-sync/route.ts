@@ -17,7 +17,7 @@ const RETRY_BASE_MS =
   1500;
 
 const MAX_FBO_POSTING_PAGES =
-  100;
+  1000;
 
 const MAX_STOCK_PAGES =
   100;
@@ -1184,8 +1184,10 @@ async function getOzonClusters() {
 // ============================================================
 // 28 ДНЕЙ FBO POSTINGS
 //
-// Берём весь диапазон одним курсором.
-// Ничего не записываем.
+// ВАЖНО:
+// /v3/posting/fbo/list разрешает limit максимум 100.
+//
+// Поэтому для 28 дней может понадобиться несколько сотен страниц.
 // ============================================================
 
 async function getFboPostingsForRange(
@@ -1233,7 +1235,7 @@ async function getFboPostingsForRange(
           },
 
           limit:
-            1000,
+            100,
 
           sort_dir:
             "asc",
