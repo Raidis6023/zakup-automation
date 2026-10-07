@@ -924,12 +924,6 @@ Promise<T> {
 
 // ============================================================
 // PRODUCTS ИЗ SUPABASE
-//
-// Здесь читаем ВСЕ товары.
-//
-// Активные нужны для будущей записи.
-// Неактивные нужны, чтобы отличать:
-// "старый известный товар" от реально неизвестного товара.
 // ============================================================
 
 async function getProducts():
@@ -1183,11 +1177,6 @@ async function getOzonClusters() {
 
 // ============================================================
 // 28 ДНЕЙ FBO POSTINGS
-//
-// ВАЖНО:
-// /v3/posting/fbo/list разрешает limit максимум 100.
-//
-// Поэтому для 28 дней может понадобиться несколько сотен страниц.
 // ============================================================
 
 async function getFboPostingsForRange(
@@ -1317,11 +1306,10 @@ async function getFboPostingsForRange(
 
 
 // ============================================================
-// НЕРАЗРЕШЁННЫЕ SKU ПРОДАЖ
+// НЕРАЗРЕШЁННЫЕ SKU
 //
-// exact offer_id имеет приоритет.
-// Если offer_id уже известен даже как НЕАКТИВНЫЙ,
-// SKU дополнительно разрешать не нужно.
+// Старые строки вне текущего 28-дневного окна здесь
+// специально пропускаем.
 // ============================================================
 
 function getUnresolvedSalesSkus(
@@ -1329,7 +1317,13 @@ function getUnresolvedSalesSkus(
     FboPosting[],
 
   products:
-    ProductRow[]
+    ProductRow[],
+
+  dateFrom:
+    string,
+
+  dateTo:
+    string
 ) {
 
   const {
@@ -1348,6 +1342,25 @@ function getUnresolvedSalesSkus(
     const posting
     of postings
   ) {
+
+    const saleDate =
+      isoToMoscowDate(
+        posting.created_at
+      );
+
+
+    if (
+      !saleDate
+      ||
+      saleDate < dateFrom
+      ||
+      saleDate > dateTo
+    ) {
+
+      continue;
+
+    }
+
 
     for (
       const item
@@ -1480,7 +1493,7 @@ async function getProductInfoBySkus(
 
 
 // ============================================================
-// SKU → НАШ PRODUCT
+// SKU → PRODUCT
 // ============================================================
 
 function buildSkuResolutions(
@@ -1706,6 +1719,15 @@ function buildSalesPreflight(
     > = [];
 
 
+  const ignoredOutOfRange:
+    Array<
+      Record<
+        string,
+        unknown
+      >
+    > = [];
+
+
   const unmappedWarehouseIds =
     new Set<string>();
 
@@ -1734,6 +1756,14 @@ function buildSalesPreflight(
     0;
 
 
+  let ignoredOutOfRangeItems =
+    0;
+
+
+  let ignoredOutOfRangeQuantity =
+    0;
+
+
   let unmatchedQuantity =
     0;
 
@@ -1747,6 +1777,145 @@ function buildSalesPreflight(
       isoToMoscowDate(
         posting.created_at
       );
+
+
+    // ========================================================
+    // created_at вообще не удалось разобрать.
+    // Это настоящая ошибка.
+    // ========================================================
+
+    if (!saleDate) {
+
+      for (
+        const item
+        of posting.products
+        ?? []
+      ) {
+
+        const quantity =
+          toSafeInteger(
+            item.quantity
+          );
+
+
+        unmatchedQuantity +=
+          quantity;
+
+
+        unmatched.push(
+          {
+            reason:
+              "invalid_created_at",
+
+            posting_number:
+              posting.posting_number
+              ?? null,
+
+            created_at:
+              posting.created_at
+              ?? null,
+
+            offer_id:
+              normalizeKey(
+                item.offer_id
+              )
+              || null,
+
+            sku:
+              normalizeKey(
+                item.sku
+              )
+              || null,
+
+            quantity,
+          }
+        );
+
+      }
+
+
+      continue;
+
+    }
+
+
+    // ========================================================
+    // Ozon может вернуть строку с created_at за пределами
+    // запрошенного периода.
+    //
+    // Если дата валидная, но не входит в наши 28 дней,
+    // это НЕ ошибка и НЕ unmatched.
+    // Просто исключаем её из расчёта.
+    // ========================================================
+
+    if (
+      saleDate < dateFrom
+      ||
+      saleDate > dateTo
+    ) {
+
+      for (
+        const item
+        of posting.products
+        ?? []
+      ) {
+
+        const quantity =
+          toSafeInteger(
+            item.quantity
+          );
+
+
+        ignoredOutOfRangeItems +=
+          1;
+
+
+        ignoredOutOfRangeQuantity +=
+          quantity;
+
+
+        if (
+          ignoredOutOfRange.length <
+          100
+        ) {
+
+          ignoredOutOfRange.push(
+            {
+              posting_number:
+                posting.posting_number
+                ?? null,
+
+              created_at:
+                posting.created_at
+                ?? null,
+
+              calculated_sale_date:
+                saleDate,
+
+              offer_id:
+                normalizeKey(
+                  item.offer_id
+                )
+                || null,
+
+              sku:
+                normalizeKey(
+                  item.sku
+                )
+                || null,
+
+              quantity,
+            }
+          );
+
+        }
+
+      }
+
+
+      continue;
+
+    }
 
 
     const warehouseId =
@@ -1833,52 +2002,6 @@ function buildSalesPreflight(
         normalizeKey(
           item.sku
         );
-
-
-      if (
-        !saleDate
-        ||
-        saleDate < dateFrom
-        ||
-        saleDate > dateTo
-      ) {
-
-        unmatchedQuantity +=
-          quantity;
-
-
-        unmatched.push(
-          {
-            reason:
-              "invalid_or_out_of_range_created_at",
-
-            posting_number:
-              posting.posting_number
-              ?? null,
-
-            created_at:
-              posting.created_at
-              ?? null,
-
-            calculated_sale_date:
-              saleDate,
-
-            offer_id:
-              sourceOfferId
-              || null,
-
-            sku:
-              sku
-              || null,
-
-            quantity,
-          }
-        );
-
-
-        continue;
-
-      }
 
 
       let product:
@@ -2220,6 +2343,8 @@ function buildSalesPreflight(
 
     ignoredInactive,
 
+    ignoredOutOfRange,
+
     unmatchedWarehouseIds:
       Array.from(
         unmappedWarehouseIds
@@ -2244,6 +2369,12 @@ function buildSalesPreflight(
       ignored_inactive_quantity:
         ignoredInactiveQuantity,
 
+      ignored_out_of_range_items:
+        ignoredOutOfRangeItems,
+
+      ignored_out_of_range_quantity:
+        ignoredOutOfRangeQuantity,
+
       unmatched_items:
         unmatched.length,
 
@@ -2256,8 +2387,6 @@ function buildSalesPreflight(
 
 // ============================================================
 // FBO STOCKS
-//
-// Остатки запрашиваем только для активных товаров.
 // ============================================================
 
 async function getFboWarehouseStocks(
@@ -2424,11 +2553,6 @@ async function getFboWarehouseStocks(
 
 // ============================================================
 // STOCK PREFLIGHT
-//
-// quantity будущей записи:
-// SUM(present - reserved)
-//
-// Это уже проверено против старых 5165 строк.
 // ============================================================
 
 function buildStockPreflight(
@@ -2908,7 +3032,7 @@ async function runPreflight(
 
 
     // ========================================================
-    // 4. SALES 28 DAYS
+    // 4. SALES
     // ========================================================
 
     const salesResult =
@@ -2925,7 +3049,9 @@ async function runPreflight(
     const unresolvedSkus =
       getUnresolvedSalesSkus(
         salesResult.postings,
-        products
+        products,
+        salesDateFrom,
+        salesDateTo
       );
 
 
@@ -3000,11 +3126,40 @@ async function runPreflight(
 
 
     // ========================================================
-    // 7. POSTING COUNTS
+    // 7. POSTING COUNTS ВНУТРИ ОКНА
     // ========================================================
 
-    const cancelledPostings =
+    const postingsInWindow =
       salesResult.postings
+        .filter(
+          posting => {
+
+            const date =
+              isoToMoscowDate(
+                posting.created_at
+              );
+
+
+            return Boolean(
+              date
+              &&
+              date >= salesDateFrom
+              &&
+              date <= salesDateTo
+            );
+
+          }
+        );
+
+
+    const postingsOutsideWindow =
+      salesResult.postings.length
+      -
+      postingsInWindow.length;
+
+
+    const cancelledPostings =
+      postingsInWindow
         .filter(
           posting =>
             normalizeKey(
@@ -3018,13 +3173,13 @@ async function runPreflight(
 
 
     const notCancelledPostings =
-      salesResult.postings.length
+      postingsInWindow.length
       -
       cancelledPostings;
 
 
     // ========================================================
-    // 8. SKU RESOLUTION SUMMARY
+    // 8. SKU SUMMARY
     // ========================================================
 
     const skuResolutionRows =
@@ -3057,6 +3212,9 @@ async function runPreflight(
       {
         ok:
           (
+            activeWithoutMasterCode
+              .length === 0
+            &&
             salesPreflight
               .unmatched
               .length === 0
@@ -3132,10 +3290,16 @@ async function runPreflight(
             salesResult
               .requestsMade,
 
-          postings_total:
+          postings_total_returned_by_ozon:
             salesResult
               .postings
               .length,
+
+          postings_in_window:
+            postingsInWindow.length,
+
+          postings_outside_window:
+            postingsOutsideWindow,
 
           postings_not_cancelled:
             notCancelledPostings,
@@ -3167,6 +3331,10 @@ async function runPreflight(
                 0,
                 50
               ),
+
+          ignored_out_of_range_sample:
+            salesPreflight
+              .ignoredOutOfRange,
 
           ignored_inactive_sample:
             salesPreflight
