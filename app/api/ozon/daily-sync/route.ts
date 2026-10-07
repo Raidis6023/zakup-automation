@@ -8,14 +8,37 @@ export const maxDuration = 300;
 // ============================================================
 
 const SALES_WINDOW_DAYS = 28;
+
 const OZON_MAX_RETRIES = 5;
+
 const RETRY_BASE_MS = 1500;
 
+// Не даём всей синхронизации долбить Ozon слишком быстро.
+// Максимум примерно 8 запросов/сек из этого процесса.
+const OZON_MIN_REQUEST_INTERVAL_MS = 125;
+
+// /v1/analytics/stocks дополнительно притормаживаем.
+// Метод вызывается пачками по 100 SKU.
+const ANALYTICS_STOCK_REQUEST_INTERVAL_MS = 1250;
+
+// Если Ozon всё-таки дал 429 и не указал Retry-After,
+// отходим заметно дальше, а не продолжаем бодаться.
+const OZON_429_FALLBACK_DELAY_MS = 5000;
+
 const MAX_FBO_POSTING_PAGES = 1000;
+
 const MAX_PRODUCT_LIST_PAGES = 100;
 
 const PRODUCT_INFO_BATCH_SIZE = 900;
+
 const ANALYTICS_STOCK_BATCH_SIZE = 100;
+
+
+// ============================================================
+// ГЛОБАЛЬНЫЙ THROTTLE OZON
+// ============================================================
+
+let lastOzonRequestStartedAt = 0;
 
 
 // ============================================================
@@ -24,24 +47,31 @@ const ANALYTICS_STOCK_BATCH_SIZE = 100;
 
 type ProductRow = {
   id: string;
+
   offer_id: string;
+
   ozon_product_id:
     | number
     | string
     | null;
+
   name:
     | string
     | null;
+
   master_code:
     | string
     | null;
+
   is_active: boolean;
 };
 
 
 type WarehouseCluster = {
   clusterId: string;
+
   clusterName: string;
+
   warehouseName: string;
 };
 
@@ -175,6 +205,7 @@ type SkuResolution = {
 
 type SalesWriteRow = {
   product_id: string;
+
   cluster_id: string;
 
   cluster_name:
@@ -184,6 +215,7 @@ type SalesWriteRow = {
   sale_date: string;
 
   sales_quantity: number;
+
   cancelled_quantity: number;
 
   raw_payload:
@@ -196,6 +228,7 @@ type SalesWriteRow = {
 
 type StockWriteRow = {
   product_id: string;
+
   cluster_id: string;
 
   cluster_name:
@@ -218,6 +251,7 @@ type ApplySyncResult = {
   sales_sync_run_id: string;
 
   date_from: string;
+
   date_to: string;
 
   completed_days: number;
@@ -229,6 +263,7 @@ type ApplySyncResult = {
   stock_rows_saved: number;
 
   postings_received: number;
+
   cancelled_postings: number;
 };
 
@@ -320,6 +355,44 @@ function chunkArray<T>(
 
 
   return result;
+}
+
+
+// ============================================================
+// OZON REQUEST THROTTLE
+// ============================================================
+
+async function waitForOzonRequestSlot() {
+
+  const now =
+    Date.now();
+
+
+  const earliestNextRequest =
+    lastOzonRequestStartedAt
+    +
+    OZON_MIN_REQUEST_INTERVAL_MS;
+
+
+  const waitMs =
+    earliestNextRequest
+    -
+    now;
+
+
+  if (
+    waitMs > 0
+  ) {
+
+    await sleep(
+      waitMs
+    );
+
+  }
+
+
+  lastOzonRequestStartedAt =
+    Date.now();
 }
 
 
@@ -596,6 +669,9 @@ async function ozonPost<T>(
     attempt += 1
   ) {
 
+    await waitForOzonRequestSlot();
+
+
     const controller =
       new AbortController();
 
@@ -677,6 +753,10 @@ async function ozonPost<T>(
       }
 
 
+      // ========================================================
+      // 429
+      // ========================================================
+
       if (
         response.status ===
           429
@@ -694,34 +774,45 @@ async function ozonPost<T>(
         }
 
 
-        const retryAfter =
-          Number(
-            response.headers.get(
-              "retry-after"
-            )
+        const retryAfterHeader =
+          response.headers.get(
+            "retry-after"
           );
 
 
-        const delay =
-          Number.isFinite(
-            retryAfter
-          )
-          &&
-          retryAfter > 0
+        const retryAfterSeconds =
+          retryAfterHeader
 
-            ? Math.ceil(
-                retryAfter
-                *
-                1000
+            ? Number(
+                retryAfterHeader
               )
 
-            : RETRY_BASE_MS
+            : NaN;
+
+
+        const retryAfterMs =
+          Number.isFinite(
+            retryAfterSeconds
+          )
+          &&
+          retryAfterSeconds > 0
+
+            ? Math.max(
+                Math.ceil(
+                  retryAfterSeconds
+                  *
+                  1000
+                ),
+                2000
+              )
+
+            : OZON_429_FALLBACK_DELAY_MS
               *
               attempt;
 
 
         await sleep(
-          delay
+          retryAfterMs
         );
 
 
@@ -729,6 +820,10 @@ async function ozonPost<T>(
 
       }
 
+
+      // ========================================================
+      // 5XX
+      // ========================================================
 
       if (
         response.status >=
@@ -1603,6 +1698,7 @@ function buildSkuResolutions(
 
   return {
     resolutions,
+
     conflicts,
   };
 }
@@ -2648,9 +2744,29 @@ async function getAnalyticsStocks(
 
 
   for (
-    const batch
-    of batches
+    let index = 0;
+    index < batches.length;
+    index += 1
   ) {
+
+    // Между запросами этого конкретного метода
+    // держим отдельную паузу.
+    if (
+      index > 0
+    ) {
+
+      await sleep(
+        ANALYTICS_STOCK_REQUEST_INTERVAL_MS
+      );
+
+    }
+
+
+    const batch =
+      batches[
+        index
+      ];
+
 
     const response =
       await ozonPost<{
@@ -3036,6 +3152,7 @@ function buildStockData(
 
       ignoredInactiveRows +=
         1;
+
 
       continue;
 
@@ -3622,8 +3739,6 @@ async function runDailySync(
 
     // ========================================================
     // 6. STOCK CATALOG
-    //
-    // Берём реальный каталог Ozon.
     // ========================================================
 
     const ozonCatalog =
@@ -3711,10 +3826,7 @@ async function runDailySync(
 
 
     // ========================================================
-    // 7. CATALOG OFFER → REAL SKU
-    //
-    // Вот этого шага не было в предыдущей версии.
-    // product_id и SKU — НЕ одно и то же.
+    // 7. OFFER ID → SKU
     // ========================================================
 
     const stockProductInfo =
@@ -3856,11 +3968,7 @@ async function runDailySync(
 
 
     // ========================================================
-    // 8. ПРОВЕРКА:
-    //    ВСЕ ЖИВЫЕ ACTIVE PRODUCTS ДОЛЖНЫ ИМЕТЬ SKU
-    //
-    // Старые active строки, которых уже нет в каталоге Ozon,
-    // сюда НЕ входят.
+    // 8. ЖИВЫЕ ACTIVE PRODUCTS ДОЛЖНЫ ИМЕТЬ SKU
     // ========================================================
 
     const activeCatalogProducts =
@@ -3947,8 +4055,6 @@ async function runDailySync(
 
     // ========================================================
     // 9. ANALYTICS STOCKS
-    //
-    // Передаём реальные SKU.
     // ========================================================
 
     const stockResult =
@@ -4003,8 +4109,6 @@ async function runDailySync(
 
     // ========================================================
     // 10. НЕИЗВЕСТНЫЙ ТОВАР С ПОЛОЖИТЕЛЬНЫМ ОСТАТКОМ
-    //
-    // Такое молча пропускать нельзя.
     // ========================================================
 
     if (
