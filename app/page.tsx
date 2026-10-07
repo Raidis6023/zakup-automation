@@ -375,6 +375,16 @@ export default function Home() {
 
       <aside className="home-sidebar">
 
+        <div className="home-company-logo">
+
+          <img
+            src="/logos/babushkina-marketplace.png"
+            alt="ИП Бабушкина Маркетплейс"
+            className="home-company-logo-image"
+          />
+
+        </div>
+
         <nav
           className="home-workspaces"
           aria-label="Рабочие пространства"
