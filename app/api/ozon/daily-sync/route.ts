@@ -1,12 +1,35 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function isAuthorized(
-  request: Request
-): boolean {
+
+function getConfig() {
+
+  const supabaseUrl =
+    process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+  const supabaseSecretKey =
+    process.env.SUPABASE_SECRET_KEY;
 
   const cronSecret =
     process.env.CRON_SECRET;
+
+
+  if (!supabaseUrl) {
+
+    throw new Error(
+      "Не найдена переменная NEXT_PUBLIC_SUPABASE_URL"
+    );
+
+  }
+
+
+  if (!supabaseSecretKey) {
+
+    throw new Error(
+      "Не найдена переменная SUPABASE_SECRET_KEY"
+    );
+
+  }
 
 
   if (!cronSecret) {
@@ -16,6 +39,23 @@ function isAuthorized(
     );
 
   }
+
+
+  return {
+    supabaseUrl,
+    supabaseSecretKey,
+    cronSecret,
+  };
+}
+
+
+function isAuthorized(
+  request: Request
+): boolean {
+
+  const {
+    cronSecret,
+  } = getConfig();
 
 
   const authorization =
@@ -57,16 +97,74 @@ async function handler(
     }
 
 
+    const {
+      supabaseUrl,
+      supabaseSecretKey,
+    } = getConfig();
+
+
+    const response =
+      await fetch(
+        `${supabaseUrl}/rest/v1/rpc/replace_ozon_sales_day`,
+        {
+          method: "POST",
+
+          headers: {
+            apikey:
+              supabaseSecretKey,
+
+            Authorization:
+              `Bearer ${supabaseSecretKey}`,
+
+            "Content-Type":
+              "application/json",
+          },
+
+          body:
+            JSON.stringify(
+              {
+                p_sale_date:
+                  "2099-12-31",
+
+                p_rows:
+                  [],
+              }
+            ),
+
+          cache:
+            "no-store",
+        }
+      );
+
+
+    const text =
+      await response.text();
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        `Supabase RPC error ${response.status}: ${text}`
+      );
+
+    }
+
+
     return Response.json(
       {
         ok: true,
-        mode: "auth_test_only",
-        writes_to_database: false,
-        message:
-          "CRON_SECRET работает. Daily sync пока ничего не записывает.",
-      },
-      {
-        status: 200,
+
+        mode:
+          "sales_rpc_test",
+
+        writes_real_sales:
+          false,
+
+        test_date:
+          "2099-12-31",
+
+        rpc_result:
+          text,
       }
     );
 
@@ -75,8 +173,13 @@ async function handler(
     return Response.json(
       {
         ok: false,
-        mode: "auth_test_only",
-        writes_to_database: false,
+
+        mode:
+          "sales_rpc_test",
+
+        writes_real_sales:
+          false,
+
         error:
           error instanceof Error
             ? error.message
