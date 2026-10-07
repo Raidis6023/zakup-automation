@@ -243,6 +243,71 @@ type SkuResolution = {
 };
 
 
+type SalesWriteRow = {
+  product_id: string;
+
+  cluster_id: string;
+
+  cluster_name:
+    | string
+    | null;
+
+  sale_date: string;
+
+  sales_quantity: number;
+
+  cancelled_quantity: number;
+
+  raw_payload:
+    Record<
+      string,
+      unknown
+    >;
+};
+
+
+type StockWriteRow = {
+  product_id: string;
+
+  cluster_id: string;
+
+  cluster_name:
+    | string
+    | null;
+
+  quantity: number;
+
+  raw_payload:
+    Record<
+      string,
+      unknown
+    >;
+};
+
+
+type ApplySyncResult = {
+  ok: boolean;
+
+  sales_sync_run_id: string;
+
+  date_from: string;
+
+  date_to: string;
+
+  completed_days: number;
+
+  sales_rows_saved: number;
+
+  snapshot_date: string;
+
+  stock_rows_saved: number;
+
+  postings_received: number;
+
+  cancelled_postings: number;
+};
+
+
 // ============================================================
 // ОБЩИЕ HELPERS
 // ============================================================
@@ -412,11 +477,8 @@ string {
 
 
 function addDays(
-  date:
-    string,
-
-  delta:
-    number
+  date: string,
+  delta: number
 ): string {
 
   const parsed =
@@ -923,7 +985,94 @@ Promise<T> {
 
 
 // ============================================================
-// PRODUCTS ИЗ SUPABASE
+// SUPABASE RPC
+// ============================================================
+
+async function supabaseRpc<T>(
+  functionName: string,
+  body:
+    Record<
+      string,
+      unknown
+    >
+):
+Promise<T> {
+
+  const {
+    supabaseUrl,
+    supabaseSecretKey,
+  } =
+    getConfig();
+
+
+  const response =
+    await fetch(
+      `${supabaseUrl}/rest/v1/rpc/${functionName}`,
+      {
+        method:
+          "POST",
+
+        headers: {
+          apikey:
+            supabaseSecretKey,
+
+          Authorization:
+            `Bearer ${supabaseSecretKey}`,
+
+          "Content-Type":
+            "application/json",
+
+          Accept:
+            "application/json",
+        },
+
+        body:
+          JSON.stringify(
+            body
+          ),
+
+        cache:
+          "no-store",
+      }
+    );
+
+
+  const text =
+    await response.text();
+
+
+  if (!response.ok) {
+
+    throw new Error(
+      [
+        `Supabase RPC ${functionName}`,
+        `HTTP ${response.status}`,
+        text,
+      ].join(
+        ": "
+      )
+    );
+
+  }
+
+
+  if (!text) {
+
+    throw new Error(
+      `Supabase RPC ${functionName} вернул пустой ответ`
+    );
+
+  }
+
+
+  return JSON.parse(
+    text
+  ) as T;
+}
+
+
+// ============================================================
+// PRODUCTS
 // ============================================================
 
 async function getProducts():
@@ -1307,9 +1456,6 @@ async function getFboPostingsForRange(
 
 // ============================================================
 // НЕРАЗРЕШЁННЫЕ SKU
-//
-// Старые строки вне текущего 28-дневного окна здесь
-// специально пропускаем.
 // ============================================================
 
 function getUnresolvedSalesSkus(
@@ -1638,10 +1784,10 @@ function buildSkuResolutions(
 
 
 // ============================================================
-// SALES PREFLIGHT
+// SALES DATA
 // ============================================================
 
-function buildSalesPreflight(
+function buildSalesData(
   postings:
     FboPosting[],
 
@@ -1691,6 +1837,23 @@ function buildSalesPreflight(
     salesQuantity: number;
 
     cancelledQuantity: number;
+
+    sourceOfferIds:
+      Set<string>;
+
+    skus:
+      Set<string>;
+
+    matchMethods:
+      Set<string>;
+
+    warehouseIds:
+      Set<string>;
+
+    warehouseNames:
+      Set<string>;
+
+    postingItemLines: number;
   };
 
 
@@ -1780,8 +1943,7 @@ function buildSalesPreflight(
 
 
     // ========================================================
-    // created_at вообще не удалось разобрать.
-    // Это настоящая ошибка.
+    // НЕВАЛИДНЫЙ created_at
     // ========================================================
 
     if (!saleDate) {
@@ -1840,12 +2002,8 @@ function buildSalesPreflight(
 
 
     // ========================================================
-    // Ozon может вернуть строку с created_at за пределами
-    // запрошенного периода.
-    //
-    // Если дата валидная, но не входит в наши 28 дней,
-    // это НЕ ошибка и НЕ unmatched.
-    // Просто исключаем её из расчёта.
+    // Ozon иногда возвращает старые строки вне диапазона.
+    // Их просто игнорируем.
     // ========================================================
 
     if (
@@ -1889,7 +2047,7 @@ function buildSalesPreflight(
                 posting.created_at
                 ?? null,
 
-              calculated_sale_date:
+              sale_date:
                 saleDate,
 
               offer_id:
@@ -2101,6 +2259,13 @@ function buildSalesPreflight(
       }
 
 
+      // ======================================================
+      // НЕАКТИВНЫЕ ТОВАРЫ
+      //
+      // Исторические строки в БД не удаляем.
+      // В новую активную выборку не включаем.
+      // ======================================================
+
       if (
         !product.is_active
       ) {
@@ -2219,6 +2384,24 @@ function buildSalesPreflight(
 
           cancelledQuantity:
             0,
+
+          sourceOfferIds:
+            new Set<string>(),
+
+          skus:
+            new Set<string>(),
+
+          matchMethods:
+            new Set<string>(),
+
+          warehouseIds:
+            new Set<string>(),
+
+          warehouseNames:
+            new Set<string>(),
+
+          postingItemLines:
+            0,
         };
 
 
@@ -2228,6 +2411,61 @@ function buildSalesPreflight(
         );
 
       }
+
+
+      if (sourceOfferId) {
+
+        current
+          .sourceOfferIds
+          .add(
+            sourceOfferId
+          );
+
+      }
+
+
+      if (sku) {
+
+        current
+          .skus
+          .add(
+            sku
+          );
+
+      }
+
+
+      if (warehouseId) {
+
+        current
+          .warehouseIds
+          .add(
+            warehouseId
+          );
+
+      }
+
+
+      if (warehouseName) {
+
+        current
+          .warehouseNames
+          .add(
+            warehouseName
+          );
+
+      }
+
+
+      current
+        .matchMethods
+        .add(
+          matchMethod
+        );
+
+
+      current.postingItemLines +=
+        1;
 
 
       if (isCancelled) {
@@ -2247,6 +2485,125 @@ function buildSalesPreflight(
   }
 
 
+  // ==========================================================
+  // ГОТОВЫЕ СТРОКИ ДЛЯ БД
+  // ==========================================================
+
+  const rows:
+    SalesWriteRow[] =
+    Array.from(
+      aggregated.values()
+    )
+      .map(
+        current => ({
+          product_id:
+            current.productId,
+
+          cluster_id:
+            current.clusterId,
+
+          cluster_name:
+            current.clusterName,
+
+          sale_date:
+            current.saleDate,
+
+          sales_quantity:
+            current.salesQuantity,
+
+          cancelled_quantity:
+            current.cancelledQuantity,
+
+          raw_payload: {
+            source:
+              "v3/posting/fbo/list",
+
+            master_code:
+              current.masterCode,
+
+            source_offer_ids:
+              Array.from(
+                current.sourceOfferIds
+              ),
+
+            ozon_skus:
+              Array.from(
+                current.skus
+              ),
+
+            match_methods:
+              Array.from(
+                current.matchMethods
+              ),
+
+            warehouse_ids:
+              Array.from(
+                current.warehouseIds
+              ),
+
+            warehouse_names:
+              Array.from(
+                current.warehouseNames
+              ),
+
+            posting_item_lines:
+              current.postingItemLines,
+          },
+        })
+      );
+
+
+  rows.sort(
+    (
+      left,
+      right
+    ) => {
+
+      const dateCompare =
+        left.sale_date
+          .localeCompare(
+            right.sale_date
+          );
+
+
+      if (
+        dateCompare !== 0
+      ) {
+
+        return dateCompare;
+
+      }
+
+
+      const productCompare =
+        left.product_id
+          .localeCompare(
+            right.product_id
+          );
+
+
+      if (
+        productCompare !== 0
+      ) {
+
+        return productCompare;
+
+      }
+
+
+      return left.cluster_id
+        .localeCompare(
+          right.cluster_id
+        );
+
+    }
+  );
+
+
+  // ==========================================================
+  // СТАТИСТИКА ПО ДНЯМ
+  // ==========================================================
+
   const perDay =
     new Map<
       string,
@@ -2265,12 +2622,12 @@ function buildSalesPreflight(
 
   for (
     const row
-    of aggregated.values()
+    of rows
   ) {
 
     const current =
       perDay.get(
-        row.saleDate
+        row.sale_date
       )
       ?? {
         aggregated_rows:
@@ -2289,15 +2646,15 @@ function buildSalesPreflight(
 
 
     current.sales_quantity +=
-      row.salesQuantity;
+      row.sales_quantity;
 
 
     current.cancelled_quantity +=
-      row.cancelledQuantity;
+      row.cancelled_quantity;
 
 
     perDay.set(
-      row.saleDate,
+      row.sale_date,
       current
     );
 
@@ -2326,15 +2683,15 @@ function buildSalesPreflight(
           left,
           right
         ) =>
-          left.sale_date.localeCompare(
-            right.sale_date
-          )
+          left.sale_date
+            .localeCompare(
+              right.sale_date
+            )
       );
 
 
   return {
-    aggregatedRows:
-      aggregated.size,
+    rows,
 
     perDay:
       perDayRows,
@@ -2472,7 +2829,7 @@ async function getFboWarehouseStocks(
         1;
 
 
-      const rows =
+      const stockRows =
         response.products
         ??
         response.result
@@ -2482,7 +2839,7 @@ async function getFboWarehouseStocks(
 
 
       allStocks.push(
-        ...rows
+        ...stockRows
       );
 
 
@@ -2552,10 +2909,10 @@ async function getFboWarehouseStocks(
 
 
 // ============================================================
-// STOCK PREFLIGHT
+// STOCK DATA
 // ============================================================
 
-function buildStockPreflight(
+function buildStockData(
   stocks:
     FboWarehouseStock[],
 
@@ -2578,8 +2935,42 @@ function buildStockPreflight(
     );
 
 
+  type StockWarehousePayload = {
+    sku:
+      string
+      | null;
+
+    warehouse_id:
+      string
+      | null;
+
+    warehouse_name:
+      string
+      | null;
+
+    offer_id:
+      string
+      | null;
+
+    ozon_product_id:
+      string
+      | null;
+
+    present: number;
+
+    reserved: number;
+
+    available_stock_count:
+      number;
+  };
+
+
   type StockAggregate = {
     productId: string;
+
+    masterCode:
+      | string
+      | null;
 
     clusterId: string;
 
@@ -2587,7 +2978,8 @@ function buildStockPreflight(
 
     quantity: number;
 
-    warehouseRows: number;
+    warehouses:
+      StockWarehousePayload[];
   };
 
 
@@ -2795,6 +3187,9 @@ function buildStockPreflight(
         productId:
           product.id,
 
+        masterCode:
+          product.master_code,
+
         clusterId,
 
         clusterName,
@@ -2802,8 +3197,8 @@ function buildStockPreflight(
         quantity:
           0,
 
-        warehouseRows:
-          0,
+        warehouses:
+          [],
       };
 
 
@@ -2819,8 +3214,39 @@ function buildStockPreflight(
       available;
 
 
-    current.warehouseRows +=
-      1;
+    current.warehouses.push(
+      {
+        sku:
+          sku
+          || null,
+
+        warehouse_id:
+          warehouseId
+          || null,
+
+        warehouse_name:
+          warehouseName
+          ||
+          cluster?.warehouseName
+          ||
+          null,
+
+        offer_id:
+          offerId
+          || null,
+
+        ozon_product_id:
+          ozonProductId
+          || null,
+
+        present,
+
+        reserved,
+
+        available_stock_count:
+          available,
+      }
+    );
 
 
     totalPresent +=
@@ -2837,37 +3263,72 @@ function buildStockPreflight(
   }
 
 
-  const sample =
+  const rows:
+    StockWriteRow[] =
     Array.from(
       aggregated.values()
     )
-      .slice(
-        0,
-        30
-      )
       .map(
-        row => ({
+        current => ({
           product_id:
-            row.productId,
+            current.productId,
 
           cluster_id:
-            row.clusterId,
+            current.clusterId,
 
           cluster_name:
-            row.clusterName,
+            current.clusterName,
 
           quantity:
-            row.quantity,
+            current.quantity,
 
-          warehouse_rows:
-            row.warehouseRows,
+          raw_payload: {
+            source:
+              "v1/product/info/stocks-by-warehouse/fbo",
+
+            master_code:
+              current.masterCode,
+
+            warehouses:
+              current.warehouses,
+          },
         })
       );
 
 
+  rows.sort(
+    (
+      left,
+      right
+    ) => {
+
+      const productCompare =
+        left.product_id
+          .localeCompare(
+            right.product_id
+          );
+
+
+      if (
+        productCompare !== 0
+      ) {
+
+        return productCompare;
+
+      }
+
+
+      return left.cluster_id
+        .localeCompare(
+          right.cluster_id
+        );
+
+    }
+  );
+
+
   return {
-    aggregatedRows:
-      aggregated.size,
+    rows,
 
     unmatched,
 
@@ -2881,17 +3342,15 @@ function buildStockPreflight(
     totalReserved,
 
     totalAvailable,
-
-    sample,
   };
 }
 
 
 // ============================================================
-// PREFLIGHT
+// DAILY SYNC
 // ============================================================
 
-async function runPreflight(
+async function runDailySync(
   request:
     Request
 ) {
@@ -2900,7 +3359,19 @@ async function runPreflight(
     Date.now();
 
 
+  let writeAttempted =
+    false;
+
+
+  let writeSucceeded =
+    false;
+
+
   try {
+
+    // ========================================================
+    // 1. AUTH
+    // ========================================================
 
     if (
       !isAuthorized(
@@ -2926,7 +3397,7 @@ async function runPreflight(
 
 
     // ========================================================
-    // 1. ДАТЫ
+    // 2. ДАТЫ
     // ========================================================
 
     const todayMoscow =
@@ -2952,7 +3423,7 @@ async function runPreflight(
 
 
     // ========================================================
-    // 2. PRODUCTS
+    // 3. PRODUCTS
     // ========================================================
 
     const products =
@@ -2993,7 +3464,7 @@ async function runPreflight(
             false,
 
           mode:
-            "preflight_28_days",
+            "write_sync",
 
           writes_to_database:
             false,
@@ -3024,15 +3495,47 @@ async function runPreflight(
 
 
     // ========================================================
-    // 3. CLUSTERS
+    // 4. CLUSTERS
     // ========================================================
 
     const clusterResult =
       await getOzonClusters();
 
 
+    if (
+      clusterResult
+        .clusters
+        .length === 0
+    ) {
+
+      return Response.json(
+        {
+          ok:
+            false,
+
+          mode:
+            "write_sync",
+
+          writes_to_database:
+            false,
+
+          stage:
+            "cluster_validation",
+
+          error:
+            "Ozon не вернул список кластеров",
+        },
+        {
+          status:
+            409,
+        }
+      );
+
+    }
+
+
     // ========================================================
-    // 4. SALES
+    // 5. SALES
     // ========================================================
 
     const salesResult =
@@ -3042,8 +3545,40 @@ async function runPreflight(
       );
 
 
+    if (
+      salesResult
+        .postings
+        .length === 0
+    ) {
+
+      return Response.json(
+        {
+          ok:
+            false,
+
+          mode:
+            "write_sync",
+
+          writes_to_database:
+            false,
+
+          stage:
+            "sales_validation",
+
+          error:
+            "Ozon вернул 0 FBO postings. Запись отменена.",
+        },
+        {
+          status:
+            409,
+        }
+      );
+
+    }
+
+
     // ========================================================
-    // 5. SKU FALLBACK
+    // 6. SKU FALLBACK
     // ========================================================
 
     const unresolvedSkus =
@@ -3081,8 +3616,8 @@ async function runPreflight(
       );
 
 
-    const salesPreflight =
-      buildSalesPreflight(
+    const salesData =
+      buildSalesData(
         salesResult.postings,
         products,
         skuResolutions,
@@ -3094,7 +3629,7 @@ async function runPreflight(
 
 
     // ========================================================
-    // 6. STOCKS
+    // 7. STOCKS
     // ========================================================
 
     const activeOfferIds =
@@ -3116,8 +3651,40 @@ async function runPreflight(
       );
 
 
-    const stockPreflight =
-      buildStockPreflight(
+    if (
+      stockResult
+        .stocks
+        .length === 0
+    ) {
+
+      return Response.json(
+        {
+          ok:
+            false,
+
+          mode:
+            "write_sync",
+
+          writes_to_database:
+            false,
+
+          stage:
+            "stock_validation",
+
+          error:
+            "Ozon вернул 0 строк FBO stock. Запись отменена.",
+        },
+        {
+          status:
+            409,
+        }
+      );
+
+    }
+
+
+    const stockData =
+      buildStockData(
         stockResult.stocks,
         activeProducts,
         clusterResult
@@ -3126,7 +3693,72 @@ async function runPreflight(
 
 
     // ========================================================
-    // 7. POSTING COUNTS ВНУТРИ ОКНА
+    // 8. ФИНАЛЬНАЯ ПРОВЕРКА
+    //
+    // НИКАКОЙ ЗАПИСИ ДО ЭТОЙ ТОЧКИ.
+    // ========================================================
+
+    if (
+      salesData
+        .unmatched
+        .length > 0
+      ||
+      stockData
+        .unmatched
+        .length > 0
+    ) {
+
+      return Response.json(
+        {
+          ok:
+            false,
+
+          mode:
+            "write_sync",
+
+          writes_to_database:
+            false,
+
+          stage:
+            "final_validation",
+
+          sales_unmatched:
+            salesData
+              .unmatched
+              .length,
+
+          sales_unmatched_sample:
+            salesData
+              .unmatched
+              .slice(
+                0,
+                100
+              ),
+
+          stock_unmatched:
+            stockData
+              .unmatched
+              .length,
+
+          stock_unmatched_sample:
+            stockData
+              .unmatched
+              .slice(
+                0,
+                100
+              ),
+        },
+        {
+          status:
+            409,
+        }
+      );
+
+    }
+
+
+    // ========================================================
+    // 9. СЧЁТЧИКИ POSTINGS ТОЛЬКО ВНУТРИ 28 ДНЕЙ
     // ========================================================
 
     const postingsInWindow =
@@ -3134,18 +3766,18 @@ async function runPreflight(
         .filter(
           posting => {
 
-            const date =
+            const saleDate =
               isoToMoscowDate(
                 posting.created_at
               );
 
 
             return Boolean(
-              date
+              saleDate
               &&
-              date >= salesDateFrom
+              saleDate >= salesDateFrom
               &&
-              date <= salesDateTo
+              saleDate <= salesDateTo
             );
 
           }
@@ -3153,9 +3785,12 @@ async function runPreflight(
 
 
     const postingsOutsideWindow =
-      salesResult.postings.length
+      salesResult
+        .postings
+        .length
       -
-      postingsInWindow.length;
+      postingsInWindow
+        .length;
 
 
     const cancelledPostings =
@@ -3172,69 +3807,123 @@ async function runPreflight(
         .length;
 
 
-    const notCancelledPostings =
-      postingsInWindow.length
-      -
-      cancelledPostings;
-
-
     // ========================================================
-    // 8. SKU SUMMARY
+    // 10. ЕДИНСТВЕННАЯ БОЕВАЯ ЗАПИСЬ
+    //
+    // PostgreSQL выполняет:
+    // - замену 28 дней продаж;
+    // - замену снимка остатков;
+    // - создание sales_sync_run;
+    //
+    // всё в ОДНОЙ транзакции.
     // ========================================================
 
-    const skuResolutionRows =
-      Array.from(
-        skuResolutions.values()
+    writeAttempted =
+      true;
+
+
+    const writeResult =
+      await supabaseRpc<
+        ApplySyncResult
+      >(
+        "apply_ozon_daily_sync",
+        {
+          p_date_from:
+            salesDateFrom,
+
+          p_date_to:
+            salesDateTo,
+
+          p_sales_rows:
+            salesData.rows,
+
+          p_snapshot_date:
+            todayMoscow,
+
+          p_stock_rows:
+            stockData.rows,
+
+          p_postings_received:
+            postingsInWindow.length,
+
+          p_cancelled_postings:
+            cancelledPostings,
+        }
       );
 
 
-    const resolvedSkuRows =
-      skuResolutionRows.filter(
-        row =>
-          row.product
-          != null
+    if (
+      !writeResult
+      ||
+      writeResult.ok !== true
+    ) {
+
+      throw new Error(
+        "apply_ozon_daily_sync не подтвердил успешную запись"
       );
 
+    }
 
-    const unresolvedSkuRows =
-      skuResolutionRows.filter(
-        row =>
-          row.product
-          == null
+
+    if (
+      writeResult.sales_rows_saved
+      !==
+      salesData.rows.length
+    ) {
+
+      throw new Error(
+        [
+          "Количество записанных строк продаж не совпало",
+          `ожидали ${salesData.rows.length}`,
+          `получили ${writeResult.sales_rows_saved}`,
+        ].join(
+          ": "
+        )
       );
+
+    }
+
+
+    if (
+      writeResult.stock_rows_saved
+      !==
+      stockData.rows.length
+    ) {
+
+      throw new Error(
+        [
+          "Количество записанных строк остатков не совпало",
+          `ожидали ${stockData.rows.length}`,
+          `получили ${writeResult.stock_rows_saved}`,
+        ].join(
+          ": "
+        )
+      );
+
+    }
+
+
+    writeSucceeded =
+      true;
 
 
     // ========================================================
-    // 9. RESULT
+    // 11. SUCCESS
     // ========================================================
 
     return Response.json(
       {
         ok:
-          (
-            activeWithoutMasterCode
-              .length === 0
-            &&
-            salesPreflight
-              .unmatched
-              .length === 0
-            &&
-            stockPreflight
-              .unmatched
-              .length === 0
-          ),
+          true,
 
         mode:
-          "preflight_28_days",
+          "write_sync",
 
         writes_to_database:
-          false,
+          true,
 
 
         dates: {
-          today_moscow:
-            todayMoscow,
-
           sales_date_from:
             salesDateFrom,
 
@@ -3244,7 +3933,7 @@ async function runPreflight(
           sales_window_days:
             SALES_WINDOW_DAYS,
 
-          future_stock_snapshot_date:
+          stock_snapshot_date:
             todayMoscow,
         },
 
@@ -3259,16 +3948,8 @@ async function runPreflight(
           inactive:
             inactiveProducts.length,
 
-          active_with_master_code:
-            activeProducts.length
-            -
-            activeWithoutMasterCode.length,
-
           active_without_master_code:
             activeWithoutMasterCode.length,
-
-          active_offer_ids_sent_to_stock_api:
-            activeOfferIds.length,
         },
 
 
@@ -3301,62 +3982,44 @@ async function runPreflight(
           postings_outside_window:
             postingsOutsideWindow,
 
-          postings_not_cancelled:
-            notCancelledPostings,
-
           postings_cancelled:
             cancelledPostings,
 
-          aggregated_rows_for_active_products:
-            salesPreflight
-              .aggregatedRows,
+          rows_sent_to_database:
+            salesData
+              .rows
+              .length,
 
           matching:
-            salesPreflight
+            salesData
               .matchingStats,
 
-          per_day:
-            salesPreflight
-              .perDay,
-
           unmatched_products:
-            salesPreflight
+            salesData
               .unmatched
               .length,
 
-          unmatched_sample:
-            salesPreflight
-              .unmatched
-              .slice(
-                0,
-                50
-              ),
-
           ignored_out_of_range_sample:
-            salesPreflight
+            salesData
               .ignoredOutOfRange,
 
           ignored_inactive_sample:
-            salesPreflight
+            salesData
               .ignoredInactive,
 
           unmapped_warehouse_ids_count:
-            salesPreflight
+            salesData
               .unmatchedWarehouseIds
               .length,
 
-          unmapped_warehouse_ids_sample:
-            salesPreflight
-              .unmatchedWarehouseIds
-              .slice(
-                0,
-                50
-              ),
+          per_day:
+            salesData
+              .perDay,
         },
 
 
         sku_resolution: {
-          unresolved_sales_skus_requested:
+          skus_requested:
             productInfoResult
               .requestedSkus,
 
@@ -3370,15 +4033,31 @@ async function runPreflight(
               .length,
 
           resolved_to_products:
-            resolvedSkuRows
+            Array.from(
+              skuResolutions.values()
+            )
+              .filter(
+                row =>
+                  row.product
+                  != null
+              )
               .length,
 
           unresolved_to_products:
-            unresolvedSkuRows
+            Array.from(
+              skuResolutions.values()
+            )
+              .filter(
+                row =>
+                  row.product
+                  == null
+              )
               .length,
 
           resolution_sample:
-            skuResolutionRows
+            Array.from(
+              skuResolutions.values()
+            )
               .slice(
                 0,
                 50
@@ -3408,9 +4087,6 @@ async function runPreflight(
 
                           offer_id:
                             row.product.offer_id,
-
-                          ozon_product_id:
-                            row.product.ozon_product_id,
 
                           master_code:
                             row.product.master_code,
@@ -3445,69 +4121,44 @@ async function runPreflight(
               .stocks
               .length,
 
-          aggregated_rows_for_database:
-            stockPreflight
-              .aggregatedRows,
+          rows_sent_to_database:
+            stockData
+              .rows
+              .length,
 
           unmatched_rows:
-            stockPreflight
+            stockData
               .unmatched
               .length,
-
-          unmatched_sample:
-            stockPreflight
-              .unmatched
-              .slice(
-                0,
-                50
-              ),
 
           unmapped_warehouse_ids_count:
-            stockPreflight
+            stockData
               .unmappedWarehouseIds
               .length,
-
-          unmapped_warehouse_ids_sample:
-            stockPreflight
-              .unmappedWarehouseIds
-              .slice(
-                0,
-                50
-              ),
 
           totals: {
             present:
-              stockPreflight
+              stockData
                 .totalPresent,
 
             reserved:
-              stockPreflight
+              stockData
                 .totalReserved,
 
             available:
-              stockPreflight
+              stockData
                 .totalAvailable,
           },
-
-          aggregated_sample:
-            stockPreflight
-              .sample,
         },
 
 
-        ready_for_write:
-          (
-            activeWithoutMasterCode
-              .length === 0
-            &&
-            salesPreflight
-              .unmatched
-              .length === 0
-            &&
-            stockPreflight
-              .unmatched
-              .length === 0
-          ),
+        database: {
+          atomic_rpc:
+            "apply_ozon_daily_sync",
+
+          result:
+            writeResult,
+        },
 
 
         duration_ms:
@@ -3524,7 +4175,7 @@ async function runPreflight(
   } catch (error) {
 
     console.error(
-      "OZON DAILY SYNC PREFLIGHT ERROR",
+      "OZON DAILY SYNC ERROR",
       error
     );
 
@@ -3535,10 +4186,13 @@ async function runPreflight(
           false,
 
         mode:
-          "preflight_28_days",
+          "write_sync",
 
-        writes_to_database:
-          false,
+        write_attempted:
+          writeAttempted,
+
+        write_succeeded:
+          writeSucceeded,
 
         error:
           error instanceof Error
@@ -3546,6 +4200,15 @@ async function runPreflight(
             : String(
                 error
               ),
+
+        note:
+          writeAttempted
+          &&
+          !writeSucceeded
+
+            ? "Если ошибка пришла от apply_ozon_daily_sync, транзакция PostgreSQL откатывается целиком."
+
+            : "До боевой записи дело не дошло.",
 
         duration_ms:
           Date.now()
@@ -3570,7 +4233,7 @@ export async function GET(
   request: Request
 ) {
 
-  return runPreflight(
+  return runDailySync(
     request
   );
 
@@ -3581,7 +4244,7 @@ export async function POST(
   request: Request
 ) {
 
-  return runPreflight(
+  return runDailySync(
     request
   );
 
