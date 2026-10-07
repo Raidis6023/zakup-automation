@@ -139,6 +139,9 @@ type MarketplaceListingRow = {
 
   is_active:
     boolean;
+
+  china_procurement_enabled:
+    boolean;
 };
 
 
@@ -630,12 +633,6 @@ function safeNonNegativeInteger(
 
 // ============================================================
 // НОРМАЛИЗАЦИЯ АРТИКУЛА ДЛЯ КОНТРОЛЯ
-//
-// ВАЖНО:
-// артикул продавца НЕ используется как основной ключ.
-// Основной ключ WB = nmID / external_id.
-//
-// Эта функция нужна только для диагностики.
 // ============================================================
 
 function normalizeSellerArticle(
@@ -674,7 +671,7 @@ export async function GET() {
   try {
 
     // ========================================================
-    // 1. СОСТОЯНИЕ СИНХРОНИЗАЦИИ WB
+    // 1. СОСТОЯНИЕ СИНХРОНИЗАЦИИ
     // ========================================================
 
     const states =
@@ -748,13 +745,7 @@ export async function GET() {
 
 
     // ========================================================
-    // 2. ФИКСИРУЕМ ПЕРИОД
-    //
-    // Пока конец периода = последняя успешная
-    // синхронизация заказов WB.
-    //
-    // Когда подключим Ozon, установим один общий период
-    // для обеих площадок.
+    // 2. ПЕРИОД
     // ========================================================
 
     const periodEnd =
@@ -775,13 +766,13 @@ export async function GET() {
 
 
     // ========================================================
-    // 3. ЗАГРУЖАЕМ СПРАВОЧНИК WB → MASTER_CODE
+    // 3. СПРАВОЧНИК WB → MASTER_CODE
     // ========================================================
 
     const mappingsBasePath =
       "marketplace_listings"
       +
-      "?select=external_id,seller_article,master_code,is_active"
+      "?select=external_id,seller_article,master_code,is_active,china_procurement_enabled"
       +
       `&marketplace=eq.${MARKETPLACE}`
       +
@@ -916,7 +907,9 @@ export async function GET() {
 
 
     // ========================================================
-    // 4. ЗАКАЗЫ FBW
+    // 4. ЗАКАЗЫ ТОЛЬКО СО СКЛАДА WB
+    //
+    // FBS / "Склад продавца" сюда не попадает.
     // ========================================================
 
     const ordersBasePath =
@@ -985,7 +978,7 @@ export async function GET() {
 
 
     // ========================================================
-    // 5. ПРОВЕРЯЕМ ЗАКАЗЫ
+    // 5. ПРОВЕРКА ЗАКАЗОВ
     // ========================================================
 
     const duplicateSrid =
@@ -1097,7 +1090,7 @@ export async function GET() {
 
 
     // ========================================================
-    // 6. АГРЕГИРУЕМ ПРОДАЖИ ПО NMID
+    // 6. АГРЕГАЦИЯ ПРОДАЖ ПО NMID
     // ========================================================
 
     const salesByNmId =
@@ -1107,11 +1100,11 @@ export async function GET() {
       >();
 
 
-    let activeOrders =
+    let allActiveOrders =
       0;
 
 
-    let cancelledOrders =
+    let allCancelledOrders =
       0;
 
 
@@ -1198,7 +1191,7 @@ export async function GET() {
         current.cancelledOrders +=
           1;
 
-        cancelledOrders +=
+        allCancelledOrders +=
           1;
 
       } else {
@@ -1206,7 +1199,7 @@ export async function GET() {
         current.activeOrders +=
           1;
 
-        activeOrders +=
+        allActiveOrders +=
           1;
 
       }
@@ -1221,7 +1214,7 @@ export async function GET() {
 
 
     // ========================================================
-    // 7. ОСТАТКИ ИЗ КОНКРЕТНОГО SNAPSHOT
+    // 7. ОСТАТКИ ПО ПОСЛЕДНЕМУ SNAPSHOT
     // ========================================================
 
     const stocksBasePath =
@@ -1284,7 +1277,7 @@ export async function GET() {
 
 
     // ========================================================
-    // 8. ПРОВЕРЯЕМ ДУБЛИ NMID В SNAPSHOT
+    // 8. ПРОВЕРКА ДУБЛЕЙ NMID В SNAPSHOT
     // ========================================================
 
     const stockByNmId =
@@ -1395,7 +1388,7 @@ export async function GET() {
     }
 
 
-    const items =
+    const allItems =
       Array.from(
         allNmIds
       )
@@ -1532,10 +1525,6 @@ export async function GET() {
 
             return {
 
-              // -----------------------------------------------
-              // ЕДИНЫЙ ФИЗИЧЕСКИЙ ТОВАР
-              // -----------------------------------------------
-
               masterCode:
                 listing
                   ?.master_code
@@ -1556,10 +1545,11 @@ export async function GET() {
                   :
                   null,
 
-
-              // -----------------------------------------------
-              // WB
-              // -----------------------------------------------
+              chinaProcurementEnabled:
+                listing
+                  ?.china_procurement_enabled
+                ??
+                false,
 
               nmId,
 
@@ -1588,11 +1578,6 @@ export async function GET() {
                 ??
                 null,
 
-
-              // -----------------------------------------------
-              // ПРОДАЖИ
-              // -----------------------------------------------
-
               sales: {
 
                 periodDays:
@@ -1604,11 +1589,6 @@ export async function GET() {
 
                 avgSalesPerDay,
               },
-
-
-              // -----------------------------------------------
-              // ОСТАТКИ
-              // -----------------------------------------------
 
               stock: {
 
@@ -1644,11 +1624,11 @@ export async function GET() {
 
 
     // ========================================================
-    // 10. ПРОВЕРЯЕМ ПОКРЫТИЕ MASTER_CODE
+    // 10. ПРОВЕРКА СОПОСТАВЛЕНИЯ
     // ========================================================
 
     const mappedItems =
-      items.filter(
+      allItems.filter(
         (item) =>
           item.masterCode
           !==
@@ -1657,7 +1637,7 @@ export async function GET() {
 
 
     const unmappedItems =
-      items.filter(
+      allItems.filter(
         (item) =>
           item.masterCode
           ===
@@ -1666,7 +1646,7 @@ export async function GET() {
 
 
     const sellerArticleMismatchItems =
-      items.filter(
+      allItems.filter(
         (item) =>
           item.sellerArticleCheck
           ===
@@ -1674,7 +1654,40 @@ export async function GET() {
       );
 
 
-    const uniqueMasterCodes =
+    // ========================================================
+    // 11. РАЗДЕЛЯЕМ:
+    //
+    // allItems
+    //   = весь текущий WB
+    //
+    // chinaItems
+    //   = только товары, которые действительно участвуют
+    //     в закупке Китая
+    //
+    // excludedFromChinaItems
+    //   = карточки WB, которые сохраняем для истории,
+    //     но из расчёта Китая исключаем
+    // ========================================================
+
+    const chinaItems =
+      mappedItems.filter(
+        (item) =>
+          item.chinaProcurementEnabled
+          ===
+          true
+      );
+
+
+    const excludedFromChinaItems =
+      mappedItems.filter(
+        (item) =>
+          item.chinaProcurementEnabled
+          ===
+          false
+      );
+
+
+    const allUniqueMasterCodes =
       new Set(
         mappedItems.map(
           (item) =>
@@ -1683,12 +1696,21 @@ export async function GET() {
       );
 
 
+    const chinaUniqueMasterCodes =
+      new Set(
+        chinaItems.map(
+          (item) =>
+            item.masterCode
+        )
+      );
+
+
     // ========================================================
-    // 11. ИТОГИ
+    // 12. ОБЩИЕ ИТОГИ WB
     // ========================================================
 
-    const totalFbwStock =
-      items.reduce(
+    const allTotalFbwStock =
+      allItems.reduce(
         (
           sum,
           item
@@ -1700,8 +1722,8 @@ export async function GET() {
       );
 
 
-    const totalToClient =
-      items.reduce(
+    const allTotalToClient =
+      allItems.reduce(
         (
           sum,
           item
@@ -1713,8 +1735,8 @@ export async function GET() {
       );
 
 
-    const totalFromClient =
-      items.reduce(
+    const allTotalFromClient =
+      allItems.reduce(
         (
           sum,
           item
@@ -1726,8 +1748,8 @@ export async function GET() {
       );
 
 
-    const itemsWithSales =
-      items.filter(
+    const allItemsWithSales =
+      allItems.filter(
         (item) =>
           item.sales
             .sales28Days
@@ -1736,8 +1758,8 @@ export async function GET() {
       ).length;
 
 
-    const absentStockItems =
-      items.filter(
+    const allAbsentStockItems =
+      allItems.filter(
         (item) =>
           !item.stock
             .presentInSnapshot
@@ -1745,8 +1767,99 @@ export async function GET() {
 
 
     // ========================================================
-    // 12. ЕСЛИ ЕСТЬ SKU БЕЗ MASTER_CODE, НЕ ПРИТВОРЯЕМСЯ,
-    //     ЧТО ИСТОЧНИК ГОТОВ К ОБЩЕМУ РАСЧЁТУ КИТАЯ
+    // 13. ИТОГИ ТОЛЬКО ДЛЯ КИТАЯ
+    // ========================================================
+
+    const chinaActiveSales28Days =
+      chinaItems.reduce(
+        (
+          sum,
+          item
+        ) =>
+          sum
+          +
+          item.sales.sales28Days,
+        0
+      );
+
+
+    const chinaCancelled28Days =
+      chinaItems.reduce(
+        (
+          sum,
+          item
+        ) =>
+          sum
+          +
+          item.sales.cancelled28Days,
+        0
+      );
+
+
+    const chinaTotalFbwStock =
+      chinaItems.reduce(
+        (
+          sum,
+          item
+        ) =>
+          sum
+          +
+          item.stock.fbwStock,
+        0
+      );
+
+
+    const chinaTotalToClient =
+      chinaItems.reduce(
+        (
+          sum,
+          item
+        ) =>
+          sum
+          +
+          item.stock.toClient,
+        0
+      );
+
+
+    const chinaTotalFromClient =
+      chinaItems.reduce(
+        (
+          sum,
+          item
+        ) =>
+          sum
+          +
+          item.stock.fromClient,
+        0
+      );
+
+
+    const chinaItemsWithSales =
+      chinaItems.filter(
+        (item) =>
+          item.sales
+            .sales28Days
+          >
+          0
+      ).length;
+
+
+    const chinaAbsentStockItems =
+      chinaItems.filter(
+        (item) =>
+          !item.stock
+            .presentInSnapshot
+      );
+
+
+    // ========================================================
+    // 14. ГОТОВНОСТЬ
+    //
+    // Исключённые из Китая карточки НЕ являются ошибкой.
+    //
+    // Ошибка только если текущий SKU вообще не связан
+    // с master_code.
     // ========================================================
 
     const mappingReady =
@@ -1754,6 +1867,10 @@ export async function GET() {
       ===
       0;
 
+
+    // ========================================================
+    // 15. ОТВЕТ
+    // ========================================================
 
     const responseBody = {
 
@@ -1763,7 +1880,7 @@ export async function GET() {
       message:
         mappingReady
           ?
-          "Данные Wildberries для общего расчёта Китая подготовлены и связаны с master_code"
+          "Данные Wildberries для общего расчёта Китая подготовлены"
           :
           "Не все текущие SKU Wildberries связаны с master_code",
 
@@ -1782,8 +1899,14 @@ export async function GET() {
         wbReplenishmentFormulaApplied:
           false,
 
+        fbsSalesIncluded:
+          false,
+
+        disabledChinaListingsIncluded:
+          false,
+
         note:
-          "Маршрут отдаёт исходные продажи и остатки WB. Формула поставки Wildberries 10/30/40 дней здесь не применяется.",
+          "В items попадают только WB-карточки с china_procurement_enabled=true. FBS-продажи и карточки, отключённые для закупки Китая, в расчётный источник не входят.",
       },
 
 
@@ -1805,20 +1928,32 @@ export async function GET() {
             :
             "INCOMPLETE",
 
+        currentWbItems:
+          allItems.length,
+
         mappedItems:
           mappedItems.length,
 
         unmappedItems:
           unmappedItems.length,
 
-        uniqueMasterCodes:
-          uniqueMasterCodes.size,
+        chinaEnabledItems:
+          chinaItems.length,
+
+        chinaDisabledItems:
+          excludedFromChinaItems.length,
+
+        uniqueMasterCodesAll:
+          allUniqueMasterCodes.size,
+
+        uniqueMasterCodesChina:
+          chinaUniqueMasterCodes.size,
 
         sellerArticleMismatchItems:
           sellerArticleMismatchItems.length,
 
         note:
-          "Основной ключ сопоставления — числовой nmID Wildberries. Словесный артикул продавца используется только для дополнительного контроля.",
+          "Основной ключ сопоставления — числовой nmID Wildberries. china_procurement_enabled определяет участие карточки в закупке из Китая.",
       },
 
 
@@ -1908,16 +2043,19 @@ export async function GET() {
             orderResult.pages,
 
           active:
-            activeOrders,
+            allActiveOrders,
 
           cancelled:
-            cancelledOrders,
+            allCancelledOrders,
 
           nullIsCancel:
             nullCancelRows,
 
           duplicateSrid:
             duplicateSrid.size,
+
+          warehouseType:
+            FBW_WAREHOUSE_TYPE,
         },
 
 
@@ -1941,35 +2079,104 @@ export async function GET() {
 
       summary: {
 
-        skuCount:
-          items.length,
+        allCurrentWb: {
 
-        skuWithSales:
-          itemsWithSales,
+          skuCount:
+            allItems.length,
 
-        activeSales28Days:
-          activeOrders,
+          skuWithSales:
+            allItemsWithSales,
 
-        cancelled28Days:
-          cancelledOrders,
+          activeSales28Days:
+            allActiveOrders,
 
-        totalFbwStock,
+          cancelled28Days:
+            allCancelledOrders,
 
-        totalToClient,
+          totalFbwStock:
+            allTotalFbwStock,
 
-        totalFromClient,
+          totalToClient:
+            allTotalToClient,
 
-        absentFromStockSnapshot:
-          absentStockItems.length,
+          totalFromClient:
+            allTotalFromClient,
 
-        mappedToMasterCode:
-          mappedItems.length,
+          absentFromStockSnapshot:
+            allAbsentStockItems.length,
 
-        unmappedFromMasterCode:
-          unmappedItems.length,
+          mappedToMasterCode:
+            mappedItems.length,
 
-        uniqueMasterCodes:
-          uniqueMasterCodes.size,
+          unmappedFromMasterCode:
+            unmappedItems.length,
+
+          uniqueMasterCodes:
+            allUniqueMasterCodes.size,
+        },
+
+
+        chinaEligible: {
+
+          skuCount:
+            chinaItems.length,
+
+          skuWithSales:
+            chinaItemsWithSales,
+
+          activeSales28Days:
+            chinaActiveSales28Days,
+
+          cancelled28Days:
+            chinaCancelled28Days,
+
+          totalFbwStock:
+            chinaTotalFbwStock,
+
+          totalToClient:
+            chinaTotalToClient,
+
+          totalFromClient:
+            chinaTotalFromClient,
+
+          absentFromStockSnapshot:
+            chinaAbsentStockItems.length,
+
+          uniqueMasterCodes:
+            chinaUniqueMasterCodes.size,
+        },
+
+
+        excludedFromChina: {
+
+          skuCount:
+            excludedFromChinaItems.length,
+
+          activeSales28Days:
+            excludedFromChinaItems.reduce(
+              (
+                sum,
+                item
+              ) =>
+                sum
+                +
+                item.sales.sales28Days,
+              0
+            ),
+
+          fbwStock:
+            excludedFromChinaItems.reduce(
+              (
+                sum,
+                item
+              ) =>
+                sum
+                +
+                item.stock.fbwStock,
+              0
+            ),
+        },
+
       },
 
 
@@ -2014,8 +2221,57 @@ export async function GET() {
         ),
 
 
+      excludedFromChina:
+        excludedFromChinaItems.map(
+          (item) => ({
+            masterCode:
+              item.masterCode,
+
+            nmId:
+              item.nmId,
+
+            supplierArticle:
+              item.supplierArticle,
+
+            productName:
+              item.productName,
+
+            chinaProcurementEnabled:
+              item.chinaProcurementEnabled,
+
+            sales: {
+              sales28Days:
+                item.sales
+                  .sales28Days,
+
+              cancelled28Days:
+                item.sales
+                  .cancelled28Days,
+
+              avgSalesPerDay:
+                item.sales
+                  .avgSalesPerDay,
+            },
+
+            stock: {
+              fbwStock:
+                item.stock
+                  .fbwStock,
+
+              toClient:
+                item.stock
+                  .toClient,
+
+              fromClient:
+                item.stock
+                  .fromClient,
+            },
+          })
+        ),
+
+
       absentFromStockSnapshot:
-        absentStockItems.map(
+        chinaAbsentStockItems.map(
           (item) => ({
             nmId:
               item.nmId,
@@ -2033,7 +2289,17 @@ export async function GET() {
         ),
 
 
-      items,
+      // ======================================================
+      // ВАЖНО:
+      //
+      // items = именно данные, которые дальше можно
+      // использовать в общем расчёте закупки Китая.
+      //
+      // Здесь уже НЕТ 12 отключённых карточек.
+      // ======================================================
+
+      items:
+        chinaItems,
 
     };
 
