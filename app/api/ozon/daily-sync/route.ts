@@ -105,7 +105,7 @@ async function handler(
 
     const response =
       await fetch(
-        `${supabaseUrl}/rest/v1/rpc/replace_ozon_sales_day`,
+        `${supabaseUrl}/rest/v1/rpc/replace_ozon_stock_snapshot`,
         {
           method: "POST",
 
@@ -123,7 +123,7 @@ async function handler(
           body:
             JSON.stringify(
               {
-                p_sale_date:
+                p_snapshot_date:
                   "2099-12-31",
 
                 p_rows:
@@ -155,9 +155,9 @@ async function handler(
         ok: true,
 
         mode:
-          "sales_rpc_test",
+          "stock_rpc_test",
 
-        writes_real_sales:
+        writes_real_stock:
           false,
 
         test_date:
@@ -175,9 +175,9 @@ async function handler(
         ok: false,
 
         mode:
-          "sales_rpc_test",
+          "stock_rpc_test",
 
-        writes_real_sales:
+        writes_real_stock:
           false,
 
         error:
