@@ -26,6 +26,12 @@ const PAGE_SIZE =
 const FBW_WAREHOUSE_TYPE =
   "Склад WB";
 
+const MARKETPLACE =
+  "wildberries";
+
+const ACCOUNT_KEY =
+  "main";
+
 
 // ============================================================
 // ТИПЫ
@@ -118,6 +124,21 @@ type StockRow = {
 
   availability:
     string | null;
+};
+
+
+type MarketplaceListingRow = {
+  external_id:
+    string;
+
+  seller_article:
+    string | null;
+
+  master_code:
+    string;
+
+  is_active:
+    boolean;
 };
 
 
@@ -608,6 +629,43 @@ function safeNonNegativeInteger(
 
 
 // ============================================================
+// НОРМАЛИЗАЦИЯ АРТИКУЛА ДЛЯ КОНТРОЛЯ
+//
+// ВАЖНО:
+// артикул продавца НЕ используется как основной ключ.
+// Основной ключ WB = nmID / external_id.
+//
+// Эта функция нужна только для диагностики.
+// ============================================================
+
+function normalizeSellerArticle(
+  value:
+    string | null
+): string {
+
+  if (!value) {
+
+    return "";
+
+  }
+
+
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(
+      /ё/g,
+      "е"
+    )
+    .replace(
+      /\s+/g,
+      " "
+    );
+
+}
+
+
+// ============================================================
 // GET
 // ============================================================
 
@@ -616,7 +674,7 @@ export async function GET() {
   try {
 
     // ========================================================
-    // 1. СОСТОЯНИЕ СИНХРОНИЗАЦИИ
+    // 1. СОСТОЯНИЕ СИНХРОНИЗАЦИИ WB
     // ========================================================
 
     const states =
@@ -692,11 +750,11 @@ export async function GET() {
     // ========================================================
     // 2. ФИКСИРУЕМ ПЕРИОД
     //
-    // Пока используем ту же логику, что проверенный WB:
-    // конец периода = последняя успешная синхронизация заказов.
+    // Пока конец периода = последняя успешная
+    // синхронизация заказов WB.
     //
-    // При объединении с Ozon следующим этапом сделаем
-    // общий период для обеих площадок.
+    // Когда подключим Ozon, установим один общий период
+    // для обеих площадок.
     // ========================================================
 
     const periodEnd =
@@ -717,7 +775,148 @@ export async function GET() {
 
 
     // ========================================================
-    // 3. ЗАКАЗЫ FBW
+    // 3. ЗАГРУЖАЕМ СПРАВОЧНИК WB → MASTER_CODE
+    // ========================================================
+
+    const mappingsBasePath =
+      "marketplace_listings"
+      +
+      "?select=external_id,seller_article,master_code,is_active"
+      +
+      `&marketplace=eq.${MARKETPLACE}`
+      +
+      `&account_key=eq.${ACCOUNT_KEY}`
+      +
+      "&is_active=eq.true";
+
+
+    const exactMappingCount =
+      await supabaseExactCount(
+        mappingsBasePath
+      );
+
+
+    const mappingResult =
+      await supabaseGetAll<
+        MarketplaceListingRow
+      >(
+        mappingsBasePath,
+        "external_id.asc"
+      );
+
+
+    if (
+      mappingResult.rows.length
+      !==
+      exactMappingCount
+    ) {
+
+      return NextResponse.json(
+        {
+          ok:
+            false,
+
+          message:
+            "Количество загруженных связей WB → master_code не совпало с точным count Supabase",
+
+          validation: {
+            exactCount:
+              exactMappingCount,
+
+            loaded:
+              mappingResult.rows.length,
+
+            pages:
+              mappingResult.pages,
+          },
+        },
+        {
+          status:
+            409,
+        }
+      );
+
+    }
+
+
+    const listingByNmId =
+      new Map<
+        string,
+        MarketplaceListingRow
+      >();
+
+
+    const duplicateMappingExternalIds:
+      string[] =
+      [];
+
+
+    for (
+      const row
+      of mappingResult.rows
+    ) {
+
+      const externalId =
+        String(
+          row.external_id
+        ).trim();
+
+
+      if (
+        listingByNmId.has(
+          externalId
+        )
+      ) {
+
+        duplicateMappingExternalIds.push(
+          externalId
+        );
+
+      }
+
+
+      listingByNmId.set(
+        externalId,
+        row
+      );
+
+    }
+
+
+    if (
+      duplicateMappingExternalIds.length
+      >
+      0
+    ) {
+
+      return NextResponse.json(
+        {
+          ok:
+            false,
+
+          message:
+            "В marketplace_listings обнаружены повторяющиеся WB external_id",
+
+          duplicateCount:
+            duplicateMappingExternalIds.length,
+
+          sample:
+            duplicateMappingExternalIds.slice(
+              0,
+              20
+            ),
+        },
+        {
+          status:
+            409,
+        }
+      );
+
+    }
+
+
+    // ========================================================
+    // 4. ЗАКАЗЫ FBW
     // ========================================================
 
     const ordersBasePath =
@@ -786,7 +985,7 @@ export async function GET() {
 
 
     // ========================================================
-    // 4. ПРОВЕРЯЕМ ЗАКАЗЫ
+    // 5. ПРОВЕРЯЕМ ЗАКАЗЫ
     // ========================================================
 
     const duplicateSrid =
@@ -898,7 +1097,7 @@ export async function GET() {
 
 
     // ========================================================
-    // 5. АГРЕГИРУЕМ ПРОДАЖИ ПО NMID
+    // 6. АГРЕГИРУЕМ ПРОДАЖИ ПО NMID
     // ========================================================
 
     const salesByNmId =
@@ -1022,7 +1221,7 @@ export async function GET() {
 
 
     // ========================================================
-    // 6. ОСТАТКИ ИЗ КОНКРЕТНОГО SNAPSHOT
+    // 7. ОСТАТКИ ИЗ КОНКРЕТНОГО SNAPSHOT
     // ========================================================
 
     const stocksBasePath =
@@ -1085,7 +1284,7 @@ export async function GET() {
 
 
     // ========================================================
-    // 7. ПРОВЕРЯЕМ ДУБЛИ NMID
+    // 8. ПРОВЕРЯЕМ ДУБЛИ NMID В SNAPSHOT
     // ========================================================
 
     const stockByNmId =
@@ -1165,13 +1364,7 @@ export async function GET() {
 
 
     // ========================================================
-    // 8. ОБЪЕДИНЯЕМ ПРОДАЖИ И ОСТАТКИ
-    //
-    // ВАЖНО:
-    // здесь НЕТ формулы поставки WB.
-    //
-    // Это только источник данных для будущего
-    // общего расчёта заказа в Китай.
+    // 9. ОБЪЕДИНЯЕМ ПРОДАЖИ И ОСТАТКИ
     // ========================================================
 
     const allNmIds =
@@ -1228,6 +1421,16 @@ export async function GET() {
               );
 
 
+            const listing =
+              listingByNmId.get(
+                String(
+                  nmId
+                )
+              )
+              ??
+              null;
+
+
             const sales28Days =
               sales
                 ?.activeOrders
@@ -1278,17 +1481,80 @@ export async function GET() {
                 0;
 
 
+            const currentSellerArticle =
+              sales
+                ?.supplierArticle
+              ??
+              stock
+                ?.vendor_code
+              ??
+              null;
+
+
+            const mappingSellerArticle =
+              listing
+                ?.seller_article
+              ??
+              null;
+
+
+            let sellerArticleCheck:
+              "MATCH"
+              |
+              "MISMATCH"
+              |
+              "NO_REFERENCE"
+              =
+              "NO_REFERENCE";
+
+
+            if (
+              currentSellerArticle
+              &&
+              mappingSellerArticle
+            ) {
+
+              sellerArticleCheck =
+                normalizeSellerArticle(
+                  currentSellerArticle
+                )
+                ===
+                normalizeSellerArticle(
+                  mappingSellerArticle
+                )
+                  ?
+                  "MATCH"
+                  :
+                  "MISMATCH";
+
+            }
+
+
             return {
 
               // -----------------------------------------------
-              // ПОКА ЕЩЁ НЕТ СВЯЗКИ С ЕДИНЫМ ТОВАРОМ
+              // ЕДИНЫЙ ФИЗИЧЕСКИЙ ТОВАР
               // -----------------------------------------------
 
               masterCode:
+                listing
+                  ?.master_code
+                ??
                 null,
 
               mappingStatus:
-                "UNMAPPED",
+                listing
+                  ?
+                  "MAPPED_BY_WB_NMID"
+                  :
+                  "UNMAPPED",
+
+              mappingSource:
+                listing
+                  ?
+                  "marketplace_listings"
+                  :
+                  null,
 
 
               // -----------------------------------------------
@@ -1298,13 +1564,11 @@ export async function GET() {
               nmId,
 
               supplierArticle:
-                sales
-                  ?.supplierArticle
-                ??
-                stock
-                  ?.vendor_code
-                ??
-                null,
+                currentSellerArticle,
+
+              mappingSellerArticle,
+
+              sellerArticleCheck,
 
               barcode:
                 sales
@@ -1380,7 +1644,47 @@ export async function GET() {
 
 
     // ========================================================
-    // 9. ИТОГИ
+    // 10. ПРОВЕРЯЕМ ПОКРЫТИЕ MASTER_CODE
+    // ========================================================
+
+    const mappedItems =
+      items.filter(
+        (item) =>
+          item.masterCode
+          !==
+          null
+      );
+
+
+    const unmappedItems =
+      items.filter(
+        (item) =>
+          item.masterCode
+          ===
+          null
+      );
+
+
+    const sellerArticleMismatchItems =
+      items.filter(
+        (item) =>
+          item.sellerArticleCheck
+          ===
+          "MISMATCH"
+      );
+
+
+    const uniqueMasterCodes =
+      new Set(
+        mappedItems.map(
+          (item) =>
+            item.masterCode
+        )
+      );
+
+
+    // ========================================================
+    // 11. ИТОГИ
     // ========================================================
 
     const totalFbwStock =
@@ -1441,16 +1745,27 @@ export async function GET() {
 
 
     // ========================================================
-    // 10. ОТВЕТ
+    // 12. ЕСЛИ ЕСТЬ SKU БЕЗ MASTER_CODE, НЕ ПРИТВОРЯЕМСЯ,
+    //     ЧТО ИСТОЧНИК ГОТОВ К ОБЩЕМУ РАСЧЁТУ КИТАЯ
     // ========================================================
 
-    return NextResponse.json({
+    const mappingReady =
+      unmappedItems.length
+      ===
+      0;
+
+
+    const responseBody = {
 
       ok:
-        true,
+        mappingReady,
 
       message:
-        "Данные Wildberries для будущего общего расчёта Китая подготовлены",
+        mappingReady
+          ?
+          "Данные Wildberries для общего расчёта Китая подготовлены и связаны с master_code"
+          :
+          "Не все текущие SKU Wildberries связаны с master_code",
 
 
       purpose: {
@@ -1477,17 +1792,33 @@ export async function GET() {
         targetKey:
           "master_code",
 
+        source:
+          "public.marketplace_listings",
+
+        join:
+          "WB nmID -> marketplace_listings.external_id",
+
         currentStatus:
-          "NOT_CONNECTED_YET",
+          mappingReady
+            ?
+            "CONNECTED"
+            :
+            "INCOMPLETE",
 
         mappedItems:
-          0,
+          mappedItems.length,
 
         unmappedItems:
-          items.length,
+          unmappedItems.length,
+
+        uniqueMasterCodes:
+          uniqueMasterCodes.size,
+
+        sellerArticleMismatchItems:
+          sellerArticleMismatchItems.length,
 
         note:
-          "Следующий этап — связать каждый WB nmID с единым физическим товаром master_code.",
+          "Основной ключ сопоставления — числовой nmID Wildberries. Словесный артикул продавца используется только для дополнительного контроля.",
       },
 
 
@@ -1518,6 +1849,19 @@ export async function GET() {
           snapshotId,
         },
 
+
+        mapping: {
+
+          marketplace:
+            MARKETPLACE,
+
+          accountKey:
+            ACCOUNT_KEY,
+
+          rows:
+            mappingResult.rows.length,
+        },
+
       },
 
 
@@ -1535,6 +1879,22 @@ export async function GET() {
 
 
       validation: {
+
+        mappings: {
+
+          exactRows:
+            exactMappingCount,
+
+          loadedRows:
+            mappingResult.rows.length,
+
+          pages:
+            mappingResult.pages,
+
+          duplicateExternalId:
+            duplicateMappingExternalIds.length,
+        },
+
 
         orders: {
 
@@ -1601,7 +1961,57 @@ export async function GET() {
 
         absentFromStockSnapshot:
           absentStockItems.length,
+
+        mappedToMasterCode:
+          mappedItems.length,
+
+        unmappedFromMasterCode:
+          unmappedItems.length,
+
+        uniqueMasterCodes:
+          uniqueMasterCodes.size,
       },
+
+
+      unmappedItems:
+        unmappedItems.map(
+          (item) => ({
+            nmId:
+              item.nmId,
+
+            supplierArticle:
+              item.supplierArticle,
+
+            productName:
+              item.productName,
+
+            sales28Days:
+              item.sales
+                .sales28Days,
+
+            fbwStock:
+              item.stock
+                .fbwStock,
+          })
+        ),
+
+
+      sellerArticleMismatches:
+        sellerArticleMismatchItems.map(
+          (item) => ({
+            nmId:
+              item.nmId,
+
+            currentSellerArticle:
+              item.supplierArticle,
+
+            mappingSellerArticle:
+              item.mappingSellerArticle,
+
+            masterCode:
+              item.masterCode,
+          })
+        ),
 
 
       absentFromStockSnapshot:
@@ -1613,6 +2023,9 @@ export async function GET() {
             supplierArticle:
               item.supplierArticle,
 
+            masterCode:
+              item.masterCode,
+
             sales28Days:
               item.sales
                 .sales28Days,
@@ -1622,7 +2035,20 @@ export async function GET() {
 
       items,
 
-    });
+    };
+
+
+    return NextResponse.json(
+      responseBody,
+      {
+        status:
+          mappingReady
+            ?
+            200
+            :
+            409,
+      }
+    );
 
   } catch (error) {
 
