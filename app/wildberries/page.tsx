@@ -21,16 +21,19 @@ type DailySalesRow = {
 
 
 type ProductRow = {
-  masterCode: string;
-  productName: string;
-  sellerArticles: string;
-  nmIds: string;
-  listingsCount: number;
+  nmId: number;
+  sellerArticle: string | null;
+  productName: string | null;
+  brandName: string | null;
+  masterCode: string | null;
+
   sales28Days: number;
   avgSalesPerDay: number;
   cancelled28Days: number;
+
   fbwStock: number;
   daysOfStock: number | null;
+
   toClient: number;
   fromClient: number;
 };
@@ -39,14 +42,20 @@ type ProductRow = {
 type DashboardData = {
   ok: boolean;
 
+  calculationKey: string;
+  marketplace: string;
+
   status: {
     ok: boolean;
     label: string;
+
     lastSuccessfulSyncAt: string | null;
     ordersLastSuccessAt: string | null;
     stocksLastSuccessAt: string | null;
+
     ordersLastHttpStatus: number | null;
     stocksLastHttpStatus: number | null;
+
     stockSnapshotId: string | null;
     stockSnapshotAt: string | null;
   };
@@ -55,17 +64,19 @@ type DashboardData = {
     days: number;
     dateFrom: string;
     dateTo: string;
-    source: string;
     samePeriodAsOzon: boolean;
+    note: string;
   };
 
   summary: {
     orderRows: number;
     sales28Days: number;
     cancelled28Days: number;
+
     fbwStock: number;
     toClient: number;
     fromClient: number;
+
     physicalProducts: number;
     listings: number;
   };
@@ -113,7 +124,8 @@ function getSupabaseConfig() {
 }
 
 
-async function getDashboard(): Promise<DashboardData> {
+async function getDashboard():
+Promise<DashboardData> {
   const {
     supabaseUrl,
     supabaseKey,
@@ -127,9 +139,15 @@ async function getDashboard(): Promise<DashboardData> {
 
         headers: {
           apikey: supabaseKey,
-          Authorization: `Bearer ${supabaseKey}`,
-          "Content-Type": "application/json",
-          Accept: "application/json",
+
+          Authorization:
+            `Bearer ${supabaseKey}`,
+
+          "Content-Type":
+            "application/json",
+
+          Accept:
+            "application/json",
         },
 
         body: "{}",
@@ -147,11 +165,13 @@ async function getDashboard(): Promise<DashboardData> {
     );
   }
 
-  let data: unknown;
+  let data: DashboardData;
 
   try {
     data =
-      JSON.parse(text);
+      JSON.parse(
+        text
+      ) as DashboardData;
   } catch {
     throw new Error(
       "Supabase вернул некорректный JSON для WB dashboard"
@@ -167,7 +187,7 @@ async function getDashboard(): Promise<DashboardData> {
     );
   }
 
-  return data as DashboardData;
+  return data;
 }
 
 
@@ -175,10 +195,14 @@ function formatInteger(
   value: number | null | undefined
 ) {
   const number =
-    Number(value ?? 0);
+    Number(
+      value ?? 0
+    );
 
   if (
-    !Number.isFinite(number)
+    !Number.isFinite(
+      number
+    )
   ) {
     return "0";
   }
@@ -207,7 +231,9 @@ function formatDecimal(
     Number(value);
 
   if (
-    !Number.isFinite(number)
+    !Number.isFinite(
+      number
+    )
   ) {
     return "—";
   }
@@ -230,7 +256,10 @@ function formatDate(
   }
 
   const datePart =
-    value.slice(0, 10);
+    value.slice(
+      0,
+      10
+    );
 
   const parts =
     datePart.split("-");
@@ -270,13 +299,26 @@ function formatKrasnoyarskDateTime(
   return new Intl.DateTimeFormat(
     "ru-RU",
     {
-      timeZone: "Asia/Krasnoyarsk",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
+      timeZone:
+        "Asia/Krasnoyarsk",
+
+      day:
+        "2-digit",
+
+      month:
+        "2-digit",
+
+      year:
+        "numeric",
+
+      hour:
+        "2-digit",
+
+      minute:
+        "2-digit",
+
+      second:
+        "2-digit",
     }
   ).format(date);
 }
@@ -303,10 +345,17 @@ function formatKrasnoyarskDate(
   return new Intl.DateTimeFormat(
     "ru-RU",
     {
-      timeZone: "Asia/Krasnoyarsk",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
+      timeZone:
+        "Asia/Krasnoyarsk",
+
+      day:
+        "2-digit",
+
+      month:
+        "2-digit",
+
+      year:
+        "numeric",
     }
   ).format(date);
 }
@@ -323,6 +372,7 @@ function SummaryCard({
 }) {
   return (
     <div className="card">
+
       <div className="card-label">
         {label}
       </div>
@@ -334,6 +384,7 @@ function SummaryCard({
       <div className="muted">
         {caption}
       </div>
+
     </div>
   );
 }
@@ -358,7 +409,8 @@ function InfoLine({
 
 
 export default async function WildberriesPage() {
-  let dashboard: DashboardData | null =
+  let dashboard:
+    DashboardData | null =
     null;
 
   let loadError =
@@ -376,12 +428,18 @@ export default async function WildberriesPage() {
 
   return (
     <main className="page">
+
       <div className="container">
 
-        {/* HEADER */}
+
+        {/* ==================================================
+            HEADER
+            ================================================== */}
 
         <header className="header">
+
           <div>
+
             <div className="small-label">
               СИСТЕМА ЗАКУПА
             </div>
@@ -393,9 +451,12 @@ export default async function WildberriesPage() {
             <p className="subtitle">
               FBW продажи, отмены и доступные остатки Wildberries.
             </p>
+
           </div>
 
+
           <div className="header-actions">
+
             <ThemeToggle />
 
             <Link
@@ -411,552 +472,829 @@ export default async function WildberriesPage() {
             >
               ← Расчёт Китая
             </Link>
+
           </div>
+
         </header>
 
 
-        {/* ОШИБКА */}
+        {/* ==================================================
+            ОШИБКА ЗАГРУЗКИ
+            ================================================== */}
 
-        {loadError && (
-          <section className="section">
-            <div className="section-header">
-              <div>
-                <h2 className="section-title">
-                  Ошибка загрузки
-                </h2>
-              </div>
-            </div>
-
-            <div className="reason-text">
-              {loadError}
-            </div>
-          </section>
-        )}
-
-
-        {dashboard && (
-          <>
-
-            {/* СОСТОЯНИЕ СИНХРОНИЗАЦИИ */}
-
+        {
+          loadError
+          &&
+          (
             <section className="section">
+
               <div className="section-header">
+
                 <div>
+
                   <h2 className="section-title">
-                    Состояние синхронизации
+                    Ошибка загрузки
                   </h2>
 
-                  <div className="muted">
-                    Последняя успешная загрузка FBW-данных из Wildberries.
-                  </div>
                 </div>
 
-                <span
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    padding: "7px 11px",
-                    borderRadius: "999px",
-                    background:
-                      dashboard.status.ok
-                        ? "rgba(40, 160, 90, 0.12)"
-                        : "rgba(220, 70, 70, 0.13)",
-                    color: "var(--text)",
-                    fontSize: "12px",
-                    fontWeight: 700,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {dashboard.status.label}
-                </span>
               </div>
 
-              <div
-                className="summary-grid"
-                style={{
-                  marginBottom: 0,
-                }}
-              >
-                <SummaryCard
-                  label="Последняя синхронизация"
-                  value={
-                    formatKrasnoyarskDateTime(
-                      dashboard.status.lastSuccessfulSyncAt
-                    )
-                  }
-                  caption="Красноярское время"
-                />
+              <div className="reason-text">
+                {loadError}
+              </div>
+
+            </section>
+          )
+        }
+
+
+        {
+          dashboard
+          &&
+          (
+            <>
+
+
+              {/* ============================================
+                  СОСТОЯНИЕ СИНХРОНИЗАЦИИ
+                  ============================================ */}
+
+              <section className="section">
+
+                <div className="section-header">
+
+                  <div>
+
+                    <h2 className="section-title">
+                      Состояние синхронизации
+                    </h2>
+
+                    <div className="muted">
+                      Последняя успешная загрузка FBW-данных из Wildberries.
+                    </div>
+
+                  </div>
+
+
+                  <span
+                    style={{
+                      display:
+                        "inline-flex",
+
+                      alignItems:
+                        "center",
+
+                      padding:
+                        "7px 11px",
+
+                      borderRadius:
+                        "999px",
+
+                      background:
+                        dashboard.status.ok
+                          ? "rgba(40, 160, 90, 0.12)"
+                          : "rgba(220, 70, 70, 0.13)",
+
+                      color:
+                        "var(--text)",
+
+                      fontSize:
+                        "12px",
+
+                      fontWeight:
+                        700,
+
+                      whiteSpace:
+                        "nowrap",
+                    }}
+                  >
+                    {dashboard.status.label}
+                  </span>
+
+                </div>
+
+
+                <div
+                  className="summary-grid"
+                  style={{
+                    marginBottom: 0,
+                  }}
+                >
+
+                  <SummaryCard
+                    label="Последняя синхронизация"
+                    value={
+                      formatKrasnoyarskDateTime(
+                        dashboard
+                          .status
+                          .lastSuccessfulSyncAt
+                      )
+                    }
+                    caption="Красноярское время"
+                  />
+
+
+                  <SummaryCard
+                    label="Период продаж"
+                    value={
+                      <>
+                        {
+                          formatDate(
+                            dashboard
+                              .period
+                              .dateFrom
+                          )
+                        }
+
+                        {" — "}
+
+                        {
+                          formatDate(
+                            dashboard
+                              .period
+                              .dateTo
+                          )
+                        }
+                      </>
+                    }
+                    caption="Скользящие 28 дней"
+                  />
+
+
+                  <SummaryCard
+                    label="Снимок остатков"
+                    value={
+                      formatKrasnoyarskDate(
+                        dashboard
+                          .status
+                          .stockSnapshotAt
+                      )
+                    }
+                    caption="FBW"
+                  />
+
+
+                  <SummaryCard
+                    label="Заказов"
+                    value={
+                      formatInteger(
+                        dashboard
+                          .summary
+                          .orderRows
+                      )
+                    }
+                    caption="Получено из Wildberries"
+                  />
+
+                </div>
+
+              </section>
+
+
+              {/* ============================================
+                  KPI
+                  ============================================ */}
+
+              <section className="summary-grid">
 
                 <SummaryCard
-                  label="Период продаж"
-                  value={
-                    <>
-                      {formatDate(
-                        dashboard.period.dateFrom
-                      )}
-                      {" — "}
-                      {formatDate(
-                        dashboard.period.dateTo
-                      )}
-                    </>
-                  }
-                  caption="Скользящие 28 дней"
-                />
-
-                <SummaryCard
-                  label="Снимок остатков"
-                  value={
-                    formatKrasnoyarskDate(
-                      dashboard.status.stockSnapshotAt
-                    )
-                  }
-                  caption="FBW"
-                />
-
-                <SummaryCard
-                  label="Заказов"
+                  label="Продажи за 28 дней"
                   value={
                     formatInteger(
-                      dashboard.summary.orderRows
+                      dashboard
+                        .summary
+                        .sales28Days
                     )
                   }
-                  caption="Получено из Wildberries"
+                  caption="шт., без отмен"
                 />
-              </div>
-            </section>
 
 
-            {/* KPI */}
-
-            <section className="summary-grid">
-              <SummaryCard
-                label="Продажи за 28 дней"
-                value={
-                  formatInteger(
-                    dashboard.summary.sales28Days
-                  )
-                }
-                caption="шт., без отмен"
-              />
-
-              <SummaryCard
-                label="Отмены"
-                value={
-                  formatInteger(
-                    dashboard.summary.cancelled28Days
-                  )
-                }
-                caption="шт. отдельно от продаж"
-              />
-
-              <SummaryCard
-                label="Остаток FBW"
-                value={
-                  formatInteger(
-                    dashboard.summary.fbwStock
-                  )
-                }
-                caption="доступно на складах WB"
-              />
-
-              <SummaryCard
-                label="Физических товаров"
-                value={
-                  formatInteger(
-                    dashboard.summary.physicalProducts
-                  )
-                }
-                caption="по master_code"
-              />
-
-              <SummaryCard
-                label="Размещений"
-                value={
-                  formatInteger(
-                    dashboard.summary.listings
-                  )
-                }
-                caption="текущих карточек WB"
-              />
-            </section>
+                <SummaryCard
+                  label="Отмены"
+                  value={
+                    formatInteger(
+                      dashboard
+                        .summary
+                        .cancelled28Days
+                    )
+                  }
+                  caption="шт. отдельно от продаж"
+                />
 
 
-            {/* КАК СВЕРЯТЬ */}
-
-            <section className="section">
-              <div className="section-header">
-                <div>
-                  <h2 className="section-title">
-                    Как сверять с кабинетом Wildberries
-                  </h2>
-                </div>
-              </div>
-
-              <InfoLine>
-                Продажи: FBW за период, указанный выше.
-                Отменённые заказы в продажи не входят.
-              </InfoLine>
-
-              <InfoLine>
-                Отмены: считаются отдельно и отображаются отдельным показателем.
-              </InfoLine>
-
-              <InfoLine>
-                Остаток: используется текущее значение stock_count
-                из последнего успешного snapshot WB.
-              </InfoLine>
-
-              <InfoLine>
-                toClient и fromClient показываются отдельно,
-                но в FBW-остаток не прибавляются.
-              </InfoLine>
-
-              <InfoLine>
-                FBS, то есть «Склад продавца», на этой странице
-                в продажи не входит.
-              </InfoLine>
-
-              <InfoLine>
-                Период WB совпадает с периодом Ozon,
-                чтобы данные двух площадок можно было корректно складывать.
-              </InfoLine>
-            </section>
+                <SummaryCard
+                  label="Остаток FBW"
+                  value={
+                    formatInteger(
+                      dashboard
+                        .summary
+                        .fbwStock
+                    )
+                  }
+                  caption="доступно на складах WB"
+                />
 
 
-            {/* ПРОДАЖИ ПО ДНЯМ */}
+                <SummaryCard
+                  label="Связанных master_code"
+                  value={
+                    formatInteger(
+                      dashboard
+                        .summary
+                        .physicalProducts
+                    )
+                  }
+                  caption="только справочная связь"
+                />
 
-            <section className="section">
-              <div className="section-header">
-                <div>
-                  <h2 className="section-title">
-                    Продажи по дням
-                  </h2>
 
-                  <div className="muted">
-                    Этот блок удобнее всего использовать
-                    для контрольной сверки с кабинетом Wildberries.
+                <SummaryCard
+                  label="Карточек WB"
+                  value={
+                    formatInteger(
+                      dashboard
+                        .summary
+                        .listings
+                    )
+                  }
+                  caption="расчётный ключ nmID"
+                />
+
+              </section>
+
+
+              {/* ============================================
+                  КАК СВЕРЯТЬ
+                  ============================================ */}
+
+              <section className="section">
+
+                <div className="section-header">
+
+                  <div>
+
+                    <h2 className="section-title">
+                      Как сверять с кабинетом Wildberries
+                    </h2>
+
                   </div>
+
                 </div>
-              </div>
-
-              <div className="table-wrapper">
-                <table
-                  className="table"
-                  style={{
-                    minWidth: "800px",
-                  }}
-                >
-                  <thead>
-                    <tr>
-                      <th className="left">
-                        Дата
-                      </th>
-
-                      <th className="right">
-                        Продажи, шт.
-                      </th>
-
-                      <th className="right">
-                        Отмены, шт.
-                      </th>
-
-                      <th className="right">
-                        Строк в БД
-                      </th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {dashboard.dailySales.map(
-                      (row) => (
-                        <tr key={row.date}>
-                          <td className="left">
-                            <strong>
-                              {formatDate(
-                                row.date
-                              )}
-                            </strong>
-                          </td>
-
-                          <td className="right">
-                            <strong>
-                              {formatInteger(
-                                row.sales
-                              )}
-                            </strong>
-                          </td>
-
-                          <td className="right">
-                            {formatInteger(
-                              row.cancelled
-                            )}
-                          </td>
-
-                          <td className="right">
-                            {formatInteger(
-                              row.dbRows
-                            )}
-                          </td>
-                        </tr>
-                      )
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
 
 
-            {/* ДАННЫЕ ПО ТОВАРАМ */}
+                <InfoLine>
+                  Продажи считаются отдельно для каждого числового артикула WB, то есть nmID.
+                </InfoLine>
 
-            <section className="section">
-              <div className="section-header">
-                <div>
-                  <h2 className="section-title">
-                    Данные по товарам
-                  </h2>
 
-                  <div className="muted">
-                    Одна строка соответствует одному физическому товару
-                    по master_code.
+                <InfoLine>
+                  Используются только FBW-заказы с типом склада «Склад WB».
+                </InfoLine>
+
+
+                <InfoLine>
+                  Отменённые заказы в продажи не входят и показываются отдельным показателем.
+                </InfoLine>
+
+
+                <InfoLine>
+                  Остаток каждой карточки берётся только из текущего FBW-остатка Wildberries.
+                </InfoLine>
+
+
+                <InfoLine>
+                  Остатки Ozon на этой странице не используются и к остаткам WB не прибавляются.
+                </InfoLine>
+
+
+                <InfoLine>
+                  toClient и fromClient отображаются в исходных данных, но в доступный FBW-остаток не входят.
+                </InfoLine>
+
+
+                <InfoLine>
+                  master_code отображается только как связь карточки с физическим товаром для будущего расчёта закупки в Китай.
+                </InfoLine>
+
+
+                <InfoLine>
+                  Период продаж совпадает с периодом Ozon, но данные площадок остаются раздельными.
+                </InfoLine>
+
+              </section>
+
+
+              {/* ============================================
+                  ПРОДАЖИ ПО ДНЯМ
+                  ============================================ */}
+
+              <section className="section">
+
+                <div className="section-header">
+
+                  <div>
+
+                    <h2 className="section-title">
+                      Продажи по дням
+                    </h2>
+
+                    <div className="muted">
+                      Этот блок удобнее всего использовать для контрольной сверки с кабинетом Wildberries.
+                    </div>
+
                   </div>
+
                 </div>
-              </div>
 
-              <div className="table-wrapper">
-                <table
-                  className="table"
-                  style={{
-                    minWidth: "1250px",
-                  }}
-                >
-                  <thead>
-                    <tr>
-                      <th className="left">
-                        master_code
-                      </th>
 
-                      <th className="left">
-                        Товар
-                      </th>
+                <div className="table-wrapper">
 
-                      <th className="left">
-                        Артикул WB
-                      </th>
+                  <table
+                    className="table"
+                    style={{
+                      minWidth: "800px",
+                    }}
+                  >
 
-                      <th className="right">
-                        Продажи 28 дн.
-                      </th>
+                    <thead>
 
-                      <th className="right">
-                        Среднее / день
-                      </th>
+                      <tr>
 
-                      <th className="right">
-                        Отмены
-                      </th>
+                        <th className="left">
+                          Дата
+                        </th>
 
-                      <th className="right">
-                        Остаток
-                      </th>
+                        <th className="right">
+                          Продажи, шт.
+                        </th>
 
-                      <th className="right">
-                        Дней запаса
-                      </th>
-                    </tr>
-                  </thead>
+                        <th className="right">
+                          Отмены, шт.
+                        </th>
 
-                  <tbody>
-                    {dashboard.products.map(
-                      (row) => (
-                        <tr
-                          key={
-                            row.masterCode
-                          }
-                        >
-                          <td className="left">
-                            <strong>
-                              {row.masterCode}
-                            </strong>
-                          </td>
+                        <th className="right">
+                          Строк в БД
+                        </th>
 
-                          <td
-                            className="left"
-                            style={{
-                              whiteSpace: "normal",
-                              minWidth: "330px",
-                              maxWidth: "520px",
-                            }}
-                          >
-                            {row.productName || "—"}
+                      </tr>
 
-                            {row.listingsCount > 1 && (
-                              <div
-                                className="muted"
-                                style={{
-                                  marginTop: "4px",
-                                }}
+                    </thead>
+
+
+                    <tbody>
+
+                      {
+                        dashboard
+                          .dailySales
+                          .map(
+                            (row) => (
+
+                              <tr
+                                key={
+                                  row.date
+                                }
                               >
-                                {formatInteger(
-                                  row.listingsCount
-                                )}{" "}
-                                размещения
-                              </div>
-                            )}
-                          </td>
 
-                          <td
-                            className="left"
-                            style={{
-                              whiteSpace: "normal",
-                              minWidth: "260px",
-                              maxWidth: "420px",
-                            }}
-                          >
-                            {row.sellerArticles || "—"}
+                                <td className="left">
 
-                            <div
-                              className="muted"
-                              style={{
-                                marginTop: "4px",
-                              }}
-                            >
-                              nmID: {row.nmIds}
-                            </div>
-                          </td>
+                                  <strong>
+                                    {
+                                      formatDate(
+                                        row.date
+                                      )
+                                    }
+                                  </strong>
 
-                          <td className="right">
-                            <strong>
-                              {formatInteger(
-                                row.sales28Days
-                              )}
-                            </strong>
-                          </td>
-
-                          <td className="right">
-                            {formatDecimal(
-                              row.avgSalesPerDay,
-                              2
-                            )}
-                          </td>
-
-                          <td className="right">
-                            {formatInteger(
-                              row.cancelled28Days
-                            )}
-                          </td>
-
-                          <td className="right">
-                            <strong>
-                              {formatInteger(
-                                row.fbwStock
-                              )}
-                            </strong>
-                          </td>
-
-                          <td className="right">
-                            {row.daysOfStock === null
-                              ? "—"
-                              : formatDecimal(
-                                  row.daysOfStock,
-                                  1
-                                )}
-                          </td>
-                        </tr>
-                      )
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
+                                </td>
 
 
-            {/* БЕЗОПАСНЫЙ РЕЖИМ */}
+                                <td className="right">
 
-            <section className="section">
-              <div className="section-header">
-                <div>
-                  <h2 className="section-title">
-                    Безопасный режим
-                  </h2>
+                                  <strong>
+                                    {
+                                      formatInteger(
+                                        row.sales
+                                      )
+                                    }
+                                  </strong>
+
+                                </td>
+
+
+                                <td className="right">
+
+                                  {
+                                    formatInteger(
+                                      row.cancelled
+                                    )
+                                  }
+
+                                </td>
+
+
+                                <td className="right">
+
+                                  {
+                                    formatInteger(
+                                      row.dbRows
+                                    )
+                                  }
+
+                                </td>
+
+                              </tr>
+
+                            )
+                          )
+                      }
+
+                    </tbody>
+
+                  </table>
+
                 </div>
-              </div>
 
-              <InfoLine>
-                Система использует только успешно сохранённые данные Wildberries.
-              </InfoLine>
-
-              <InfoLine>
-                Ошибка API Wildberries не считается нулевым остатком.
-              </InfoLine>
-
-              <InfoLine>
-                Для страницы используется последний успешно сохранённый
-                snapshot остатков.
-              </InfoLine>
-
-              <InfoLine>
-                Карточка без master_code не скрывается молча.
-                Dashboard вернёт ошибку и потребует проверки.
-              </InfoLine>
-
-              <InfoLine>
-                В продажах используются только FBW-заказы
-                с типом склада «Склад WB».
-              </InfoLine>
-            </section>
+              </section>
 
 
-            {/* ОСТАТКИ */}
+              {/* ============================================
+                  ДАННЫЕ ПО КАРТОЧКАМ WB
+                  ============================================ */}
 
-            <section className="section">
-              <div className="section-header">
-                <div>
-                  <h2 className="section-title">
-                    Остатки Wildberries
-                  </h2>
+              <section className="section">
 
-                  <div className="muted">
-                    Все текущие карточки WB, FBW-остаток,
-                    toClient и fromClient.
+                <div className="section-header">
+
+                  <div>
+
+                    <h2 className="section-title">
+                      Данные по товарам
+                    </h2>
+
+                    <div className="muted">
+                      Одна строка соответствует одной карточке Wildberries по nmID.
+                    </div>
+
                   </div>
+
                 </div>
 
-                <WbSyncClient
-                  endpoint="/api/wb/sync-stocks?force=1"
-                  label="Обновить остатки WB"
-                  loadingLabel="Обновляем остатки..."
-                />
-              </div>
-            </section>
+
+                <div className="table-wrapper">
+
+                  <table
+                    className="table"
+                    style={{
+                      minWidth: "1450px",
+                    }}
+                  >
+
+                    <thead>
+
+                      <tr>
+
+                        <th className="left">
+                          nmID
+                        </th>
+
+                        <th className="left">
+                          Артикул продавца
+                        </th>
+
+                        <th className="left">
+                          Товар
+                        </th>
+
+                        <th className="left">
+                          master_code
+                        </th>
+
+                        <th className="right">
+                          Продажи 28 дн.
+                        </th>
+
+                        <th className="right">
+                          Среднее / день
+                        </th>
+
+                        <th className="right">
+                          Отмены
+                        </th>
+
+                        <th className="right">
+                          Остаток
+                        </th>
+
+                        <th className="right">
+                          Дней запаса
+                        </th>
+
+                      </tr>
+
+                    </thead>
 
 
-            {/* ПРОДАЖИ */}
+                    <tbody>
 
-            <section className="section">
-              <div className="section-header">
-                <div>
-                  <h2 className="section-title">
-                    Продажи Wildberries
-                  </h2>
+                      {
+                        dashboard
+                          .products
+                          .map(
+                            (row) => (
 
-                  <div className="muted">
-                    FBW-заказы Wildberries.
-                    Отменённые заказы считаются отдельно.
+                              <tr
+                                key={
+                                  row.nmId
+                                }
+                              >
+
+                                <td className="left">
+
+                                  <strong>
+                                    {
+                                      row.nmId
+                                    }
+                                  </strong>
+
+                                </td>
+
+
+                                <td
+                                  className="left"
+                                  style={{
+                                    whiteSpace:
+                                      "normal",
+
+                                    minWidth:
+                                      "240px",
+
+                                    maxWidth:
+                                      "360px",
+                                  }}
+                                >
+                                  {
+                                    row.sellerArticle
+                                    ||
+                                    "—"
+                                  }
+                                </td>
+
+
+                                <td
+                                  className="left"
+                                  style={{
+                                    whiteSpace:
+                                      "normal",
+
+                                    minWidth:
+                                      "320px",
+
+                                    maxWidth:
+                                      "520px",
+                                  }}
+                                >
+
+                                  {
+                                    row.productName
+                                    ||
+                                    "—"
+                                  }
+
+
+                                  {
+                                    row.brandName
+                                    &&
+                                    row.brandName.trim()
+                                    &&
+                                    (
+                                      <div
+                                        className="muted"
+                                        style={{
+                                          marginTop:
+                                            "4px",
+                                        }}
+                                      >
+                                        {
+                                          row.brandName
+                                        }
+                                      </div>
+                                    )
+                                  }
+
+                                </td>
+
+
+                                <td className="left">
+
+                                  {
+                                    row.masterCode
+                                    ||
+                                    "—"
+                                  }
+
+                                </td>
+
+
+                                <td className="right">
+
+                                  <strong>
+                                    {
+                                      formatInteger(
+                                        row.sales28Days
+                                      )
+                                    }
+                                  </strong>
+
+                                </td>
+
+
+                                <td className="right">
+
+                                  {
+                                    formatDecimal(
+                                      row.avgSalesPerDay,
+                                      2
+                                    )
+                                  }
+
+                                </td>
+
+
+                                <td className="right">
+
+                                  {
+                                    formatInteger(
+                                      row.cancelled28Days
+                                    )
+                                  }
+
+                                </td>
+
+
+                                <td className="right">
+
+                                  <strong>
+                                    {
+                                      formatInteger(
+                                        row.fbwStock
+                                      )
+                                    }
+                                  </strong>
+
+                                </td>
+
+
+                                <td className="right">
+
+                                  {
+                                    row.daysOfStock === null
+                                      ? "—"
+                                      : formatDecimal(
+                                          row.daysOfStock,
+                                          1
+                                        )
+                                  }
+
+                                </td>
+
+                              </tr>
+
+                            )
+                          )
+                      }
+
+                    </tbody>
+
+                  </table>
+
+                </div>
+
+              </section>
+
+
+              {/* ============================================
+                  БЕЗОПАСНЫЙ РЕЖИМ
+                  ============================================ */}
+
+              <section className="section">
+
+                <div className="section-header">
+
+                  <div>
+
+                    <h2 className="section-title">
+                      Безопасный режим
+                    </h2>
+
                   </div>
+
                 </div>
 
-                <WbSyncClient
-                  endpoint="/api/wb/sync-orders"
-                  label="Обновить продажи WB"
-                  loadingLabel="Обновляем продажи..."
-                />
-              </div>
-            </section>
 
-          </>
-        )}
+                <InfoLine>
+                  Система использует только успешно сохранённые данные Wildberries.
+                </InfoLine>
+
+
+                <InfoLine>
+                  Ошибка API Wildberries не считается нулевым остатком.
+                </InfoLine>
+
+
+                <InfoLine>
+                  Для страницы используется последний успешно сохранённый snapshot остатков WB.
+                </InfoLine>
+
+
+                <InfoLine>
+                  Каждая карточка рассчитывается отдельно по nmID.
+                </InfoLine>
+
+
+                <InfoLine>
+                  Остатки и продажи Ozon не используются при расчёте показателей WB.
+                </InfoLine>
+
+
+                <InfoLine>
+                  FBS, то есть «Склад продавца», в текущий расчёт пополнения WB не входит.
+                </InfoLine>
+
+              </section>
+
+
+              {/* ============================================
+                  ОСТАТКИ WB
+                  ============================================ */}
+
+              <section className="section">
+
+                <div className="section-header">
+
+                  <div>
+
+                    <h2 className="section-title">
+                      Остатки Wildberries
+                    </h2>
+
+                    <div className="muted">
+                      Текущий FBW-остаток по карточкам Wildberries.
+                    </div>
+
+                  </div>
+
+
+                  <WbSyncClient
+                    endpoint="/api/wb/sync-stocks?force=1"
+                    label="Обновить остатки WB"
+                    loadingLabel="Обновляем остатки..."
+                  />
+
+                </div>
+
+              </section>
+
+
+              {/* ============================================
+                  ПРОДАЖИ WB
+                  ============================================ */}
+
+              <section className="section">
+
+                <div className="section-header">
+
+                  <div>
+
+                    <h2 className="section-title">
+                      Продажи Wildberries
+                    </h2>
+
+                    <div className="muted">
+                      FBW-заказы Wildberries. Отменённые заказы считаются отдельно.
+                    </div>
+
+                  </div>
+
+
+                  <WbSyncClient
+                    endpoint="/api/wb/sync-orders"
+                    label="Обновить продажи WB"
+                    loadingLabel="Обновляем продажи..."
+                  />
+
+                </div>
+
+              </section>
+
+
+            </>
+          )
+        }
 
       </div>
+
     </main>
   );
 }
