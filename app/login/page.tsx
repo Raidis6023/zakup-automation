@@ -30,10 +30,13 @@ export default async function LoginPage() {
 
   /*
    * Если пользователь уже вошёл,
-   * второй раз форму входа ему не показываем.
+   * второй раз форму входа ему
+   * не показываем.
    */
   if (user) {
+
     redirect("/");
+
   }
 
 
@@ -67,19 +70,6 @@ export default async function LoginPage() {
 
 
         <LoginForm />
-
-
-        <div className="login-access-note">
-
-          <span>
-            Нет доступа к WorkSpace?
-          </span>
-
-          <strong>
-            Запрос доступа появится на следующем этапе
-          </strong>
-
-        </div>
 
       </section>
 
