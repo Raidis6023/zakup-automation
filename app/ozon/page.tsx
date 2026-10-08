@@ -2,13 +2,20 @@ import type {
   ReactNode,
 } from "react";
 
-import Link from "next/link";
+import Link
+  from "next/link";
 
 import ThemeToggle
   from "../ThemeToggle";
 
 import OzonStockSyncClient
   from "../OzonStockSyncClient";
+
+import OzonProductsTableClient,
+{
+  type OzonClusterStockRow,
+  type OzonProductTableRow,
+} from "./OzonProductsTableClient";
 
 
 export const dynamic =
@@ -64,48 +71,11 @@ type DailySalesRow = {
 };
 
 
-type ListingRow = {
-  product_id: string;
-
-  offer_id:
-    | string
-    | null;
-
-  ozon_product_id:
-    | string
-    | number
-    | null;
-
-  name:
-    | string
-    | null;
-};
-
-
-type ProductRow = {
-  master_code: string;
-
-  product_name:
-    | string
-    | null;
-
-  listing_count: number;
-
-  listings:
-    ListingRow[];
-
-  sales_28_days: number;
-
-  cancelled_28_days: number;
-
-  average_sales_per_day: number;
-
-  stock_quantity: number;
-
-  stock_days:
-    | number
-    | null;
-};
+type DashboardProductRow =
+  Omit<
+    OzonProductTableRow,
+    "cluster_stocks"
+  >;
 
 
 type DashboardData = {
@@ -125,7 +95,20 @@ type DashboardData = {
     DailySalesRow[];
 
   products:
-    ProductRow[];
+    DashboardProductRow[];
+};
+
+
+type StockSnapshotRow = {
+  product_id: string;
+
+  cluster_id: string;
+
+  cluster_name:
+    | string
+    | null;
+
+  quantity: number;
 };
 
 
@@ -153,42 +136,6 @@ function formatNumber(
 
   return new Intl.NumberFormat(
     "ru-RU"
-  ).format(
-    value
-  );
-}
-
-
-function formatDecimal(
-  value:
-    | number
-    | null
-    | undefined,
-
-  digits:
-    number = 1
-) {
-
-  if (
-    value === null
-    ||
-    value === undefined
-  ) {
-
-    return "—";
-
-  }
-
-
-  return new Intl.NumberFormat(
-    "ru-RU",
-    {
-      minimumFractionDigits:
-        0,
-
-      maximumFractionDigits:
-        digits,
-    }
   ).format(
     value
   );
@@ -303,11 +250,10 @@ function formatDateTimeKrasnoyarsk(
 
 
 // ============================================================
-// ПОЛУЧЕНИЕ ДАННЫХ
+// SUPABASE
 // ============================================================
 
-async function getOzonDashboard():
-Promise<DashboardData> {
+function getSupabaseConfig() {
 
   const supabaseUrl =
     process.env
@@ -335,6 +281,27 @@ Promise<DashboardData> {
     );
 
   }
+
+
+  return {
+    supabaseUrl,
+    supabaseSecretKey,
+  };
+}
+
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+
+async function getOzonDashboard():
+Promise<DashboardData> {
+
+  const {
+    supabaseUrl,
+    supabaseSecretKey,
+  } =
+    getSupabaseConfig();
 
 
   const response =
@@ -389,6 +356,314 @@ Promise<DashboardData> {
 
 
 // ============================================================
+// ОСТАТКИ ПО КЛАСТЕРАМ
+//
+// Берём только текущий snapshot.
+// Никаких расчётов через master_code здесь нет.
+// ============================================================
+
+async function getStockSnapshotRows(
+  snapshotDate: string
+):
+Promise<StockSnapshotRow[]> {
+
+  const {
+    supabaseUrl,
+    supabaseSecretKey,
+  } =
+    getSupabaseConfig();
+
+
+  const allRows:
+    StockSnapshotRow[] =
+    [];
+
+
+  const pageSize =
+    1000;
+
+
+  let offset =
+    0;
+
+
+  while (true) {
+
+    const url =
+      new URL(
+        `${supabaseUrl}/rest/v1/ozon_stock_snapshots`
+      );
+
+
+    url.searchParams.set(
+      "select",
+      [
+        "product_id",
+        "cluster_id",
+        "cluster_name",
+        "quantity",
+      ].join(
+        ","
+      )
+    );
+
+
+    url.searchParams.set(
+      "snapshot_date",
+      `eq.${snapshotDate}`
+    );
+
+
+    url.searchParams.set(
+      "order",
+      "product_id.asc,cluster_id.asc"
+    );
+
+
+    url.searchParams.set(
+      "limit",
+      String(
+        pageSize
+      )
+    );
+
+
+    url.searchParams.set(
+      "offset",
+      String(
+        offset
+      )
+    );
+
+
+    const response =
+      await fetch(
+        url.toString(),
+        {
+          method:
+            "GET",
+
+          headers: {
+            apikey:
+              supabaseSecretKey,
+
+            Authorization:
+              `Bearer ${supabaseSecretKey}`,
+
+            Accept:
+              "application/json",
+          },
+
+          cache:
+            "no-store",
+        }
+      );
+
+
+    const text =
+      await response.text();
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        `Ошибка загрузки остатков по кластерам ${response.status}: ${text}`
+      );
+
+    }
+
+
+    const page =
+      JSON.parse(
+        text
+      ) as StockSnapshotRow[];
+
+
+    allRows.push(
+      ...page
+    );
+
+
+    if (
+      page.length <
+      pageSize
+    ) {
+
+      break;
+
+    }
+
+
+    offset +=
+      pageSize;
+
+  }
+
+
+  return allRows;
+}
+
+
+// ============================================================
+// ПРИВЯЗКА СТРОК ОСТАТКОВ К РАЗМЕЩЕНИЯМ
+//
+// master_code используется только для внешней строки таблицы.
+// Сами остатки связываются строго по product_id.
+// ============================================================
+
+function attachClusterStocks(
+  products:
+    DashboardProductRow[],
+
+  stockRows:
+    StockSnapshotRow[]
+):
+OzonProductTableRow[] {
+
+  const rowsByProduct =
+    new Map<
+      string,
+      StockSnapshotRow[]
+    >();
+
+
+  for (
+    const row
+    of stockRows
+  ) {
+
+    const current =
+      rowsByProduct.get(
+        row.product_id
+      )
+      ?? [];
+
+
+    current.push(
+      row
+    );
+
+
+    rowsByProduct.set(
+      row.product_id,
+      current
+    );
+
+  }
+
+
+  return products.map(
+    product => {
+
+      const clusterStocks:
+        OzonClusterStockRow[] =
+        [];
+
+
+      for (
+        const listing
+        of product.listings
+        ?? []
+      ) {
+
+        const listingStockRows =
+          rowsByProduct.get(
+            listing.product_id
+          )
+          ?? [];
+
+
+        for (
+          const stockRow
+          of listingStockRows
+        ) {
+
+          clusterStocks.push(
+            {
+              product_id:
+                listing.product_id,
+
+              offer_id:
+                listing.offer_id,
+
+              ozon_product_id:
+                listing.ozon_product_id,
+
+              listing_name:
+                listing.name,
+
+              cluster_id:
+                stockRow.cluster_id,
+
+              cluster_name:
+                stockRow.cluster_name,
+
+              quantity:
+                Number(
+                  stockRow.quantity
+                  ?? 0
+                ),
+            }
+          );
+
+        }
+
+      }
+
+
+      clusterStocks.sort(
+        (
+          left,
+          right
+        ) => {
+
+          const clusterCompare =
+            (
+              left.cluster_name
+              ?? ""
+            ).localeCompare(
+              right.cluster_name
+              ?? "",
+              "ru"
+            );
+
+
+          if (
+            clusterCompare !==
+            0
+          ) {
+
+            return clusterCompare;
+
+          }
+
+
+          return (
+            left.offer_id
+            ?? ""
+          ).localeCompare(
+            right.offer_id
+            ?? "",
+            "ru"
+          );
+
+        }
+      );
+
+
+      return {
+        ...product,
+
+        cluster_stocks:
+          clusterStocks,
+      };
+
+    }
+  );
+}
+
+
+// ============================================================
 // СТРАНИЦА OZON
 // ============================================================
 
@@ -406,6 +681,17 @@ export default async function OzonPage() {
     null;
 
 
+  let clusterStocksError:
+    string
+    | null =
+    null;
+
+
+  let stockRows:
+    StockSnapshotRow[] =
+    [];
+
+
   try {
 
     dashboard =
@@ -419,6 +705,33 @@ export default async function OzonPage() {
         : String(
             error
           );
+
+  }
+
+
+  if (
+    dashboard
+      ?.stock_snapshot_date
+  ) {
+
+    try {
+
+      stockRows =
+        await getStockSnapshotRows(
+          dashboard
+            .stock_snapshot_date
+        );
+
+    } catch (error) {
+
+      clusterStocksError =
+        error instanceof Error
+          ? error.message
+          : String(
+              error
+            );
+
+    }
 
   }
 
@@ -442,9 +755,12 @@ export default async function OzonPage() {
 
 
   const products =
-    dashboard
-      ?.products
-    ?? [];
+    attachClusterStocks(
+      dashboard
+        ?.products
+      ?? [],
+      stockRows
+    );
 
 
   return (
@@ -473,10 +789,8 @@ export default async function OzonPage() {
 
 
             <p className="subtitle">
-
               FBO продажи, отмены
               и доступные остатки Ozon.
-
             </p>
 
           </div>
@@ -489,7 +803,6 @@ export default async function OzonPage() {
 
             <Link
               href="/stock-import"
-
               className=
                 "secondary-button navigation-button"
             >
@@ -499,7 +812,6 @@ export default async function OzonPage() {
 
             <Link
               href="/"
-
               className=
                 "secondary-button navigation-button"
             >
@@ -528,6 +840,7 @@ export default async function OzonPage() {
 
                 <div
                   className="reason-text"
+
                   style={{
                     color:
                       "#b42318",
@@ -576,10 +889,8 @@ export default async function OzonPage() {
 
 
               <div className="reason-text">
-
                 Последняя успешная загрузка
                 FBO-данных из Ozon.
-
               </div>
 
             </div>
@@ -640,19 +951,25 @@ export default async function OzonPage() {
           >
 
             <InfoCard
-              label="Последняя синхронизация"
+              label=
+                "Последняя синхронизация"
+
               value={
                 formatDateTimeKrasnoyarsk(
                   latestSync
                     ?.created_at
                 )
               }
-              hint="Красноярское время"
+
+              hint=
+                "Красноярское время"
             />
 
 
             <InfoCard
-              label="Период продаж"
+              label=
+                "Период продаж"
+
               value={
                 latestSync
                   ? `${formatDate(
@@ -662,31 +979,41 @@ export default async function OzonPage() {
                     )}`
                   : "—"
               }
-              hint="Скользящие 28 дней"
+
+              hint=
+                "Скользящие 28 дней"
             />
 
 
             <InfoCard
-              label="Снимок остатков"
+              label=
+                "Снимок остатков"
+
               value={
                 formatDate(
                   dashboard
                     ?.stock_snapshot_date
                 )
               }
-              hint="FBO"
+
+              hint=
+                "FBO"
             />
 
 
             <InfoCard
-              label="Отправлений"
+              label=
+                "Отправлений"
+
               value={
                 formatNumber(
                   latestSync
                     ?.postings_received
                 )
               }
-              hint="Получено из Ozon"
+
+              hint=
+                "Получено из Ozon"
             />
 
           </div>
@@ -699,7 +1026,6 @@ export default async function OzonPage() {
             =================================== */}
 
         <section className="summary-grid">
-
 
           <div className="card">
 
@@ -825,42 +1151,45 @@ export default async function OzonPage() {
 
 
           <div className="reason-text">
-
-            Продажи:
-            FBO за период,
+            Продажи: FBO за период,
             указанный выше.
             Отменённые отправления
             в продажи не входят.
-
           </div>
 
 
           <div className="reason-text">
-
-            Отмены:
-            считаются отдельно
+            Отмены считаются отдельно
             и отображаются
             отдельным показателем.
-
           </div>
 
 
           <div className="reason-text">
 
             Остаток:
-            доступный FBO-остаток.
-            В расчёт записывается
-            present − reserved.
+            доступный FBO-остаток
+            из{" "}
+
+            <code>
+              /v1/analytics/stocks
+            </code>
+
+            , поле{" "}
+
+            <code>
+              available_stock_count
+            </code>
+            .
 
           </div>
 
 
           <div className="reason-text">
-
             Для корректного сравнения
             в кабинете Ozon нужно выбирать
-            тот же период и FBO.
-
+            тот же период и учитывать время
+            снимка остатков.
           </div>
 
         </section>
@@ -878,11 +1207,9 @@ export default async function OzonPage() {
 
 
           <div className="reason-text">
-
             Этот блок удобнее всего
             использовать для контрольной
             сверки с кабинетом Ozon.
-
           </div>
 
 
@@ -953,15 +1280,18 @@ export default async function OzonPage() {
                       >
 
                         <TableCell>
+
                           {
                             formatDate(
                               row.sale_date
                             )
                           }
+
                         </TableCell>
 
 
                         <TableCell align="right">
+
                           <strong>
                             {
                               formatNumber(
@@ -969,24 +1299,29 @@ export default async function OzonPage() {
                               )
                             }
                           </strong>
+
                         </TableCell>
 
 
                         <TableCell align="right">
+
                           {
                             formatNumber(
                               row.cancelled_quantity
                             )
                           }
+
                         </TableCell>
 
 
                         <TableCell align="right">
+
                           {
                             formatNumber(
                               row.rows_count
                             )
                           }
+
                         </TableCell>
 
                       </tr>
@@ -1016,12 +1351,39 @@ export default async function OzonPage() {
 
 
           <div className="reason-text">
-
-            Одна строка соответствует
+            Одна основная строка соответствует
             одному физическому товару
             по master_code.
-
+            Стрелка раскрывает реальные
+            остатки Ozon по размещениям
+            и кластерам.
           </div>
+
+
+          {
+            clusterStocksError
+              ? (
+
+                <div
+                  className="reason-text"
+
+                  style={{
+                    marginTop:
+                      "12px",
+
+                    color:
+                      "#b42318",
+                  }}
+                >
+                  Не удалось загрузить
+                  детализацию остатков:
+                  {" "}
+                  {clusterStocksError}
+                </div>
+
+              )
+              : null
+          }
 
 
           <div
@@ -1096,193 +1458,11 @@ export default async function OzonPage() {
 
               <tbody>
 
-                {
-                  products.map(
-                    product => {
-
-                      const offers =
-                        (
-                          product.listings
-                          ?? []
-                        )
-                          .map(
-                            listing =>
-                              listing.offer_id
-                          )
-                          .filter(
-                            (
-                              value
-                            ): value is string =>
-                              Boolean(
-                                value
-                              )
-                          )
-                          .join(
-                            ", "
-                          );
-
-
-                      return (
-
-                        <tr
-                          key={
-                            product.master_code
-                          }
-                        >
-
-                          <TableCell>
-
-                            <span
-                              style={{
-                                fontFamily:
-                                  "monospace",
-
-                                fontWeight:
-                                  700,
-                              }}
-                            >
-                              {
-                                product.master_code
-                              }
-                            </span>
-
-                          </TableCell>
-
-
-                          <TableCell>
-
-                            <div>
-                              {
-                                product
-                                  .product_name
-                                ||
-                                "—"
-                              }
-                            </div>
-
-
-                            {
-                              product.listing_count >
-                              1
-                                ? (
-
-                                  <div
-                                    className="muted"
-                                    style={{
-                                      marginTop:
-                                        "4px",
-
-                                      fontSize:
-                                        "11px",
-                                    }}
-                                  >
-                                    {
-                                      product
-                                        .listing_count
-                                    }{" "}
-                                    размещения
-                                  </div>
-
-                                )
-                                : null
-                            }
-
-                          </TableCell>
-
-
-                          <TableCell>
-
-                            <div
-                              style={{
-                                maxWidth:
-                                  "360px",
-
-                                wordBreak:
-                                  "break-word",
-                              }}
-                            >
-                              {
-                                offers
-                                ||
-                                "—"
-                              }
-                            </div>
-
-                          </TableCell>
-
-
-                          <TableCell align="right">
-
-                            <strong>
-                              {
-                                formatNumber(
-                                  product
-                                    .sales_28_days
-                                )
-                              }
-                            </strong>
-
-                          </TableCell>
-
-
-                          <TableCell align="right">
-
-                            {
-                              formatDecimal(
-                                product
-                                  .average_sales_per_day,
-                                2
-                              )
-                            }
-
-                          </TableCell>
-
-
-                          <TableCell align="right">
-
-                            {
-                              formatNumber(
-                                product
-                                  .cancelled_28_days
-                              )
-                            }
-
-                          </TableCell>
-
-
-                          <TableCell align="right">
-
-                            <strong>
-                              {
-                                formatNumber(
-                                  product
-                                    .stock_quantity
-                                )
-                              }
-                            </strong>
-
-                          </TableCell>
-
-
-                          <TableCell align="right">
-
-                            {
-                              formatDecimal(
-                                product
-                                  .stock_days,
-                                1
-                              )
-                            }
-
-                          </TableCell>
-
-                        </tr>
-
-                      );
-
-                    }
-                  )
-                }
+                <OzonProductsTableClient
+                  products={
+                    products
+                  }
+                />
 
               </tbody>
 
@@ -1305,29 +1485,23 @@ export default async function OzonPage() {
 
 
           <div className="reason-text">
-
             Сначала система полностью
             получает и проверяет данные
             Ozon.
-
           </div>
 
 
           <div className="reason-text">
-
             Только после успешного
             завершения всех запросов
             данные записываются
             в Supabase одной транзакцией.
-
           </div>
 
 
           <div className="reason-text">
-
             Ошибка API не считается
             нулевым остатком.
-
           </div>
 
         </section>
@@ -1401,6 +1575,7 @@ function InfoCard(
 
             <div
               className="muted"
+
               style={{
                 marginTop:
                   "5px",
