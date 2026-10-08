@@ -1,5 +1,12 @@
 "use client";
 
+import Link
+  from "next/link";
+
+import {
+  useRouter,
+} from "next/navigation";
+
 import {
   useCallback,
   useEffect,
@@ -685,6 +692,10 @@ function getProfileInitials(
 
 export default function HomeHeaderActions() {
 
+  const router =
+    useRouter();
+
+
   const [
     openPanel,
     setOpenPanel,
@@ -693,6 +704,8 @@ export default function HomeHeaderActions() {
       "calendar"
       |
       "notifications"
+      |
+      "profile"
       |
       null
     >(
@@ -825,6 +838,15 @@ export default function HomeHeaderActions() {
   ] =
     useState(
       true
+    );
+
+
+  const [
+    logoutLoading,
+    setLogoutLoading,
+  ] =
+    useState(
+      false
     );
 
 
@@ -2022,6 +2044,106 @@ export default function HomeHeaderActions() {
   }
 
 
+  // ==========================================================
+  // PROFILE MENU / LOGOUT
+  // ==========================================================
+
+  function toggleProfileMenu() {
+
+    setOpenPanel(
+      current =>
+        current ===
+          "profile"
+
+          ? null
+
+          : "profile"
+    );
+
+  }
+
+
+  async function handleLogout() {
+
+    if (
+      logoutLoading
+    ) {
+
+      return;
+
+    }
+
+
+    setLogoutLoading(
+      true
+    );
+
+
+    try {
+
+      const supabase =
+        createClient();
+
+
+      const {
+        error,
+      } =
+        await supabase
+          .auth
+          .signOut();
+
+
+      if (
+        error
+      ) {
+
+        console.error(
+          "Ошибка выхода:",
+          error
+        );
+
+
+        setLogoutLoading(
+          false
+        );
+
+
+        return;
+
+      }
+
+
+      setOpenPanel(
+        null
+      );
+
+
+      router.replace(
+        "/login"
+      );
+
+
+      router.refresh();
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        "Ошибка выхода:",
+        error
+      );
+
+
+      setLogoutLoading(
+        false
+      );
+
+    }
+
+  }
+
+
   const unreadCount =
     notifications.length;
 
@@ -2095,6 +2217,28 @@ export default function HomeHeaderActions() {
 
         : "Роль не определена"
     );
+
+
+  const profileEmail =
+    currentProfile
+      ?.email
+      ?.trim()
+    ||
+    "";
+
+
+  const profileAdminRole =
+    currentProfile
+      ?.has_admin_access
+
+      ? (
+          currentProfile
+            .admin_role_name
+          ||
+          "Администратор"
+        )
+
+      : null;
 
 
   const profileInitials =
@@ -3445,55 +3589,213 @@ export default function HomeHeaderActions() {
             PROFILE
         ==================================================== */}
 
-        <button
-          type="button"
-
-          className=
-            "home-profile"
+        <div
+          className={
+            styles.profileWrapper
+          }
         >
 
-          <span
+          <button
+            type="button"
+
             className=
-              "home-avatar"
-          >
-            {
-              profileInitials
+              "home-profile"
+
+            aria-label=
+              "Меню пользователя"
+
+            aria-expanded={
+              openPanel ===
+                "profile"
             }
-          </span>
 
-
-          <span
-            className=
-              "home-profile-text"
+            onClick={
+              toggleProfileMenu
+            }
           >
 
-            <strong>
+            <span
+              className=
+                "home-avatar"
+            >
               {
-                profileFullName
-              }
-            </strong>
-
-
-            <span>
-              {
-                profileRoleName
+                profileInitials
               }
             </span>
 
-          </span>
+
+            <span
+              className=
+                "home-profile-text"
+            >
+
+              <strong>
+                {
+                  profileFullName
+                }
+              </strong>
 
 
-          <span
-            className="
-              home-profile-chevron
-            "
-          >
+              <span>
+                {
+                  profileRoleName
+                }
+              </span>
 
-            <ChevronIcon />
+            </span>
 
-          </span>
 
-        </button>
+            <span
+              className="
+                home-profile-chevron
+              "
+            >
+
+              <ChevronIcon />
+
+            </span>
+
+          </button>
+
+
+          {
+            openPanel ===
+              "profile"
+            &&
+            (
+
+              <div
+                className={
+                  styles.profileMenu
+                }
+              >
+
+                <div
+                  className={
+                    styles.profileMenuHeader
+                  }
+                >
+
+                  <strong
+                    className={
+                      styles.profileMenuName
+                    }
+                  >
+                    {
+                      profileFullName
+                    }
+                  </strong>
+
+
+                  {
+                    profileEmail
+                    &&
+                    (
+
+                      <span
+                        className={
+                          styles.profileMenuEmail
+                        }
+                      >
+                        {
+                          profileEmail
+                        }
+                      </span>
+
+                    )
+                  }
+
+
+                  <div
+                    className={
+                      styles.profileMenuRole
+                    }
+                  >
+                    Рабочая роль:
+                    {" "}
+                    {
+                      profileRoleName
+                    }
+                  </div>
+
+
+                  {
+                    profileAdminRole
+                    &&
+                    (
+
+                      <div
+                        className={
+                          styles.profileMenuAdmin
+                        }
+                      >
+                        {
+                          profileAdminRole
+                        }
+                      </div>
+
+                    )
+                  }
+
+                </div>
+
+
+                <div
+                  className={
+                    styles.profileMenuActions
+                  }
+                >
+
+                  <Link
+                    href="/profile"
+
+                    className={
+                      styles.profileMenuLink
+                    }
+
+                    onClick={
+                      () =>
+                        setOpenPanel(
+                          null
+                        )
+                    }
+                  >
+                    Мой профиль
+                  </Link>
+
+
+                  <button
+                    type="button"
+
+                    className={
+                      styles.profileMenuButton
+                    }
+
+                    onClick={
+                      handleLogout
+                    }
+
+                    disabled={
+                      logoutLoading
+                    }
+                  >
+                    {
+                      logoutLoading
+
+                        ? "Выходим..."
+
+                        : "Выйти"
+                    }
+                  </button>
+
+                </div>
+
+              </div>
+
+            )
+          }
+
+        </div>
 
       </div>
 
