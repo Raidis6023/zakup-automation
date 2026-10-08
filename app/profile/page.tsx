@@ -9,6 +9,9 @@ import {
   createClient,
 } from "../../lib/supabase/server";
 
+import ProfileForm
+  from "./ProfileForm";
+
 import "./profile.css";
 
 
@@ -266,86 +269,23 @@ export default async function ProfilePage() {
             </h2>
 
 
-            <div
-              className=
-                "profile-grid"
-            >
+            <ProfileForm
+              userId={
+                profile.user_id
+              }
 
-              <div
-                className=
-                  "profile-field"
-              >
+              firstName={
+                profile.first_name
+              }
 
-                <span
-                  className=
-                    "profile-label"
-                >
-                  Имя
-                </span>
+              lastName={
+                profile.last_name
+              }
 
-
-                <span
-                  className=
-                    "profile-value"
-                >
-                  {
-                    profile.first_name
-                  }
-                </span>
-
-              </div>
-
-
-              <div
-                className=
-                  "profile-field"
-              >
-
-                <span
-                  className=
-                    "profile-label"
-                >
-                  Фамилия
-                </span>
-
-
-                <span
-                  className=
-                    "profile-value"
-                >
-                  {
-                    profile.last_name
-                  }
-                </span>
-
-              </div>
-
-
-              <div
-                className=
-                  "profile-field"
-              >
-
-                <span
-                  className=
-                    "profile-label"
-                >
-                  Email
-                </span>
-
-
-                <span
-                  className=
-                    "profile-value"
-                >
-                  {
-                    profile.email
-                  }
-                </span>
-
-              </div>
-
-            </div>
+              email={
+                profile.email
+              }
+            />
 
           </div>
 
