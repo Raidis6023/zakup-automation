@@ -7,21 +7,15 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 
+import { createClient } from "../lib/supabase/client";
 import {
-  createPortal,
-} from "react-dom";
-
-import {
-  createClient,
-} from "../lib/supabase/client";
-
-import HomeThemeToggle
-  from "./HomeThemeToggle";
-
-import styles
-  from "./HomeHeaderActions.module.css";
-
+  approveAccessRequest,
+  rejectAccessRequest,
+} from "./access-request-actions";
+import HomeThemeToggle from "./HomeThemeToggle";
+import styles from "./HomeHeaderActions.module.css";
 
 // ============================================================
 // ICONS
@@ -29,106 +23,57 @@ import styles
 
 function BellIcon() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-      <path
-        d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"
-      />
-
-      <path
-        d="M10 21h4"
-      />
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+      <path d="M10 21h4" />
     </svg>
   );
 }
-
 
 function CalendarIcon() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-      <rect
-        x="3"
-        y="5"
-        width="18"
-        height="16"
-        rx="2"
-      />
-
-      <path
-        d="M16 3v4M8 3v4M3 10h18"
-      />
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M16 3v4M8 3v4M3 10h18" />
     </svg>
   );
 }
-
 
 function ChevronIcon() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-      <path
-        d="m7 9 5 5 5-5"
-      />
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="m7 9 5 5 5-5" />
     </svg>
   );
 }
-
 
 function ArrowLeftIcon() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-      <path
-        d="m15 18-6-6 6-6"
-      />
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="m15 18-6-6 6-6" />
     </svg>
   );
 }
-
 
 function ArrowRightIcon() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-      <path
-        d="m9 18 6-6-6-6"
-      />
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="m9 18 6-6-6-6" />
     </svg>
   );
 }
-
 
 function CloseIcon() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-      <path
-        d="M6 6l12 12"
-      />
-
-      <path
-        d="M18 6L6 18"
-      />
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M6 6l12 12" />
+      <path d="M18 6L6 18" />
     </svg>
   );
 }
 
-
 // ============================================================
-// NOTIFICATIONS
+// TYPES
 // ============================================================
 
 type AccessRequestNotificationRow = {
@@ -140,7 +85,6 @@ type AccessRequestNotificationRow = {
   comment: string | null;
   created_at: string;
 };
-
 
 type NotificationItem = {
   id: string;
@@ -158,13 +102,8 @@ type NotificationItem = {
   };
 };
 
-
-// ============================================================
-// ROLES
-// ============================================================
-
 type WorkingRole =
-  ""
+  | ""
   | "analyst"
   | "procurement"
   | "ved"
@@ -172,18 +111,36 @@ type WorkingRole =
   | "marketing"
   | "manager";
 
-
 type CategoryMarketplace =
-  ""
+  | ""
   | "ozon"
   | "wildberries"
   | "yandex_market";
 
+type ApprovalResult = {
+  email: string;
+  fullName: string;
+  temporaryPassword: string;
+};
 
-const WORKING_ROLES: {
+type RequestAction =
+  | "approve"
+  | "reject"
+  | null;
+
+type CopyStatus =
+  | "idle"
+  | "copied"
+  | "error";
+
+// ============================================================
+// CONSTANTS
+// ============================================================
+
+const WORKING_ROLES: Array<{
   value: WorkingRole;
   label: string;
-}[] = [
+}> = [
   {
     value: "",
     label: "Выберите роль",
@@ -214,11 +171,10 @@ const WORKING_ROLES: {
   },
 ];
 
-
-const MARKETPLACES: {
+const MARKETPLACES: Array<{
   value: CategoryMarketplace;
   label: string;
-}[] = [
+}> = [
   {
     value: "",
     label: "Выберите маркетплейс",
@@ -237,11 +193,6 @@ const MARKETPLACES: {
   },
 ];
 
-
-// ============================================================
-// CALENDAR CONSTANTS
-// ============================================================
-
 const MONTH_NAMES = [
   "Январь",
   "Февраль",
@@ -257,7 +208,6 @@ const MONTH_NAMES = [
   "Декабрь",
 ];
 
-
 const WEEK_DAYS = [
   "Пн",
   "Вт",
@@ -267,7 +217,6 @@ const WEEK_DAYS = [
   "Сб",
   "Вс",
 ];
-
 
 // ============================================================
 // HELPERS
@@ -289,7 +238,6 @@ function isSameDay(
   );
 }
 
-
 function formatToday(
   date: Date
 ) {
@@ -303,13 +251,11 @@ function formatToday(
   );
 }
 
-
 function formatNotificationTime(
   value: string
 ) {
   const date =
     new Date(value);
-
 
   if (
     Number.isNaN(
@@ -318,7 +264,6 @@ function formatNotificationTime(
   ) {
     return "";
   }
-
 
   return date.toLocaleString(
     "ru-RU",
@@ -331,17 +276,12 @@ function formatNotificationTime(
   );
 }
 
-
-// ============================================================
-// SAFE VALUE CONVERTERS
-// ============================================================
-
 function getWorkingRole(
   value: string
 ): WorkingRole {
-
-  switch (value) {
-
+  switch (
+    value
+  ) {
     case "analyst":
       return "analyst";
 
@@ -362,18 +302,15 @@ function getWorkingRole(
 
     default:
       return "";
-
   }
-
 }
-
 
 function getCategoryMarketplace(
   value: string
 ): CategoryMarketplace {
-
-  switch (value) {
-
+  switch (
+    value
+  ) {
     case "ozon":
       return "ozon";
 
@@ -385,38 +322,27 @@ function getCategoryMarketplace(
 
     default:
       return "";
-
   }
-
 }
-
 
 // ============================================================
 // COMPONENT
 // ============================================================
 
 export default function HomeHeaderActions() {
-
-  // ==========================================================
-  // PANELS
-  // ==========================================================
-
   const [
     openPanel,
     setOpenPanel,
   ] =
     useState<
       "calendar"
-      | "notifications"
-      | null
+      |
+      "notifications"
+      |
+      null
     >(
       null
     );
-
-
-  // ==========================================================
-  // NOTIFICATIONS
-  // ==========================================================
 
   const [
     notifications,
@@ -428,7 +354,6 @@ export default function HomeHeaderActions() {
       []
     );
 
-
   const [
     notificationsLoading,
     setNotificationsLoading,
@@ -436,7 +361,6 @@ export default function HomeHeaderActions() {
     useState(
       true
     );
-
 
   const [
     notificationsError,
@@ -448,11 +372,6 @@ export default function HomeHeaderActions() {
       null
     );
 
-
-  // ==========================================================
-  // ACCESS REQUEST MODAL
-  // ==========================================================
-
   const [
     selectedNotification,
     setSelectedNotification,
@@ -462,7 +381,6 @@ export default function HomeHeaderActions() {
     >(
       null
     );
-
 
   const [
     selectedRole,
@@ -474,7 +392,6 @@ export default function HomeHeaderActions() {
       ""
     );
 
-
   const [
     selectedMarketplace,
     setSelectedMarketplace,
@@ -485,10 +402,45 @@ export default function HomeHeaderActions() {
       ""
     );
 
+  const [
+    requestAction,
+    setRequestAction,
+  ] =
+    useState<
+      RequestAction
+    >(
+      null
+    );
 
-  // ==========================================================
-  // CALENDAR
-  // ==========================================================
+  const [
+    requestActionError,
+    setRequestActionError,
+  ] =
+    useState<
+      string | null
+    >(
+      null
+    );
+
+  const [
+    approvalResult,
+    setApprovalResult,
+  ] =
+    useState<
+      ApprovalResult | null
+    >(
+      null
+    );
+
+  const [
+    copyStatus,
+    setCopyStatus,
+  ] =
+    useState<
+      CopyStatus
+    >(
+      "idle"
+    );
 
   const [
     today,
@@ -499,57 +451,48 @@ export default function HomeHeaderActions() {
         new Date()
     );
 
-
   const [
     visibleMonth,
     setVisibleMonth,
   ] =
     useState(
       () => {
-
         const now =
           new Date();
-
 
         return new Date(
           now.getFullYear(),
           now.getMonth(),
           1
         );
-
       }
     );
 
-
   const actionsRef =
-    useRef<HTMLDivElement | null>(
+    useRef<
+      HTMLDivElement | null
+    >(
       null
     );
 
-
   // ==========================================================
-  // LOAD ACCESS REQUEST NOTIFICATIONS
+  // NOTIFICATIONS
   // ==========================================================
 
   const loadNotifications =
     useCallback(
       async () => {
-
         setNotificationsLoading(
           true
         );
-
 
         setNotificationsError(
           null
         );
 
-
         try {
-
           const supabase =
             createClient();
-
 
           const {
             data,
@@ -560,13 +503,13 @@ export default function HomeHeaderActions() {
                 "app_get_access_request_notifications"
               );
 
-
-          if (error) {
-
+          if (
+            error
+          ) {
             const message =
-              error.message
+              error
+                .message
                 .toLowerCase();
-
 
             if (
               message.includes(
@@ -577,26 +520,19 @@ export default function HomeHeaderActions() {
                 "требуется авторизация"
               )
             ) {
-
               setNotifications(
                 []
               );
 
-
               return "forbidden";
-
             }
-
 
             setNotificationsError(
               "Не удалось загрузить уведомления"
             );
 
-
             return "error";
-
           }
-
 
           const rows =
             (
@@ -604,12 +540,10 @@ export default function HomeHeaderActions() {
             ) as
               AccessRequestNotificationRow[];
 
-
           const nextNotifications:
             NotificationItem[] =
               rows.map(
                 row => {
-
                   const fullName =
                     [
                       row.first_name,
@@ -622,7 +556,6 @@ export default function HomeHeaderActions() {
                         " "
                       );
 
-
                   const detail =
                     row.department
 
@@ -630,9 +563,7 @@ export default function HomeHeaderActions() {
 
                       : fullName;
 
-
                   return {
-
                     id:
                       row.request_id,
 
@@ -649,7 +580,6 @@ export default function HomeHeaderActions() {
                       row.created_at,
 
                     request: {
-
                       firstName:
                         row.first_name,
 
@@ -664,170 +594,121 @@ export default function HomeHeaderActions() {
 
                       comment:
                         row.comment,
-
                     },
-
                   };
-
                 }
               );
-
 
           setNotifications(
             nextNotifications
           );
 
-
           return "success";
-
         } catch {
-
           setNotificationsError(
             "Не удалось загрузить уведомления"
           );
 
-
           return "error";
-
         } finally {
-
           setNotificationsLoading(
             false
           );
-
         }
-
       },
       []
     );
 
-
-  // ==========================================================
-  // INITIAL NOTIFICATIONS + POLLING
-  // ==========================================================
-
   useEffect(
     () => {
-
       let stopped =
         false;
-
 
       let intervalId:
         number | null =
           null;
 
-
       async function startNotifications() {
-
         const result =
           await loadNotifications();
-
 
         if (
           stopped
           ||
-          result !== "success"
+          result !==
+            "success"
         ) {
-
           return;
-
         }
-
 
         intervalId =
           window.setInterval(
             () => {
-
               void loadNotifications();
-
             },
             60 * 1000
           );
-
       }
-
 
       void startNotifications();
 
-
       return () => {
-
         stopped =
           true;
 
-
         if (
-          intervalId !== null
+          intervalId !==
+            null
         ) {
-
           window.clearInterval(
             intervalId
           );
-
         }
-
       };
-
     },
     [
       loadNotifications,
     ]
   );
 
-
   // ==========================================================
-  // UPDATE TODAY
+  // DATE
   // ==========================================================
 
   useEffect(
     () => {
-
       const interval =
         window.setInterval(
           () => {
-
             const now =
               new Date();
 
-
             setToday(
               previous => {
-
                 if (
                   isSameDay(
                     previous,
                     now
                   )
                 ) {
-
                   return previous;
-
                 }
 
-
                 return now;
-
               }
             );
-
           },
           60 * 1000
         );
 
-
       return () => {
-
         window.clearInterval(
           interval
         );
-
       };
-
     },
     []
   );
-
 
   // ==========================================================
   // CLOSE PANELS / MODAL
@@ -835,120 +716,103 @@ export default function HomeHeaderActions() {
 
   useEffect(
     () => {
-
       function handlePointerDown(
         event: MouseEvent
       ) {
-
         if (
           !actionsRef.current
         ) {
-
           return;
-
         }
 
+        const target =
+          event.target;
 
         if (
+          target instanceof Node
+          &&
           !actionsRef.current.contains(
-            event.target as Node
+            target
           )
         ) {
-
           setOpenPanel(
             null
           );
-
         }
-
       }
-
 
       function handleKeyDown(
         event: KeyboardEvent
       ) {
-
         if (
           event.key !==
-          "Escape"
+            "Escape"
         ) {
-
           return;
-
         }
-
 
         if (
           selectedNotification
         ) {
+          if (
+            requestAction !==
+              null
+          ) {
+            return;
+          }
 
-          setSelectedNotification(
-            null
-          );
+          closeAccessRequest();
 
           return;
-
         }
-
 
         setOpenPanel(
           null
         );
-
       }
-
 
       document.addEventListener(
         "mousedown",
         handlePointerDown
       );
 
-
       document.addEventListener(
         "keydown",
         handleKeyDown
       );
 
-
       return () => {
-
         document.removeEventListener(
           "mousedown",
           handlePointerDown
         );
 
-
         document.removeEventListener(
           "keydown",
           handleKeyDown
         );
-
       };
-
     },
     [
       selectedNotification,
+      requestAction,
     ]
   );
 
-
   // ==========================================================
-  // CALENDAR CELLS
+  // CALENDAR
   // ==========================================================
 
   const calendarCells =
     useMemo(
       () => {
-
         const year =
           visibleMonth
             .getFullYear();
 
-
         const month =
           visibleMonth
             .getMonth();
-
 
         const firstDay =
           new Date(
@@ -956,7 +820,6 @@ export default function HomeHeaderActions() {
             month,
             1
           );
-
 
         const mondayOffset =
           (
@@ -967,7 +830,6 @@ export default function HomeHeaderActions() {
           %
           7;
 
-
         const daysInMonth =
           new Date(
             year,
@@ -975,7 +837,6 @@ export default function HomeHeaderActions() {
             0
           )
             .getDate();
-
 
         return Array.from(
           {
@@ -985,7 +846,6 @@ export default function HomeHeaderActions() {
             _,
             index
           ) => {
-
             const day =
               index
               -
@@ -993,40 +853,28 @@ export default function HomeHeaderActions() {
               +
               1;
 
-
             if (
               day < 1
               ||
               day > daysInMonth
             ) {
-
               return null;
-
             }
-
 
             return new Date(
               year,
               month,
               day
             );
-
           }
         );
-
       },
       [
         visibleMonth,
       ]
     );
 
-
-  // ==========================================================
-  // CALENDAR NAVIGATION
-  // ==========================================================
-
   function showPreviousMonth() {
-
     setVisibleMonth(
       current =>
         new Date(
@@ -1035,12 +883,9 @@ export default function HomeHeaderActions() {
           1
         )
     );
-
   }
 
-
   function showNextMonth() {
-
     setVisibleMonth(
       current =>
         new Date(
@@ -1049,20 +894,15 @@ export default function HomeHeaderActions() {
           1
         )
     );
-
   }
 
-
   function showCurrentMonth() {
-
     const now =
       new Date();
-
 
     setToday(
       now
     );
-
 
     setVisibleMonth(
       new Date(
@@ -1071,119 +911,354 @@ export default function HomeHeaderActions() {
         1
       )
     );
-
   }
 
-
   // ==========================================================
-  // NOTIFICATION PANEL
+  // ACCESS REQUEST MODAL
   // ==========================================================
 
   function toggleNotifications() {
-
     const willOpen =
       openPanel !==
         "notifications";
 
-
     setOpenPanel(
       willOpen
+
         ? "notifications"
+
         : null
     );
 
-
-    if (willOpen) {
-
+    if (
+      willOpen
+    ) {
       void loadNotifications();
-
     }
-
   }
 
-
-  // ==========================================================
-  // OPEN ACCESS REQUEST
-  // ==========================================================
-
   function openAccessRequest(
-    notification: NotificationItem
+    notification:
+      NotificationItem
   ) {
-
     setSelectedNotification(
       notification
     );
 
-
     setSelectedRole(
       ""
     );
-
 
     setSelectedMarketplace(
       ""
     );
 
+    setRequestAction(
+      null
+    );
+
+    setRequestActionError(
+      null
+    );
+
+    setApprovalResult(
+      null
+    );
+
+    setCopyStatus(
+      "idle"
+    );
 
     setOpenPanel(
       null
     );
-
   }
 
-
   function closeAccessRequest() {
+    if (
+      requestAction !==
+        null
+    ) {
+      return;
+    }
 
     setSelectedNotification(
       null
     );
 
-
     setSelectedRole(
       ""
     );
-
 
     setSelectedMarketplace(
       ""
     );
 
+    setRequestActionError(
+      null
+    );
+
+    setApprovalResult(
+      null
+    );
+
+    setCopyStatus(
+      "idle"
+    );
   }
 
-
-  // ==========================================================
-  // ROLE CHANGE
-  // ==========================================================
-
   function changeRole(
-    role: WorkingRole
+    role:
+      WorkingRole
   ) {
-
     setSelectedRole(
       role
     );
 
+    setRequestActionError(
+      null
+    );
 
     if (
       role !==
-      "category_manager"
+        "category_manager"
     ) {
+      setSelectedMarketplace(
+        ""
+      );
+    }
+  }
+
+  async function handleApproveAccessRequest() {
+    if (
+      !selectedNotification
+      ||
+      requestAction !==
+        null
+    ) {
+      return;
+    }
+
+    if (
+      selectedRole ===
+        ""
+    ) {
+      setRequestActionError(
+        "Выберите рабочую роль"
+      );
+
+      return;
+    }
+
+    if (
+      selectedRole ===
+        "category_manager"
+      &&
+      selectedMarketplace ===
+        ""
+    ) {
+      setRequestActionError(
+        "Выберите маркетплейс для категорийного менеджера"
+      );
+
+      return;
+    }
+
+    setRequestAction(
+      "approve"
+    );
+
+    setRequestActionError(
+      null
+    );
+
+    try {
+      const result =
+        await approveAccessRequest({
+          requestId:
+            selectedNotification.id,
+
+          systemRole:
+            selectedRole,
+
+          categoryMarketplace:
+            selectedRole ===
+              "category_manager"
+
+              ? selectedMarketplace
+
+              : null,
+        });
+
+      if (
+        !result.ok
+      ) {
+        setRequestActionError(
+          result.error
+        );
+
+        return;
+      }
+
+      setNotifications(
+        current =>
+          current.filter(
+            notification =>
+              notification.id !==
+                selectedNotification.id
+          )
+      );
+
+      setApprovalResult({
+        email:
+          result.email,
+
+        fullName:
+          result.fullName,
+
+        temporaryPassword:
+          result.temporaryPassword,
+      });
+
+      setCopyStatus(
+        "idle"
+      );
+    } catch {
+      setRequestActionError(
+        "Не удалось одобрить заявку"
+      );
+    } finally {
+      setRequestAction(
+        null
+      );
+    }
+  }
+
+  async function handleRejectAccessRequest() {
+    if (
+      !selectedNotification
+      ||
+      requestAction !==
+        null
+    ) {
+      return;
+    }
+
+    setRequestAction(
+      "reject"
+    );
+
+    setRequestActionError(
+      null
+    );
+
+    try {
+      const result =
+        await rejectAccessRequest(
+          selectedNotification.id
+        );
+
+      if (
+        !result.ok
+      ) {
+        setRequestActionError(
+          result.error
+        );
+
+        return;
+      }
+
+      const processedRequestId =
+        selectedNotification.id;
+
+      setNotifications(
+        current =>
+          current.filter(
+            notification =>
+              notification.id !==
+                processedRequestId
+          )
+      );
+
+      setSelectedNotification(
+        null
+      );
+
+      setSelectedRole(
+        ""
+      );
 
       setSelectedMarketplace(
         ""
       );
 
-    }
+      setRequestActionError(
+        null
+      );
 
+      setApprovalResult(
+        null
+      );
+
+      setCopyStatus(
+        "idle"
+      );
+    } catch {
+      setRequestActionError(
+        "Не удалось отклонить заявку"
+      );
+    } finally {
+      setRequestAction(
+        null
+      );
+    }
   }
 
+  async function copyTemporaryPassword() {
+    if (
+      !approvalResult
+    ) {
+      return;
+    }
+
+    try {
+      await navigator
+        .clipboard
+        .writeText(
+          approvalResult
+            .temporaryPassword
+        );
+
+      setCopyStatus(
+        "copied"
+      );
+    } catch {
+      setCopyStatus(
+        "error"
+      );
+    }
+  }
 
   const unreadCount =
     notifications.length;
 
+  const canApprove =
+    selectedRole !==
+      ""
+    &&
+    (
+      selectedRole !==
+        "category_manager"
+      ||
+      selectedMarketplace !==
+        ""
+    )
+    &&
+    requestAction ===
+      null;
 
   // ==========================================================
-  // ACCESS REQUEST MODAL
+  // MODAL RENDER
   // ==========================================================
 
   const accessRequestModal =
@@ -1193,437 +1268,634 @@ export default function HomeHeaderActions() {
       "undefined"
 
       ? createPortal(
-
           <div
             className={
               styles.modalOverlay
             }
-
             onMouseDown={
               event => {
-
                 if (
                   event.target ===
-                  event.currentTarget
+                    event.currentTarget
+                  &&
+                  requestAction ===
+                    null
                 ) {
-
                   closeAccessRequest();
-
                 }
-
               }
             }
           >
-
             <div
               className={
                 styles.modal
               }
-
               role="dialog"
-
               aria-modal="true"
-
               aria-labelledby=
                 "access-request-title"
             >
-
               <button
                 type="button"
-
                 className={
                   styles.closeButton
                 }
-
-                aria-label=
-                  "Закрыть"
-
+                aria-label="Закрыть"
                 onClick={
                   closeAccessRequest
+                }
+                disabled={
+                  requestAction !==
+                    null
                 }
               >
                 <CloseIcon />
               </button>
 
+              {
+                approvalResult
 
-              <div
-                className={
-                  styles.modalHeader
-                }
-              >
+                  ? (
+                    <>
+                      <div
+                        className={
+                          styles.modalHeader
+                        }
+                      >
+                        <h2
+                          id=
+                            "access-request-title"
+                        >
+                          Доступ одобрен
+                        </h2>
 
-                <h2
-                  id="access-request-title"
-                >
-                  Запрос доступа
-                </h2>
+                        <p>
+                          Учётная запись создана.
+                          Передайте сотруднику email
+                          и временный пароль.
+                        </p>
+                      </div>
 
-
-                <p>
-                  Проверьте данные сотрудника
-                  и назначьте ему рабочую роль.
-                </p>
-
-              </div>
-
-
-              <div
-                className={
-                  styles.requestInfo
-                }
-              >
-
-                <div
-                  className={
-                    styles.requestRow
-                  }
-                >
-
-                  <span
-                    className={
-                      styles.requestLabel
-                    }
-                  >
-                    Сотрудник
-                  </span>
-
-
-                  <span
-                    className={
-                      styles.requestValue
-                    }
-                  >
-                    {
-                      selectedNotification
-                        .request
-                        .firstName
-                    }
-                    {" "}
-                    {
-                      selectedNotification
-                        .request
-                        .lastName
-                    }
-                  </span>
-
-                </div>
-
-
-                <div
-                  className={
-                    styles.requestRow
-                  }
-                >
-
-                  <span
-                    className={
-                      styles.requestLabel
-                    }
-                  >
-                    Email
-                  </span>
-
-
-                  <span
-                    className={
-                      styles.requestValue
-                    }
-                  >
-                    {
-                      selectedNotification
-                        .request
-                        .email
-                    }
-                  </span>
-
-                </div>
-
-
-                <div
-                  className={
-                    styles.requestRow
-                  }
-                >
-
-                  <span
-                    className={
-                      styles.requestLabel
-                    }
-                  >
-                    Отдел
-                  </span>
-
-
-                  <span
-                    className={
-                      styles.requestValue
-                    }
-                  >
-                    {
-                      selectedNotification
-                        .request
-                        .department
-                      ||
-                      "Не указан"
-                    }
-                  </span>
-
-                </div>
-
-
-                <div
-                  className={
-                    styles.requestRow
-                  }
-                >
-
-                  <span
-                    className={
-                      styles.requestLabel
-                    }
-                  >
-                    Комментарий
-                  </span>
-
-
-                  <span
-                    className={
-                      styles.requestValue
-                    }
-                  >
-                    {
-                      selectedNotification
-                        .request
-                        .comment
-                      ||
-                      "Нет"
-                    }
-                  </span>
-
-                </div>
-
-              </div>
-
-
-              <div
-                className={
-                  styles.roleForm
-                }
-              >
-
-                <div
-                  className={
-                    styles.field
-                  }
-                >
-
-                  <label
-                    htmlFor=
-                      "access-request-role"
-                  >
-                    Рабочая роль *
-                  </label>
-
-
-                  <select
-                    id=
-                      "access-request-role"
-
-                    value={
-                      selectedRole
-                    }
-
-                    onChange={
-                      event =>
-                        changeRole(
-                          getWorkingRole(
-                            event.currentTarget.value
-                          )
-                        )
-                    }
-                  >
-
-                    {WORKING_ROLES.map(
-                      role => (
-
-                        <option
-                          key={
-                            role.value
-                            ||
-                            "empty"
-                          }
-
-                          value={
-                            role.value
+                      <div
+                        className={
+                          styles.successBox
+                        }
+                      >
+                        <div
+                          className={
+                            styles.successTitle
                           }
                         >
-                          {
-                            role.label
+                          Сотрудник создан
+                        </div>
+
+                        <div
+                          className={
+                            styles.credentialRow
                           }
-                        </option>
+                        >
+                          <span
+                            className={
+                              styles.credentialLabel
+                            }
+                          >
+                            Сотрудник
+                          </span>
 
-                      )
-                    )}
+                          <strong
+                            className={
+                              styles.credentialValue
+                            }
+                          >
+                            {
+                              approvalResult
+                                .fullName
+                            }
+                          </strong>
+                        </div>
 
-                  </select>
+                        <div
+                          className={
+                            styles.credentialRow
+                          }
+                        >
+                          <span
+                            className={
+                              styles.credentialLabel
+                            }
+                          >
+                            Email
+                          </span>
 
-                </div>
+                          <strong
+                            className={
+                              styles.credentialValue
+                            }
+                          >
+                            {
+                              approvalResult
+                                .email
+                            }
+                          </strong>
+                        </div>
 
+                        <div
+                          className={
+                            styles.passwordBlock
+                          }
+                        >
+                          <span
+                            className={
+                              styles.credentialLabel
+                            }
+                          >
+                            Временный пароль
+                          </span>
 
-                {selectedRole ===
-                  "category_manager"
-                  &&
-                  (
-
-                    <div
-                      className={
-                        styles.field
-                      }
-                    >
-
-                      <label
-                        htmlFor=
-                          "access-request-marketplace"
-                      >
-                        Маркетплейс *
-                      </label>
-
-
-                      <select
-                        id=
-                          "access-request-marketplace"
-
-                        value={
-                          selectedMarketplace
-                        }
-
-                        onChange={
-                          event =>
-                            setSelectedMarketplace(
-                              getCategoryMarketplace(
-                                event.currentTarget.value
-                              )
-                            )
-                        }
-                      >
-
-                        {MARKETPLACES.map(
-                          marketplace => (
-
-                            <option
-                              key={
-                                marketplace.value
-                                ||
-                                "empty"
-                              }
-
-                              value={
-                                marketplace.value
+                          <div
+                            className={
+                              styles.passwordLine
+                            }
+                          >
+                            <code
+                              className={
+                                styles.passwordValue
                               }
                             >
                               {
-                                marketplace.label
+                                approvalResult
+                                  .temporaryPassword
                               }
-                            </option>
+                            </code>
 
+                            <button
+                              type="button"
+                              className={
+                                styles.copyButton
+                              }
+                              onClick={
+                                copyTemporaryPassword
+                              }
+                            >
+                              {
+                                copyStatus ===
+                                  "copied"
+
+                                  ? "Скопировано"
+
+                                  : copyStatus ===
+                                      "error"
+
+                                    ? "Ошибка копирования"
+
+                                    : "Копировать"
+                              }
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div
+                        className={
+                          styles.warningNote
+                        }
+                      >
+                        Этот временный пароль
+                        показывается здесь только
+                        сейчас. После первого входа
+                        сотрудник будет обязан
+                        создать собственный пароль.
+                      </div>
+
+                      <div
+                        className={
+                          styles.footer
+                        }
+                      >
+                        <span
+                          className={
+                            styles.footerHint
+                          }
+                        >
+                          После закрытия окна
+                          временный пароль повторно
+                          в WorkSpace показан не будет.
+                        </span>
+
+                        <button
+                          type="button"
+                          className={
+                            styles.closeFooterButton
+                          }
+                          onClick={
+                            closeAccessRequest
+                          }
+                        >
+                          Закрыть
+                        </button>
+                      </div>
+                    </>
+                  )
+
+                  : (
+                    <>
+                      <div
+                        className={
+                          styles.modalHeader
+                        }
+                      >
+                        <h2
+                          id=
+                            "access-request-title"
+                        >
+                          Запрос доступа
+                        </h2>
+
+                        <p>
+                          Проверьте данные сотрудника
+                          и назначьте ему рабочую роль.
+                        </p>
+                      </div>
+
+                      <div
+                        className={
+                          styles.requestInfo
+                        }
+                      >
+                        <div
+                          className={
+                            styles.requestRow
+                          }
+                        >
+                          <span
+                            className={
+                              styles.requestLabel
+                            }
+                          >
+                            Сотрудник
+                          </span>
+
+                          <span
+                            className={
+                              styles.requestValue
+                            }
+                          >
+                            {
+                              selectedNotification
+                                .request
+                                .firstName
+                            }
+                            {" "}
+                            {
+                              selectedNotification
+                                .request
+                                .lastName
+                            }
+                          </span>
+                        </div>
+
+                        <div
+                          className={
+                            styles.requestRow
+                          }
+                        >
+                          <span
+                            className={
+                              styles.requestLabel
+                            }
+                          >
+                            Email
+                          </span>
+
+                          <span
+                            className={
+                              styles.requestValue
+                            }
+                          >
+                            {
+                              selectedNotification
+                                .request
+                                .email
+                            }
+                          </span>
+                        </div>
+
+                        <div
+                          className={
+                            styles.requestRow
+                          }
+                        >
+                          <span
+                            className={
+                              styles.requestLabel
+                            }
+                          >
+                            Отдел
+                          </span>
+
+                          <span
+                            className={
+                              styles.requestValue
+                            }
+                          >
+                            {
+                              selectedNotification
+                                .request
+                                .department
+                              ||
+                              "Не указан"
+                            }
+                          </span>
+                        </div>
+
+                        <div
+                          className={
+                            styles.requestRow
+                          }
+                        >
+                          <span
+                            className={
+                              styles.requestLabel
+                            }
+                          >
+                            Комментарий
+                          </span>
+
+                          <span
+                            className={
+                              styles.requestValue
+                            }
+                          >
+                            {
+                              selectedNotification
+                                .request
+                                .comment
+                              ||
+                              "Нет"
+                            }
+                          </span>
+                        </div>
+                      </div>
+
+                      <div
+                        className={
+                          styles.roleForm
+                        }
+                      >
+                        <div
+                          className={
+                            styles.field
+                          }
+                        >
+                          <label
+                            htmlFor=
+                              "access-request-role"
+                          >
+                            Рабочая роль *
+                          </label>
+
+                          <select
+                            id=
+                              "access-request-role"
+                            value={
+                              selectedRole
+                            }
+                            onChange={
+                              event =>
+                                changeRole(
+                                  getWorkingRole(
+                                    event
+                                      .currentTarget
+                                      .value
+                                  )
+                                )
+                            }
+                            disabled={
+                              requestAction !==
+                                null
+                            }
+                          >
+                            {
+                              WORKING_ROLES.map(
+                                role => (
+                                  <option
+                                    key={
+                                      role.value
+                                      ||
+                                      "empty"
+                                    }
+                                    value={
+                                      role.value
+                                    }
+                                  >
+                                    {
+                                      role.label
+                                    }
+                                  </option>
+                                )
+                              )
+                            }
+                          </select>
+                        </div>
+
+                        {
+                          selectedRole ===
+                            "category_manager"
+                          &&
+                          (
+                            <div
+                              className={
+                                styles.field
+                              }
+                            >
+                              <label
+                                htmlFor=
+                                  "access-request-marketplace"
+                              >
+                                Маркетплейс *
+                              </label>
+
+                              <select
+                                id=
+                                  "access-request-marketplace"
+                                value={
+                                  selectedMarketplace
+                                }
+                                onChange={
+                                  event => {
+                                    setSelectedMarketplace(
+                                      getCategoryMarketplace(
+                                        event
+                                          .currentTarget
+                                          .value
+                                      )
+                                    );
+
+                                    setRequestActionError(
+                                      null
+                                    );
+                                  }
+                                }
+                                disabled={
+                                  requestAction !==
+                                    null
+                                }
+                              >
+                                {
+                                  MARKETPLACES.map(
+                                    marketplace => (
+                                      <option
+                                        key={
+                                          marketplace.value
+                                          ||
+                                          "empty"
+                                        }
+                                        value={
+                                          marketplace.value
+                                        }
+                                      >
+                                        {
+                                          marketplace.label
+                                        }
+                                      </option>
+                                    )
+                                  )
+                                }
+                              </select>
+                            </div>
                           )
-                        )}
+                        }
 
-                      </select>
+                        <div
+                          className={
+                            styles.adminNote
+                          }
+                        >
+                          <strong>
+                            Административные права:
+                          </strong>
+                          {" "}
+                          не выдаются при обычном
+                          одобрении заявки.
+                        </div>
+                      </div>
 
-                    </div>
+                      {
+                        requestActionError
+                        &&
+                        (
+                          <div
+                            className={
+                              styles.actionError
+                            }
+                            role="alert"
+                          >
+                            {
+                              requestActionError
+                            }
+                          </div>
+                        )
+                      }
 
-                  )}
+                      <div
+                        className={
+                          styles.footer
+                        }
+                      >
+                        <span
+                          className={
+                            styles.footerHint
+                          }
+                        >
+                          При одобрении будет создана
+                          учётная запись с временным
+                          паролем и выбранной ролью.
+                        </span>
 
+                        <div
+                          className={
+                            styles.footerActions
+                          }
+                        >
+                          <button
+                            type="button"
+                            className={
+                              styles.rejectButton
+                            }
+                            onClick={
+                              handleRejectAccessRequest
+                            }
+                            disabled={
+                              requestAction !==
+                                null
+                            }
+                          >
+                            {
+                              requestAction ===
+                                "reject"
 
-                <div
-                  className={
-                    styles.adminNote
-                  }
-                >
+                                ? "Отклоняем..."
 
-                  <strong>
-                    Административные права:
-                  </strong>
-                  {" "}
-                  не выдаются при обычном
-                  одобрении заявки.
+                                : "Отклонить"
+                            }
+                          </button>
 
-                </div>
+                          <button
+                            type="button"
+                            className={
+                              styles.approveButton
+                            }
+                            onClick={
+                              handleApproveAccessRequest
+                            }
+                            disabled={
+                              !canApprove
+                            }
+                          >
+                            {
+                              requestAction ===
+                                "approve"
 
-              </div>
+                                ? "Одобряем..."
 
-
-              <div
-                className={
-                  styles.footer
-                }
-              >
-
-                <span
-                  className={
-                    styles.footerHint
-                  }
-                >
-                  На следующем шаге подключим
-                  реальные действия
-                  «Отклонить» и «Одобрить»
-                  с приглашением сотрудника.
-                </span>
-
-
-                <button
-                  type="button"
-
-                  className={
-                    styles.closeFooterButton
-                  }
-
-                  onClick={
-                    closeAccessRequest
-                  }
-                >
-                  Закрыть
-                </button>
-
-              </div>
-
+                                : "Одобрить"
+                            }
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )
+              }
             </div>
-
           </div>,
-
           document.body
-
         )
 
       : null;
-
 
   // ==========================================================
   // RENDER
   // ==========================================================
 
   return (
-
     <>
-
       <div
-        className="home-topbar-right"
-        ref={actionsRef}
+        className=
+          "home-topbar-right"
+        ref={
+          actionsRef
+        }
       >
-
-
         {/* ====================================================
             NOTIFICATIONS
         ==================================================== */}
 
         <div
-          className="home-action-wrapper"
+          className=
+            "home-action-wrapper"
         >
-
           <button
             type="button"
-
             className={
               openPanel ===
                 "notifications"
@@ -1632,256 +1904,224 @@ export default function HomeHeaderActions() {
 
                 : "home-icon-button"
             }
-
-            aria-label="Уведомления"
-
+            aria-label=
+              "Уведомления"
             aria-expanded={
               openPanel ===
                 "notifications"
             }
-
             onClick={
               toggleNotifications
             }
           >
-
             <BellIcon />
 
-
-            {unreadCount > 0 && (
-
-              <span
-                className=
-                  "home-notification-badge"
-              >
-                {unreadCount}
-              </span>
-
-            )}
-
+            {
+              unreadCount > 0
+              &&
+              (
+                <span
+                  className=
+                    "home-notification-badge"
+                >
+                  {
+                    unreadCount
+                  }
+                </span>
+              )
+            }
           </button>
 
-
-          {openPanel ===
-            "notifications"
+          {
+            openPanel ===
+              "notifications"
             &&
             (
-
               <div
                 className="
                   home-popup
                   home-notifications-popup
                 "
               >
-
                 <div
                   className=
                     "home-popup-header"
                 >
-
                   <strong>
                     Уведомления
                   </strong>
-
                 </div>
 
-
-                {notificationsLoading
+                {
+                  notificationsLoading
                   &&
                   notifications.length ===
                     0
-                  ? (
 
-                    <div
-                      className="
-                        home-notifications-empty
-                      "
-                    >
-
+                    ? (
                       <div
                         className="
-                          home-notifications-empty-icon
+                          home-notifications-empty
                         "
                       >
-                        <BellIcon />
+                        <div
+                          className="
+                            home-notifications-empty-icon
+                          "
+                        >
+                          <BellIcon />
+                        </div>
+
+                        <strong>
+                          Загружаем
+                        </strong>
+
+                        <span>
+                          Проверяем новые
+                          уведомления.
+                        </span>
                       </div>
+                    )
 
+                    : notificationsError
+                      &&
+                      notifications.length ===
+                        0
 
-                      <strong>
-                        Загружаем
-                      </strong>
-
-
-                      <span>
-                        Проверяем новые
-                        уведомления.
-                      </span>
-
-                    </div>
-
-                  )
-                  :
-                  notificationsError
-                  &&
-                  notifications.length ===
-                    0
-                  ? (
-
-                    <div
-                      className="
-                        home-notifications-empty
-                      "
-                    >
-
-                      <div
-                        className="
-                          home-notifications-empty-icon
-                        "
-                      >
-                        <BellIcon />
-                      </div>
-
-
-                      <strong>
-                        Не удалось загрузить
-                      </strong>
-
-
-                      <span>
-                        {
-                          notificationsError
-                        }
-                      </span>
-
-                    </div>
-
-                  )
-                  :
-                  notifications.length ===
-                    0
-                  ? (
-
-                    <div
-                      className="
-                        home-notifications-empty
-                      "
-                    >
-
-                      <div
-                        className="
-                          home-notifications-empty-icon
-                        "
-                      >
-                        <BellIcon />
-                      </div>
-
-
-                      <strong>
-                        Уведомлений нет
-                      </strong>
-
-
-                      <span>
-                        Здесь появятся новые
-                        системные уведомления.
-                      </span>
-
-                    </div>
-
-                  )
-                  : (
-
-                    <div
-                      className="
-                        home-notifications-list
-                      "
-                    >
-
-                      {notifications.map(
-                        notification => (
-
-                          <button
-                            key={
-                              notification.id
-                            }
-
-                            type="button"
-
-                            className={`
-                              home-notification-item
-                              ${styles.notificationButton}
-                            `}
-
-                            onClick={
-                              () =>
-                                openAccessRequest(
-                                  notification
-                                )
-                            }
+                      ? (
+                        <div
+                          className="
+                            home-notifications-empty
+                          "
+                        >
+                          <div
+                            className="
+                              home-notifications-empty-icon
+                            "
                           >
+                            <BellIcon />
+                          </div>
+
+                          <strong>
+                            Не удалось загрузить
+                          </strong>
+
+                          <span>
+                            {
+                              notificationsError
+                            }
+                          </span>
+                        </div>
+                      )
+
+                      : notifications.length ===
+                          0
+
+                        ? (
+                          <div
+                            className="
+                              home-notifications-empty
+                            "
+                          >
+                            <div
+                              className="
+                                home-notifications-empty-icon
+                              "
+                            >
+                              <BellIcon />
+                            </div>
 
                             <strong>
-                              {
-                                notification.title
-                              }
+                              Уведомлений нет
                             </strong>
 
-
                             <span>
-                              {
-                                notification.text
-                              }
+                              Здесь появятся новые
+                              системные уведомления.
                             </span>
+                          </div>
+                        )
 
+                        : (
+                          <div
+                            className="
+                              home-notifications-list
+                            "
+                          >
+                            {
+                              notifications.map(
+                                notification => (
+                                  <button
+                                    key={
+                                      notification.id
+                                    }
+                                    type="button"
+                                    className={`
+                                      home-notification-item
+                                      ${styles.notificationButton}
+                                    `}
+                                    onClick={
+                                      () =>
+                                        openAccessRequest(
+                                          notification
+                                        )
+                                    }
+                                  >
+                                    <strong>
+                                      {
+                                        notification.title
+                                      }
+                                    </strong>
 
-                            <span>
-                              {
-                                notification
-                                  .request
-                                  .email
-                              }
+                                    <span>
+                                      {
+                                        notification.text
+                                      }
+                                    </span>
 
-                              {
-                                notification.createdAt
+                                    <span>
+                                      {
+                                        notification
+                                          .request
+                                          .email
+                                      }
 
-                                  ? ` · ${
-                                      formatNotificationTime(
+                                      {
                                         notification
                                           .createdAt
-                                      )
-                                    }`
 
-                                  : ""
-                              }
-                            </span>
+                                          ? ` · ${
+                                              formatNotificationTime(
+                                                notification
+                                                  .createdAt
+                                              )
+                                            }`
 
-                          </button>
-
+                                          : ""
+                                      }
+                                    </span>
+                                  </button>
+                                )
+                              )
+                            }
+                          </div>
                         )
-                      )}
-
-                    </div>
-
-                  )}
-
+                }
               </div>
-
-            )}
-
+            )
+          }
         </div>
-
 
         {/* ====================================================
             CALENDAR
         ==================================================== */}
 
         <div
-          className="home-action-wrapper"
+          className=
+            "home-action-wrapper"
         >
-
           <button
             type="button"
-
             className={
               openPanel ===
                 "calendar"
@@ -1890,14 +2130,12 @@ export default function HomeHeaderActions() {
 
                 : "home-icon-button"
             }
-
-            aria-label="Календарь"
-
+            aria-label=
+              "Календарь"
             aria-expanded={
               openPanel ===
                 "calendar"
             }
-
             onClick={
               () =>
                 setOpenPanel(
@@ -1911,52 +2149,40 @@ export default function HomeHeaderActions() {
                 )
             }
           >
-
             <CalendarIcon />
-
           </button>
 
-
-          {openPanel ===
-            "calendar"
+          {
+            openPanel ===
+              "calendar"
             &&
             (
-
               <div
                 className="
                   home-popup
                   home-calendar-popup
                 "
               >
-
                 <div
                   className="
                     home-calendar-header
                   "
                 >
-
                   <button
                     type="button"
-
                     className="
                       home-calendar-arrow
                     "
-
                     aria-label=
                       "Предыдущий месяц"
-
                     onClick={
                       showPreviousMonth
                     }
                   >
-
                     <ArrowLeftIcon />
-
                   </button>
 
-
                   <strong>
-
                     {
                       MONTH_NAMES[
                         visibleMonth
@@ -1970,172 +2196,135 @@ export default function HomeHeaderActions() {
                       visibleMonth
                         .getFullYear()
                     }
-
                   </strong>
-
 
                   <button
                     type="button"
-
                     className="
                       home-calendar-arrow
                     "
-
                     aria-label=
                       "Следующий месяц"
-
                     onClick={
                       showNextMonth
                     }
                   >
-
                     <ArrowRightIcon />
-
                   </button>
-
                 </div>
-
 
                 <div
                   className="
                     home-calendar-weekdays
                   "
                 >
-
-                  {WEEK_DAYS.map(
-                    day => (
-
-                      <span
-                        key={
-                          day
-                        }
-                      >
-                        {day}
-                      </span>
-
+                  {
+                    WEEK_DAYS.map(
+                      day => (
+                        <span
+                          key={
+                            day
+                          }
+                        >
+                          {
+                            day
+                          }
+                        </span>
+                      )
                     )
-                  )}
-
+                  }
                 </div>
-
 
                 <div
                   className="
                     home-calendar-grid
                   "
                 >
+                  {
+                    calendarCells.map(
+                      (
+                        date,
+                        index
+                      ) => {
+                        if (
+                          !date
+                        ) {
+                          return (
+                            <span
+                              key={
+                                `empty-${index}`
+                              }
+                              className="
+                                home-calendar-day
+                                empty
+                              "
+                            />
+                          );
+                        }
 
-                  {calendarCells.map(
-                    (
-                      date,
-                      index
-                    ) => {
-
-                      if (!date) {
+                        const currentDay =
+                          isSameDay(
+                            date,
+                            today
+                          );
 
                         return (
-
-                          <span
+                          <button
                             key={
-                              `empty-${index}`
+                              date.toISOString()
                             }
+                            type="button"
+                            className={
+                              currentDay
 
-                            className="
-                              home-calendar-day
-                              empty
-                            "
-                          />
+                                ? "home-calendar-day today"
 
+                                : "home-calendar-day"
+                            }
+                            aria-current={
+                              currentDay
+
+                                ? "date"
+
+                                : undefined
+                            }
+                          >
+                            {
+                              date.getDate()
+                            }
+                          </button>
                         );
-
                       }
-
-
-                      const currentDay =
-                        isSameDay(
-                          date,
-                          today
-                        );
-
-
-                      return (
-
-                        <button
-                          key={
-                            date.toISOString()
-                          }
-
-                          type="button"
-
-                          className={
-                            currentDay
-
-                              ? `
-                                home-calendar-day
-                                today
-                              `
-
-                              : `
-                                home-calendar-day
-                              `
-                          }
-
-                          aria-current={
-                            currentDay
-                              ? "date"
-                              : undefined
-                          }
-                        >
-
-                          {
-                            date.getDate()
-                          }
-
-                        </button>
-
-                      );
-
-                    }
-                  )}
-
+                    )
+                  }
                 </div>
-
 
                 <button
                   type="button"
-
                   className="
                     home-calendar-today-button
                   "
-
                   onClick={
                     showCurrentMonth
                   }
                 >
-
                   Сегодня,
                   {" "}
-
                   {
                     formatToday(
                       today
                     )
                   }
-
                 </button>
-
               </div>
-
-            )}
-
+            )
+          }
         </div>
-
 
         <div
           className=
             "home-topbar-divider"
         />
-
 
         {/* ====================================================
             THEME
@@ -2143,12 +2332,10 @@ export default function HomeHeaderActions() {
 
         <HomeThemeToggle />
 
-
         <div
           className=
             "home-topbar-divider"
         />
-
 
         {/* ====================================================
             PROFILE
@@ -2156,21 +2343,20 @@ export default function HomeHeaderActions() {
 
         <button
           type="button"
-          className="home-profile"
+          className=
+            "home-profile"
         >
-
           <span
-            className="home-avatar"
+            className=
+              "home-avatar"
           >
             ТС
           </span>
-
 
           <span
             className=
               "home-profile-text"
           >
-
             <strong>
               Тест Сайта
             </strong>
@@ -2178,29 +2364,21 @@ export default function HomeHeaderActions() {
             <span>
               Аналитик
             </span>
-
           </span>
-
 
           <span
             className="
               home-profile-chevron
             "
           >
-
             <ChevronIcon />
-
           </span>
-
         </button>
-
       </div>
 
-
-      {accessRequestModal}
-
+      {
+        accessRequestModal
+      }
     </>
-
   );
-
 }
