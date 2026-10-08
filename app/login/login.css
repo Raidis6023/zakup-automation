@@ -171,14 +171,11 @@
 }
 
 
-.login-field input {
+.login-field input,
+.login-field textarea {
+  box-sizing: border-box;
+
   width: 100%;
-
-  height: 48px;
-
-  padding:
-    0
-    14px;
 
   border:
     1px solid
@@ -194,6 +191,8 @@
   color:
     #f5f8fb;
 
+  font-family: inherit;
+
   font-size: 14px;
 
   transition:
@@ -203,13 +202,37 @@
 }
 
 
-.login-field input::placeholder {
+.login-field input {
+  height: 48px;
+
+  padding:
+    0
+    14px;
+}
+
+
+.login-field textarea {
+  min-height: 92px;
+
+  padding:
+    12px
+    14px;
+
+  resize: vertical;
+
+  line-height: 1.45;
+}
+
+
+.login-field input::placeholder,
+.login-field textarea::placeholder {
   color:
     #697b8b;
 }
 
 
-.login-field input:focus {
+.login-field input:focus,
+.login-field textarea:focus {
   border-color:
     var(--login-blue);
 
@@ -224,7 +247,8 @@
 }
 
 
-.login-field input:disabled {
+.login-field input:disabled,
+.login-field textarea:disabled {
   opacity: 0.7;
 
   cursor: not-allowed;
@@ -351,7 +375,7 @@
 
 
 /* ============================================================
-   BUTTON
+   LOGIN BUTTON
    ============================================================ */
 
 .login-submit {
@@ -428,8 +452,7 @@
 .login-forgot-password {
   align-self: center;
 
-  padding:
-    0;
+  padding: 0;
 
   border: none;
 
@@ -446,51 +469,499 @@
 
 
 /* ============================================================
-   ACCESS
+   ACCESS REQUEST BUTTON
    ============================================================ */
 
-.login-access-note {
+.login-access-section {
   display: flex;
 
   align-items: center;
 
   flex-direction: column;
 
-  gap: 5px;
+  gap: 10px;
 
-  margin-top: 26px;
+  margin-top: 8px;
 
   padding-top: 22px;
 
   border-top:
     1px solid
     #29343e;
+}
+
+
+.login-access-caption {
+  color:
+    #7f93a5;
+
+  font-size: 12px;
+}
+
+
+.login-access-button {
+  width: 100%;
+
+  height: 46px;
+
+  padding:
+    0
+    16px;
+
+  border:
+    1px solid
+    #3b5268;
+
+  border-radius: 10px;
+
+  background:
+    #1a232c;
+
+  color:
+    #dceaf6;
+
+  font-size: 13px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+
+.login-access-button:hover:not(:disabled) {
+  border-color:
+    #477eae;
+
+  background:
+    #202d38;
+
+  color:
+    #ffffff;
+}
+
+
+.login-access-button:disabled {
+  opacity: 0.6;
+
+  cursor: not-allowed;
+}
+
+
+/* ============================================================
+   ACCESS MODAL
+   ============================================================ */
+
+.access-modal-overlay {
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 1000;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  padding: 24px;
+
+  background:
+    rgba(
+      4,
+      8,
+      12,
+      0.72
+    );
+
+  backdrop-filter:
+    blur(6px);
+}
+
+
+.access-modal {
+  position: relative;
+
+  width: 100%;
+
+  max-width: 560px;
+
+  max-height:
+    calc(
+      100vh - 48px
+    );
+
+  overflow-y: auto;
+
+  padding:
+    30px;
+
+  border:
+    1px solid
+    #334454;
+
+  border-radius: 18px;
+
+  background:
+    #181f26;
+
+  box-shadow:
+    0 30px 90px
+    rgba(
+      0,
+      0,
+      0,
+      0.5
+    );
+}
+
+
+.access-modal-close {
+  position: absolute;
+
+  top: 14px;
+
+  right: 14px;
+
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  width: 36px;
+
+  height: 36px;
+
+  padding: 0;
+
+  border: none;
+
+  border-radius: 8px;
+
+  background:
+    transparent;
+
+  color:
+    #8195a6;
+
+  cursor: pointer;
+}
+
+
+.access-modal-close:hover:not(:disabled) {
+  background:
+    #222c35;
+
+  color:
+    #ffffff;
+}
+
+
+.access-modal-close:disabled {
+  opacity: 0.5;
+
+  cursor: not-allowed;
+}
+
+
+.access-modal-close svg {
+  width: 20px;
+
+  height: 20px;
+
+  fill: none;
+
+  stroke:
+    currentColor;
+
+  stroke-width: 1.8;
+
+  stroke-linecap: round;
+}
+
+
+/* ============================================================
+   ACCESS MODAL HEADING
+   ============================================================ */
+
+.access-modal-heading {
+  padding-right: 42px;
+
+  margin-bottom: 24px;
+}
+
+
+.access-modal-heading h2 {
+  margin:
+    0
+    0
+    8px;
+
+  color:
+    #ffffff;
+
+  font-size: 23px;
+
+  line-height: 1.25;
+}
+
+
+.access-modal-heading p {
+  max-width: 430px;
+
+  margin: 0;
+
+  color:
+    #879aaa;
+
+  font-size: 13px;
+
+  line-height: 1.55;
+}
+
+
+/* ============================================================
+   ACCESS FORM
+   ============================================================ */
+
+.access-request-form {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 18px;
+}
+
+
+.access-name-grid {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 1fr);
+
+  gap: 14px;
+}
+
+
+.access-comment-field {
+  margin-top: 2px;
+}
+
+
+/* ============================================================
+   ACCESS MODAL ACTIONS
+   ============================================================ */
+
+.access-modal-actions {
+  display: flex;
+
+  justify-content: flex-end;
+
+  gap: 10px;
+
+  margin-top: 4px;
+}
+
+
+.access-primary-button,
+.access-secondary-button {
+  min-height: 44px;
+
+  padding:
+    0
+    18px;
+
+  border-radius: 9px;
+
+  font-size: 13px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+
+.access-primary-button {
+  border:
+    1px solid
+    var(--login-blue);
+
+  background:
+    var(--login-blue);
+
+  color:
+    #ffffff;
+}
+
+
+.access-primary-button:hover:not(:disabled) {
+  background:
+    var(--login-blue-hover);
+
+  border-color:
+    var(--login-blue-hover);
+}
+
+
+.access-secondary-button {
+  border:
+    1px solid
+    #3a4a58;
+
+  background:
+    transparent;
+
+  color:
+    #aebdca;
+}
+
+
+.access-secondary-button:hover:not(:disabled) {
+  background:
+    #222c35;
+
+  color:
+    #ffffff;
+}
+
+
+.access-primary-button:disabled,
+.access-secondary-button:disabled {
+  opacity: 0.6;
+
+  cursor: not-allowed;
+}
+
+
+/* ============================================================
+   ACCESS SUCCESS
+   ============================================================ */
+
+.access-success {
+  display: flex;
+
+  align-items: center;
+
+  flex-direction: column;
+
+  padding:
+    18px
+    8px
+    6px;
 
   text-align: center;
 }
 
 
-.login-access-note span {
-  color:
-    #718496;
+.access-success-icon {
+  display: flex;
 
-  font-size: 12px;
+  align-items: center;
+
+  justify-content: center;
+
+  width: 58px;
+
+  height: 58px;
+
+  margin-bottom: 18px;
+
+  border-radius: 50%;
+
+  background:
+    rgba(
+      51,
+      190,
+      113,
+      0.12
+    );
+
+  color:
+    #68d99b;
+
+  font-size: 27px;
+
+  font-weight: 800;
 }
 
 
-.login-access-note strong {
+.access-success h2 {
+  margin:
+    0
+    0
+    9px;
+
   color:
-    #95a8b9;
+    #ffffff;
 
-  font-size: 12px;
+  font-size: 23px;
+}
 
-  font-weight: 600;
+
+.access-success p {
+  max-width: 360px;
+
+  margin:
+    0
+    0
+    24px;
+
+  color:
+    #879aaa;
+
+  font-size: 13px;
+
+  line-height: 1.55;
+}
+
+
+.access-success-button {
+  min-width: 140px;
 }
 
 
 /* ============================================================
    RESPONSIVE
    ============================================================ */
+
+@media (
+  max-width: 600px
+) {
+
+  .access-name-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+
+  .access-modal {
+    padding:
+      26px
+      20px
+      22px;
+  }
+
+
+  .access-modal-actions {
+    flex-direction:
+      column-reverse;
+  }
+
+
+  .access-primary-button,
+  .access-secondary-button {
+    width: 100%;
+  }
+
+}
+
 
 @media (
   max-width: 520px
@@ -520,6 +991,11 @@
 
   .login-heading h1 {
     font-size: 24px;
+  }
+
+
+  .access-modal-overlay {
+    padding: 12px;
   }
 
 }
