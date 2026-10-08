@@ -89,8 +89,7 @@ type FboPosting = {
     cluster_from?: string | null;
     cluster_to?: string | null;
 
-    [key: string]:
-      unknown;
+    [key: string]: unknown;
   } | null;
 };
 
@@ -100,16 +99,14 @@ type OzonProductInfoItem = {
   sku?: number | string;
   name?: string;
 
-  [key: string]:
-    unknown;
+  [key: string]: unknown;
 };
 
 type OzonCatalogItem = {
   product_id?: number | string;
   offer_id?: string;
 
-  [key: string]:
-    unknown;
+  [key: string]: unknown;
 };
 
 type AnalyticsStock = {
@@ -118,111 +115,65 @@ type AnalyticsStock = {
 
   warehouse_id?: number | string;
 
-  warehouse_name?:
-    | string
-    | null;
+  warehouse_name?: string | null;
 
   cluster_id?: number | string;
 
-  cluster_name?:
-    | string
-    | null;
+  cluster_name?: string | null;
 
-  available_stock_count?:
-    number;
+  available_stock_count?: number;
 
-  [key: string]:
-    unknown;
+  [key: string]: unknown;
 };
 
 type SkuResolution = {
   sku: string;
 
-  ozonProductId:
-    | string
-    | null;
+  ozonProductId: string | null;
 
-  ozonOfferId:
-    | string
-    | null;
+  ozonOfferId: string | null;
 
-  product:
-    | ProductRow
-    | null;
+  product: ProductRow | null;
 
-  resolutionReason:
-    string;
+  resolutionReason: string;
 };
 
 type SalesWriteRow = {
   product_id: string;
   cluster_id: string;
-
-  cluster_name:
-    | string
-    | null;
-
+  cluster_name: string | null;
   sale_date: string;
+  sales_quantity: number;
+  cancelled_quantity: number;
 
-  sales_quantity:
-    number;
-
-  cancelled_quantity:
-    number;
-
-  raw_payload:
-    Record<
-      string,
-      unknown
-    >;
+  raw_payload: Record<string, unknown>;
 };
 
 type StockWriteRow = {
   product_id: string;
   cluster_id: string;
-
-  cluster_name:
-    | string
-    | null;
-
+  cluster_name: string | null;
   quantity: number;
 
-  raw_payload:
-    Record<
-      string,
-      unknown
-    >;
+  raw_payload: Record<string, unknown>;
 };
 
 type ApplySyncResult = {
   ok: boolean;
+  sales_sync_run_id: string;
+  date_from: string;
+  date_to: string;
+  completed_days: number;
+  sales_rows_saved: number;
+  snapshot_date: string;
+  stock_rows_saved: number;
+  postings_received: number;
+  cancelled_postings: number;
 
-  sales_sync_run_id:
-    string;
-
-  date_from:
-    string;
-
-  date_to:
-    string;
-
-  completed_days:
-    number;
-
-  sales_rows_saved:
-    number;
-
-  snapshot_date:
-    string;
-
-  stock_rows_saved:
-    number;
-
-  postings_received:
-    number;
-
-  cancelled_postings:
-    number;
+  sales_rows_changed?: number;
+  sales_rows_deleted?: number;
+  stock_rows_changed?: number;
+  stock_rows_deleted?: number;
 };
 
 // ============================================================
@@ -231,9 +182,7 @@ type ApplySyncResult = {
 
 function normalizeKey(
   value: unknown
-):
-string {
-
+): string {
   return String(
     value ?? ""
   ).trim();
@@ -241,9 +190,7 @@ string {
 
 function normalizeClusterNameKey(
   value: unknown
-):
-string {
-
+): string {
   return normalizeKey(
     value
   )
@@ -258,9 +205,7 @@ string {
 
 function toSafeInteger(
   value: unknown
-):
-number {
-
+): number {
   const parsed =
     Number(
       value ?? 0
@@ -271,7 +216,6 @@ number {
       parsed
     )
   ) {
-
     return 0;
   }
 
@@ -286,10 +230,8 @@ number {
 function sleep(
   milliseconds: number
 ) {
-
   return new Promise<void>(
     resolve => {
-
       setTimeout(
         resolve,
         milliseconds
@@ -301,11 +243,8 @@ function sleep(
 function chunkArray<T>(
   rows: T[],
   size: number
-):
-T[][] {
-
-  const result:
-    T[][] =
+): T[][] {
+  const result: T[][] =
     [];
 
   for (
@@ -313,7 +252,6 @@ T[][] {
     index < rows.length;
     index += size
   ) {
-
     result.push(
       rows.slice(
         index,
@@ -330,7 +268,6 @@ T[][] {
 // ============================================================
 
 async function waitForOzonRequestSlot() {
-
   const now =
     Date.now();
 
@@ -347,7 +284,6 @@ async function waitForOzonRequestSlot() {
   if (
     waitMs > 0
   ) {
-
     await sleep(
       waitMs
     );
@@ -362,11 +298,8 @@ async function waitForOzonRequestSlot() {
 // ============================================================
 
 function getMoscowDate(
-  date:
-    Date = new Date()
-):
-string {
-
+  date: Date = new Date()
+): string {
   const formatter =
     new Intl.DateTimeFormat(
       "en-CA",
@@ -418,7 +351,6 @@ string {
     ||
     !day
   ) {
-
     throw new Error(
       "Не удалось определить дату по Москве"
     );
@@ -430,9 +362,7 @@ string {
 function addDays(
   date: string,
   delta: number
-):
-string {
-
+): string {
   const parsed =
     new Date(
       `${date}T00:00:00Z`
@@ -453,14 +383,9 @@ string {
 }
 
 function isoToMoscowDate(
-  value:
-    | string
-    | undefined
-):
-string | null {
-
+  value: string | undefined
+): string | null {
   if (!value) {
-
     return null;
   }
 
@@ -474,7 +399,6 @@ string | null {
       parsed.getTime()
     )
   ) {
-
     return null;
   }
 
@@ -488,7 +412,6 @@ string | null {
 // ============================================================
 
 function getConfig() {
-
   const ozonClientId =
     process.env
       .OZON_CLIENT_ID;
@@ -510,35 +433,30 @@ function getConfig() {
       .CRON_SECRET;
 
   if (!ozonClientId) {
-
     throw new Error(
       "Не найдена переменная OZON_CLIENT_ID"
     );
   }
 
   if (!ozonApiKey) {
-
     throw new Error(
       "Не найдена переменная OZON_API_KEY"
     );
   }
 
   if (!supabaseUrl) {
-
     throw new Error(
       "Не найдена переменная NEXT_PUBLIC_SUPABASE_URL"
     );
   }
 
   if (!supabaseSecretKey) {
-
     throw new Error(
       "Не найдена переменная SUPABASE_SECRET_KEY"
     );
   }
 
   if (!cronSecret) {
-
     throw new Error(
       "Не найдена переменная CRON_SECRET"
     );
@@ -558,11 +476,8 @@ function getConfig() {
 // ============================================================
 
 function isAuthorized(
-  request:
-    Request
-):
-boolean {
-
+  request: Request
+): boolean {
   const {
     cronSecret,
   } =
@@ -584,9 +499,7 @@ boolean {
 async function ozonPost<T>(
   path: string,
   body: unknown
-):
-Promise<T> {
-
+): Promise<T> {
   const {
     ozonClientId,
     ozonApiKey,
@@ -598,7 +511,6 @@ Promise<T> {
     attempt <= OZON_MAX_RETRIES;
     attempt += 1
   ) {
-
     await waitForOzonRequestSlot();
 
     const controller =
@@ -607,14 +519,12 @@ Promise<T> {
     const timeout =
       setTimeout(
         () => {
-
           controller.abort();
         },
         30000
       );
 
     try {
-
       const response =
         await fetch(
           `https://api-seller.ozon.ru${path}`,
@@ -657,16 +567,12 @@ Promise<T> {
         null;
 
       if (text) {
-
         try {
-
           parsed =
             JSON.parse(
               text
             );
-
         } catch {
-
           parsed = {
             raw:
               text,
@@ -682,12 +588,10 @@ Promise<T> {
         response.status ===
         429
       ) {
-
         if (
           attempt ===
           OZON_MAX_RETRIES
         ) {
-
           throw new Error(
             `Ozon API ${path}: HTTP 429: ${JSON.stringify(parsed)}`
           );
@@ -700,11 +604,9 @@ Promise<T> {
 
         const retryAfterSeconds =
           retryAfterHeader
-
             ? Number(
                 retryAfterHeader
               )
-
             : NaN;
 
         const retryAfterMs =
@@ -713,7 +615,6 @@ Promise<T> {
           )
           &&
           retryAfterSeconds > 0
-
             ? Math.max(
                 Math.ceil(
                   retryAfterSeconds
@@ -722,7 +623,6 @@ Promise<T> {
                 ),
                 2000
               )
-
             : OZON_429_FALLBACK_DELAY_MS
               *
               attempt;
@@ -748,7 +648,6 @@ Promise<T> {
         attempt <
         OZON_MAX_RETRIES
       ) {
-
         await sleep(
           RETRY_BASE_MS
           *
@@ -759,7 +658,6 @@ Promise<T> {
       }
 
       if (!response.ok) {
-
         throw new Error(
           `Ozon API ${path}: HTTP ${response.status}: ${JSON.stringify(parsed)}`
         );
@@ -768,7 +666,6 @@ Promise<T> {
       return parsed as T;
 
     } catch (error) {
-
       if (
         error instanceof Error
         &&
@@ -778,7 +675,6 @@ Promise<T> {
         attempt <
         OZON_MAX_RETRIES
       ) {
-
         await sleep(
           RETRY_BASE_MS
           *
@@ -791,7 +687,6 @@ Promise<T> {
       throw error;
 
     } finally {
-
       clearTimeout(
         timeout
       );
@@ -808,17 +703,9 @@ Promise<T> {
 // ============================================================
 
 async function supabaseRpc<T>(
-  functionName:
-    string,
-
-  body:
-    Record<
-      string,
-      unknown
-    >
-):
-Promise<T> {
-
+  functionName: string,
+  body: Record<string, unknown>
+): Promise<T> {
   const {
     supabaseUrl,
     supabaseSecretKey,
@@ -860,14 +747,12 @@ Promise<T> {
     await response.text();
 
   if (!response.ok) {
-
     throw new Error(
       `Supabase RPC ${functionName}: HTTP ${response.status}: ${text}`
     );
   }
 
   if (!text) {
-
     throw new Error(
       `Supabase RPC ${functionName} вернул пустой ответ`
     );
@@ -884,7 +769,6 @@ Promise<T> {
 
 async function getProducts():
 Promise<ProductRow[]> {
-
   const {
     supabaseUrl,
     supabaseSecretKey,
@@ -933,7 +817,6 @@ Promise<ProductRow[]> {
     await response.text();
 
   if (!response.ok) {
-
     throw new Error(
       `Supabase products: HTTP ${response.status}: ${text}`
     );
@@ -949,10 +832,8 @@ Promise<ProductRow[]> {
 // ============================================================
 
 function buildProductIndexes(
-  products:
-    ProductRow[]
+  products: ProductRow[]
 ) {
-
   const byOffer =
     new Map<
       string,
@@ -969,7 +850,6 @@ function buildProductIndexes(
     const product
     of products
   ) {
-
     const offerId =
       normalizeKey(
         product.offer_id
@@ -981,7 +861,6 @@ function buildProductIndexes(
       );
 
     if (offerId) {
-
       byOffer.set(
         offerId,
         product
@@ -989,7 +868,6 @@ function buildProductIndexes(
     }
 
     if (ozonProductId) {
-
       byOzonProductId.set(
         ozonProductId,
         product
@@ -1008,7 +886,6 @@ function buildProductIndexes(
 // ============================================================
 
 async function getOzonClusters() {
-
   const clusterTypes =
     [
       "CLUSTER_TYPE_OZON",
@@ -1030,7 +907,6 @@ async function getOzonClusters() {
     const clusterType
     of clusterTypes
   ) {
-
     const response =
       await ozonPost<{
         clusters?:
@@ -1081,7 +957,6 @@ async function getOzonClusters() {
     const cluster
     of clusters
   ) {
-
     const clusterId =
       normalizeKey(
         cluster.id
@@ -1102,7 +977,6 @@ async function getOzonClusters() {
       &&
       clusterNameKey
     ) {
-
       const existing =
         clusterNameToCluster.get(
           clusterNameKey
@@ -1114,7 +988,6 @@ async function getOzonClusters() {
         existing.clusterId !==
         clusterId
       ) {
-
         ambiguousClusterNameKeys.add(
           clusterNameKey
         );
@@ -1128,7 +1001,6 @@ async function getOzonClusters() {
           clusterNameKey
         )
       ) {
-
         clusterNameToCluster.set(
           clusterNameKey,
           {
@@ -1144,20 +1016,17 @@ async function getOzonClusters() {
       of cluster.logistic_clusters
       ?? []
     ) {
-
       for (
         const warehouse
         of logisticCluster.warehouses
         ?? []
       ) {
-
         const warehouseId =
           normalizeKey(
             warehouse.warehouse_id
           );
 
         if (!warehouseId) {
-
           continue;
         }
 
@@ -1172,7 +1041,6 @@ async function getOzonClusters() {
           existingWarehouse.clusterId !==
           clusterId
         ) {
-
           throw new Error(
             [
               "Ozon вернул warehouse_id в нескольких кластерах",
@@ -1203,13 +1071,9 @@ async function getOzonClusters() {
 
   return {
     clusters,
-
     clusterTypes,
-
     requestsMade,
-
     warehouseToCluster,
-
     clusterNameToCluster,
 
     ambiguousClusterNameKeys:
@@ -1224,13 +1088,9 @@ async function getOzonClusters() {
 // ============================================================
 
 async function getFboPostingsForRange(
-  dateFrom:
-    string,
-
-  dateTo:
-    string
+  dateFrom: string,
+  dateTo: string
 ) {
-
   const allPostings:
     FboPosting[] =
     [];
@@ -1246,7 +1106,6 @@ async function getFboPostingsForRange(
     page <= MAX_FBO_POSTING_PAGES;
     page += 1
   ) {
-
     const response =
       await ozonPost<{
         postings?:
@@ -1305,7 +1164,6 @@ async function getFboPostingsForRange(
     if (
       !response.has_next
     ) {
-
       return {
         postings:
           allPostings,
@@ -1325,7 +1183,6 @@ async function getFboPostingsForRange(
       nextCursor ===
       cursor
     ) {
-
       throw new Error(
         "Ozon вернул has_next=true, но не вернул новый cursor для FBO postings"
       );
@@ -1345,10 +1202,8 @@ async function getFboPostingsForRange(
 // ============================================================
 
 async function getProductInfoBySkus(
-  skus:
-    string[]
+  skus: string[]
 ) {
-
   const uniqueSkus =
     Array.from(
       new Set(
@@ -1376,7 +1231,6 @@ async function getProductInfoBySkus(
       PRODUCT_INFO_BATCH_SIZE
     )
   ) {
-
     const response =
       await ozonPost<{
         items?:
@@ -1415,10 +1269,8 @@ async function getProductInfoBySkus(
 // ============================================================
 
 async function getProductInfoByOfferIds(
-  offerIds:
-    string[]
+  offerIds: string[]
 ) {
-
   const uniqueOfferIds =
     Array.from(
       new Set(
@@ -1446,7 +1298,6 @@ async function getProductInfoByOfferIds(
       PRODUCT_INFO_BATCH_SIZE
     )
   ) {
-
     const response =
       await ozonPost<{
         items?:
@@ -1485,13 +1336,9 @@ async function getProductInfoByOfferIds(
 // ============================================================
 
 function buildSkuResolutions(
-  infoItems:
-    OzonProductInfoItem[],
-
-  products:
-    ProductRow[]
+  infoItems: OzonProductInfoItem[],
+  products: ProductRow[]
 ) {
-
   const {
     byOffer,
     byOzonProductId,
@@ -1508,10 +1355,7 @@ function buildSkuResolutions(
 
   const conflicts:
     Array<
-      Record<
-        string,
-        unknown
-      >
+      Record<string, unknown>
     > =
     [];
 
@@ -1519,14 +1363,12 @@ function buildSkuResolutions(
     const item
     of infoItems
   ) {
-
     const sku =
       normalizeKey(
         item.sku
       );
 
     if (!sku) {
-
       continue;
     }
 
@@ -1548,14 +1390,12 @@ function buildSkuResolutions(
       "unresolved";
 
     if (ozonProductId) {
-
       product =
         byOzonProductId.get(
           ozonProductId
         );
 
       if (product) {
-
         resolutionReason =
           "matched_by_ozon_product_id";
       }
@@ -1566,14 +1406,12 @@ function buildSkuResolutions(
       &&
       ozonOfferId
     ) {
-
       product =
         byOffer.get(
           ozonOfferId
         );
 
       if (product) {
-
         resolutionReason =
           "matched_by_returned_offer_id";
       }
@@ -1592,7 +1430,6 @@ function buildSkuResolutions(
       existing.product.id !==
       product.id
     ) {
-
       conflicts.push(
         {
           sku,
@@ -1638,7 +1475,6 @@ function buildSkuResolutions(
 
   return {
     resolutions,
-
     conflicts,
   };
 }
@@ -1648,19 +1484,11 @@ function buildSkuResolutions(
 // ============================================================
 
 function getUnresolvedSalesSkus(
-  postings:
-    FboPosting[],
-
-  products:
-    ProductRow[],
-
-  dateFrom:
-    string,
-
-  dateTo:
-    string
+  postings: FboPosting[],
+  products: ProductRow[],
+  dateFrom: string,
+  dateTo: string
 ) {
-
   const {
     byOffer,
   } =
@@ -1675,7 +1503,6 @@ function getUnresolvedSalesSkus(
     const posting
     of postings
   ) {
-
     const saleDate =
       isoToMoscowDate(
         posting.created_at
@@ -1690,7 +1517,6 @@ function getUnresolvedSalesSkus(
       saleDate >
       dateTo
     ) {
-
       continue;
     }
 
@@ -1699,7 +1525,6 @@ function getUnresolvedSalesSkus(
       of posting.products
       ?? []
     ) {
-
       const offerId =
         normalizeKey(
           item.offer_id
@@ -1712,7 +1537,6 @@ function getUnresolvedSalesSkus(
           offerId
         )
       ) {
-
         continue;
       }
 
@@ -1722,7 +1546,6 @@ function getUnresolvedSalesSkus(
         );
 
       if (sku) {
-
         result.add(
           sku
         );
@@ -1740,11 +1563,8 @@ function getUnresolvedSalesSkus(
 // ============================================================
 
 function buildSalesData(
-  postings:
-    FboPosting[],
-
-  products:
-    ProductRow[],
+  postings: FboPosting[],
+  products: ProductRow[],
 
   skuResolutions:
     Map<
@@ -1764,13 +1584,9 @@ function buildSalesData(
       WarehouseCluster
     >,
 
-  dateFrom:
-    string,
-
-  dateTo:
-    string
+  dateFrom: string,
+  dateTo: string
 ) {
-
   const {
     byOffer,
   } =
@@ -1779,44 +1595,31 @@ function buildSalesData(
     );
 
   type SalesAggregate = {
-    saleDate:
-      string;
+    saleDate: string;
 
-    product:
-      ProductRow;
+    product: ProductRow;
 
-    clusterId:
-      string;
+    clusterId: string;
 
-    clusterName:
-      string;
+    clusterName: string;
 
-    salesQuantity:
-      number;
+    salesQuantity: number;
 
-    cancelledQuantity:
-      number;
+    cancelledQuantity: number;
 
-    offerIds:
-      Set<string>;
+    offerIds: Set<string>;
 
-    skus:
-      Set<string>;
+    skus: Set<string>;
 
-    warehouseIds:
-      Set<string>;
+    warehouseIds: Set<string>;
 
-    warehouseNames:
-      Set<string>;
+    warehouseNames: Set<string>;
 
-    clusterFromNames:
-      Set<string>;
+    clusterFromNames: Set<string>;
 
-    clusterToNames:
-      Set<string>;
+    clusterToNames: Set<string>;
 
-    clusterResolutionSources:
-      Set<string>;
+    clusterResolutionSources: Set<string>;
   };
 
   const aggregated =
@@ -1827,37 +1630,25 @@ function buildSalesData(
 
   const unmatched:
     Array<
-      Record<
-        string,
-        unknown
-      >
+      Record<string, unknown>
     > =
     [];
 
   const ignoredInactive:
     Array<
-      Record<
-        string,
-        unknown
-      >
+      Record<string, unknown>
     > =
     [];
 
   const ignoredOutOfRange:
     Array<
-      Record<
-        string,
-        unknown
-      >
+      Record<string, unknown>
     > =
     [];
 
   const unresolvedClusters:
     Array<
-      Record<
-        string,
-        unknown
-      >
+      Record<string, unknown>
     > =
     [];
 
@@ -1880,20 +1671,17 @@ function buildSalesData(
     const posting
     of postings
   ) {
-
     const saleDate =
       isoToMoscowDate(
         posting.created_at
       );
 
     if (!saleDate) {
-
       for (
         const item
         of posting.products
         ?? []
       ) {
-
         unmatched.push(
           {
             reason:
@@ -1933,18 +1721,15 @@ function buildSalesData(
       saleDate >
       dateTo
     ) {
-
       for (
         const item
         of posting.products
         ?? []
       ) {
-
         if (
           ignoredOutOfRange.length <
           100
         ) {
-
           ignoredOutOfRange.push(
             {
               posting_number:
@@ -2009,20 +1794,16 @@ function buildSalesData(
 
     const financialCluster =
       clusterFromKey
-
         ? clusterNameToCluster.get(
             clusterFromKey
           )
-
         : undefined;
 
     const warehouseCluster =
       warehouseId
-
         ? warehouseToCluster.get(
             warehouseId
           )
-
         : undefined;
 
     const resolvedCluster =
@@ -2032,17 +1813,12 @@ function buildSalesData(
 
     const clusterResolutionSource =
       financialCluster
-
         ? "financial_data.cluster_from"
-
         : warehouseCluster
-
           ? "analytics_data.warehouse_id"
-
           : "unresolved";
 
     if (!resolvedCluster) {
-
       postingsWithoutResolvedCluster +=
         1;
 
@@ -2050,7 +1826,6 @@ function buildSalesData(
         unresolvedClusters.length <
         200
       ) {
-
         unresolvedClusters.push(
           {
             reason:
@@ -2088,12 +1863,9 @@ function buildSalesData(
     }
 
     if (financialCluster) {
-
       postingsClusteredByFinancialData +=
         1;
-
     } else {
-
       postingsClusteredByWarehouseFallback +=
         1;
     }
@@ -2117,7 +1889,6 @@ function buildSalesData(
       of posting.products
       ?? []
     ) {
-
       const quantity =
         toSafeInteger(
           item.quantity
@@ -2135,11 +1906,9 @@ function buildSalesData(
 
       let product =
         offerId
-
           ? byOffer.get(
               offerId
             )
-
           : undefined;
 
       let matchMethod =
@@ -2150,7 +1919,6 @@ function buildSalesData(
         &&
         sku
       ) {
-
         product =
           skuResolutions.get(
             sku
@@ -2162,7 +1930,6 @@ function buildSalesData(
       }
 
       if (!product) {
-
         unmatched.push(
           {
             reason:
@@ -2203,12 +1970,10 @@ function buildSalesData(
       if (
         !product.is_active
       ) {
-
         if (
           ignoredInactive.length <
           100
         ) {
-
           ignoredInactive.push(
             {
               product_id:
@@ -2250,12 +2015,9 @@ function buildSalesData(
         matchMethod ===
         "offer_id"
       ) {
-
         matchedByOffer +=
           1;
-
       } else {
-
         matchedBySku +=
           1;
       }
@@ -2275,14 +2037,10 @@ function buildSalesData(
         );
 
       if (!current) {
-
         current = {
           saleDate,
-
           product,
-
           clusterId,
-
           clusterName,
 
           salesQuantity:
@@ -2320,42 +2078,36 @@ function buildSalesData(
       }
 
       if (offerId) {
-
         current.offerIds.add(
           offerId
         );
       }
 
       if (sku) {
-
         current.skus.add(
           sku
         );
       }
 
       if (warehouseId) {
-
         current.warehouseIds.add(
           warehouseId
         );
       }
 
       if (warehouseName) {
-
         current.warehouseNames.add(
           warehouseName
         );
       }
 
       if (clusterFrom) {
-
         current.clusterFromNames.add(
           clusterFrom
         );
       }
 
       if (clusterTo) {
-
         current.clusterToNames.add(
           clusterTo
         );
@@ -2368,12 +2120,9 @@ function buildSalesData(
         );
 
       if (isCancelled) {
-
         current.cancelledQuantity +=
           quantity;
-
       } else {
-
         current.salesQuantity +=
           quantity;
       }
@@ -2456,7 +2205,6 @@ function buildSalesData(
       left,
       right
     ) => {
-
       return (
         left.sale_date.localeCompare(
           right.sale_date
@@ -2477,14 +2225,9 @@ function buildSalesData(
     new Map<
       string,
       {
-        aggregated_rows:
-          number;
-
-        sales_quantity:
-          number;
-
-        cancelled_quantity:
-          number;
+        aggregated_rows: number;
+        sales_quantity: number;
+        cancelled_quantity: number;
       }
     >();
 
@@ -2492,7 +2235,6 @@ function buildSalesData(
     const row
     of rows
   ) {
-
     const current =
       perDayMap.get(
         row.sale_date
@@ -2535,7 +2277,6 @@ function buildSalesData(
           ]
         ) => ({
           sale_date,
-
           ...values,
         })
       )
@@ -2551,25 +2292,15 @@ function buildSalesData(
 
   return {
     rows,
-
     unmatched,
-
     ignoredInactive,
-
     ignoredOutOfRange,
-
     unresolvedClusters,
-
     matchedByOffer,
-
     matchedBySku,
-
     postingsClusteredByFinancialData,
-
     postingsClusteredByWarehouseFallback,
-
     postingsWithoutResolvedCluster,
-
     perDay,
   };
 }
@@ -2579,7 +2310,6 @@ function buildSalesData(
 // ============================================================
 
 async function getOzonProductCatalog() {
-
   const items:
     OzonCatalogItem[] =
     [];
@@ -2600,7 +2330,6 @@ async function getOzonProductCatalog() {
     page <= MAX_PRODUCT_LIST_PAGES;
     page += 1
   ) {
-
     const response =
       await ozonPost<{
         result?: {
@@ -2652,7 +2381,6 @@ async function getOzonProductCatalog() {
         total
       )
     ) {
-
       declaredTotal =
         total;
     }
@@ -2664,7 +2392,6 @@ async function getOzonProductCatalog() {
       items.length >=
       declaredTotal
     ) {
-
       break;
     }
 
@@ -2672,7 +2399,6 @@ async function getOzonProductCatalog() {
       pageItems.length ===
       0
     ) {
-
       break;
     }
 
@@ -2688,7 +2414,6 @@ async function getOzonProductCatalog() {
       nextLastId ===
       lastId
     ) {
-
       break;
     }
 
@@ -2703,7 +2428,6 @@ async function getOzonProductCatalog() {
     items.length <
     declaredTotal
   ) {
-
     throw new Error(
       `Не удалось получить полный каталог Ozon: получено ${items.length}, ожидалось ${declaredTotal}`
     );
@@ -2736,9 +2460,7 @@ function extractAnalyticsStockRows(
         AnalyticsStock[];
     };
   }
-):
-AnalyticsStock[] {
-
+): AnalyticsStock[] {
   return (
     response.items
     ??
@@ -2755,10 +2477,8 @@ AnalyticsStock[] {
 }
 
 async function getAnalyticsStocks(
-  skus:
-    string[]
+  skus: string[]
 ) {
-
   const uniqueSkus =
     Array.from(
       new Set(
@@ -2790,11 +2510,9 @@ async function getAnalyticsStocks(
     index < batches.length;
     index += 1
   ) {
-
     if (
       index > 0
     ) {
-
       await sleep(
         ANALYTICS_STOCK_REQUEST_INTERVAL_MS
       );
@@ -2862,7 +2580,6 @@ function getActiveCatalogProducts(
   activeProducts:
     ProductRow[]
 ) {
-
   const {
     byOffer,
     byOzonProductId,
@@ -2881,7 +2598,6 @@ function getActiveCatalogProducts(
     const item
     of catalogItems
   ) {
-
     const offerId =
       normalizeKey(
         item.offer_id
@@ -2895,26 +2611,21 @@ function getActiveCatalogProducts(
     const product =
       (
         offerId
-
           ? byOffer.get(
               offerId
             )
-
           : undefined
       )
       ??
       (
         ozonProductId
-
           ? byOzonProductId.get(
               ozonProductId
             )
-
           : undefined
       );
 
     if (product) {
-
       matchedProducts.set(
         product.id,
         product
@@ -2950,16 +2661,12 @@ function buildStockData(
       WarehouseCluster
     >
 ) {
-
   const clusterByName =
     new Map<
       string,
       {
-        id:
-          string;
-
-        name:
-          string;
+        id: string;
+        name: string;
       }
     >();
 
@@ -2967,7 +2674,6 @@ function buildStockData(
     const cluster
     of clusters
   ) {
-
     const clusterId =
       normalizeKey(
         cluster.id
@@ -2983,7 +2689,6 @@ function buildStockData(
       &&
       clusterName
     ) {
-
       clusterByName.set(
         clusterName,
         {
@@ -2998,24 +2703,14 @@ function buildStockData(
   }
 
   type StockAggregate = {
-    product:
-      ProductRow;
-
-    clusterId:
-      string;
-
-    clusterName:
-      string;
-
-    quantity:
-      number;
+    product: ProductRow;
+    clusterId: string;
+    clusterName: string;
+    quantity: number;
 
     warehouses:
       Array<
-        Record<
-          string,
-          unknown
-        >
+        Record<string, unknown>
       >;
   };
 
@@ -3027,10 +2722,7 @@ function buildStockData(
 
   const unknownPositiveRows:
     Array<
-      Record<
-        string,
-        unknown
-      >
+      Record<string, unknown>
     > =
     [];
 
@@ -3047,7 +2739,6 @@ function buildStockData(
     const stock
     of stocks
   ) {
-
     const sku =
       normalizeKey(
         stock.sku
@@ -3080,11 +2771,9 @@ function buildStockData(
 
     const resolution =
       sku
-
         ? skuResolutions.get(
             sku
           )
-
         : undefined;
 
     const product =
@@ -3092,16 +2781,13 @@ function buildStockData(
       ?? null;
 
     if (!product) {
-
       if (
         available > 0
       ) {
-
         if (
           unknownPositiveRows.length <
           100
         ) {
-
           unknownPositiveRows.push(
             {
               sku:
@@ -3137,7 +2823,6 @@ function buildStockData(
         }
 
       } else {
-
         unknownZeroRows +=
           1;
       }
@@ -3148,7 +2833,6 @@ function buildStockData(
     if (
       !product.is_active
     ) {
-
       ignoredInactiveRows +=
         1;
 
@@ -3157,20 +2841,16 @@ function buildStockData(
 
     const warehouseCluster =
       warehouseId
-
         ? warehouseToCluster.get(
             warehouseId
           )
-
         : undefined;
 
     const namedCluster =
       analyticsClusterName
-
         ? clusterByName.get(
             analyticsClusterName
           )
-
         : undefined;
 
     const clusterId =
@@ -3184,13 +2864,9 @@ function buildStockData(
       ||
       (
         analyticsClusterName
-
           ? `name:${analyticsClusterName}`
-
           : warehouseId
-
             ? `warehouse:${warehouseId}`
-
             : "unknown"
       );
 
@@ -3221,12 +2897,9 @@ function buildStockData(
       );
 
     if (!current) {
-
       current = {
         product,
-
         clusterId,
-
         clusterName,
 
         quantity:
@@ -3326,7 +2999,6 @@ function buildStockData(
       left,
       right
     ) => {
-
       return (
         left.product_id.localeCompare(
           right.product_id
@@ -3341,13 +3013,9 @@ function buildStockData(
 
   return {
     rows,
-
     unknownPositiveRows,
-
     unknownZeroRows,
-
     ignoredInactiveRows,
-
     totalAvailable,
   };
 }
@@ -3360,7 +3028,6 @@ async function runDailySync(
   request:
     Request
 ) {
-
   const startedAt =
     Date.now();
 
@@ -3370,8 +3037,18 @@ async function runDailySync(
   let writeSucceeded =
     false;
 
-  try {
+  let replenishmentAttempted =
+    false;
 
+  let replenishmentSucceeded =
+    false;
+
+  let replenishmentRunId:
+    string
+    | null =
+    null;
+
+  try {
     // ========================================================
     // 1. AUTH
     // ========================================================
@@ -3381,7 +3058,6 @@ async function runDailySync(
         request
       )
     ) {
-
       return Response.json(
         {
           ok:
@@ -3451,7 +3127,6 @@ async function runDailySync(
       activeWithoutMasterCode.length >
       0
     ) {
-
       return Response.json(
         {
           ok:
@@ -3498,7 +3173,6 @@ async function runDailySync(
         .clusters
         .length === 0
     ) {
-
       return Response.json(
         {
           ok:
@@ -3528,7 +3202,6 @@ async function runDailySync(
         .ambiguousClusterNameKeys
         .length > 0
     ) {
-
       return Response.json(
         {
           ok:
@@ -3581,7 +3254,6 @@ async function runDailySync(
         .postings
         .length === 0
     ) {
-
       return Response.json(
         {
           ok:
@@ -3616,11 +3288,9 @@ async function runDailySync(
 
     const salesProductInfo =
       unresolvedSalesSkus.length > 0
-
         ? await getProductInfoBySkus(
             unresolvedSalesSkus
           )
-
         : {
             requestedSkus:
               0,
@@ -3643,7 +3313,6 @@ async function runDailySync(
         .conflicts
         .length > 0
     ) {
-
       return Response.json(
         {
           ok:
@@ -3695,7 +3364,6 @@ async function runDailySync(
         .unresolvedClusters
         .length > 0
     ) {
-
       return Response.json(
         {
           ok:
@@ -3737,7 +3405,6 @@ async function runDailySync(
         .unmatched
         .length > 0
     ) {
-
       return Response.json(
         {
           ok:
@@ -3787,7 +3454,6 @@ async function runDailySync(
         .items
         .length === 0
     ) {
-
       return Response.json(
         {
           ok:
@@ -3833,7 +3499,6 @@ async function runDailySync(
       catalogOfferIds.length ===
       0
     ) {
-
       return Response.json(
         {
           ok:
@@ -3872,7 +3537,6 @@ async function runDailySync(
         .items
         .length === 0
     ) {
-
       return Response.json(
         {
           ok:
@@ -3908,7 +3572,6 @@ async function runDailySync(
         .conflicts
         .length > 0
     ) {
-
       return Response.json(
         {
           ok:
@@ -3967,7 +3630,6 @@ async function runDailySync(
       stockSkus.length ===
       0
     ) {
-
       return Response.json(
         {
           ok:
@@ -4011,12 +3673,10 @@ async function runDailySync(
         .resolutions
         .values()
     ) {
-
       if (
         resolution.product
           ?.is_active
       ) {
-
         activeProductsWithSku.add(
           resolution.product.id
         );
@@ -4035,7 +3695,6 @@ async function runDailySync(
       liveActiveWithoutSku.length >
       0
     ) {
-
       return Response.json(
         {
           ok:
@@ -4084,7 +3743,6 @@ async function runDailySync(
         .stocks
         .length === 0
     ) {
-
       return Response.json(
         {
           ok:
@@ -4129,7 +3787,6 @@ async function runDailySync(
         .unknownPositiveRows
         .length > 0
     ) {
-
       return Response.json(
         {
           ok:
@@ -4172,7 +3829,6 @@ async function runDailySync(
         .postings
         .filter(
           posting => {
-
             const saleDate =
               isoToMoscowDate(
                 posting.created_at
@@ -4212,7 +3868,7 @@ async function runDailySync(
         .length;
 
     // ========================================================
-    // 12. ATOMIC WRITE
+    // 12. ATOMIC WRITE SALES + STOCKS
     // ========================================================
 
     writeAttempted =
@@ -4253,7 +3909,6 @@ async function runDailySync(
       writeResult.ok !==
       true
     ) {
-
       throw new Error(
         "apply_ozon_daily_sync не подтвердил успешную запись"
       );
@@ -4267,7 +3922,6 @@ async function runDailySync(
         .rows
         .length
     ) {
-
       throw new Error(
         [
           "Количество записанных строк продаж не совпало",
@@ -4287,7 +3941,6 @@ async function runDailySync(
         .rows
         .length
     ) {
-
       throw new Error(
         [
           "Количество записанных строк остатков не совпало",
@@ -4303,7 +3956,49 @@ async function runDailySync(
       true;
 
     // ========================================================
-    // 13. SUCCESS
+    // 13. AUTOMATIC FBO REPLENISHMENT CALCULATION
+    //
+    // Запускается ТОЛЬКО после успешной записи:
+    //
+    // sales + stocks
+    //       ↓
+    // apply_ozon_daily_sync
+    //       ↓
+    // run_ozon_fbo_replenishment
+    //
+    // Если расчёт потребности упадёт:
+    // - продажи/остатки уже сохранены;
+    // - сама ошибка будет видна отдельным статусом;
+    // - кривой replenishment run функция не сохранит.
+    // ========================================================
+
+    replenishmentAttempted =
+      true;
+
+    const rawReplenishmentRunId =
+      await supabaseRpc<string>(
+        "run_ozon_fbo_replenishment",
+        {}
+      );
+
+    replenishmentRunId =
+      normalizeKey(
+        rawReplenishmentRunId
+      );
+
+    if (
+      !replenishmentRunId
+    ) {
+      throw new Error(
+        "run_ozon_fbo_replenishment не вернул calculation_run_id"
+      );
+    }
+
+    replenishmentSucceeded =
+      true;
+
+    // ========================================================
+    // 14. SUCCESS
     // ========================================================
 
     return Response.json(
@@ -4513,6 +4208,23 @@ async function runDailySync(
             writeResult,
         },
 
+        replenishment_fbo: {
+          automatic:
+            true,
+
+          rpc:
+            "run_ozon_fbo_replenishment",
+
+          attempted:
+            replenishmentAttempted,
+
+          succeeded:
+            replenishmentSucceeded,
+
+          calculation_run_id:
+            replenishmentRunId,
+        },
+
         duration_ms:
           Date.now()
           -
@@ -4525,11 +4237,33 @@ async function runDailySync(
     );
 
   } catch (error) {
-
     console.error(
       "OZON DAILY SYNC ERROR",
       error
     );
+
+    let note =
+      "До боевой записи дело не дошло.";
+
+    if (
+      writeAttempted
+      &&
+      !writeSucceeded
+    ) {
+      note =
+        "Если ошибка пришла от apply_ozon_daily_sync, транзакция PostgreSQL откатывается целиком.";
+    }
+
+    if (
+      writeSucceeded
+      &&
+      replenishmentAttempted
+      &&
+      !replenishmentSucceeded
+    ) {
+      note =
+        "Продажи и остатки Ozon уже успешно записаны. Ошибка произошла после этого, на этапе автоматического расчёта потребности FBO.";
+    }
 
     return Response.json(
       {
@@ -4545,23 +4279,23 @@ async function runDailySync(
         write_succeeded:
           writeSucceeded,
 
+        replenishment_attempted:
+          replenishmentAttempted,
+
+        replenishment_succeeded:
+          replenishmentSucceeded,
+
+        replenishment_run_id:
+          replenishmentRunId,
+
         error:
           error instanceof Error
-
             ? error.message
-
             : String(
                 error
               ),
 
-        note:
-          writeAttempted
-          &&
-          !writeSucceeded
-
-            ? "Если ошибка пришла от apply_ozon_daily_sync, транзакция PostgreSQL откатывается целиком."
-
-            : "До боевой записи дело не дошло.",
+        note,
 
         duration_ms:
           Date.now()
@@ -4584,7 +4318,6 @@ export async function GET(
   request:
     Request
 ) {
-
   return runDailySync(
     request
   );
@@ -4594,7 +4327,6 @@ export async function POST(
   request:
     Request
 ) {
-
   return runDailySync(
     request
   );
