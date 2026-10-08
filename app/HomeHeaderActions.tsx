@@ -28,7 +28,6 @@ import styles
 // ============================================================
 
 function BellIcon() {
-
   return (
     <svg
       viewBox="0 0 24 24"
@@ -43,12 +42,10 @@ function BellIcon() {
       />
     </svg>
   );
-
 }
 
 
 function CalendarIcon() {
-
   return (
     <svg
       viewBox="0 0 24 24"
@@ -67,12 +64,10 @@ function CalendarIcon() {
       />
     </svg>
   );
-
 }
 
 
 function ChevronIcon() {
-
   return (
     <svg
       viewBox="0 0 24 24"
@@ -83,12 +78,10 @@ function ChevronIcon() {
       />
     </svg>
   );
-
 }
 
 
 function ArrowLeftIcon() {
-
   return (
     <svg
       viewBox="0 0 24 24"
@@ -99,12 +92,10 @@ function ArrowLeftIcon() {
       />
     </svg>
   );
-
 }
 
 
 function ArrowRightIcon() {
-
   return (
     <svg
       viewBox="0 0 24 24"
@@ -115,12 +106,10 @@ function ArrowRightIcon() {
       />
     </svg>
   );
-
 }
 
 
 function CloseIcon() {
-
   return (
     <svg
       viewBox="0 0 24 24"
@@ -135,7 +124,6 @@ function CloseIcon() {
       />
     </svg>
   );
-
 }
 
 
@@ -144,67 +132,30 @@ function CloseIcon() {
 // ============================================================
 
 type AccessRequestNotificationRow = {
-
-  request_id:
-    string;
-
-  first_name:
-    string;
-
-  last_name:
-    string;
-
-  email:
-    string;
-
-  department:
-    string | null;
-
-  comment:
-    string | null;
-
-  created_at:
-    string;
-
+  request_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  department: string | null;
+  comment: string | null;
+  created_at: string;
 };
 
 
 type NotificationItem = {
-
-  id:
-    string;
-
-  type:
-    "access_request";
-
-  title:
-    string;
-
-  text:
-    string;
-
-  createdAt:
-    string;
+  id: string;
+  type: "access_request";
+  title: string;
+  text: string;
+  createdAt: string;
 
   request: {
-
-    firstName:
-      string;
-
-    lastName:
-      string;
-
-    email:
-      string;
-
-    department:
-      string | null;
-
-    comment:
-      string | null;
-
+    firstName: string;
+    lastName: string;
+    email: string;
+    department: string | null;
+    comment: string | null;
   };
-
 };
 
 
@@ -214,83 +165,53 @@ type NotificationItem = {
 
 type WorkingRole =
   ""
-  |
-  "analyst"
-  |
-  "procurement"
-  |
-  "ved"
-  |
-  "category_manager"
-  |
-  "marketing"
-  |
-  "manager";
+  | "analyst"
+  | "procurement"
+  | "ved"
+  | "category_manager"
+  | "marketing"
+  | "manager";
 
 
 type CategoryMarketplace =
   ""
-  |
-  "ozon"
-  |
-  "wildberries"
-  |
-  "yandex_market";
+  | "ozon"
+  | "wildberries"
+  | "yandex_market";
 
 
 const WORKING_ROLES: {
   value: WorkingRole;
   label: string;
 }[] = [
-
   {
     value: "",
-    label:
-      "Выберите роль",
+    label: "Выберите роль",
   },
-
   {
-    value:
-      "analyst",
-    label:
-      "Аналитик",
+    value: "analyst",
+    label: "Аналитик",
   },
-
   {
-    value:
-      "procurement",
-    label:
-      "Закуп",
+    value: "procurement",
+    label: "Закуп",
   },
-
   {
-    value:
-      "ved",
-    label:
-      "ВЭД",
+    value: "ved",
+    label: "ВЭД",
   },
-
   {
-    value:
-      "category_manager",
-    label:
-      "Категорийный менеджер",
+    value: "category_manager",
+    label: "Категорийный менеджер",
   },
-
   {
-    value:
-      "marketing",
-    label:
-      "Маркетинг",
+    value: "marketing",
+    label: "Маркетинг",
   },
-
   {
-    value:
-      "manager",
-    label:
-      "Руководитель",
+    value: "manager",
+    label: "Руководитель",
   },
-
 ];
 
 
@@ -298,34 +219,22 @@ const MARKETPLACES: {
   value: CategoryMarketplace;
   label: string;
 }[] = [
-
   {
     value: "",
-    label:
-      "Выберите маркетплейс",
+    label: "Выберите маркетплейс",
   },
-
   {
-    value:
-      "ozon",
-    label:
-      "Ozon",
+    value: "ozon",
+    label: "Ozon",
   },
-
   {
-    value:
-      "wildberries",
-    label:
-      "Wildberries",
+    value: "wildberries",
+    label: "Wildberries",
   },
-
   {
-    value:
-      "yandex_market",
-    label:
-      "Яндекс Маркет",
+    value: "yandex_market",
+    label: "Яндекс Маркет",
   },
-
 ];
 
 
@@ -368,56 +277,38 @@ function isSameDay(
   first: Date,
   second: Date
 ) {
-
   return (
-
     first.getFullYear() ===
       second.getFullYear()
-
     &&
-
     first.getMonth() ===
       second.getMonth()
-
     &&
-
     first.getDate() ===
       second.getDate()
-
   );
-
 }
 
 
 function formatToday(
   date: Date
 ) {
-
   return date.toLocaleDateString(
     "ru-RU",
     {
-      day:
-        "numeric",
-
-      month:
-        "long",
-
-      year:
-        "numeric",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
     }
   );
-
 }
 
 
 function formatNotificationTime(
   value: string
 ) {
-
   const date =
-    new Date(
-      value
-    );
+    new Date(value);
 
 
   if (
@@ -425,29 +316,19 @@ function formatNotificationTime(
       date.getTime()
     )
   ) {
-
     return "";
-
   }
 
 
   return date.toLocaleString(
     "ru-RU",
     {
-      day:
-        "2-digit",
-
-      month:
-        "2-digit",
-
-      hour:
-        "2-digit",
-
-      minute:
-        "2-digit",
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
     }
   );
-
 }
 
 
@@ -467,10 +348,8 @@ export default function HomeHeaderActions() {
   ] =
     useState<
       "calendar"
-      |
-      "notifications"
-      |
-      null
+      | "notifications"
+      | null
     >(
       null
     );
@@ -568,7 +447,6 @@ export default function HomeHeaderActions() {
   ] =
     useState(
       () => {
-
         const now =
           new Date();
 
@@ -578,7 +456,6 @@ export default function HomeHeaderActions() {
           now.getMonth(),
           1
         );
-
       }
     );
 
@@ -646,7 +523,6 @@ export default function HomeHeaderActions() {
 
 
               return "forbidden" as const;
-
             }
 
 
@@ -656,7 +532,6 @@ export default function HomeHeaderActions() {
 
 
             return "error" as const;
-
           }
 
 
@@ -677,12 +552,8 @@ export default function HomeHeaderActions() {
                       row.first_name,
                       row.last_name,
                     ]
-                      .filter(
-                        Boolean
-                      )
-                      .join(
-                        " "
-                      );
+                      .filter(Boolean)
+                      .join(" ");
 
 
                   const detail =
@@ -694,7 +565,6 @@ export default function HomeHeaderActions() {
 
 
                   return {
-
                     id:
                       row.request_id,
 
@@ -711,7 +581,6 @@ export default function HomeHeaderActions() {
                       row.created_at,
 
                     request: {
-
                       firstName:
                         row.first_name,
 
@@ -726,11 +595,8 @@ export default function HomeHeaderActions() {
 
                       comment:
                         row.comment,
-
                     },
-
                   };
-
                 }
               );
 
@@ -758,7 +624,6 @@ export default function HomeHeaderActions() {
           );
 
         }
-
       },
       []
     );
@@ -791,22 +656,17 @@ export default function HomeHeaderActions() {
           ||
           result !== "success"
         ) {
-
           return;
-
         }
 
 
         intervalId =
           window.setInterval(
             () => {
-
               void loadNotifications();
-
             },
             60 * 1000
           );
-
       }
 
 
@@ -822,11 +682,9 @@ export default function HomeHeaderActions() {
         if (
           intervalId !== null
         ) {
-
           window.clearInterval(
             intervalId
           );
-
         }
 
       };
@@ -862,14 +720,11 @@ export default function HomeHeaderActions() {
                     now
                   )
                 ) {
-
                   return previous;
-
                 }
 
 
                 return now;
-
               }
             );
 
@@ -905,9 +760,7 @@ export default function HomeHeaderActions() {
         if (
           !actionsRef.current
         ) {
-
           return;
-
         }
 
 
@@ -916,13 +769,10 @@ export default function HomeHeaderActions() {
             event.target as Node
           )
         ) {
-
           setOpenPanel(
             null
           );
-
         }
-
       }
 
 
@@ -934,29 +784,24 @@ export default function HomeHeaderActions() {
           event.key !==
           "Escape"
         ) {
-
           return;
-
         }
 
 
         if (
           selectedNotification
         ) {
-
           setSelectedNotification(
             null
           );
 
           return;
-
         }
 
 
         setOpenPanel(
           null
         );
-
       }
 
 
@@ -1041,8 +886,7 @@ export default function HomeHeaderActions() {
 
         return Array.from(
           {
-            length:
-              42,
+            length: 42,
           },
           (
             _,
@@ -1062,9 +906,7 @@ export default function HomeHeaderActions() {
               ||
               day > daysInMonth
             ) {
-
               return null;
-
             }
 
 
@@ -1073,7 +915,6 @@ export default function HomeHeaderActions() {
               month,
               day
             );
-
           }
         );
 
@@ -1157,9 +998,7 @@ export default function HomeHeaderActions() {
 
 
     if (willOpen) {
-
       void loadNotifications();
-
     }
 
   }
@@ -1231,11 +1070,9 @@ export default function HomeHeaderActions() {
       role !==
       "category_manager"
     ) {
-
       setSelectedMarketplace(
         ""
       );
-
     }
 
   }
@@ -1269,9 +1106,7 @@ export default function HomeHeaderActions() {
                   event.target ===
                   event.currentTarget
                 ) {
-
                   closeAccessRequest();
-
                 }
 
               }
@@ -1497,12 +1332,15 @@ export default function HomeHeaderActions() {
                     }
 
                     onChange={
-                      event =>
+                      event => {
+                        const role =
+                          event.target.value
+                            as WorkingRole;
+
                         changeRole(
-                          event.target
-                            .value
-                            as WorkingRole
-                        )
+                          role
+                        );
+                      }
                     }
                   >
 
@@ -1561,12 +1399,15 @@ export default function HomeHeaderActions() {
                         }
 
                         onChange={
-                          event =>
+                          event => {
+                            const marketplace =
+                              event.target.value
+                                as CategoryMarketplace;
+
                             setSelectedMarketplace(
-                              event.target
-                                .value
-                                as CategoryMarketplace
-                            )
+                              marketplace
+                            );
+                          }
                         }
                       >
 
