@@ -7,103 +7,238 @@ import {
   useRef,
   useState,
 } from "react";
-import { createPortal } from "react-dom";
 
-import { createClient } from "../lib/supabase/client";
+import {
+  createPortal,
+} from "react-dom";
+
+import {
+  createClient,
+} from "../lib/supabase/client";
+
 import {
   approveAccessRequest,
   rejectAccessRequest,
 } from "./access-request-actions";
-import HomeThemeToggle from "./HomeThemeToggle";
-import styles from "./HomeHeaderActions.module.css";
+
+import HomeThemeToggle
+  from "./HomeThemeToggle";
+
+import styles
+  from "./HomeHeaderActions.module.css";
+
 
 // ============================================================
 // ICONS
 // ============================================================
 
 function BellIcon() {
+
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
-      <path d="M10 21h4" />
+
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+
+      <path
+        d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"
+      />
+
+      <path
+        d="M10 21h4"
+      />
+
     </svg>
+
   );
+
 }
+
 
 function CalendarIcon() {
+
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="3" y="5" width="18" height="16" rx="2" />
-      <path d="M16 3v4M8 3v4M3 10h18" />
+
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+
+      <rect
+        x="3"
+        y="5"
+        width="18"
+        height="16"
+        rx="2"
+      />
+
+      <path
+        d="M16 3v4M8 3v4M3 10h18"
+      />
+
     </svg>
+
   );
+
 }
+
 
 function ChevronIcon() {
+
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="m7 9 5 5 5-5" />
+
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+
+      <path
+        d="m7 9 5 5 5-5"
+      />
+
     </svg>
+
   );
+
 }
+
 
 function ArrowLeftIcon() {
+
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="m15 18-6-6 6-6" />
+
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+
+      <path
+        d="m15 18-6-6 6-6"
+      />
+
     </svg>
+
   );
+
 }
+
 
 function ArrowRightIcon() {
+
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="m9 18 6-6-6-6" />
+
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+
+      <path
+        d="m9 18 6-6-6-6"
+      />
+
     </svg>
+
   );
+
 }
 
+
 function CloseIcon() {
+
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M6 6l12 12" />
-      <path d="M18 6L6 18" />
+
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+
+      <path
+        d="M6 6l12 12"
+      />
+
+      <path
+        d="M18 6L6 18"
+      />
+
     </svg>
+
   );
+
 }
+
 
 // ============================================================
 // TYPES
 // ============================================================
 
 type AccessRequestNotificationRow = {
-  request_id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  department: string | null;
-  comment: string | null;
-  created_at: string;
+
+  request_id:
+    string;
+
+  first_name:
+    string;
+
+  last_name:
+    string;
+
+  email:
+    string;
+
+  department:
+    string | null;
+
+  comment:
+    string | null;
+
+  created_at:
+    string;
+
 };
+
 
 type NotificationItem = {
-  id: string;
-  type: "access_request";
-  title: string;
-  text: string;
-  createdAt: string;
+
+  id:
+    string;
+
+  type:
+    "access_request";
+
+  title:
+    string;
+
+  text:
+    string;
+
+  createdAt:
+    string;
 
   request: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    department: string | null;
-    comment: string | null;
+
+    firstName:
+      string;
+
+    lastName:
+      string;
+
+    email:
+      string;
+
+    department:
+      string | null;
+
+    comment:
+      string | null;
+
   };
+
 };
 
+
 type WorkingRole =
-  | ""
+  ""
   | "analyst"
   | "procurement"
   | "ved"
@@ -111,89 +246,189 @@ type WorkingRole =
   | "marketing"
   | "manager";
 
+
 type CategoryMarketplace =
-  | ""
+  ""
   | "ozon"
   | "wildberries"
   | "yandex_market";
 
+
 type ApprovalResult = {
-  email: string;
-  fullName: string;
-  temporaryPassword: string;
+
+  email:
+    string;
+
+  fullName:
+    string;
+
+  temporaryPassword:
+    string;
+
 };
 
+
 type RequestAction =
-  | "approve"
+  "approve"
   | "reject"
   | null;
 
+
 type CopyStatus =
-  | "idle"
+  "idle"
   | "copied"
   | "error";
+
+
+type CurrentUserProfileRow = {
+
+  user_id:
+    string;
+
+  first_name:
+    string;
+
+  last_name:
+    string;
+
+  email:
+    string;
+
+  avatar_path:
+    string | null;
+
+  role_name:
+    string;
+
+  has_admin_access:
+    boolean;
+
+  admin_role_name:
+    string | null;
+
+};
+
 
 // ============================================================
 // CONSTANTS
 // ============================================================
 
 const WORKING_ROLES: Array<{
-  value: WorkingRole;
-  label: string;
+
+  value:
+    WorkingRole;
+
+  label:
+    string;
+
 }> = [
+
   {
-    value: "",
-    label: "Выберите роль",
+    value:
+      "",
+
+    label:
+      "Выберите роль",
   },
+
   {
-    value: "analyst",
-    label: "Аналитик",
+    value:
+      "analyst",
+
+    label:
+      "Аналитик",
   },
+
   {
-    value: "procurement",
-    label: "Закуп",
+    value:
+      "procurement",
+
+    label:
+      "Закуп",
   },
+
   {
-    value: "ved",
-    label: "ВЭД",
+    value:
+      "ved",
+
+    label:
+      "ВЭД",
   },
+
   {
-    value: "category_manager",
-    label: "Категорийный менеджер",
+    value:
+      "category_manager",
+
+    label:
+      "Категорийный менеджер",
   },
+
   {
-    value: "marketing",
-    label: "Маркетинг",
+    value:
+      "marketing",
+
+    label:
+      "Маркетинг",
   },
+
   {
-    value: "manager",
-    label: "Руководитель",
+    value:
+      "manager",
+
+    label:
+      "Руководитель",
   },
+
 ];
+
 
 const MARKETPLACES: Array<{
-  value: CategoryMarketplace;
-  label: string;
+
+  value:
+    CategoryMarketplace;
+
+  label:
+    string;
+
 }> = [
+
   {
-    value: "",
-    label: "Выберите маркетплейс",
+    value:
+      "",
+
+    label:
+      "Выберите маркетплейс",
   },
+
   {
-    value: "ozon",
-    label: "Ozon",
+    value:
+      "ozon",
+
+    label:
+      "Ozon",
   },
+
   {
-    value: "wildberries",
-    label: "Wildberries",
+    value:
+      "wildberries",
+
+    label:
+      "Wildberries",
   },
+
   {
-    value: "yandex_market",
-    label: "Яндекс Маркет",
+    value:
+      "yandex_market",
+
+    label:
+      "Яндекс Маркет",
   },
+
 ];
 
+
 const MONTH_NAMES = [
+
   "Январь",
   "Февраль",
   "Март",
@@ -206,9 +441,12 @@ const MONTH_NAMES = [
   "Октябрь",
   "Ноябрь",
   "Декабрь",
+
 ];
 
+
 const WEEK_DAYS = [
+
   "Пн",
   "Вт",
   "Ср",
@@ -216,120 +454,237 @@ const WEEK_DAYS = [
   "Пт",
   "Сб",
   "Вс",
+
 ];
+
 
 // ============================================================
 // HELPERS
 // ============================================================
 
 function isSameDay(
-  first: Date,
-  second: Date
+  first:
+    Date,
+
+  second:
+    Date
 ) {
+
   return (
+
     first.getFullYear() ===
       second.getFullYear()
+
     &&
+
     first.getMonth() ===
       second.getMonth()
+
     &&
+
     first.getDate() ===
       second.getDate()
+
   );
+
 }
 
+
 function formatToday(
-  date: Date
+  date:
+    Date
 ) {
+
   return date.toLocaleDateString(
     "ru-RU",
     {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
+
+      day:
+        "numeric",
+
+      month:
+        "long",
+
+      year:
+        "numeric",
+
     }
   );
+
 }
 
+
 function formatNotificationTime(
-  value: string
+  value:
+    string
 ) {
+
   const date =
-    new Date(value);
+    new Date(
+      value
+    );
+
 
   if (
     Number.isNaN(
       date.getTime()
     )
   ) {
+
     return "";
+
   }
+
 
   return date.toLocaleString(
     "ru-RU",
     {
-      day: "2-digit",
-      month: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
+
+      day:
+        "2-digit",
+
+      month:
+        "2-digit",
+
+      hour:
+        "2-digit",
+
+      minute:
+        "2-digit",
+
     }
   );
+
 }
+
 
 function getWorkingRole(
-  value: string
-): WorkingRole {
+  value:
+    string
+):
+WorkingRole {
+
   switch (
     value
   ) {
+
     case "analyst":
+
       return "analyst";
 
+
     case "procurement":
+
       return "procurement";
 
+
     case "ved":
+
       return "ved";
 
+
     case "category_manager":
+
       return "category_manager";
 
+
     case "marketing":
+
       return "marketing";
 
+
     case "manager":
+
       return "manager";
 
+
     default:
+
       return "";
+
   }
+
 }
 
+
 function getCategoryMarketplace(
-  value: string
-): CategoryMarketplace {
+  value:
+    string
+):
+CategoryMarketplace {
+
   switch (
     value
   ) {
+
     case "ozon":
+
       return "ozon";
 
+
     case "wildberries":
+
       return "wildberries";
 
+
     case "yandex_market":
+
       return "yandex_market";
 
+
     default:
+
       return "";
+
   }
+
 }
+
+
+function getProfileInitials(
+  firstName:
+    string,
+
+  lastName:
+    string
+) {
+
+  const firstInitial =
+    firstName
+      .trim()
+      .charAt(
+        0
+      );
+
+
+  const lastInitial =
+    lastName
+      .trim()
+      .charAt(
+        0
+      );
+
+
+  const initials =
+    `${firstInitial}${lastInitial}`
+      .toUpperCase();
+
+
+  return (
+    initials
+    ||
+    "П"
+  );
+
+}
+
 
 // ============================================================
 // COMPONENT
 // ============================================================
 
 export default function HomeHeaderActions() {
+
   const [
     openPanel,
     setOpenPanel,
@@ -344,6 +699,7 @@ export default function HomeHeaderActions() {
       null
     );
 
+
   const [
     notifications,
     setNotifications,
@@ -354,6 +710,7 @@ export default function HomeHeaderActions() {
       []
     );
 
+
   const [
     notificationsLoading,
     setNotificationsLoading,
@@ -361,6 +718,7 @@ export default function HomeHeaderActions() {
     useState(
       true
     );
+
 
   const [
     notificationsError,
@@ -372,6 +730,7 @@ export default function HomeHeaderActions() {
       null
     );
 
+
   const [
     selectedNotification,
     setSelectedNotification,
@@ -381,6 +740,7 @@ export default function HomeHeaderActions() {
     >(
       null
     );
+
 
   const [
     selectedRole,
@@ -392,6 +752,7 @@ export default function HomeHeaderActions() {
       ""
     );
 
+
   const [
     selectedMarketplace,
     setSelectedMarketplace,
@@ -401,6 +762,7 @@ export default function HomeHeaderActions() {
     >(
       ""
     );
+
 
   const [
     requestAction,
@@ -412,6 +774,7 @@ export default function HomeHeaderActions() {
       null
     );
 
+
   const [
     requestActionError,
     setRequestActionError,
@@ -421,6 +784,7 @@ export default function HomeHeaderActions() {
     >(
       null
     );
+
 
   const [
     approvalResult,
@@ -432,6 +796,7 @@ export default function HomeHeaderActions() {
       null
     );
 
+
   const [
     copyStatus,
     setCopyStatus,
@@ -442,6 +807,27 @@ export default function HomeHeaderActions() {
       "idle"
     );
 
+
+  const [
+    currentProfile,
+    setCurrentProfile,
+  ] =
+    useState<
+      CurrentUserProfileRow | null
+    >(
+      null
+    );
+
+
+  const [
+    profileLoading,
+    setProfileLoading,
+  ] =
+    useState(
+      true
+    );
+
+
   const [
     today,
     setToday,
@@ -451,22 +837,27 @@ export default function HomeHeaderActions() {
         new Date()
     );
 
+
   const [
     visibleMonth,
     setVisibleMonth,
   ] =
     useState(
       () => {
+
         const now =
           new Date();
+
 
         return new Date(
           now.getFullYear(),
           now.getMonth(),
           1
         );
+
       }
     );
+
 
   const actionsRef =
     useRef<
@@ -475,6 +866,7 @@ export default function HomeHeaderActions() {
       null
     );
 
+
   // ==========================================================
   // NOTIFICATIONS
   // ==========================================================
@@ -482,17 +874,22 @@ export default function HomeHeaderActions() {
   const loadNotifications =
     useCallback(
       async () => {
+
         setNotificationsLoading(
           true
         );
+
 
         setNotificationsError(
           null
         );
 
+
         try {
+
           const supabase =
             createClient();
+
 
           const {
             data,
@@ -503,13 +900,16 @@ export default function HomeHeaderActions() {
                 "app_get_access_request_notifications"
               );
 
+
           if (
             error
           ) {
+
             const message =
               error
                 .message
                 .toLowerCase();
+
 
             if (
               message.includes(
@@ -520,30 +920,41 @@ export default function HomeHeaderActions() {
                 "требуется авторизация"
               )
             ) {
+
               setNotifications(
                 []
               );
 
+
               return "forbidden";
+
             }
+
 
             setNotificationsError(
               "Не удалось загрузить уведомления"
             );
 
+
             return "error";
+
           }
+
 
           const rows =
             (
-              data ?? []
+              data
+              ??
+              []
             ) as
               AccessRequestNotificationRow[];
+
 
           const nextNotifications:
             NotificationItem[] =
               rows.map(
                 row => {
+
                   const fullName =
                     [
                       row.first_name,
@@ -556,6 +967,7 @@ export default function HomeHeaderActions() {
                         " "
                       );
 
+
                   const detail =
                     row.department
 
@@ -563,7 +975,9 @@ export default function HomeHeaderActions() {
 
                       : fullName;
 
+
                   return {
+
                     id:
                       row.request_id,
 
@@ -580,6 +994,7 @@ export default function HomeHeaderActions() {
                       row.created_at,
 
                     request: {
+
                       firstName:
                         row.first_name,
 
@@ -594,43 +1009,61 @@ export default function HomeHeaderActions() {
 
                       comment:
                         row.comment,
+
                     },
+
                   };
+
                 }
               );
+
 
           setNotifications(
             nextNotifications
           );
 
+
           return "success";
+
         } catch {
+
           setNotificationsError(
             "Не удалось загрузить уведомления"
           );
 
+
           return "error";
+
         } finally {
+
           setNotificationsLoading(
             false
           );
+
         }
+
       },
       []
     );
 
+
   useEffect(
     () => {
+
       let stopped =
         false;
+
 
       let intervalId:
         number | null =
           null;
 
+
       async function startNotifications() {
+
         const result =
           await loadNotifications();
+
 
         if (
           stopped
@@ -638,38 +1071,206 @@ export default function HomeHeaderActions() {
           result !==
             "success"
         ) {
+
           return;
+
         }
+
 
         intervalId =
           window.setInterval(
             () => {
+
               void loadNotifications();
+
             },
             60 * 1000
           );
+
       }
+
 
       void startNotifications();
 
+
       return () => {
+
         stopped =
           true;
+
 
         if (
           intervalId !==
             null
         ) {
+
           window.clearInterval(
             intervalId
           );
+
         }
+
       };
+
     },
     [
       loadNotifications,
     ]
   );
+
+
+  // ==========================================================
+  // CURRENT USER PROFILE
+  // ==========================================================
+
+  useEffect(
+    () => {
+
+      let active =
+        true;
+
+
+      async function loadCurrentProfile() {
+
+        try {
+
+          const supabase =
+            createClient();
+
+
+          const {
+            data,
+            error,
+          } =
+            await supabase
+              .rpc(
+                "app_get_my_profile"
+              );
+
+
+          if (
+            !active
+          ) {
+
+            return;
+
+          }
+
+
+          if (
+            error
+          ) {
+
+            console.error(
+              "Ошибка загрузки профиля:",
+              error
+            );
+
+
+            setCurrentProfile(
+              null
+            );
+
+
+            return;
+
+          }
+
+
+          const rows =
+            Array.isArray(
+              data
+            )
+
+              ? data
+
+              : data
+
+                ? [
+                    data,
+                  ]
+
+                : [];
+
+
+          const profile =
+            rows[
+              0
+            ] as
+              CurrentUserProfileRow
+              |
+              undefined;
+
+
+          if (
+            !profile
+          ) {
+
+            setCurrentProfile(
+              null
+            );
+
+
+            return;
+
+          }
+
+
+          setCurrentProfile(
+            profile
+          );
+
+        } catch (
+          error
+        ) {
+
+          if (
+            active
+          ) {
+
+            console.error(
+              "Ошибка загрузки профиля:",
+              error
+            );
+
+
+            setCurrentProfile(
+              null
+            );
+
+          }
+
+        } finally {
+
+          if (
+            active
+          ) {
+
+            setProfileLoading(
+              false
+            );
+
+          }
+
+        }
+
+      }
+
+
+      void loadCurrentProfile();
+
+
+      return () => {
+
+        active =
+          false;
+
+      };
+
+    },
+    []
+  );
+
 
   // ==========================================================
   // DATE
@@ -677,38 +1278,52 @@ export default function HomeHeaderActions() {
 
   useEffect(
     () => {
+
       const interval =
         window.setInterval(
           () => {
+
             const now =
               new Date();
 
+
             setToday(
               previous => {
+
                 if (
                   isSameDay(
                     previous,
                     now
                   )
                 ) {
+
                   return previous;
+
                 }
 
+
                 return now;
+
               }
             );
+
           },
           60 * 1000
         );
 
+
       return () => {
+
         window.clearInterval(
           interval
         );
+
       };
+
     },
     []
   );
+
 
   // ==========================================================
   // CLOSE PANELS / MODAL
@@ -716,88 +1331,121 @@ export default function HomeHeaderActions() {
 
   useEffect(
     () => {
+
       function handlePointerDown(
-        event: MouseEvent
+        event:
+          MouseEvent
       ) {
+
         if (
           !actionsRef.current
         ) {
+
           return;
+
         }
+
 
         const target =
           event.target;
 
+
         if (
-          target instanceof Node
+          target instanceof
+            Node
           &&
           !actionsRef.current.contains(
             target
           )
         ) {
+
           setOpenPanel(
             null
           );
+
         }
+
       }
 
+
       function handleKeyDown(
-        event: KeyboardEvent
+        event:
+          KeyboardEvent
       ) {
+
         if (
           event.key !==
             "Escape"
         ) {
+
           return;
+
         }
+
 
         if (
           selectedNotification
         ) {
+
           if (
             requestAction !==
               null
           ) {
+
             return;
+
           }
+
 
           closeAccessRequest();
 
+
           return;
+
         }
+
 
         setOpenPanel(
           null
         );
+
       }
+
 
       document.addEventListener(
         "mousedown",
         handlePointerDown
       );
 
+
       document.addEventListener(
         "keydown",
         handleKeyDown
       );
 
+
       return () => {
+
         document.removeEventListener(
           "mousedown",
           handlePointerDown
         );
 
+
         document.removeEventListener(
           "keydown",
           handleKeyDown
         );
+
       };
+
     },
     [
       selectedNotification,
       requestAction,
     ]
   );
+
 
   // ==========================================================
   // CALENDAR
@@ -806,13 +1454,16 @@ export default function HomeHeaderActions() {
   const calendarCells =
     useMemo(
       () => {
+
         const year =
           visibleMonth
             .getFullYear();
 
+
         const month =
           visibleMonth
             .getMonth();
+
 
         const firstDay =
           new Date(
@@ -820,6 +1471,7 @@ export default function HomeHeaderActions() {
             month,
             1
           );
+
 
         const mondayOffset =
           (
@@ -830,6 +1482,7 @@ export default function HomeHeaderActions() {
           %
           7;
 
+
         const daysInMonth =
           new Date(
             year,
@@ -838,14 +1491,17 @@ export default function HomeHeaderActions() {
           )
             .getDate();
 
+
         return Array.from(
           {
-            length: 42,
+            length:
+              42,
           },
           (
             _,
             index
           ) => {
+
             const day =
               index
               -
@@ -853,28 +1509,36 @@ export default function HomeHeaderActions() {
               +
               1;
 
+
             if (
               day < 1
               ||
               day > daysInMonth
             ) {
+
               return null;
+
             }
+
 
             return new Date(
               year,
               month,
               day
             );
+
           }
         );
+
       },
       [
         visibleMonth,
       ]
     );
 
+
   function showPreviousMonth() {
+
     setVisibleMonth(
       current =>
         new Date(
@@ -883,9 +1547,12 @@ export default function HomeHeaderActions() {
           1
         )
     );
+
   }
 
+
   function showNextMonth() {
+
     setVisibleMonth(
       current =>
         new Date(
@@ -894,15 +1561,20 @@ export default function HomeHeaderActions() {
           1
         )
     );
+
   }
 
+
   function showCurrentMonth() {
+
     const now =
       new Date();
+
 
     setToday(
       now
     );
+
 
     setVisibleMonth(
       new Date(
@@ -911,16 +1583,20 @@ export default function HomeHeaderActions() {
         1
       )
     );
+
   }
 
+
   // ==========================================================
-  // ACCESS REQUEST MODAL
+  // ACCESS REQUEST
   // ==========================================================
 
   function toggleNotifications() {
+
     const willOpen =
       openPanel !==
         "notifications";
+
 
     setOpenPanel(
       willOpen
@@ -930,125 +1606,166 @@ export default function HomeHeaderActions() {
         : null
     );
 
+
     if (
       willOpen
     ) {
+
       void loadNotifications();
+
     }
+
   }
+
 
   function openAccessRequest(
     notification:
       NotificationItem
   ) {
+
     setSelectedNotification(
       notification
     );
+
 
     setSelectedRole(
       ""
     );
 
+
     setSelectedMarketplace(
       ""
     );
+
 
     setRequestAction(
       null
     );
 
+
     setRequestActionError(
       null
     );
+
 
     setApprovalResult(
       null
     );
 
+
     setCopyStatus(
       "idle"
     );
 
+
     setOpenPanel(
       null
     );
+
   }
 
+
   function closeAccessRequest() {
+
     if (
       requestAction !==
         null
     ) {
+
       return;
+
     }
+
 
     setSelectedNotification(
       null
     );
 
+
     setSelectedRole(
       ""
     );
+
 
     setSelectedMarketplace(
       ""
     );
 
+
     setRequestActionError(
       null
     );
+
 
     setApprovalResult(
       null
     );
 
+
     setCopyStatus(
       "idle"
     );
+
   }
+
 
   function changeRole(
     role:
       WorkingRole
   ) {
+
     setSelectedRole(
       role
     );
+
 
     setRequestActionError(
       null
     );
 
+
     if (
       role !==
         "category_manager"
     ) {
+
       setSelectedMarketplace(
         ""
       );
+
     }
+
   }
 
+
   async function handleApproveAccessRequest() {
+
     if (
       !selectedNotification
       ||
       requestAction !==
         null
     ) {
+
       return;
+
     }
+
 
     if (
       selectedRole ===
         ""
     ) {
+
       setRequestActionError(
         "Выберите рабочую роль"
       );
 
+
       return;
+
     }
+
 
     if (
       selectedRole ===
@@ -1057,48 +1774,64 @@ export default function HomeHeaderActions() {
       selectedMarketplace ===
         ""
     ) {
+
       setRequestActionError(
         "Выберите маркетплейс для категорийного менеджера"
       );
 
+
       return;
+
     }
+
 
     setRequestAction(
       "approve"
     );
 
+
     setRequestActionError(
       null
     );
 
+
     try {
+
       const result =
-        await approveAccessRequest({
-          requestId:
-            selectedNotification.id,
+        await approveAccessRequest(
+          {
 
-          systemRole:
-            selectedRole,
+            requestId:
+              selectedNotification.id,
 
-          categoryMarketplace:
-            selectedRole ===
-              "category_manager"
+            systemRole:
+              selectedRole,
 
-              ? selectedMarketplace
+            categoryMarketplace:
+              selectedRole ===
+                "category_manager"
 
-              : null,
-        });
+                ? selectedMarketplace
+
+                : null,
+
+          }
+        );
+
 
       if (
         !result.ok
       ) {
+
         setRequestActionError(
           result.error
         );
 
+
         return;
+
       }
+
 
       setNotifications(
         current =>
@@ -1109,67 +1842,93 @@ export default function HomeHeaderActions() {
           )
       );
 
-      setApprovalResult({
-        email:
-          result.email,
 
-        fullName:
-          result.fullName,
+      setApprovalResult(
+        {
 
-        temporaryPassword:
-          result.temporaryPassword,
-      });
+          email:
+            result.email,
+
+          fullName:
+            result.fullName,
+
+          temporaryPassword:
+            result.temporaryPassword,
+
+        }
+      );
+
 
       setCopyStatus(
         "idle"
       );
+
     } catch {
+
       setRequestActionError(
         "Не удалось одобрить заявку"
       );
+
     } finally {
+
       setRequestAction(
         null
       );
+
     }
+
   }
 
+
   async function handleRejectAccessRequest() {
+
     if (
       !selectedNotification
       ||
       requestAction !==
         null
     ) {
+
       return;
+
     }
+
 
     setRequestAction(
       "reject"
     );
 
+
     setRequestActionError(
       null
     );
 
+
     try {
+
       const result =
         await rejectAccessRequest(
           selectedNotification.id
         );
 
+
       if (
         !result.ok
       ) {
+
         setRequestActionError(
           result.error
         );
 
+
         return;
+
       }
+
 
       const processedRequestId =
         selectedNotification.id;
+
 
       setNotifications(
         current =>
@@ -1180,48 +1939,66 @@ export default function HomeHeaderActions() {
           )
       );
 
+
       setSelectedNotification(
         null
       );
+
 
       setSelectedRole(
         ""
       );
 
+
       setSelectedMarketplace(
         ""
       );
 
+
       setRequestActionError(
         null
       );
+
 
       setApprovalResult(
         null
       );
 
+
       setCopyStatus(
         "idle"
       );
+
     } catch {
+
       setRequestActionError(
         "Не удалось отклонить заявку"
       );
+
     } finally {
+
       setRequestAction(
         null
       );
+
     }
+
   }
 
+
   async function copyTemporaryPassword() {
+
     if (
       !approvalResult
     ) {
+
       return;
+
     }
 
+
     try {
+
       await navigator
         .clipboard
         .writeText(
@@ -1229,18 +2006,25 @@ export default function HomeHeaderActions() {
             .temporaryPassword
         );
 
+
       setCopyStatus(
         "copied"
       );
+
     } catch {
+
       setCopyStatus(
         "error"
       );
+
     }
+
   }
+
 
   const unreadCount =
     notifications.length;
+
 
   const canApprove =
     selectedRole !==
@@ -1257,8 +2041,79 @@ export default function HomeHeaderActions() {
     requestAction ===
       null;
 
+
   // ==========================================================
-  // MODAL RENDER
+  // PROFILE VALUES
+  // ==========================================================
+
+  const profileFirstName =
+    currentProfile
+      ?.first_name
+      ?.trim()
+    ||
+    "";
+
+
+  const profileLastName =
+    currentProfile
+      ?.last_name
+      ?.trim()
+    ||
+    "";
+
+
+  const profileFullName =
+    [
+      profileFirstName,
+      profileLastName,
+    ]
+      .filter(
+        Boolean
+      )
+      .join(
+        " "
+      )
+    ||
+    (
+      profileLoading
+
+        ? "Загрузка..."
+
+        : "Пользователь"
+    );
+
+
+  const profileRoleName =
+    currentProfile
+      ?.role_name
+      ?.trim()
+    ||
+    (
+      profileLoading
+
+        ? "Загрузка..."
+
+        : "Роль не определена"
+    );
+
+
+  const profileInitials =
+    currentProfile
+
+      ? getProfileInitials(
+          profileFirstName,
+          profileLastName
+        )
+
+      : profileLoading
+
+        ? "··"
+
+        : "П";
+
+
+  // ==========================================================
+  // ACCESS REQUEST MODAL
   // ==========================================================
 
   const accessRequestModal =
@@ -1268,12 +2123,15 @@ export default function HomeHeaderActions() {
       "undefined"
 
       ? createPortal(
+
           <div
             className={
               styles.modalOverlay
             }
+
             onMouseDown={
               event => {
+
                 if (
                   event.target ===
                     event.currentTarget
@@ -1281,47 +2139,66 @@ export default function HomeHeaderActions() {
                   requestAction ===
                     null
                 ) {
+
                   closeAccessRequest();
+
                 }
+
               }
             }
           >
+
             <div
               className={
                 styles.modal
               }
+
               role="dialog"
+
               aria-modal="true"
+
               aria-labelledby=
                 "access-request-title"
             >
+
               <button
                 type="button"
+
                 className={
                   styles.closeButton
                 }
-                aria-label="Закрыть"
+
+                aria-label=
+                  "Закрыть"
+
                 onClick={
                   closeAccessRequest
                 }
+
                 disabled={
                   requestAction !==
                     null
                 }
               >
+
                 <CloseIcon />
+
               </button>
+
 
               {
                 approvalResult
 
                   ? (
+
                     <>
+
                       <div
                         className={
                           styles.modalHeader
                         }
                       >
+
                         <h2
                           id=
                             "access-request-title"
@@ -1329,18 +2206,22 @@ export default function HomeHeaderActions() {
                           Доступ одобрен
                         </h2>
 
+
                         <p>
                           Учётная запись создана.
                           Передайте сотруднику email
                           и временный пароль.
                         </p>
+
                       </div>
+
 
                       <div
                         className={
                           styles.successBox
                         }
                       >
+
                         <div
                           className={
                             styles.successTitle
@@ -1349,11 +2230,13 @@ export default function HomeHeaderActions() {
                           Сотрудник создан
                         </div>
 
+
                         <div
                           className={
                             styles.credentialRow
                           }
                         >
+
                           <span
                             className={
                               styles.credentialLabel
@@ -1361,6 +2244,7 @@ export default function HomeHeaderActions() {
                           >
                             Сотрудник
                           </span>
+
 
                           <strong
                             className={
@@ -1372,13 +2256,16 @@ export default function HomeHeaderActions() {
                                 .fullName
                             }
                           </strong>
+
                         </div>
+
 
                         <div
                           className={
                             styles.credentialRow
                           }
                         >
+
                           <span
                             className={
                               styles.credentialLabel
@@ -1386,6 +2273,7 @@ export default function HomeHeaderActions() {
                           >
                             Email
                           </span>
+
 
                           <strong
                             className={
@@ -1397,13 +2285,16 @@ export default function HomeHeaderActions() {
                                 .email
                             }
                           </strong>
+
                         </div>
+
 
                         <div
                           className={
                             styles.passwordBlock
                           }
                         >
+
                           <span
                             className={
                               styles.credentialLabel
@@ -1412,11 +2303,13 @@ export default function HomeHeaderActions() {
                             Временный пароль
                           </span>
 
+
                           <div
                             className={
                               styles.passwordLine
                             }
                           >
+
                             <code
                               className={
                                 styles.passwordValue
@@ -1428,11 +2321,14 @@ export default function HomeHeaderActions() {
                               }
                             </code>
 
+
                             <button
                               type="button"
+
                               className={
                                 styles.copyButton
                               }
+
                               onClick={
                                 copyTemporaryPassword
                               }
@@ -1451,9 +2347,13 @@ export default function HomeHeaderActions() {
                                     : "Копировать"
                               }
                             </button>
+
                           </div>
+
                         </div>
+
                       </div>
+
 
                       <div
                         className={
@@ -1467,11 +2367,13 @@ export default function HomeHeaderActions() {
                         создать собственный пароль.
                       </div>
 
+
                       <div
                         className={
                           styles.footer
                         }
                       >
+
                         <span
                           className={
                             styles.footerHint
@@ -1482,28 +2384,37 @@ export default function HomeHeaderActions() {
                           в WorkSpace показан не будет.
                         </span>
 
+
                         <button
                           type="button"
+
                           className={
                             styles.closeFooterButton
                           }
+
                           onClick={
                             closeAccessRequest
                           }
                         >
                           Закрыть
                         </button>
+
                       </div>
+
                     </>
+
                   )
 
                   : (
+
                     <>
+
                       <div
                         className={
                           styles.modalHeader
                         }
                       >
+
                         <h2
                           id=
                             "access-request-title"
@@ -1511,22 +2422,27 @@ export default function HomeHeaderActions() {
                           Запрос доступа
                         </h2>
 
+
                         <p>
                           Проверьте данные сотрудника
                           и назначьте ему рабочую роль.
                         </p>
+
                       </div>
+
 
                       <div
                         className={
                           styles.requestInfo
                         }
                       >
+
                         <div
                           className={
                             styles.requestRow
                           }
                         >
+
                           <span
                             className={
                               styles.requestLabel
@@ -1534,6 +2450,7 @@ export default function HomeHeaderActions() {
                           >
                             Сотрудник
                           </span>
+
 
                           <span
                             className={
@@ -1545,20 +2462,25 @@ export default function HomeHeaderActions() {
                                 .request
                                 .firstName
                             }
+
                             {" "}
+
                             {
                               selectedNotification
                                 .request
                                 .lastName
                             }
                           </span>
+
                         </div>
+
 
                         <div
                           className={
                             styles.requestRow
                           }
                         >
+
                           <span
                             className={
                               styles.requestLabel
@@ -1566,6 +2488,7 @@ export default function HomeHeaderActions() {
                           >
                             Email
                           </span>
+
 
                           <span
                             className={
@@ -1578,13 +2501,16 @@ export default function HomeHeaderActions() {
                                 .email
                             }
                           </span>
+
                         </div>
+
 
                         <div
                           className={
                             styles.requestRow
                           }
                         >
+
                           <span
                             className={
                               styles.requestLabel
@@ -1592,6 +2518,7 @@ export default function HomeHeaderActions() {
                           >
                             Отдел
                           </span>
+
 
                           <span
                             className={
@@ -1606,13 +2533,16 @@ export default function HomeHeaderActions() {
                               "Не указан"
                             }
                           </span>
+
                         </div>
+
 
                         <div
                           className={
                             styles.requestRow
                           }
                         >
+
                           <span
                             className={
                               styles.requestLabel
@@ -1620,6 +2550,7 @@ export default function HomeHeaderActions() {
                           >
                             Комментарий
                           </span>
+
 
                           <span
                             className={
@@ -1634,19 +2565,24 @@ export default function HomeHeaderActions() {
                               "Нет"
                             }
                           </span>
+
                         </div>
+
                       </div>
+
 
                       <div
                         className={
                           styles.roleForm
                         }
                       >
+
                         <div
                           className={
                             styles.field
                           }
                         >
+
                           <label
                             htmlFor=
                               "access-request-role"
@@ -1654,12 +2590,15 @@ export default function HomeHeaderActions() {
                             Рабочая роль *
                           </label>
 
+
                           <select
                             id=
                               "access-request-role"
+
                             value={
                               selectedRole
                             }
+
                             onChange={
                               event =>
                                 changeRole(
@@ -1670,20 +2609,24 @@ export default function HomeHeaderActions() {
                                   )
                                 )
                             }
+
                             disabled={
                               requestAction !==
                                 null
                             }
                           >
+
                             {
                               WORKING_ROLES.map(
                                 role => (
+
                                   <option
                                     key={
                                       role.value
                                       ||
                                       "empty"
                                     }
+
                                     value={
                                       role.value
                                     }
@@ -1692,22 +2635,28 @@ export default function HomeHeaderActions() {
                                       role.label
                                     }
                                   </option>
+
                                 )
                               )
                             }
+
                           </select>
+
                         </div>
+
 
                         {
                           selectedRole ===
                             "category_manager"
                           &&
                           (
+
                             <div
                               className={
                                 styles.field
                               }
                             >
+
                               <label
                                 htmlFor=
                                   "access-request-marketplace"
@@ -1715,14 +2664,18 @@ export default function HomeHeaderActions() {
                                 Маркетплейс *
                               </label>
 
+
                               <select
                                 id=
                                   "access-request-marketplace"
+
                                 value={
                                   selectedMarketplace
                                 }
+
                                 onChange={
                                   event => {
+
                                     setSelectedMarketplace(
                                       getCategoryMarketplace(
                                         event
@@ -1731,25 +2684,31 @@ export default function HomeHeaderActions() {
                                       )
                                     );
 
+
                                     setRequestActionError(
                                       null
                                     );
+
                                   }
                                 }
+
                                 disabled={
                                   requestAction !==
                                     null
                                 }
                               >
+
                                 {
                                   MARKETPLACES.map(
                                     marketplace => (
+
                                       <option
                                         key={
                                           marketplace.value
                                           ||
                                           "empty"
                                         }
+
                                         value={
                                           marketplace.value
                                         }
@@ -1758,50 +2717,66 @@ export default function HomeHeaderActions() {
                                           marketplace.label
                                         }
                                       </option>
+
                                     )
                                   )
                                 }
+
                               </select>
+
                             </div>
+
                           )
                         }
+
 
                         <div
                           className={
                             styles.adminNote
                           }
                         >
+
                           <strong>
                             Административные права:
                           </strong>
+
                           {" "}
+
                           не выдаются при обычном
                           одобрении заявки.
+
                         </div>
+
                       </div>
+
 
                       {
                         requestActionError
                         &&
                         (
+
                           <div
                             className={
                               styles.actionError
                             }
+
                             role="alert"
                           >
                             {
                               requestActionError
                             }
                           </div>
+
                         )
                       }
+
 
                       <div
                         className={
                           styles.footer
                         }
                       >
+
                         <span
                           className={
                             styles.footerHint
@@ -1812,19 +2787,24 @@ export default function HomeHeaderActions() {
                           паролем и выбранной ролью.
                         </span>
 
+
                         <div
                           className={
                             styles.footerActions
                           }
                         >
+
                           <button
                             type="button"
+
                             className={
                               styles.rejectButton
                             }
+
                             onClick={
                               handleRejectAccessRequest
                             }
+
                             disabled={
                               requestAction !==
                                 null
@@ -1840,14 +2820,18 @@ export default function HomeHeaderActions() {
                             }
                           </button>
 
+
                           <button
                             type="button"
+
                             className={
                               styles.approveButton
                             }
+
                             onClick={
                               handleApproveAccessRequest
                             }
+
                             disabled={
                               !canApprove
                             }
@@ -1861,31 +2845,44 @@ export default function HomeHeaderActions() {
                                 : "Одобрить"
                             }
                           </button>
+
                         </div>
+
                       </div>
+
                     </>
+
                   )
               }
+
             </div>
+
           </div>,
+
           document.body
+
         )
 
       : null;
+
 
   // ==========================================================
   // RENDER
   // ==========================================================
 
   return (
+
     <>
+
       <div
         className=
           "home-topbar-right"
+
         ref={
           actionsRef
         }
       >
+
         {/* ====================================================
             NOTIFICATIONS
         ==================================================== */}
@@ -1894,8 +2891,10 @@ export default function HomeHeaderActions() {
           className=
             "home-action-wrapper"
         >
+
           <button
             type="button"
+
             className={
               openPanel ===
                 "notifications"
@@ -1904,22 +2903,28 @@ export default function HomeHeaderActions() {
 
                 : "home-icon-button"
             }
+
             aria-label=
               "Уведомления"
+
             aria-expanded={
               openPanel ===
                 "notifications"
             }
+
             onClick={
               toggleNotifications
             }
           >
+
             <BellIcon />
+
 
             {
               unreadCount > 0
               &&
               (
+
                 <span
                   className=
                     "home-notification-badge"
@@ -1928,21 +2933,26 @@ export default function HomeHeaderActions() {
                     unreadCount
                   }
                 </span>
+
               )
             }
+
           </button>
+
 
           {
             openPanel ===
               "notifications"
             &&
             (
+
               <div
                 className="
                   home-popup
                   home-notifications-popup
                 "
               >
+
                 <div
                   className=
                     "home-popup-header"
@@ -1952,6 +2962,7 @@ export default function HomeHeaderActions() {
                   </strong>
                 </div>
 
+
                 {
                   notificationsLoading
                   &&
@@ -1959,11 +2970,13 @@ export default function HomeHeaderActions() {
                     0
 
                     ? (
+
                       <div
                         className="
                           home-notifications-empty
                         "
                       >
+
                         <div
                           className="
                             home-notifications-empty-icon
@@ -1972,15 +2985,19 @@ export default function HomeHeaderActions() {
                           <BellIcon />
                         </div>
 
+
                         <strong>
                           Загружаем
                         </strong>
+
 
                         <span>
                           Проверяем новые
                           уведомления.
                         </span>
+
                       </div>
+
                     )
 
                     : notificationsError
@@ -1989,11 +3006,13 @@ export default function HomeHeaderActions() {
                         0
 
                       ? (
+
                         <div
                           className="
                             home-notifications-empty
                           "
                         >
+
                           <div
                             className="
                               home-notifications-empty-icon
@@ -2002,27 +3021,33 @@ export default function HomeHeaderActions() {
                             <BellIcon />
                           </div>
 
+
                           <strong>
                             Не удалось загрузить
                           </strong>
+
 
                           <span>
                             {
                               notificationsError
                             }
                           </span>
+
                         </div>
+
                       )
 
                       : notifications.length ===
                           0
 
                         ? (
+
                           <div
                             className="
                               home-notifications-empty
                             "
                           >
+
                             <div
                               className="
                                 home-notifications-empty-icon
@@ -2031,35 +3056,45 @@ export default function HomeHeaderActions() {
                               <BellIcon />
                             </div>
 
+
                             <strong>
                               Уведомлений нет
                             </strong>
+
 
                             <span>
                               Здесь появятся новые
                               системные уведомления.
                             </span>
+
                           </div>
+
                         )
 
                         : (
+
                           <div
                             className="
                               home-notifications-list
                             "
                           >
+
                             {
                               notifications.map(
                                 notification => (
+
                                   <button
                                     key={
                                       notification.id
                                     }
+
                                     type="button"
+
                                     className={`
                                       home-notification-item
                                       ${styles.notificationButton}
                                     `}
+
                                     onClick={
                                       () =>
                                         openAccessRequest(
@@ -2067,17 +3102,20 @@ export default function HomeHeaderActions() {
                                         )
                                     }
                                   >
+
                                     <strong>
                                       {
                                         notification.title
                                       }
                                     </strong>
 
+
                                     <span>
                                       {
                                         notification.text
                                       }
                                     </span>
+
 
                                     <span>
                                       {
@@ -2100,17 +3138,25 @@ export default function HomeHeaderActions() {
                                           : ""
                                       }
                                     </span>
+
                                   </button>
+
                                 )
                               )
                             }
+
                           </div>
+
                         )
                 }
+
               </div>
+
             )
           }
+
         </div>
+
 
         {/* ====================================================
             CALENDAR
@@ -2120,8 +3166,10 @@ export default function HomeHeaderActions() {
           className=
             "home-action-wrapper"
         >
+
           <button
             type="button"
+
             className={
               openPanel ===
                 "calendar"
@@ -2130,12 +3178,15 @@ export default function HomeHeaderActions() {
 
                 : "home-icon-button"
             }
+
             aria-label=
               "Календарь"
+
             aria-expanded={
               openPanel ===
                 "calendar"
             }
+
             onClick={
               () =>
                 setOpenPanel(
@@ -2149,40 +3200,53 @@ export default function HomeHeaderActions() {
                 )
             }
           >
+
             <CalendarIcon />
+
           </button>
+
 
           {
             openPanel ===
               "calendar"
             &&
             (
+
               <div
                 className="
                   home-popup
                   home-calendar-popup
                 "
               >
+
                 <div
                   className="
                     home-calendar-header
                   "
                 >
+
                   <button
                     type="button"
+
                     className="
                       home-calendar-arrow
                     "
+
                     aria-label=
                       "Предыдущий месяц"
+
                     onClick={
                       showPreviousMonth
                     }
                   >
+
                     <ArrowLeftIcon />
+
                   </button>
 
+
                   <strong>
+
                     {
                       MONTH_NAMES[
                         visibleMonth
@@ -2196,31 +3260,42 @@ export default function HomeHeaderActions() {
                       visibleMonth
                         .getFullYear()
                     }
+
                   </strong>
+
 
                   <button
                     type="button"
+
                     className="
                       home-calendar-arrow
                     "
+
                     aria-label=
                       "Следующий месяц"
+
                     onClick={
                       showNextMonth
                     }
                   >
+
                     <ArrowRightIcon />
+
                   </button>
+
                 </div>
+
 
                 <div
                   className="
                     home-calendar-weekdays
                   "
                 >
+
                   {
                     WEEK_DAYS.map(
                       day => (
+
                         <span
                           key={
                             day
@@ -2230,37 +3305,48 @@ export default function HomeHeaderActions() {
                             day
                           }
                         </span>
+
                       )
                     )
                   }
+
                 </div>
+
 
                 <div
                   className="
                     home-calendar-grid
                   "
                 >
+
                   {
                     calendarCells.map(
                       (
                         date,
                         index
                       ) => {
+
                         if (
                           !date
                         ) {
+
                           return (
+
                             <span
                               key={
                                 `empty-${index}`
                               }
+
                               className="
                                 home-calendar-day
                                 empty
                               "
                             />
+
                           );
+
                         }
+
 
                         const currentDay =
                           isSameDay(
@@ -2268,12 +3354,16 @@ export default function HomeHeaderActions() {
                             today
                           );
 
+
                         return (
+
                           <button
                             key={
                               date.toISOString()
                             }
+
                             type="button"
+
                             className={
                               currentDay
 
@@ -2281,6 +3371,7 @@ export default function HomeHeaderActions() {
 
                                 : "home-calendar-day"
                             }
+
                             aria-current={
                               currentDay
 
@@ -2293,17 +3384,23 @@ export default function HomeHeaderActions() {
                               date.getDate()
                             }
                           </button>
+
                         );
+
                       }
                     )
                   }
+
                 </div>
+
 
                 <button
                   type="button"
+
                   className="
                     home-calendar-today-button
                   "
+
                   onClick={
                     showCurrentMonth
                   }
@@ -2316,15 +3413,20 @@ export default function HomeHeaderActions() {
                     )
                   }
                 </button>
+
               </div>
+
             )
           }
+
         </div>
+
 
         <div
           className=
             "home-topbar-divider"
         />
+
 
         {/* ====================================================
             THEME
@@ -2332,10 +3434,12 @@ export default function HomeHeaderActions() {
 
         <HomeThemeToggle />
 
+
         <div
           className=
             "home-topbar-divider"
         />
+
 
         {/* ====================================================
             PROFILE
@@ -2343,42 +3447,63 @@ export default function HomeHeaderActions() {
 
         <button
           type="button"
+
           className=
             "home-profile"
         >
+
           <span
             className=
               "home-avatar"
           >
-            ТС
+            {
+              profileInitials
+            }
           </span>
+
 
           <span
             className=
               "home-profile-text"
           >
+
             <strong>
-              Тест Сайта
+              {
+                profileFullName
+              }
             </strong>
 
+
             <span>
-              Аналитик
+              {
+                profileRoleName
+              }
             </span>
+
           </span>
+
 
           <span
             className="
               home-profile-chevron
             "
           >
+
             <ChevronIcon />
+
           </span>
+
         </button>
+
       </div>
+
 
       {
         accessRequestModal
       }
+
     </>
+
   );
+
 }
