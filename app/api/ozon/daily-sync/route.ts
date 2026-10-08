@@ -2,15 +2,12 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-
 // ============================================================
 // НАСТРОЙКИ
 // ============================================================
 
 const SALES_WINDOW_DAYS = 28;
-
 const OZON_MAX_RETRIES = 5;
-
 const RETRY_BASE_MS = 1500;
 
 // Не даём всей синхронизации долбить Ozon слишком быстро.
@@ -26,13 +23,9 @@ const ANALYTICS_STOCK_REQUEST_INTERVAL_MS = 1250;
 const OZON_429_FALLBACK_DELAY_MS = 5000;
 
 const MAX_FBO_POSTING_PAGES = 1000;
-
 const MAX_PRODUCT_LIST_PAGES = 100;
-
 const PRODUCT_INFO_BATCH_SIZE = 900;
-
 const ANALYTICS_STOCK_BATCH_SIZE = 100;
-
 
 // ============================================================
 // ГЛОБАЛЬНЫЙ THROTTLE OZON
@@ -40,136 +33,96 @@ const ANALYTICS_STOCK_BATCH_SIZE = 100;
 
 let lastOzonRequestStartedAt = 0;
 
-
 // ============================================================
 // ТИПЫ
 // ============================================================
 
 type ProductRow = {
   id: string;
-
   offer_id: string;
-
-  ozon_product_id:
-    | number
-    | string
-    | null;
-
-  name:
-    | string
-    | null;
-
-  master_code:
-    | string
-    | null;
-
+  ozon_product_id: number | string | null;
+  name: string | null;
+  master_code: string | null;
   is_active: boolean;
 };
 
-
 type WarehouseCluster = {
   clusterId: string;
-
   clusterName: string;
-
   warehouseName: string;
 };
 
+type ClusterReference = {
+  clusterId: string;
+  clusterName: string;
+};
 
 type OzonCluster = {
-  id?:
-    | number
-    | string;
-
+  id?: number | string;
   name?: string;
 
   logistic_clusters?: Array<{
     warehouses?: Array<{
-      warehouse_id?:
-        | number
-        | string;
-
+      warehouse_id?: number | string;
       name?: string;
     }>;
   }>;
 };
 
-
 type FboPosting = {
   posting_number?: string;
-
   status?: string;
-
   created_at?: string;
 
   products?: Array<{
-    sku?:
-      | number
-      | string;
-
+    sku?: number | string;
     offer_id?: string;
-
     quantity?: number;
   }>;
 
   analytics_data?: {
-    warehouse_id?:
-      | number
-      | string;
-
+    warehouse_id?: number | string;
     warehouse_name?: string;
+  } | null;
+
+  financial_data?: {
+    cluster_from?: string | null;
+    cluster_to?: string | null;
+
+    [key: string]:
+      unknown;
   } | null;
 };
 
-
 type OzonProductInfoItem = {
-  id?:
-    | number
-    | string;
-
+  id?: number | string;
   offer_id?: string;
-
-  sku?:
-    | number
-    | string;
-
+  sku?: number | string;
   name?: string;
 
   [key: string]:
     unknown;
 };
 
-
 type OzonCatalogItem = {
-  product_id?:
-    | number
-    | string;
-
+  product_id?: number | string;
   offer_id?: string;
 
   [key: string]:
     unknown;
 };
 
-
 type AnalyticsStock = {
-  sku?:
-    | number
-    | string;
-
+  sku?: number | string;
   offer_id?: string;
 
-  warehouse_id?:
-    | number
-    | string;
+  warehouse_id?: number | string;
 
   warehouse_name?:
     | string
     | null;
 
-  cluster_id?:
-    | number
-    | string;
+  cluster_id?: number | string;
 
   cluster_name?:
     | string
@@ -181,7 +134,6 @@ type AnalyticsStock = {
   [key: string]:
     unknown;
 };
-
 
 type SkuResolution = {
   sku: string;
@@ -202,10 +154,8 @@ type SkuResolution = {
     string;
 };
 
-
 type SalesWriteRow = {
   product_id: string;
-
   cluster_id: string;
 
   cluster_name:
@@ -214,9 +164,11 @@ type SalesWriteRow = {
 
   sale_date: string;
 
-  sales_quantity: number;
+  sales_quantity:
+    number;
 
-  cancelled_quantity: number;
+  cancelled_quantity:
+    number;
 
   raw_payload:
     Record<
@@ -225,10 +177,8 @@ type SalesWriteRow = {
     >;
 };
 
-
 type StockWriteRow = {
   product_id: string;
-
   cluster_id: string;
 
   cluster_name:
@@ -244,29 +194,36 @@ type StockWriteRow = {
     >;
 };
 
-
 type ApplySyncResult = {
   ok: boolean;
 
-  sales_sync_run_id: string;
+  sales_sync_run_id:
+    string;
 
-  date_from: string;
+  date_from:
+    string;
 
-  date_to: string;
+  date_to:
+    string;
 
-  completed_days: number;
+  completed_days:
+    number;
 
-  sales_rows_saved: number;
+  sales_rows_saved:
+    number;
 
-  snapshot_date: string;
+  snapshot_date:
+    string;
 
-  stock_rows_saved: number;
+  stock_rows_saved:
+    number;
 
-  postings_received: number;
+  postings_received:
+    number;
 
-  cancelled_postings: number;
+  cancelled_postings:
+    number;
 };
-
 
 // ============================================================
 // HELPERS
@@ -274,23 +231,40 @@ type ApplySyncResult = {
 
 function normalizeKey(
   value: unknown
-): string {
+):
+string {
 
   return String(
     value ?? ""
   ).trim();
 }
 
+function normalizeClusterNameKey(
+  value: unknown
+):
+string {
+
+  return normalizeKey(
+    value
+  )
+    .replace(
+      /\s+/g,
+      " "
+    )
+    .toLocaleLowerCase(
+      "ru-RU"
+    );
+}
 
 function toSafeInteger(
   value: unknown
-): number {
+):
+number {
 
   const parsed =
     Number(
       value ?? 0
     );
-
 
   if (
     !Number.isFinite(
@@ -299,9 +273,7 @@ function toSafeInteger(
   ) {
 
     return 0;
-
   }
-
 
   return Math.max(
     0,
@@ -310,7 +282,6 @@ function toSafeInteger(
     )
   );
 }
-
 
 function sleep(
   milliseconds: number
@@ -323,20 +294,19 @@ function sleep(
         resolve,
         milliseconds
       );
-
     }
   );
 }
 
-
 function chunkArray<T>(
   rows: T[],
   size: number
-): T[][] {
+):
+T[][] {
 
   const result:
-    T[][] = [];
-
+    T[][] =
+    [];
 
   for (
     let index = 0;
@@ -350,13 +320,10 @@ function chunkArray<T>(
         index + size
       )
     );
-
   }
-
 
   return result;
 }
-
 
 // ============================================================
 // OZON REQUEST THROTTLE
@@ -367,18 +334,15 @@ async function waitForOzonRequestSlot() {
   const now =
     Date.now();
 
-
   const earliestNextRequest =
     lastOzonRequestStartedAt
     +
     OZON_MIN_REQUEST_INTERVAL_MS;
 
-
   const waitMs =
     earliestNextRequest
     -
     now;
-
 
   if (
     waitMs > 0
@@ -387,14 +351,11 @@ async function waitForOzonRequestSlot() {
     await sleep(
       waitMs
     );
-
   }
-
 
   lastOzonRequestStartedAt =
     Date.now();
 }
-
 
 // ============================================================
 // ДАТЫ
@@ -403,7 +364,8 @@ async function waitForOzonRequestSlot() {
 function getMoscowDate(
   date:
     Date = new Date()
-): string {
+):
+string {
 
   const formatter =
     new Intl.DateTimeFormat(
@@ -423,12 +385,10 @@ function getMoscowDate(
       }
     );
 
-
   const parts =
     formatter.formatToParts(
       date
     );
-
 
   const year =
     parts.find(
@@ -437,7 +397,6 @@ function getMoscowDate(
         "year"
     )?.value;
 
-
   const month =
     parts.find(
       part =>
@@ -445,14 +404,12 @@ function getMoscowDate(
         "month"
     )?.value;
 
-
   const day =
     parts.find(
       part =>
         part.type ===
         "day"
     )?.value;
-
 
   if (
     !year
@@ -465,31 +422,27 @@ function getMoscowDate(
     throw new Error(
       "Не удалось определить дату по Москве"
     );
-
   }
-
 
   return `${year}-${month}-${day}`;
 }
 
-
 function addDays(
   date: string,
   delta: number
-): string {
+):
+string {
 
   const parsed =
     new Date(
       `${date}T00:00:00Z`
     );
 
-
   parsed.setUTCDate(
     parsed.getUTCDate()
     +
     delta
   );
-
 
   return parsed
     .toISOString()
@@ -499,25 +452,22 @@ function addDays(
     );
 }
 
-
 function isoToMoscowDate(
   value:
-    string
+    | string
     | undefined
-): string | null {
+):
+string | null {
 
   if (!value) {
 
     return null;
-
   }
-
 
   const parsed =
     new Date(
       value
     );
-
 
   if (
     Number.isNaN(
@@ -526,15 +476,12 @@ function isoToMoscowDate(
   ) {
 
     return null;
-
   }
-
 
   return getMoscowDate(
     parsed
   );
 }
-
 
 // ============================================================
 // CONFIG
@@ -546,71 +493,56 @@ function getConfig() {
     process.env
       .OZON_CLIENT_ID;
 
-
   const ozonApiKey =
     process.env
       .OZON_API_KEY;
-
 
   const supabaseUrl =
     process.env
       .NEXT_PUBLIC_SUPABASE_URL;
 
-
   const supabaseSecretKey =
     process.env
       .SUPABASE_SECRET_KEY;
 
-
   const cronSecret =
     process.env
       .CRON_SECRET;
-
 
   if (!ozonClientId) {
 
     throw new Error(
       "Не найдена переменная OZON_CLIENT_ID"
     );
-
   }
-
 
   if (!ozonApiKey) {
 
     throw new Error(
       "Не найдена переменная OZON_API_KEY"
     );
-
   }
-
 
   if (!supabaseUrl) {
 
     throw new Error(
       "Не найдена переменная NEXT_PUBLIC_SUPABASE_URL"
     );
-
   }
-
 
   if (!supabaseSecretKey) {
 
     throw new Error(
       "Не найдена переменная SUPABASE_SECRET_KEY"
     );
-
   }
-
 
   if (!cronSecret) {
 
     throw new Error(
       "Не найдена переменная CRON_SECRET"
     );
-
   }
-
 
   return {
     ozonClientId,
@@ -621,7 +553,6 @@ function getConfig() {
   };
 }
 
-
 // ============================================================
 // AUTH
 // ============================================================
@@ -629,13 +560,13 @@ function getConfig() {
 function isAuthorized(
   request:
     Request
-): boolean {
+):
+boolean {
 
   const {
     cronSecret,
   } =
     getConfig();
-
 
   return (
     request.headers.get(
@@ -646,7 +577,6 @@ function isAuthorized(
   );
 }
 
-
 // ============================================================
 // OZON POST
 // ============================================================
@@ -654,14 +584,14 @@ function isAuthorized(
 async function ozonPost<T>(
   path: string,
   body: unknown
-): Promise<T> {
+):
+Promise<T> {
 
   const {
     ozonClientId,
     ozonApiKey,
   } =
     getConfig();
-
 
   for (
     let attempt = 1;
@@ -671,21 +601,17 @@ async function ozonPost<T>(
 
     await waitForOzonRequestSlot();
 
-
     const controller =
       new AbortController();
-
 
     const timeout =
       setTimeout(
         () => {
 
           controller.abort();
-
         },
         30000
       );
-
 
     try {
 
@@ -723,14 +649,12 @@ async function ozonPost<T>(
           }
         );
 
-
       const text =
         await response.text();
 
-
       let parsed:
-        unknown = null;
-
+        unknown =
+        null;
 
       if (text) {
 
@@ -747,11 +671,8 @@ async function ozonPost<T>(
             raw:
               text,
           };
-
         }
-
       }
-
 
       // ========================================================
       // 429
@@ -759,7 +680,7 @@ async function ozonPost<T>(
 
       if (
         response.status ===
-          429
+        429
       ) {
 
         if (
@@ -770,15 +691,12 @@ async function ozonPost<T>(
           throw new Error(
             `Ozon API ${path}: HTTP 429: ${JSON.stringify(parsed)}`
           );
-
         }
-
 
         const retryAfterHeader =
           response.headers.get(
             "retry-after"
           );
-
 
         const retryAfterSeconds =
           retryAfterHeader
@@ -788,7 +706,6 @@ async function ozonPost<T>(
               )
 
             : NaN;
-
 
         const retryAfterMs =
           Number.isFinite(
@@ -810,16 +727,12 @@ async function ozonPost<T>(
               *
               attempt;
 
-
         await sleep(
           retryAfterMs
         );
 
-
         continue;
-
       }
-
 
       // ========================================================
       // 5XX
@@ -827,13 +740,13 @@ async function ozonPost<T>(
 
       if (
         response.status >=
-          500
+        500
         &&
         response.status <=
-          599
+        599
         &&
         attempt <
-          OZON_MAX_RETRIES
+        OZON_MAX_RETRIES
       ) {
 
         await sleep(
@@ -842,20 +755,15 @@ async function ozonPost<T>(
           attempt
         );
 
-
         continue;
-
       }
-
 
       if (!response.ok) {
 
         throw new Error(
           `Ozon API ${path}: HTTP ${response.status}: ${JSON.stringify(parsed)}`
         );
-
       }
-
 
       return parsed as T;
 
@@ -865,10 +773,10 @@ async function ozonPost<T>(
         error instanceof Error
         &&
         error.name ===
-          "AbortError"
+        "AbortError"
         &&
         attempt <
-          OZON_MAX_RETRIES
+        OZON_MAX_RETRIES
       ) {
 
         await sleep(
@@ -877,11 +785,8 @@ async function ozonPost<T>(
           attempt
         );
 
-
         continue;
-
       }
-
 
       throw error;
 
@@ -890,17 +795,13 @@ async function ozonPost<T>(
       clearTimeout(
         timeout
       );
-
     }
-
   }
-
 
   throw new Error(
     `Ozon API ${path}: исчерпаны все попытки`
   );
 }
-
 
 // ============================================================
 // SUPABASE RPC
@@ -915,14 +816,14 @@ async function supabaseRpc<T>(
       string,
       unknown
     >
-): Promise<T> {
+):
+Promise<T> {
 
   const {
     supabaseUrl,
     supabaseSecretKey,
   } =
     getConfig();
-
 
   const response =
     await fetch(
@@ -955,34 +856,27 @@ async function supabaseRpc<T>(
       }
     );
 
-
   const text =
     await response.text();
-
 
   if (!response.ok) {
 
     throw new Error(
       `Supabase RPC ${functionName}: HTTP ${response.status}: ${text}`
     );
-
   }
-
 
   if (!text) {
 
     throw new Error(
       `Supabase RPC ${functionName} вернул пустой ответ`
     );
-
   }
-
 
   return JSON.parse(
     text
   ) as T;
 }
-
 
 // ============================================================
 // PRODUCTS
@@ -997,24 +891,20 @@ Promise<ProductRow[]> {
   } =
     getConfig();
 
-
   const url =
     new URL(
       `${supabaseUrl}/rest/v1/products`
     );
-
 
   url.searchParams.set(
     "select",
     "id,offer_id,ozon_product_id,name,master_code,is_active"
   );
 
-
   url.searchParams.set(
     "limit",
     "5000"
   );
-
 
   const response =
     await fetch(
@@ -1039,25 +929,20 @@ Promise<ProductRow[]> {
       }
     );
 
-
   const text =
     await response.text();
-
 
   if (!response.ok) {
 
     throw new Error(
       `Supabase products: HTTP ${response.status}: ${text}`
     );
-
   }
-
 
   return JSON.parse(
     text
   ) as ProductRow[];
 }
-
 
 // ============================================================
 // PRODUCT INDEXES
@@ -1074,13 +959,11 @@ function buildProductIndexes(
       ProductRow
     >();
 
-
   const byOzonProductId =
     new Map<
       string,
       ProductRow
     >();
-
 
   for (
     const product
@@ -1092,12 +975,10 @@ function buildProductIndexes(
         product.offer_id
       );
 
-
     const ozonProductId =
       normalizeKey(
         product.ozon_product_id
       );
-
 
     if (offerId) {
 
@@ -1105,9 +986,7 @@ function buildProductIndexes(
         offerId,
         product
       );
-
     }
-
 
     if (ozonProductId) {
 
@@ -1115,18 +994,14 @@ function buildProductIndexes(
         ozonProductId,
         product
       );
-
     }
-
   }
-
 
   return {
     byOffer,
     byOzonProductId,
   };
 }
-
 
 // ============================================================
 // CLUSTERS
@@ -1146,11 +1021,9 @@ async function getOzonClusters() {
       }
     );
 
-
   const clusters =
     response.clusters
     ?? [];
-
 
   const warehouseToCluster =
     new Map<
@@ -1158,6 +1031,14 @@ async function getOzonClusters() {
       WarehouseCluster
     >();
 
+  const clusterNameToCluster =
+    new Map<
+      string,
+      ClusterReference
+    >();
+
+  const ambiguousClusterNameKeys =
+    new Set<string>();
 
   for (
     const cluster
@@ -1169,12 +1050,57 @@ async function getOzonClusters() {
         cluster.id
       );
 
-
     const clusterName =
       normalizeKey(
         cluster.name
       );
 
+    const clusterNameKey =
+      normalizeClusterNameKey(
+        clusterName
+      );
+
+    if (
+      clusterId
+      &&
+      clusterNameKey
+    ) {
+
+      const existing =
+        clusterNameToCluster.get(
+          clusterNameKey
+        );
+
+      if (
+        existing
+        &&
+        existing.clusterId !==
+        clusterId
+      ) {
+
+        ambiguousClusterNameKeys.add(
+          clusterNameKey
+        );
+
+        clusterNameToCluster.delete(
+          clusterNameKey
+        );
+
+      } else if (
+        !ambiguousClusterNameKeys.has(
+          clusterNameKey
+        )
+      ) {
+
+        clusterNameToCluster.set(
+          clusterNameKey,
+          {
+            clusterId,
+            clusterName,
+          }
+        );
+      }
+    }
 
     for (
       const logisticCluster
@@ -1193,19 +1119,15 @@ async function getOzonClusters() {
             warehouse.warehouse_id
           );
 
-
         if (!warehouseId) {
 
           continue;
-
         }
-
 
         warehouseToCluster.set(
           warehouseId,
           {
             clusterId,
-
             clusterName,
 
             warehouseName:
@@ -1214,20 +1136,23 @@ async function getOzonClusters() {
               ),
           }
         );
-
       }
-
     }
-
   }
-
 
   return {
     clusters,
+
     warehouseToCluster,
+
+    clusterNameToCluster,
+
+    ambiguousClusterNameKeys:
+      Array.from(
+        ambiguousClusterNameKeys
+      ),
   };
 }
-
 
 // ============================================================
 // FBO POSTINGS
@@ -1242,16 +1167,14 @@ async function getFboPostingsForRange(
 ) {
 
   const allPostings:
-    FboPosting[] = [];
-
+    FboPosting[] =
+    [];
 
   let cursor =
     "";
 
-
   let requestsMade =
     0;
-
 
   for (
     let page = 1;
@@ -1296,7 +1219,7 @@ async function getFboPostingsForRange(
               true,
 
             financial_data:
-              false,
+              true,
 
             legal_info:
               false,
@@ -1304,10 +1227,8 @@ async function getFboPostingsForRange(
         }
       );
 
-
     requestsMade +=
       1;
-
 
     allPostings.push(
       ...(
@@ -1315,7 +1236,6 @@ async function getFboPostingsForRange(
         ?? []
       )
     );
-
 
     if (
       !response.has_next
@@ -1327,41 +1247,33 @@ async function getFboPostingsForRange(
 
         requestsMade,
       };
-
     }
-
 
     const nextCursor =
       normalizeKey(
         response.cursor
       );
 
-
     if (
       !nextCursor
       ||
       nextCursor ===
-        cursor
+      cursor
     ) {
 
       throw new Error(
         "Ozon вернул has_next=true, но не вернул новый cursor для FBO postings"
       );
-
     }
-
 
     cursor =
       nextCursor;
-
   }
-
 
   throw new Error(
     "Превышен защитный лимит страниц FBO postings"
   );
 }
-
 
 // ============================================================
 // PRODUCT INFO BY SKU
@@ -1385,14 +1297,12 @@ async function getProductInfoBySkus(
       )
     );
 
-
   const items:
-    OzonProductInfoItem[] = [];
-
+    OzonProductInfoItem[] =
+    [];
 
   let requestsMade =
     0;
-
 
   for (
     const batch
@@ -1414,10 +1324,8 @@ async function getProductInfoBySkus(
         }
       );
 
-
     requestsMade +=
       1;
-
 
     items.push(
       ...(
@@ -1425,9 +1333,7 @@ async function getProductInfoBySkus(
         ?? []
       )
     );
-
   }
-
 
   return {
     requestedSkus:
@@ -1438,7 +1344,6 @@ async function getProductInfoBySkus(
     items,
   };
 }
-
 
 // ============================================================
 // PRODUCT INFO BY OFFER ID
@@ -1462,14 +1367,12 @@ async function getProductInfoByOfferIds(
       )
     );
 
-
   const items:
-    OzonProductInfoItem[] = [];
-
+    OzonProductInfoItem[] =
+    [];
 
   let requestsMade =
     0;
-
 
   for (
     const batch
@@ -1491,10 +1394,8 @@ async function getProductInfoByOfferIds(
         }
       );
 
-
     requestsMade +=
       1;
-
 
     items.push(
       ...(
@@ -1502,9 +1403,7 @@ async function getProductInfoByOfferIds(
         ?? []
       )
     );
-
   }
-
 
   return {
     requestedOfferIds:
@@ -1515,7 +1414,6 @@ async function getProductInfoByOfferIds(
     items,
   };
 }
-
 
 // ============================================================
 // SKU RESOLUTIONS
@@ -1537,13 +1435,11 @@ function buildSkuResolutions(
       products
     );
 
-
   const resolutions =
     new Map<
       string,
       SkuResolution
     >();
-
 
   const conflicts:
     Array<
@@ -1551,8 +1447,8 @@ function buildSkuResolutions(
         string,
         unknown
       >
-    > = [];
-
+    > =
+    [];
 
   for (
     const item
@@ -1564,34 +1460,27 @@ function buildSkuResolutions(
         item.sku
       );
 
-
     if (!sku) {
 
       continue;
-
     }
-
 
     const ozonProductId =
       normalizeKey(
         item.id
       );
 
-
     const ozonOfferId =
       normalizeKey(
         item.offer_id
       );
 
-
     let product:
       ProductRow
       | undefined;
 
-
     let resolutionReason =
       "unresolved";
-
 
     if (ozonProductId) {
 
@@ -1600,16 +1489,12 @@ function buildSkuResolutions(
           ozonProductId
         );
 
-
       if (product) {
 
         resolutionReason =
           "matched_by_ozon_product_id";
-
       }
-
     }
-
 
     if (
       !product
@@ -1622,22 +1507,17 @@ function buildSkuResolutions(
           ozonOfferId
         );
 
-
       if (product) {
 
         resolutionReason =
           "matched_by_returned_offer_id";
-
       }
-
     }
-
 
     const existing =
       resolutions.get(
         sku
       );
-
 
     if (
       existing?.product
@@ -1645,7 +1525,7 @@ function buildSkuResolutions(
       product
       &&
       existing.product.id !==
-        product.id
+      product.id
     ) {
 
       conflicts.push(
@@ -1666,11 +1546,8 @@ function buildSkuResolutions(
         }
       );
 
-
       continue;
-
     }
-
 
     resolutions.set(
       sku,
@@ -1692,9 +1569,7 @@ function buildSkuResolutions(
         resolutionReason,
       }
     );
-
   }
-
 
   return {
     resolutions,
@@ -1702,7 +1577,6 @@ function buildSkuResolutions(
     conflicts,
   };
 }
-
 
 // ============================================================
 // SALES SKU FALLBACK
@@ -1729,10 +1603,8 @@ function getUnresolvedSalesSkus(
       products
     );
 
-
   const result =
     new Set<string>();
-
 
   for (
     const posting
@@ -1744,21 +1616,18 @@ function getUnresolvedSalesSkus(
         posting.created_at
       );
 
-
     if (
       !saleDate
       ||
       saleDate <
-        dateFrom
+      dateFrom
       ||
       saleDate >
-        dateTo
+      dateTo
     ) {
 
       continue;
-
     }
-
 
     for (
       const item
@@ -1771,7 +1640,6 @@ function getUnresolvedSalesSkus(
           item.offer_id
         );
 
-
       if (
         offerId
         &&
@@ -1781,34 +1649,26 @@ function getUnresolvedSalesSkus(
       ) {
 
         continue;
-
       }
-
 
       const sku =
         normalizeKey(
           item.sku
         );
 
-
       if (sku) {
 
         result.add(
           sku
         );
-
       }
-
     }
-
   }
-
 
   return Array.from(
     result
   );
 }
-
 
 // ============================================================
 // SALES DATA
@@ -1825,6 +1685,12 @@ function buildSalesData(
     Map<
       string,
       SkuResolution
+    >,
+
+  clusterNameToCluster:
+    Map<
+      string,
+      ClusterReference
     >,
 
   warehouseToCluster:
@@ -1846,7 +1712,6 @@ function buildSalesData(
     buildProductIndexes(
       products
     );
-
 
   type SalesAggregate = {
     saleDate:
@@ -1875,8 +1740,19 @@ function buildSalesData(
 
     warehouseIds:
       Set<string>;
-  };
 
+    warehouseNames:
+      Set<string>;
+
+    clusterFromNames:
+      Set<string>;
+
+    clusterToNames:
+      Set<string>;
+
+    clusterResolutionSources:
+      Set<string>;
+  };
 
   const aggregated =
     new Map<
@@ -1884,15 +1760,14 @@ function buildSalesData(
       SalesAggregate
     >();
 
-
   const unmatched:
     Array<
       Record<
         string,
         unknown
       >
-    > = [];
-
+    > =
+    [];
 
   const ignoredInactive:
     Array<
@@ -1900,8 +1775,8 @@ function buildSalesData(
         string,
         unknown
       >
-    > = [];
-
+    > =
+    [];
 
   const ignoredOutOfRange:
     Array<
@@ -1909,16 +1784,32 @@ function buildSalesData(
         string,
         unknown
       >
-    > = [];
+    > =
+    [];
 
+  const unresolvedClusters:
+    Array<
+      Record<
+        string,
+        unknown
+      >
+    > =
+    [];
 
   let matchedByOffer =
     0;
 
-
   let matchedBySku =
     0;
 
+  let postingsClusteredByFinancialData =
+    0;
+
+  let postingsClusteredByWarehouseFallback =
+    0;
+
+  let postingsWithoutResolvedCluster =
+    0;
 
   for (
     const posting
@@ -1929,7 +1820,6 @@ function buildSalesData(
       isoToMoscowDate(
         posting.created_at
       );
-
 
     if (!saleDate) {
 
@@ -1966,21 +1856,17 @@ function buildSalesData(
               ),
           }
         );
-
       }
 
-
       continue;
-
     }
-
 
     if (
       saleDate <
-        dateFrom
+      dateFrom
       ||
       saleDate >
-        dateTo
+      dateTo
     ) {
 
       for (
@@ -2021,16 +1907,11 @@ function buildSalesData(
                 ),
             }
           );
-
         }
-
       }
 
-
       continue;
-
     }
-
 
     const warehouseId =
       normalizeKey(
@@ -2038,13 +1919,37 @@ function buildSalesData(
           ?.warehouse_id
       );
 
-
     const warehouseName =
       normalizeKey(
         posting.analytics_data
           ?.warehouse_name
       );
 
+    const clusterFrom =
+      normalizeKey(
+        posting.financial_data
+          ?.cluster_from
+      );
+
+    const clusterTo =
+      normalizeKey(
+        posting.financial_data
+          ?.cluster_to
+      );
+
+    const clusterFromKey =
+      normalizeClusterNameKey(
+        clusterFrom
+      );
+
+    const financialCluster =
+      clusterFromKey
+
+        ? clusterNameToCluster.get(
+            clusterFromKey
+          )
+
+        : undefined;
 
     const warehouseCluster =
       warehouseId
@@ -2055,28 +1960,84 @@ function buildSalesData(
 
         : undefined;
 
+    const resolvedCluster =
+      financialCluster
+      ??
+      warehouseCluster;
+
+    const clusterResolutionSource =
+      financialCluster
+
+        ? "financial_data.cluster_from"
+
+        : warehouseCluster
+
+          ? "analytics_data.warehouse_id"
+
+          : "unresolved";
+
+    if (!resolvedCluster) {
+
+      postingsWithoutResolvedCluster +=
+        1;
+
+      if (
+        unresolvedClusters.length <
+        200
+      ) {
+
+        unresolvedClusters.push(
+          {
+            reason:
+              clusterFrom
+                ? "cluster_from_not_found"
+                : "cluster_from_missing",
+
+            posting_number:
+              posting.posting_number
+              ?? null,
+
+            sale_date:
+              saleDate,
+
+            warehouse_id:
+              warehouseId
+              || null,
+
+            warehouse_name:
+              warehouseName
+              || null,
+
+            cluster_from:
+              clusterFrom
+              || null,
+
+            cluster_to:
+              clusterTo
+              || null,
+          }
+        );
+      }
+
+      continue;
+    }
+
+    if (financialCluster) {
+
+      postingsClusteredByFinancialData +=
+        1;
+
+    } else {
+
+      postingsClusteredByWarehouseFallback +=
+        1;
+    }
 
     const clusterId =
-      warehouseCluster
-        ?.clusterId
-      ||
-      (
-        warehouseId
-
-          ? `warehouse:${warehouseId}`
-
-          : "unknown"
-      );
-
+      resolvedCluster.clusterId;
 
     const clusterName =
-      warehouseCluster
-        ?.clusterName
-      ||
-      warehouseName
-      ||
-      "Не определён";
-
+      resolvedCluster.clusterName;
 
     const isCancelled =
       normalizeKey(
@@ -2085,7 +2046,6 @@ function buildSalesData(
         .toLowerCase()
       ===
       "cancelled";
-
 
     for (
       const item
@@ -2098,18 +2058,15 @@ function buildSalesData(
           item.quantity
         );
 
-
       const offerId =
         normalizeKey(
           item.offer_id
         );
 
-
       const sku =
         normalizeKey(
           item.sku
         );
-
 
       let product =
         offerId
@@ -2120,10 +2077,8 @@ function buildSalesData(
 
           : undefined;
 
-
       let matchMethod =
         "offer_id";
-
 
       if (
         !product
@@ -2137,12 +2092,9 @@ function buildSalesData(
           )?.product
           ?? undefined;
 
-
         matchMethod =
           "sku_product_info";
-
       }
-
 
       if (!product) {
 
@@ -2167,14 +2119,21 @@ function buildSalesData(
               || null,
 
             quantity,
+
+            cluster_id:
+              clusterId,
+
+            cluster_name:
+              clusterName,
+
+            cluster_from:
+              clusterFrom
+              || null,
           }
         );
 
-
         continue;
-
       }
-
 
       if (
         !product.is_active
@@ -2205,20 +2164,26 @@ function buildSalesData(
 
               master_code:
                 product.master_code,
+
+              cluster_id:
+                clusterId,
+
+              cluster_name:
+                clusterName,
+
+              cluster_from:
+                clusterFrom
+                || null,
             }
           );
-
         }
 
-
         continue;
-
       }
-
 
       if (
         matchMethod ===
-          "offer_id"
+        "offer_id"
       ) {
 
         matchedByOffer +=
@@ -2228,9 +2193,7 @@ function buildSalesData(
 
         matchedBySku +=
           1;
-
       }
-
 
       const aggregateKey =
         [
@@ -2241,12 +2204,10 @@ function buildSalesData(
           "::"
         );
 
-
       let current =
         aggregated.get(
           aggregateKey
         );
-
 
       if (!current) {
 
@@ -2273,43 +2234,73 @@ function buildSalesData(
 
           warehouseIds:
             new Set<string>(),
-        };
 
+          warehouseNames:
+            new Set<string>(),
+
+          clusterFromNames:
+            new Set<string>(),
+
+          clusterToNames:
+            new Set<string>(),
+
+          clusterResolutionSources:
+            new Set<string>(),
+        };
 
         aggregated.set(
           aggregateKey,
           current
         );
-
       }
-
 
       if (offerId) {
 
         current.offerIds.add(
           offerId
         );
-
       }
-
 
       if (sku) {
 
         current.skus.add(
           sku
         );
-
       }
-
 
       if (warehouseId) {
 
         current.warehouseIds.add(
           warehouseId
         );
-
       }
 
+      if (warehouseName) {
+
+        current.warehouseNames.add(
+          warehouseName
+        );
+      }
+
+      if (clusterFrom) {
+
+        current.clusterFromNames.add(
+          clusterFrom
+        );
+      }
+
+      if (clusterTo) {
+
+        current.clusterToNames.add(
+          clusterTo
+        );
+      }
+
+      current
+        .clusterResolutionSources
+        .add(
+          clusterResolutionSource
+        );
 
       if (isCancelled) {
 
@@ -2320,13 +2311,9 @@ function buildSalesData(
 
         current.salesQuantity +=
           quantity;
-
       }
-
     }
-
   }
-
 
   const rows:
     SalesWriteRow[] =
@@ -2360,6 +2347,22 @@ function buildSalesData(
             master_code:
               current.product.master_code,
 
+            cluster_resolution_sources:
+              Array.from(
+                current
+                  .clusterResolutionSources
+              ),
+
+            cluster_from_names:
+              Array.from(
+                current.clusterFromNames
+              ),
+
+            cluster_to_names:
+              Array.from(
+                current.clusterToNames
+              ),
+
             source_offer_ids:
               Array.from(
                 current.offerIds
@@ -2374,10 +2377,14 @@ function buildSalesData(
               Array.from(
                 current.warehouseIds
               ),
+
+            warehouse_names:
+              Array.from(
+                current.warehouseNames
+              ),
           },
         })
       );
-
 
   rows.sort(
     (
@@ -2398,10 +2405,8 @@ function buildSalesData(
           right.cluster_id
         )
       );
-
     }
   );
-
 
   const perDayMap =
     new Map<
@@ -2417,7 +2422,6 @@ function buildSalesData(
           number;
       }
     >();
-
 
   for (
     const row
@@ -2439,26 +2443,20 @@ function buildSalesData(
           0,
       };
 
-
     current.aggregated_rows +=
       1;
-
 
     current.sales_quantity +=
       row.sales_quantity;
 
-
     current.cancelled_quantity +=
       row.cancelled_quantity;
-
 
     perDayMap.set(
       row.sale_date,
       current
     );
-
   }
-
 
   const perDay =
     Array.from(
@@ -2486,7 +2484,6 @@ function buildSalesData(
           )
       );
 
-
   return {
     rows,
 
@@ -2496,14 +2493,21 @@ function buildSalesData(
 
     ignoredOutOfRange,
 
+    unresolvedClusters,
+
     matchedByOffer,
 
     matchedBySku,
 
+    postingsClusteredByFinancialData,
+
+    postingsClusteredByWarehouseFallback,
+
+    postingsWithoutResolvedCluster,
+
     perDay,
   };
 }
-
 
 // ============================================================
 // OZON PRODUCT CATALOG
@@ -2512,22 +2516,19 @@ function buildSalesData(
 async function getOzonProductCatalog() {
 
   const items:
-    OzonCatalogItem[] = [];
-
+    OzonCatalogItem[] =
+    [];
 
   let lastId =
     "";
 
-
   let requestsMade =
     0;
-
 
   let declaredTotal:
     number
     | null =
     null;
-
 
   for (
     let page = 1;
@@ -2563,28 +2564,23 @@ async function getOzonProductCatalog() {
         }
       );
 
-
     requestsMade +=
       1;
-
 
     const pageItems =
       response.result
         ?.items
       ?? [];
 
-
     items.push(
       ...pageItems
     );
-
 
     const total =
       Number(
         response.result
           ?.total
       );
-
 
     if (
       Number.isFinite(
@@ -2594,22 +2590,18 @@ async function getOzonProductCatalog() {
 
       declaredTotal =
         total;
-
     }
-
 
     if (
       declaredTotal !==
-        null
+      null
       &&
       items.length >=
-        declaredTotal
+      declaredTotal
     ) {
 
       break;
-
     }
-
 
     if (
       pageItems.length ===
@@ -2617,9 +2609,7 @@ async function getOzonProductCatalog() {
     ) {
 
       break;
-
     }
-
 
     const nextLastId =
       normalizeKey(
@@ -2627,49 +2617,39 @@ async function getOzonProductCatalog() {
           ?.last_id
       );
 
-
     if (
       !nextLastId
       ||
       nextLastId ===
-        lastId
+      lastId
     ) {
 
       break;
-
     }
-
 
     lastId =
       nextLastId;
-
   }
-
 
   if (
     declaredTotal !==
-      null
+    null
     &&
     items.length <
-      declaredTotal
+    declaredTotal
   ) {
 
     throw new Error(
       `Не удалось получить полный каталог Ozon: получено ${items.length}, ожидалось ${declaredTotal}`
     );
-
   }
-
 
   return {
     items,
-
     requestsMade,
-
     declaredTotal,
   };
 }
-
 
 // ============================================================
 // ANALYTICS STOCKS
@@ -2691,7 +2671,8 @@ function extractAnalyticsStockRows(
         AnalyticsStock[];
     };
   }
-): AnalyticsStock[] {
+):
+AnalyticsStock[] {
 
   return (
     response.items
@@ -2707,7 +2688,6 @@ function extractAnalyticsStockRows(
     []
   );
 }
-
 
 async function getAnalyticsStocks(
   skus:
@@ -2727,21 +2707,18 @@ async function getAnalyticsStocks(
       )
     );
 
-
   const batches =
     chunkArray(
       uniqueSkus,
       ANALYTICS_STOCK_BATCH_SIZE
     );
 
-
   const stocks:
-    AnalyticsStock[] = [];
-
+    AnalyticsStock[] =
+    [];
 
   let requestsMade =
     0;
-
 
   for (
     let index = 0;
@@ -2749,8 +2726,6 @@ async function getAnalyticsStocks(
     index += 1
   ) {
 
-    // Между запросами этого конкретного метода
-    // держим отдельную паузу.
     if (
       index > 0
     ) {
@@ -2758,15 +2733,12 @@ async function getAnalyticsStocks(
       await sleep(
         ANALYTICS_STOCK_REQUEST_INTERVAL_MS
       );
-
     }
-
 
     const batch =
       batches[
         index
       ];
-
 
     const response =
       await ozonPost<{
@@ -2791,19 +2763,15 @@ async function getAnalyticsStocks(
         }
       );
 
-
     requestsMade +=
       1;
-
 
     stocks.push(
       ...extractAnalyticsStockRows(
         response
       )
     );
-
   }
-
 
   return {
     requestedSkus:
@@ -2817,7 +2785,6 @@ async function getAnalyticsStocks(
     stocks,
   };
 }
-
 
 // ============================================================
 // ПРОВЕРКА ЖИВЫХ ACTIVE LISTINGS
@@ -2839,13 +2806,11 @@ function getActiveCatalogProducts(
       activeProducts
     );
 
-
   const matchedProducts =
     new Map<
       string,
       ProductRow
     >();
-
 
   for (
     const item
@@ -2857,12 +2822,10 @@ function getActiveCatalogProducts(
         item.offer_id
       );
 
-
     const ozonProductId =
       normalizeKey(
         item.product_id
       );
-
 
     const product =
       (
@@ -2885,24 +2848,19 @@ function getActiveCatalogProducts(
           : undefined
       );
 
-
     if (product) {
 
       matchedProducts.set(
         product.id,
         product
       );
-
     }
-
   }
-
 
   return Array.from(
     matchedProducts.values()
   );
 }
-
 
 // ============================================================
 // STOCK DATA
@@ -2940,7 +2898,6 @@ function buildStockData(
       }
     >();
 
-
   for (
     const cluster
     of clusters
@@ -2951,12 +2908,10 @@ function buildStockData(
         cluster.id
       );
 
-
     const clusterName =
       normalizeKey(
         cluster.name
       );
-
 
     if (
       clusterId
@@ -2974,11 +2929,8 @@ function buildStockData(
             clusterName,
         }
       );
-
     }
-
   }
-
 
   type StockAggregate = {
     product:
@@ -3002,13 +2954,11 @@ function buildStockData(
       >;
   };
 
-
   const aggregated =
     new Map<
       string,
       StockAggregate
     >();
-
 
   const unknownPositiveRows:
     Array<
@@ -3016,20 +2966,17 @@ function buildStockData(
         string,
         unknown
       >
-    > = [];
-
+    > =
+    [];
 
   let unknownZeroRows =
     0;
 
-
   let ignoredInactiveRows =
     0;
 
-
   let totalAvailable =
     0;
-
 
   for (
     const stock
@@ -3041,36 +2988,30 @@ function buildStockData(
         stock.sku
       );
 
-
     const warehouseId =
       normalizeKey(
         stock.warehouse_id
       );
-
 
     const warehouseName =
       normalizeKey(
         stock.warehouse_name
       );
 
-
     const analyticsClusterId =
       normalizeKey(
         stock.cluster_id
       );
-
 
     const analyticsClusterName =
       normalizeKey(
         stock.cluster_name
       );
 
-
     const available =
       toSafeInteger(
         stock.available_stock_count
       );
-
 
     const resolution =
       sku
@@ -3081,11 +3022,9 @@ function buildStockData(
 
         : undefined;
 
-
     const product =
       resolution?.product
       ?? null;
-
 
     if (!product) {
 
@@ -3130,21 +3069,16 @@ function buildStockData(
                 available,
             }
           );
-
         }
 
       } else {
 
         unknownZeroRows +=
           1;
-
       }
 
-
       continue;
-
     }
-
 
     if (
       !product.is_active
@@ -3153,11 +3087,8 @@ function buildStockData(
       ignoredInactiveRows +=
         1;
 
-
       continue;
-
     }
-
 
     const warehouseCluster =
       warehouseId
@@ -3168,7 +3099,6 @@ function buildStockData(
 
         : undefined;
 
-
     const namedCluster =
       analyticsClusterName
 
@@ -3177,7 +3107,6 @@ function buildStockData(
           )
 
         : undefined;
-
 
     const clusterId =
       warehouseCluster
@@ -3200,7 +3129,6 @@ function buildStockData(
             : "unknown"
       );
 
-
     const clusterName =
       analyticsClusterName
       ||
@@ -3214,7 +3142,6 @@ function buildStockData(
       ||
       "Не определён";
 
-
     const aggregateKey =
       [
         product.id,
@@ -3223,12 +3150,10 @@ function buildStockData(
         "::"
       );
 
-
     let current =
       aggregated.get(
         aggregateKey
       );
-
 
     if (!current) {
 
@@ -3246,18 +3171,14 @@ function buildStockData(
           [],
       };
 
-
       aggregated.set(
         aggregateKey,
         current
       );
-
     }
-
 
     current.quantity +=
       available;
-
 
     current.warehouses.push(
       {
@@ -3299,12 +3220,9 @@ function buildStockData(
       }
     );
 
-
     totalAvailable +=
       available;
-
   }
-
 
   const rows:
     StockWriteRow[] =
@@ -3338,7 +3256,6 @@ function buildStockData(
         })
       );
 
-
   rows.sort(
     (
       left,
@@ -3354,10 +3271,8 @@ function buildStockData(
           right.cluster_id
         )
       );
-
     }
   );
-
 
   return {
     rows,
@@ -3372,7 +3287,6 @@ function buildStockData(
   };
 }
 
-
 // ============================================================
 // DAILY SYNC
 // ============================================================
@@ -3385,14 +3299,11 @@ async function runDailySync(
   const startedAt =
     Date.now();
 
-
   let writeAttempted =
     false;
 
-
   let writeSucceeded =
     false;
-
 
   try {
 
@@ -3419,9 +3330,7 @@ async function runDailySync(
             401,
         }
       );
-
     }
-
 
     // ========================================================
     // 2. DATES
@@ -3430,13 +3339,11 @@ async function runDailySync(
     const todayMoscow =
       getMoscowDate();
 
-
     const salesDateTo =
       addDays(
         todayMoscow,
         -1
       );
-
 
     const salesDateFrom =
       addDays(
@@ -3448,7 +3355,6 @@ async function runDailySync(
         )
       );
 
-
     // ========================================================
     // 3. PRODUCTS
     // ========================================================
@@ -3456,20 +3362,17 @@ async function runDailySync(
     const products =
       await getProducts();
 
-
     const activeProducts =
       products.filter(
         product =>
           product.is_active
       );
 
-
     const inactiveProducts =
       products.filter(
         product =>
           !product.is_active
       );
-
 
     const activeWithoutMasterCode =
       activeProducts.filter(
@@ -3478,7 +3381,6 @@ async function runDailySync(
             product.master_code
           )
       );
-
 
     if (
       activeWithoutMasterCode.length >
@@ -3517,9 +3419,7 @@ async function runDailySync(
             409,
         }
       );
-
     }
-
 
     // ========================================================
     // 4. CLUSTERS
@@ -3527,7 +3427,6 @@ async function runDailySync(
 
     const clusterResult =
       await getOzonClusters();
-
 
     if (
       clusterResult
@@ -3557,9 +3456,50 @@ async function runDailySync(
             409,
         }
       );
-
     }
 
+    if (
+      clusterResult
+        .ambiguousClusterNameKeys
+        .length > 0
+    ) {
+
+      return Response.json(
+        {
+          ok:
+            false,
+
+          mode:
+            "write_sync",
+
+          writes_to_database:
+            false,
+
+          stage:
+            "cluster_name_validation",
+
+          error:
+            "В /v1/cluster/list найдены неоднозначные названия кластеров.",
+
+          count:
+            clusterResult
+              .ambiguousClusterNameKeys
+              .length,
+
+          sample:
+            clusterResult
+              .ambiguousClusterNameKeys
+              .slice(
+                0,
+                100
+              ),
+        },
+        {
+          status:
+            409,
+        }
+      );
+    }
 
     // ========================================================
     // 5. SALES
@@ -3570,7 +3510,6 @@ async function runDailySync(
         salesDateFrom,
         salesDateTo
       );
-
 
     if (
       salesResult
@@ -3600,9 +3539,7 @@ async function runDailySync(
             409,
         }
       );
-
     }
-
 
     const unresolvedSalesSkus =
       getUnresolvedSalesSkus(
@@ -3611,7 +3548,6 @@ async function runDailySync(
         salesDateFrom,
         salesDateTo
       );
-
 
     const salesProductInfo =
       unresolvedSalesSkus.length > 0
@@ -3631,13 +3567,11 @@ async function runDailySync(
               [] as OzonProductInfoItem[],
           };
 
-
     const salesResolutionResult =
       buildSkuResolutions(
         salesProductInfo.items,
         products
       );
-
 
     if (
       salesResolutionResult
@@ -3675,9 +3609,7 @@ async function runDailySync(
             409,
         }
       );
-
     }
-
 
     const salesData =
       buildSalesData(
@@ -3686,11 +3618,54 @@ async function runDailySync(
         salesResolutionResult
           .resolutions,
         clusterResult
+          .clusterNameToCluster,
+        clusterResult
           .warehouseToCluster,
         salesDateFrom,
         salesDateTo
       );
 
+    if (
+      salesData
+        .unresolvedClusters
+        .length > 0
+    ) {
+
+      return Response.json(
+        {
+          ok:
+            false,
+
+          mode:
+            "write_sync",
+
+          writes_to_database:
+            false,
+
+          stage:
+            "sales_cluster_validation",
+
+          error:
+            "Есть FBO-отправления, для которых не удалось определить кластер продаж. Запись отменена.",
+
+          count:
+            salesData
+              .postingsWithoutResolvedCluster,
+
+          sample:
+            salesData
+              .unresolvedClusters
+              .slice(
+                0,
+                100
+              ),
+        },
+        {
+          status:
+            409,
+        }
+      );
+    }
 
     if (
       salesData
@@ -3733,9 +3708,7 @@ async function runDailySync(
             409,
         }
       );
-
     }
-
 
     // ========================================================
     // 6. STOCK CATALOG
@@ -3743,7 +3716,6 @@ async function runDailySync(
 
     const ozonCatalog =
       await getOzonProductCatalog();
-
 
     if (
       ozonCatalog
@@ -3773,9 +3745,7 @@ async function runDailySync(
             409,
         }
       );
-
     }
-
 
     const catalogOfferIds =
       Array.from(
@@ -3794,9 +3764,9 @@ async function runDailySync(
         )
       );
 
-
     if (
-      catalogOfferIds.length === 0
+      catalogOfferIds.length ===
+      0
     ) {
 
       return Response.json(
@@ -3821,9 +3791,7 @@ async function runDailySync(
             409,
         }
       );
-
     }
-
 
     // ========================================================
     // 7. OFFER ID → SKU
@@ -3833,7 +3801,6 @@ async function runDailySync(
       await getProductInfoByOfferIds(
         catalogOfferIds
       );
-
 
     if (
       stockProductInfo
@@ -3863,16 +3830,13 @@ async function runDailySync(
             409,
         }
       );
-
     }
-
 
     const stockResolutionResult =
       buildSkuResolutions(
         stockProductInfo.items,
         products
       );
-
 
     if (
       stockResolutionResult
@@ -3915,9 +3879,7 @@ async function runDailySync(
             409,
         }
       );
-
     }
-
 
     const stockSkus =
       Array.from(
@@ -3936,9 +3898,9 @@ async function runDailySync(
         )
       );
 
-
     if (
-      stockSkus.length === 0
+      stockSkus.length ===
+      0
     ) {
 
       return Response.json(
@@ -3963,9 +3925,7 @@ async function runDailySync(
             409,
         }
       );
-
     }
-
 
     // ========================================================
     // 8. ЖИВЫЕ ACTIVE PRODUCTS ДОЛЖНЫ ИМЕТЬ SKU
@@ -3977,10 +3937,8 @@ async function runDailySync(
         activeProducts
       );
 
-
     const activeProductsWithSku =
       new Set<string>();
-
 
     for (
       const resolution
@@ -3991,17 +3949,14 @@ async function runDailySync(
 
       if (
         resolution.product
-        ?.is_active
+          ?.is_active
       ) {
 
         activeProductsWithSku.add(
           resolution.product.id
         );
-
       }
-
     }
-
 
     const liveActiveWithoutSku =
       activeCatalogProducts.filter(
@@ -4010,7 +3965,6 @@ async function runDailySync(
             product.id
           )
       );
-
 
     if (
       liveActiveWithoutSku.length >
@@ -4049,9 +4003,7 @@ async function runDailySync(
             409,
         }
       );
-
     }
-
 
     // ========================================================
     // 9. ANALYTICS STOCKS
@@ -4061,7 +4013,6 @@ async function runDailySync(
       await getAnalyticsStocks(
         stockSkus
       );
-
 
     if (
       stockResult
@@ -4091,9 +4042,7 @@ async function runDailySync(
             409,
         }
       );
-
     }
-
 
     const stockData =
       buildStockData(
@@ -4105,7 +4054,6 @@ async function runDailySync(
         clusterResult
           .warehouseToCluster
       );
-
 
     // ========================================================
     // 10. НЕИЗВЕСТНЫЙ ТОВАР С ПОЛОЖИТЕЛЬНЫМ ОСТАТКОМ
@@ -4148,9 +4096,7 @@ async function runDailySync(
             409,
         }
       );
-
     }
-
 
     // ========================================================
     // 11. POSTINGS COUNTERS
@@ -4167,20 +4113,17 @@ async function runDailySync(
                 posting.created_at
               );
 
-
             return Boolean(
               saleDate
               &&
               saleDate >=
-                salesDateFrom
+              salesDateFrom
               &&
               saleDate <=
-                salesDateTo
+              salesDateTo
             );
-
           }
         );
-
 
     const postingsOutsideWindow =
       salesResult
@@ -4189,7 +4132,6 @@ async function runDailySync(
       -
       postingsInWindow
         .length;
-
 
     const cancelledPostings =
       postingsInWindow
@@ -4204,14 +4146,12 @@ async function runDailySync(
         )
         .length;
 
-
     // ========================================================
     // 12. ATOMIC WRITE
     // ========================================================
 
     writeAttempted =
       true;
-
 
     const writeResult =
       await supabaseRpc<
@@ -4242,20 +4182,17 @@ async function runDailySync(
         }
       );
 
-
     if (
       !writeResult
       ||
       writeResult.ok !==
-        true
+      true
     ) {
 
       throw new Error(
         "apply_ozon_daily_sync не подтвердил успешную запись"
       );
-
     }
-
 
     if (
       writeResult
@@ -4275,9 +4212,7 @@ async function runDailySync(
           ": "
         )
       );
-
     }
-
 
     if (
       writeResult
@@ -4297,13 +4232,10 @@ async function runDailySync(
           ": "
         )
       );
-
     }
-
 
     writeSucceeded =
       true;
-
 
     // ========================================================
     // 13. SUCCESS
@@ -4320,7 +4252,6 @@ async function runDailySync(
         writes_to_database:
           true,
 
-
         dates: {
           sales_date_from:
             salesDateFrom,
@@ -4334,7 +4265,6 @@ async function runDailySync(
           stock_snapshot_date:
             todayMoscow,
         },
-
 
         products: {
           total:
@@ -4350,19 +4280,22 @@ async function runDailySync(
             activeCatalogProducts.length,
         },
 
-
         clusters: {
           total_clusters:
             clusterResult
               .clusters
               .length,
 
+          mapped_cluster_names:
+            clusterResult
+              .clusterNameToCluster
+              .size,
+
           mapped_warehouses:
             clusterResult
               .warehouseToCluster
               .size,
         },
-
 
         sales_fbo: {
           ozon_requests:
@@ -4396,6 +4329,23 @@ async function runDailySync(
             salesData
               .matchedBySku,
 
+          cluster_resolution: {
+            primary_source:
+              "financial_data.cluster_from",
+
+            postings_by_financial_cluster:
+              salesData
+                .postingsClusteredByFinancialData,
+
+            postings_by_warehouse_fallback:
+              salesData
+                .postingsClusteredByWarehouseFallback,
+
+            postings_without_resolved_cluster:
+              salesData
+                .postingsWithoutResolvedCluster,
+          },
+
           ignored_inactive_sample:
             salesData
               .ignoredInactive,
@@ -4408,7 +4358,6 @@ async function runDailySync(
             salesData
               .perDay,
         },
-
 
         stocks_fbo: {
           method:
@@ -4483,7 +4432,6 @@ async function runDailySync(
           },
         },
 
-
         database: {
           atomic_rpc:
             "apply_ozon_daily_sync",
@@ -4491,7 +4439,6 @@ async function runDailySync(
           result:
             writeResult,
         },
-
 
         duration_ms:
           Date.now()
@@ -4510,7 +4457,6 @@ async function runDailySync(
       "OZON DAILY SYNC ERROR",
       error
     );
-
 
     return Response.json(
       {
@@ -4554,10 +4500,8 @@ async function runDailySync(
           500,
       }
     );
-
   }
 }
-
 
 // ============================================================
 // GET / POST
@@ -4572,7 +4516,6 @@ export async function GET(
     request
   );
 }
-
 
 export async function POST(
   request:
