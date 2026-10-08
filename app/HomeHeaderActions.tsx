@@ -1,11 +1,16 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
+
+import {
+  createClient,
+} from "../lib/supabase/client";
 
 import HomeThemeToggle from "./HomeThemeToggle";
 
@@ -15,6 +20,7 @@ import HomeThemeToggle from "./HomeThemeToggle";
 // ============================================================
 
 function BellIcon() {
+
   return (
     <svg
       viewBox="0 0 24 24"
@@ -29,10 +35,12 @@ function BellIcon() {
       />
     </svg>
   );
+
 }
 
 
 function CalendarIcon() {
+
   return (
     <svg
       viewBox="0 0 24 24"
@@ -51,10 +59,12 @@ function CalendarIcon() {
       />
     </svg>
   );
+
 }
 
 
 function ChevronIcon() {
+
   return (
     <svg
       viewBox="0 0 24 24"
@@ -65,10 +75,12 @@ function ChevronIcon() {
       />
     </svg>
   );
+
 }
 
 
 function ArrowLeftIcon() {
+
   return (
     <svg
       viewBox="0 0 24 24"
@@ -79,10 +91,12 @@ function ArrowLeftIcon() {
       />
     </svg>
   );
+
 }
 
 
 function ArrowRightIcon() {
+
   return (
     <svg
       viewBox="0 0 24 24"
@@ -93,6 +107,7 @@ function ArrowRightIcon() {
       />
     </svg>
   );
+
 }
 
 
@@ -100,18 +115,67 @@ function ArrowRightIcon() {
 // NOTIFICATIONS
 // ============================================================
 
-type NotificationItem = {
-  id: string;
-  title: string;
-  text?: string;
-  createdAt: string;
+type AccessRequestNotificationRow = {
+
+  request_id:
+    string;
+
+  first_name:
+    string;
+
+  last_name:
+    string;
+
+  email:
+    string;
+
+  department:
+    string | null;
+
+  comment:
+    string | null;
+
+  created_at:
+    string;
+
 };
 
 
-// Здесь в дальнейшем будут реальные уведомления.
-// Сейчас список действительно пустой.
+type NotificationItem = {
 
-const notifications: NotificationItem[] = [];
+  id:
+    string;
+
+  type:
+    "access_request";
+
+  title:
+    string;
+
+  text:
+    string;
+
+  createdAt:
+    string;
+
+  request: {
+    firstName:
+      string;
+
+    lastName:
+      string;
+
+    email:
+      string;
+
+    department:
+      string | null;
+
+    comment:
+      string | null;
+  };
+
+};
 
 
 // ============================================================
@@ -153,30 +217,86 @@ function isSameDay(
   first: Date,
   second: Date
 ) {
+
   return (
+
     first.getFullYear() ===
       second.getFullYear()
+
     &&
+
     first.getMonth() ===
       second.getMonth()
+
     &&
+
     first.getDate() ===
       second.getDate()
+
   );
+
 }
 
 
 function formatToday(
   date: Date
 ) {
+
   return date.toLocaleDateString(
     "ru-RU",
     {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
+      day:
+        "numeric",
+
+      month:
+        "long",
+
+      year:
+        "numeric",
     }
   );
+
+}
+
+
+function formatNotificationTime(
+  value: string
+) {
+
+  const date =
+    new Date(
+      value
+    );
+
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+
+    return "";
+
+  }
+
+
+  return date.toLocaleString(
+    "ru-RU",
+    {
+      day:
+        "2-digit",
+
+      month:
+        "2-digit",
+
+      hour:
+        "2-digit",
+
+      minute:
+        "2-digit",
+    }
+  );
+
 }
 
 
@@ -185,6 +305,10 @@ function formatToday(
 // ============================================================
 
 export default function HomeHeaderActions() {
+
+  // ==========================================================
+  // PANELS
+  // ==========================================================
 
   const [
     openPanel,
@@ -200,6 +324,45 @@ export default function HomeHeaderActions() {
       null
     );
 
+
+  // ==========================================================
+  // NOTIFICATIONS STATE
+  // ==========================================================
+
+  const [
+    notifications,
+    setNotifications,
+  ] =
+    useState<
+      NotificationItem[]
+    >(
+      []
+    );
+
+
+  const [
+    notificationsLoading,
+    setNotificationsLoading,
+  ] =
+    useState(
+      true
+    );
+
+
+  const [
+    notificationsError,
+    setNotificationsError,
+  ] =
+    useState<
+      string | null
+    >(
+      null
+    );
+
+
+  // ==========================================================
+  // CALENDAR STATE
+  // ==========================================================
 
   const [
     today,
@@ -221,6 +384,7 @@ export default function HomeHeaderActions() {
         const now =
           new Date();
 
+
         return new Date(
           now.getFullYear(),
           now.getMonth(),
@@ -235,6 +399,271 @@ export default function HomeHeaderActions() {
     useRef<HTMLDivElement | null>(
       null
     );
+
+
+  // ==========================================================
+  // LOAD ACCESS REQUEST NOTIFICATIONS
+  // ==========================================================
+
+  const loadNotifications =
+    useCallback(
+      async () => {
+
+        setNotificationsLoading(
+          true
+        );
+
+
+        setNotificationsError(
+          null
+        );
+
+
+        try {
+
+          const supabase =
+            createClient();
+
+
+          const {
+            data,
+            error,
+          } =
+            await supabase
+              .rpc(
+                "app_get_access_request_notifications"
+              );
+
+
+          if (error) {
+
+            const message =
+              error.message
+                .toLowerCase();
+
+
+            /*
+             * Обычный пользователь
+             * не должен видеть
+             * административные заявки.
+             *
+             * Для него это не ошибка
+             * интерфейса: просто
+             * уведомлений такого типа нет.
+             */
+            if (
+              message.includes(
+                "недостаточно прав"
+              )
+              ||
+              message.includes(
+                "требуется авторизация"
+              )
+            ) {
+
+              setNotifications(
+                []
+              );
+
+
+              return "forbidden" as const;
+
+            }
+
+
+            setNotificationsError(
+              "Не удалось загрузить уведомления"
+            );
+
+
+            return "error" as const;
+
+          }
+
+
+          const rows =
+            (
+              data ?? []
+            ) as
+              AccessRequestNotificationRow[];
+
+
+          const nextNotifications:
+            NotificationItem[] =
+              rows.map(
+                row => {
+
+                  const fullName =
+                    [
+                      row.first_name,
+                      row.last_name,
+                    ]
+                      .filter(
+                        Boolean
+                      )
+                      .join(
+                        " "
+                      );
+
+
+                  const detail =
+                    row.department
+
+                      ? `${fullName} · ${row.department}`
+
+                      : fullName;
+
+
+                  return {
+
+                    id:
+                      row.request_id,
+
+                    type:
+                      "access_request",
+
+                    title:
+                      "Новый запрос доступа",
+
+                    text:
+                      detail,
+
+                    createdAt:
+                      row.created_at,
+
+                    request: {
+
+                      firstName:
+                        row.first_name,
+
+                      lastName:
+                        row.last_name,
+
+                      email:
+                        row.email,
+
+                      department:
+                        row.department,
+
+                      comment:
+                        row.comment,
+
+                    },
+
+                  };
+
+                }
+              );
+
+
+          setNotifications(
+            nextNotifications
+          );
+
+
+          return "success" as const;
+
+        } catch {
+
+          setNotificationsError(
+            "Не удалось загрузить уведомления"
+          );
+
+
+          return "error" as const;
+
+        } finally {
+
+          setNotificationsLoading(
+            false
+          );
+
+        }
+
+      },
+      []
+    );
+
+
+  // ==========================================================
+  // ПЕРВАЯ ЗАГРУЗКА УВЕДОМЛЕНИЙ
+  //
+  // Если пользователь является администратором,
+  // после успешной первой загрузки проверяем
+  // новые заявки раз в минуту.
+  //
+  // Для обычного пользователя polling
+  // не запускается.
+  // ==========================================================
+
+  useEffect(
+    () => {
+
+      let stopped =
+        false;
+
+
+      let intervalId:
+        number | null =
+          null;
+
+
+      async function startNotifications() {
+
+        const result =
+          await loadNotifications();
+
+
+        if (
+          stopped
+          ||
+          result !== "success"
+        ) {
+
+          return;
+
+        }
+
+
+        intervalId =
+          window.setInterval(
+            () => {
+
+              void loadNotifications();
+
+            },
+            60 * 1000
+          );
+
+      }
+
+
+      void startNotifications();
+
+
+      return () => {
+
+        stopped =
+          true;
+
+
+        if (
+          intervalId !== null
+        ) {
+
+          window.clearInterval(
+            intervalId
+          );
+
+        }
+
+      };
+
+    },
+    [
+      loadNotifications,
+    ]
+  );
 
 
   // ==========================================================
@@ -261,8 +690,11 @@ export default function HomeHeaderActions() {
                     now
                   )
                 ) {
+
                   return previous;
+
                 }
+
 
                 return now;
 
@@ -275,9 +707,11 @@ export default function HomeHeaderActions() {
 
 
       return () => {
+
         window.clearInterval(
           interval
         );
+
       };
 
     },
@@ -299,7 +733,9 @@ export default function HomeHeaderActions() {
         if (
           !actionsRef.current
         ) {
+
           return;
+
         }
 
 
@@ -308,9 +744,11 @@ export default function HomeHeaderActions() {
             event.target as Node
           )
         ) {
+
           setOpenPanel(
             null
           );
+
         }
 
       }
@@ -324,9 +762,11 @@ export default function HomeHeaderActions() {
           event.key ===
           "Escape"
         ) {
+
           setOpenPanel(
             null
           );
+
         }
 
       }
@@ -373,11 +813,13 @@ export default function HomeHeaderActions() {
       () => {
 
         const year =
-          visibleMonth.getFullYear();
+          visibleMonth
+            .getFullYear();
 
 
         const month =
-          visibleMonth.getMonth();
+          visibleMonth
+            .getMonth();
 
 
         const firstDay =
@@ -409,7 +851,8 @@ export default function HomeHeaderActions() {
 
         return Array.from(
           {
-            length: 42,
+            length:
+              42,
           },
           (
             _,
@@ -429,7 +872,9 @@ export default function HomeHeaderActions() {
               ||
               day > daysInMonth
             ) {
+
               return null;
+
             }
 
 
@@ -503,9 +948,45 @@ export default function HomeHeaderActions() {
   }
 
 
+  // ==========================================================
+  // TOGGLE NOTIFICATIONS
+  // ==========================================================
+
+  function toggleNotifications() {
+
+    const willOpen =
+      openPanel !==
+        "notifications";
+
+
+    setOpenPanel(
+      willOpen
+        ? "notifications"
+        : null
+    );
+
+
+    /*
+     * При каждом открытии
+     * колокольчика обновляем
+     * список ещё раз.
+     */
+    if (willOpen) {
+
+      void loadNotifications();
+
+    }
+
+  }
+
+
   const unreadCount =
     notifications.length;
 
+
+  // ==========================================================
+  // RENDER
+  // ==========================================================
 
   return (
 
@@ -519,14 +1000,16 @@ export default function HomeHeaderActions() {
           NOTIFICATIONS
       ====================================================== */}
 
-      <div className="home-action-wrapper">
+      <div
+        className="home-action-wrapper"
+      >
 
         <button
           type="button"
 
           className={
             openPanel ===
-            "notifications"
+              "notifications"
 
               ? "home-icon-button active"
 
@@ -537,18 +1020,11 @@ export default function HomeHeaderActions() {
 
           aria-expanded={
             openPanel ===
-            "notifications"
+              "notifications"
           }
 
           onClick={
-            () =>
-              setOpenPanel(
-                current =>
-                  current ===
-                  "notifications"
-                    ? null
-                    : "notifications"
-              )
+            toggleNotifications
           }
         >
 
@@ -580,7 +1056,9 @@ export default function HomeHeaderActions() {
               "
             >
 
-              <div className="home-popup-header">
+              <div
+                className="home-popup-header"
+              >
 
                 <strong>
                   Уведомления
@@ -589,8 +1067,79 @@ export default function HomeHeaderActions() {
               </div>
 
 
-              {notifications.length ===
-                0
+              {notificationsLoading
+                &&
+                notifications.length ===
+                  0
+                ? (
+
+                  <div
+                    className="
+                      home-notifications-empty
+                    "
+                  >
+
+                    <div
+                      className="
+                        home-notifications-empty-icon
+                      "
+                    >
+                      <BellIcon />
+                    </div>
+
+
+                    <strong>
+                      Загружаем
+                    </strong>
+
+
+                    <span>
+                      Проверяем новые
+                      уведомления.
+                    </span>
+
+                  </div>
+
+                )
+                :
+                notificationsError
+                &&
+                notifications.length ===
+                  0
+                ? (
+
+                  <div
+                    className="
+                      home-notifications-empty
+                    "
+                  >
+
+                    <div
+                      className="
+                        home-notifications-empty-icon
+                      "
+                    >
+                      <BellIcon />
+                    </div>
+
+
+                    <strong>
+                      Не удалось загрузить
+                    </strong>
+
+
+                    <span>
+                      {
+                        notificationsError
+                      }
+                    </span>
+
+                  </div>
+
+                )
+                :
+                notifications.length ===
+                  0
                 ? (
 
                   <div
@@ -649,15 +1198,26 @@ export default function HomeHeaderActions() {
                           </strong>
 
 
-                          {notification.text && (
+                          <span>
+                            {
+                              notification.text
+                            }
+                          </span>
 
-                            <span>
-                              {
-                                notification.text
-                              }
-                            </span>
 
-                          )}
+                          <span>
+                            {
+                              notification.request.email
+                            }
+
+                            {
+                              notification.createdAt
+                                ? ` · ${formatNotificationTime(
+                                    notification.createdAt
+                                  )}`
+                                : ""
+                            }
+                          </span>
 
                         </div>
 
@@ -679,14 +1239,16 @@ export default function HomeHeaderActions() {
           CALENDAR
       ====================================================== */}
 
-      <div className="home-action-wrapper">
+      <div
+        className="home-action-wrapper"
+      >
 
         <button
           type="button"
 
           className={
             openPanel ===
-            "calendar"
+              "calendar"
 
               ? "home-icon-button active"
 
@@ -697,7 +1259,7 @@ export default function HomeHeaderActions() {
 
           aria-expanded={
             openPanel ===
-            "calendar"
+              "calendar"
           }
 
           onClick={
@@ -705,13 +1267,17 @@ export default function HomeHeaderActions() {
               setOpenPanel(
                 current =>
                   current ===
-                  "calendar"
+                    "calendar"
+
                     ? null
+
                     : "calendar"
               )
           }
         >
+
           <CalendarIcon />
+
         </button>
 
 
@@ -747,7 +1313,9 @@ export default function HomeHeaderActions() {
                     showPreviousMonth
                   }
                 >
+
                   <ArrowLeftIcon />
+
                 </button>
 
 
@@ -759,7 +1327,9 @@ export default function HomeHeaderActions() {
                         .getMonth()
                     ]
                   }
+
                   {" "}
+
                   {
                     visibleMonth
                       .getFullYear()
@@ -782,7 +1352,9 @@ export default function HomeHeaderActions() {
                     showNextMonth
                   }
                 >
+
                   <ArrowRightIcon />
+
                 </button>
 
               </div>
@@ -823,11 +1395,10 @@ export default function HomeHeaderActions() {
                     index
                   ) => {
 
-                    if (
-                      !date
-                    ) {
+                    if (!date) {
 
                       return (
+
                         <span
                           key={
                             `empty-${index}`
@@ -838,6 +1409,7 @@ export default function HomeHeaderActions() {
                             empty
                           "
                         />
+
                       );
 
                     }
@@ -907,6 +1479,7 @@ export default function HomeHeaderActions() {
 
                 Сегодня,
                 {" "}
+
                 {
                   formatToday(
                     today
@@ -948,12 +1521,16 @@ export default function HomeHeaderActions() {
         className="home-profile"
       >
 
-        <span className="home-avatar">
+        <span
+          className="home-avatar"
+        >
           ТС
         </span>
 
 
-        <span className="home-profile-text">
+        <span
+          className="home-profile-text"
+        >
 
           <strong>
             Тест Сайта
@@ -971,7 +1548,9 @@ export default function HomeHeaderActions() {
             home-profile-chevron
           "
         >
+
           <ChevronIcon />
+
         </span>
 
       </button>
