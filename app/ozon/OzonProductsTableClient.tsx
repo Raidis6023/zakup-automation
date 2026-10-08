@@ -777,7 +777,7 @@ export default function OzonProductsTableClient(
                                         "100%",
 
                                       minWidth:
-                                        "1450px",
+                                        "1320px",
 
                                       borderCollapse:
                                         "collapse",
@@ -798,10 +798,6 @@ export default function OzonProductsTableClient(
 
                                         <ClusterHeader>
                                           Кластер
-                                        </ClusterHeader>
-
-                                        <ClusterHeader>
-                                          cluster_id
                                         </ClusterHeader>
 
                                         <ClusterHeader align="right">
@@ -840,7 +836,7 @@ export default function OzonProductsTableClient(
 
                                               <td
                                                 colSpan={
-                                                  9
+                                                  8
                                                 }
 
                                                 style={{
@@ -912,22 +908,6 @@ export default function OzonProductsTableClient(
                                                       ||
                                                       "—"
                                                     }
-
-                                                  </ClusterCell>
-
-
-                                                  <ClusterCell>
-
-                                                    <span
-                                                      style={{
-                                                        fontFamily:
-                                                          "monospace",
-                                                      }}
-                                                    >
-                                                      {
-                                                        row.cluster_id
-                                                      }
-                                                    </span>
 
                                                   </ClusterCell>
 
