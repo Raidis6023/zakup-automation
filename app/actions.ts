@@ -1,7 +1,54 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import {
+  revalidatePath,
+} from "next/cache";
+
+import {
+  redirect,
+} from "next/navigation";
+
+import {
+  createClient as createSupabaseAuthClient,
+} from "@/lib/supabase/server";
+
+
+// ============================================
+// ПРОВЕРКА АВТОРИЗАЦИИ
+// ============================================
+
+async function requireAuthenticatedUser() {
+
+  const supabase =
+    await createSupabaseAuthClient();
+
+
+  const {
+    data: {
+      user,
+    },
+
+    error,
+  } =
+    await supabase
+      .auth
+      .getUser();
+
+
+  if (
+    error ||
+    !user
+  ) {
+
+    throw new Error(
+      "Для выполнения этого действия необходимо войти в WorkSpace"
+    );
+
+  }
+
+
+  return user;
+}
 
 
 // ============================================
@@ -9,24 +56,32 @@ import { redirect } from "next/navigation";
 // ============================================
 
 function getSupabaseConfig() {
+
   const supabaseUrl =
-    process.env.NEXT_PUBLIC_SUPABASE_URL;
+    process.env
+      .NEXT_PUBLIC_SUPABASE_URL;
+
 
   const supabaseSecretKey =
-    process.env.SUPABASE_SECRET_KEY;
+    process.env
+      .SUPABASE_SECRET_KEY;
 
 
   if (!supabaseUrl) {
+
     throw new Error(
       "Не найдена переменная NEXT_PUBLIC_SUPABASE_URL"
     );
+
   }
 
 
   if (!supabaseSecretKey) {
+
     throw new Error(
       "Не найдена переменная SUPABASE_SECRET_KEY"
     );
+
   }
 
 
@@ -34,6 +89,7 @@ function getSupabaseConfig() {
     supabaseUrl,
     supabaseSecretKey,
   };
+
 }
 
 
@@ -45,38 +101,42 @@ async function callSupabaseRpc(
   functionName: string,
   body: Record<string, unknown> = {}
 ) {
+
   const {
     supabaseUrl,
     supabaseSecretKey,
-  } = getSupabaseConfig();
+  } =
+    getSupabaseConfig();
 
 
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/${functionName}`,
-    {
-      method: "POST",
+  const response =
+    await fetch(
+      `${supabaseUrl}/rest/v1/rpc/${functionName}`,
+      {
+        method: "POST",
 
-      headers: {
-        apikey:
-          supabaseSecretKey,
+        headers: {
+          apikey:
+            supabaseSecretKey,
 
-        Authorization:
-          `Bearer ${supabaseSecretKey}`,
+          Authorization:
+            `Bearer ${supabaseSecretKey}`,
 
-        "Content-Type":
-          "application/json",
-      },
+          "Content-Type":
+            "application/json",
+        },
 
-      body:
-        JSON.stringify(body),
+        body:
+          JSON.stringify(body),
 
-      cache:
-        "no-store",
-    }
-  );
+        cache:
+          "no-store",
+      }
+    );
 
 
   if (!response.ok) {
+
     const errorText =
       await response.text();
 
@@ -84,10 +144,12 @@ async function callSupabaseRpc(
     throw new Error(
       `Ошибка Supabase: ${response.status} ${errorText}`
     );
+
   }
 
 
   return response.json();
+
 }
 
 
@@ -97,13 +159,22 @@ async function callSupabaseRpc(
 
 export async function runChinaCalculation() {
 
+  await requireAuthenticatedUser();
+
+
   await callSupabaseRpc(
     "run_china_calculation"
   );
 
 
-  revalidatePath("/zakup");
-  revalidatePath("/");
+  revalidatePath(
+    "/zakup"
+  );
+
+  revalidatePath(
+    "/"
+  );
+
 }
 
 
@@ -115,6 +186,9 @@ export async function simulateChinaTransport(
   formData: FormData
 ) {
 
+  await requireAuthenticatedUser();
+
+
   const rawValue =
     formData.get(
       "newProductsVolume"
@@ -125,7 +199,10 @@ export async function simulateChinaTransport(
     Number(
       String(
         rawValue ?? ""
-      ).replace(",", ".")
+      ).replace(
+        ",",
+        "."
+      )
     );
 
 
@@ -133,9 +210,11 @@ export async function simulateChinaTransport(
     Number.isNaN(volume) ||
     volume < 0
   ) {
+
     throw new Error(
       "Введите корректный объём новых товаров"
     );
+
   }
 
 
@@ -148,8 +227,14 @@ export async function simulateChinaTransport(
   );
 
 
-  revalidatePath("/zakup");
-  revalidatePath("/");
+  revalidatePath(
+    "/zakup"
+  );
+
+  revalidatePath(
+    "/"
+  );
+
 }
 
 
@@ -160,6 +245,9 @@ export async function simulateChinaTransport(
 export async function saveChinaManualAdjustment(
   formData: FormData
 ) {
+
+  await requireAuthenticatedUser();
+
 
   const calculationItemId =
     String(
@@ -194,13 +282,17 @@ export async function saveChinaManualAdjustment(
 
 
   const quantity =
-    Number(rawQuantity);
+    Number(
+      rawQuantity
+    );
 
 
   if (!calculationItemId) {
+
     throw new Error(
       "Не найден ID строки расчёта SKU"
     );
+
   }
 
 
@@ -208,19 +300,25 @@ export async function saveChinaManualAdjustment(
     scenario !== "container" &&
     scenario !== "truck"
   ) {
+
     throw new Error(
       "Некорректный сценарий транспортировки"
     );
+
   }
 
 
   if (
-    !Number.isInteger(quantity) ||
+    !Number.isInteger(
+      quantity
+    ) ||
     quantity < 0
   ) {
+
     throw new Error(
       "Количество должно быть целым числом от 0"
     );
+
   }
 
 
@@ -239,6 +337,11 @@ export async function saveChinaManualAdjustment(
       p_comment:
         comment || null,
 
+      /*
+       * Пока оставляем старую заглушку.
+       * Реального пользователя подключим
+       * отдельным следующим этапом.
+       */
       p_adjusted_by:
         "test-user",
     }
@@ -274,8 +377,14 @@ export async function saveChinaManualAdjustment(
   );
 
 
-  revalidatePath("/zakup");
-  revalidatePath("/");
+  revalidatePath(
+    "/zakup"
+  );
+
+  revalidatePath(
+    "/"
+  );
+
 }
 
 
@@ -286,6 +395,9 @@ export async function saveChinaManualAdjustment(
 export async function createVedOrderDraft(
   formData: FormData
 ) {
+
+  await requireAuthenticatedUser();
+
 
   const scenario =
     String(
@@ -305,7 +417,10 @@ export async function createVedOrderDraft(
 
   const newProductsVolume =
     Number(
-      rawNewProductsVolume.replace(",", ".")
+      rawNewProductsVolume.replace(
+        ",",
+        "."
+      )
     );
 
 
@@ -313,19 +428,25 @@ export async function createVedOrderDraft(
     scenario !== "container" &&
     scenario !== "truck"
   ) {
+
     throw new Error(
       "Нельзя сформировать заказ: транспортный сценарий не определён"
     );
+
   }
 
 
   if (
-    Number.isNaN(newProductsVolume) ||
+    Number.isNaN(
+      newProductsVolume
+    ) ||
     newProductsVolume < 0
   ) {
+
     throw new Error(
       "Некорректный объём новых товаров"
     );
+
   }
 
 
@@ -339,6 +460,11 @@ export async function createVedOrderDraft(
         p_preparation_department:
           "procurement",
 
+        /*
+         * Эти две заглушки заменим
+         * реальными данными пользователя
+         * на следующем этапе.
+         */
         p_created_by_name:
           "Тест Сайта",
 
@@ -360,19 +486,27 @@ export async function createVedOrderDraft(
     !result?.ok ||
     !result?.order_id
   ) {
+
     throw new Error(
       "Supabase не вернул ID созданного заказа"
     );
+
   }
 
 
-  revalidatePath("/zakup");
-  revalidatePath("/ved");
+  revalidatePath(
+    "/zakup"
+  );
+
+  revalidatePath(
+    "/ved"
+  );
 
 
   redirect(
     `/ved-orders/${result.order_id}`
   );
+
 }
 
 
@@ -381,7 +515,9 @@ export async function createVedOrderDraft(
 // ============================================
 
 type StockImportRowInput = {
-  source_row_number: number;
+
+  source_row_number:
+    number;
 
   warehouse_name:
     string | null;
@@ -400,6 +536,7 @@ type StockImportRowInput = {
 
   parse_error:
     string | null;
+
 };
 
 
@@ -411,17 +548,24 @@ export async function createStockImportPreview(
   }
 ) {
 
+  await requireAuthenticatedUser();
+
+
   if (!input.fileName) {
+
     throw new Error(
       "Не указано имя файла"
     );
+
   }
 
 
   if (!input.reportDate) {
+
     throw new Error(
       "Не определена дата отчёта"
     );
+
   }
 
 
@@ -429,9 +573,11 @@ export async function createStockImportPreview(
     !input.rows ||
     input.rows.length === 0
   ) {
+
     throw new Error(
       "В Excel не найдено товаров"
     );
+
   }
 
 
@@ -455,9 +601,11 @@ export async function createStockImportPreview(
     typeof result !== "string" ||
     !result
   ) {
+
     throw new Error(
       "Supabase не вернул ID импорта"
     );
+
   }
 
 
@@ -467,6 +615,7 @@ export async function createStockImportPreview(
 
 
   return result;
+
 }
 
 
@@ -478,10 +627,15 @@ export async function getStockImportPreview(
   batchId: string
 ) {
 
+  await requireAuthenticatedUser();
+
+
   if (!batchId) {
+
     throw new Error(
       "Не указан ID импорта"
     );
+
   }
 
 
@@ -492,6 +646,7 @@ export async function getStockImportPreview(
         batchId,
     }
   );
+
 }
 
 
@@ -503,10 +658,15 @@ export async function confirmStockImport(
   batchId: string
 ) {
 
+  await requireAuthenticatedUser();
+
+
   if (!batchId) {
+
     throw new Error(
       "Не указан ID импорта"
     );
+
   }
 
 
@@ -524,9 +684,15 @@ export async function confirmStockImport(
     "/stock-import"
   );
 
-  revalidatePath("/zakup");
-  revalidatePath("/");
+  revalidatePath(
+    "/zakup"
+  );
+
+  revalidatePath(
+    "/"
+  );
 
 
   return result;
+
 }
