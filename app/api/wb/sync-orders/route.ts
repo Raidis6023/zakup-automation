@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 export const maxDuration = 60;
 
 
@@ -11,10 +10,8 @@ export const maxDuration = 60;
 
 const DAYS_TO_LOAD = 28;
 
-// Не запрашиваем заказы чаще одного раза в час
-const REPEAT_GUARD_HOURS = 1;
-
 const SUPABASE_BATCH_SIZE = 1000;
+
 const SYNC_KEY = "orders";
 
 
@@ -27,9 +24,15 @@ function parseJson(
 ): unknown {
 
   try {
-    return JSON.parse(text);
+
+    return JSON.parse(
+      text
+    );
+
   } catch {
+
     return text;
+
   }
 
 }
@@ -40,10 +43,13 @@ function normalizeCancelDate(
 ): string | null {
 
   if (
-    typeof value !== "string" ||
+    typeof value !== "string"
+    ||
     !value
   ) {
+
     return null;
+
   }
 
 
@@ -52,7 +58,9 @@ function normalizeCancelDate(
       "0001-01-01"
     )
   ) {
+
     return null;
+
   }
 
 
@@ -66,7 +74,8 @@ function splitIntoBatches<T>(
   size: number
 ): T[][] {
 
-  const batches: T[][] =
+  const batches:
+    T[][] =
     [];
 
 
@@ -112,10 +121,6 @@ export async function GET() {
     ??
     process.env.SUPABASE_SECRET_KEY;
 
-
-  // ==========================================================
-  // ПРОВЕРКА ENV
-  // ==========================================================
 
   if (!wbTokenRaw) {
 
@@ -168,15 +173,18 @@ export async function GET() {
   }
 
 
-  const wbToken: string =
+  const wbToken:
+    string =
     wbTokenRaw;
 
 
-  const supabaseUrl: string =
+  const supabaseUrl:
+    string =
     supabaseUrlRaw;
 
 
-  const supabaseKey: string =
+  const supabaseKey:
+    string =
     supabaseKeyRaw;
 
 
@@ -186,25 +194,12 @@ export async function GET() {
 
   async function saveSyncState(
     data: {
-
-      lastAttemptAt?:
-        string | null;
-
-      lastSuccessAt?:
-        string | null;
-
-      nextAllowedAt?:
-        string | null;
-
-      lastHttpStatus?:
-        number | null;
-
-      retryAfterSeconds?:
-        number | null;
-
-      lastMessage?:
-        string | null;
-
+      lastAttemptAt?: string | null;
+      lastSuccessAt?: string | null;
+      nextAllowedAt?: string | null;
+      lastHttpStatus?: number | null;
+      retryAfterSeconds?: number | null;
+      lastMessage?: string | null;
     }
   ) {
 
@@ -215,31 +210,36 @@ export async function GET() {
 
       last_attempt_at:
         data.lastAttemptAt
-        ?? null,
+        ??
+        null,
 
       last_success_at:
         data.lastSuccessAt
-        ?? null,
+        ??
+        null,
 
       next_allowed_at:
         data.nextAllowedAt
-        ?? null,
+        ??
+        null,
 
       last_http_status:
         data.lastHttpStatus
-        ?? null,
+        ??
+        null,
 
       retry_after_seconds:
         data.retryAfterSeconds
-        ?? null,
+        ??
+        null,
 
       last_message:
         data.lastMessage
-        ?? null,
+        ??
+        null,
 
       updated_at:
-        new Date()
-          .toISOString(),
+        new Date().toISOString(),
 
     };
 
@@ -369,50 +369,53 @@ export async function GET() {
     }
 
 
-    const stateRows: any[] =
+    const stateRows:
+      any[] =
       await stateResponse.json();
 
 
     const state =
       stateRows[0]
-      ?? null;
+      ??
+      null;
 
 
     // ========================================================
-    // 2. БЛОКИРОВКА ПО 429
+    // 2. БЛОКИРУЕМ ТОЛЬКО ЕСЛИ ЕСТЬ АКТИВНЫЙ ЛИМИТ WB
+    //
+    // Никакой нашей трёхчасовой блокировки больше нет.
     // ========================================================
 
     if (
-      state
-        ?.next_allowed_at
+      state?.next_allowed_at
     ) {
 
       const nextAllowed =
         new Date(
-          state
-            .next_allowed_at
+          state.next_allowed_at
         );
+
+
+      const now =
+        new Date();
 
 
       if (
         Number.isFinite(
-          nextAllowed
-            .getTime()
+          nextAllowed.getTime()
         )
         &&
-        nextAllowed
-          .getTime()
+        nextAllowed.getTime()
         >
-        Date.now()
+        now.getTime()
       ) {
 
         const secondsRemaining =
           Math.ceil(
             (
-              nextAllowed
-                .getTime()
+              nextAllowed.getTime()
               -
-              Date.now()
+              now.getTime()
             )
             /
             1000
@@ -420,7 +423,6 @@ export async function GET() {
 
 
         return NextResponse.json({
-
           ok:
             true,
 
@@ -431,29 +433,24 @@ export async function GET() {
             true,
 
           message:
-            "Запрос к Wildberries не выполнен: лимит ещё не восстановился",
+            "Запрос к Wildberries не выполнен: действует лимит площадки",
 
           lastHttpStatus:
-            state
-              .last_http_status,
+            state.last_http_status,
 
           retryAfterSecondsOriginally:
-            state
-              .retry_after_seconds,
+            state.retry_after_seconds,
 
           secondsRemaining,
 
           nextAllowedAt:
-            state
-              .next_allowed_at,
+            state.next_allowed_at,
 
           lastAttemptAt:
-            state
-              .last_attempt_at,
+            state.last_attempt_at,
 
           wildberriesRequestSent:
             false,
-
         });
 
       }
@@ -462,168 +459,11 @@ export async function GET() {
 
 
     // ========================================================
-    // 3. ЗАЩИТА ОТ ПОВТОРНОГО ЗАПРОСА
-    // ========================================================
-
-    const latestSyncUrl =
-      `${supabaseUrl}/rest/v1/wb_orders`
-      +
-      "?select=synced_at"
-      +
-      "&order=synced_at.desc"
-      +
-      "&limit=1";
-
-
-    const latestSyncResponse =
-      await fetch(
-        latestSyncUrl,
-        {
-          method:
-            "GET",
-
-          headers: {
-
-            apikey:
-              supabaseKey,
-
-            Authorization:
-              `Bearer ${supabaseKey}`,
-
-            Accept:
-              "application/json",
-
-          },
-
-          cache:
-            "no-store",
-        }
-      );
-
-
-    if (!latestSyncResponse.ok) {
-
-      const text =
-        await latestSyncResponse.text();
-
-
-      return NextResponse.json(
-        {
-          ok:
-            false,
-
-          message:
-            "Не удалось проверить последнюю успешную синхронизацию",
-
-          supabaseStatus:
-            latestSyncResponse.status,
-
-          supabaseResponse:
-            parseJson(
-              text
-            ),
-        },
-        {
-          status:
-            500,
-        }
-      );
-
-    }
-
-
-    const latestRows: any[] =
-      await latestSyncResponse.json();
-
-
-    if (
-      latestRows.length
-      >
-      0
-      &&
-      latestRows[0]
-        ?.synced_at
-    ) {
-
-      const latestSyncTime =
-        new Date(
-          latestRows[0]
-            .synced_at
-        ).getTime();
-
-
-      const hoursSinceLastSync =
-        (
-          Date.now()
-          -
-          latestSyncTime
-        )
-        /
-        (
-          1000
-          *
-          60
-          *
-          60
-        );
-
-
-      if (
-        Number.isFinite(
-          hoursSinceLastSync
-        )
-        &&
-        hoursSinceLastSync
-        <
-        REPEAT_GUARD_HOURS
-      ) {
-
-        return NextResponse.json({
-
-          ok:
-            true,
-
-          skipped:
-            true,
-
-          blockedByRateLimit:
-            false,
-
-          message:
-            "Запрос к WB не выполнен: недавняя успешная синхронизация уже есть",
-
-          latestSyncedAt:
-            latestRows[0]
-              .synced_at,
-
-          hoursSinceLastSync:
-            Number(
-              hoursSinceLastSync
-                .toFixed(
-                  2
-                )
-            ),
-
-          repeatGuardHours:
-            REPEAT_GUARD_HOURS,
-
-          wildberriesRequestSent:
-            false,
-
-        });
-
-      }
-
-    }
-
-
-    // ========================================================
-    // 4. ФИКСИРУЕМ ПОПЫТКУ
+    // 3. ФИКСИРУЕМ ПОПЫТКУ
     // ========================================================
 
     const attemptAt =
-      new Date()
-        .toISOString();
+      new Date().toISOString();
 
 
     await saveSyncState({
@@ -632,8 +472,7 @@ export async function GET() {
         attemptAt,
 
       lastSuccessAt:
-        state
-          ?.last_success_at
+        state?.last_success_at
         ??
         null,
 
@@ -653,7 +492,7 @@ export async function GET() {
 
 
     // ========================================================
-    // 5. ДАТА НАЧАЛА
+    // 4. ДАТА НАЧАЛА
     // ========================================================
 
     const dateFrom =
@@ -673,7 +512,7 @@ export async function GET() {
 
 
     // ========================================================
-    // 6. ЗАПРОС К WB
+    // 5. ЗАПРОС К WILDBERRIES
     // ========================================================
 
     const wbUrl =
@@ -682,26 +521,21 @@ export async function GET() {
       );
 
 
-    wbUrl
-      .searchParams
-      .set(
-        "dateFrom",
-        dateFrom
-      );
+    wbUrl.searchParams.set(
+      "dateFrom",
+      dateFrom
+    );
 
 
-    wbUrl
-      .searchParams
-      .set(
-        "flag",
-        "0"
-      );
+    wbUrl.searchParams.set(
+      "flag",
+      "0"
+    );
 
 
     const wbResponse =
       await fetch(
-        wbUrl
-          .toString(),
+        wbUrl.toString(),
         {
           method:
             "GET",
@@ -723,30 +557,30 @@ export async function GET() {
 
 
     const wbText =
-      await wbResponse
-        .text();
+      await wbResponse.text();
 
 
-    const wbData: any =
+    const wbData:
+      any =
       parseJson(
         wbText
       );
 
 
+    // ========================================================
+    // 6. ЧИТАЕМ ЛИМИТЫ WB
+    // ========================================================
+
     const retryHeader =
-      wbResponse
-        .headers
-        .get(
-          "x-ratelimit-retry"
-        );
+      wbResponse.headers.get(
+        "x-ratelimit-retry"
+      );
 
 
     const resetHeader =
-      wbResponse
-        .headers
-        .get(
-          "x-ratelimit-reset"
-        );
+      wbResponse.headers.get(
+        "x-ratelimit-reset"
+      );
 
 
     const rateLimit = {
@@ -758,29 +592,24 @@ export async function GET() {
         resetHeader,
 
       limit:
-        wbResponse
-          .headers
-          .get(
-            "x-ratelimit-limit"
-          ),
+        wbResponse.headers.get(
+          "x-ratelimit-limit"
+        ),
 
       remaining:
-        wbResponse
-          .headers
-          .get(
-            "x-ratelimit-remaining"
-          ),
+        wbResponse.headers.get(
+          "x-ratelimit-remaining"
+        ),
 
     };
 
 
     // ========================================================
-    // 7. 429
+    // 7. НАСТОЯЩИЙ 429 ОТ WILDBERRIES
     // ========================================================
 
     if (
-      wbResponse.status
-      ===
+      wbResponse.status ===
       429
     ) {
 
@@ -792,12 +621,10 @@ export async function GET() {
 
       const retrySeconds =
         retrySecondsRaw
-          ?
-          Number(
-            retrySecondsRaw
-          )
-          :
-          null;
+          ? Number(
+              retrySecondsRaw
+            )
+          : null;
 
 
       let nextAllowedAt:
@@ -806,17 +633,15 @@ export async function GET() {
 
 
       if (
-        retrySeconds
-        !==
-        null
+        retrySeconds !==
+          null
         &&
         Number.isFinite(
           retrySeconds
         )
         &&
-        retrySeconds
-        >
-        0
+        retrySeconds >
+          0
       ) {
 
         nextAllowedAt =
@@ -837,8 +662,7 @@ export async function GET() {
           attemptAt,
 
         lastSuccessAt:
-          state
-            ?.last_success_at
+          state?.last_success_at
           ??
           null,
 
@@ -861,8 +685,13 @@ export async function GET() {
           ok:
             false,
 
+          blockedByRateLimit:
+            true,
+
           message:
-            "Wildberries ограничил запрос. Время следующей попытки сохранено в Supabase.",
+            nextAllowedAt
+              ? "Wildberries ограничил запрос. Ожидание до следующей разрешённой попытки сохранено."
+              : "Wildberries ограничил запрос, но не сообщил точное время сброса лимита.",
 
           wbStatus:
             429,
@@ -872,6 +701,9 @@ export async function GET() {
           rateLimit,
 
           nextAllowedAt,
+
+          retryAfterSeconds:
+            retrySeconds,
 
           wildberriesRequestSent:
             true,
@@ -900,8 +732,7 @@ export async function GET() {
           attemptAt,
 
         lastSuccessAt:
-          state
-            ?.last_success_at
+          state?.last_success_at
           ??
           null,
 
@@ -966,8 +797,7 @@ export async function GET() {
           attemptAt,
 
         lastSuccessAt:
-          state
-            ?.last_success_at
+          state?.last_success_at
           ??
           null,
 
@@ -1013,98 +843,78 @@ export async function GET() {
     // ========================================================
 
     const syncedAt =
-      new Date()
-        .toISOString();
+      new Date().toISOString();
 
 
     const rows =
       wbData
         .filter(
           (
-            order: any
+            order:
+              any
           ) =>
-            typeof order
-              ?.srid
-            ===
-            "string"
+            typeof order?.srid ===
+              "string"
             &&
-            order
-              .srid
-              .trim()
-            !==
-            ""
+            order.srid.trim() !==
+              ""
         )
         .map(
           (
-            order: any
+            order:
+              any
           ) => ({
 
             srid:
-              order
-                .srid,
+              order.srid,
 
             order_date:
-              order
-                .date,
+              order.date,
 
             last_change_date:
-              order
-                .lastChangeDate
+              order.lastChangeDate
               ??
               null,
 
             nm_id:
               Number(
-                order
-                  .nmId
+                order.nmId
               ),
 
             supplier_article:
-              order
-                .supplierArticle
+              order.supplierArticle
               ??
               null,
 
             barcode:
-              order
-                .barcode
+              order.barcode
               ??
               null,
 
             warehouse_name:
-              order
-                .warehouseName
+              order.warehouseName
               ??
               null,
 
             warehouse_type:
-              order
-                .warehouseType
+              order.warehouseType
               ??
               null,
 
             is_cancel:
-              order
-                .isCancel
-              ===
+              order.isCancel ===
               true,
 
             cancel_date:
               normalizeCancelDate(
-                order
-                  .cancelDate
+                order.cancelDate
               ),
 
             income_id:
-              typeof order
-                .incomeID
-              ===
-              "number"
-                ?
-                order
-                  .incomeID
-                :
-                null,
+              typeof order.incomeID ===
+                "number"
+                ? order.incomeID
+                : null,
 
             raw:
               order,
@@ -1142,8 +952,7 @@ export async function GET() {
 
     const uniqueRows =
       Array.from(
-        uniqueBySrid
-          .values()
+        uniqueBySrid.values()
       );
 
 
@@ -1234,8 +1043,7 @@ export async function GET() {
       ) {
 
         const text =
-          await upsertResponse
-            .text();
+          await upsertResponse.text();
 
 
         await saveSyncState({
@@ -1244,8 +1052,7 @@ export async function GET() {
             attemptAt,
 
           lastSuccessAt:
-            state
-              ?.last_success_at
+            state?.last_success_at
             ??
             null,
 
@@ -1282,8 +1089,7 @@ export async function GET() {
               savedRows,
 
             supabaseStatus:
-              upsertResponse
-                .status,
+              upsertResponse.status,
 
             supabaseResponse:
               parseJson(
@@ -1317,11 +1123,10 @@ export async function GET() {
     const fbwOrders =
       uniqueRows.filter(
         (
-          row: any
+          row:
+            any
         ) =>
-          row
-            .warehouse_type
-          ===
+          row.warehouse_type ===
           "Склад WB"
       );
 
@@ -1329,11 +1134,10 @@ export async function GET() {
     const sellerOrders =
       uniqueRows.filter(
         (
-          row: any
+          row:
+            any
         ) =>
-          row
-            .warehouse_type
-          ===
+          row.warehouse_type ===
           "Склад продавца"
       );
 
@@ -1341,11 +1145,10 @@ export async function GET() {
     const cancelledOrders =
       uniqueRows.filter(
         (
-          row: any
+          row:
+            any
         ) =>
-          row
-            .is_cancel
-          ===
+          row.is_cancel ===
           true
       );
 
@@ -1353,17 +1156,14 @@ export async function GET() {
     const activeFbwOrders =
       uniqueRows.filter(
         (
-          row: any
+          row:
+            any
         ) =>
-          row
-            .warehouse_type
-          ===
-          "Склад WB"
+          row.warehouse_type ===
+            "Склад WB"
           &&
-          row
-            .is_cancel
-          ===
-          false
+          row.is_cancel ===
+            false
       );
 
 
@@ -1401,6 +1201,15 @@ export async function GET() {
     return NextResponse.json({
 
       ok:
+        true,
+
+      blockedByRateLimit:
+        false,
+
+      skipped:
+        false,
+
+      wildberriesRequestSent:
         true,
 
       message:
@@ -1483,10 +1292,8 @@ export async function GET() {
 
         error:
           error instanceof Error
-            ?
-            error.message
-            :
-            "Неизвестная ошибка",
+            ? error.message
+            : "Неизвестная ошибка",
       },
       {
         status:
