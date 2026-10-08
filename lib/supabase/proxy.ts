@@ -8,44 +8,37 @@ import {
 } from "next/server";
 
 
-// ============================================================
-// PUBLIC ROUTES
-// ============================================================
-
-function isPublicRoute(
-  pathname: string
+function copyCookies(
+  source: NextResponse,
+  target: NextResponse
 ) {
 
-  /*
-   * Страницы, которые должны работать
-   * БЕЗ авторизации.
-   *
-   * /request-access создадим позже.
-   * /auth/* понадобится для приглашений,
-   * подтверждений и восстановления пароля.
-   */
-
-  if (
-    pathname === "/login" ||
-    pathname === "/request-access" ||
-    pathname.startsWith("/auth/")
+  for (
+    const cookie
+    of source.cookies.getAll()
   ) {
-    return true;
+
+    target.cookies.set(
+      cookie
+    );
+
   }
 
 
-  return false;
+  return target;
 
 }
 
 
-// ============================================================
-// UPDATE AUTH SESSION
-// ============================================================
-
 export async function updateSession(
   request: NextRequest
 ) {
+
+  let supabaseResponse =
+    NextResponse.next({
+      request,
+    });
+
 
   const supabaseUrl =
     process.env
@@ -57,28 +50,17 @@ export async function updateSession(
       .NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 
-  if (!supabaseUrl) {
+  if (
+    !supabaseUrl
+    ||
+    !supabasePublishableKey
+  ) {
 
     throw new Error(
-      "Не найдена переменная NEXT_PUBLIC_SUPABASE_URL"
+      "Не настроены переменные окружения Supabase"
     );
 
   }
-
-
-  if (!supabasePublishableKey) {
-
-    throw new Error(
-      "Не найдена переменная NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
-    );
-
-  }
-
-
-  let supabaseResponse =
-    NextResponse.next({
-      request,
-    });
 
 
   const supabase =
@@ -101,33 +83,21 @@ export async function updateSession(
             cookiesToSet
           ) {
 
-            /*
-             * Сначала обновляем cookies
-             * внутри текущего request.
-             */
+            for (
+              const {
+                name,
+                value,
+              }
+              of cookiesToSet
+            ) {
 
-            cookiesToSet
-              .forEach(
-                ({
-                  name,
-                  value,
-                }) => {
-
-                  request
-                    .cookies
-                    .set(
-                      name,
-                      value
-                    );
-
-                }
+              request.cookies.set(
+                name,
+                value
               );
 
+            }
 
-            /*
-             * После изменения cookies
-             * создаём новый response.
-             */
 
             supabaseResponse =
               NextResponse.next({
@@ -135,29 +105,24 @@ export async function updateSession(
               });
 
 
-            /*
-             * И записываем обновлённые
-             * cookies пользователю.
-             */
+            for (
+              const {
+                name,
+                value,
+                options,
+              }
+              of cookiesToSet
+            ) {
 
-            cookiesToSet
-              .forEach(
-                ({
+              supabaseResponse
+                .cookies
+                .set(
                   name,
                   value,
-                  options,
-                }) => {
+                  options
+                );
 
-                  supabaseResponse
-                    .cookies
-                    .set(
-                      name,
-                      value,
-                      options
-                    );
-
-                }
-              );
+            }
 
           },
 
@@ -167,7 +132,7 @@ export async function updateSession(
 
 
   // ==========================================================
-  // CHECK AUTHENTICATED USER
+  // ТЕКУЩИЙ ПОЛЬЗОВАТЕЛЬ
   // ==========================================================
 
   const {
@@ -181,51 +146,223 @@ export async function updateSession(
 
 
   const pathname =
-    request.nextUrl.pathname;
+    request
+      .nextUrl
+      .pathname;
 
 
   // ==========================================================
-  // PROTECT WORKSPACE
+  // ПУБЛИЧНЫЕ МАРШРУТЫ
+  // ==========================================================
+
+  const isPublicRoute =
+    pathname === "/login"
+    ||
+    pathname === "/request-access"
+    ||
+    pathname === "/auth"
+    ||
+    pathname.startsWith(
+      "/auth/"
+    );
+
+
+  // ==========================================================
+  // СТРАНИЦА ОБЯЗАТЕЛЬНОЙ СМЕНЫ ПАРОЛЯ
+  // ==========================================================
+
+  const isSetPasswordRoute =
+    pathname === "/set-password"
+    ||
+    pathname.startsWith(
+      "/set-password/"
+    );
+
+
+  // ==========================================================
+  // НЕАВТОРИЗОВАННЫЙ ПОЛЬЗОВАТЕЛЬ
   // ==========================================================
 
   if (
-    !user &&
-    !isPublicRoute(
-      pathname
-    )
+    !user
   ) {
 
+    if (
+      isPublicRoute
+    ) {
+
+      return supabaseResponse;
+
+    }
+
+
     const loginUrl =
-      request.nextUrl.clone();
+      request
+        .nextUrl
+        .clone();
 
 
     loginUrl.pathname =
       "/login";
 
 
-    /*
-     * Пока после входа всегда
-     * переходим на главную.
-     *
-     * Позже можем добавить returnTo,
-     * чтобы после входа человек
-     * возвращался именно туда,
-     * куда первоначально шёл.
-     */
-
-    loginUrl.search = "";
+    const redirectResponse =
+      NextResponse.redirect(
+        loginUrl
+      );
 
 
-    return NextResponse.redirect(
-      loginUrl
+    return copyCookies(
+      supabaseResponse,
+      redirectResponse
     );
 
   }
 
 
   // ==========================================================
-  // AUTHENTICATED USER
+  // ПРОВЕРЯЕМ ОБЯЗАТЕЛЬНУЮ СМЕНУ ПАРОЛЯ
   // ==========================================================
+
+  const {
+    data:
+      mustChangePassword,
+    error:
+      passwordFlagError,
+  } =
+    await supabase
+      .rpc(
+        "app_get_must_change_password"
+      );
+
+
+  // ==========================================================
+  // ЕСЛИ ПРОВЕРКА СЛОМАЛАСЬ
+  //
+  // Рабочие страницы не открываем.
+  // Иначе при проблеме БД можно было бы случайно обойти
+  // обязательную смену временного пароля.
+  // ==========================================================
+
+  if (
+    passwordFlagError
+  ) {
+
+    if (
+      isSetPasswordRoute
+    ) {
+
+      return supabaseResponse;
+
+    }
+
+
+    const setPasswordUrl =
+      request
+        .nextUrl
+        .clone();
+
+
+    setPasswordUrl.pathname =
+      "/set-password";
+
+
+    const redirectResponse =
+      NextResponse.redirect(
+        setPasswordUrl
+      );
+
+
+    return copyCookies(
+      supabaseResponse,
+      redirectResponse
+    );
+
+  }
+
+
+  // ==========================================================
+  // ВРЕМЕННЫЙ ПАРОЛЬ ЕЩЁ НЕ ЗАМЕНЁН
+  // ==========================================================
+
+  if (
+    mustChangePassword === true
+    &&
+    !isSetPasswordRoute
+  ) {
+
+    const setPasswordUrl =
+      request
+        .nextUrl
+        .clone();
+
+
+    setPasswordUrl.pathname =
+      "/set-password";
+
+
+    const redirectResponse =
+      NextResponse.redirect(
+        setPasswordUrl
+      );
+
+
+    return copyCookies(
+      supabaseResponse,
+      redirectResponse
+    );
+
+  }
+
+
+  // ==========================================================
+  // ПАРОЛЬ УЖЕ ЗАМЕНЁН
+  //
+  // На /set-password такому пользователю делать нечего.
+  // ==========================================================
+
+  if (
+    mustChangePassword !== true
+    &&
+    isSetPasswordRoute
+  ) {
+
+    const homeUrl =
+      request
+        .nextUrl
+        .clone();
+
+
+    homeUrl.pathname =
+      "/";
+
+
+    const redirectResponse =
+      NextResponse.redirect(
+        homeUrl
+      );
+
+
+    return copyCookies(
+      supabaseResponse,
+      redirectResponse
+    );
+
+  }
+
+
+  // ==========================================================
+  // ОБЫЧНАЯ ЗАЩИТА ЗАКРЫТЫХ МАРШРУТОВ
+  // ==========================================================
+
+  if (
+    !isPublicRoute
+  ) {
+
+    return supabaseResponse;
+
+  }
+
 
   return supabaseResponse;
 
