@@ -2,9 +2,14 @@
 
 import {
   Fragment,
+  useMemo,
   useState,
 } from "react";
 
+
+// ============================================================
+// ТИПЫ
+// ============================================================
 
 export type OzonListingRow = {
   product_id: string;
@@ -24,33 +29,7 @@ export type OzonListingRow = {
 };
 
 
-export type OzonClusterStockRow = {
-  product_id: string;
-
-  offer_id:
-    | string
-    | null;
-
-  ozon_product_id:
-    | string
-    | number
-    | null;
-
-  listing_name:
-    | string
-    | null;
-
-  cluster_id: string;
-
-  cluster_name:
-    | string
-    | null;
-
-  quantity: number;
-};
-
-
-export type OzonProductTableRow = {
+export type OzonProductRow = {
   master_code: string;
 
   product_name:
@@ -73,17 +52,60 @@ export type OzonProductTableRow = {
   stock_days:
     | number
     | null;
+};
 
-  cluster_stocks:
-    OzonClusterStockRow[];
+
+export type OzonClusterDetailRow = {
+  product_id: string;
+
+  offer_id:
+    | string
+    | null;
+
+  ozon_product_id:
+    | string
+    | number
+    | null;
+
+  ozon_sku:
+    | string
+    | null;
+
+  cluster_id: string;
+
+  cluster_name:
+    | string
+    | null;
+
+  sales_28_days: number;
+
+  cancelled_28_days: number;
+
+  average_sales_per_day: number;
+
+  stock_quantity: number;
+
+  stock_days:
+    | number
+    | null;
 };
 
 
 type Props = {
   products:
-    OzonProductTableRow[];
+    OzonProductRow[];
+
+  clusterRowsByMasterCode:
+    Record<
+      string,
+      OzonClusterDetailRow[]
+    >;
 };
 
+
+// ============================================================
+// ФОРМАТИРОВАНИЕ
+// ============================================================
 
 function formatNumber(
   value:
@@ -91,17 +113,13 @@ function formatNumber(
     | null
     | undefined
 ) {
-
   if (
     value === null
     ||
     value === undefined
   ) {
-
     return "—";
-
   }
-
 
   return new Intl.NumberFormat(
     "ru-RU"
@@ -120,17 +138,13 @@ function formatDecimal(
   digits:
     number = 1
 ) {
-
   if (
     value === null
     ||
     value === undefined
   ) {
-
     return "—";
-
   }
-
 
   return new Intl.NumberFormat(
     "ru-RU",
@@ -147,7 +161,985 @@ function formatDecimal(
 }
 
 
-function MainCell(
+// ============================================================
+// КОМПОНЕНТ
+// ============================================================
+
+export default function OzonProductsTableClient(
+  {
+    products,
+    clusterRowsByMasterCode,
+  }:
+  Props
+) {
+  const [
+    expandedMasterCodes,
+    setExpandedMasterCodes,
+  ] =
+    useState<
+      Set<string>
+    >(
+      new Set()
+    );
+
+
+  function toggleMasterCode(
+    masterCode: string
+  ) {
+    setExpandedMasterCodes(
+      previous => {
+        const next =
+          new Set(
+            previous
+          );
+
+        if (
+          next.has(
+            masterCode
+          )
+        ) {
+          next.delete(
+            masterCode
+          );
+        } else {
+          next.add(
+            masterCode
+          );
+        }
+
+        return next;
+      }
+    );
+  }
+
+
+  const normalizedClusterRows =
+    useMemo(
+      () => {
+        const result:
+          Record<
+            string,
+            OzonClusterDetailRow[]
+          > =
+          {};
+
+        for (
+          const [
+            masterCode,
+            rows,
+          ]
+          of Object.entries(
+            clusterRowsByMasterCode
+          )
+        ) {
+          result[
+            masterCode
+          ] =
+            [
+              ...rows,
+            ].sort(
+              (
+                left,
+                right
+              ) => {
+                const clusterCompare =
+                  (
+                    left.cluster_name
+                    ?? ""
+                  )
+                    .localeCompare(
+                      right.cluster_name
+                      ?? "",
+                      "ru"
+                    );
+
+                if (
+                  clusterCompare !==
+                  0
+                ) {
+                  return clusterCompare;
+                }
+
+                const offerCompare =
+                  (
+                    left.offer_id
+                    ?? ""
+                  )
+                    .localeCompare(
+                      right.offer_id
+                      ?? "",
+                      "ru"
+                    );
+
+                if (
+                  offerCompare !==
+                  0
+                ) {
+                  return offerCompare;
+                }
+
+                return (
+                  left.cluster_id
+                    .localeCompare(
+                      right.cluster_id,
+                      "ru"
+                    )
+                );
+              }
+            );
+        }
+
+        return result;
+      },
+      [
+        clusterRowsByMasterCode,
+      ]
+    );
+
+
+  return (
+    <div
+      style={{
+        overflowX:
+          "auto",
+
+        marginTop:
+          "18px",
+
+        border:
+          "1px solid var(--border-color, #e5e7eb)",
+
+        borderRadius:
+          "12px",
+      }}
+    >
+      <table
+        style={{
+          width:
+            "100%",
+
+          borderCollapse:
+            "collapse",
+
+          minWidth:
+            "1250px",
+        }}
+      >
+        <thead>
+          <tr>
+
+            <TableHeader>
+              master_code
+            </TableHeader>
+
+            <TableHeader>
+              Товар
+            </TableHeader>
+
+            <TableHeader>
+              Offer ID
+            </TableHeader>
+
+            <TableHeader align="right">
+              Продажи 28 дн.
+            </TableHeader>
+
+            <TableHeader align="right">
+              Среднее / день
+            </TableHeader>
+
+            <TableHeader align="right">
+              Отмены
+            </TableHeader>
+
+            <TableHeader align="right">
+              Остаток
+            </TableHeader>
+
+            <TableHeader align="right">
+              Дней запаса
+            </TableHeader>
+
+          </tr>
+        </thead>
+
+
+        <tbody>
+
+          {
+            products.map(
+              product => {
+                const masterCode =
+                  product.master_code;
+
+                const isExpanded =
+                  expandedMasterCodes
+                    .has(
+                      masterCode
+                    );
+
+                const clusterRows =
+                  normalizedClusterRows[
+                    masterCode
+                  ]
+                  ?? [];
+
+                const offers =
+                  (
+                    product.listings
+                    ?? []
+                  )
+                    .map(
+                      listing =>
+                        listing.offer_id
+                    )
+                    .filter(
+                      (
+                        value
+                      ): value is string =>
+                        Boolean(
+                          value
+                        )
+                    )
+                    .join(
+                      ", "
+                    );
+
+
+                return (
+
+                  <Fragment
+                    key={
+                      masterCode
+                    }
+                  >
+
+                    {/* =========================================
+                        ОСНОВНАЯ СТРОКА MASTER_CODE
+                        ========================================= */}
+
+                    <tr>
+
+                      <TableCell>
+
+                        <button
+                          type="button"
+
+                          onClick={
+                            () =>
+                              toggleMasterCode(
+                                masterCode
+                              )
+                          }
+
+                          aria-expanded={
+                            isExpanded
+                          }
+
+                          style={{
+                            display:
+                              "inline-flex",
+
+                            alignItems:
+                              "center",
+
+                            gap:
+                              "7px",
+
+                            padding:
+                              0,
+
+                            border:
+                              "none",
+
+                            background:
+                              "transparent",
+
+                            color:
+                              "inherit",
+
+                            cursor:
+                              "pointer",
+
+                            font:
+                              "inherit",
+                          }}
+                        >
+
+                          <span
+                            style={{
+                              display:
+                                "inline-flex",
+
+                              alignItems:
+                                "center",
+
+                              justifyContent:
+                                "center",
+
+                              width:
+                                "14px",
+
+                              fontSize:
+                                "11px",
+
+                              opacity:
+                                0.8,
+                            }}
+                          >
+                            {
+                              isExpanded
+                                ? "▼"
+                                : "▶"
+                            }
+                          </span>
+
+
+                          <span
+                            style={{
+                              fontFamily:
+                                "monospace",
+
+                              fontWeight:
+                                700,
+
+                              textDecoration:
+                                "underline",
+                            }}
+                          >
+                            {
+                              masterCode
+                            }
+                          </span>
+
+                        </button>
+
+                      </TableCell>
+
+
+                      <TableCell>
+
+                        <div
+                          style={{
+                            fontWeight:
+                              600,
+                          }}
+                        >
+                          {
+                            product
+                              .product_name
+                            ||
+                            "—"
+                          }
+                        </div>
+
+
+                        {
+                          product.listing_count >
+                          1
+                            ? (
+
+                              <div
+                                className="muted"
+
+                                style={{
+                                  marginTop:
+                                    "4px",
+
+                                  fontSize:
+                                    "11px",
+                                }}
+                              >
+                                {
+                                  product
+                                    .listing_count
+                                }{" "}
+                                размещения
+                              </div>
+
+                            )
+                            : null
+                        }
+
+                      </TableCell>
+
+
+                      <TableCell>
+
+                        <div
+                          style={{
+                            maxWidth:
+                              "360px",
+
+                            wordBreak:
+                              "break-word",
+                          }}
+                        >
+                          {
+                            offers
+                            ||
+                            "—"
+                          }
+                        </div>
+
+                      </TableCell>
+
+
+                      <TableCell align="right">
+
+                        <strong>
+                          {
+                            formatNumber(
+                              product
+                                .sales_28_days
+                            )
+                          }
+                        </strong>
+
+                      </TableCell>
+
+
+                      <TableCell align="right">
+
+                        {
+                          formatDecimal(
+                            product
+                              .average_sales_per_day,
+                            2
+                          )
+                        }
+
+                      </TableCell>
+
+
+                      <TableCell align="right">
+
+                        {
+                          formatNumber(
+                            product
+                              .cancelled_28_days
+                          )
+                        }
+
+                      </TableCell>
+
+
+                      <TableCell align="right">
+
+                        <strong>
+                          {
+                            formatNumber(
+                              product
+                                .stock_quantity
+                            )
+                          }
+                        </strong>
+
+                      </TableCell>
+
+
+                      <TableCell align="right">
+
+                        {
+                          formatDecimal(
+                            product
+                              .stock_days,
+                            1
+                          )
+                        }
+
+                      </TableCell>
+
+                    </tr>
+
+
+                    {/* =========================================
+                        РАСКРЫТИЕ:
+                        ПРОДАЖИ + ОСТАТКИ ПО КЛАСТЕРАМ
+                        ========================================= */}
+
+                    {
+                      isExpanded
+                        ? (
+
+                          <tr>
+
+                            <td
+                              colSpan={
+                                8
+                              }
+
+                              style={{
+                                padding:
+                                  "0 12px 18px",
+
+                                borderBottom:
+                                  "1px solid var(--border-color, #eef0f2)",
+                              }}
+                            >
+
+                              <div
+                                style={{
+                                  padding:
+                                    "14px 30px 0",
+                                }}
+                              >
+
+                                {/* =============================
+                                    ЗАГОЛОВОК
+                                    ============================= */}
+
+                                <div
+                                  style={{
+                                    display:
+                                      "flex",
+
+                                    alignItems:
+                                      "flex-start",
+
+                                    justifyContent:
+                                      "space-between",
+
+                                    gap:
+                                      "16px",
+
+                                    flexWrap:
+                                      "wrap",
+                                  }}
+                                >
+
+                                  <div>
+
+                                    <div
+                                      style={{
+                                        fontWeight:
+                                          700,
+
+                                        fontSize:
+                                          "13px",
+                                      }}
+                                    >
+                                      Продажи и остатки по кластерам
+                                    </div>
+
+
+                                    <div
+                                      className="muted"
+
+                                      style={{
+                                        marginTop:
+                                          "4px",
+
+                                        fontSize:
+                                          "11px",
+                                      }}
+                                    >
+                                      По конкретным Ozon-размещениям,
+                                      без объединения SKU
+                                      по master_code.
+                                    </div>
+
+                                  </div>
+
+
+                                  <ClusterSummary
+                                    rows={
+                                      clusterRows
+                                    }
+                                  />
+
+                                </div>
+
+
+                                {/* =============================
+                                    ТАБЛИЦА
+                                    ============================= */}
+
+                                <div
+                                  style={{
+                                    overflowX:
+                                      "auto",
+
+                                    marginTop:
+                                      "14px",
+
+                                    border:
+                                      "1px solid var(--border-color, #d1d5db)",
+
+                                    borderRadius:
+                                      "11px",
+                                  }}
+                                >
+
+                                  <table
+                                    style={{
+                                      width:
+                                        "100%",
+
+                                      minWidth:
+                                        "1450px",
+
+                                      borderCollapse:
+                                        "collapse",
+                                    }}
+                                  >
+
+                                    <thead>
+
+                                      <tr>
+
+                                        <ClusterHeader>
+                                          Offer ID
+                                        </ClusterHeader>
+
+                                        <ClusterHeader>
+                                          Ozon product ID
+                                        </ClusterHeader>
+
+                                        <ClusterHeader>
+                                          Кластер
+                                        </ClusterHeader>
+
+                                        <ClusterHeader>
+                                          cluster_id
+                                        </ClusterHeader>
+
+                                        <ClusterHeader align="right">
+                                          Продажи 28 дн.
+                                        </ClusterHeader>
+
+                                        <ClusterHeader align="right">
+                                          Среднее / день
+                                        </ClusterHeader>
+
+                                        <ClusterHeader align="right">
+                                          Отмены
+                                        </ClusterHeader>
+
+                                        <ClusterHeader align="right">
+                                          Остаток
+                                        </ClusterHeader>
+
+                                        <ClusterHeader align="right">
+                                          Дней запаса
+                                        </ClusterHeader>
+
+                                      </tr>
+
+                                    </thead>
+
+
+                                    <tbody>
+
+                                      {
+                                        clusterRows.length ===
+                                        0
+                                          ? (
+
+                                            <tr>
+
+                                              <td
+                                                colSpan={
+                                                  9
+                                                }
+
+                                                style={{
+                                                  padding:
+                                                    "18px",
+
+                                                  textAlign:
+                                                    "center",
+
+                                                  fontSize:
+                                                    "12px",
+
+                                                  opacity:
+                                                    0.65,
+                                                }}
+                                              >
+                                                Нет строк
+                                                последнего расчёта FBO
+                                                для этого товара.
+                                              </td>
+
+                                            </tr>
+
+                                          )
+                                          : (
+
+                                            clusterRows.map(
+                                              row => (
+
+                                                <tr
+                                                  key={
+                                                    [
+                                                      row.product_id,
+                                                      row.cluster_id,
+                                                    ].join(
+                                                      "::"
+                                                    )
+                                                  }
+                                                >
+
+                                                  <ClusterCell>
+
+                                                    <strong>
+                                                      {
+                                                        row.offer_id
+                                                        ||
+                                                        "—"
+                                                      }
+                                                    </strong>
+
+                                                  </ClusterCell>
+
+
+                                                  <ClusterCell>
+
+                                                    {
+                                                      row.ozon_product_id
+                                                      ??
+                                                      "—"
+                                                    }
+
+                                                  </ClusterCell>
+
+
+                                                  <ClusterCell>
+
+                                                    {
+                                                      row.cluster_name
+                                                      ||
+                                                      "—"
+                                                    }
+
+                                                  </ClusterCell>
+
+
+                                                  <ClusterCell>
+
+                                                    <span
+                                                      style={{
+                                                        fontFamily:
+                                                          "monospace",
+                                                      }}
+                                                    >
+                                                      {
+                                                        row.cluster_id
+                                                      }
+                                                    </span>
+
+                                                  </ClusterCell>
+
+
+                                                  <ClusterCell align="right">
+
+                                                    <strong>
+                                                      {
+                                                        formatNumber(
+                                                          row.sales_28_days
+                                                        )
+                                                      }
+                                                    </strong>
+
+                                                  </ClusterCell>
+
+
+                                                  <ClusterCell align="right">
+
+                                                    {
+                                                      formatDecimal(
+                                                        row.average_sales_per_day,
+                                                        2
+                                                      )
+                                                    }
+
+                                                  </ClusterCell>
+
+
+                                                  <ClusterCell align="right">
+
+                                                    {
+                                                      formatNumber(
+                                                        row.cancelled_28_days
+                                                      )
+                                                    }
+
+                                                  </ClusterCell>
+
+
+                                                  <ClusterCell align="right">
+
+                                                    <strong>
+                                                      {
+                                                        formatNumber(
+                                                          row.stock_quantity
+                                                        )
+                                                      }
+                                                    </strong>
+
+                                                  </ClusterCell>
+
+
+                                                  <ClusterCell align="right">
+
+                                                    {
+                                                      formatDecimal(
+                                                        row.stock_days,
+                                                        1
+                                                      )
+                                                    }
+
+                                                  </ClusterCell>
+
+                                                </tr>
+
+                                              )
+                                            )
+
+                                          )
+                                      }
+
+                                    </tbody>
+
+                                  </table>
+
+                                </div>
+
+                              </div>
+
+                            </td>
+
+                          </tr>
+
+                        )
+                        : null
+                    }
+
+                  </Fragment>
+
+                );
+              }
+            )
+          }
+
+        </tbody>
+
+      </table>
+    </div>
+  );
+}
+
+
+// ============================================================
+// ИТОГИ РАСКРЫТИЯ
+// ============================================================
+
+function ClusterSummary(
+  {
+    rows,
+  }:
+  {
+    rows:
+      OzonClusterDetailRow[];
+  }
+) {
+  const sales =
+    rows.reduce(
+      (
+        sum,
+        row
+      ) =>
+        sum
+        +
+        (
+          row.sales_28_days
+          ?? 0
+        ),
+      0
+    );
+
+  const stock =
+    rows.reduce(
+      (
+        sum,
+        row
+      ) =>
+        sum
+        +
+        (
+          row.stock_quantity
+          ?? 0
+        ),
+      0
+    );
+
+
+  return (
+    <div
+      style={{
+        display:
+          "flex",
+
+        gap:
+          "18px",
+
+        flexWrap:
+          "wrap",
+
+        justifyContent:
+          "flex-end",
+
+        fontSize:
+          "11px",
+      }}
+    >
+
+      <span>
+        Строк:{" "}
+        <strong>
+          {
+            formatNumber(
+              rows.length
+            )
+          }
+        </strong>
+      </span>
+
+
+      <span>
+        Продажи:{" "}
+        <strong>
+          {
+            formatNumber(
+              sales
+            )
+          }
+        </strong>
+      </span>
+
+
+      <span>
+        Остаток:{" "}
+        <strong>
+          {
+            formatNumber(
+              stock
+            )
+          }
+        </strong>
+      </span>
+
+    </div>
+  );
+}
+
+
+// ============================================================
+// ОСНОВНАЯ ТАБЛИЦА
+// ============================================================
+
+function TableHeader(
   {
     children,
     align = "left",
@@ -161,9 +1153,52 @@ function MainCell(
       | "right";
   }
 ) {
-
   return (
+    <th
+      style={{
+        padding:
+          "12px 14px",
 
+        textAlign:
+          align,
+
+        borderBottom:
+          "1px solid var(--border-color, #e5e7eb)",
+
+        fontSize:
+          "12px",
+
+        fontWeight:
+          700,
+
+        whiteSpace:
+          "nowrap",
+
+        opacity:
+          0.75,
+      }}
+    >
+      {children}
+    </th>
+  );
+}
+
+
+function TableCell(
+  {
+    children,
+    align = "left",
+  }:
+  {
+    children:
+      React.ReactNode;
+
+    align?:
+      "left"
+      | "right";
+  }
+) {
+  return (
     <td
       style={{
         padding:
@@ -184,12 +1219,15 @@ function MainCell(
     >
       {children}
     </td>
-
   );
 }
 
 
-function DetailHeader(
+// ============================================================
+// ВНУТРЕННЯЯ ТАБЛИЦА КЛАСТЕРОВ
+// ============================================================
+
+function ClusterHeader(
   {
     children,
     align = "left",
@@ -203,10 +1241,53 @@ function DetailHeader(
       | "right";
   }
 ) {
-
   return (
-
     <th
+      style={{
+        padding:
+          "10px 12px",
+
+        textAlign:
+          align,
+
+        borderBottom:
+          "1px solid var(--border-color, #d1d5db)",
+
+        fontSize:
+          "11px",
+
+        whiteSpace:
+          "nowrap",
+
+        fontWeight:
+          700,
+
+        opacity:
+          0.75,
+      }}
+    >
+      {children}
+    </th>
+  );
+}
+
+
+function ClusterCell(
+  {
+    children,
+    align = "left",
+  }:
+  {
+    children:
+      React.ReactNode;
+
+    align?:
+      "left"
+      | "right";
+  }
+) {
+  return (
+    <td
       style={{
         padding:
           "9px 12px",
@@ -220,802 +1301,14 @@ function DetailHeader(
         fontSize:
           "11px",
 
-        fontWeight:
-          700,
-
-        opacity:
-          0.72,
+        verticalAlign:
+          "middle",
 
         whiteSpace:
           "nowrap",
       }}
     >
       {children}
-    </th>
-
-  );
-}
-
-
-function DetailCell(
-  {
-    children,
-    align = "left",
-  }:
-  {
-    children:
-      React.ReactNode;
-
-    align?:
-      "left"
-      | "right";
-  }
-) {
-
-  return (
-
-    <td
-      style={{
-        padding:
-          "9px 12px",
-
-        textAlign:
-          align,
-
-        borderBottom:
-          "1px solid var(--border-color, #eef0f2)",
-
-        fontSize:
-          "12px",
-
-        verticalAlign:
-          "top",
-      }}
-    >
-      {children}
     </td>
-
-  );
-}
-
-
-export default function OzonProductsTableClient(
-  {
-    products,
-  }:
-  Props
-) {
-
-  const [
-    expanded,
-    setExpanded,
-  ] =
-    useState<
-      Record<
-        string,
-        boolean
-      >
-    >(
-      {}
-    );
-
-
-  function toggleProduct(
-    masterCode: string
-  ) {
-
-    setExpanded(
-      previous => ({
-        ...previous,
-
-        [masterCode]:
-          !previous[
-            masterCode
-          ],
-      })
-    );
-
-  }
-
-
-  return (
-
-    <>
-
-      {
-        products.map(
-          product => {
-
-            const isExpanded =
-              Boolean(
-                expanded[
-                  product.master_code
-                ]
-              );
-
-
-            const offers =
-              (
-                product.listings
-                ?? []
-              )
-                .map(
-                  listing =>
-                    listing.offer_id
-                )
-                .filter(
-                  (
-                    value
-                  ): value is string =>
-                    Boolean(
-                      value
-                    )
-                )
-                .join(
-                  ", "
-                );
-
-
-            const clusterRows =
-              product.cluster_stocks
-              ?? [];
-
-
-            const clusterTotal =
-              clusterRows.reduce(
-                (
-                  total,
-                  row
-                ) =>
-                  total +
-                  (
-                    Number(
-                      row.quantity
-                    )
-                    || 0
-                  ),
-                0
-              );
-
-
-            const totalsMatch =
-              clusterTotal ===
-              product.stock_quantity;
-
-
-            return (
-
-              <Fragment
-                key={
-                  product.master_code
-                }
-              >
-
-                {/* ===================================
-                    ОСНОВНАЯ СТРОКА ТОВАРА
-                    =================================== */}
-
-                <tr>
-
-                  <MainCell>
-
-                    <button
-                      type="button"
-
-                      onClick={
-                        () =>
-                          toggleProduct(
-                            product.master_code
-                          )
-                      }
-
-                      aria-expanded={
-                        isExpanded
-                      }
-
-                      title={
-                        isExpanded
-                          ? "Скрыть остатки по кластерам"
-                          : "Показать остатки по кластерам"
-                      }
-
-                      style={{
-                        display:
-                          "inline-flex",
-
-                        alignItems:
-                          "center",
-
-                        gap:
-                          "8px",
-
-                        padding:
-                          0,
-
-                        border:
-                          "none",
-
-                        background:
-                          "transparent",
-
-                        color:
-                          "inherit",
-
-                        cursor:
-                          "pointer",
-
-                        font:
-                          "inherit",
-
-                        textAlign:
-                          "left",
-                      }}
-                    >
-
-                      <span
-                        aria-hidden="true"
-
-                        style={{
-                          display:
-                            "inline-flex",
-
-                          alignItems:
-                            "center",
-
-                          justifyContent:
-                            "center",
-
-                          width:
-                            "12px",
-
-                          height:
-                            "16px",
-
-                          fontSize:
-                            "13px",
-
-                          opacity:
-                            0.7,
-
-                          transform:
-                            isExpanded
-                              ? "rotate(90deg)"
-                              : "rotate(0deg)",
-
-                          transition:
-                            "transform 120ms ease",
-                        }}
-                      >
-                        ▸
-                      </span>
-
-
-                      <span
-                        style={{
-                          fontFamily:
-                            "monospace",
-
-                          fontWeight:
-                            700,
-                        }}
-                      >
-                        {
-                          product
-                            .master_code
-                        }
-                      </span>
-
-                    </button>
-
-                  </MainCell>
-
-
-                  <MainCell>
-
-                    <div>
-                      {
-                        product
-                          .product_name
-                        ||
-                        "—"
-                      }
-                    </div>
-
-
-                    {
-                      product.listing_count >
-                      1
-                        ? (
-
-                          <div
-                            className="muted"
-
-                            style={{
-                              marginTop:
-                                "4px",
-
-                              fontSize:
-                                "11px",
-                            }}
-                          >
-                            {
-                              product
-                                .listing_count
-                            }{" "}
-                            размещения
-                          </div>
-
-                        )
-                        : null
-                    }
-
-                  </MainCell>
-
-
-                  <MainCell>
-
-                    <div
-                      style={{
-                        maxWidth:
-                          "360px",
-
-                        wordBreak:
-                          "break-word",
-                      }}
-                    >
-                      {
-                        offers
-                        ||
-                        "—"
-                      }
-                    </div>
-
-                  </MainCell>
-
-
-                  <MainCell align="right">
-
-                    <strong>
-                      {
-                        formatNumber(
-                          product
-                            .sales_28_days
-                        )
-                      }
-                    </strong>
-
-                  </MainCell>
-
-
-                  <MainCell align="right">
-
-                    {
-                      formatDecimal(
-                        product
-                          .average_sales_per_day,
-                        2
-                      )
-                    }
-
-                  </MainCell>
-
-
-                  <MainCell align="right">
-
-                    {
-                      formatNumber(
-                        product
-                          .cancelled_28_days
-                      )
-                    }
-
-                  </MainCell>
-
-
-                  <MainCell align="right">
-
-                    <strong>
-                      {
-                        formatNumber(
-                          product
-                            .stock_quantity
-                        )
-                      }
-                    </strong>
-
-                  </MainCell>
-
-
-                  <MainCell align="right">
-
-                    {
-                      formatDecimal(
-                        product
-                          .stock_days,
-                        1
-                      )
-                    }
-
-                  </MainCell>
-
-                </tr>
-
-
-                {/* ===================================
-                    РАСКРЫТАЯ ДЕТАЛИЗАЦИЯ
-                    =================================== */}
-
-                {
-                  isExpanded
-                    ? (
-
-                      <tr>
-
-                        <td
-                          colSpan={
-                            8
-                          }
-
-                          style={{
-                            padding:
-                              0,
-
-                            borderBottom:
-                              "1px solid var(--border-color, #eef0f2)",
-                          }}
-                        >
-
-                          <div
-                            style={{
-                              padding:
-                                "14px 18px 18px 42px",
-
-                              background:
-                                "rgba(127, 127, 127, 0.055)",
-                            }}
-                          >
-
-                            <div
-                              style={{
-                                display:
-                                  "flex",
-
-                                justifyContent:
-                                  "space-between",
-
-                                alignItems:
-                                  "center",
-
-                                gap:
-                                  "16px",
-
-                                flexWrap:
-                                  "wrap",
-
-                                marginBottom:
-                                  "10px",
-                              }}
-                            >
-
-                              <div>
-
-                                <div
-                                  style={{
-                                    fontSize:
-                                      "12px",
-
-                                    fontWeight:
-                                      700,
-                                  }}
-                                >
-                                  Остатки по кластерам
-                                </div>
-
-
-                                <div
-                                  className="muted"
-
-                                  style={{
-                                    marginTop:
-                                      "3px",
-
-                                    fontSize:
-                                      "11px",
-                                  }}
-                                >
-                                  По конкретным Ozon-размещениям,
-                                  без объединения SKU по master_code.
-                                </div>
-
-                              </div>
-
-
-                              <div
-                                style={{
-                                  display:
-                                    "flex",
-
-                                  gap:
-                                    "16px",
-
-                                  alignItems:
-                                    "center",
-
-                                  flexWrap:
-                                    "wrap",
-
-                                  fontSize:
-                                    "12px",
-                                }}
-                              >
-
-                                <span>
-                                  Строк:{" "}
-                                  <strong>
-                                    {
-                                      formatNumber(
-                                        clusterRows
-                                          .length
-                                      )
-                                    }
-                                  </strong>
-                                </span>
-
-
-                                <span>
-                                  Итого:{" "}
-                                  <strong>
-                                    {
-                                      formatNumber(
-                                        clusterTotal
-                                      )
-                                    }
-                                  </strong>
-                                </span>
-
-
-                                {
-                                  clusterRows.length >
-                                    0
-                                  &&
-                                  !totalsMatch
-                                    ? (
-
-                                      <span
-                                        style={{
-                                          color:
-                                            "#b42318",
-
-                                          fontWeight:
-                                            700,
-                                        }}
-                                      >
-                                        Не совпадает
-                                        с общим остатком{" "}
-                                        {
-                                          formatNumber(
-                                            product
-                                              .stock_quantity
-                                          )
-                                        }
-                                      </span>
-
-                                    )
-                                    : null
-                                }
-
-                              </div>
-
-                            </div>
-
-
-                            {
-                              clusterRows.length ===
-                              0
-                                ? (
-
-                                  <div
-                                    className="muted"
-
-                                    style={{
-                                      padding:
-                                        "12px 0",
-
-                                      fontSize:
-                                        "12px",
-                                    }}
-                                  >
-                                    В текущем снимке нет
-                                    строк остатков по кластерам
-                                    для этого товара.
-                                  </div>
-
-                                )
-                                : (
-
-                                  <div
-                                    style={{
-                                      overflowX:
-                                        "auto",
-
-                                      border:
-                                        "1px solid var(--border-color, #e5e7eb)",
-
-                                      borderRadius:
-                                        "10px",
-                                    }}
-                                  >
-
-                                    <table
-                                      style={{
-                                        width:
-                                          "100%",
-
-                                        minWidth:
-                                          "820px",
-
-                                        borderCollapse:
-                                          "collapse",
-                                      }}
-                                    >
-
-                                      <thead>
-
-                                        <tr>
-
-                                          <DetailHeader>
-                                            Offer ID
-                                          </DetailHeader>
-
-                                          <DetailHeader>
-                                            Ozon product ID
-                                          </DetailHeader>
-
-                                          <DetailHeader>
-                                            Кластер
-                                          </DetailHeader>
-
-                                          <DetailHeader>
-                                            cluster_id
-                                          </DetailHeader>
-
-                                          <DetailHeader align="right">
-                                            Остаток
-                                          </DetailHeader>
-
-                                        </tr>
-
-                                      </thead>
-
-
-                                      <tbody>
-
-                                        {
-                                          clusterRows.map(
-                                            (
-                                              row,
-                                              index
-                                            ) => (
-
-                                              <tr
-                                                key={
-                                                  `${row.product_id}:${row.cluster_id}:${index}`
-                                                }
-                                              >
-
-                                                <DetailCell>
-
-                                                  <div
-                                                    style={{
-                                                      fontWeight:
-                                                        600,
-                                                    }}
-                                                  >
-                                                    {
-                                                      row.offer_id
-                                                      ||
-                                                      "—"
-                                                    }
-                                                  </div>
-
-                                                </DetailCell>
-
-
-                                                <DetailCell>
-
-                                                  {
-                                                    row.ozon_product_id
-                                                      !== null
-                                                    &&
-                                                    row.ozon_product_id
-                                                      !== undefined
-                                                      ? String(
-                                                          row.ozon_product_id
-                                                        )
-                                                      : "—"
-                                                  }
-
-                                                </DetailCell>
-
-
-                                                <DetailCell>
-
-                                                  <strong>
-                                                    {
-                                                      row.cluster_name
-                                                      ||
-                                                      "Не определён"
-                                                    }
-                                                  </strong>
-
-                                                </DetailCell>
-
-
-                                                <DetailCell>
-
-                                                  <span
-                                                    style={{
-                                                      fontFamily:
-                                                        "monospace",
-
-                                                      fontSize:
-                                                        "11px",
-                                                    }}
-                                                  >
-                                                    {
-                                                      row.cluster_id
-                                                    }
-                                                  </span>
-
-                                                </DetailCell>
-
-
-                                                <DetailCell align="right">
-
-                                                  <strong>
-                                                    {
-                                                      formatNumber(
-                                                        row.quantity
-                                                      )
-                                                    }
-                                                  </strong>
-
-                                                </DetailCell>
-
-                                              </tr>
-
-                                            )
-                                          )
-                                        }
-
-                                      </tbody>
-
-                                    </table>
-
-                                  </div>
-
-                                )
-                            }
-
-                          </div>
-
-                        </td>
-
-                      </tr>
-
-                    )
-                    : null
-                }
-
-              </Fragment>
-
-            );
-
-          }
-        )
-      }
-
-    </>
-
   );
 }
