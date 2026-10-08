@@ -13,9 +13,10 @@ import OzonStockSyncClient
 
 import OzonProductsTableClient,
 {
-  type OzonClusterStockRow,
-  type OzonProductTableRow,
-} from "./OzonProductsTableClient";
+  type OzonClusterDetailRow,
+  type OzonProductRow,
+}
+  from "./OzonProductsTableClient";
 
 
 export const dynamic =
@@ -71,11 +72,48 @@ type DailySalesRow = {
 };
 
 
-type DashboardProductRow =
-  Omit<
-    OzonProductTableRow,
-    "cluster_stocks"
-  >;
+type ListingRow = {
+  product_id: string;
+
+  offer_id:
+    | string
+    | null;
+
+  ozon_product_id:
+    | string
+    | number
+    | null;
+
+  name:
+    | string
+    | null;
+};
+
+
+type ProductRow = {
+  master_code: string;
+
+  product_name:
+    | string
+    | null;
+
+  listing_count: number;
+
+  listings:
+    ListingRow[];
+
+  sales_28_days: number;
+
+  cancelled_28_days: number;
+
+  average_sales_per_day: number;
+
+  stock_quantity: number;
+
+  stock_days:
+    | number
+    | null;
+};
 
 
 type DashboardData = {
@@ -95,12 +133,47 @@ type DashboardData = {
     DailySalesRow[];
 
   products:
-    DashboardProductRow[];
+    ProductRow[];
 };
 
 
-type StockSnapshotRow = {
+type ReplenishmentRun = {
+  id: string;
+
+  created_at: string;
+
+  status: string;
+
+  calculation_version: string;
+
+  sales_date_from: string;
+
+  sales_date_to: string;
+
+  stock_snapshot_date: string;
+
+  total_product_cluster_pairs: number;
+
+  pairs_with_need: number;
+
+  total_need_units: number;
+};
+
+
+type ReplenishmentItem = {
   product_id: string;
+
+  offer_id:
+    | string
+    | null;
+
+  product_name:
+    | string
+    | null;
+
+  ozon_sku:
+    | string
+    | null;
 
   cluster_id: string;
 
@@ -108,7 +181,27 @@ type StockSnapshotRow = {
     | string
     | null;
 
-  quantity: number;
+  sales_28_days: number;
+
+  cancelled_28_days: number;
+
+  avg_sales_per_day: number;
+
+  stock_quantity: number;
+
+  coverage_days:
+    | number
+    | null;
+};
+
+
+type ReplenishmentData = {
+  run:
+    | ReplenishmentRun
+    | null;
+
+  items:
+    ReplenishmentItem[];
 };
 
 
@@ -122,17 +215,13 @@ function formatNumber(
     | null
     | undefined
 ) {
-
   if (
     value === null
     ||
     value === undefined
   ) {
-
     return "—";
-
   }
-
 
   return new Intl.NumberFormat(
     "ru-RU"
@@ -148,13 +237,9 @@ function formatDate(
     | null
     | undefined
 ) {
-
   if (!value) {
-
     return "—";
-
   }
-
 
   const [
     year,
@@ -170,7 +255,6 @@ function formatDate(
         "-"
       );
 
-
   if (
     !year
     ||
@@ -178,11 +262,8 @@ function formatDate(
     ||
     !day
   ) {
-
     return value;
-
   }
-
 
   return `${day}.${month}.${year}`;
 }
@@ -194,30 +275,22 @@ function formatDateTimeKrasnoyarsk(
     | null
     | undefined
 ) {
-
   if (!value) {
-
     return "—";
-
   }
-
 
   const date =
     new Date(
       value
     );
 
-
   if (
     Number.isNaN(
       date.getTime()
     )
   ) {
-
     return value;
-
   }
-
 
   return new Intl.DateTimeFormat(
     "ru-RU",
@@ -250,38 +323,29 @@ function formatDateTimeKrasnoyarsk(
 
 
 // ============================================================
-// SUPABASE
+// SUPABASE CONFIG
 // ============================================================
 
 function getSupabaseConfig() {
-
   const supabaseUrl =
     process.env
       .NEXT_PUBLIC_SUPABASE_URL;
-
 
   const supabaseSecretKey =
     process.env
       .SUPABASE_SECRET_KEY;
 
-
   if (!supabaseUrl) {
-
     throw new Error(
       "Не найдена NEXT_PUBLIC_SUPABASE_URL"
     );
-
   }
 
-
   if (!supabaseSecretKey) {
-
     throw new Error(
       "Не найдена SUPABASE_SECRET_KEY"
     );
-
   }
-
 
   return {
     supabaseUrl,
@@ -291,18 +355,67 @@ function getSupabaseConfig() {
 
 
 // ============================================================
+// SUPABASE GET
+// ============================================================
+
+async function supabaseGet<T>(
+  url: URL
+):
+Promise<T> {
+  const {
+    supabaseSecretKey,
+  } =
+    getSupabaseConfig();
+
+  const response =
+    await fetch(
+      url.toString(),
+      {
+        method:
+          "GET",
+
+        headers: {
+          apikey:
+            supabaseSecretKey,
+
+          Authorization:
+            `Bearer ${supabaseSecretKey}`,
+
+          Accept:
+            "application/json",
+        },
+
+        cache:
+          "no-store",
+      }
+    );
+
+  const text =
+    await response.text();
+
+  if (!response.ok) {
+    throw new Error(
+      `Supabase GET ${response.status}: ${text}`
+    );
+  }
+
+  return JSON.parse(
+    text
+  ) as T;
+}
+
+
+// ============================================================
 // DASHBOARD
 // ============================================================
 
 async function getOzonDashboard():
 Promise<DashboardData> {
-
   const {
     supabaseUrl,
     supabaseSecretKey,
   } =
     getSupabaseConfig();
-
 
   const response =
     await fetch(
@@ -335,19 +448,14 @@ Promise<DashboardData> {
       }
     );
 
-
   const text =
     await response.text();
 
-
   if (!response.ok) {
-
     throw new Error(
       `Supabase RPC error ${response.status}: ${text}`
     );
-
   }
-
 
   return JSON.parse(
     text
@@ -356,71 +464,145 @@ Promise<DashboardData> {
 
 
 // ============================================================
-// ОСТАТКИ ПО КЛАСТЕРАМ
-//
-// Берём только текущий snapshot.
-// Никаких расчётов через master_code здесь нет.
+// ПОСЛЕДНИЙ УСПЕШНЫЙ РАСЧЁТ FBO
 // ============================================================
 
-async function getStockSnapshotRows(
-  snapshotDate: string
-):
-Promise<StockSnapshotRow[]> {
-
+async function getLatestReplenishment():
+Promise<ReplenishmentData> {
   const {
     supabaseUrl,
-    supabaseSecretKey,
   } =
     getSupabaseConfig();
 
 
-  const allRows:
-    StockSnapshotRow[] =
-    [];
+  // ==========================================================
+  // 1. RUN
+  // ==========================================================
 
+  const runUrl =
+    new URL(
+      `${supabaseUrl}/rest/v1/ozon_fbo_replenishment_runs`
+    );
+
+  runUrl.searchParams.set(
+    "select",
+    [
+      "id",
+      "created_at",
+      "status",
+      "calculation_version",
+      "sales_date_from",
+      "sales_date_to",
+      "stock_snapshot_date",
+      "total_product_cluster_pairs",
+      "pairs_with_need",
+      "total_need_units",
+    ].join(
+      ","
+    )
+  );
+
+  runUrl.searchParams.set(
+    "status",
+    "eq.success"
+  );
+
+  runUrl.searchParams.set(
+    "order",
+    "created_at.desc"
+  );
+
+  runUrl.searchParams.set(
+    "limit",
+    "1"
+  );
+
+
+  const runs =
+    await supabaseGet<
+      ReplenishmentRun[]
+    >(
+      runUrl
+    );
+
+
+  const run =
+    runs[
+      0
+    ]
+    ?? null;
+
+
+  if (!run) {
+    return {
+      run:
+        null,
+
+      items:
+        [],
+    };
+  }
+
+
+  // ==========================================================
+  // 2. ITEMS
+  //
+  // Строк сейчас больше 1000,
+  // поэтому читаем постранично.
+  // ==========================================================
+
+  const items:
+    ReplenishmentItem[] =
+    [];
 
   const pageSize =
     1000;
 
 
-  let offset =
-    0;
-
-
-  while (true) {
-
-    const url =
+  for (
+    let offset = 0;
+    offset < 100000;
+    offset += pageSize
+  ) {
+    const itemsUrl =
       new URL(
-        `${supabaseUrl}/rest/v1/ozon_stock_snapshots`
+        `${supabaseUrl}/rest/v1/ozon_fbo_replenishment_items`
       );
 
 
-    url.searchParams.set(
+    itemsUrl.searchParams.set(
       "select",
       [
         "product_id",
+        "offer_id",
+        "product_name",
+        "ozon_sku",
         "cluster_id",
         "cluster_name",
-        "quantity",
+        "sales_28_days",
+        "cancelled_28_days",
+        "avg_sales_per_day",
+        "stock_quantity",
+        "coverage_days",
       ].join(
         ","
       )
     );
 
 
-    url.searchParams.set(
-      "snapshot_date",
-      `eq.${snapshotDate}`
+    itemsUrl.searchParams.set(
+      "calculation_run_id",
+      `eq.${run.id}`
     );
 
 
-    url.searchParams.set(
+    itemsUrl.searchParams.set(
       "order",
-      "product_id.asc,cluster_id.asc"
+      "product_id.asc,cluster_name.asc,cluster_id.asc"
     );
 
 
-    url.searchParams.set(
+    itemsUrl.searchParams.set(
       "limit",
       String(
         pageSize
@@ -428,7 +610,7 @@ Promise<StockSnapshotRow[]> {
     );
 
 
-    url.searchParams.set(
+    itemsUrl.searchParams.set(
       "offset",
       String(
         offset
@@ -436,50 +618,15 @@ Promise<StockSnapshotRow[]> {
     );
 
 
-    const response =
-      await fetch(
-        url.toString(),
-        {
-          method:
-            "GET",
-
-          headers: {
-            apikey:
-              supabaseSecretKey,
-
-            Authorization:
-              `Bearer ${supabaseSecretKey}`,
-
-            Accept:
-              "application/json",
-          },
-
-          cache:
-            "no-store",
-        }
-      );
-
-
-    const text =
-      await response.text();
-
-
-    if (!response.ok) {
-
-      throw new Error(
-        `Ошибка загрузки остатков по кластерам ${response.status}: ${text}`
-      );
-
-    }
-
-
     const page =
-      JSON.parse(
-        text
-      ) as StockSnapshotRow[];
+      await supabaseGet<
+        ReplenishmentItem[]
+      >(
+        itemsUrl
+      );
 
 
-    allRows.push(
+    items.push(
       ...page
     );
 
@@ -488,178 +635,182 @@ Promise<StockSnapshotRow[]> {
       page.length <
       pageSize
     ) {
-
       break;
-
     }
-
-
-    offset +=
-      pageSize;
-
   }
 
 
-  return allRows;
+  return {
+    run,
+    items,
+  };
 }
 
 
 // ============================================================
-// ПРИВЯЗКА СТРОК ОСТАТКОВ К РАЗМЕЩЕНИЯМ
-//
-// master_code используется только для внешней строки таблицы.
-// Сами остатки связываются строго по product_id.
+// СОБИРАЕМ ДЕТАЛИ ПО MASTER_CODE
 // ============================================================
 
-function attachClusterStocks(
+function buildClusterRowsByMasterCode(
   products:
-    DashboardProductRow[],
+    ProductRow[],
 
-  stockRows:
-    StockSnapshotRow[]
+  replenishmentItems:
+    ReplenishmentItem[]
 ):
-OzonProductTableRow[] {
-
-  const rowsByProduct =
+Record<
+  string,
+  OzonClusterDetailRow[]
+> {
+  const productIndex =
     new Map<
       string,
-      StockSnapshotRow[]
+      {
+        masterCode: string;
+
+        ozonProductId:
+          | string
+          | number
+          | null;
+      }
     >();
 
 
+  // ==========================================================
+  // PRODUCT_ID → MASTER_CODE + OZON PRODUCT ID
+  // ==========================================================
+
   for (
-    const row
-    of stockRows
+    const product
+    of products
   ) {
+    for (
+      const listing
+      of product.listings
+      ?? []
+    ) {
+      if (
+        !listing.product_id
+      ) {
+        continue;
+      }
 
-    const current =
-      rowsByProduct.get(
-        row.product_id
-      )
-      ?? [];
+      productIndex.set(
+        listing.product_id,
+        {
+          masterCode:
+            product.master_code,
 
-
-    current.push(
-      row
-    );
-
-
-    rowsByProduct.set(
-      row.product_id,
-      current
-    );
-
+          ozonProductId:
+            listing.ozon_product_id
+            ?? null,
+        }
+      );
+    }
   }
 
 
-  return products.map(
-    product => {
+  // ==========================================================
+  // ГРУППИРУЕМ СТРОКИ РАСЧЁТА
+  // ==========================================================
 
-      const clusterStocks:
-        OzonClusterStockRow[] =
-        [];
-
-
-      for (
-        const listing
-        of product.listings
-        ?? []
-      ) {
-
-        const listingStockRows =
-          rowsByProduct.get(
-            listing.product_id
-          )
-          ?? [];
+  const result:
+    Record<
+      string,
+      OzonClusterDetailRow[]
+    > =
+    {};
 
 
-        for (
-          const stockRow
-          of listingStockRows
-        ) {
-
-          clusterStocks.push(
-            {
-              product_id:
-                listing.product_id,
-
-              offer_id:
-                listing.offer_id,
-
-              ozon_product_id:
-                listing.ozon_product_id,
-
-              listing_name:
-                listing.name,
-
-              cluster_id:
-                stockRow.cluster_id,
-
-              cluster_name:
-                stockRow.cluster_name,
-
-              quantity:
-                Number(
-                  stockRow.quantity
-                  ?? 0
-                ),
-            }
-          );
-
-        }
-
-      }
-
-
-      clusterStocks.sort(
-        (
-          left,
-          right
-        ) => {
-
-          const clusterCompare =
-            (
-              left.cluster_name
-              ?? ""
-            ).localeCompare(
-              right.cluster_name
-              ?? "",
-              "ru"
-            );
-
-
-          if (
-            clusterCompare !==
-            0
-          ) {
-
-            return clusterCompare;
-
-          }
-
-
-          return (
-            left.offer_id
-            ?? ""
-          ).localeCompare(
-            right.offer_id
-            ?? "",
-            "ru"
-          );
-
-        }
+  for (
+    const item
+    of replenishmentItems
+  ) {
+    const mapping =
+      productIndex.get(
+        item.product_id
       );
 
 
-      return {
-        ...product,
-
-        cluster_stocks:
-          clusterStocks,
-      };
-
+    // Если product_id почему-то не входит
+    // в текущий dashboard,
+    // не приписываем его чужому master_code.
+    if (!mapping) {
+      continue;
     }
-  );
+
+
+    if (
+      !result[
+        mapping.masterCode
+      ]
+    ) {
+      result[
+        mapping.masterCode
+      ] =
+        [];
+    }
+
+
+    result[
+      mapping.masterCode
+    ].push(
+      {
+        product_id:
+          item.product_id,
+
+        offer_id:
+          item.offer_id,
+
+        ozon_product_id:
+          mapping.ozonProductId,
+
+        ozon_sku:
+          item.ozon_sku,
+
+        cluster_id:
+          item.cluster_id,
+
+        cluster_name:
+          item.cluster_name,
+
+        sales_28_days:
+          Number(
+            item.sales_28_days
+            ?? 0
+          ),
+
+        cancelled_28_days:
+          Number(
+            item.cancelled_28_days
+            ?? 0
+          ),
+
+        average_sales_per_day:
+          Number(
+            item.avg_sales_per_day
+            ?? 0
+          ),
+
+        stock_quantity:
+          Number(
+            item.stock_quantity
+            ?? 0
+          ),
+
+        stock_days:
+          item.coverage_days ===
+          null
+            ? null
+            : Number(
+                item.coverage_days
+              ),
+      }
+    );
+  }
+
+
+  return result;
 }
 
 
@@ -668,7 +819,6 @@ OzonProductTableRow[] {
 // ============================================================
 
 export default async function OzonPage() {
-
   let dashboard:
     DashboardData
     | null =
@@ -681,58 +831,55 @@ export default async function OzonPage() {
     null;
 
 
-  let clusterStocksError:
+  let replenishment:
+    ReplenishmentData = {
+      run:
+        null,
+
+      items:
+        [],
+    };
+
+
+  let replenishmentError:
     string
     | null =
     null;
 
 
-  let stockRows:
-    StockSnapshotRow[] =
-    [];
-
+  // ==========================================================
+  // DASHBOARD
+  // ==========================================================
 
   try {
-
     dashboard =
       await getOzonDashboard();
 
   } catch (error) {
-
     dashboardError =
       error instanceof Error
         ? error.message
         : String(
             error
           );
-
   }
 
 
-  if (
-    dashboard
-      ?.stock_snapshot_date
-  ) {
+  // ==========================================================
+  // FBO CALCULATION DETAILS
+  // ==========================================================
 
-    try {
+  try {
+    replenishment =
+      await getLatestReplenishment();
 
-      stockRows =
-        await getStockSnapshotRows(
-          dashboard
-            .stock_snapshot_date
-        );
-
-    } catch (error) {
-
-      clusterStocksError =
-        error instanceof Error
-          ? error.message
-          : String(
-              error
-            );
-
-    }
-
+  } catch (error) {
+    replenishmentError =
+      error instanceof Error
+        ? error.message
+        : String(
+            error
+          );
   }
 
 
@@ -755,11 +902,15 @@ export default async function OzonPage() {
 
 
   const products =
-    attachClusterStocks(
-      dashboard
-        ?.products
-      ?? [],
-      stockRows
+    dashboard
+      ?.products
+    ?? [];
+
+
+  const clusterRowsByMasterCode =
+    buildClusterRowsByMasterCode(
+      products,
+      replenishment.items
     );
 
 
@@ -789,8 +940,10 @@ export default async function OzonPage() {
 
 
             <p className="subtitle">
+
               FBO продажи, отмены
               и доступные остатки Ozon.
+
             </p>
 
           </div>
@@ -803,6 +956,7 @@ export default async function OzonPage() {
 
             <Link
               href="/stock-import"
+
               className=
                 "secondary-button navigation-button"
             >
@@ -812,6 +966,7 @@ export default async function OzonPage() {
 
             <Link
               href="/"
+
               className=
                 "secondary-button navigation-button"
             >
@@ -857,6 +1012,41 @@ export default async function OzonPage() {
 
 
         {/* ===================================
+            ОШИБКА ДЕТАЛИЗАЦИИ FBO
+            =================================== */}
+
+        {
+          replenishmentError
+            ? (
+
+              <section className="section">
+
+                <h2 className="section-title">
+                  Ошибка загрузки расчёта FBO
+                </h2>
+
+
+                <div
+                  className="reason-text"
+
+                  style={{
+                    color:
+                      "#b42318",
+                  }}
+                >
+                  {
+                    replenishmentError
+                  }
+                </div>
+
+              </section>
+
+            )
+            : null
+        }
+
+
+        {/* ===================================
             СОСТОЯНИЕ СИНХРОНИЗАЦИИ
             =================================== */}
 
@@ -889,8 +1079,10 @@ export default async function OzonPage() {
 
 
               <div className="reason-text">
+
                 Последняя успешная загрузка
                 FBO-данных из Ozon.
+
               </div>
 
             </div>
@@ -951,8 +1143,7 @@ export default async function OzonPage() {
           >
 
             <InfoCard
-              label=
-                "Последняя синхронизация"
+              label="Последняя синхронизация"
 
               value={
                 formatDateTimeKrasnoyarsk(
@@ -961,14 +1152,12 @@ export default async function OzonPage() {
                 )
               }
 
-              hint=
-                "Красноярское время"
+              hint="Красноярское время"
             />
 
 
             <InfoCard
-              label=
-                "Период продаж"
+              label="Период продаж"
 
               value={
                 latestSync
@@ -980,14 +1169,12 @@ export default async function OzonPage() {
                   : "—"
               }
 
-              hint=
-                "Скользящие 28 дней"
+              hint="Скользящие 28 дней"
             />
 
 
             <InfoCard
-              label=
-                "Снимок остатков"
+              label="Снимок остатков"
 
               value={
                 formatDate(
@@ -996,14 +1183,12 @@ export default async function OzonPage() {
                 )
               }
 
-              hint=
-                "FBO"
+              hint="FBO"
             />
 
 
             <InfoCard
-              label=
-                "Отправлений"
+              label="Отправлений"
 
               value={
                 formatNumber(
@@ -1012,8 +1197,7 @@ export default async function OzonPage() {
                 )
               }
 
-              hint=
-                "Получено из Ozon"
+              hint="Получено из Ozon"
             />
 
           </div>
@@ -1026,6 +1210,7 @@ export default async function OzonPage() {
             =================================== */}
 
         <section className="summary-grid">
+
 
           <div className="card">
 
@@ -1151,17 +1336,23 @@ export default async function OzonPage() {
 
 
           <div className="reason-text">
-            Продажи: FBO за период,
+
+            Продажи:
+            FBO за период,
             указанный выше.
             Отменённые отправления
             в продажи не входят.
+
           </div>
 
 
           <div className="reason-text">
-            Отмены считаются отдельно
+
+            Отмены:
+            считаются отдельно
             и отображаются
             отдельным показателем.
+
           </div>
 
 
@@ -1169,27 +1360,18 @@ export default async function OzonPage() {
 
             Остаток:
             доступный FBO-остаток
-            из{" "}
-
-            <code>
-              /v1/analytics/stocks
-            </code>
-
-            , поле{" "}
-
-            <code>
-              available_stock_count
-            </code>
-            .
+            из /v1/analytics/stocks,
+            поле available_stock_count.
 
           </div>
 
 
           <div className="reason-text">
+
             Для корректного сравнения
             в кабинете Ozon нужно выбирать
-            тот же период и учитывать время
-            снимка остатков.
+            тот же период и FBO.
+
           </div>
 
         </section>
@@ -1207,9 +1389,11 @@ export default async function OzonPage() {
 
 
           <div className="reason-text">
+
             Этот блок удобнее всего
             использовать для контрольной
             сверки с кабинетом Ozon.
+
           </div>
 
 
@@ -1280,13 +1464,11 @@ export default async function OzonPage() {
                       >
 
                         <TableCell>
-
                           {
                             formatDate(
                               row.sale_date
                             )
                           }
-
                         </TableCell>
 
 
@@ -1351,34 +1533,58 @@ export default async function OzonPage() {
 
 
           <div className="reason-text">
-            Одна основная строка соответствует
-            одному физическому товару
+
+            Верхняя строка:
+            агрегат физического товара
             по master_code.
-            Стрелка раскрывает реальные
-            остатки Ozon по размещениям
-            и кластерам.
+
+          </div>
+
+
+          <div className="reason-text">
+
+            Раскрытие:
+            продажи, отмены,
+            средние продажи,
+            остаток и дни запаса
+            отдельно по каждому
+            Ozon-размещению и кластеру.
+
           </div>
 
 
           {
-            clusterStocksError
+            replenishment.run
               ? (
 
                 <div
-                  className="reason-text"
+                  className="muted"
 
                   style={{
                     marginTop:
-                      "12px",
+                      "6px",
 
-                    color:
-                      "#b42318",
+                    fontSize:
+                      "11px",
                   }}
                 >
-                  Не удалось загрузить
-                  детализацию остатков:
+                  Расшифровка по расчёту{" "}
+                  <strong>
+                    {
+                      replenishment
+                        .run
+                        .calculation_version
+                    }
+                  </strong>
                   {" "}
-                  {clusterStocksError}
+                  от{" "}
+                  {
+                    formatDateTimeKrasnoyarsk(
+                      replenishment
+                        .run
+                        .created_at
+                    )
+                  }.
                 </div>
 
               )
@@ -1386,89 +1592,16 @@ export default async function OzonPage() {
           }
 
 
-          <div
-            style={{
-              overflowX:
-                "auto",
+          <OzonProductsTableClient
+            products={
+              products as
+                OzonProductRow[]
+            }
 
-              marginTop:
-                "18px",
-
-              border:
-                "1px solid var(--border-color, #e5e7eb)",
-
-              borderRadius:
-                "12px",
-            }}
-          >
-
-            <table
-              style={{
-                width:
-                  "100%",
-
-                borderCollapse:
-                  "collapse",
-
-                minWidth:
-                  "1250px",
-              }}
-            >
-
-              <thead>
-
-                <tr>
-
-                  <TableHeader>
-                    master_code
-                  </TableHeader>
-
-                  <TableHeader>
-                    Товар
-                  </TableHeader>
-
-                  <TableHeader>
-                    Offer ID
-                  </TableHeader>
-
-                  <TableHeader align="right">
-                    Продажи 28 дн.
-                  </TableHeader>
-
-                  <TableHeader align="right">
-                    Среднее / день
-                  </TableHeader>
-
-                  <TableHeader align="right">
-                    Отмены
-                  </TableHeader>
-
-                  <TableHeader align="right">
-                    Остаток
-                  </TableHeader>
-
-                  <TableHeader align="right">
-                    Дней запаса
-                  </TableHeader>
-
-                </tr>
-
-              </thead>
-
-
-              <tbody>
-
-                <OzonProductsTableClient
-                  products={
-                    products
-                  }
-                />
-
-              </tbody>
-
-            </table>
-
-          </div>
+            clusterRowsByMasterCode={
+              clusterRowsByMasterCode
+            }
+          />
 
         </section>
 
@@ -1485,30 +1618,45 @@ export default async function OzonPage() {
 
 
           <div className="reason-text">
+
             Сначала система полностью
             получает и проверяет данные
             Ozon.
+
           </div>
 
 
           <div className="reason-text">
+
             Только после успешного
             завершения всех запросов
-            данные записываются
+            продажи и остатки записываются
             в Supabase одной транзакцией.
+
           </div>
 
 
           <div className="reason-text">
+
+            После успешной записи
+            автоматически запускается
+            расчёт потребности FBO.
+
+          </div>
+
+
+          <div className="reason-text">
+
             Ошибка API не считается
             нулевым остатком.
+
           </div>
 
         </section>
 
 
         {/* ===================================
-            СУЩЕСТВУЮЩИЙ БЛОК СИНХРОНИЗАЦИИ
+            СИНХРОНИЗАЦИЯ
             =================================== */}
 
         <OzonStockSyncClient />
@@ -1523,7 +1671,7 @@ export default async function OzonPage() {
 
 
 // ============================================================
-// МАЛЕНЬКИЕ КОМПОНЕНТЫ
+// КОМПОНЕНТЫ
 // ============================================================
 
 function InfoCard(
@@ -1543,7 +1691,6 @@ function InfoCard(
       string;
   }
 ) {
-
   return (
 
     <div className="card">
@@ -1608,7 +1755,6 @@ function TableHeader(
       | "right";
   }
 ) {
-
   return (
 
     <th
@@ -1656,7 +1802,6 @@ function TableCell(
       | "right";
   }
 ) {
-
   return (
 
     <td
