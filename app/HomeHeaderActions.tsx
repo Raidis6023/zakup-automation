@@ -333,6 +333,65 @@ function formatNotificationTime(
 
 
 // ============================================================
+// SAFE VALUE CONVERTERS
+// ============================================================
+
+function getWorkingRole(
+  value: string
+): WorkingRole {
+
+  switch (value) {
+
+    case "analyst":
+      return "analyst";
+
+    case "procurement":
+      return "procurement";
+
+    case "ved":
+      return "ved";
+
+    case "category_manager":
+      return "category_manager";
+
+    case "marketing":
+      return "marketing";
+
+    case "manager":
+      return "manager";
+
+    default:
+      return "";
+
+  }
+
+}
+
+
+function getCategoryMarketplace(
+  value: string
+): CategoryMarketplace {
+
+  switch (value) {
+
+    case "ozon":
+      return "ozon";
+
+    case "wildberries":
+      return "wildberries";
+
+    case "yandex_market":
+      return "yandex_market";
+
+    default:
+      return "";
+
+  }
+
+}
+
+
+// ============================================================
 // COMPONENT
 // ============================================================
 
@@ -447,6 +506,7 @@ export default function HomeHeaderActions() {
   ] =
     useState(
       () => {
+
         const now =
           new Date();
 
@@ -456,6 +516,7 @@ export default function HomeHeaderActions() {
           now.getMonth(),
           1
         );
+
       }
     );
 
@@ -522,7 +583,8 @@ export default function HomeHeaderActions() {
               );
 
 
-              return "forbidden" as const;
+              return "forbidden";
+
             }
 
 
@@ -531,7 +593,8 @@ export default function HomeHeaderActions() {
             );
 
 
-            return "error" as const;
+            return "error";
+
           }
 
 
@@ -552,8 +615,12 @@ export default function HomeHeaderActions() {
                       row.first_name,
                       row.last_name,
                     ]
-                      .filter(Boolean)
-                      .join(" ");
+                      .filter(
+                        Boolean
+                      )
+                      .join(
+                        " "
+                      );
 
 
                   const detail =
@@ -565,6 +632,7 @@ export default function HomeHeaderActions() {
 
 
                   return {
+
                     id:
                       row.request_id,
 
@@ -581,6 +649,7 @@ export default function HomeHeaderActions() {
                       row.created_at,
 
                     request: {
+
                       firstName:
                         row.first_name,
 
@@ -595,8 +664,11 @@ export default function HomeHeaderActions() {
 
                       comment:
                         row.comment,
+
                     },
+
                   };
+
                 }
               );
 
@@ -606,7 +678,7 @@ export default function HomeHeaderActions() {
           );
 
 
-          return "success" as const;
+          return "success";
 
         } catch {
 
@@ -615,7 +687,7 @@ export default function HomeHeaderActions() {
           );
 
 
-          return "error" as const;
+          return "error";
 
         } finally {
 
@@ -624,6 +696,7 @@ export default function HomeHeaderActions() {
           );
 
         }
+
       },
       []
     );
@@ -656,17 +729,22 @@ export default function HomeHeaderActions() {
           ||
           result !== "success"
         ) {
+
           return;
+
         }
 
 
         intervalId =
           window.setInterval(
             () => {
+
               void loadNotifications();
+
             },
             60 * 1000
           );
+
       }
 
 
@@ -682,9 +760,11 @@ export default function HomeHeaderActions() {
         if (
           intervalId !== null
         ) {
+
           window.clearInterval(
             intervalId
           );
+
         }
 
       };
@@ -720,11 +800,14 @@ export default function HomeHeaderActions() {
                     now
                   )
                 ) {
+
                   return previous;
+
                 }
 
 
                 return now;
+
               }
             );
 
@@ -760,7 +843,9 @@ export default function HomeHeaderActions() {
         if (
           !actionsRef.current
         ) {
+
           return;
+
         }
 
 
@@ -769,10 +854,13 @@ export default function HomeHeaderActions() {
             event.target as Node
           )
         ) {
+
           setOpenPanel(
             null
           );
+
         }
+
       }
 
 
@@ -784,24 +872,29 @@ export default function HomeHeaderActions() {
           event.key !==
           "Escape"
         ) {
+
           return;
+
         }
 
 
         if (
           selectedNotification
         ) {
+
           setSelectedNotification(
             null
           );
 
           return;
+
         }
 
 
         setOpenPanel(
           null
         );
+
       }
 
 
@@ -906,7 +999,9 @@ export default function HomeHeaderActions() {
               ||
               day > daysInMonth
             ) {
+
               return null;
+
             }
 
 
@@ -915,6 +1010,7 @@ export default function HomeHeaderActions() {
               month,
               day
             );
+
           }
         );
 
@@ -998,7 +1094,9 @@ export default function HomeHeaderActions() {
 
 
     if (willOpen) {
+
       void loadNotifications();
+
     }
 
   }
@@ -1070,9 +1168,11 @@ export default function HomeHeaderActions() {
       role !==
       "category_manager"
     ) {
+
       setSelectedMarketplace(
         ""
       );
+
     }
 
   }
@@ -1106,7 +1206,9 @@ export default function HomeHeaderActions() {
                   event.target ===
                   event.currentTarget
                 ) {
+
                   closeAccessRequest();
+
                 }
 
               }
@@ -1332,15 +1434,12 @@ export default function HomeHeaderActions() {
                     }
 
                     onChange={
-                      event => {
-                        const role =
-                          event.target.value
-                            as WorkingRole;
-
+                      event =>
                         changeRole(
-                          role
-                        );
-                      }
+                          getWorkingRole(
+                            event.currentTarget.value
+                          )
+                        )
                     }
                   >
 
@@ -1399,15 +1498,12 @@ export default function HomeHeaderActions() {
                         }
 
                         onChange={
-                          event => {
-                            const marketplace =
-                              event.target.value
-                                as CategoryMarketplace;
-
+                          event =>
                             setSelectedMarketplace(
-                              marketplace
-                            );
-                          }
+                              getCategoryMarketplace(
+                                event.currentTarget.value
+                              )
+                            )
                         }
                       >
 
