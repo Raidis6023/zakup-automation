@@ -6,9 +6,13 @@ export const maxDuration = 60;
 
 const SALES_DAYS = 28;
 const PAGE_SIZE = 1000;
+
+const OZON_MARKETPLACE = "ozon";
 const WB_MARKETPLACE = "wildberries";
 const ACCOUNT_KEY = "main";
-const WB_FBW_WAREHOUSE_TYPE = "Склад WB";
+
+const WB_FBW_WAREHOUSE_TYPE =
+  "Склад WB";
 
 type OzonSalesSyncRun = {
   id: string;
@@ -19,11 +23,11 @@ type OzonSalesSyncRun = {
   created_at: string;
 };
 
-type WbSyncState = {
-  sync_key: string;
-  last_success_at: string | null;
-  last_http_status: number | null;
-  last_snapshot_id?: string | null;
+type ProductRow = {
+  id: string;
+  offer_id: string | null;
+  master_code: string | null;
+  is_active: boolean;
 };
 
 type MarketplaceListingRow = {
@@ -34,6 +38,38 @@ type MarketplaceListingRow = {
   master_code: string;
   is_active: boolean;
   china_procurement_enabled: boolean;
+};
+
+type OzonSalesRow = {
+  product_id: string;
+  cluster_id: string;
+  sale_date: string;
+  sales_quantity: number;
+  cancelled_quantity: number;
+};
+
+type OzonStockRow = {
+  product_id: string;
+  cluster_id: string;
+  quantity: number;
+  snapshot_date: string;
+};
+
+type WbSyncState = {
+  sync_key: string;
+  last_success_at: string | null;
+  last_http_status: number | null;
+  last_snapshot_id?: string | null;
+};
+
+type WbOrderRow = {
+  srid: string;
+  order_date: string;
+  nm_id: number;
+  supplier_article: string | null;
+  barcode: string | null;
+  warehouse_type: string | null;
+  is_cancel: boolean | null;
 };
 
 type WbStockRow = {
@@ -49,14 +85,23 @@ type WbStockRow = {
   availability: string | null;
 };
 
-type WbOrderRow = {
-  srid: string;
-  order_date: string;
-  nm_id: number;
-  supplier_article: string | null;
-  barcode: string | null;
-  warehouse_type: string | null;
-  is_cancel: boolean | null;
+type OzonAggregate = {
+  productIds: Set<string>;
+  offerIds: Set<string>;
+  sales28Days: number;
+  cancelled28Days: number;
+  stock: number;
+};
+
+type WbAggregate = {
+  nmIds: Set<number>;
+  sellerArticles: Set<string>;
+  sales28Days: number;
+  cancelled28Days: number;
+  fbwStock: number;
+  toClient: number;
+  fromClient: number;
+  disabledFlagListings: number;
 };
 
 function getSupabaseConfig() {
@@ -92,8 +137,10 @@ function getHeaders() {
 
   return {
     apikey: supabaseKey,
-    Authorization: `Bearer ${supabaseKey}`,
-    Accept: "application/json",
+    Authorization:
+      `Bearer ${supabaseKey}`,
+    Accept:
+      "application/json",
   };
 }
 
@@ -222,11 +269,14 @@ async function supabaseExactCount(
 
         headers: {
           ...getHeaders(),
-          Prefer: "count=exact",
-          Range: "0-0",
+          Prefer:
+            "count=exact",
+          Range:
+            "0-0",
         },
 
-        cache: "no-store",
+        cache:
+          "no-store",
       }
     );
 
@@ -263,6 +313,24 @@ async function supabaseExactCount(
 
   return Number(
     match[1]
+  );
+}
+
+function safeNumber(
+  value: unknown
+): number {
+  const number =
+    Number(value);
+
+  if (
+    !Number.isFinite(number)
+  ) {
+    return 0;
+  }
+
+  return Math.max(
+    0,
+    Math.trunc(number)
   );
 }
 
@@ -317,22 +385,53 @@ function moscowDayStartIso(
   ).toISOString();
 }
 
-function safeNumber(
-  value: unknown
-): number {
-  const result =
-    Number(value);
+function createOzonAggregate():
+OzonAggregate {
+  return {
+    productIds:
+      new Set<string>(),
 
-  if (
-    !Number.isFinite(result)
-  ) {
-    return 0;
-  }
+    offerIds:
+      new Set<string>(),
 
-  return Math.max(
-    0,
-    Math.trunc(result)
-  );
+    sales28Days:
+      0,
+
+    cancelled28Days:
+      0,
+
+    stock:
+      0,
+  };
+}
+
+function createWbAggregate():
+WbAggregate {
+  return {
+    nmIds:
+      new Set<number>(),
+
+    sellerArticles:
+      new Set<string>(),
+
+    sales28Days:
+      0,
+
+    cancelled28Days:
+      0,
+
+    fbwStock:
+      0,
+
+    toClient:
+      0,
+
+    fromClient:
+      0,
+
+    disabledFlagListings:
+      0,
+  };
 }
 
 async function getLatestOzonSalesRun():
@@ -350,6 +449,25 @@ Promise<OzonSalesSyncRun | null> {
     );
 
   return rows[0] ?? null;
+}
+
+async function getLatestOzonStockDate():
+Promise<string | null> {
+  const rows =
+    await supabaseGetRows<{
+      snapshot_date: string;
+    }>(
+      "ozon_stock_snapshots" +
+      "?select=snapshot_date" +
+      "&order=snapshot_date.desc" +
+      "&limit=1"
+    );
+
+  return (
+    rows[0]
+      ?.snapshot_date ??
+    null
+  );
 }
 
 async function getWbSyncStates():
@@ -386,10 +504,7 @@ Promise<{
 export async function GET() {
   try {
     // ========================================================
-    // 1. ОБЩИЙ ПЕРИОД
-    //
-    // WB использует ровно тот же период,
-    // что последний успешный 28-дневный sync Ozon.
+    // 1. ЕДИНЫЙ ПЕРИОД OZON + WB
     // ========================================================
 
     const ozonSalesRun =
@@ -408,26 +523,31 @@ export async function GET() {
       );
     }
 
-    const days =
+    const periodDays =
       inclusiveDays(
         ozonSalesRun.date_from,
         ozonSalesRun.date_to
       );
 
     if (
-      days !== SALES_DAYS
+      periodDays !== SALES_DAYS
     ) {
       return NextResponse.json(
         {
           ok: false,
+
           message:
             "Период Ozon не равен 28 календарным дням",
+
           period: {
             dateFrom:
               ozonSalesRun.date_from,
+
             dateTo:
               ozonSalesRun.date_to,
-            days,
+
+            days:
+              periodDays,
           },
         },
         {
@@ -456,7 +576,434 @@ export async function GET() {
       );
 
     // ========================================================
-    // 2. СОСТОЯНИЕ WB
+    // 2. OZON PRODUCTS
+    // ========================================================
+
+    const productsPath =
+      "products" +
+      "?select=id,offer_id,master_code,is_active" +
+      "&is_active=eq.true";
+
+    const productsExact =
+      await supabaseExactCount(
+        productsPath
+      );
+
+    const productsResult =
+      await supabaseGetAll<
+        ProductRow
+      >(
+        productsPath,
+        "id.asc"
+      );
+
+    if (
+      productsResult.rows.length !==
+      productsExact
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "Не все активные products были загружены",
+          exactRows:
+            productsExact,
+          loadedRows:
+            productsResult.rows.length,
+        },
+        {
+          status: 409,
+        }
+      );
+    }
+
+    // ========================================================
+    // 3. OZON LISTINGS
+    //
+    // Все активные.
+    // china_procurement_enabled НЕ фильтрует.
+    // ========================================================
+
+    const ozonListingsPath =
+      "marketplace_listings" +
+      "?select=marketplace,account_key,external_id,seller_article,master_code,is_active,china_procurement_enabled" +
+      `&marketplace=eq.${OZON_MARKETPLACE}` +
+      `&account_key=eq.${ACCOUNT_KEY}` +
+      "&is_active=eq.true";
+
+    const ozonListingsExact =
+      await supabaseExactCount(
+        ozonListingsPath
+      );
+
+    const ozonListingsResult =
+      await supabaseGetAll<
+        MarketplaceListingRow
+      >(
+        ozonListingsPath,
+        "external_id.asc"
+      );
+
+    if (
+      ozonListingsResult.rows.length !==
+      ozonListingsExact
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "Не все Ozon listings были загружены",
+          exactRows:
+            ozonListingsExact,
+          loadedRows:
+            ozonListingsResult.rows.length,
+        },
+        {
+          status: 409,
+        }
+      );
+    }
+
+    const ozonListingByOffer =
+      new Map<
+        string,
+        MarketplaceListingRow
+      >();
+
+    for (
+      const listing
+      of ozonListingsResult.rows
+    ) {
+      ozonListingByOffer.set(
+        listing.external_id.trim(),
+        listing
+      );
+    }
+
+    const ozonProductToMaster =
+      new Map<string, string>();
+
+    const ozonByMaster =
+      new Map<
+        string,
+        OzonAggregate
+      >();
+
+    const ozonMappingErrors:
+      Array<{
+        productId: string;
+        offerId: string | null;
+        productMasterCode: string | null;
+        listingMasterCode?: string | null;
+        reason: string;
+      }> = [];
+
+    for (
+      const product
+      of productsResult.rows
+    ) {
+      const offerId =
+        product.offer_id
+          ?.trim() ?? "";
+
+      const productMasterCode =
+        product.master_code
+          ?.trim() ?? "";
+
+      if (
+        !offerId ||
+        !productMasterCode
+      ) {
+        ozonMappingErrors.push(
+          {
+            productId:
+              product.id,
+
+            offerId:
+              product.offer_id,
+
+            productMasterCode:
+              product.master_code,
+
+            reason:
+              "PRODUCT_WITHOUT_OFFER_OR_MASTER_CODE",
+          }
+        );
+
+        continue;
+      }
+
+      const listing =
+        ozonListingByOffer.get(
+          offerId
+        );
+
+      if (!listing) {
+        ozonMappingErrors.push(
+          {
+            productId:
+              product.id,
+
+            offerId,
+
+            productMasterCode,
+
+            reason:
+              "LISTING_NOT_FOUND",
+          }
+        );
+
+        continue;
+      }
+
+      if (
+        listing.master_code.trim() !==
+        productMasterCode
+      ) {
+        ozonMappingErrors.push(
+          {
+            productId:
+              product.id,
+
+            offerId,
+
+            productMasterCode,
+
+            listingMasterCode:
+              listing.master_code,
+
+            reason:
+              "MASTER_CODE_MISMATCH",
+          }
+        );
+
+        continue;
+      }
+
+      ozonProductToMaster.set(
+        product.id,
+        productMasterCode
+      );
+
+      const aggregate =
+        ozonByMaster.get(
+          productMasterCode
+        ) ??
+        createOzonAggregate();
+
+      aggregate.productIds.add(
+        product.id
+      );
+
+      aggregate.offerIds.add(
+        offerId
+      );
+
+      ozonByMaster.set(
+        productMasterCode,
+        aggregate
+      );
+    }
+
+    if (
+      ozonMappingErrors.length > 0
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+
+          message:
+            "Ошибка Ozon → master_code mapping",
+
+          errors:
+            ozonMappingErrors,
+        },
+        {
+          status: 409,
+        }
+      );
+    }
+
+    // ========================================================
+    // 4. OZON SALES
+    // ========================================================
+
+    const ozonSalesPath =
+      "ozon_sales_daily" +
+      "?select=product_id,cluster_id,sale_date,sales_quantity,cancelled_quantity" +
+      `&sale_date=gte.${periodDateFrom}` +
+      `&sale_date=lte.${periodDateTo}`;
+
+    const ozonSalesExact =
+      await supabaseExactCount(
+        ozonSalesPath
+      );
+
+    const ozonSalesResult =
+      await supabaseGetAll<
+        OzonSalesRow
+      >(
+        ozonSalesPath,
+        "sale_date.asc,product_id.asc,cluster_id.asc"
+      );
+
+    if (
+      ozonSalesResult.rows.length !==
+      ozonSalesExact
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "Не все строки Ozon sales были загружены",
+          exactRows:
+            ozonSalesExact,
+          loadedRows:
+            ozonSalesResult.rows.length,
+        },
+        {
+          status: 409,
+        }
+      );
+    }
+
+    let ozonSalesRowsOutsideCurrentCatalog =
+      0;
+
+    for (
+      const row
+      of ozonSalesResult.rows
+    ) {
+      const masterCode =
+        ozonProductToMaster.get(
+          row.product_id
+        );
+
+      if (!masterCode) {
+        ozonSalesRowsOutsideCurrentCatalog +=
+          1;
+
+        continue;
+      }
+
+      const aggregate =
+        ozonByMaster.get(
+          masterCode
+        ) ??
+        createOzonAggregate();
+
+      aggregate.sales28Days +=
+        safeNumber(
+          row.sales_quantity
+        );
+
+      aggregate.cancelled28Days +=
+        safeNumber(
+          row.cancelled_quantity
+        );
+
+      ozonByMaster.set(
+        masterCode,
+        aggregate
+      );
+    }
+
+    // ========================================================
+    // 5. OZON STOCK
+    // ========================================================
+
+    const ozonStockDate =
+      await getLatestOzonStockDate();
+
+    if (!ozonStockDate) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "Не найден snapshot остатков Ozon",
+        },
+        {
+          status: 409,
+        }
+      );
+    }
+
+    const ozonStockPath =
+      "ozon_stock_snapshots" +
+      "?select=product_id,cluster_id,quantity,snapshot_date" +
+      `&snapshot_date=eq.${ozonStockDate}`;
+
+    const ozonStockExact =
+      await supabaseExactCount(
+        ozonStockPath
+      );
+
+    const ozonStockResult =
+      await supabaseGetAll<
+        OzonStockRow
+      >(
+        ozonStockPath,
+        "product_id.asc,cluster_id.asc"
+      );
+
+    if (
+      ozonStockResult.rows.length !==
+      ozonStockExact
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "Не все строки Ozon stock были загружены",
+          exactRows:
+            ozonStockExact,
+          loadedRows:
+            ozonStockResult.rows.length,
+        },
+        {
+          status: 409,
+        }
+      );
+    }
+
+    let ozonStockRowsOutsideCurrentCatalog =
+      0;
+
+    for (
+      const row
+      of ozonStockResult.rows
+    ) {
+      const masterCode =
+        ozonProductToMaster.get(
+          row.product_id
+        );
+
+      if (!masterCode) {
+        ozonStockRowsOutsideCurrentCatalog +=
+          1;
+
+        continue;
+      }
+
+      const aggregate =
+        ozonByMaster.get(
+          masterCode
+        ) ??
+        createOzonAggregate();
+
+      aggregate.stock +=
+        safeNumber(
+          row.quantity
+        );
+
+      ozonByMaster.set(
+        masterCode,
+        aggregate
+      );
+    }
+
+    // ========================================================
+    // 6. WB SYNC STATE
     // ========================================================
 
     const wbStates =
@@ -501,7 +1048,7 @@ export async function GET() {
         wbStates.orders.last_success_at
       ).getTime();
 
-    const requiredCoverageTime =
+    const requiredWbCoverage =
       new Date(
         wbPeriodToExclusive
       ).getTime();
@@ -511,7 +1058,7 @@ export async function GET() {
         wbOrdersSyncTime
       ) ||
       wbOrdersSyncTime <
-        requiredCoverageTime
+        requiredWbCoverage
     ) {
       return NextResponse.json(
         {
@@ -529,7 +1076,9 @@ export async function GET() {
 
           wildberries: {
             ordersLastSuccessAt:
-              wbStates.orders.last_success_at,
+              wbStates.orders
+                .last_success_at,
+
             requiredThrough:
               wbPeriodToExclusive,
           },
@@ -540,143 +1089,85 @@ export async function GET() {
       );
     }
 
-    const snapshotId =
+    const wbSnapshotId =
       wbStates.stocks
         .last_snapshot_id;
 
     // ========================================================
-    // 3. ВСЕ WB MAPPING
+    // 7. WB LISTINGS
     //
-    // china_procurement_enabled читаем только
-    // для информации. НИЧЕГО им не фильтруем.
+    // Все active mappings.
+    // china_procurement_enabled НЕ фильтрует.
     // ========================================================
 
-    const mappingsPath =
+    const wbListingsPath =
       "marketplace_listings" +
       "?select=marketplace,account_key,external_id,seller_article,master_code,is_active,china_procurement_enabled" +
       `&marketplace=eq.${WB_MARKETPLACE}` +
       `&account_key=eq.${ACCOUNT_KEY}` +
       "&is_active=eq.true";
 
-    const mappingsExact =
-      await supabaseExactCount(
-        mappingsPath
-      );
-
-    const mappingsResult =
+    const wbListingsResult =
       await supabaseGetAll<
         MarketplaceListingRow
       >(
-        mappingsPath,
+        wbListingsPath,
         "external_id.asc"
       );
 
-    if (
-      mappingsResult.rows.length !==
-      mappingsExact
-    ) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message:
-            "Не все WB mappings были загружены",
-          exactRows:
-            mappingsExact,
-          loadedRows:
-            mappingsResult.rows.length,
-        },
-        {
-          status: 409,
-        }
-      );
-    }
-
-    const mappingByNmId =
+    const wbListingByNmId =
       new Map<
         string,
         MarketplaceListingRow
       >();
 
-    const duplicateMappingIds =
-      new Set<string>();
-
     for (
-      const mapping
-      of mappingsResult.rows
+      const listing
+      of wbListingsResult.rows
     ) {
-      const key =
-        mapping.external_id.trim();
-
-      if (
-        mappingByNmId.has(key)
-      ) {
-        duplicateMappingIds.add(
-          key
-        );
-      }
-
-      mappingByNmId.set(
-        key,
-        mapping
-      );
-    }
-
-    if (
-      duplicateMappingIds.size > 0
-    ) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message:
-            "В WB mapping есть дубли external_id",
-          duplicates:
-            Array.from(
-              duplicateMappingIds
-            ),
-        },
-        {
-          status: 409,
-        }
+      wbListingByNmId.set(
+        listing.external_id.trim(),
+        listing
       );
     }
 
     // ========================================================
-    // 4. ТЕКУЩИЙ SNAPSHOT WB
+    // 8. CURRENT WB SNAPSHOT
     // ========================================================
 
-    const stockPath =
+    const wbStockPath =
       "wb_stock_product_snapshots" +
       "?select=snapshot_id,snapshot_at,nm_id,vendor_code,product_name,brand_name,stock_count,to_client_count,from_client_count,availability" +
       `&snapshot_id=eq.${encodeURIComponent(
-        snapshotId
+        wbSnapshotId
       )}`;
 
-    const stockExact =
+    const wbStockExact =
       await supabaseExactCount(
-        stockPath
+        wbStockPath
       );
 
-    const stockResult =
+    const wbStockResult =
       await supabaseGetAll<
         WbStockRow
       >(
-        stockPath,
+        wbStockPath,
         "nm_id.asc"
       );
 
     if (
-      stockResult.rows.length !==
-      stockExact
+      wbStockResult.rows.length !==
+      wbStockExact
     ) {
       return NextResponse.json(
         {
           ok: false,
           message:
-            "Не все строки WB snapshot были загружены",
+            "Не все строки WB stock были загружены",
           exactRows:
-            stockExact,
+            wbStockExact,
           loadedRows:
-            stockResult.rows.length,
+            wbStockResult.rows.length,
         },
         {
           status: 409,
@@ -684,43 +1175,54 @@ export async function GET() {
       );
     }
 
-    const currentNmIds =
+    const wbCurrentNmIds =
       new Set<number>();
 
-    const duplicateNmIds =
+    const wbDuplicateNmIds =
       new Set<number>();
 
-    const unmappedItems: Array<{
-      nmId: number;
-      vendorCode: string | null;
-      productName: string | null;
-    }> = [];
+    const wbUnmapped:
+      Array<{
+        nmId: number;
+        vendorCode: string | null;
+        productName: string | null;
+      }> = [];
+
+    const wbNmIdToMaster =
+      new Map<number, string>();
+
+    const wbByMaster =
+      new Map<
+        string,
+        WbAggregate
+      >();
 
     for (
       const stock
-      of stockResult.rows
+      of wbStockResult.rows
     ) {
       const nmId =
         Number(stock.nm_id);
 
       if (
-        currentNmIds.has(nmId)
+        wbCurrentNmIds.has(nmId)
       ) {
-        duplicateNmIds.add(
+        wbDuplicateNmIds.add(
           nmId
         );
       }
 
-      currentNmIds.add(
+      wbCurrentNmIds.add(
         nmId
       );
 
-      if (
-        !mappingByNmId.has(
+      const listing =
+        wbListingByNmId.get(
           String(nmId)
-        )
-      ) {
-        unmappedItems.push(
+        );
+
+      if (!listing) {
+        wbUnmapped.push(
           {
             nmId,
             vendorCode:
@@ -729,11 +1231,70 @@ export async function GET() {
               stock.product_name,
           }
         );
+
+        continue;
       }
+
+      const masterCode =
+        listing.master_code;
+
+      wbNmIdToMaster.set(
+        nmId,
+        masterCode
+      );
+
+      const aggregate =
+        wbByMaster.get(
+          masterCode
+        ) ??
+        createWbAggregate();
+
+      aggregate.nmIds.add(
+        nmId
+      );
+
+      if (
+        listing.seller_article
+      ) {
+        aggregate
+          .sellerArticles
+          .add(
+            listing.seller_article
+          );
+      }
+
+      aggregate.fbwStock +=
+        safeNumber(
+          stock.stock_count
+        );
+
+      aggregate.toClient +=
+        safeNumber(
+          stock.to_client_count
+        );
+
+      aggregate.fromClient +=
+        safeNumber(
+          stock.from_client_count
+        );
+
+      if (
+        listing
+          .china_procurement_enabled ===
+        false
+      ) {
+        aggregate.disabledFlagListings +=
+          1;
+      }
+
+      wbByMaster.set(
+        masterCode,
+        aggregate
+      );
     }
 
     if (
-      duplicateNmIds.size > 0
+      wbDuplicateNmIds.size > 0
     ) {
       return NextResponse.json(
         {
@@ -742,7 +1303,7 @@ export async function GET() {
             "В текущем WB snapshot есть дубли nmID",
           duplicateNmIds:
             Array.from(
-              duplicateNmIds
+              wbDuplicateNmIds
             ),
         },
         {
@@ -752,14 +1313,15 @@ export async function GET() {
     }
 
     if (
-      unmappedItems.length > 0
+      wbUnmapped.length > 0
     ) {
       return NextResponse.json(
         {
           ok: false,
           message:
             "Не все текущие WB карточки имеют master_code",
-          unmappedItems,
+          unmapped:
+            wbUnmapped,
         },
         {
           status: 409,
@@ -768,13 +1330,13 @@ export async function GET() {
     }
 
     // ========================================================
-    // 5. ЗАКАЗЫ WB ЗА ТОТ ЖЕ ПЕРИОД
+    // 9. WB SALES ЗА ТОТ ЖЕ ПЕРИОД
     //
     // Только FBW.
-    // FBS не входит.
+    // Все текущие карточки.
     // ========================================================
 
-    const ordersPath =
+    const wbOrdersPath =
       "wb_orders" +
       "?select=srid,order_date,nm_id,supplier_article,barcode,warehouse_type,is_cancel" +
       `&warehouse_type=eq.${encodeURIComponent(
@@ -787,32 +1349,32 @@ export async function GET() {
         wbPeriodToExclusive
       )}`;
 
-    const ordersExact =
+    const wbOrdersExact =
       await supabaseExactCount(
-        ordersPath
+        wbOrdersPath
       );
 
-    const ordersResult =
+    const wbOrdersResult =
       await supabaseGetAll<
         WbOrderRow
       >(
-        ordersPath,
+        wbOrdersPath,
         "order_date.asc,srid.asc"
       );
 
     if (
-      ordersResult.rows.length !==
-      ordersExact
+      wbOrdersResult.rows.length !==
+      wbOrdersExact
     ) {
       return NextResponse.json(
         {
           ok: false,
           message:
-            "Не все WB orders были загружены",
+            "Не все строки WB orders были загружены",
           exactRows:
-            ordersExact,
+            wbOrdersExact,
           loadedRows:
-            ordersResult.rows.length,
+            wbOrdersResult.rows.length,
         },
         {
           status: 409,
@@ -820,99 +1382,96 @@ export async function GET() {
       );
     }
 
-    const seenSrids =
+    const wbSeenSrids =
       new Set<string>();
 
-    const duplicateSrids =
+    const wbDuplicateSrids =
       new Set<string>();
 
-    let nullIsCancel =
+    let wbNullIsCancel =
       0;
 
-    let ordersOutsideCurrentSnapshot =
+    let wbOrdersOutsideCurrentSnapshot =
       0;
-
-    const salesByNmId =
-      new Map<
-        number,
-        {
-          active: number;
-          cancelled: number;
-        }
-      >();
 
     for (
       const order
-      of ordersResult.rows
+      of wbOrdersResult.rows
     ) {
       if (
-        seenSrids.has(
+        wbSeenSrids.has(
           order.srid
         )
       ) {
-        duplicateSrids.add(
+        wbDuplicateSrids.add(
           order.srid
         );
       }
 
-      seenSrids.add(
+      wbSeenSrids.add(
         order.srid
       );
 
       if (
         order.is_cancel === null
       ) {
-        nullIsCancel += 1;
+        wbNullIsCancel += 1;
         continue;
       }
 
       const nmId =
         Number(order.nm_id);
 
-      if (
-        !currentNmIds.has(nmId)
-      ) {
-        ordersOutsideCurrentSnapshot +=
+      const masterCode =
+        wbNmIdToMaster.get(
+          nmId
+        );
+
+      if (!masterCode) {
+        wbOrdersOutsideCurrentSnapshot +=
           1;
 
         continue;
       }
 
-      const current =
-        salesByNmId.get(
-          nmId
-        ) ?? {
-          active: 0,
-          cancelled: 0,
-        };
+      const aggregate =
+        wbByMaster.get(
+          masterCode
+        ) ??
+        createWbAggregate();
 
       if (
         order.is_cancel === true
       ) {
-        current.cancelled += 1;
+        aggregate.cancelled28Days +=
+          1;
       } else {
-        current.active += 1;
+        aggregate.sales28Days +=
+          1;
       }
 
-      salesByNmId.set(
-        nmId,
-        current
+      wbByMaster.set(
+        masterCode,
+        aggregate
       );
     }
 
     if (
-      duplicateSrids.size > 0
+      wbDuplicateSrids.size > 0
     ) {
       return NextResponse.json(
         {
           ok: false,
+
           message:
             "В WB orders найдены дубли srid",
+
           duplicateCount:
-            duplicateSrids.size,
+            wbDuplicateSrids.size,
+
           sample:
             Array.from(
-              duplicateSrids
+              wbDuplicateSrids
             ).slice(0, 20),
         },
         {
@@ -922,7 +1481,7 @@ export async function GET() {
     }
 
     if (
-      nullIsCancel > 0
+      wbNullIsCancel > 0
     ) {
       return NextResponse.json(
         {
@@ -930,7 +1489,7 @@ export async function GET() {
           message:
             "В WB orders найден is_cancel = null",
           rows:
-            nullIsCancel,
+            wbNullIsCancel,
         },
         {
           status: 409,
@@ -939,227 +1498,317 @@ export async function GET() {
     }
 
     // ========================================================
-    // 6. ITEMS
-    //
-    // ВСЕ карточки текущего WB snapshot.
-    // Флаг china_procurement_enabled НЕ фильтрует.
+    // 10. UNION ПО MASTER_CODE
     // ========================================================
 
-    const sellerArticleMismatches:
-      Array<{
-        nmId: number;
-        currentSellerArticle: string | null;
-        mappingSellerArticle: string | null;
-        masterCode: string;
-      }> = [];
+    const allMasterCodes =
+      new Set<string>();
+
+    for (
+      const masterCode
+      of ozonByMaster.keys()
+    ) {
+      allMasterCodes.add(
+        masterCode
+      );
+    }
+
+    for (
+      const masterCode
+      of wbByMaster.keys()
+    ) {
+      allMasterCodes.add(
+        masterCode
+      );
+    }
+
+    // ========================================================
+    // 11. ОБЩИЕ ITEMS
+    // ========================================================
 
     const items =
-      stockResult.rows
+      Array.from(
+        allMasterCodes
+      )
+        .sort()
         .map(
-          stock => {
-            const nmId =
-              Number(stock.nm_id);
+          masterCode => {
+            const ozon =
+              ozonByMaster.get(
+                masterCode
+              ) ??
+              createOzonAggregate();
 
-            const mapping =
-              mappingByNmId.get(
-                String(nmId)
-              )!;
+            const wb =
+              wbByMaster.get(
+                masterCode
+              ) ??
+              createWbAggregate();
 
-            const sales =
-              salesByNmId.get(
-                nmId
-              ) ?? {
-                active: 0,
-                cancelled: 0,
-              };
+            const totalSales28Days =
+              ozon.sales28Days +
+              wb.sales28Days;
 
-            const currentSellerArticle =
-              stock.vendor_code
-                ?.trim() ||
-              null;
+            const totalCancelled28Days =
+              ozon.cancelled28Days +
+              wb.cancelled28Days;
 
-            const mappingSellerArticle =
-              mapping.seller_article
-                ?.trim() ||
-              null;
-
-            if (
-              currentSellerArticle &&
-              mappingSellerArticle &&
-              currentSellerArticle
-                .toLowerCase() !==
-              mappingSellerArticle
-                .toLowerCase()
-            ) {
-              sellerArticleMismatches.push(
-                {
-                  nmId,
-                  currentSellerArticle,
-                  mappingSellerArticle,
-                  masterCode:
-                    mapping.master_code,
-                }
-              );
-            }
+            const marketplaceStock =
+              ozon.stock +
+              wb.fbwStock;
 
             return {
-              masterCode:
-                mapping.master_code,
-
-              mappingStatus:
-                "MAPPED_BY_WB_NMID",
-
-              mappingSource:
-                "marketplace_listings",
-
-              nmId,
-
-              supplierArticle:
-                stock.vendor_code,
-
-              mappingSellerArticle:
-                mapping.seller_article,
-
-              productName:
-                stock.product_name,
-
-              brandName:
-                stock.brand_name,
-
-              chinaProcurementEnabledFlag:
-                mapping
-                  .china_procurement_enabled,
-
-              chinaProcurementFlagApplied:
-                false,
+              masterCode,
 
               sales: {
-                sales28Days:
-                  sales.active,
-
-                cancelled28Days:
-                  sales.cancelled,
-
-                avgSalesPerDay:
-                  sales.active /
+                periodDays:
                   SALES_DAYS,
+
+                ozon:
+                  ozon.sales28Days,
+
+                wildberries:
+                  wb.sales28Days,
+
+                total:
+                  totalSales28Days,
+
+                avgPerDay:
+                  totalSales28Days /
+                  SALES_DAYS,
+
+                cancelled: {
+                  ozon:
+                    ozon.cancelled28Days,
+
+                  wildberries:
+                    wb.cancelled28Days,
+
+                  total:
+                    totalCancelled28Days,
+                },
               },
 
               stock: {
-                fbwStock:
-                  safeNumber(
-                    stock.stock_count
+                ozon:
+                  ozon.stock,
+
+                wildberriesFbw:
+                  wb.fbwStock,
+
+                marketplaceTotal:
+                  marketplaceStock,
+              },
+
+              ozon: {
+                present:
+                  ozon.productIds.size > 0,
+
+                listingsCount:
+                  ozon.offerIds.size,
+
+                productIds:
+                  Array.from(
+                    ozon.productIds
+                  ).sort(),
+
+                offerIds:
+                  Array.from(
+                    ozon.offerIds
+                  ).sort(),
+              },
+
+              wildberries: {
+                present:
+                  wb.nmIds.size > 0,
+
+                listingsCount:
+                  wb.nmIds.size,
+
+                nmIds:
+                  Array.from(
+                    wb.nmIds
+                  ).sort(
+                    (a, b) =>
+                      a - b
                   ),
 
-                toClient:
-                  safeNumber(
-                    stock.to_client_count
-                  ),
+                sellerArticles:
+                  Array.from(
+                    wb.sellerArticles
+                  ).sort(),
 
-                fromClient:
-                  safeNumber(
-                    stock.from_client_count
-                  ),
+                toClientInfo:
+                  wb.toClient,
+
+                fromClientInfo:
+                  wb.fromClient,
+
+                chinaProcurementDisabledFlagListings:
+                  wb.disabledFlagListings,
+
+                chinaProcurementFlagApplied:
+                  false,
               },
             };
           }
-        )
-        .sort(
-          (left, right) =>
-            left.masterCode.localeCompare(
-              right.masterCode
-            ) ||
-            left.nmId - right.nmId
         );
 
     // ========================================================
-    // 7. SUMMARY
+    // 12. КАТАЛОЖНАЯ СТАТИСТИКА
     // ========================================================
 
-    const uniqueMasterCodes =
+    const ozonMasterCodes =
       new Set(
-        items.map(
-          item =>
-            item.masterCode
-        )
+        ozonByMaster.keys()
       );
 
-    const activeSales28Days =
+    const wbMasterCodes =
+      new Set(
+        wbByMaster.keys()
+      );
+
+    let ozonAndWb = 0;
+    let onlyOzon = 0;
+    let onlyWb = 0;
+
+    for (
+      const masterCode
+      of allMasterCodes
+    ) {
+      const inOzon =
+        ozonMasterCodes.has(
+          masterCode
+        );
+
+      const inWb =
+        wbMasterCodes.has(
+          masterCode
+        );
+
+      if (
+        inOzon &&
+        inWb
+      ) {
+        ozonAndWb += 1;
+      } else if (inOzon) {
+        onlyOzon += 1;
+      } else if (inWb) {
+        onlyWb += 1;
+      }
+    }
+
+    // ========================================================
+    // 13. SUMMARY
+    // ========================================================
+
+    const totalOzonSales =
       items.reduce(
         (sum, item) =>
           sum +
-          item.sales.sales28Days,
+          item.sales.ozon,
         0
       );
 
-    const cancelled28Days =
+    const totalWbSales =
       items.reduce(
         (sum, item) =>
           sum +
-          item.sales.cancelled28Days,
+          item.sales.wildberries,
         0
       );
 
-    const totalFbwStock =
+    const totalOzonCancelled =
       items.reduce(
         (sum, item) =>
           sum +
-          item.stock.fbwStock,
+          item.sales
+            .cancelled
+            .ozon,
         0
       );
 
-    const totalToClient =
+    const totalWbCancelled =
       items.reduce(
         (sum, item) =>
           sum +
-          item.stock.toClient,
+          item.sales
+            .cancelled
+            .wildberries,
         0
       );
 
-    const totalFromClient =
+    const totalOzonStock =
       items.reduce(
         (sum, item) =>
           sum +
-          item.stock.fromClient,
+          item.stock.ozon,
         0
       );
 
-    const informationalDisabledFlags =
-      items.filter(
-        item =>
-          item
-            .chinaProcurementEnabledFlag ===
-          false
+    const totalWbStock =
+      items.reduce(
+        (sum, item) =>
+          sum +
+          item.stock
+            .wildberriesFbw,
+        0
+      );
+
+    const wbDisabledFlagsIncluded =
+      wbStockResult.rows.filter(
+        stock => {
+          const listing =
+            wbListingByNmId.get(
+              String(stock.nm_id)
+            );
+
+          return (
+            listing
+              ?.china_procurement_enabled ===
+            false
+          );
+        }
       ).length;
+
+    // ========================================================
+    // 14. RESPONSE
+    // ========================================================
 
     return NextResponse.json(
       {
         ok: true,
 
         message:
-          "Все текущие карточки Wildberries подготовлены для общего расчёта по master_code",
+          "Продажи и остатки Ozon + Wildberries объединены по master_code на одном 28-дневном периоде",
 
         purpose: {
-          marketplace:
-            "Wildberries",
-
-          fulfillment:
-            "FBW",
-
           calculation:
-            "MARKETPLACE_SOURCE",
+            "OZON_WB_COMBINED_SOURCE",
 
-          wbReplenishmentFormulaApplied:
+          chinaOrderFormulaApplied:
             false,
 
-          fbsSalesIncluded:
-            false,
+          allCurrentMarketplaceCardsIncluded:
+            true,
 
           chinaProcurementFlagApplied:
             false,
 
+          supplyOriginFilterApplied:
+            false,
+
+          wildberriesFbsIncluded:
+            false,
+
+          wildberriesToClientIncludedInStock:
+            false,
+
+          wildberriesFromClientIncludedInStock:
+            false,
+
           note:
-            "Учитываются все текущие карточки WB. china_procurement_enabled пока не используется как фильтр. Продажи только FBW.",
+            "Сейчас учитываются все активные карточки Ozon и все карточки текущего WB snapshot. Ограничение по необходимости закупки в Китай будет добавлено позже на уровне общего справочника master_code.",
         },
 
         period: {
@@ -1175,142 +1824,194 @@ export async function GET() {
           dateTo:
             periodDateTo,
 
-          wbTimestampFrom:
+          wildberriesTimestampFrom:
             wbPeriodFrom,
 
-          wbTimestampToExclusive:
+          wildberriesTimestampToExclusive:
             wbPeriodToExclusive,
+
+          samePeriodForBothMarketplaces:
+            true,
         },
 
         sourceVersions: {
-          orders: {
-            lastSuccessAt:
+          ozon: {
+            salesSyncRunId:
+              ozonSalesRun.id,
+
+            salesSyncCreatedAt:
+              ozonSalesRun.created_at,
+
+            stockSnapshotDate:
+              ozonStockDate,
+          },
+
+          wildberries: {
+            ordersLastSuccessAt:
               wbStates.orders
                 .last_success_at,
 
-            lastHttpStatus:
-              wbStates.orders
-                .last_http_status,
-          },
-
-          stocks: {
-            lastSuccessAt:
+            stocksLastSuccessAt:
               wbStates.stocks
                 .last_success_at,
 
-            lastHttpStatus:
-              wbStates.stocks
-                .last_http_status,
+            stockSnapshotId:
+              wbSnapshotId,
+          },
+        },
 
-            snapshotId,
+        catalog: {
+          ozon: {
+            activeListings:
+              productsResult.rows.length,
+
+            uniqueMasterCodes:
+              ozonMasterCodes.size,
           },
 
-          mapping: {
-            marketplace:
-              WB_MARKETPLACE,
+          wildberries: {
+            currentListings:
+              wbStockResult.rows.length,
 
-            accountKey:
-              ACCOUNT_KEY,
+            uniqueMasterCodes:
+              wbMasterCodes.size,
 
-            rows:
-              mappingsResult.rows.length,
+            informationalDisabledFlagsIncluded:
+              wbDisabledFlagsIncluded,
+          },
+
+          combined: {
+            ozonAndWb,
+
+            onlyOzon,
+
+            onlyWb,
+
+            totalMasterCodes:
+              allMasterCodes.size,
           },
         },
 
         validation: {
-          mappings: {
-            exactRows:
-              mappingsExact,
-
-            loadedRows:
-              mappingsResult.rows.length,
-
-            pages:
-              mappingsResult.pages,
-
-            duplicateExternalId:
-              duplicateMappingIds.size,
+          ozonMapping: {
+            errors:
+              ozonMappingErrors.length,
           },
 
-          orders: {
+          ozonSales: {
             exactRows:
-              ordersExact,
+              ozonSalesExact,
 
             loadedRows:
-              ordersResult.rows.length,
+              ozonSalesResult.rows.length,
 
             pages:
-              ordersResult.pages,
+              ozonSalesResult.pages,
+
+            rowsOutsideCurrentCatalog:
+              ozonSalesRowsOutsideCurrentCatalog,
+          },
+
+          ozonStocks: {
+            exactRows:
+              ozonStockExact,
+
+            loadedRows:
+              ozonStockResult.rows.length,
+
+            pages:
+              ozonStockResult.pages,
+
+            rowsOutsideCurrentCatalog:
+              ozonStockRowsOutsideCurrentCatalog,
+          },
+
+          wildberriesMapping: {
+            currentListings:
+              wbStockResult.rows.length,
+
+            unmapped:
+              wbUnmapped.length,
+          },
+
+          wildberriesOrders: {
+            exactRows:
+              wbOrdersExact,
+
+            loadedRows:
+              wbOrdersResult.rows.length,
+
+            pages:
+              wbOrdersResult.pages,
 
             duplicateSrid:
-              duplicateSrids.size,
+              wbDuplicateSrids.size,
 
-            nullIsCancel,
+            nullIsCancel:
+              wbNullIsCancel,
+
+            rowsOutsideCurrentSnapshot:
+              wbOrdersOutsideCurrentSnapshot,
 
             warehouseType:
               WB_FBW_WAREHOUSE_TYPE,
-
-            rowsOutsideCurrentSnapshot:
-              ordersOutsideCurrentSnapshot,
           },
 
-          stocks: {
+          wildberriesStocks: {
             exactRows:
-              stockExact,
+              wbStockExact,
 
             loadedRows:
-              stockResult.rows.length,
+              wbStockResult.rows.length,
 
             pages:
-              stockResult.pages,
+              wbStockResult.pages,
 
             duplicateNmId:
-              duplicateNmIds.size,
-          },
-
-          mappingCurrentSnapshot: {
-            mappedItems:
-              items.length,
-
-            unmappedItems:
-              unmappedItems.length,
-
-            sellerArticleMismatchItems:
-              sellerArticleMismatches.length,
+              wbDuplicateNmIds.size,
           },
         },
 
         summary: {
-          skuCount:
+          masterCodes:
             items.length,
 
-          uniqueMasterCodes:
-            uniqueMasterCodes.size,
+          sales28Days: {
+            ozon:
+              totalOzonSales,
 
-          skuWithSales:
-            items.filter(
-              item =>
-                item.sales
-                  .sales28Days > 0
-            ).length,
+            wildberries:
+              totalWbSales,
 
-          activeSales28Days,
+            total:
+              totalOzonSales +
+              totalWbSales,
+          },
 
-          cancelled28Days,
+          cancelled28Days: {
+            ozon:
+              totalOzonCancelled,
 
-          totalFbwStock,
+            wildberries:
+              totalWbCancelled,
 
-          totalToClient,
+            total:
+              totalOzonCancelled +
+              totalWbCancelled,
+          },
 
-          totalFromClient,
+          marketplaceStock: {
+            ozon:
+              totalOzonStock,
 
-          informationalDisabledFlags,
+            wildberriesFbw:
+              totalWbStock,
 
-          allCurrentCardsIncluded:
-            true,
+            total:
+              totalOzonStock +
+              totalWbStock,
+          },
         },
-
-        sellerArticleMismatches,
 
         items,
       },
@@ -1320,7 +2021,7 @@ export async function GET() {
     );
   } catch (error) {
     console.error(
-      "WB MARKETPLACE SOURCE ERROR",
+      "OZON + WB SOURCE ERROR",
       error
     );
 
@@ -1329,7 +2030,7 @@ export async function GET() {
         ok: false,
 
         message:
-          "Не удалось собрать источник Wildberries",
+          "Не удалось собрать общий источник Ozon + Wildberries",
 
         error:
           error instanceof Error
