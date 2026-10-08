@@ -1009,27 +1009,64 @@ function buildProductIndexes(
 
 async function getOzonClusters() {
 
-  const response =
-    await ozonPost<{
-      clusters?:
-        OzonCluster[];
-    }>(
-      "/v1/cluster/list",
-      {
-        cluster_type:
-          "CLUSTER_TYPE_OZON",
-      }
-    );
+  const clusterTypes =
+    [
+      "CLUSTER_TYPE_OZON",
+      "CLUSTER_TYPE_CIS",
+    ];
 
-  const clusters =
-    response.clusters
-    ?? [];
+  const clusters:
+    OzonCluster[] =
+    [];
+
+  let requestsMade =
+    0;
+
+  // ==========================================================
+  // 1. РОССИЯ + СНГ
+  // ==========================================================
+
+  for (
+    const clusterType
+    of clusterTypes
+  ) {
+
+    const response =
+      await ozonPost<{
+        clusters?:
+          OzonCluster[];
+      }>(
+        "/v1/cluster/list",
+        {
+          cluster_type:
+            clusterType,
+        }
+      );
+
+    requestsMade +=
+      1;
+
+    clusters.push(
+      ...(
+        response.clusters
+        ?? []
+      )
+    );
+  }
+
+  // ==========================================================
+  // 2. WAREHOUSE ID → CLUSTER
+  // ==========================================================
 
   const warehouseToCluster =
     new Map<
       string,
       WarehouseCluster
     >();
+
+  // ==========================================================
+  // 3. CLUSTER NAME → CLUSTER ID
+  // ==========================================================
 
   const clusterNameToCluster =
     new Map<
@@ -1124,6 +1161,30 @@ async function getOzonClusters() {
           continue;
         }
 
+        const existingWarehouse =
+          warehouseToCluster.get(
+            warehouseId
+          );
+
+        if (
+          existingWarehouse
+          &&
+          existingWarehouse.clusterId !==
+          clusterId
+        ) {
+
+          throw new Error(
+            [
+              "Ozon вернул warehouse_id в нескольких кластерах",
+              `warehouse_id=${warehouseId}`,
+              `cluster_1=${existingWarehouse.clusterId}`,
+              `cluster_2=${clusterId}`,
+            ].join(
+              ", "
+            )
+          );
+        }
+
         warehouseToCluster.set(
           warehouseId,
           {
@@ -1142,6 +1203,10 @@ async function getOzonClusters() {
 
   return {
     clusters,
+
+    clusterTypes,
+
+    requestsMade,
 
     warehouseToCluster,
 
@@ -4281,6 +4346,14 @@ async function runDailySync(
         },
 
         clusters: {
+          methods:
+            clusterResult
+              .clusterTypes,
+
+          ozon_requests:
+            clusterResult
+              .requestsMade,
+
           total_clusters:
             clusterResult
               .clusters
