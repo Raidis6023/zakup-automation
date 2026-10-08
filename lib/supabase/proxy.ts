@@ -8,6 +8,41 @@ import {
 } from "next/server";
 
 
+// ============================================================
+// PUBLIC ROUTES
+// ============================================================
+
+function isPublicRoute(
+  pathname: string
+) {
+
+  /*
+   * Страницы, которые должны работать
+   * БЕЗ авторизации.
+   *
+   * /request-access создадим позже.
+   * /auth/* понадобится для приглашений,
+   * подтверждений и восстановления пароля.
+   */
+
+  if (
+    pathname === "/login" ||
+    pathname === "/request-access" ||
+    pathname.startsWith("/auth/")
+  ) {
+    return true;
+  }
+
+
+  return false;
+
+}
+
+
+// ============================================================
+// UPDATE AUTH SESSION
+// ============================================================
+
 export async function updateSession(
   request: NextRequest
 ) {
@@ -23,16 +58,20 @@ export async function updateSession(
 
 
   if (!supabaseUrl) {
+
     throw new Error(
       "Не найдена переменная NEXT_PUBLIC_SUPABASE_URL"
     );
+
   }
 
 
   if (!supabasePublishableKey) {
+
     throw new Error(
       "Не найдена переменная NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
     );
+
   }
 
 
@@ -50,15 +89,22 @@ export async function updateSession(
         cookies: {
 
           getAll() {
+
             return request
               .cookies
               .getAll();
+
           },
 
 
           setAll(
             cookiesToSet
           ) {
+
+            /*
+             * Сначала обновляем cookies
+             * внутри текущего request.
+             */
 
             cookiesToSet
               .forEach(
@@ -78,11 +124,21 @@ export async function updateSession(
               );
 
 
+            /*
+             * После изменения cookies
+             * создаём новый response.
+             */
+
             supabaseResponse =
               NextResponse.next({
                 request,
               });
 
+
+            /*
+             * И записываем обновлённые
+             * cookies пользователю.
+             */
 
             cookiesToSet
               .forEach(
@@ -110,19 +166,66 @@ export async function updateSession(
     );
 
 
-  /*
-   * ВАЖНО:
-   *
-   * Пока мы только обновляем Auth-сессию.
-   * Никаких редиректов на /login здесь ещё нет.
-   *
-   * Защиту сайта добавим на Шаге 5.
-   */
+  // ==========================================================
+  // CHECK AUTHENTICATED USER
+  // ==========================================================
 
-  await supabase
-    .auth
-    .getClaims();
+  const {
+    data: {
+      user,
+    },
+  } =
+    await supabase
+      .auth
+      .getUser();
 
+
+  const pathname =
+    request.nextUrl.pathname;
+
+
+  // ==========================================================
+  // PROTECT WORKSPACE
+  // ==========================================================
+
+  if (
+    !user &&
+    !isPublicRoute(
+      pathname
+    )
+  ) {
+
+    const loginUrl =
+      request.nextUrl.clone();
+
+
+    loginUrl.pathname =
+      "/login";
+
+
+    /*
+     * Пока после входа всегда
+     * переходим на главную.
+     *
+     * Позже можем добавить returnTo,
+     * чтобы после входа человек
+     * возвращался именно туда,
+     * куда первоначально шёл.
+     */
+
+    loginUrl.search = "";
+
+
+    return NextResponse.redirect(
+      loginUrl
+    );
+
+  }
+
+
+  // ==========================================================
+  // AUTHENTICATED USER
+  // ==========================================================
 
   return supabaseResponse;
 
