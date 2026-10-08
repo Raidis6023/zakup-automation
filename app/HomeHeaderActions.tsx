@@ -9,10 +9,18 @@ import {
 } from "react";
 
 import {
+  createPortal,
+} from "react-dom";
+
+import {
   createClient,
 } from "../lib/supabase/client";
 
-import HomeThemeToggle from "./HomeThemeToggle";
+import HomeThemeToggle
+  from "./HomeThemeToggle";
+
+import styles
+  from "./HomeHeaderActions.module.css";
 
 
 // ============================================================
@@ -111,6 +119,26 @@ function ArrowRightIcon() {
 }
 
 
+function CloseIcon() {
+
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path
+        d="M6 6l12 12"
+      />
+
+      <path
+        d="M18 6L6 18"
+      />
+    </svg>
+  );
+
+}
+
+
 // ============================================================
 // NOTIFICATIONS
 // ============================================================
@@ -159,6 +187,7 @@ type NotificationItem = {
     string;
 
   request: {
+
     firstName:
       string;
 
@@ -173,9 +202,131 @@ type NotificationItem = {
 
     comment:
       string | null;
+
   };
 
 };
+
+
+// ============================================================
+// ROLES
+// ============================================================
+
+type WorkingRole =
+  ""
+  |
+  "analyst"
+  |
+  "procurement"
+  |
+  "ved"
+  |
+  "category_manager"
+  |
+  "marketing"
+  |
+  "manager";
+
+
+type CategoryMarketplace =
+  ""
+  |
+  "ozon"
+  |
+  "wildberries"
+  |
+  "yandex_market";
+
+
+const WORKING_ROLES: {
+  value: WorkingRole;
+  label: string;
+}[] = [
+
+  {
+    value: "",
+    label:
+      "Выберите роль",
+  },
+
+  {
+    value:
+      "analyst",
+    label:
+      "Аналитик",
+  },
+
+  {
+    value:
+      "procurement",
+    label:
+      "Закуп",
+  },
+
+  {
+    value:
+      "ved",
+    label:
+      "ВЭД",
+  },
+
+  {
+    value:
+      "category_manager",
+    label:
+      "Категорийный менеджер",
+  },
+
+  {
+    value:
+      "marketing",
+    label:
+      "Маркетинг",
+  },
+
+  {
+    value:
+      "manager",
+    label:
+      "Руководитель",
+  },
+
+];
+
+
+const MARKETPLACES: {
+  value: CategoryMarketplace;
+  label: string;
+}[] = [
+
+  {
+    value: "",
+    label:
+      "Выберите маркетплейс",
+  },
+
+  {
+    value:
+      "ozon",
+    label:
+      "Ozon",
+  },
+
+  {
+    value:
+      "wildberries",
+    label:
+      "Wildberries",
+  },
+
+  {
+    value:
+      "yandex_market",
+    label:
+      "Яндекс Маркет",
+  },
+
+];
 
 
 // ============================================================
@@ -326,7 +477,7 @@ export default function HomeHeaderActions() {
 
 
   // ==========================================================
-  // NOTIFICATIONS STATE
+  // NOTIFICATIONS
   // ==========================================================
 
   const [
@@ -361,7 +512,44 @@ export default function HomeHeaderActions() {
 
 
   // ==========================================================
-  // CALENDAR STATE
+  // ACCESS REQUEST MODAL
+  // ==========================================================
+
+  const [
+    selectedNotification,
+    setSelectedNotification,
+  ] =
+    useState<
+      NotificationItem | null
+    >(
+      null
+    );
+
+
+  const [
+    selectedRole,
+    setSelectedRole,
+  ] =
+    useState<
+      WorkingRole
+    >(
+      ""
+    );
+
+
+  const [
+    selectedMarketplace,
+    setSelectedMarketplace,
+  ] =
+    useState<
+      CategoryMarketplace
+    >(
+      ""
+    );
+
+
+  // ==========================================================
+  // CALENDAR
   // ==========================================================
 
   const [
@@ -442,15 +630,6 @@ export default function HomeHeaderActions() {
                 .toLowerCase();
 
 
-            /*
-             * Обычный пользователь
-             * не должен видеть
-             * административные заявки.
-             *
-             * Для него это не ошибка
-             * интерфейса: просто
-             * уведомлений такого типа нет.
-             */
             if (
               message.includes(
                 "недостаточно прав"
@@ -586,14 +765,7 @@ export default function HomeHeaderActions() {
 
 
   // ==========================================================
-  // ПЕРВАЯ ЗАГРУЗКА УВЕДОМЛЕНИЙ
-  //
-  // Если пользователь является администратором,
-  // после успешной первой загрузки проверяем
-  // новые заявки раз в минуту.
-  //
-  // Для обычного пользователя polling
-  // не запускается.
+  // INITIAL NOTIFICATIONS + POLLING
   // ==========================================================
 
   useEffect(
@@ -667,7 +839,7 @@ export default function HomeHeaderActions() {
 
 
   // ==========================================================
-  // ОБНОВЛЯЕМ СЕГОДНЯШНЮЮ ДАТУ
+  // UPDATE TODAY
   // ==========================================================
 
   useEffect(
@@ -720,7 +892,7 @@ export default function HomeHeaderActions() {
 
 
   // ==========================================================
-  // ЗАКРЫТИЕ ПО КЛИКУ СНАРУЖИ
+  // CLOSE PANELS / MODAL
   // ==========================================================
 
   useEffect(
@@ -759,15 +931,31 @@ export default function HomeHeaderActions() {
       ) {
 
         if (
-          event.key ===
+          event.key !==
           "Escape"
         ) {
 
-          setOpenPanel(
+          return;
+
+        }
+
+
+        if (
+          selectedNotification
+        ) {
+
+          setSelectedNotification(
             null
           );
 
+          return;
+
         }
+
+
+        setOpenPanel(
+          null
+        );
 
       }
 
@@ -800,12 +988,14 @@ export default function HomeHeaderActions() {
       };
 
     },
-    []
+    [
+      selectedNotification,
+    ]
   );
 
 
   // ==========================================================
-  // ДНИ КАЛЕНДАРЯ
+  // CALENDAR CELLS
   // ==========================================================
 
   const calendarCells =
@@ -895,7 +1085,7 @@ export default function HomeHeaderActions() {
 
 
   // ==========================================================
-  // MONTH NAVIGATION
+  // CALENDAR NAVIGATION
   // ==========================================================
 
   function showPreviousMonth() {
@@ -949,7 +1139,7 @@ export default function HomeHeaderActions() {
 
 
   // ==========================================================
-  // TOGGLE NOTIFICATIONS
+  // NOTIFICATION PANEL
   // ==========================================================
 
   function toggleNotifications() {
@@ -966,14 +1156,85 @@ export default function HomeHeaderActions() {
     );
 
 
-    /*
-     * При каждом открытии
-     * колокольчика обновляем
-     * список ещё раз.
-     */
     if (willOpen) {
 
       void loadNotifications();
+
+    }
+
+  }
+
+
+  // ==========================================================
+  // OPEN ACCESS REQUEST
+  // ==========================================================
+
+  function openAccessRequest(
+    notification: NotificationItem
+  ) {
+
+    setSelectedNotification(
+      notification
+    );
+
+
+    setSelectedRole(
+      ""
+    );
+
+
+    setSelectedMarketplace(
+      ""
+    );
+
+
+    setOpenPanel(
+      null
+    );
+
+  }
+
+
+  function closeAccessRequest() {
+
+    setSelectedNotification(
+      null
+    );
+
+
+    setSelectedRole(
+      ""
+    );
+
+
+    setSelectedMarketplace(
+      ""
+    );
+
+  }
+
+
+  // ==========================================================
+  // ROLE CHANGE
+  // ==========================================================
+
+  function changeRole(
+    role: WorkingRole
+  ) {
+
+    setSelectedRole(
+      role
+    );
+
+
+    if (
+      role !==
+      "category_manager"
+    ) {
+
+      setSelectedMarketplace(
+        ""
+      );
 
     }
 
@@ -985,577 +1246,1023 @@ export default function HomeHeaderActions() {
 
 
   // ==========================================================
+  // ACCESS REQUEST MODAL
+  // ==========================================================
+
+  const accessRequestModal =
+    selectedNotification
+    &&
+    typeof document !==
+      "undefined"
+
+      ? createPortal(
+
+          <div
+            className={
+              styles.modalOverlay
+            }
+
+            onMouseDown={
+              event => {
+
+                if (
+                  event.target ===
+                  event.currentTarget
+                ) {
+
+                  closeAccessRequest();
+
+                }
+
+              }
+            }
+          >
+
+            <div
+              className={
+                styles.modal
+              }
+
+              role="dialog"
+
+              aria-modal="true"
+
+              aria-labelledby=
+                "access-request-title"
+            >
+
+              <button
+                type="button"
+
+                className={
+                  styles.closeButton
+                }
+
+                aria-label=
+                  "Закрыть"
+
+                onClick={
+                  closeAccessRequest
+                }
+              >
+                <CloseIcon />
+              </button>
+
+
+              <div
+                className={
+                  styles.modalHeader
+                }
+              >
+
+                <h2
+                  id="access-request-title"
+                >
+                  Запрос доступа
+                </h2>
+
+
+                <p>
+                  Проверьте данные сотрудника
+                  и назначьте ему рабочую роль.
+                </p>
+
+              </div>
+
+
+              <div
+                className={
+                  styles.requestInfo
+                }
+              >
+
+                <div
+                  className={
+                    styles.requestRow
+                  }
+                >
+
+                  <span
+                    className={
+                      styles.requestLabel
+                    }
+                  >
+                    Сотрудник
+                  </span>
+
+
+                  <span
+                    className={
+                      styles.requestValue
+                    }
+                  >
+                    {
+                      selectedNotification
+                        .request
+                        .firstName
+                    }
+                    {" "}
+                    {
+                      selectedNotification
+                        .request
+                        .lastName
+                    }
+                  </span>
+
+                </div>
+
+
+                <div
+                  className={
+                    styles.requestRow
+                  }
+                >
+
+                  <span
+                    className={
+                      styles.requestLabel
+                    }
+                  >
+                    Email
+                  </span>
+
+
+                  <span
+                    className={
+                      styles.requestValue
+                    }
+                  >
+                    {
+                      selectedNotification
+                        .request
+                        .email
+                    }
+                  </span>
+
+                </div>
+
+
+                <div
+                  className={
+                    styles.requestRow
+                  }
+                >
+
+                  <span
+                    className={
+                      styles.requestLabel
+                    }
+                  >
+                    Отдел
+                  </span>
+
+
+                  <span
+                    className={
+                      styles.requestValue
+                    }
+                  >
+                    {
+                      selectedNotification
+                        .request
+                        .department
+                      ||
+                      "Не указан"
+                    }
+                  </span>
+
+                </div>
+
+
+                <div
+                  className={
+                    styles.requestRow
+                  }
+                >
+
+                  <span
+                    className={
+                      styles.requestLabel
+                    }
+                  >
+                    Комментарий
+                  </span>
+
+
+                  <span
+                    className={
+                      styles.requestValue
+                    }
+                  >
+                    {
+                      selectedNotification
+                        .request
+                        .comment
+                      ||
+                      "Нет"
+                    }
+                  </span>
+
+                </div>
+
+              </div>
+
+
+              <div
+                className={
+                  styles.roleForm
+                }
+              >
+
+                <div
+                  className={
+                    styles.field
+                  }
+                >
+
+                  <label
+                    htmlFor=
+                      "access-request-role"
+                  >
+                    Рабочая роль *
+                  </label>
+
+
+                  <select
+                    id=
+                      "access-request-role"
+
+                    value={
+                      selectedRole
+                    }
+
+                    onChange={
+                      event =>
+                        changeRole(
+                          event.target
+                            .value
+                            as WorkingRole
+                        )
+                    }
+                  >
+
+                    {WORKING_ROLES.map(
+                      role => (
+
+                        <option
+                          key={
+                            role.value
+                            ||
+                            "empty"
+                          }
+
+                          value={
+                            role.value
+                          }
+                        >
+                          {
+                            role.label
+                          }
+                        </option>
+
+                      )
+                    )}
+
+                  </select>
+
+                </div>
+
+
+                {selectedRole ===
+                  "category_manager"
+                  &&
+                  (
+
+                    <div
+                      className={
+                        styles.field
+                      }
+                    >
+
+                      <label
+                        htmlFor=
+                          "access-request-marketplace"
+                      >
+                        Маркетплейс *
+                      </label>
+
+
+                      <select
+                        id=
+                          "access-request-marketplace"
+
+                        value={
+                          selectedMarketplace
+                        }
+
+                        onChange={
+                          event =>
+                            setSelectedMarketplace(
+                              event.target
+                                .value
+                                as CategoryMarketplace
+                            )
+                        }
+                      >
+
+                        {MARKETPLACES.map(
+                          marketplace => (
+
+                            <option
+                              key={
+                                marketplace.value
+                                ||
+                                "empty"
+                              }
+
+                              value={
+                                marketplace.value
+                              }
+                            >
+                              {
+                                marketplace.label
+                              }
+                            </option>
+
+                          )
+                        )}
+
+                      </select>
+
+                    </div>
+
+                  )}
+
+
+                <div
+                  className={
+                    styles.adminNote
+                  }
+                >
+
+                  <strong>
+                    Административные права:
+                  </strong>
+                  {" "}
+                  не выдаются при обычном
+                  одобрении заявки.
+
+                </div>
+
+              </div>
+
+
+              <div
+                className={
+                  styles.footer
+                }
+              >
+
+                <span
+                  className={
+                    styles.footerHint
+                  }
+                >
+                  На следующем шаге подключим
+                  реальные действия
+                  «Отклонить» и «Одобрить»
+                  с приглашением сотрудника.
+                </span>
+
+
+                <button
+                  type="button"
+
+                  className={
+                    styles.closeFooterButton
+                  }
+
+                  onClick={
+                    closeAccessRequest
+                  }
+                >
+                  Закрыть
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>,
+
+          document.body
+
+        )
+
+      : null;
+
+
+  // ==========================================================
   // RENDER
   // ==========================================================
 
   return (
 
-    <div
-      className="home-topbar-right"
-      ref={actionsRef}
-    >
-
-
-      {/* ======================================================
-          NOTIFICATIONS
-      ====================================================== */}
+    <>
 
       <div
-        className="home-action-wrapper"
+        className="home-topbar-right"
+        ref={actionsRef}
       >
 
-        <button
-          type="button"
 
-          className={
-            openPanel ===
-              "notifications"
+        {/* ====================================================
+            NOTIFICATIONS
+        ==================================================== */}
 
-              ? "home-icon-button active"
-
-              : "home-icon-button"
-          }
-
-          aria-label="Уведомления"
-
-          aria-expanded={
-            openPanel ===
-              "notifications"
-          }
-
-          onClick={
-            toggleNotifications
-          }
+        <div
+          className="home-action-wrapper"
         >
 
-          <BellIcon />
+          <button
+            type="button"
+
+            className={
+              openPanel ===
+                "notifications"
+
+                ? "home-icon-button active"
+
+                : "home-icon-button"
+            }
+
+            aria-label="Уведомления"
+
+            aria-expanded={
+              openPanel ===
+                "notifications"
+            }
+
+            onClick={
+              toggleNotifications
+            }
+          >
+
+            <BellIcon />
 
 
-          {unreadCount > 0 && (
+            {unreadCount > 0 && (
 
-            <span
-              className="home-notification-badge"
-            >
-              {unreadCount}
-            </span>
-
-          )}
-
-        </button>
-
-
-        {openPanel ===
-          "notifications"
-          &&
-          (
-
-            <div
-              className="
-                home-popup
-                home-notifications-popup
-              "
-            >
-
-              <div
-                className="home-popup-header"
+              <span
+                className=
+                  "home-notification-badge"
               >
+                {unreadCount}
+              </span>
 
-                <strong>
-                  Уведомления
-                </strong>
+            )}
 
-              </div>
-
-
-              {notificationsLoading
-                &&
-                notifications.length ===
-                  0
-                ? (
-
-                  <div
-                    className="
-                      home-notifications-empty
-                    "
-                  >
-
-                    <div
-                      className="
-                        home-notifications-empty-icon
-                      "
-                    >
-                      <BellIcon />
-                    </div>
+          </button>
 
 
-                    <strong>
-                      Загружаем
-                    </strong>
-
-
-                    <span>
-                      Проверяем новые
-                      уведомления.
-                    </span>
-
-                  </div>
-
-                )
-                :
-                notificationsError
-                &&
-                notifications.length ===
-                  0
-                ? (
-
-                  <div
-                    className="
-                      home-notifications-empty
-                    "
-                  >
-
-                    <div
-                      className="
-                        home-notifications-empty-icon
-                      "
-                    >
-                      <BellIcon />
-                    </div>
-
-
-                    <strong>
-                      Не удалось загрузить
-                    </strong>
-
-
-                    <span>
-                      {
-                        notificationsError
-                      }
-                    </span>
-
-                  </div>
-
-                )
-                :
-                notifications.length ===
-                  0
-                ? (
-
-                  <div
-                    className="
-                      home-notifications-empty
-                    "
-                  >
-
-                    <div
-                      className="
-                        home-notifications-empty-icon
-                      "
-                    >
-                      <BellIcon />
-                    </div>
-
-
-                    <strong>
-                      Уведомлений нет
-                    </strong>
-
-
-                    <span>
-                      Здесь появятся новые
-                      системные уведомления.
-                    </span>
-
-                  </div>
-
-                )
-                : (
-
-                  <div
-                    className="
-                      home-notifications-list
-                    "
-                  >
-
-                    {notifications.map(
-                      notification => (
-
-                        <div
-                          key={
-                            notification.id
-                          }
-
-                          className="
-                            home-notification-item
-                          "
-                        >
-
-                          <strong>
-                            {
-                              notification.title
-                            }
-                          </strong>
-
-
-                          <span>
-                            {
-                              notification.text
-                            }
-                          </span>
-
-
-                          <span>
-                            {
-                              notification.request.email
-                            }
-
-                            {
-                              notification.createdAt
-                                ? ` · ${formatNotificationTime(
-                                    notification.createdAt
-                                  )}`
-                                : ""
-                            }
-                          </span>
-
-                        </div>
-
-                      )
-                    )}
-
-                  </div>
-
-                )}
-
-            </div>
-
-          )}
-
-      </div>
-
-
-      {/* ======================================================
-          CALENDAR
-      ====================================================== */}
-
-      <div
-        className="home-action-wrapper"
-      >
-
-        <button
-          type="button"
-
-          className={
-            openPanel ===
-              "calendar"
-
-              ? "home-icon-button active"
-
-              : "home-icon-button"
-          }
-
-          aria-label="Календарь"
-
-          aria-expanded={
-            openPanel ===
-              "calendar"
-          }
-
-          onClick={
-            () =>
-              setOpenPanel(
-                current =>
-                  current ===
-                    "calendar"
-
-                    ? null
-
-                    : "calendar"
-              )
-          }
-        >
-
-          <CalendarIcon />
-
-        </button>
-
-
-        {openPanel ===
-          "calendar"
-          &&
-          (
-
-            <div
-              className="
-                home-popup
-                home-calendar-popup
-              "
-            >
+          {openPanel ===
+            "notifications"
+            &&
+            (
 
               <div
                 className="
-                  home-calendar-header
+                  home-popup
+                  home-notifications-popup
                 "
               >
 
-                <button
-                  type="button"
-
-                  className="
-                    home-calendar-arrow
-                  "
-
-                  aria-label=
-                    "Предыдущий месяц"
-
-                  onClick={
-                    showPreviousMonth
-                  }
+                <div
+                  className=
+                    "home-popup-header"
                 >
 
-                  <ArrowLeftIcon />
+                  <strong>
+                    Уведомления
+                  </strong>
 
-                </button>
-
-
-                <strong>
-
-                  {
-                    MONTH_NAMES[
-                      visibleMonth
-                        .getMonth()
-                    ]
-                  }
-
-                  {" "}
-
-                  {
-                    visibleMonth
-                      .getFullYear()
-                  }
-
-                </strong>
+                </div>
 
 
-                <button
-                  type="button"
+                {notificationsLoading
+                  &&
+                  notifications.length ===
+                    0
+                  ? (
 
-                  className="
-                    home-calendar-arrow
-                  "
-
-                  aria-label=
-                    "Следующий месяц"
-
-                  onClick={
-                    showNextMonth
-                  }
-                >
-
-                  <ArrowRightIcon />
-
-                </button>
-
-              </div>
-
-
-              <div
-                className="
-                  home-calendar-weekdays
-                "
-              >
-
-                {WEEK_DAYS.map(
-                  day => (
-
-                    <span
-                      key={
-                        day
-                      }
+                    <div
+                      className="
+                        home-notifications-empty
+                      "
                     >
-                      {day}
-                    </span>
+
+                      <div
+                        className="
+                          home-notifications-empty-icon
+                        "
+                      >
+                        <BellIcon />
+                      </div>
+
+
+                      <strong>
+                        Загружаем
+                      </strong>
+
+
+                      <span>
+                        Проверяем новые
+                        уведомления.
+                      </span>
+
+                    </div>
 
                   )
-                )}
+                  :
+                  notificationsError
+                  &&
+                  notifications.length ===
+                    0
+                  ? (
+
+                    <div
+                      className="
+                        home-notifications-empty
+                      "
+                    >
+
+                      <div
+                        className="
+                          home-notifications-empty-icon
+                        "
+                      >
+                        <BellIcon />
+                      </div>
+
+
+                      <strong>
+                        Не удалось загрузить
+                      </strong>
+
+
+                      <span>
+                        {
+                          notificationsError
+                        }
+                      </span>
+
+                    </div>
+
+                  )
+                  :
+                  notifications.length ===
+                    0
+                  ? (
+
+                    <div
+                      className="
+                        home-notifications-empty
+                      "
+                    >
+
+                      <div
+                        className="
+                          home-notifications-empty-icon
+                        "
+                      >
+                        <BellIcon />
+                      </div>
+
+
+                      <strong>
+                        Уведомлений нет
+                      </strong>
+
+
+                      <span>
+                        Здесь появятся новые
+                        системные уведомления.
+                      </span>
+
+                    </div>
+
+                  )
+                  : (
+
+                    <div
+                      className="
+                        home-notifications-list
+                      "
+                    >
+
+                      {notifications.map(
+                        notification => (
+
+                          <button
+                            key={
+                              notification.id
+                            }
+
+                            type="button"
+
+                            className={`
+                              home-notification-item
+                              ${styles.notificationButton}
+                            `}
+
+                            onClick={
+                              () =>
+                                openAccessRequest(
+                                  notification
+                                )
+                            }
+                          >
+
+                            <strong>
+                              {
+                                notification.title
+                              }
+                            </strong>
+
+
+                            <span>
+                              {
+                                notification.text
+                              }
+                            </span>
+
+
+                            <span>
+                              {
+                                notification
+                                  .request
+                                  .email
+                              }
+
+                              {
+                                notification.createdAt
+
+                                  ? ` · ${
+                                      formatNotificationTime(
+                                        notification
+                                          .createdAt
+                                      )
+                                    }`
+
+                                  : ""
+                              }
+                            </span>
+
+                          </button>
+
+                        )
+                      )}
+
+                    </div>
+
+                  )}
 
               </div>
 
+            )}
+
+        </div>
+
+
+        {/* ====================================================
+            CALENDAR
+        ==================================================== */}
+
+        <div
+          className="home-action-wrapper"
+        >
+
+          <button
+            type="button"
+
+            className={
+              openPanel ===
+                "calendar"
+
+                ? "home-icon-button active"
+
+                : "home-icon-button"
+            }
+
+            aria-label="Календарь"
+
+            aria-expanded={
+              openPanel ===
+                "calendar"
+            }
+
+            onClick={
+              () =>
+                setOpenPanel(
+                  current =>
+                    current ===
+                      "calendar"
+
+                      ? null
+
+                      : "calendar"
+                )
+            }
+          >
+
+            <CalendarIcon />
+
+          </button>
+
+
+          {openPanel ===
+            "calendar"
+            &&
+            (
 
               <div
                 className="
-                  home-calendar-grid
+                  home-popup
+                  home-calendar-popup
                 "
               >
 
-                {calendarCells.map(
-                  (
-                    date,
-                    index
-                  ) => {
+                <div
+                  className="
+                    home-calendar-header
+                  "
+                >
 
-                    if (!date) {
+                  <button
+                    type="button"
+
+                    className="
+                      home-calendar-arrow
+                    "
+
+                    aria-label=
+                      "Предыдущий месяц"
+
+                    onClick={
+                      showPreviousMonth
+                    }
+                  >
+
+                    <ArrowLeftIcon />
+
+                  </button>
+
+
+                  <strong>
+
+                    {
+                      MONTH_NAMES[
+                        visibleMonth
+                          .getMonth()
+                      ]
+                    }
+
+                    {" "}
+
+                    {
+                      visibleMonth
+                        .getFullYear()
+                    }
+
+                  </strong>
+
+
+                  <button
+                    type="button"
+
+                    className="
+                      home-calendar-arrow
+                    "
+
+                    aria-label=
+                      "Следующий месяц"
+
+                    onClick={
+                      showNextMonth
+                    }
+                  >
+
+                    <ArrowRightIcon />
+
+                  </button>
+
+                </div>
+
+
+                <div
+                  className="
+                    home-calendar-weekdays
+                  "
+                >
+
+                  {WEEK_DAYS.map(
+                    day => (
+
+                      <span
+                        key={
+                          day
+                        }
+                      >
+                        {day}
+                      </span>
+
+                    )
+                  )}
+
+                </div>
+
+
+                <div
+                  className="
+                    home-calendar-grid
+                  "
+                >
+
+                  {calendarCells.map(
+                    (
+                      date,
+                      index
+                    ) => {
+
+                      if (!date) {
+
+                        return (
+
+                          <span
+                            key={
+                              `empty-${index}`
+                            }
+
+                            className="
+                              home-calendar-day
+                              empty
+                            "
+                          />
+
+                        );
+
+                      }
+
+
+                      const currentDay =
+                        isSameDay(
+                          date,
+                          today
+                        );
+
 
                       return (
 
-                        <span
+                        <button
                           key={
-                            `empty-${index}`
+                            date.toISOString()
                           }
 
-                          className="
-                            home-calendar-day
-                            empty
-                          "
-                        />
+                          type="button"
+
+                          className={
+                            currentDay
+
+                              ? `
+                                home-calendar-day
+                                today
+                              `
+
+                              : `
+                                home-calendar-day
+                              `
+                          }
+
+                          aria-current={
+                            currentDay
+                              ? "date"
+                              : undefined
+                          }
+                        >
+
+                          {
+                            date.getDate()
+                          }
+
+                        </button>
 
                       );
 
                     }
+                  )}
+
+                </div>
 
 
-                    const currentDay =
-                      isSameDay(
-                        date,
-                        today
-                      );
+                <button
+                  type="button"
 
+                  className="
+                    home-calendar-today-button
+                  "
 
-                    return (
-
-                      <button
-                        key={
-                          date.toISOString()
-                        }
-
-                        type="button"
-
-                        className={
-                          currentDay
-
-                            ? `
-                              home-calendar-day
-                              today
-                            `
-
-                            : `
-                              home-calendar-day
-                            `
-                        }
-
-                        aria-current={
-                          currentDay
-                            ? "date"
-                            : undefined
-                        }
-                      >
-
-                        {
-                          date.getDate()
-                        }
-
-                      </button>
-
-                    );
-
+                  onClick={
+                    showCurrentMonth
                   }
-                )}
+                >
+
+                  Сегодня,
+                  {" "}
+
+                  {
+                    formatToday(
+                      today
+                    )
+                  }
+
+                </button>
 
               </div>
 
+            )}
 
-              <button
-                type="button"
+        </div>
 
-                className="
-                  home-calendar-today-button
-                "
 
-                onClick={
-                  showCurrentMonth
-                }
-              >
+        <div
+          className=
+            "home-topbar-divider"
+        />
 
-                Сегодня,
-                {" "}
 
-                {
-                  formatToday(
-                    today
-                  )
-                }
+        {/* ====================================================
+            THEME
+        ==================================================== */}
 
-              </button>
+        <HomeThemeToggle />
 
-            </div>
 
-          )}
+        <div
+          className=
+            "home-topbar-divider"
+        />
+
+
+        {/* ====================================================
+            PROFILE
+        ==================================================== */}
+
+        <button
+          type="button"
+          className="home-profile"
+        >
+
+          <span
+            className="home-avatar"
+          >
+            ТС
+          </span>
+
+
+          <span
+            className=
+              "home-profile-text"
+          >
+
+            <strong>
+              Тест Сайта
+            </strong>
+
+            <span>
+              Аналитик
+            </span>
+
+          </span>
+
+
+          <span
+            className="
+              home-profile-chevron
+            "
+          >
+
+            <ChevronIcon />
+
+          </span>
+
+        </button>
 
       </div>
 
 
-      <div
-        className="home-topbar-divider"
-      />
+      {accessRequestModal}
 
-
-      {/* ======================================================
-          THEME
-      ====================================================== */}
-
-      <HomeThemeToggle />
-
-
-      <div
-        className="home-topbar-divider"
-      />
-
-
-      {/* ======================================================
-          PROFILE
-      ====================================================== */}
-
-      <button
-        type="button"
-        className="home-profile"
-      >
-
-        <span
-          className="home-avatar"
-        >
-          ТС
-        </span>
-
-
-        <span
-          className="home-profile-text"
-        >
-
-          <strong>
-            Тест Сайта
-          </strong>
-
-          <span>
-            Аналитик
-          </span>
-
-        </span>
-
-
-        <span
-          className="
-            home-profile-chevron
-          "
-        >
-
-          <ChevronIcon />
-
-        </span>
-
-      </button>
-
-    </div>
+    </>
 
   );
 
