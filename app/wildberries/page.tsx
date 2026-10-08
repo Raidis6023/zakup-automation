@@ -12,133 +12,319 @@ export const dynamic =
   "force-dynamic";
 
 
+// ============================================================
+// ТИПЫ DASHBOARD
+// ============================================================
+
 type DailySalesRow = {
-  date: string;
-  sales: number;
-  cancelled: number;
-  dbRows: number;
+
+  date:
+    string;
+
+  sales:
+    number;
+
+  cancelled:
+    number;
+
+  dbRows:
+    number;
+
 };
 
 
 type ProductRow = {
-  nmId: number;
-  sellerArticle: string | null;
-  productName: string | null;
-  brandName: string | null;
-  masterCode: string | null;
 
-  sales28Days: number;
-  avgSalesPerDay: number;
-  cancelled28Days: number;
+  nmId:
+    number;
 
-  fbwStock: number;
-  daysOfStock: number | null;
+  sellerArticle:
+    string | null;
 
-  toClient: number;
-  fromClient: number;
+  productName:
+    string | null;
+
+  brandName:
+    string | null;
+
+  masterCode:
+    string | null;
+
+  sales28Days:
+    number;
+
+  avgSalesPerDay:
+    number;
+
+  cancelled28Days:
+    number;
+
+  fbwStock:
+    number;
+
+  daysOfStock:
+    number | null;
+
+  toClient:
+    number;
+
+  fromClient:
+    number;
+
 };
 
 
 type DashboardData = {
-  ok: boolean;
 
-  calculationKey: string;
-  marketplace: string;
+  ok:
+    boolean;
+
+  calculationKey:
+    string;
+
+  marketplace:
+    string;
+
 
   status: {
-    ok: boolean;
-    label: string;
 
-    lastSuccessfulSyncAt: string | null;
-    ordersLastSuccessAt: string | null;
-    stocksLastSuccessAt: string | null;
+    ok:
+      boolean;
 
-    ordersLastHttpStatus: number | null;
-    stocksLastHttpStatus: number | null;
+    label:
+      string;
 
-    stockSnapshotId: string | null;
-    stockSnapshotAt: string | null;
+    lastSuccessfulSyncAt:
+      string | null;
+
+    ordersLastSuccessAt:
+      string | null;
+
+    stocksLastSuccessAt:
+      string | null;
+
+    ordersLastHttpStatus:
+      number | null;
+
+    stocksLastHttpStatus:
+      number | null;
+
+    stockSnapshotId:
+      string | null;
+
+    stockSnapshotAt:
+      string | null;
+
   };
+
 
   period: {
-    days: number;
-    dateFrom: string;
-    dateTo: string;
-    samePeriodAsOzon: boolean;
-    note: string;
+
+    days:
+      number;
+
+    dateFrom:
+      string;
+
+    dateTo:
+      string;
+
+    samePeriodAsOzon:
+      boolean;
+
+    note:
+      string;
+
   };
+
 
   summary: {
-    orderRows: number;
-    sales28Days: number;
-    cancelled28Days: number;
 
-    fbwStock: number;
-    toClient: number;
-    fromClient: number;
+    orderRows:
+      number;
 
-    physicalProducts: number;
-    listings: number;
+    sales28Days:
+      number;
+
+    cancelled28Days:
+      number;
+
+    fbwStock:
+      number;
+
+    toClient:
+      number;
+
+    fromClient:
+      number;
+
+    physicalProducts:
+      number;
+
+    listings:
+      number;
+
   };
 
-  dailySales: DailySalesRow[];
 
-  products: ProductRow[];
+  dailySales:
+    DailySalesRow[];
+
+
+  products:
+    ProductRow[];
+
 
   validation: {
-    currentUnmapped: number;
-    mappingRows: number;
-    duplicateNmId: number;
-    duplicateSrid: number;
-    nullIsCancel: number;
-    ordersOutsideCurrentSnapshot: number;
+
+    currentUnmapped:
+      number;
+
+    mappingRows:
+      number;
+
+    duplicateNmId:
+      number;
+
+    duplicateSrid:
+      number;
+
+    nullIsCancel:
+      number;
+
+    ordersOutsideCurrentSnapshot:
+      number;
+
   };
+
 };
 
 
+// ============================================================
+// СОСТОЯНИЕ СИНХРОНИЗАЦИИ WB
+// ============================================================
+
+type WbSyncStateRow = {
+
+  sync_key:
+    string;
+
+  last_attempt_at:
+    string | null;
+
+  last_success_at:
+    string | null;
+
+  next_allowed_at:
+    string | null;
+
+  last_http_status:
+    number | null;
+
+  retry_after_seconds:
+    number | null;
+
+  last_message:
+    string | null;
+
+  updated_at:
+    string | null;
+
+};
+
+
+type ClientSyncState = {
+
+  lastHttpStatus:
+    number | null;
+
+  lastAttemptAt:
+    string | null;
+
+  lastSuccessAt:
+    string | null;
+
+  nextAllowedAt:
+    string | null;
+
+  retryAfterSeconds:
+    number | null;
+
+  lastMessage:
+    string | null;
+
+};
+
+
+// ============================================================
+// SUPABASE
+// ============================================================
+
 function getSupabaseConfig() {
+
   const supabaseUrl =
-    process.env.SUPABASE_URL ??
+    process.env.SUPABASE_URL
+    ??
     process.env.NEXT_PUBLIC_SUPABASE_URL;
 
+
   const supabaseKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+    ??
     process.env.SUPABASE_SECRET_KEY;
 
+
   if (!supabaseUrl) {
+
     throw new Error(
       "Не найдена SUPABASE_URL или NEXT_PUBLIC_SUPABASE_URL"
     );
+
   }
 
+
   if (!supabaseKey) {
+
     throw new Error(
       "Не найдена SUPABASE_SERVICE_ROLE_KEY или SUPABASE_SECRET_KEY"
     );
+
   }
+
 
   return {
     supabaseUrl,
     supabaseKey,
   };
+
 }
 
 
+// ============================================================
+// DASHBOARD
+// ============================================================
+
 async function getDashboard():
 Promise<DashboardData> {
+
   const {
     supabaseUrl,
     supabaseKey,
-  } = getSupabaseConfig();
+  } =
+    getSupabaseConfig();
+
 
   const response =
     await fetch(
       `${supabaseUrl}/rest/v1/rpc/get_wb_sync_dashboard`,
       {
-        method: "POST",
+        method:
+          "POST",
 
         headers: {
-          apikey: supabaseKey,
+
+          apikey:
+            supabaseKey,
 
           Authorization:
             `Bearer ${supabaseKey}`,
@@ -148,112 +334,269 @@ Promise<DashboardData> {
 
           Accept:
             "application/json",
+
         },
 
-        body: "{}",
+        body:
+          "{}",
 
-        cache: "no-store",
+        cache:
+          "no-store",
       }
     );
+
 
   const text =
     await response.text();
 
+
   if (!response.ok) {
+
     throw new Error(
       `Не удалось загрузить WB dashboard. HTTP ${response.status}: ${text}`
     );
+
   }
 
-  let data: DashboardData;
+
+  let data:
+    DashboardData;
+
 
   try {
+
     data =
       JSON.parse(
         text
       ) as DashboardData;
+
   } catch {
+
     throw new Error(
       "Supabase вернул некорректный JSON для WB dashboard"
     );
+
   }
 
+
   if (
-    !data ||
-    typeof data !== "object"
+    !data
+    ||
+    typeof data !==
+      "object"
   ) {
+
     throw new Error(
       "WB dashboard вернул пустой ответ"
     );
+
   }
 
+
   return data;
+
 }
 
 
+// ============================================================
+// СОСТОЯНИЕ ЛИМИТОВ
+// ============================================================
+
+async function getWbSyncStates():
+Promise<WbSyncStateRow[]> {
+
+  const {
+    supabaseUrl,
+    supabaseKey,
+  } =
+    getSupabaseConfig();
+
+
+  const response =
+    await fetch(
+      `${supabaseUrl}/rest/v1/wb_sync_state?select=*`,
+      {
+        method:
+          "GET",
+
+        headers: {
+
+          apikey:
+            supabaseKey,
+
+          Authorization:
+            `Bearer ${supabaseKey}`,
+
+          Accept:
+            "application/json",
+
+        },
+
+        cache:
+          "no-store",
+      }
+    );
+
+
+  if (!response.ok) {
+
+    const text =
+      await response.text();
+
+
+    throw new Error(
+      `Не удалось получить wb_sync_state. HTTP ${response.status}: ${text}`
+    );
+
+  }
+
+
+  return await response.json()
+    as WbSyncStateRow[];
+
+}
+
+
+function toClientSyncState(
+  row:
+    WbSyncStateRow | null
+): ClientSyncState | null {
+
+  if (!row) {
+
+    return null;
+
+  }
+
+
+  return {
+
+    lastHttpStatus:
+      row.last_http_status,
+
+    lastAttemptAt:
+      row.last_attempt_at,
+
+    lastSuccessAt:
+      row.last_success_at,
+
+    nextAllowedAt:
+      row.next_allowed_at,
+
+    retryAfterSeconds:
+      row.retry_after_seconds,
+
+    lastMessage:
+      row.last_message,
+
+  };
+
+}
+
+
+// ============================================================
+// ФОРМАТИРОВАНИЕ
+// ============================================================
+
 function formatInteger(
-  value: number | null | undefined
+  value:
+    number | null | undefined
 ) {
+
   const number =
     Number(
-      value ?? 0
+      value
+      ??
+      0
     );
+
 
   if (
     !Number.isFinite(
       number
     )
   ) {
+
     return "0";
+
   }
+
 
   return new Intl.NumberFormat(
     "ru-RU",
     {
-      maximumFractionDigits: 0,
+      maximumFractionDigits:
+        0,
     }
-  ).format(number);
+  ).format(
+    number
+  );
+
 }
 
 
 function formatDecimal(
-  value: number | null | undefined,
-  digits = 2
+  value:
+    number | null | undefined,
+  digits =
+    2
 ) {
+
   if (
-    value === null ||
+    value === null
+    ||
     value === undefined
   ) {
+
     return "—";
+
   }
 
+
   const number =
-    Number(value);
+    Number(
+      value
+    );
+
 
   if (
     !Number.isFinite(
       number
     )
   ) {
+
     return "—";
+
   }
+
 
   return new Intl.NumberFormat(
     "ru-RU",
     {
-      minimumFractionDigits: digits,
-      maximumFractionDigits: digits,
+      minimumFractionDigits:
+        digits,
+
+      maximumFractionDigits:
+        digits,
     }
-  ).format(number);
+  ).format(
+    number
+  );
+
 }
 
 
 function formatDate(
-  value: string | null | undefined
+  value:
+    string | null | undefined
 ) {
+
   if (!value) {
+
     return "—";
+
   }
+
 
   const datePart =
     value.slice(
@@ -261,40 +604,62 @@ function formatDate(
       10
     );
 
+
   const parts =
-    datePart.split("-");
+    datePart.split(
+      "-"
+    );
+
 
   if (
-    parts.length !== 3
+    parts.length !==
+    3
   ) {
+
     return value;
+
   }
+
 
   return [
     parts[2],
     parts[1],
     parts[0],
-  ].join(".");
+  ].join(
+    "."
+  );
+
 }
 
 
 function formatKrasnoyarskDateTime(
-  value: string | null | undefined
+  value:
+    string | null | undefined
 ) {
+
   if (!value) {
+
     return "—";
+
   }
 
+
   const date =
-    new Date(value);
+    new Date(
+      value
+    );
+
 
   if (
     !Number.isFinite(
       date.getTime()
     )
   ) {
+
     return "—";
+
   }
+
 
   return new Intl.DateTimeFormat(
     "ru-RU",
@@ -320,27 +685,41 @@ function formatKrasnoyarskDateTime(
       second:
         "2-digit",
     }
-  ).format(date);
+  ).format(
+    date
+  );
+
 }
 
 
 function formatKrasnoyarskDate(
-  value: string | null | undefined
+  value:
+    string | null | undefined
 ) {
+
   if (!value) {
+
     return "—";
+
   }
 
+
   const date =
-    new Date(value);
+    new Date(
+      value
+    );
+
 
   if (
     !Number.isFinite(
       date.getTime()
     )
   ) {
+
     return "—";
+
   }
+
 
   return new Intl.DateTimeFormat(
     "ru-RU",
@@ -357,20 +736,34 @@ function formatKrasnoyarskDate(
       year:
         "numeric",
     }
-  ).format(date);
+  ).format(
+    date
+  );
+
 }
 
+
+// ============================================================
+// UI
+// ============================================================
 
 function SummaryCard({
   label,
   value,
   caption,
 }: {
-  label: string;
-  value: ReactNode;
-  caption: ReactNode;
+  label:
+    string;
+
+  value:
+    ReactNode;
+
+  caption:
+    ReactNode;
 }) {
+
   return (
+
     <div className="card">
 
       <div className="card-label">
@@ -386,55 +779,130 @@ function SummaryCard({
       </div>
 
     </div>
+
   );
+
 }
 
 
 function InfoLine({
   children,
 }: {
-  children: ReactNode;
+  children:
+    ReactNode;
 }) {
+
   return (
+
     <div
       className="reason-text"
       style={{
-        marginTop: "5px",
+        marginTop:
+          "5px",
       }}
     >
+
       {children}
+
     </div>
+
   );
+
 }
 
 
+// ============================================================
+// СТРАНИЦА
+// ============================================================
+
 export default async function WildberriesPage() {
+
   let dashboard:
     DashboardData | null =
     null;
 
+
   let loadError =
     "";
 
+
+  let syncStates:
+    WbSyncStateRow[] =
+    [];
+
+
   try {
+
     dashboard =
       await getDashboard();
-  } catch (error) {
+
+  } catch (
+    error
+  ) {
+
     loadError =
       error instanceof Error
         ? error.message
         : "Не удалось загрузить страницу Wildberries";
+
   }
 
+
+  try {
+
+    syncStates =
+      await getWbSyncStates();
+
+  } catch {
+
+    syncStates =
+      [];
+
+  }
+
+
+  const ordersStateRow =
+    syncStates.find(
+      row =>
+        row.sync_key ===
+        "orders"
+    )
+    ??
+    null;
+
+
+  const stocksStateRow =
+    syncStates.find(
+      row =>
+        row.sync_key ===
+        "stocks"
+    )
+    ??
+    null;
+
+
+  const ordersState =
+    toClientSyncState(
+      ordersStateRow
+    );
+
+
+  const stocksState =
+    toClientSyncState(
+      stocksStateRow
+    );
+
+
   return (
+
     <main className="page">
 
       <div className="container">
 
 
-        {/* ==================================================
+        {/* ==========================================
             HEADER
-            ================================================== */}
+            ========================================== */}
 
         <header className="header">
 
@@ -444,9 +912,11 @@ export default async function WildberriesPage() {
               СИСТЕМА ЗАКУПА
             </div>
 
+
             <h1 className="title">
               Wildberries — синхронизация
             </h1>
+
 
             <p className="subtitle">
               FBW продажи, отмены и доступные остатки Wildberries.
@@ -459,12 +929,14 @@ export default async function WildberriesPage() {
 
             <ThemeToggle />
 
+
             <Link
               href="/stock-import"
               className="secondary-button navigation-button"
             >
               Остатки склада
             </Link>
+
 
             <Link
               href="/"
@@ -478,14 +950,15 @@ export default async function WildberriesPage() {
         </header>
 
 
-        {/* ==================================================
-            ОШИБКА ЗАГРУЗКИ
-            ================================================== */}
+        {/* ==========================================
+            ОШИБКА
+            ========================================== */}
 
         {
           loadError
           &&
           (
+
             <section className="section">
 
               <div className="section-header">
@@ -500,11 +973,13 @@ export default async function WildberriesPage() {
 
               </div>
 
+
               <div className="reason-text">
                 {loadError}
               </div>
 
             </section>
+
           )
         }
 
@@ -516,9 +991,9 @@ export default async function WildberriesPage() {
             <>
 
 
-              {/* ============================================
+              {/* ======================================
                   СОСТОЯНИЕ СИНХРОНИЗАЦИИ
-                  ============================================ */}
+                  ====================================== */}
 
               <section className="section">
 
@@ -529,6 +1004,7 @@ export default async function WildberriesPage() {
                     <h2 className="section-title">
                       Состояние синхронизации
                     </h2>
+
 
                     <div className="muted">
                       Последняя успешная загрузка FBW-данных из Wildberries.
@@ -569,21 +1045,33 @@ export default async function WildberriesPage() {
                         "nowrap",
                     }}
                   >
-                    {dashboard.status.label}
+
+                    {
+                      dashboard
+                        .status
+                        .label
+                    }
+
                   </span>
 
                 </div>
 
 
                 <div
-                  className="summary-grid"
+                  className=
+                    "summary-grid"
+
                   style={{
-                    marginBottom: 0,
+                    marginBottom:
+                      0,
                   }}
                 >
 
+
                   <SummaryCard
-                    label="Последняя синхронизация"
+                    label=
+                      "Последняя синхронизация"
+
                     value={
                       formatKrasnoyarskDateTime(
                         dashboard
@@ -591,12 +1079,16 @@ export default async function WildberriesPage() {
                           .lastSuccessfulSyncAt
                       )
                     }
-                    caption="Красноярское время"
+
+                    caption=
+                      "Красноярское время"
                   />
 
 
                   <SummaryCard
-                    label="Период продаж"
+                    label=
+                      "Период продаж"
+
                     value={
                       <>
                         {
@@ -618,12 +1110,16 @@ export default async function WildberriesPage() {
                         }
                       </>
                     }
-                    caption="Скользящие 28 дней"
+
+                    caption=
+                      "Скользящие 28 дней"
                   />
 
 
                   <SummaryCard
-                    label="Снимок остатков"
+                    label=
+                      "Снимок остатков"
+
                     value={
                       formatKrasnoyarskDate(
                         dashboard
@@ -631,12 +1127,16 @@ export default async function WildberriesPage() {
                           .stockSnapshotAt
                       )
                     }
-                    caption="FBW"
+
+                    caption=
+                      "FBW"
                   />
 
 
                   <SummaryCard
-                    label="Заказов"
+                    label=
+                      "Заказов"
+
                     value={
                       formatInteger(
                         dashboard
@@ -644,22 +1144,28 @@ export default async function WildberriesPage() {
                           .orderRows
                       )
                     }
-                    caption="Получено из Wildberries"
+
+                    caption=
+                      "Получено из Wildberries"
                   />
+
 
                 </div>
 
               </section>
 
 
-              {/* ============================================
+              {/* ======================================
                   KPI
-                  ============================================ */}
+                  ====================================== */}
 
               <section className="summary-grid">
 
+
                 <SummaryCard
-                  label="Продажи за 28 дней"
+                  label=
+                    "Продажи за 28 дней"
+
                   value={
                     formatInteger(
                       dashboard
@@ -667,12 +1173,16 @@ export default async function WildberriesPage() {
                         .sales28Days
                     )
                   }
-                  caption="шт., без отмен"
+
+                  caption=
+                    "шт., без отмен"
                 />
 
 
                 <SummaryCard
-                  label="Отмены"
+                  label=
+                    "Отмены"
+
                   value={
                     formatInteger(
                       dashboard
@@ -680,12 +1190,16 @@ export default async function WildberriesPage() {
                         .cancelled28Days
                     )
                   }
-                  caption="шт. отдельно от продаж"
+
+                  caption=
+                    "шт. отдельно от продаж"
                 />
 
 
                 <SummaryCard
-                  label="Остаток FBW"
+                  label=
+                    "Остаток FBW"
+
                   value={
                     formatInteger(
                       dashboard
@@ -693,12 +1207,16 @@ export default async function WildberriesPage() {
                         .fbwStock
                     )
                   }
-                  caption="доступно на складах WB"
+
+                  caption=
+                    "доступно на складах WB"
                 />
 
 
                 <SummaryCard
-                  label="Связанных master_code"
+                  label=
+                    "Связанных master_code"
+
                   value={
                     formatInteger(
                       dashboard
@@ -706,12 +1224,16 @@ export default async function WildberriesPage() {
                         .physicalProducts
                     )
                   }
-                  caption="только справочная связь"
+
+                  caption=
+                    "только справочная связь"
                 />
 
 
                 <SummaryCard
-                  label="Карточек WB"
+                  label=
+                    "Артикулов WB"
+
                   value={
                     formatInteger(
                       dashboard
@@ -719,15 +1241,18 @@ export default async function WildberriesPage() {
                         .listings
                     )
                   }
-                  caption="расчётный ключ nmID"
+
+                  caption=
+                    "текущих карточек Wildberries"
                 />
+
 
               </section>
 
 
-              {/* ============================================
+              {/* ======================================
                   КАК СВЕРЯТЬ
-                  ============================================ */}
+                  ====================================== */}
 
               <section className="section">
 
@@ -745,7 +1270,7 @@ export default async function WildberriesPage() {
 
 
                 <InfoLine>
-                  Продажи считаются отдельно для каждого числового артикула WB, то есть nmID.
+                  Продажи считаются отдельно для каждого числового артикула Wildberries.
                 </InfoLine>
 
 
@@ -755,40 +1280,40 @@ export default async function WildberriesPage() {
 
 
                 <InfoLine>
-                  Отменённые заказы в продажи не входят и показываются отдельным показателем.
+                  Отменённые заказы в продажи не входят и показываются отдельно.
                 </InfoLine>
 
 
                 <InfoLine>
-                  Остаток каждой карточки берётся только из текущего FBW-остатка Wildberries.
+                  Остаток каждого артикула берётся только из текущего FBW-остатка Wildberries.
                 </InfoLine>
 
 
                 <InfoLine>
-                  Остатки Ozon на этой странице не используются и к остаткам WB не прибавляются.
+                  Остатки Ozon здесь не используются и к остаткам Wildberries не прибавляются.
                 </InfoLine>
 
 
                 <InfoLine>
-                  toClient и fromClient отображаются в исходных данных, но в доступный FBW-остаток не входят.
+                  toClient и fromClient в доступный FBW-остаток не входят.
                 </InfoLine>
 
 
                 <InfoLine>
-                  master_code отображается только как связь карточки с физическим товаром для будущего расчёта закупки в Китай.
+                  master_code используется только для связи карточки с физическим товаром и дальнейшего расчёта закупки в Китай.
                 </InfoLine>
 
 
                 <InfoLine>
-                  Период продаж совпадает с периодом Ozon, но данные площадок остаются раздельными.
+                  Период продаж совпадает с периодом Ozon, но данные двух площадок остаются раздельными.
                 </InfoLine>
 
               </section>
 
 
-              {/* ============================================
+              {/* ======================================
                   ПРОДАЖИ ПО ДНЯМ
-                  ============================================ */}
+                  ====================================== */}
 
               <section className="section">
 
@@ -800,8 +1325,9 @@ export default async function WildberriesPage() {
                       Продажи по дням
                     </h2>
 
+
                     <div className="muted">
-                      Этот блок удобнее всего использовать для контрольной сверки с кабинетом Wildberries.
+                      Для контрольной сверки с кабинетом Wildberries.
                     </div>
 
                   </div>
@@ -814,7 +1340,8 @@ export default async function WildberriesPage() {
                   <table
                     className="table"
                     style={{
-                      minWidth: "800px",
+                      minWidth:
+                        "800px",
                     }}
                   >
 
@@ -849,7 +1376,7 @@ export default async function WildberriesPage() {
                         dashboard
                           .dailySales
                           .map(
-                            (row) => (
+                            row => (
 
                               <tr
                                 key={
@@ -919,9 +1446,9 @@ export default async function WildberriesPage() {
               </section>
 
 
-              {/* ============================================
-                  ДАННЫЕ ПО КАРТОЧКАМ WB
-                  ============================================ */}
+              {/* ======================================
+                  ДАННЫЕ ПО ТОВАРАМ
+                  ====================================== */}
 
               <section className="section">
 
@@ -933,8 +1460,9 @@ export default async function WildberriesPage() {
                       Данные по товарам
                     </h2>
 
+
                     <div className="muted">
-                      Одна строка соответствует одной карточке Wildberries по nmID.
+                      Одна строка соответствует одному Артикулу WB.
                     </div>
 
                   </div>
@@ -947,7 +1475,8 @@ export default async function WildberriesPage() {
                   <table
                     className="table"
                     style={{
-                      minWidth: "1450px",
+                      minWidth:
+                        "1450px",
                     }}
                   >
 
@@ -956,7 +1485,7 @@ export default async function WildberriesPage() {
                       <tr>
 
                         <th className="left">
-                          nmID
+                          Артикул WB
                         </th>
 
                         <th className="left">
@@ -1002,7 +1531,7 @@ export default async function WildberriesPage() {
                         dashboard
                           .products
                           .map(
-                            (row) => (
+                            row => (
 
                               <tr
                                 key={
@@ -1034,11 +1563,13 @@ export default async function WildberriesPage() {
                                       "360px",
                                   }}
                                 >
+
                                   {
                                     row.sellerArticle
                                     ||
                                     "—"
                                   }
+
                                 </td>
 
 
@@ -1069,6 +1600,7 @@ export default async function WildberriesPage() {
                                     row.brandName.trim()
                                     &&
                                     (
+
                                       <div
                                         className="muted"
                                         style={{
@@ -1080,6 +1612,7 @@ export default async function WildberriesPage() {
                                           row.brandName
                                         }
                                       </div>
+
                                     )
                                   }
 
@@ -1149,8 +1682,11 @@ export default async function WildberriesPage() {
                                 <td className="right">
 
                                   {
-                                    row.daysOfStock === null
+                                    row.daysOfStock ===
+                                      null
+
                                       ? "—"
+
                                       : formatDecimal(
                                           row.daysOfStock,
                                           1
@@ -1174,9 +1710,9 @@ export default async function WildberriesPage() {
               </section>
 
 
-              {/* ============================================
+              {/* ======================================
                   БЕЗОПАСНЫЙ РЕЖИМ
-                  ============================================ */}
+                  ====================================== */}
 
               <section className="section">
 
@@ -1204,17 +1740,22 @@ export default async function WildberriesPage() {
 
 
                 <InfoLine>
-                  Для страницы используется последний успешно сохранённый snapshot остатков WB.
+                  Для страницы используется последний успешно сохранённый snapshot остатков.
                 </InfoLine>
 
 
                 <InfoLine>
-                  Каждая карточка рассчитывается отдельно по nmID.
+                  Каждая карточка Wildberries рассчитывается отдельно по Артикулу WB.
                 </InfoLine>
 
 
                 <InfoLine>
-                  Остатки и продажи Ozon не используются при расчёте показателей WB.
+                  Собственного ограничения по частоте ручных обновлений нет.
+                </InfoLine>
+
+
+                <InfoLine>
+                  Если Wildberries сам вернёт лимит запросов, система покажет его отдельно.
                 </InfoLine>
 
 
@@ -1225,9 +1766,9 @@ export default async function WildberriesPage() {
               </section>
 
 
-              {/* ============================================
+              {/* ======================================
                   ОСТАТКИ WB
-                  ============================================ */}
+                  ====================================== */}
 
               <section className="section">
 
@@ -1239,17 +1780,27 @@ export default async function WildberriesPage() {
                       Остатки Wildberries
                     </h2>
 
+
                     <div className="muted">
-                      Текущий FBW-остаток по карточкам Wildberries.
+                      Текущий FBW-остаток по артикулам Wildberries.
                     </div>
 
                   </div>
 
 
                   <WbSyncClient
-                    endpoint="/api/wb/sync-stocks?force=1"
-                    label="Обновить остатки WB"
-                    loadingLabel="Обновляем остатки..."
+                    endpoint=
+                      "/api/wb/sync-stocks?force=1"
+
+                    label=
+                      "Обновить остатки WB"
+
+                    loadingLabel=
+                      "Обновляем остатки..."
+
+                    initialState={
+                      stocksState
+                    }
                   />
 
                 </div>
@@ -1257,9 +1808,9 @@ export default async function WildberriesPage() {
               </section>
 
 
-              {/* ============================================
+              {/* ======================================
                   ПРОДАЖИ WB
-                  ============================================ */}
+                  ====================================== */}
 
               <section className="section">
 
@@ -1271,6 +1822,7 @@ export default async function WildberriesPage() {
                       Продажи Wildberries
                     </h2>
 
+
                     <div className="muted">
                       FBW-заказы Wildberries. Отменённые заказы считаются отдельно.
                     </div>
@@ -1279,9 +1831,18 @@ export default async function WildberriesPage() {
 
 
                   <WbSyncClient
-                    endpoint="/api/wb/sync-orders"
-                    label="Обновить продажи WB"
-                    loadingLabel="Обновляем продажи..."
+                    endpoint=
+                      "/api/wb/sync-orders"
+
+                    label=
+                      "Обновить продажи WB"
+
+                    loadingLabel=
+                      "Обновляем продажи..."
+
+                    initialState={
+                      ordersState
+                    }
                   />
 
                 </div>
@@ -1293,8 +1854,11 @@ export default async function WildberriesPage() {
           )
         }
 
+
       </div>
 
     </main>
+
   );
+
 }
