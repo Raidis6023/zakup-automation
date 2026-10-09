@@ -17,21 +17,11 @@ function parseJson(text: string): any {
 export async function GET() {
   try {
     // ========================================================
-    // 1. ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ
+    // 1. WB TOKEN
     // ========================================================
 
     const wbToken =
       process.env.WB_READ_TOKEN;
-
-    const supabaseUrl =
-      process.env.SUPABASE_URL
-      ??
-      process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-    const supabaseKey =
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-      ??
-      process.env.SUPABASE_SECRET_KEY;
 
     if (!wbToken) {
       return NextResponse.json(
@@ -45,130 +35,28 @@ export async function GET() {
       );
     }
 
-    if (!supabaseUrl) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message:
-            "Не найдена SUPABASE_URL или NEXT_PUBLIC_SUPABASE_URL",
-        },
-        {
-          status: 500,
-        }
-      );
-    }
-
-    if (!supabaseKey) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message:
-            "Не найдена SUPABASE_SERVICE_ROLE_KEY или SUPABASE_SECRET_KEY",
-        },
-        {
-          status: 500,
-        }
-      );
-    }
-
     // ========================================================
-    // 2. БЕРЁМ ТОТ ЖЕ 28-ДНЕВНЫЙ ПЕРИОД, ЧТО И OZON
+    // 2. ТОЧНО ТОТ ЖЕ ПЕРИОД,
+    // КОТОРЫЙ БЫЛ В ВЫГРУЗКЕ ИЗ КАБИНЕТА WB
     // ========================================================
-
-    const periodResponse =
-      await fetch(
-        `${supabaseUrl}/rest/v1/ozon_sales_sync_runs`
-        +
-        `?status=eq.success`
-        +
-        `&completed_days=eq.28`
-        +
-        `&date_from=not.is.null`
-        +
-        `&date_to=not.is.null`
-        +
-        `&select=date_from,date_to,created_at`
-        +
-        `&order=date_to.desc,created_at.desc`
-        +
-        `&limit=1`,
-        {
-          method: "GET",
-
-          headers: {
-            apikey: supabaseKey,
-            Authorization: `Bearer ${supabaseKey}`,
-            Accept: "application/json",
-          },
-
-          cache: "no-store",
-        }
-      );
-
-    const periodText =
-      await periodResponse.text();
-
-    if (!periodResponse.ok) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message:
-            "Не удалось получить 28-дневный период Ozon",
-          supabaseStatus:
-            periodResponse.status,
-          supabaseResponse:
-            parseJson(periodText),
-        },
-        {
-          status: 500,
-        }
-      );
-    }
-
-    const periodRows =
-      parseJson(periodText);
-
-    if (
-      !Array.isArray(periodRows)
-      ||
-      periodRows.length === 0
-    ) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message:
-            "В Supabase не найден успешный 28-дневный период Ozon",
-        },
-        {
-          status: 500,
-        }
-      );
-    }
 
     const dateFrom =
-      String(
-        periodRows[0].date_from
-      ).slice(0, 10);
+      "2026-09-10";
 
     const dateTo =
-      String(
-        periodRows[0].date_to
-      ).slice(0, 10);
+      "2026-10-07";
 
     // ========================================================
     // 3. КОНТРОЛЬНЫЕ ТОВАРЫ
-    //
-    // Включил большую бритву и несколько товаров,
-    // которые видны на твоём скрине.
     // ========================================================
 
     const nmIds = [
-      232169288,   // Бритва мужская 31 кассета арт. 1267
-      1583832993,  // AVB12R Банты красные
-      1583876412,  // AVB12S Банты серебристые
-      1583886263,  // AVB12G Банты золотые
-      1583608982,  // AVD-NY37M Коза с открыткой
-      1583646991,  // AVD-NY37S Коза с открыткой
+      232169288,
+      1583608982,
+      1583832993,
+      1583646991,
+      1583876412,
+      1583886263,
     ];
 
     // ========================================================
@@ -230,7 +118,7 @@ export async function GET() {
       );
 
     // ========================================================
-    // 5. ЕСЛИ WB ВЕРНУЛ ОШИБКУ
+    // 5. ОШИБКА WB
     // ========================================================
 
     if (!wbResponse.ok) {
@@ -287,7 +175,7 @@ export async function GET() {
     }
 
     // ========================================================
-    // 6. ПРОВЕРЯЕМ ФОРМАТ
+    // 6. ТОВАРЫ
     // ========================================================
 
     const products =
@@ -300,7 +188,7 @@ export async function GET() {
         [];
 
     // ========================================================
-    // 7. ДЕЛАЕМ ЧЕЛОВЕЧЕСКИЙ ОТВЕТ
+    // 7. НОРМАЛИЗУЕМ
     // ========================================================
 
     const rows =
@@ -381,6 +269,10 @@ export async function GET() {
         }
       );
 
+    // ========================================================
+    // 8. ИЩЕМ ПРОПАВШИЕ nmID
+    // ========================================================
+
     const foundNmIds =
       new Set(
         rows.map(
@@ -400,14 +292,42 @@ export async function GET() {
       );
 
     // ========================================================
-    // 8. ОТВЕТ
+    // 9. КОНТРОЛЬНАЯ БРИТВА
+    // ========================================================
+
+    const control =
+      rows.find(
+        (
+          row: any
+        ) =>
+          row.nmId ===
+          232169288
+      )
+      ??
+      null;
+
+    const expectedBuyout =
+      2153;
+
+    const actualBuyout =
+      control
+        ?.buyoutCount
+      ??
+      null;
+
+    const matchesCabinet =
+      actualBuyout ===
+      expectedBuyout;
+
+    // ========================================================
+    // 10. ОТВЕТ
     // ========================================================
 
     return NextResponse.json({
       ok: true,
 
       message:
-        "Контрольный Sales Funnel WB успешно получен",
+        "Контрольный Sales Funnel WB за период кабинета успешно получен",
 
       writesToDatabase:
         false,
@@ -429,18 +349,29 @@ export async function GET() {
           "Отменили, шт.",
       },
 
-      expectedControl: {
+      controlCheck: {
         nmId:
           232169288,
 
         sellerArticle:
           "Бритва мужская 31 кассета арт. 1267",
 
-        cabinetScreenshotBuyout:
-          2153,
+        cabinetBuyout:
+          expectedBuyout,
 
-        note:
-          "Сравниваем buyoutCount только если период скрина совпадает с period.dateFrom/dateTo.",
+        apiBuyout:
+          actualBuyout,
+
+        difference:
+          actualBuyout === null
+            ?
+            null
+            :
+            actualBuyout
+            -
+            expectedBuyout,
+
+        matchesCabinet,
       },
 
       rows,
