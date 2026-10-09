@@ -1,5 +1,4 @@
 
-import WorkspaceShell from "./WorkspaceShell";
 import WorkspaceDecoration from "./WorkspaceDecoration";
 
 // ============================================================
@@ -8,31 +7,31 @@ import WorkspaceDecoration from "./WorkspaceDecoration";
 
 export default function Home() {
   return (
-    <WorkspaceShell>
-      <section aria-label="Главная страница">
+    <section aria-label="Главная страница">
 
-        {/* ЗАГОЛОВОК И ДЕКОРАТИВНЫЕ ПОЛОСЫ */}
+      {/* ЗАГОЛОВОК И ДЕКОРАТИВНЫЕ ПОЛОСЫ */}
 
-        <div className="home-title-row">
-          <div>
-            <h1>
-              Главная страница
-            </h1>
+      <div className="home-title-row">
 
-            <p>
-              Основные рабочие пространства
-              и быстрый доступ к разделам системы
-            </p>
-          </div>
+        <div>
+          <h1>
+            Главная страница
+          </h1>
 
-          <WorkspaceDecoration />
+          <p>
+            Основные рабочие пространства
+            и быстрый доступ к разделам системы
+          </p>
         </div>
 
-        {/* ПУСТАЯ РАБОЧАЯ ОБЛАСТЬ */}
+        <WorkspaceDecoration />
 
-        <div className="home-empty-space" />
+      </div>
 
-      </section>
-    </WorkspaceShell>
+      {/* ПУСТАЯ РАБОЧАЯ ОБЛАСТЬ */}
+
+      <div className="home-empty-space" />
+
+    </section>
   );
 }
