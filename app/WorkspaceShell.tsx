@@ -1,8 +1,12 @@
 
+"use client";
+
 import Link from "next/link";
+
 import type { ReactNode } from "react";
 
 import HomeHeaderActions from "./HomeHeaderActions";
+
 import WorkspaceDecoration from "./WorkspaceDecoration";
 
 import "./home.css";
@@ -14,16 +18,29 @@ import "./workspace-shell.css";
 
 function SearchIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="11" cy="11" r="7" />
-      <path d="m20 20-4.2-4.2" />
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <circle
+        cx="11"
+        cy="11"
+        r="7"
+      />
+
+      <path
+        d="m20 20-4.2-4.2"
+      />
     </svg>
   );
 }
 
 function CartIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
       <path
         d="
           M3 4h2
@@ -34,6 +51,7 @@ function CartIcon() {
           L20 8H7
         "
       />
+
       <circle cx="10" cy="20" r="1.3" />
       <circle cx="17" cy="20" r="1.3" />
     </svg>
@@ -42,9 +60,18 @@ function CartIcon() {
 
 function GlobeIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="12" cy="12" r="9" />
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="9"
+      />
+
       <path d="M3 12h18" />
+
       <path
         d="
           M12 3
@@ -55,6 +82,7 @@ function GlobeIcon() {
           12 21
         "
       />
+
       <path
         d="
           M12 3
@@ -87,11 +115,16 @@ export default function WorkspaceShell({
   module = false,
 }: WorkspaceShellProps) {
   return (
-    <main className="home-shell">
+    <div className="home-shell">
 
-      {/* ЛЕВОЕ МЕНЮ */}
+      {/* ==========================================
+          ЛЕВОЕ МЕНЮ
+          ========================================== */}
 
       <aside className="home-sidebar">
+
+        {/* ЛОГОТИП */}
+
         <div className="home-company-logo">
           <img
             src="/logos/babushkina-marketplace.png"
@@ -100,10 +133,13 @@ export default function WorkspaceShell({
           />
         </div>
 
+        {/* РАЗДЕЛЫ */}
+
         <nav
           className="home-workspaces"
           aria-label="Рабочие пространства"
         >
+
           <Link
             href="/zakup"
             className="home-workspace-link"
@@ -112,7 +148,9 @@ export default function WorkspaceShell({
               <CartIcon />
             </span>
 
-            <span>Закуп</span>
+            <span>
+              Закуп
+            </span>
           </Link>
 
           <Link
@@ -123,7 +161,9 @@ export default function WorkspaceShell({
               <GlobeIcon />
             </span>
 
-            <span>ВЭД</span>
+            <span>
+              ВЭД
+            </span>
           </Link>
 
           <Link
@@ -138,7 +178,9 @@ export default function WorkspaceShell({
               />
             </span>
 
-            <span>Ozon</span>
+            <span>
+              Ozon
+            </span>
           </Link>
 
           <Link
@@ -153,7 +195,9 @@ export default function WorkspaceShell({
               />
             </span>
 
-            <span>Wildberries</span>
+            <span>
+              Wildberries
+            </span>
           </Link>
 
           <Link
@@ -168,18 +212,26 @@ export default function WorkspaceShell({
               />
             </span>
 
-            <span>Яндекс Маркет</span>
+            <span>
+              Яндекс Маркет
+            </span>
           </Link>
+
         </nav>
       </aside>
 
-      {/* ПРАВАЯ ЧАСТЬ WORKSPACE */}
+      {/* ==========================================
+          ОСНОВНАЯ ЧАСТЬ WORKSPACE
+          ========================================== */}
 
       <div className="home-main">
 
-        {/* ОБЩАЯ ВЕРХНЯЯ ПАНЕЛЬ */}
+        {/* ВЕРХНЯЯ ПАНЕЛЬ */}
 
         <header className="home-topbar">
+
+          {/* ПОИСК */}
+
           <div className="home-search">
             <span className="home-search-icon">
               <SearchIcon />
@@ -196,10 +248,16 @@ export default function WorkspaceShell({
             </span>
           </div>
 
+          {/* УВЕДОМЛЕНИЯ, КАЛЕНДАРЬ,
+              ТЕМА И ПРОФИЛЬ */}
+
           <HomeHeaderActions />
+
         </header>
 
-        {/* РАБОЧАЯ ОБЛАСТЬ */}
+        {/* ======================================
+            РАБОЧАЯ ОБЛАСТЬ
+            ====================================== */}
 
         <div
           className={
@@ -210,15 +268,24 @@ export default function WorkspaceShell({
             }`
           }
         >
+
+          {/* ДЕКОРАТИВНЫЕ ПОЛОСЫ
+              ВО ВНУТРЕННИХ РАЗДЕЛАХ */}
+
           {module ? (
             <div className="workspace-corner-decoration">
               <WorkspaceDecoration />
             </div>
           ) : null}
 
+          {/* СОДЕРЖИМОЕ ВЫБРАННОЙ СТРАНИЦЫ */}
+
           {children}
+
         </div>
+
       </div>
-    </main>
+
+    </div>
   );
 }
