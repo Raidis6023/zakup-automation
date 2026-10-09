@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 export const maxDuration = 60;
 
 
@@ -8,11 +9,14 @@ export const maxDuration = 60;
 // НАСТРОЙКИ
 // ============================================================
 
-const DAYS_TO_LOAD = 28;
+const SUPABASE_BATCH_SIZE =
+  1000;
 
-const SUPABASE_BATCH_SIZE = 1000;
+const SYNC_KEY =
+  "orders";
 
-const SYNC_KEY = "orders";
+const MAX_WB_ROWS_PER_RESPONSE =
+  80000;
 
 
 // ============================================================
@@ -21,7 +25,7 @@ const SYNC_KEY = "orders";
 
 function parseJson(
   text: string
-): unknown {
+): any {
 
   try {
 
@@ -38,12 +42,44 @@ function parseJson(
 }
 
 
+function splitIntoBatches<T>(
+  items: T[],
+  size: number
+): T[][] {
+
+  const result:
+    T[][] =
+    [];
+
+
+  for (
+    let i = 0;
+    i < items.length;
+    i += size
+  ) {
+
+    result.push(
+      items.slice(
+        i,
+        i + size
+      )
+    );
+
+  }
+
+
+  return result;
+
+}
+
+
 function normalizeCancelDate(
   value: unknown
 ): string | null {
 
   if (
-    typeof value !== "string"
+    typeof value !==
+      "string"
     ||
     !value
   ) {
@@ -69,33 +105,91 @@ function normalizeCancelDate(
 }
 
 
-function splitIntoBatches<T>(
-  items: T[],
-  size: number
-): T[][] {
+function getDatePart(
+  value: unknown
+): string | null {
 
-  const batches:
-    T[][] =
-    [];
-
-
-  for (
-    let i = 0;
-    i < items.length;
-    i += size
+  if (
+    typeof value !==
+      "string"
+    ||
+    value.length < 10
   ) {
 
-    batches.push(
-      items.slice(
-        i,
-        i + size
-      )
-    );
+    return null;
 
   }
 
 
-  return batches;
+  return value.slice(
+    0,
+    10
+  );
+
+}
+
+
+function isDateInsidePeriod(
+  value: unknown,
+  dateFrom: string,
+  dateTo: string
+): boolean {
+
+  const date =
+    getDatePart(
+      value
+    );
+
+
+  if (!date) {
+
+    return false;
+
+  }
+
+
+  return (
+    date >=
+      dateFrom
+    &&
+    date <=
+      dateTo
+  );
+
+}
+
+
+function toPositiveNumber(
+  value: string | null
+): number | null {
+
+  if (!value) {
+
+    return null;
+
+  }
+
+
+  const parsed =
+    Number(
+      value
+    );
+
+
+  if (
+    !Number.isFinite(
+      parsed
+    )
+    ||
+    parsed <= 0
+  ) {
+
+    return null;
+
+  }
+
+
+  return parsed;
 
 }
 
@@ -105,6 +199,10 @@ function splitIntoBatches<T>(
 // ============================================================
 
 export async function GET() {
+
+  // ==========================================================
+  // 0. ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ
+  // ==========================================================
 
   const wbTokenRaw =
     process.env.WB_READ_TOKEN;
@@ -126,13 +224,15 @@ export async function GET() {
 
     return NextResponse.json(
       {
-        ok: false,
+        ok:
+          false,
 
         message:
           "Не найден WB_READ_TOKEN в Vercel",
       },
       {
-        status: 500,
+        status:
+          500,
       }
     );
 
@@ -143,13 +243,15 @@ export async function GET() {
 
     return NextResponse.json(
       {
-        ok: false,
+        ok:
+          false,
 
         message:
           "Не найдена SUPABASE_URL или NEXT_PUBLIC_SUPABASE_URL",
       },
       {
-        status: 500,
+        status:
+          500,
       }
     );
 
@@ -160,13 +262,15 @@ export async function GET() {
 
     return NextResponse.json(
       {
-        ok: false,
+        ok:
+          false,
 
         message:
           "Не найдена SUPABASE_SERVICE_ROLE_KEY или SUPABASE_SECRET_KEY",
       },
       {
-        status: 500,
+        status:
+          500,
       }
     );
 
@@ -186,6 +290,24 @@ export async function GET() {
   const supabaseKey:
     string =
     supabaseKeyRaw;
+
+
+  // ==========================================================
+  // SUPABASE HEADERS
+  // ==========================================================
+
+  const supabaseHeaders = {
+
+    apikey:
+      supabaseKey,
+
+    Authorization:
+      `Bearer ${supabaseKey}`,
+
+    Accept:
+      "application/json",
+
+  };
 
 
   // ==========================================================
@@ -252,22 +374,13 @@ export async function GET() {
             "POST",
 
           headers: {
-
-            apikey:
-              supabaseKey,
-
-            Authorization:
-              `Bearer ${supabaseKey}`,
-
-            Accept:
-              "application/json",
+            ...supabaseHeaders,
 
             "Content-Type":
               "application/json",
 
             Prefer:
               "resolution=merge-duplicates,return=minimal",
-
           },
 
           body:
@@ -296,41 +409,137 @@ export async function GET() {
   }
 
 
+  // ==========================================================
+  // ОБРАБОТКА 429
+  // ==========================================================
+
+  async function handleRateLimit(
+    response: Response,
+    attemptAt: string,
+    previousSuccessAt:
+      string | null,
+    sourceName: string,
+    responseData: any
+  ) {
+
+    const retryHeader =
+      response.headers.get(
+        "x-ratelimit-retry"
+      )
+      ??
+      response.headers.get(
+        "retry-after"
+      );
+
+
+    const resetHeader =
+      response.headers.get(
+        "x-ratelimit-reset"
+      );
+
+
+    const retrySeconds =
+      toPositiveNumber(
+        retryHeader
+      )
+      ??
+      toPositiveNumber(
+        resetHeader
+      )
+      ??
+      60;
+
+
+    const nextAllowedAt =
+      new Date(
+        Date.now()
+        +
+        retrySeconds
+        *
+        1000
+      ).toISOString();
+
+
+    await saveSyncState({
+
+      lastAttemptAt:
+        attemptAt,
+
+      lastSuccessAt:
+        previousSuccessAt,
+
+      nextAllowedAt,
+
+      lastHttpStatus:
+        429,
+
+      retryAfterSeconds:
+        retrySeconds,
+
+      lastMessage:
+        `Лимит WB при загрузке ${sourceName}`,
+
+    });
+
+
+    return NextResponse.json(
+      {
+        ok:
+          false,
+
+        blockedByRateLimit:
+          true,
+
+        wildberriesRequestSent:
+          true,
+
+        message:
+          `Wildberries ограничил запрос ${sourceName}. Повторная попытка будет доступна после окончания лимита.`,
+
+        wbStatus:
+          429,
+
+        source:
+          sourceName,
+
+        retryAfterSeconds:
+          retrySeconds,
+
+        nextAllowedAt,
+
+        wbResponse:
+          responseData,
+      },
+      {
+        status:
+          429,
+      }
+    );
+
+  }
+
+
   try {
 
     // ========================================================
-    // 1. ЧИТАЕМ СОСТОЯНИЕ
+    // 1. СОСТОЯНИЕ СИНХРОНИЗАЦИИ
     // ========================================================
-
-    const stateUrl =
-      `${supabaseUrl}/rest/v1/wb_sync_state`
-      +
-      `?sync_key=eq.${SYNC_KEY}`
-      +
-      `&select=*`
-      +
-      `&limit=1`;
-
 
     const stateResponse =
       await fetch(
-        stateUrl,
+        `${supabaseUrl}/rest/v1/wb_sync_state`
+        +
+        `?sync_key=eq.${SYNC_KEY}`
+        +
+        `&select=*`
+        +
+        `&limit=1`,
         {
           method:
             "GET",
 
-          headers: {
-
-            apikey:
-              supabaseKey,
-
-            Authorization:
-              `Bearer ${supabaseKey}`,
-
-            Accept:
-              "application/json",
-
-          },
+          headers:
+            supabaseHeaders,
 
           cache:
             "no-store",
@@ -381,9 +590,7 @@ export async function GET() {
 
 
     // ========================================================
-    // 2. БЛОКИРУЕМ ТОЛЬКО ЕСЛИ ЕСТЬ АКТИВНЫЙ ЛИМИТ WB
-    //
-    // Никакой нашей трёхчасовой блокировки больше нет.
+    // 2. ЕСЛИ WB УЖЕ ВЕРНУЛ ЛИМИТ
     // ========================================================
 
     if (
@@ -432,14 +639,11 @@ export async function GET() {
           blockedByRateLimit:
             true,
 
+          wildberriesRequestSent:
+            false,
+
           message:
-            "Запрос к Wildberries не выполнен: действует лимит площадки",
-
-          lastHttpStatus:
-            state.last_http_status,
-
-          retryAfterSecondsOriginally:
-            state.retry_after_seconds,
+            "Запрос к Wildberries не выполнен: ещё действует лимит площадки",
 
           secondsRemaining,
 
@@ -449,8 +653,8 @@ export async function GET() {
           lastAttemptAt:
             state.last_attempt_at,
 
-          wildberriesRequestSent:
-            false,
+          lastSuccessAt:
+            state.last_success_at,
         });
 
       }
@@ -459,7 +663,119 @@ export async function GET() {
 
 
     // ========================================================
-    // 3. ФИКСИРУЕМ ПОПЫТКУ
+    // 3. ПОЛУЧАЕМ ТОЧНЫЙ 28-ДНЕВНЫЙ ПЕРИОД
+    //
+    // Тот же период используется на Ozon и WB dashboard.
+    // ========================================================
+
+    const periodResponse =
+      await fetch(
+        `${supabaseUrl}/rest/v1/ozon_sales_sync_runs`
+        +
+        `?status=eq.success`
+        +
+        `&completed_days=eq.28`
+        +
+        `&date_from=not.is.null`
+        +
+        `&date_to=not.is.null`
+        +
+        `&select=date_from,date_to,created_at`
+        +
+        `&order=date_to.desc,created_at.desc`
+        +
+        `&limit=1`,
+        {
+          method:
+            "GET",
+
+          headers:
+            supabaseHeaders,
+
+          cache:
+            "no-store",
+        }
+      );
+
+
+    if (!periodResponse.ok) {
+
+      const text =
+        await periodResponse.text();
+
+
+      return NextResponse.json(
+        {
+          ok:
+            false,
+
+          message:
+            "Не удалось получить общий 28-дневный период",
+
+          supabaseStatus:
+            periodResponse.status,
+
+          supabaseResponse:
+            parseJson(
+              text
+            ),
+        },
+        {
+          status:
+            500,
+        }
+      );
+
+    }
+
+
+    const periodRows:
+      any[] =
+      await periodResponse.json();
+
+
+    if (
+      periodRows.length ===
+      0
+    ) {
+
+      return NextResponse.json(
+        {
+          ok:
+            false,
+
+          message:
+            "Не найден успешный 28-дневный период Ozon",
+        },
+        {
+          status:
+            500,
+        }
+      );
+
+    }
+
+
+    const dateFrom =
+      String(
+        periodRows[0].date_from
+      ).slice(
+        0,
+        10
+      );
+
+
+    const dateTo =
+      String(
+        periodRows[0].date_to
+      ).slice(
+        0,
+        10
+      );
+
+
+    // ========================================================
+    // 4. ФИКСИРУЕМ ПОПЫТКУ
     // ========================================================
 
     const attemptAt =
@@ -486,68 +802,46 @@ export async function GET() {
         null,
 
       lastMessage:
-        "Начало синхронизации заказов WB",
+        "Начало синхронизации FBW-продаж и отмен WB",
 
     });
 
 
     // ========================================================
-    // 4. ДАТА НАЧАЛА
+    // 5. ЗАГРУЖАЕМ РЕАЛЬНЫЕ ПРОДАЖИ
     // ========================================================
 
-    const dateFrom =
-      new Date(
-        Date.now()
-        -
-        DAYS_TO_LOAD
-        *
-        24
-        *
-        60
-        *
-        60
-        *
-        1000
-      ).toISOString();
-
-
-    // ========================================================
-    // 5. ЗАПРОС К WILDBERRIES
-    // ========================================================
-
-    const wbUrl =
+    const salesUrl =
       new URL(
-        "https://statistics-api.wildberries.ru/api/v1/supplier/orders"
+        "https://statistics-api.wildberries.ru/api/v1/supplier/sales"
       );
 
 
-    wbUrl.searchParams.set(
+    salesUrl.searchParams.set(
       "dateFrom",
-      dateFrom
+      `${dateFrom}T00:00:00`
     );
 
 
-    wbUrl.searchParams.set(
+    salesUrl.searchParams.set(
       "flag",
       "0"
     );
 
 
-    const wbResponse =
+    const salesResponse =
       await fetch(
-        wbUrl.toString(),
+        salesUrl.toString(),
         {
           method:
             "GET",
 
           headers: {
-
             Authorization:
               wbToken,
 
             Accept:
               "application/json",
-
           },
 
           cache:
@@ -556,175 +850,35 @@ export async function GET() {
       );
 
 
-    const wbText =
-      await wbResponse.text();
+    const salesText =
+      await salesResponse.text();
 
 
-    const wbData:
-      any =
+    const salesData =
       parseJson(
-        wbText
+        salesText
       );
 
-
-    // ========================================================
-    // 6. ЧИТАЕМ ЛИМИТЫ WB
-    // ========================================================
-
-    const retryHeader =
-      wbResponse.headers.get(
-        "x-ratelimit-retry"
-      );
-
-
-    const resetHeader =
-      wbResponse.headers.get(
-        "x-ratelimit-reset"
-      );
-
-
-    const rateLimit = {
-
-      retryAfterSeconds:
-        retryHeader,
-
-      resetAfterSeconds:
-        resetHeader,
-
-      limit:
-        wbResponse.headers.get(
-          "x-ratelimit-limit"
-        ),
-
-      remaining:
-        wbResponse.headers.get(
-          "x-ratelimit-remaining"
-        ),
-
-    };
-
-
-    // ========================================================
-    // 7. НАСТОЯЩИЙ 429 ОТ WILDBERRIES
-    // ========================================================
 
     if (
-      wbResponse.status ===
+      salesResponse.status ===
       429
     ) {
 
-      const retrySecondsRaw =
-        retryHeader
+      return await handleRateLimit(
+        salesResponse,
+        attemptAt,
+        state?.last_success_at
         ??
-        resetHeader;
-
-
-      const retrySeconds =
-        retrySecondsRaw
-          ? Number(
-              retrySecondsRaw
-            )
-          : null;
-
-
-      let nextAllowedAt:
-        string | null =
-        null;
-
-
-      if (
-        retrySeconds !==
-          null
-        &&
-        Number.isFinite(
-          retrySeconds
-        )
-        &&
-        retrySeconds >
-          0
-      ) {
-
-        nextAllowedAt =
-          new Date(
-            Date.now()
-            +
-            retrySeconds
-            *
-            1000
-          ).toISOString();
-
-      }
-
-
-      await saveSyncState({
-
-        lastAttemptAt:
-          attemptAt,
-
-        lastSuccessAt:
-          state?.last_success_at
-          ??
-          null,
-
-        nextAllowedAt,
-
-        lastHttpStatus:
-          429,
-
-        retryAfterSeconds:
-          retrySeconds,
-
-        lastMessage:
-          "Too Many Requests от Wildberries",
-
-      });
-
-
-      return NextResponse.json(
-        {
-          ok:
-            false,
-
-          blockedByRateLimit:
-            true,
-
-          message:
-            nextAllowedAt
-              ? "Wildberries ограничил запрос. Ожидание до следующей разрешённой попытки сохранено."
-              : "Wildberries ограничил запрос, но не сообщил точное время сброса лимита.",
-
-          wbStatus:
-            429,
-
-          dateFrom,
-
-          rateLimit,
-
-          nextAllowedAt,
-
-          retryAfterSeconds:
-            retrySeconds,
-
-          wildberriesRequestSent:
-            true,
-
-          wbResponse:
-            wbData,
-        },
-        {
-          status:
-            429,
-        }
+        null,
+        "FBW-продаж",
+        salesData
       );
 
     }
 
 
-    // ========================================================
-    // 8. ДРУГАЯ ОШИБКА WB
-    // ========================================================
-
-    if (!wbResponse.ok) {
+    if (!salesResponse.ok) {
 
       await saveSyncState({
 
@@ -740,13 +894,13 @@ export async function GET() {
           null,
 
         lastHttpStatus:
-          wbResponse.status,
+          salesResponse.status,
 
         retryAfterSeconds:
           null,
 
         lastMessage:
-          `Ошибка WB HTTP ${wbResponse.status}`,
+          `Ошибка supplier/sales HTTP ${salesResponse.status}`,
 
       });
 
@@ -757,64 +911,28 @@ export async function GET() {
             false,
 
           message:
-            "Wildberries вернул ошибку при загрузке заказов",
+            "Wildberries вернул ошибку при загрузке продаж",
 
           wbStatus:
-            wbResponse.status,
-
-          dateFrom,
-
-          rateLimit,
-
-          wildberriesRequestSent:
-            true,
+            salesResponse.status,
 
           wbResponse:
-            wbData,
+            salesData,
         },
         {
           status:
-            wbResponse.status,
+            salesResponse.status,
         }
       );
 
     }
 
-
-    // ========================================================
-    // 9. ПРОВЕРКА ФОРМАТА
-    // ========================================================
 
     if (
       !Array.isArray(
-        wbData
+        salesData
       )
     ) {
-
-      await saveSyncState({
-
-        lastAttemptAt:
-          attemptAt,
-
-        lastSuccessAt:
-          state?.last_success_at
-          ??
-          null,
-
-        nextAllowedAt:
-          null,
-
-        lastHttpStatus:
-          wbResponse.status,
-
-        retryAfterSeconds:
-          null,
-
-        lastMessage:
-          "WB вернул неожиданный формат заказов",
-
-      });
-
 
       return NextResponse.json(
         {
@@ -822,12 +940,10 @@ export async function GET() {
             false,
 
           message:
-            "WB вернул неожиданный формат заказов",
-
-          dateFrom,
+            "supplier/sales вернул неожиданный формат данных",
 
           wbResponse:
-            wbData,
+            salesData,
         },
         {
           status:
@@ -839,25 +955,451 @@ export async function GET() {
 
 
     // ========================================================
-    // 10. ПОДГОТОВКА ДАННЫХ
+    // 6. ЗАЩИТА ОТ НЕПОЛНОЙ ВЫДАЧИ SALES
+    // ========================================================
+
+    if (
+      salesData.length >=
+      MAX_WB_ROWS_PER_RESPONSE
+    ) {
+
+      await saveSyncState({
+
+        lastAttemptAt:
+          attemptAt,
+
+        lastSuccessAt:
+          state?.last_success_at
+          ??
+          null,
+
+        nextAllowedAt:
+          null,
+
+        lastHttpStatus:
+          409,
+
+        retryAfterSeconds:
+          null,
+
+        lastMessage:
+          "supplier/sales достиг лимита 80000 строк",
+
+      });
+
+
+      return NextResponse.json(
+        {
+          ok:
+            false,
+
+          message:
+            "supplier/sales вернул 80000 строк. Запись остановлена, чтобы не сохранить неполные данные.",
+
+          received:
+            salesData.length,
+        },
+        {
+          status:
+            409,
+        }
+      );
+
+    }
+
+
+    // ========================================================
+    // 7. ЗАГРУЖАЕМ ЗАКАЗЫ ДЛЯ ОТМЕН
+    // ========================================================
+
+    const ordersUrl =
+      new URL(
+        "https://statistics-api.wildberries.ru/api/v1/supplier/orders"
+      );
+
+
+    ordersUrl.searchParams.set(
+      "dateFrom",
+      `${dateFrom}T00:00:00`
+    );
+
+
+    ordersUrl.searchParams.set(
+      "flag",
+      "0"
+    );
+
+
+    const ordersResponse =
+      await fetch(
+        ordersUrl.toString(),
+        {
+          method:
+            "GET",
+
+          headers: {
+            Authorization:
+              wbToken,
+
+            Accept:
+              "application/json",
+          },
+
+          cache:
+            "no-store",
+        }
+      );
+
+
+    const ordersText =
+      await ordersResponse.text();
+
+
+    const ordersData =
+      parseJson(
+        ordersText
+      );
+
+
+    if (
+      ordersResponse.status ===
+      429
+    ) {
+
+      return await handleRateLimit(
+        ordersResponse,
+        attemptAt,
+        state?.last_success_at
+        ??
+        null,
+        "FBW-отмен",
+        ordersData
+      );
+
+    }
+
+
+    if (!ordersResponse.ok) {
+
+      await saveSyncState({
+
+        lastAttemptAt:
+          attemptAt,
+
+        lastSuccessAt:
+          state?.last_success_at
+          ??
+          null,
+
+        nextAllowedAt:
+          null,
+
+        lastHttpStatus:
+          ordersResponse.status,
+
+        retryAfterSeconds:
+          null,
+
+        lastMessage:
+          `Ошибка supplier/orders HTTP ${ordersResponse.status}`,
+
+      });
+
+
+      return NextResponse.json(
+        {
+          ok:
+            false,
+
+          message:
+            "Wildberries вернул ошибку при загрузке заказов/отмен",
+
+          wbStatus:
+            ordersResponse.status,
+
+          wbResponse:
+            ordersData,
+        },
+        {
+          status:
+            ordersResponse.status,
+        }
+      );
+
+    }
+
+
+    if (
+      !Array.isArray(
+        ordersData
+      )
+    ) {
+
+      return NextResponse.json(
+        {
+          ok:
+            false,
+
+          message:
+            "supplier/orders вернул неожиданный формат данных",
+
+          wbResponse:
+            ordersData,
+        },
+        {
+          status:
+            500,
+        }
+      );
+
+    }
+
+
+    // ========================================================
+    // 8. ЗАЩИТА ОТ НЕПОЛНОЙ ВЫДАЧИ ORDERS
+    // ========================================================
+
+    if (
+      ordersData.length >=
+      MAX_WB_ROWS_PER_RESPONSE
+    ) {
+
+      await saveSyncState({
+
+        lastAttemptAt:
+          attemptAt,
+
+        lastSuccessAt:
+          state?.last_success_at
+          ??
+          null,
+
+        nextAllowedAt:
+          null,
+
+        lastHttpStatus:
+          409,
+
+        retryAfterSeconds:
+          null,
+
+        lastMessage:
+          "supplier/orders достиг лимита 80000 строк",
+
+      });
+
+
+      return NextResponse.json(
+        {
+          ok:
+            false,
+
+          message:
+            "supplier/orders вернул 80000 строк. Запись остановлена, чтобы не сохранить неполные данные.",
+
+          received:
+            ordersData.length,
+        },
+        {
+          status:
+            409,
+        }
+      );
+
+    }
+
+
+    // ========================================================
+    // 9. ПОДГОТОВКА FBW-ПРОДАЖ
+    //
+    // В wb_sales попадает ТОЛЬКО:
+    //
+    // warehouseType = "Склад WB"
+    // saleID = S...
+    // дата входит в общий 28-дневный период
+    //
+    // FBS не сохраняем.
+    // Возвраты R... не сохраняем.
     // ========================================================
 
     const syncedAt =
       new Date().toISOString();
 
 
-    const rows =
-      wbData
+    const salesRows =
+      salesData
+        .filter(
+          (
+            sale:
+              any
+          ) => {
+
+            const saleId =
+              typeof sale?.saleID ===
+                "string"
+                ?
+                sale.saleID.trim()
+                :
+                "";
+
+
+            return (
+              sale.warehouseType ===
+                "Склад WB"
+              &&
+              saleId.startsWith(
+                "S"
+              )
+              &&
+              Number(
+                sale.nmId
+              ) >
+                0
+              &&
+              isDateInsidePeriod(
+                sale.date,
+                dateFrom,
+                dateTo
+              )
+            );
+
+          }
+        )
+        .map(
+          (
+            sale:
+              any
+          ) => ({
+
+            sale_id:
+              sale.saleID,
+
+            srid:
+              typeof sale.srid ===
+                "string"
+                ?
+                sale.srid
+                :
+                null,
+
+            sale_date:
+              sale.date,
+
+            last_change_date:
+              sale.lastChangeDate
+              ??
+              null,
+
+            nm_id:
+              Number(
+                sale.nmId
+              ),
+
+            supplier_article:
+              sale.supplierArticle
+              ??
+              null,
+
+            barcode:
+              sale.barcode
+              ??
+              null,
+
+            warehouse_name:
+              sale.warehouseName
+              ??
+              null,
+
+            warehouse_type:
+              "Склад WB",
+
+            income_id:
+              typeof sale.incomeID ===
+                "number"
+                ?
+                sale.incomeID
+                :
+                null,
+
+            raw:
+              sale,
+
+            synced_at:
+              syncedAt,
+
+          })
+        );
+
+
+    // ========================================================
+    // 10. УБИРАЕМ ДУБЛИКАТЫ SALES
+    // ========================================================
+
+    const uniqueSalesMap =
+      new Map<
+        string,
+        any
+      >();
+
+
+    for (
+      const row
+      of salesRows
+    ) {
+
+      uniqueSalesMap.set(
+        row.sale_id,
+        row
+      );
+
+    }
+
+
+    const uniqueSalesRows =
+      Array.from(
+        uniqueSalesMap.values()
+      );
+
+
+    // ========================================================
+    // 11. ПОДГОТОВКА FBW-ЗАКАЗОВ
+    //
+    // wb_orders сохраняем для отмен.
+    //
+    // FBS здесь больше не нужен.
+    // ========================================================
+
+    const orderRows =
+      ordersData
         .filter(
           (
             order:
               any
-          ) =>
-            typeof order?.srid ===
-              "string"
-            &&
-            order.srid.trim() !==
-              ""
+          ) => {
+
+            return (
+              order?.warehouseType ===
+                "Склад WB"
+              &&
+              typeof order?.srid ===
+                "string"
+              &&
+              order.srid.trim() !==
+                ""
+              &&
+              Number(
+                order.nmId
+              ) >
+                0
+              &&
+              isDateInsidePeriod(
+                order.date,
+                dateFrom,
+                dateTo
+              )
+            );
+
+          }
         )
         .map(
           (
@@ -897,9 +1439,7 @@ export async function GET() {
               null,
 
             warehouse_type:
-              order.warehouseType
-              ??
-              null,
+              "Склад WB",
 
             is_cancel:
               order.isCancel ===
@@ -913,8 +1453,10 @@ export async function GET() {
             income_id:
               typeof order.incomeID ===
                 "number"
-                ? order.incomeID
-                : null,
+                ?
+                order.incomeID
+                :
+                null,
 
             raw:
               order,
@@ -927,10 +1469,10 @@ export async function GET() {
 
 
     // ========================================================
-    // 11. УБИРАЕМ ДУБЛИКАТЫ
+    // 12. УБИРАЕМ ДУБЛИКАТЫ ORDERS
     // ========================================================
 
-    const uniqueBySrid =
+    const uniqueOrdersMap =
       new Map<
         string,
         any
@@ -939,10 +1481,10 @@ export async function GET() {
 
     for (
       const row
-      of rows
+      of orderRows
     ) {
 
-      uniqueBySrid.set(
+      uniqueOrdersMap.set(
         row.srid,
         row
       );
@@ -950,81 +1492,132 @@ export async function GET() {
     }
 
 
-    const uniqueRows =
+    const uniqueOrderRows =
       Array.from(
-        uniqueBySrid.values()
+        uniqueOrdersMap.values()
       );
 
 
-    const skippedWithoutSrid =
-      wbData.length
-      -
-      rows.length;
+    // ========================================================
+    // 13. ДОПОЛНИТЕЛЬНАЯ СТАТИСТИКА
+    // ========================================================
+
+    const fbwReturnsIgnored =
+      salesData.filter(
+        (
+          sale:
+            any
+        ) =>
+          sale?.warehouseType ===
+            "Склад WB"
+          &&
+          typeof sale?.saleID ===
+            "string"
+          &&
+          sale.saleID.startsWith(
+            "R"
+          )
+          &&
+          isDateInsidePeriod(
+            sale.date,
+            dateFrom,
+            dateTo
+          )
+      ).length;
 
 
-    const duplicatesInsideResponse =
-      rows.length
-      -
-      uniqueRows.length;
+    const fbsSalesIgnored =
+      salesData.filter(
+        (
+          sale:
+            any
+        ) =>
+          sale?.warehouseType ===
+            "Склад продавца"
+          &&
+          typeof sale?.saleID ===
+            "string"
+          &&
+          sale.saleID.startsWith(
+            "S"
+          )
+          &&
+          isDateInsidePeriod(
+            sale.date,
+            dateFrom,
+            dateTo
+          )
+      ).length;
+
+
+    const fbsOrdersIgnored =
+      ordersData.filter(
+        (
+          order:
+            any
+        ) =>
+          order?.warehouseType ===
+            "Склад продавца"
+          &&
+          isDateInsidePeriod(
+            order.date,
+            dateFrom,
+            dateTo
+          )
+      ).length;
+
+
+    const cancelledFbwOrders =
+      uniqueOrderRows.filter(
+        (
+          row:
+            any
+        ) =>
+          row.is_cancel ===
+          true
+      );
 
 
     // ========================================================
-    // 12. ЗАПИСЬ В SUPABASE
+    // 14. СНАЧАЛА ЗАПИСЫВАЕМ SALES
     // ========================================================
 
-    const batches =
+    const salesBatches =
       splitIntoBatches(
-        uniqueRows,
+        uniqueSalesRows,
         SUPABASE_BATCH_SIZE
       );
 
 
-    let savedRows =
+    let savedSalesRows =
       0;
 
 
     for (
       let i = 0;
-      i < batches.length;
+      i < salesBatches.length;
       i++
     ) {
 
       const batch =
-        batches[i];
+        salesBatches[i];
 
 
-      const upsertUrl =
-        `${supabaseUrl}`
-        +
-        `/rest/v1/wb_orders`
-        +
-        `?on_conflict=srid`;
-
-
-      const upsertResponse =
+      const response =
         await fetch(
-          upsertUrl,
+          `${supabaseUrl}/rest/v1/wb_sales?on_conflict=sale_id`,
           {
             method:
               "POST",
 
             headers: {
-
-              apikey:
-                supabaseKey,
-
-              Authorization:
-                `Bearer ${supabaseKey}`,
-
-              Accept:
-                "application/json",
+              ...supabaseHeaders,
 
               "Content-Type":
                 "application/json",
 
               Prefer:
                 "resolution=merge-duplicates,return=minimal",
-
             },
 
             body:
@@ -1038,12 +1631,10 @@ export async function GET() {
         );
 
 
-      if (
-        !upsertResponse.ok
-      ) {
+      if (!response.ok) {
 
         const text =
-          await upsertResponse.text();
+          await response.text();
 
 
         await saveSyncState({
@@ -1060,13 +1651,13 @@ export async function GET() {
             null,
 
           lastHttpStatus:
-            wbResponse.status,
+            500,
 
           retryAfterSeconds:
             null,
 
           lastMessage:
-            "WB ответил успешно, но произошла ошибка записи в Supabase",
+            "Ошибка записи FBW-продаж в Supabase",
 
         });
 
@@ -1077,29 +1668,24 @@ export async function GET() {
               false,
 
             message:
-              "Ошибка записи заказов в Supabase",
+              "WB ответил успешно, но не удалось записать FBW-продажи в wb_sales",
 
             failedBatch:
               i + 1,
 
-            batchesCount:
-              batches.length,
+            batches:
+              salesBatches.length,
 
             savedBeforeFailure:
-              savedRows,
+              savedSalesRows,
 
             supabaseStatus:
-              upsertResponse.status,
+              response.status,
 
             supabaseResponse:
               parseJson(
                 text
               ),
-
-            wbOrdersReceived:
-              wbData.length,
-
-            rateLimit,
           },
           {
             status:
@@ -1110,65 +1696,138 @@ export async function GET() {
       }
 
 
-      savedRows +=
+      savedSalesRows +=
         batch.length;
 
     }
 
 
     // ========================================================
-    // 13. СТАТИСТИКА
+    // 15. ЗАПИСЫВАЕМ FBW-ЗАКАЗЫ / ОТМЕНЫ
     // ========================================================
 
-    const fbwOrders =
-      uniqueRows.filter(
-        (
-          row:
-            any
-        ) =>
-          row.warehouse_type ===
-          "Склад WB"
+    const orderBatches =
+      splitIntoBatches(
+        uniqueOrderRows,
+        SUPABASE_BATCH_SIZE
       );
 
 
-    const sellerOrders =
-      uniqueRows.filter(
-        (
-          row:
-            any
-        ) =>
-          row.warehouse_type ===
-          "Склад продавца"
-      );
+    let savedOrderRows =
+      0;
 
 
-    const cancelledOrders =
-      uniqueRows.filter(
-        (
-          row:
-            any
-        ) =>
-          row.is_cancel ===
-          true
-      );
+    for (
+      let i = 0;
+      i < orderBatches.length;
+      i++
+    ) {
+
+      const batch =
+        orderBatches[i];
 
 
-    const activeFbwOrders =
-      uniqueRows.filter(
-        (
-          row:
-            any
-        ) =>
-          row.warehouse_type ===
-            "Склад WB"
-          &&
-          row.is_cancel ===
-            false
-      );
+      const response =
+        await fetch(
+          `${supabaseUrl}/rest/v1/wb_orders?on_conflict=srid`,
+          {
+            method:
+              "POST",
+
+            headers: {
+              ...supabaseHeaders,
+
+              "Content-Type":
+                "application/json",
+
+              Prefer:
+                "resolution=merge-duplicates,return=minimal",
+            },
+
+            body:
+              JSON.stringify(
+                batch
+              ),
+
+            cache:
+              "no-store",
+          }
+        );
+
+
+      if (!response.ok) {
+
+        const text =
+          await response.text();
+
+
+        await saveSyncState({
+
+          lastAttemptAt:
+            attemptAt,
+
+          lastSuccessAt:
+            state?.last_success_at
+            ??
+            null,
+
+          nextAllowedAt:
+            null,
+
+          lastHttpStatus:
+            500,
+
+          retryAfterSeconds:
+            null,
+
+          lastMessage:
+            "Продажи сохранены, но произошла ошибка записи заказов/отмен",
+
+        });
+
+
+        return NextResponse.json(
+          {
+            ok:
+              false,
+
+            message:
+              "FBW-продажи сохранены, но не удалось записать FBW-заказы/отмены",
+
+            salesAlreadySaved:
+              savedSalesRows,
+
+            failedOrderBatch:
+              i + 1,
+
+            orderBatches:
+              orderBatches.length,
+
+            supabaseStatus:
+              response.status,
+
+            supabaseResponse:
+              parseJson(
+                text
+              ),
+          },
+          {
+            status:
+              500,
+          }
+        );
+
+      }
+
+
+      savedOrderRows +=
+        batch.length;
+
+    }
 
 
     // ========================================================
-    // 14. УСПЕШНОЕ СОСТОЯНИЕ
+    // 16. УСПЕШНАЯ СИНХРОНИЗАЦИЯ
     // ========================================================
 
     await saveSyncState({
@@ -1183,19 +1842,49 @@ export async function GET() {
         null,
 
       lastHttpStatus:
-        wbResponse.status,
+        200,
 
       retryAfterSeconds:
         null,
 
       lastMessage:
-        "Заказы WB успешно синхронизированы",
+        "FBW-продажи и отмены WB успешно синхронизированы",
 
     });
 
 
     // ========================================================
-    // 15. ОТВЕТ
+    // 17. КОНТРОЛЬНАЯ БРИТВА
+    // ========================================================
+
+    const controlNmId =
+      232169288;
+
+
+    const controlSales =
+      uniqueSalesRows.filter(
+        (
+          row:
+            any
+        ) =>
+          row.nm_id ===
+          controlNmId
+      ).length;
+
+
+    const controlCancellations =
+      cancelledFbwOrders.filter(
+        (
+          row:
+            any
+        ) =>
+          row.nm_id ===
+          controlNmId
+      ).length;
+
+
+    // ========================================================
+    // 18. ОТВЕТ
     // ========================================================
 
     return NextResponse.json({
@@ -1213,68 +1902,147 @@ export async function GET() {
         true,
 
       message:
-        "Заказы Wildberries успешно сохранены в Supabase",
+        "FBW-продажи и отмены Wildberries успешно сохранены",
 
       period: {
 
-        daysRequested:
-          DAYS_TO_LOAD,
+        days:
+          28,
 
         dateFrom,
 
+        dateTo,
+
       },
 
-      wildberries: {
+      source: {
 
-        status:
-          wbResponse.status,
+        sales:
+          "/api/v1/supplier/sales",
 
-        received:
-          wbData.length,
-
-        rateLimit,
+        cancellations:
+          "/api/v1/supplier/orders",
 
       },
 
       processing: {
 
-        validRows:
-          rows.length,
+        salesResponseRows:
+          salesData.length,
 
-        uniqueRows:
-          uniqueRows.length,
+        ordersResponseRows:
+          ordersData.length,
 
-        skippedWithoutSrid,
+        fbwSales:
+          uniqueSalesRows.length,
 
-        duplicatesInsideResponse,
+        fbwCancelledOrders:
+          cancelledFbwOrders.length,
 
-        batches:
-          batches.length,
+        fbwReturnsIgnored,
+
+        fbsSalesIgnored,
+
+        fbsOrdersIgnored,
 
       },
 
       saved: {
 
-        rows:
-          savedRows,
+        salesRows:
+          savedSalesRows,
+
+        orderRows:
+          savedOrderRows,
 
         syncedAt,
 
       },
 
-      statistics: {
+      controlProduct: {
 
-        fbwOrders:
-          fbwOrders.length,
+        nmId:
+          controlNmId,
 
-        sellerWarehouseOrders:
-          sellerOrders.length,
+        fbwSales:
+          controlSales,
 
-        cancelledOrders:
-          cancelledOrders.length,
+        fbwCancellations:
+          controlCancellations,
 
-        activeFbwOrders:
-          activeFbwOrders.length,
+      },
+
+      rules: {
+
+        sales:
+          "warehouseType = Склад WB AND saleID startsWith S",
+
+        cancellations:
+          "warehouseType = Склад WB AND isCancel = true",
+
+        fbsIncluded:
+          false,
+
+        returnsIncluded:
+          false,
+
+      },
+
+      wildberries: {
+
+        salesStatus:
+          salesResponse.status,
+
+        ordersStatus:
+          ordersResponse.status,
+
+        salesRateLimit: {
+
+          limit:
+            salesResponse.headers.get(
+              "x-ratelimit-limit"
+            ),
+
+          remaining:
+            salesResponse.headers.get(
+              "x-ratelimit-remaining"
+            ),
+
+          retry:
+            salesResponse.headers.get(
+              "x-ratelimit-retry"
+            ),
+
+          reset:
+            salesResponse.headers.get(
+              "x-ratelimit-reset"
+            ),
+
+        },
+
+        ordersRateLimit: {
+
+          limit:
+            ordersResponse.headers.get(
+              "x-ratelimit-limit"
+            ),
+
+          remaining:
+            ordersResponse.headers.get(
+              "x-ratelimit-remaining"
+            ),
+
+          retry:
+            ordersResponse.headers.get(
+              "x-ratelimit-retry"
+            ),
+
+          reset:
+            ordersResponse.headers.get(
+              "x-ratelimit-reset"
+            ),
+
+        },
 
       },
 
@@ -1282,18 +2050,26 @@ export async function GET() {
 
   } catch (error) {
 
+    console.error(
+      "Ошибка синхронизации WB:",
+      error
+    );
+
+
     return NextResponse.json(
       {
         ok:
           false,
 
         message:
-          "Ошибка синхронизации заказов Wildberries",
+          "Ошибка синхронизации FBW-продаж и отмен Wildberries",
 
         error:
           error instanceof Error
-            ? error.message
-            : "Неизвестная ошибка",
+            ?
+            error.message
+            :
+            "Неизвестная ошибка",
       },
       {
         status:
