@@ -183,6 +183,29 @@ type AnalyticsStock = {
 };
 
 
+type OzonUnlinkedWriteRow = {
+  offer_id: string;
+
+  ozon_product_id:
+    | string
+    | null;
+
+  ozon_sku:
+    | string
+    | null;
+
+  name:
+    | string
+    | null;
+
+  raw_payload:
+    Record<
+      string,
+      unknown
+    >;
+};
+
+
 type SkuResolution = {
   sku: string;
 
@@ -659,15 +682,12 @@ const RETRYABLE_OZON_NETWORK_CODES =
       "UND_ERR_HEADERS_TIMEOUT",
       "UND_ERR_BODY_TIMEOUT",
       "UND_ERR_ABORTED",
-
       "ECONNRESET",
       "ECONNREFUSED",
       "ECONNABORTED",
-
       "ETIMEDOUT",
       "EPIPE",
       "EAI_AGAIN",
-
       "ENETUNREACH",
       "EHOSTUNREACH",
     ]
@@ -684,9 +704,7 @@ function getNetworkErrorCode(
     typeof error !==
       "object"
   ) {
-
     return null;
-
   }
 
 
@@ -702,9 +720,7 @@ function getNetworkErrorCode(
     typeof directCode ===
       "string"
   ) {
-
     return directCode;
-
   }
 
 
@@ -722,7 +738,6 @@ function getNetworkErrorCode(
     typeof cause ===
       "object"
   ) {
-
     const causeCode =
       (
         cause as {
@@ -730,16 +745,12 @@ function getNetworkErrorCode(
         }
       ).code;
 
-
     if (
       typeof causeCode ===
         "string"
     ) {
-
       return causeCode;
-
     }
-
   }
 
 
@@ -754,9 +765,7 @@ function getNetworkErrorMessage(
   if (
     error instanceof Error
   ) {
-
     return error.message;
-
   }
 
 
@@ -776,9 +785,7 @@ function isRetryableOzonNetworkError(
     error.name ===
       "AbortError"
   ) {
-
     return true;
-
   }
 
 
@@ -796,9 +803,7 @@ function isRetryableOzonNetworkError(
         code
       )
   ) {
-
     return true;
-
   }
 
 
@@ -811,9 +816,7 @@ function isRetryableOzonNetworkError(
         "fetch failed"
       )
   ) {
-
     return true;
-
   }
 
 
@@ -853,16 +856,13 @@ async function ozonPost<T>(
     const timeout =
       setTimeout(
         () => {
-
           controller.abort();
-
         },
         30000
       );
 
 
     try {
-
       const response =
         await fetch(
           `https://api-seller.ozon.ru${path}`,
@@ -898,7 +898,7 @@ async function ozonPost<T>(
         );
 
 
-      const text =
+      const responseText =
         await response.text();
 
 
@@ -906,41 +906,29 @@ async function ozonPost<T>(
         unknown = null;
 
 
-      if (text) {
-
+      if (responseText) {
         try {
-
           parsed =
             JSON.parse(
-              text
+              responseText
             );
-
         } catch {
-
           parsed = {
             raw:
-              text,
+              responseText,
           };
-
         }
-
       }
 
-
-      // ========================================================
-      // 429
-      // ========================================================
 
       if (
         response.status ===
           429
       ) {
-
         if (
           attempt ===
           OZON_MAX_RETRIES
         ) {
-
           throw new Error(
             [
               `Ozon API ${path}`,
@@ -953,7 +941,6 @@ async function ozonPost<T>(
               ": "
             )
           );
-
         }
 
 
@@ -1013,13 +1000,8 @@ async function ozonPost<T>(
 
 
         continue;
-
       }
 
-
-      // ========================================================
-      // 5XX
-      // ========================================================
 
       if (
         response.status >=
@@ -1028,12 +1010,10 @@ async function ozonPost<T>(
         response.status <=
           599
       ) {
-
         if (
           attempt <
           OZON_MAX_RETRIES
         ) {
-
           const retryAfterMs =
             RETRY_BASE_MS
             *
@@ -1059,14 +1039,11 @@ async function ozonPost<T>(
 
 
           continue;
-
         }
-
       }
 
 
       if (!response.ok) {
-
         throw new Error(
           [
             `Ozon API ${path}`,
@@ -1078,20 +1055,17 @@ async function ozonPost<T>(
             ": "
           )
         );
-
       }
 
 
       return parsed as T;
 
     } catch (error) {
-
       if (
         isRetryableOzonNetworkError(
           error
         )
       ) {
-
         const errorCode =
           getNetworkErrorCode(
             error
@@ -1108,7 +1082,6 @@ async function ozonPost<T>(
           attempt <
           OZON_MAX_RETRIES
         ) {
-
           const retryAfterMs =
             RETRY_BASE_MS
             *
@@ -1125,9 +1098,7 @@ async function ozonPost<T>(
                 : "code=unknown",
 
               `message=${errorMessage}`,
-
               `попытка ${attempt}/${OZON_MAX_RETRIES}`,
-
               `пауза ${retryAfterMs} мс`,
             ].join(
               " | "
@@ -1141,7 +1112,6 @@ async function ozonPost<T>(
 
 
           continue;
-
         }
 
 
@@ -1155,26 +1125,21 @@ async function ozonPost<T>(
               : "code=unknown",
 
             `message=${errorMessage}`,
-
             `исчерпаны ${OZON_MAX_RETRIES} попыток`,
           ].join(
             ": "
           )
         );
-
       }
 
 
       throw error;
 
     } finally {
-
       clearTimeout(
         timeout
       );
-
     }
-
   }
 
 
@@ -1267,6 +1232,437 @@ async function supabaseRpc<T>(
 
 
 // ============================================================
+// OZON UNLINKED PRODUCTS
+// ============================================================
+
+function buildOzonUnlinkedProducts(
+  catalogItems:
+    OzonCatalogItem[],
+
+  productInfoItems:
+    OzonProductInfoItem[],
+
+  products:
+    ProductRow[]
+): OzonUnlinkedWriteRow[] {
+
+  const productByOffer =
+    new Map<
+      string,
+      ProductRow
+    >();
+
+
+  const productByOzonId =
+    new Map<
+      string,
+      ProductRow
+    >();
+
+
+  for (
+    const product
+    of products
+  ) {
+    const offerId =
+      normalizeKey(
+        product.offer_id
+      );
+
+    const ozonProductId =
+      normalizeKey(
+        product.ozon_product_id
+      );
+
+    if (offerId) {
+      productByOffer.set(
+        offerId,
+        product
+      );
+    }
+
+    if (ozonProductId) {
+      productByOzonId.set(
+        ozonProductId,
+        product
+      );
+    }
+  }
+
+
+  const infoByOffer =
+    new Map<
+      string,
+      OzonProductInfoItem
+    >();
+
+
+  const infoByOzonId =
+    new Map<
+      string,
+      OzonProductInfoItem
+    >();
+
+
+  for (
+    const item
+    of productInfoItems
+  ) {
+    const offerId =
+      normalizeKey(
+        item.offer_id
+      );
+
+    const ozonProductId =
+      normalizeKey(
+        item.id
+      );
+
+    if (offerId) {
+      infoByOffer.set(
+        offerId,
+        item
+      );
+    }
+
+    if (ozonProductId) {
+      infoByOzonId.set(
+        ozonProductId,
+        item
+      );
+    }
+  }
+
+
+  const rows:
+    OzonUnlinkedWriteRow[] =
+    [];
+
+
+  const seenOffers =
+    new Set<string>();
+
+
+  for (
+    const catalogItem
+    of catalogItems
+  ) {
+    const offerId =
+      normalizeKey(
+        catalogItem.offer_id
+      );
+
+    if (
+      !offerId
+      ||
+      seenOffers.has(
+        offerId
+      )
+    ) {
+      continue;
+    }
+
+
+    seenOffers.add(
+      offerId
+    );
+
+
+    const catalogOzonProductId =
+      normalizeKey(
+        catalogItem.product_id
+      );
+
+
+    const existingProduct =
+      productByOffer.get(
+        offerId
+      )
+      ??
+      (
+        catalogOzonProductId
+
+          ? productByOzonId.get(
+              catalogOzonProductId
+            )
+
+          : undefined
+      );
+
+
+    if (
+      existingProduct
+      &&
+      normalizeKey(
+        existingProduct.master_code
+      )
+    ) {
+      continue;
+    }
+
+
+    const info =
+      infoByOffer.get(
+        offerId
+      )
+      ??
+      (
+        catalogOzonProductId
+
+          ? infoByOzonId.get(
+              catalogOzonProductId
+            )
+
+          : undefined
+      );
+
+
+    const resolvedOzonProductId =
+      normalizeKey(
+        info?.id
+      )
+      ||
+      catalogOzonProductId;
+
+
+    const sku =
+      normalizeKey(
+        info?.sku
+      );
+
+
+    const name =
+      normalizeKey(
+        info?.name
+      )
+      ||
+      normalizeKey(
+        existingProduct
+          ?.name
+      );
+
+
+    rows.push(
+      {
+        offer_id:
+          offerId,
+
+        ozon_product_id:
+          resolvedOzonProductId
+          || null,
+
+        ozon_sku:
+          sku
+          || null,
+
+        name:
+          name
+          || null,
+
+        raw_payload: {
+          source:
+            "ozon_daily_sync",
+
+          existing_product_id:
+            existingProduct
+              ?.id
+            ?? null,
+
+          existing_product_master_code:
+            existingProduct
+              ?.master_code
+            ?? null,
+        },
+      }
+    );
+  }
+
+
+  return rows;
+}
+
+
+async function upsertOzonUnlinkedProducts(
+  rows:
+    OzonUnlinkedWriteRow[]
+) {
+
+  if (
+    rows.length ===
+    0
+  ) {
+    return {
+      saved:
+        0,
+    };
+  }
+
+
+  const {
+    supabaseUrl,
+    supabaseSecretKey,
+  } =
+    getConfig();
+
+
+  const now =
+    new Date()
+      .toISOString();
+
+
+  const existingUrl =
+    new URL(
+      `${supabaseUrl}/rest/v1/ozon_unlinked_products`
+    );
+
+
+  existingUrl.searchParams.set(
+    "select",
+    "offer_id,first_seen_at"
+  );
+
+
+  existingUrl.searchParams.set(
+    "limit",
+    "5000"
+  );
+
+
+  const existingResponse =
+    await fetch(
+      existingUrl.toString(),
+      {
+        method:
+          "GET",
+
+        headers: {
+          apikey:
+            supabaseSecretKey,
+
+          Authorization:
+            `Bearer ${supabaseSecretKey}`,
+
+          Accept:
+            "application/json",
+        },
+
+        cache:
+          "no-store",
+      }
+    );
+
+
+  const existingText =
+    await existingResponse.text();
+
+
+  if (!existingResponse.ok) {
+    throw new Error(
+      `Supabase ozon_unlinked_products read: HTTP ${existingResponse.status}: ${existingText}`
+    );
+  }
+
+
+  const existingRows =
+    JSON.parse(
+      existingText
+    ) as Array<{
+      offer_id: string;
+      first_seen_at: string;
+    }>;
+
+
+  const firstSeenByOffer =
+    new Map(
+      existingRows.map(
+        row => [
+          row.offer_id,
+          row.first_seen_at,
+        ]
+      )
+    );
+
+
+  const payload =
+    rows.map(
+      row => ({
+        ...row,
+
+        status:
+          "pending",
+
+        assigned_master_code:
+          null,
+
+        resolved_product_id:
+          null,
+
+        resolved_at:
+          null,
+
+        first_seen_at:
+          firstSeenByOffer.get(
+            row.offer_id
+          )
+          ?? now,
+
+        last_seen_at:
+          now,
+      })
+    );
+
+
+  const response =
+    await fetch(
+      `${supabaseUrl}/rest/v1/ozon_unlinked_products?on_conflict=offer_id`,
+      {
+        method:
+          "POST",
+
+        headers: {
+          apikey:
+            supabaseSecretKey,
+
+          Authorization:
+            `Bearer ${supabaseSecretKey}`,
+
+          "Content-Type":
+            "application/json",
+
+          Prefer:
+            "resolution=merge-duplicates,return=minimal",
+        },
+
+        body:
+          JSON.stringify(
+            payload
+          ),
+
+        cache:
+          "no-store",
+      }
+    );
+
+
+  const responseText =
+    await response.text();
+
+
+  if (!response.ok) {
+    throw new Error(
+      `Supabase ozon_unlinked_products: HTTP ${response.status}: ${responseText}`
+    );
+  }
+
+
+  return {
+    saved:
+      rows.length,
+  };
+}
+
+
+// ============================================================
 // PRODUCTS
 // ============================================================
 
@@ -1278,9 +1674,7 @@ Promise<ProductRow[]> {
     supabaseSecretKey,
   } =
     getConfig();
-
-
-  const url =
+const url =
     new URL(
       `${supabaseUrl}/rest/v1/products`
     );
@@ -2280,7 +2674,7 @@ function buildSalesData(
             {
               posting_number:
                 posting.posting_number
-                ?? null,
+?? null,
 
               sale_date:
                 saleDate,
@@ -3280,7 +3674,7 @@ function buildStockData(
         Record<
           string,
           unknown
-        >
+>
       >;
   };
 
@@ -3762,45 +4156,22 @@ async function runDailySync(
       );
 
 
-    if (
-      activeWithoutMasterCode.length >
-      0
-    ) {
-
-      return Response.json(
-        {
-          ok:
-            false,
-
-          mode:
-            "write_sync",
-
-          writes_to_database:
-            false,
-
-          stage:
-            "products_validation",
-
-          error:
-            "Есть активные products без master_code",
-
-          count:
-            activeWithoutMasterCode.length,
-
-          sample:
-            activeWithoutMasterCode
-              .slice(
-                0,
-                50
-              ),
-        },
-        {
-          status:
-            409,
-        }
+    const linkedProducts =
+      products.filter(
+        product =>
+          Boolean(
+            normalizeKey(
+              product.master_code
+            )
+          )
       );
 
-    }
+
+    const linkedActiveProducts =
+      linkedProducts.filter(
+        product =>
+          product.is_active
+      );
 
 
     // ========================================================
@@ -3889,7 +4260,7 @@ async function runDailySync(
     const unresolvedSalesSkus =
       getUnresolvedSalesSkus(
         salesResult.postings,
-        products,
+        linkedProducts,
         salesDateFrom,
         salesDateTo
       );
@@ -3917,7 +4288,7 @@ async function runDailySync(
     const salesResolutionResult =
       buildSkuResolutions(
         salesProductInfo.items,
-        products
+        linkedProducts
       );
 
 
@@ -3964,7 +4335,7 @@ async function runDailySync(
     const salesData =
       buildSalesData(
         salesResult.postings,
-        products,
+        linkedProducts,
         salesResolutionResult
           .resolutions,
         clusterResult
@@ -3974,49 +4345,9 @@ async function runDailySync(
       );
 
 
-    if (
-      salesData
-        .unmatched
-        .length > 0
-    ) {
-
-      return Response.json(
-        {
-          ok:
-            false,
-
-          mode:
-            "write_sync",
-
-          writes_to_database:
-            false,
-
-          stage:
-            "sales_final_validation",
-
-          error:
-            "Есть неразрешённые товары в продажах. Запись отменена.",
-
-          count:
-            salesData
-              .unmatched
-              .length,
-
-          sample:
-            salesData
-              .unmatched
-              .slice(
-                0,
-                100
-              ),
-        },
-        {
-          status:
-            409,
-        }
-      );
-
-    }
+    // Неразрешённые товары больше не валят всю синхронизацию.
+    // Они будут помещены в очередь ozon_unlinked_products
+    // после получения полного каталога Ozon.
 
 
     // ========================================================
@@ -4149,10 +4480,52 @@ async function runDailySync(
     }
 
 
+    const unlinkedProducts =
+      buildOzonUnlinkedProducts(
+        ozonCatalog.items,
+        stockProductInfo.items,
+        products
+      );
+
+
+    let unlinkedQueueSaved =
+      0;
+
+
+    let unlinkedQueueError:
+      string
+      | null =
+      null;
+
+
+    try {
+      const unlinkedQueueResult =
+        await upsertOzonUnlinkedProducts(
+          unlinkedProducts
+        );
+
+      unlinkedQueueSaved =
+        unlinkedQueueResult.saved;
+
+    } catch (error) {
+      unlinkedQueueError =
+        error instanceof Error
+          ? error.message
+          : String(
+              error
+            );
+
+      console.error(
+        "OZON UNLINKED QUEUE ERROR",
+        error
+      );
+    }
+
+
     const stockResolutionResult =
       buildSkuResolutions(
         stockProductInfo.items,
-        products
+        linkedProducts
       );
 
 
@@ -4256,7 +4629,7 @@ async function runDailySync(
     const activeCatalogProducts =
       getActiveCatalogProducts(
         ozonCatalog.items,
-        activeProducts
+        linkedActiveProducts
       );
 
 
@@ -4279,8 +4652,7 @@ async function runDailySync(
         activeProductsWithSku.add(
           resolution.product.id
         );
-
-      }
+}
 
     }
 
@@ -4390,48 +4762,12 @@ async function runDailySync(
 
 
     // ========================================================
-    // 10. НЕИЗВЕСТНЫЙ ТОВАР С ПОЛОЖИТЕЛЬНЫМ ОСТАТКОМ
+    // 10. НЕИЗВЕСТНЫЕ ТОВАРЫ
+    //
+    // Положительный остаток неизвестного товара больше
+    // не останавливает синхронизацию. Такой товар уже должен
+    // находиться в ozon_unlinked_products и ждёт master_code.
     // ========================================================
-
-    if (
-      stockData
-        .unknownPositiveRows
-        .length > 0
-    ) {
-
-      return Response.json(
-        {
-          ok:
-            false,
-
-          mode:
-            "write_sync",
-
-          writes_to_database:
-            false,
-
-          stage:
-            "stock_unknown_positive_validation",
-
-          error:
-            "Ozon вернул положительный остаток для товаров, которых нет в нашей номенклатуре. Запись отменена.",
-
-          count:
-            stockData
-              .unknownPositiveRows
-              .length,
-
-          sample:
-            stockData
-              .unknownPositiveRows,
-        },
-        {
-          status:
-            409,
-        }
-      );
-
-    }
 
 
     // ========================================================
@@ -4628,6 +4964,12 @@ async function runDailySync(
           inactive:
             inactiveProducts.length,
 
+          linked:
+            linkedProducts.length,
+
+          active_without_master_code:
+            activeWithoutMasterCode.length,
+
           live_active_in_ozon_catalog:
             activeCatalogProducts.length,
         },
@@ -4685,6 +5027,19 @@ async function runDailySync(
           ignored_out_of_range_sample:
             salesData
               .ignoredOutOfRange,
+
+          unlinked_items_ignored:
+            salesData
+              .unmatched
+              .length,
+
+          unlinked_items_sample:
+            salesData
+              .unmatched
+              .slice(
+                0,
+                100
+              ),
 
           per_day:
             salesData
@@ -4750,6 +5105,19 @@ async function runDailySync(
               .rows
               .length,
 
+          unknown_positive_rows_ignored:
+            stockData
+              .unknownPositiveRows
+              .length,
+
+          unknown_positive_rows_sample:
+            stockData
+              .unknownPositiveRows
+              .slice(
+                0,
+                100
+              ),
+
           unknown_zero_rows_ignored:
             stockData
               .unknownZeroRows,
@@ -4763,6 +5131,18 @@ async function runDailySync(
               stockData
                 .totalAvailable,
           },
+        },
+
+
+        unlinked_products: {
+          detected:
+            unlinkedProducts.length,
+
+          saved_to_queue:
+            unlinkedQueueSaved,
+
+          queue_error:
+            unlinkedQueueError,
         },
 
 
