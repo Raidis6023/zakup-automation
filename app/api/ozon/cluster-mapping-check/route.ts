@@ -24,7 +24,7 @@ type LatestSyncRun = {
 };
 
 
-type BadSalesRow = {
+type SalesRow = {
   product_id:
     string;
 
@@ -162,6 +162,27 @@ function normalizeKey(
 }
 
 
+function isFallbackClusterId(
+  clusterId:
+    string
+): boolean {
+
+  return (
+    clusterId.startsWith(
+      "warehouse:"
+    )
+    ||
+    clusterId.startsWith(
+      "name:"
+    )
+    ||
+    clusterId ===
+      "unknown"
+  );
+
+}
+
+
 // ============================================================
 // SUPABASE GET
 // ============================================================
@@ -211,6 +232,13 @@ Promise<T> {
     throw new Error(
       `Supabase GET ${response.status}: ${text}`
     );
+
+  }
+
+
+  if (!text) {
+
+    return [] as T;
 
   }
 
@@ -294,10 +322,13 @@ Promise<
 
 
 // ============================================================
-// FALLBACK SALES CLUSTERS
+// ВСЕ ПРОДАЖИ ЗА ПЕРИОД
+//
+// Не используем PostgREST or-фильтр.
+// Он здесь нам уже один раз устроил цирк.
 // ============================================================
 
-async function getBadSalesRows(
+async function getSalesRows(
   dateFrom:
     string,
 
@@ -305,7 +336,7 @@ async function getBadSalesRows(
     string
 ):
 Promise<
-  BadSalesRow[]
+  SalesRow[]
 > {
 
   const {
@@ -315,7 +346,7 @@ Promise<
 
 
   const result:
-    BadSalesRow[] =
+    SalesRow[] =
     [];
 
 
@@ -360,14 +391,8 @@ Promise<
 
 
     url.searchParams.set(
-      "or",
-      [
-        "cluster_id.like.warehouse:*",
-        "cluster_id.like.name:*",
-        "cluster_id.eq.unknown",
-      ].join(
-        ","
-      )
+      "order",
+      "sale_date.asc,product_id.asc"
     );
 
 
@@ -389,7 +414,7 @@ Promise<
 
     const rows =
       await supabaseGet<
-        BadSalesRow[]
+        SalesRow[]
       >(
         url
       );
@@ -418,7 +443,7 @@ Promise<
 
 
 // ============================================================
-// OZON V2 CLUSTERS
+// OZON /v2/cluster/list
 // ============================================================
 
 async function getMacroClusters():
@@ -476,6 +501,15 @@ Promise<MacroClusterResponse> {
   }
 
 
+  if (!text) {
+
+    throw new Error(
+      "Ozon /v2/cluster/list вернул пустой ответ"
+    );
+
+  }
+
+
   return JSON.parse(
     text
   ) as MacroClusterResponse;
@@ -510,6 +544,15 @@ export async function GET() {
           ok:
             false,
 
+          mode:
+            "read_only_cluster_mapping_check",
+
+          writes_to_database:
+            false,
+
+          writes_to_ozon:
+            false,
+
           error:
             "Не найдена успешная синхронизация Ozon",
         },
@@ -523,15 +566,34 @@ export async function GET() {
 
 
     // ========================================================
-    // 2. FALLBACK SALES ROWS
+    // 2. ПРОДАЖИ ЗА 28 ДНЕЙ
     // ========================================================
 
-    const badRows =
-      await getBadSalesRows(
+    const allSalesRows =
+      await getSalesRows(
         latestSync.date_from,
         latestSync.date_to
       );
 
+
+    // ========================================================
+    // 3. ОСТАВЛЯЕМ ТОЛЬКО FALLBACK-КЛАСТЕРЫ
+    // ========================================================
+
+    const badRows =
+      allSalesRows.filter(
+        row =>
+          isFallbackClusterId(
+            normalizeKey(
+              row.cluster_id
+            )
+          )
+      );
+
+
+    // ========================================================
+    // 4. УНИКАЛЬНЫЕ WAREHOUSE ID
+    // ========================================================
 
     const uniqueWarehouseIds =
       new Set<string>();
@@ -551,13 +613,56 @@ export async function GET() {
       >();
 
 
+    let nameFallbackRows =
+      0;
+
+
+    let unknownFallbackRows =
+      0;
+
+
     for (
       const row
       of badRows
     ) {
 
+      const clusterId =
+        normalizeKey(
+          row.cluster_id
+        );
+
+
       if (
-        !row.cluster_id.startsWith(
+        clusterId.startsWith(
+          "name:"
+        )
+      ) {
+
+        nameFallbackRows +=
+          1;
+
+
+        continue;
+
+      }
+
+
+      if (
+        clusterId ===
+        "unknown"
+      ) {
+
+        unknownFallbackRows +=
+          1;
+
+
+        continue;
+
+      }
+
+
+      if (
+        !clusterId.startsWith(
           "warehouse:"
         )
       ) {
@@ -568,7 +673,7 @@ export async function GET() {
 
 
       const warehouseId =
-        row.cluster_id.slice(
+        clusterId.slice(
           "warehouse:".length
         );
 
@@ -620,7 +725,7 @@ export async function GET() {
 
 
     // ========================================================
-    // 3. V2 MACRO CLUSTERS
+    // 5. OZON V2 CLUSTERS
     // ========================================================
 
     const macroResponse =
@@ -749,7 +854,7 @@ export async function GET() {
 
 
     // ========================================================
-    // 4. COVERAGE
+    // 6. COVERAGE
     // ========================================================
 
     let matchedWarehouseIds =
@@ -887,7 +992,7 @@ export async function GET() {
 
 
     // ========================================================
-    // 5. RESULT
+    // 7. RESULT
     // ========================================================
 
     return Response.json(
@@ -917,9 +1022,25 @@ export async function GET() {
         },
 
 
-        fallback_sales: {
-          raw_rows:
+        sales: {
+          total_rows_loaded:
+            allSalesRows.length,
+
+          fallback_rows:
             badRows.length,
+
+          warehouse_fallback_rows:
+            badRows.length
+            -
+            nameFallbackRows
+            -
+            unknownFallbackRows,
+
+          name_fallback_rows:
+            nameFallbackRows,
+
+          unknown_fallback_rows:
+            unknownFallbackRows,
 
           unique_warehouse_ids:
             uniqueWarehouseIds.size,
@@ -993,12 +1114,20 @@ export async function GET() {
 
 
         conclusion:
-          unmatchedPairs ===
-          0
+          (
+            unmatchedPairs ===
+            0
+            &&
+            nameFallbackRows ===
+            0
+            &&
+            unknownFallbackRows ===
+            0
+          )
 
-            ? "Все fallback warehouse_id из продаж сопоставились через /v2/cluster/list. Можно переводить sales sync на macrolocal mapping."
+            ? "Все fallback warehouse_id из продаж сопоставились через /v2/cluster/list."
 
-            : "Часть warehouse_id не найдена даже в /v2/cluster/list. Нужен дополнительный источник или отдельная стратегия нормализации.",
+            : "Часть fallback-кластеров ещё не сопоставлена. Смотрим coverage и samples.",
 
 
         duration_ms:
