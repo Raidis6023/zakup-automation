@@ -1,514 +1,1051 @@
 import { NextResponse } from "next/server";
 
-export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-const YANDEX_API_BASE =
-  "https://api.partner.market.yandex.ru";
 
-const PAGE_LIMIT = 100;
+// ============================================================
+// ТИПЫ
+// ============================================================
 
-type YandexCampaignResponse = {
+type CampaignResponse = {
   campaign?: {
     id?: number;
-    domain?: string;
+
     business?: {
       id?: number;
       name?: string;
     };
-    apiAvailability?: string;
   };
 };
 
-type YandexOffer = {
+
+type RawYandexOfferMapping = {
   offer?: {
     offerId?: string;
     name?: string;
-    barcodes?: string[];
     vendor?: string;
     vendorCode?: string;
+    barcodes?: string[];
+
+    [key: string]:
+      unknown;
   };
 
   mapping?: {
-    marketSku?: number;
+    marketSku?: string;
     marketSkuName?: string;
+    marketModelName?: string;
     marketCategoryId?: number;
     marketCategoryName?: string;
+
+    [key: string]:
+      unknown;
   };
 
-  [key: string]: unknown;
+  [key: string]:
+    unknown;
 };
 
+
 type OfferMappingsResponse = {
+  status?: string;
+
   result?: {
-    offerMappings?: YandexOffer[];
     paging?: {
       nextPageToken?: string;
     };
+
+    offerMappings?:
+      RawYandexOfferMapping[];
   };
 
-  status?: string;
+  errors?: Array<{
+    code?: string;
+    message?: string;
+  }>;
 };
 
-function getConfig() {
-  const yandexApiKey =
-    process.env.YANDEX_API_KEY?.trim();
 
-  const yandexCampaignId =
-    process.env.YANDEX_CAMPAIGN_ID?.trim();
+type ExistingYandexProduct = {
+  offer_id: string;
+  master_code: string | null;
+  first_seen_at: string;
+};
 
+
+type YandexProductUpsertRow = {
+  offer_id: string;
+  market_sku: string | null;
+  market_category_name: string | null;
+  master_code: string | null;
+  first_seen_at: string;
+  last_seen_at: string;
+  is_active: boolean;
+  raw_data: RawYandexOfferMapping;
+  updated_at: string;
+};
+
+
+// ============================================================
+// ENV
+// ============================================================
+
+function getRequiredEnv(
+  name: string
+): string {
+  const value =
+    process.env[name]?.trim();
+
+  if (!value) {
+    throw new Error(
+      `Не найдена переменная окружения ${name}`
+    );
+  }
+
+  return value;
+}
+
+
+function getSupabaseConfig() {
   const supabaseUrl =
-    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
-    process.env.SUPABASE_URL?.trim();
+    process.env
+      .NEXT_PUBLIC_SUPABASE_URL
+      ?.trim()
+    ||
+    process.env
+      .SUPABASE_URL
+      ?.trim();
 
   const supabaseSecretKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
-    process.env.SUPABASE_SECRET_KEY?.trim();
-
-  if (!yandexApiKey) {
-    throw new Error(
-      "Не задан YANDEX_API_KEY"
-    );
-  }
-
-  if (!yandexCampaignId) {
-    throw new Error(
-      "Не задан YANDEX_CAMPAIGN_ID"
-    );
-  }
+    process.env
+      .SUPABASE_SECRET_KEY
+      ?.trim()
+    ||
+    process.env
+      .SUPABASE_SERVICE_ROLE_KEY
+      ?.trim();
 
   if (!supabaseUrl) {
     throw new Error(
-      "Не задан NEXT_PUBLIC_SUPABASE_URL или SUPABASE_URL"
+      "Не найдена NEXT_PUBLIC_SUPABASE_URL или SUPABASE_URL"
     );
   }
 
   if (!supabaseSecretKey) {
     throw new Error(
-      "Не задан SUPABASE_SERVICE_ROLE_KEY или SUPABASE_SECRET_KEY"
+      "Не найдена SUPABASE_SECRET_KEY или SUPABASE_SERVICE_ROLE_KEY"
     );
   }
 
   return {
-    yandexApiKey,
-    yandexCampaignId,
     supabaseUrl,
     supabaseSecretKey,
   };
 }
 
-async function yandexRequest<T>(
-  url: string,
-  options?: RequestInit
-): Promise<T> {
-  const {
-    yandexApiKey,
-  } = getConfig();
 
-  const controller =
-    new AbortController();
+// ============================================================
+// ВАЖНО:
+// СОХРАНЯЕМ marketSku БЕЗ ПОТЕРИ ТОЧНОСТИ
+//
+// Яндекс присылает marketSku как JSON integer.
+//
+// Некоторые Product ID больше
+// Number.MAX_SAFE_INTEGER.
+//
+// Если вызвать обычный response.json(),
+// JavaScript округлит такие значения.
+//
+// Поэтому:
+// 1. сначала читаем исходный JSON как текст;
+// 2. только числовые значения поля marketSku
+//    превращаем в JSON-строки;
+// 3. после этого вызываем JSON.parse().
+//
+// Например:
+//
+// 228068011021017088
+//
+// останется именно:
+//
+// "228068011021017088"
+//
+// а не превратится в:
+//
+// 228068011021017100
+// ============================================================
 
-  const timeout =
-    setTimeout(
-      () => {
-        controller.abort();
-      },
-      30000
+function parseYandexJsonPreservingMarketSku(
+  rawText: string
+): OfferMappingsResponse {
+  const safeText =
+    rawText.replace(
+      /("marketSku"\s*:\s*)(-?\d+)(?=\s*[,}])/g,
+      '$1"$2"'
     );
 
+  return JSON.parse(
+    safeText
+  ) as OfferMappingsResponse;
+}
+
+
+// ============================================================
+// ОБЫЧНЫЙ JSON ДЛЯ НЕПРОБЛЕМНЫХ ОТВЕТОВ
+// ============================================================
+
+function parseJson<T>(
+  rawText: string,
+  sourceName: string
+): T {
   try {
-    const response =
-      await fetch(
-        url,
-        {
-          ...options,
-
-          headers: {
-            "Api-Key":
-              yandexApiKey,
-
-            Accept:
-              "application/json",
-
-            "Content-Type":
-              "application/json",
-
-            ...(options?.headers || {}),
-          },
-
-          cache:
-            "no-store",
-
-          signal:
-            controller.signal,
-        }
-      );
-
-    const text =
-      await response.text();
-
-    let parsed:
-      unknown = null;
-
-    if (text) {
-      try {
-        parsed =
-          JSON.parse(text);
-      } catch {
-        parsed = {
-          raw: text,
-        };
-      }
-    }
-
-    if (!response.ok) {
-      throw new Error(
-        [
-          "Yandex Market API",
-          `HTTP ${response.status}`,
-          JSON.stringify(parsed),
-        ].join(": ")
-      );
-    }
-
-    return parsed as T;
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      error.name === "AbortError"
-    ) {
-      throw new Error(
-        "Yandex Market API: превышено время ожидания"
-      );
-    }
-
-    throw error;
-  } finally {
-    clearTimeout(
-      timeout
+    return JSON.parse(
+      rawText
+    ) as T;
+  } catch {
+    throw new Error(
+      `${sourceName}: сервер вернул некорректный JSON`
     );
   }
 }
 
-async function getBusinessId():
-Promise<number> {
-  const {
-    yandexCampaignId,
-  } = getConfig();
 
-  const campaign =
-    await yandexRequest<YandexCampaignResponse>(
-      `${YANDEX_API_BASE}/v2/campaigns/${encodeURIComponent(
-        yandexCampaignId
-      )}`,
+// ============================================================
+// API HEADERS
+// ============================================================
+
+function getYandexHeaders(
+  apiKey: string
+): HeadersInit {
+  return {
+    "Api-Key":
+      apiKey,
+
+    Accept:
+      "application/json",
+  };
+}
+
+
+// ============================================================
+// BUSINESS ID
+// ============================================================
+
+async function getBusinessId(
+  apiKey: string,
+  campaignId: string
+): Promise<number> {
+  const url =
+    `https://api.partner.market.yandex.ru/v2/campaigns/${encodeURIComponent(
+      campaignId
+    )}`;
+
+  const response =
+    await fetch(
+      url,
       {
-        method: "GET",
+        method:
+          "GET",
+
+        headers:
+          getYandexHeaders(
+            apiKey
+          ),
+
+        cache:
+          "no-store",
       }
     );
 
+  const rawText =
+    await response.text();
+
+  if (!response.ok) {
+    throw new Error(
+      [
+        "Яндекс campaign API",
+        `HTTP ${response.status}`,
+        rawText,
+      ].join(": ")
+    );
+  }
+
+  const data =
+    parseJson<CampaignResponse>(
+      rawText,
+      "Яндекс campaign API"
+    );
+
   const businessId =
-    campaign.campaign
+    data
+      .campaign
       ?.business
       ?.id;
 
   if (
-    !businessId ||
+    typeof businessId !==
+      "number"
+    ||
     !Number.isFinite(
       businessId
     )
   ) {
     throw new Error(
-      `Яндекс не вернул businessId для campaignId=${yandexCampaignId}`
+      "Яндекс API не вернул campaign.business.id"
     );
   }
 
   return businessId;
 }
 
-async function getAllOffers(
-  businessId: number
-): Promise<YandexOffer[]> {
-  const result:
-    YandexOffer[] = [];
 
-  let pageToken:
-    string | undefined =
-      undefined;
+// ============================================================
+// ЗАГРУЗКА ОДНОЙ СТРАНИЦЫ КАТАЛОГА
+// ============================================================
 
-  let pageNumber = 0;
+async function getOfferMappingsPage({
+  apiKey,
+  businessId,
+  pageToken,
+}: {
+  apiKey: string;
+  businessId: number;
+  pageToken: string | null;
+}): Promise<OfferMappingsResponse> {
+  const url =
+    new URL(
+      `https://api.partner.market.yandex.ru/v2/businesses/${businessId}/offer-mappings`
+    );
 
-  do {
-    pageNumber += 1;
+  url.searchParams.set(
+    "limit",
+    "100"
+  );
 
-    if (
-      pageNumber > 1000
-    ) {
-      throw new Error(
-        "Слишком много страниц offer-mappings. Синхронизация остановлена."
-      );
-    }
+  url.searchParams.set(
+    "language",
+    "RU"
+  );
 
-    const url =
-      new URL(
-        `${YANDEX_API_BASE}/v2/businesses/${businessId}/offer-mappings`
-      );
-
+  if (pageToken) {
     url.searchParams.set(
-      "limit",
-      String(PAGE_LIMIT)
-    );
-
-    url.searchParams.set(
-      "language",
-      "RU"
-    );
-
-    if (pageToken) {
-      url.searchParams.set(
-        "pageToken",
-        pageToken
-      );
-    }
-
-    const response =
-      await yandexRequest<OfferMappingsResponse>(
-        url.toString(),
-        {
-          method: "POST",
-
-          /*
-           * По документации тело можно
-           * не передавать, если нужен
-           * полный каталог.
-           */
-        }
-      );
-
-    const offers =
-      response.result
-        ?.offerMappings ??
-      [];
-
-    result.push(
-      ...offers
-    );
-
-    pageToken =
-      response.result
-        ?.paging
-        ?.nextPageToken;
-
-  } while (pageToken);
-
-  return result;
-}
-
-async function upsertProducts(
-  offers: YandexOffer[]
-) {
-  const {
-    supabaseUrl,
-    supabaseSecretKey,
-  } = getConfig();
-
-  const now =
-    new Date()
-      .toISOString();
-
-  const rows =
-    offers
-      .map(
-        (
-          item
-        ) => {
-          const offerId =
-            item.offer
-              ?.offerId
-              ?.trim();
-
-          if (!offerId) {
-            return null;
-          }
-
-          return {
-            offer_id:
-              offerId,
-
-            market_sku:
-              item.mapping
-                ?.marketSku ??
-              null,
-
-            market_category_name:
-              item.mapping
-                ?.marketCategoryName ??
-              null,
-
-            last_seen_at:
-              now,
-
-            is_active:
-              true,
-
-            raw_data:
-              item,
-
-            updated_at:
-              now,
-          };
-        }
-      )
-      .filter(
-        (
-          row
-        ): row is NonNullable<
-          typeof row
-        > =>
-          row !== null
-      );
-
-  if (
-    rows.length === 0
-  ) {
-    throw new Error(
-      "Яндекс вернул каталог без offerId"
+      "pageToken",
+      pageToken
     );
   }
 
-  /*
-   * Supabase/PostgREST обычно нормально
-   * переваривает такие пачки, но не будем
-   * отправлять весь каталог одним кирпичом.
-   */
-  const batchSize = 500;
+  const response =
+    await fetch(
+      url.toString(),
+      {
+        method:
+          "POST",
 
-  for (
-    let index = 0;
-    index < rows.length;
-    index += batchSize
-  ) {
-    const batch =
-      rows.slice(
-        index,
-        index + batchSize
-      );
+        headers:
+          getYandexHeaders(
+            apiKey
+          ),
 
-    const url =
-      new URL(
-        `${supabaseUrl}/rest/v1/yandex_products`
-      );
-
-    url.searchParams.set(
-      "on_conflict",
-      "offer_id"
+        cache:
+          "no-store",
+      }
     );
 
-    const response =
-      await fetch(
-        url.toString(),
-        {
-          method:
-            "POST",
+  const rawText =
+    await response.text();
 
-          headers: {
-            apikey:
-              supabaseSecretKey,
+  if (!response.ok) {
+    throw new Error(
+      [
+        "Яндекс offer-mappings",
+        `HTTP ${response.status}`,
+        rawText,
+      ].join(": ")
+    );
+  }
 
-            Authorization:
-              `Bearer ${supabaseSecretKey}`,
+  let data:
+    OfferMappingsResponse;
 
-            "Content-Type":
-              "application/json",
-
-            Prefer:
-              "resolution=merge-duplicates,return=minimal",
-          },
-
-          body:
-            JSON.stringify(
-              batch
-            ),
-
-          cache:
-            "no-store",
-        }
+  try {
+    data =
+      parseYandexJsonPreservingMarketSku(
+        rawText
       );
+  } catch {
+    throw new Error(
+      "Яндекс offer-mappings вернул некорректный JSON"
+    );
+  }
 
-    const responseText =
-      await response.text();
+  if (
+    data.status
+    &&
+    data.status !== "OK"
+  ) {
+    throw new Error(
+      `Яндекс offer-mappings вернул status=${data.status}`
+    );
+  }
+
+  return data;
+}
+
+
+// ============================================================
+// ЗАГРУЗКА ВСЕГО КАТАЛОГА
+// ============================================================
+
+async function getAllOfferMappings(
+  apiKey: string,
+  businessId: number
+): Promise<{
+  items: RawYandexOfferMapping[];
+  pages: number;
+}> {
+  const items:
+    RawYandexOfferMapping[] =
+    [];
+
+  let pageToken:
+    string | null =
+    null;
+
+  let pages =
+    0;
+
+  const seenPageTokens =
+    new Set<string>();
+
+  while (true) {
+    const data =
+      await getOfferMappingsPage({
+        apiKey,
+        businessId,
+        pageToken,
+      });
+
+    pages +=
+      1;
+
+    const pageItems =
+      data
+        .result
+        ?.offerMappings
+      ??
+      [];
+
+    items.push(
+      ...pageItems
+    );
+
+    const nextPageToken =
+      data
+        .result
+        ?.paging
+        ?.nextPageToken
+        ?.trim()
+      ||
+      null;
+
+    if (!nextPageToken) {
+      break;
+    }
 
     if (
-      !response.ok
+      seenPageTokens.has(
+        nextPageToken
+      )
     ) {
       throw new Error(
-        [
-          "Supabase yandex_products",
-          `HTTP ${response.status}`,
-          responseText,
-        ].join(": ")
+        "Яндекс API вернул повторяющийся nextPageToken"
+      );
+    }
+
+    seenPageTokens.add(
+      nextPageToken
+    );
+
+    pageToken =
+      nextPageToken;
+
+    if (pages > 1000) {
+      throw new Error(
+        "Защитная остановка: слишком много страниц offer-mappings"
       );
     }
   }
 
   return {
-    saved:
-      rows.length,
+    items,
+    pages,
   };
 }
 
+
+// ============================================================
+// ВАЛИДАЦИЯ И DEDUPE ПО offerId
+//
+// offerId является идентификатором товара продавца.
+// Именно по нему yandex_products имеет UNIQUE.
+// marketSku здесь НЕ используется как уникальный ключ.
+// ============================================================
+
+function normalizeOfferMappings(
+  items: RawYandexOfferMapping[]
+): RawYandexOfferMapping[] {
+  const byOfferId =
+    new Map<
+      string,
+      RawYandexOfferMapping
+    >();
+
+  for (
+    const item
+    of items
+  ) {
+    const offerId =
+      item
+        .offer
+        ?.offerId
+        ?.trim();
+
+    if (!offerId) {
+      throw new Error(
+        "В ответе Яндекс найден товар без offer.offerId"
+      );
+    }
+
+    if (
+      byOfferId.has(
+        offerId
+      )
+    ) {
+      throw new Error(
+        `Яндекс API вернул дублирующийся offerId: ${offerId}`
+      );
+    }
+
+    byOfferId.set(
+      offerId,
+      item
+    );
+  }
+
+  return Array.from(
+    byOfferId.values()
+  );
+}
+
+
+// ============================================================
+// ТЕКУЩИЕ YANDEX_PRODUCTS
+//
+// Нужны, чтобы:
+//
+// 1. не потерять уже назначенный master_code;
+// 2. не менять first_seen_at при каждой синхронизации.
+// ============================================================
+
+async function getExistingYandexProducts():
+Promise<Map<string, ExistingYandexProduct>> {
+  const {
+    supabaseUrl,
+    supabaseSecretKey,
+  } =
+    getSupabaseConfig();
+
+  const url =
+    new URL(
+      `${supabaseUrl}/rest/v1/yandex_products`
+    );
+
+  url.searchParams.set(
+    "select",
+    [
+      "offer_id",
+      "master_code",
+      "first_seen_at",
+    ].join(",")
+  );
+
+  url.searchParams.set(
+    "limit",
+    "5000"
+  );
+
+  const response =
+    await fetch(
+      url.toString(),
+      {
+        method:
+          "GET",
+
+        headers: {
+          apikey:
+            supabaseSecretKey,
+
+          Authorization:
+            `Bearer ${supabaseSecretKey}`,
+
+          Accept:
+            "application/json",
+        },
+
+        cache:
+          "no-store",
+      }
+    );
+
+  const rawText =
+    await response.text();
+
+  if (!response.ok) {
+    throw new Error(
+      [
+        "Supabase yandex_products GET",
+        `HTTP ${response.status}`,
+        rawText,
+      ].join(": ")
+    );
+  }
+
+  const rows =
+    parseJson<
+      ExistingYandexProduct[]
+    >(
+      rawText,
+      "Supabase yandex_products GET"
+    );
+
+  const result =
+    new Map<
+      string,
+      ExistingYandexProduct
+    >();
+
+  for (
+    const row
+    of rows
+  ) {
+    result.set(
+      row.offer_id,
+      row
+    );
+  }
+
+  return result;
+}
+
+
+// ============================================================
+// ПОДГОТОВКА СТРОК ДЛЯ SUPABASE
+// ============================================================
+
+function buildUpsertRows(
+  items: RawYandexOfferMapping[],
+  existing:
+    Map<
+      string,
+      ExistingYandexProduct
+    >,
+  syncedAt: string
+): YandexProductUpsertRow[] {
+  return items.map(
+    (
+      item
+    ) => {
+      const offerId =
+        item
+          .offer
+          ?.offerId
+          ?.trim();
+
+      if (!offerId) {
+        throw new Error(
+          "Невозможно сохранить товар без offerId"
+        );
+      }
+
+      const existingRow =
+        existing.get(
+          offerId
+        );
+
+      const rawMarketSku =
+        item
+          .mapping
+          ?.marketSku;
+
+      let marketSku:
+        string | null =
+        null;
+
+      if (
+        typeof rawMarketSku ===
+          "string"
+      ) {
+        const trimmed =
+          rawMarketSku.trim();
+
+        marketSku =
+          trimmed !== ""
+            ? trimmed
+            : null;
+      }
+
+      const categoryName =
+        item
+          .mapping
+          ?.marketCategoryName;
+
+      return {
+        offer_id:
+          offerId,
+
+        market_sku:
+          marketSku,
+
+        market_category_name:
+          typeof categoryName ===
+            "string"
+            &&
+            categoryName.trim() !== ""
+            ? categoryName.trim()
+            : null,
+
+        master_code:
+          existingRow
+            ?.master_code
+          ??
+          null,
+
+        first_seen_at:
+          existingRow
+            ?.first_seen_at
+          ??
+          syncedAt,
+
+        last_seen_at:
+          syncedAt,
+
+        is_active:
+          true,
+
+        raw_data:
+          item,
+
+        updated_at:
+          syncedAt,
+      };
+    }
+  );
+}
+
+
+// ============================================================
+// UPSERT В SUPABASE
+// ============================================================
+
+async function upsertYandexProducts(
+  rows: YandexProductUpsertRow[]
+): Promise<void> {
+  if (
+    rows.length ===
+    0
+  ) {
+    return;
+  }
+
+  const {
+    supabaseUrl,
+    supabaseSecretKey,
+  } =
+    getSupabaseConfig();
+
+  const url =
+    new URL(
+      `${supabaseUrl}/rest/v1/yandex_products`
+    );
+
+  url.searchParams.set(
+    "on_conflict",
+    "offer_id"
+  );
+
+  const response =
+    await fetch(
+      url.toString(),
+      {
+        method:
+          "POST",
+
+        headers: {
+          apikey:
+            supabaseSecretKey,
+
+          Authorization:
+            `Bearer ${supabaseSecretKey}`,
+
+          "Content-Type":
+            "application/json",
+
+          Accept:
+            "application/json",
+
+          Prefer:
+            "resolution=merge-duplicates,return=minimal",
+        },
+
+        body:
+          JSON.stringify(
+            rows
+          ),
+
+        cache:
+          "no-store",
+      }
+    );
+
+  const rawText =
+    await response.text();
+
+  if (!response.ok) {
+    throw new Error(
+      [
+        "Supabase yandex_products UPSERT",
+        `HTTP ${response.status}`,
+        rawText,
+      ].join(": ")
+    );
+  }
+}
+
+
+// ============================================================
+// ПРОВЕРКА БОЛЬШИХ PRODUCT ID
+// ============================================================
+
+function countLargeMarketSkus(
+  rows: YandexProductUpsertRow[]
+): number {
+  const maxSafe =
+    BigInt(
+      Number.MAX_SAFE_INTEGER
+    );
+
+  let count =
+    0;
+
+  for (
+    const row
+    of rows
+  ) {
+    if (!row.market_sku) {
+      continue;
+    }
+
+    try {
+      const value =
+        BigInt(
+          row.market_sku
+        );
+
+      if (
+        value >
+        maxSafe
+      ) {
+        count +=
+          1;
+      }
+    } catch {
+      // Если Яндекс когда-нибудь
+      // изменит формат marketSku,
+      // синхронизация из-за этого
+      // не должна падать.
+    }
+  }
+
+  return count;
+}
+
+
+// ============================================================
+// КОНТРОЛЬНЫЕ SKU
+//
+// Ничего не меняют.
+// Просто возвращаются в JSON ответа,
+// чтобы мы сразу увидели,
+// сохранились ли длинные ID точно.
+// ============================================================
+
+function buildPrecisionCheck(
+  rows: YandexProductUpsertRow[]
+) {
+  const controlOfferIds =
+    new Set([
+      "AVD-NY150G",
+      "AVD-NY150GR",
+      "AVD-NY150S",
+    ]);
+
+  return rows
+    .filter(
+      (
+        row
+      ) =>
+        controlOfferIds.has(
+          row.offer_id
+        )
+    )
+    .map(
+      (
+        row
+      ) => ({
+        offer_id:
+          row.offer_id,
+
+        market_sku:
+          row.market_sku,
+      })
+    )
+    .sort(
+      (
+        a,
+        b
+      ) =>
+        a.offer_id.localeCompare(
+          b.offer_id
+        )
+    );
+}
+
+
+// ============================================================
+// ROUTE
+// ============================================================
+
 export async function GET() {
   try {
-    const businessId =
-      await getBusinessId();
+    const apiKey =
+      getRequiredEnv(
+        "YANDEX_API_KEY"
+      );
 
-    const offers =
-      await getAllOffers(
+    const campaignId =
+      getRequiredEnv(
+        "YANDEX_CAMPAIGN_ID"
+      );
+
+    const businessId =
+      await getBusinessId(
+        apiKey,
+        campaignId
+      );
+
+    const {
+      items:
+        rawItems,
+      pages,
+    } =
+      await getAllOfferMappings(
+        apiKey,
         businessId
       );
 
-    const saved =
-      await upsertProducts(
-        offers
+    const items =
+      normalizeOfferMappings(
+        rawItems
+      );
+
+    const existing =
+      await getExistingYandexProducts();
+
+    const syncedAt =
+      new Date()
+        .toISOString();
+
+    const rows =
+      buildUpsertRows(
+        items,
+        existing,
+        syncedAt
+      );
+
+    await upsertYandexProducts(
+      rows
+    );
+
+    const largeMarketSkus =
+      countLargeMarketSkus(
+        rows
+      );
+
+    const precisionCheck =
+      buildPrecisionCheck(
+        rows
       );
 
     return NextResponse.json(
       {
-        ok: true,
+        ok:
+          true,
 
         business_id:
           businessId,
 
+        pages,
+
         received:
-          offers.length,
+          rawItems.length,
+
+        unique_offers:
+          items.length,
 
         saved:
-          saved.saved,
+          rows.length,
+
+        market_sku_storage:
+          "text",
+
+        large_market_skus_preserved:
+          largeMarketSkus,
+
+        precision_check:
+          precisionCheck,
 
         synced_at:
-          new Date()
-            .toISOString(),
+          syncedAt,
       },
       {
-        status: 200,
+        status:
+          200,
       }
     );
+
   } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : String(error);
+
     console.error(
-      "YANDEX PRODUCTS SYNC ERROR",
+      "YANDEX PRODUCTS SYNC ERROR:",
       error
     );
 
     return NextResponse.json(
       {
-        ok: false,
+        ok:
+          false,
 
         error:
-          error instanceof Error
-            ? error.message
-            : String(error),
+          message,
       },
       {
-        status: 500,
+        status:
+          500,
       }
     );
   }
