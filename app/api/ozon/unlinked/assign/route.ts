@@ -16,38 +16,31 @@ export const dynamic =
 // ============================================================
 
 type AssignRequest = {
-  id?:
-    unknown;
+  id?: unknown;
 
-  master_code?:
-    unknown;
+  master_code?: unknown;
 };
 
 
 type AssignResult = {
-  ok:
-    boolean;
+  ok: boolean;
 
-  unlinked_id?:
-    string;
+  unlinked_id?: string;
 
-  product_id?:
-    string;
+  product_id?: string;
 
-  offer_id?:
-    string;
+  offer_id?: string;
 
   ozon_product_id?:
-    string
+    | string
     | number
     | null;
 
   ozon_sku?:
-    string
+    | string
     | null;
 
-  master_code?:
-    string;
+  master_code?: string;
 };
 
 
@@ -101,9 +94,7 @@ function normalizeText(
 ): string {
 
   return String(
-    value
-    ??
-    ""
+    value ?? ""
   ).trim();
 
 }
@@ -196,9 +187,7 @@ async function assignMasterCode(
     await response.text();
 
 
-  if (
-    !response.ok
-  ) {
+  if (!response.ok) {
 
     let message =
       text;
@@ -210,14 +199,9 @@ async function assignMasterCode(
         JSON.parse(
           text
         ) as {
-          message?:
-            string;
-
-          details?:
-            string;
-
-          hint?:
-            string;
+          message?: string;
+          details?: string;
+          hint?: string;
         };
 
 
@@ -232,8 +216,9 @@ async function assignMasterCode(
 
     } catch {
 
-      // Если Supabase вернул не JSON,
-      // оставляем исходный текст.
+      // Supabase иногда возвращает
+      // не JSON. Тогда оставляем
+      // исходный текст ошибки.
 
     }
 
@@ -265,8 +250,7 @@ async function assignMasterCode(
   if (
     !result
     ||
-    result.ok !==
-      true
+    result.ok !== true
   ) {
 
     throw new Error(
@@ -285,8 +269,7 @@ async function assignMasterCode(
 // ============================================================
 
 export async function POST(
-  request:
-    Request
+  request: Request
 ) {
 
   try {
@@ -302,8 +285,9 @@ export async function POST(
     try {
 
       body =
-        await request.json()
-        as AssignRequest;
+        (
+          await request.json()
+        ) as AssignRequest;
 
     } catch {
 
@@ -470,9 +454,7 @@ export async function POST(
 
         error:
           error instanceof Error
-
             ? error.message
-
             : String(
                 error
               ),
