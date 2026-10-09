@@ -70,11 +70,31 @@ function parseJson(
 
 
 // ============================================================
-// AUTH
-//
-// Vercel Cron при наличии CRON_SECRET
-// отправляет:
-// Authorization: Bearer <CRON_SECRET>
+// CRON SECRET
+// ============================================================
+
+function getCronSecret() {
+
+  const cronSecret =
+    process.env.CRON_SECRET;
+
+
+  if (!cronSecret) {
+
+    throw new Error(
+      "Не найдена переменная окружения CRON_SECRET"
+    );
+
+  }
+
+
+  return cronSecret;
+
+}
+
+
+// ============================================================
+// AUTH VERCEL CRON
 // ============================================================
 
 function isAuthorized(
@@ -105,11 +125,19 @@ function isAuthorized(
 
 
 // ============================================================
-// ВНУТРЕННИЙ ВЫЗОВ НАШЕГО ROUTE
+// ВНУТРЕННИЙ ВЫЗОВ НАШИХ WB ROUTES
+//
+// Передаём тот же CRON_SECRET,
+// чтобы proxy.ts понимал:
+//
+// это внутренний доверенный запрос от daily-sync,
+// а не посторонний запрос из интернета.
 // ============================================================
 
 async function callRoute(
   url:
+    string,
+  cronSecret:
     string
 ):
 Promise<InternalResult> {
@@ -131,11 +159,16 @@ Promise<InternalResult> {
             "no-store",
 
           headers: {
+
             Accept:
               "application/json",
 
+            Authorization:
+              `Bearer ${cronSecret}`,
+
             "X-Internal-WB-Daily-Sync":
               "1",
+
           },
         }
       );
@@ -196,6 +229,7 @@ Promise<InternalResult> {
         startedAt,
 
       data: {
+
         ok:
           false,
 
@@ -207,6 +241,7 @@ Promise<InternalResult> {
             String(
               error
             ),
+
       },
 
     };
@@ -257,7 +292,15 @@ async function runDailySync(
 
 
   // ==========================================================
-  // 2. ОПРЕДЕЛЯЕМ ТЕКУЩИЙ DOMAIN
+  // 2. SECRET
+  // ==========================================================
+
+  const cronSecret =
+    getCronSecret();
+
+
+  // ==========================================================
+  // 3. DOMAIN
   // ==========================================================
 
   const origin =
@@ -267,18 +310,16 @@ async function runDailySync(
 
 
   // ==========================================================
-  // 3. ROUTES
+  // 4. ROUTES
   //
   // sync-orders:
-  //   реальные FBW продажи
-  //   +
-  //   FBW отмены
+  // реальные FBW продажи + FBW отмены
   //
   // sync-stocks:
-  //   текущий FBW остаток
+  // текущий FBW остаток
   //
-  // force=1 нужен остаткам, чтобы ежедневный cron
-  // не остановился на внутренней проверке свежести.
+  // force=1 нужен остаткам,
+  // чтобы cron не остановился на проверке свежести.
   // ==========================================================
 
   const salesUrl =
@@ -290,10 +331,7 @@ async function runDailySync(
 
 
   // ==========================================================
-  // 4. ЗАПУСКАЕМ ПАРАЛЛЕЛЬНО
-  //
-  // Это разные методы WB.
-  // Так ежедневное обновление занимает меньше времени.
+  // 5. ЗАПУСКАЕМ ПАРАЛЛЕЛЬНО
   // ==========================================================
 
   const [
@@ -303,18 +341,20 @@ async function runDailySync(
     await Promise.all([
 
       callRoute(
-        salesUrl
+        salesUrl,
+        cronSecret
       ),
 
       callRoute(
-        stocksUrl
+        stocksUrl,
+        cronSecret
       ),
 
     ]);
 
 
   // ==========================================================
-  // 5. ОБЩИЙ РЕЗУЛЬТАТ
+  // 6. ОБЩИЙ РЕЗУЛЬТАТ
   // ==========================================================
 
   const allOk =
@@ -337,6 +377,7 @@ async function runDailySync(
       "wb_daily_sync",
 
     schedule: {
+
       utc:
         "00:00",
 
@@ -345,9 +386,11 @@ async function runDailySync(
 
       timezone:
         "Asia/Krasnoyarsk",
+
     },
 
     completedAt,
+
 
     salesAndCancellations: {
 
@@ -365,6 +408,7 @@ async function runDailySync(
 
     },
 
+
     stocks: {
 
       ok:
@@ -381,6 +425,7 @@ async function runDailySync(
 
     },
 
+
     durationMs:
       Date.now()
       -
@@ -388,12 +433,6 @@ async function runDailySync(
 
   };
 
-
-  // ==========================================================
-  // Если один из источников не обновился,
-  // cron должен считаться ошибочным.
-  // Это полезно в Vercel Logs.
-  // ==========================================================
 
   return NextResponse.json(
     result,
@@ -412,8 +451,6 @@ async function runDailySync(
 
 // ============================================================
 // GET
-//
-// Именно GET вызывает Vercel Cron.
 // ============================================================
 
 export async function GET(
