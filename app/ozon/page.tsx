@@ -1,33 +1,20 @@
-import type {
-  ReactNode,
-} from "react";
 
-import Link
-  from "next/link";
+import type { ReactNode } from "react";
+import Link from "next/link";
 
-import ThemeToggle
-  from "../ThemeToggle";
+import ThemeToggle from "../ThemeToggle";
+import OzonStockSyncClient from "../OzonStockSyncClient";
 
-import OzonStockSyncClient
-  from "../OzonStockSyncClient";
-
-import OzonProductsTableClient,
-{
+import OzonProductsTableClient, {
   type OzonClusterDetailRow,
   type OzonProductRow,
-}
-  from "./OzonProductsTableClient";
+} from "./OzonProductsTableClient";
 
-import OzonUnlinkedProductsClient,
-{
+import OzonUnlinkedProductsClient, {
   type OzonUnlinkedProductRow,
-}
-  from "./OzonUnlinkedProductsClient";
+} from "./OzonUnlinkedProductsClient";
 
-
-export const dynamic =
-  "force-dynamic";
-
+export const dynamic = "force-dynamic";
 
 // ============================================================
 // ТИПЫ
@@ -35,363 +22,174 @@ export const dynamic =
 
 type LatestSync = {
   id: string;
-
   date_from: string;
-
   date_to: string;
-
   completed_days: number;
-
   status: string;
-
   postings_received: number;
-
   cancelled_postings: number;
-
   aggregated_rows_saved: number;
-
   created_at: string;
 };
-
 
 type Summary = {
   active_listing_rows: number;
-
   active_master_codes: number;
-
   sales_28_days: number;
-
   cancelled_28_days: number;
-
   stock_quantity: number;
 };
-
 
 type DailySalesRow = {
   sale_date: string;
-
   rows_count: number;
-
   sales_quantity: number;
-
   cancelled_quantity: number;
 };
 
-
 type ListingRow = {
   product_id: string;
-
-  offer_id:
-    | string
-    | null;
-
-  ozon_product_id:
-    | string
-    | number
-    | null;
-
-  name:
-    | string
-    | null;
+  offer_id: string | null;
+  ozon_product_id: string | number | null;
+  name: string | null;
 };
-
 
 type ProductRow = {
   master_code: string;
-
-  product_name:
-    | string
-    | null;
-
+  product_name: string | null;
   listing_count: number;
-
-  listings:
-    ListingRow[];
-
+  listings: ListingRow[];
   sales_28_days: number;
-
   cancelled_28_days: number;
-
   average_sales_per_day: number;
-
   stock_quantity: number;
-
-  stock_days:
-    | number
-    | null;
+  stock_days: number | null;
 };
-
 
 type DashboardData = {
-  latest_sync:
-    | LatestSync
-    | null;
-
-  stock_snapshot_date:
-    | string
-    | null;
-
-  summary:
-    | Summary
-    | null;
-
-  daily_sales:
-    DailySalesRow[];
-
-  products:
-    ProductRow[];
+  latest_sync: LatestSync | null;
+  stock_snapshot_date: string | null;
+  summary: Summary | null;
+  daily_sales: DailySalesRow[];
+  products: ProductRow[];
 };
-
 
 type ReplenishmentRun = {
   id: string;
-
   created_at: string;
-
   status: string;
-
   calculation_version: string;
-
   sales_date_from: string;
-
   sales_date_to: string;
-
   stock_snapshot_date: string;
-
   total_product_cluster_pairs: number;
-
   pairs_with_need: number;
-
   total_need_units: number;
 };
 
-
 type ReplenishmentItem = {
   product_id: string;
-
-  offer_id:
-    | string
-    | null;
-
-  product_name:
-    | string
-    | null;
-
-  ozon_sku:
-    | string
-    | null;
-
+  offer_id: string | null;
+  product_name: string | null;
+  ozon_sku: string | null;
   cluster_id: string;
-
-  cluster_name:
-    | string
-    | null;
-
+  cluster_name: string | null;
   sales_28_days: number;
-
   cancelled_28_days: number;
-
   avg_sales_per_day: number;
-
   stock_quantity: number;
-
-  coverage_days:
-    | number
-    | null;
+  coverage_days: number | null;
 };
-
 
 type ReplenishmentData = {
-  run:
-    | ReplenishmentRun
-    | null;
-
-  items:
-    ReplenishmentItem[];
+  run: ReplenishmentRun | null;
+  items: ReplenishmentItem[];
 };
-
 
 // ============================================================
 // ФОРМАТИРОВАНИЕ
 // ============================================================
 
 function formatNumber(
-  value:
-    | number
-    | null
-    | undefined
+  value: number | null | undefined
 ) {
-
-  if (
-    value === null
-    ||
-    value === undefined
-  ) {
-
+  if (value === null || value === undefined) {
     return "—";
-
   }
 
-
-  return new Intl.NumberFormat(
-    "ru-RU"
-  ).format(
-    value
-  );
-
+  return new Intl.NumberFormat("ru-RU").format(value);
 }
-
 
 function formatDate(
-  value:
-    | string
-    | null
-    | undefined
+  value: string | null | undefined
 ) {
-
   if (!value) {
-
     return "—";
-
   }
 
+  const [year, month, day] = value
+    .slice(0, 10)
+    .split("-");
 
-  const [
-    year,
-    month,
-    day,
-  ] =
-    value
-      .slice(
-        0,
-        10
-      )
-      .split(
-        "-"
-      );
-
-
-  if (
-    !year
-    ||
-    !month
-    ||
-    !day
-  ) {
-
+  if (!year || !month || !day) {
     return value;
-
   }
-
 
   return `${day}.${month}.${year}`;
-
 }
-
 
 function formatDateTimeKrasnoyarsk(
-  value:
-    | string
-    | null
-    | undefined
+  value: string | null | undefined
 ) {
-
   if (!value) {
-
     return "—";
-
   }
 
+  const date = new Date(value);
 
-  const date =
-    new Date(
-      value
-    );
-
-
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
-
+  if (Number.isNaN(date.getTime())) {
     return value;
-
   }
 
-
-  return new Intl.DateTimeFormat(
-    "ru-RU",
-    {
-      timeZone:
-        "Asia/Krasnoyarsk",
-
-      year:
-        "numeric",
-
-      month:
-        "2-digit",
-
-      day:
-        "2-digit",
-
-      hour:
-        "2-digit",
-
-      minute:
-        "2-digit",
-
-      second:
-        "2-digit",
-    }
-  ).format(
-    date
-  );
-
+  return new Intl.DateTimeFormat("ru-RU", {
+    timeZone: "Asia/Krasnoyarsk",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(date);
 }
-
 
 // ============================================================
 // SUPABASE CONFIG
 // ============================================================
 
 function getSupabaseConfig() {
-
   const supabaseUrl =
-    process.env
-      .NEXT_PUBLIC_SUPABASE_URL;
-
+    process.env.NEXT_PUBLIC_SUPABASE_URL;
 
   const supabaseSecretKey =
-    process.env
-      .SUPABASE_SECRET_KEY;
-
+    process.env.SUPABASE_SECRET_KEY;
 
   if (!supabaseUrl) {
-
     throw new Error(
       "Не найдена NEXT_PUBLIC_SUPABASE_URL"
     );
-
   }
 
-
   if (!supabaseSecretKey) {
-
     throw new Error(
       "Не найдена SUPABASE_SECRET_KEY"
     );
-
   }
-
 
   return {
     supabaseUrl,
     supabaseSecretKey,
   };
-
 }
-
 
 // ============================================================
 // SUPABASE GET
@@ -399,147 +197,85 @@ function getSupabaseConfig() {
 
 async function supabaseGet<T>(
   url: URL
-):
-Promise<T> {
-
-  const {
-    supabaseSecretKey,
-  } =
+): Promise<T> {
+  const { supabaseSecretKey } =
     getSupabaseConfig();
 
+  const response = await fetch(
+    url.toString(),
+    {
+      method: "GET",
+      headers: {
+        apikey: supabaseSecretKey,
+        Authorization: `Bearer ${supabaseSecretKey}`,
+        Accept: "application/json",
+      },
+      cache: "no-store",
+    }
+  );
 
-  const response =
-    await fetch(
-      url.toString(),
-      {
-        method:
-          "GET",
-
-        headers: {
-          apikey:
-            supabaseSecretKey,
-
-          Authorization:
-            `Bearer ${supabaseSecretKey}`,
-
-          Accept:
-            "application/json",
-        },
-
-        cache:
-          "no-store",
-      }
-    );
-
-
-  const text =
-    await response.text();
-
+  const text = await response.text();
 
   if (!response.ok) {
-
     throw new Error(
       `Supabase GET ${response.status}: ${text}`
     );
-
   }
 
-
-  return JSON.parse(
-    text
-  ) as T;
-
+  return JSON.parse(text) as T;
 }
-
 
 // ============================================================
 // DASHBOARD
 // ============================================================
 
 async function getOzonDashboard():
-Promise<DashboardData> {
-
+  Promise<DashboardData> {
   const {
     supabaseUrl,
     supabaseSecretKey,
-  } =
-    getSupabaseConfig();
+  } = getSupabaseConfig();
 
+  const response = await fetch(
+    `${supabaseUrl}/rest/v1/rpc/get_ozon_sync_dashboard`,
+    {
+      method: "POST",
+      headers: {
+        apikey: supabaseSecretKey,
+        Authorization: `Bearer ${supabaseSecretKey}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({}),
+      cache: "no-store",
+    }
+  );
 
-  const response =
-    await fetch(
-      `${supabaseUrl}/rest/v1/rpc/get_ozon_sync_dashboard`,
-      {
-        method:
-          "POST",
-
-        headers: {
-          apikey:
-            supabaseSecretKey,
-
-          Authorization:
-            `Bearer ${supabaseSecretKey}`,
-
-          "Content-Type":
-            "application/json",
-
-          Accept:
-            "application/json",
-        },
-
-        body:
-          JSON.stringify(
-            {}
-          ),
-
-        cache:
-          "no-store",
-      }
-    );
-
-
-  const text =
-    await response.text();
-
+  const text = await response.text();
 
   if (!response.ok) {
-
     throw new Error(
       `Supabase RPC error ${response.status}: ${text}`
     );
-
   }
 
-
-  return JSON.parse(
-    text
-  ) as DashboardData;
-
+  return JSON.parse(text) as DashboardData;
 }
-
 
 // ============================================================
 // ПОСЛЕДНИЙ УСПЕШНЫЙ РАСЧЁТ FBO
 // ============================================================
 
 async function getLatestReplenishment():
-Promise<ReplenishmentData> {
-
-  const {
-    supabaseUrl,
-  } =
+  Promise<ReplenishmentData> {
+  const { supabaseUrl } =
     getSupabaseConfig();
 
+  // 1. Последний успешный расчёт
 
-  // ==========================================================
-  // 1. RUN
-  // ==========================================================
-
-  const runUrl =
-    new URL(
-      `${supabaseUrl}/rest/v1/ozon_fbo_replenishment_runs`
-    );
-
+  const runUrl = new URL(
+    `${supabaseUrl}/rest/v1/ozon_fbo_replenishment_runs`
+  );
 
   runUrl.searchParams.set(
     "select",
@@ -554,82 +290,50 @@ Promise<ReplenishmentData> {
       "total_product_cluster_pairs",
       "pairs_with_need",
       "total_need_units",
-    ].join(
-      ","
-    )
+    ].join(",")
   );
-
 
   runUrl.searchParams.set(
     "status",
     "eq.success"
   );
 
-
   runUrl.searchParams.set(
     "order",
     "created_at.desc"
   );
-
 
   runUrl.searchParams.set(
     "limit",
     "1"
   );
 
+  const runs = await supabaseGet<
+    ReplenishmentRun[]
+  >(runUrl);
 
-  const runs =
-    await supabaseGet<
-      ReplenishmentRun[]
-    >(
-      runUrl
-    );
-
-
-  const run =
-    runs[
-      0
-    ]
-    ?? null;
-
+  const run = runs[0] ?? null;
 
   if (!run) {
-
     return {
-      run:
-        null,
-
-      items:
-        [],
+      run: null,
+      items: [],
     };
-
   }
 
+  // 2. Детализация расчёта
 
-  // ==========================================================
-  // 2. ITEMS
-  // ==========================================================
-
-  const items:
-    ReplenishmentItem[] =
-    [];
-
-
-  const pageSize =
-    1000;
-
+  const items: ReplenishmentItem[] = [];
+  const pageSize = 1000;
 
   for (
     let offset = 0;
     offset < 100000;
     offset += pageSize
   ) {
-
-    const itemsUrl =
-      new URL(
-        `${supabaseUrl}/rest/v1/ozon_fbo_replenishment_items`
-      );
-
+    const itemsUrl = new URL(
+      `${supabaseUrl}/rest/v1/ozon_fbo_replenishment_items`
+    );
 
     itemsUrl.searchParams.set(
       "select",
@@ -645,91 +349,58 @@ Promise<ReplenishmentData> {
         "avg_sales_per_day",
         "stock_quantity",
         "coverage_days",
-      ].join(
-        ","
-      )
+      ].join(",")
     );
-
 
     itemsUrl.searchParams.set(
       "calculation_run_id",
       `eq.${run.id}`
     );
 
-
     itemsUrl.searchParams.set(
       "order",
       "product_id.asc,cluster_name.asc,cluster_id.asc"
     );
 
-
     itemsUrl.searchParams.set(
       "limit",
-      String(
-        pageSize
-      )
+      String(pageSize)
     );
-
 
     itemsUrl.searchParams.set(
       "offset",
-      String(
-        offset
-      )
+      String(offset)
     );
 
+    const page = await supabaseGet<
+      ReplenishmentItem[]
+    >(itemsUrl);
 
-    const page =
-      await supabaseGet<
-        ReplenishmentItem[]
-      >(
-        itemsUrl
-      );
+    items.push(...page);
 
-
-    items.push(
-      ...page
-    );
-
-
-    if (
-      page.length <
-      pageSize
-    ) {
-
+    if (page.length < pageSize) {
       break;
-
     }
-
   }
-
 
   return {
     run,
     items,
   };
-
 }
-
 
 // ============================================================
 // ТОВАРЫ OZON БЕЗ MASTER_CODE
 // ============================================================
 
 async function getOzonUnlinkedProducts():
-Promise<OzonUnlinkedProductRow[]> {
-
-  const {
-    supabaseUrl,
-  } =
+  Promise<OzonUnlinkedProductRow[]> {
+  const { supabaseUrl } =
     getSupabaseConfig();
 
-
-  const url =
-    new URL(
-      `${supabaseUrl}/rest/v1/ozon_unlinked_products`
-    );
-
+  const url = new URL(
+    `${supabaseUrl}/rest/v1/ozon_unlinked_products`
+  );
 
   url.searchParams.set(
     "select",
@@ -741,341 +412,175 @@ Promise<OzonUnlinkedProductRow[]> {
       "name",
       "first_seen_at",
       "last_seen_at",
-    ].join(
-      ","
-    )
+    ].join(",")
   );
-
 
   url.searchParams.set(
     "status",
     "eq.pending"
   );
 
-
   url.searchParams.set(
     "order",
     "first_seen_at.desc"
   );
-
 
   url.searchParams.set(
     "limit",
     "1000"
   );
 
-
   return supabaseGet<
     OzonUnlinkedProductRow[]
-  >(
-    url
-  );
-
+  >(url);
 }
-
 
 // ============================================================
 // СОБИРАЕМ ДЕТАЛИ ПО MASTER_CODE
 // ============================================================
 
 function buildClusterRowsByMasterCode(
-  products:
-    ProductRow[],
+  products: ProductRow[],
+  replenishmentItems: ReplenishmentItem[]
+): Record<string, OzonClusterDetailRow[]> {
+  const productIndex = new Map<
+    string,
+    {
+      masterCode: string;
+      ozonProductId: string | number | null;
+    }
+  >();
 
-  replenishmentItems:
-    ReplenishmentItem[]
-):
-Record<
-  string,
-  OzonClusterDetailRow[]
-> {
-
-  const productIndex =
-    new Map<
-      string,
-      {
-        masterCode: string;
-
-        ozonProductId:
-          | string
-          | number
-          | null;
-      }
-    >();
-
-
-  for (
-    const product
-    of products
-  ) {
-
-    for (
-      const listing
-      of product.listings
-      ?? []
-    ) {
-
-      if (
-        !listing.product_id
-      ) {
-
+  for (const product of products) {
+    for (const listing of product.listings ?? []) {
+      if (!listing.product_id) {
         continue;
-
       }
-
 
       productIndex.set(
         listing.product_id,
         {
-          masterCode:
-            product.master_code,
-
+          masterCode: product.master_code,
           ozonProductId:
-            listing.ozon_product_id
-            ?? null,
+            listing.ozon_product_id ?? null,
         }
       );
-
     }
-
   }
 
+  const result: Record<
+    string,
+    OzonClusterDetailRow[]
+  > = {};
 
-  const result:
-    Record<
-      string,
-      OzonClusterDetailRow[]
-    > =
-    {};
-
-
-  for (
-    const item
-    of replenishmentItems
-  ) {
-
-    const mapping =
-      productIndex.get(
-        item.product_id
-      );
-
-
-    if (!mapping) {
-
-      continue;
-
-    }
-
-
-    if (
-      !result[
-        mapping.masterCode
-      ]
-    ) {
-
-      result[
-        mapping.masterCode
-      ] =
-        [];
-
-    }
-
-
-    result[
-      mapping.masterCode
-    ].push(
-      {
-        product_id:
-          item.product_id,
-
-        offer_id:
-          item.offer_id,
-
-        ozon_product_id:
-          mapping.ozonProductId,
-
-        ozon_sku:
-          item.ozon_sku,
-
-        cluster_id:
-          item.cluster_id,
-
-        cluster_name:
-          item.cluster_name,
-
-        sales_28_days:
-          Number(
-            item.sales_28_days
-            ?? 0
-          ),
-
-        cancelled_28_days:
-          Number(
-            item.cancelled_28_days
-            ?? 0
-          ),
-
-        average_sales_per_day:
-          Number(
-            item.avg_sales_per_day
-            ?? 0
-          ),
-
-        stock_quantity:
-          Number(
-            item.stock_quantity
-            ?? 0
-          ),
-
-        stock_days:
-          item.coverage_days ===
-          null
-            ? null
-            : Number(
-                item.coverage_days
-              ),
-      }
+  for (const item of replenishmentItems) {
+    const mapping = productIndex.get(
+      item.product_id
     );
 
+    if (!mapping) {
+      continue;
+    }
+
+    if (!result[mapping.masterCode]) {
+      result[mapping.masterCode] = [];
+    }
+
+    result[mapping.masterCode].push({
+      product_id: item.product_id,
+      offer_id: item.offer_id,
+      ozon_product_id: mapping.ozonProductId,
+      ozon_sku: item.ozon_sku,
+      cluster_id: item.cluster_id,
+      cluster_name: item.cluster_name,
+      sales_28_days: Number(
+        item.sales_28_days ?? 0
+      ),
+      cancelled_28_days: Number(
+        item.cancelled_28_days ?? 0
+      ),
+      average_sales_per_day: Number(
+        item.avg_sales_per_day ?? 0
+      ),
+      stock_quantity: Number(
+        item.stock_quantity ?? 0
+      ),
+      stock_days:
+        item.coverage_days === null
+          ? null
+          : Number(item.coverage_days),
+    });
   }
 
-
   return result;
-
 }
-
 
 // ============================================================
 // СТРАНИЦА OZON
 // ============================================================
 
 export default async function OzonPage() {
+  let dashboard: DashboardData | null = null;
+  let dashboardError: string | null = null;
 
-  let dashboard:
-    DashboardData
-    | null =
-    null;
+  let replenishment: ReplenishmentData = {
+    run: null,
+    items: [],
+  };
 
-
-  let dashboardError:
-    string
-    | null =
-    null;
-
-
-  let replenishment:
-    ReplenishmentData = {
-      run:
-        null,
-
-      items:
-        [],
-    };
-
-
-  let replenishmentError:
-    string
-    | null =
-    null;
-
+  let replenishmentError: string | null = null;
 
   let unlinkedProducts:
-    OzonUnlinkedProductRow[] =
-    [];
+    OzonUnlinkedProductRow[] = [];
 
+  let unlinkedProductsError: string | null = null;
 
-  let unlinkedProductsError:
-    string
-    | null =
-    null;
-
-
-  // ==========================================================
   // DASHBOARD
-  // ==========================================================
 
   try {
-
-    dashboard =
-      await getOzonDashboard();
-
+    dashboard = await getOzonDashboard();
   } catch (error) {
-
     dashboardError =
       error instanceof Error
         ? error.message
-        : String(
-            error
-          );
-
+        : String(error);
   }
 
-
-  // ==========================================================
   // FBO CALCULATION DETAILS
-  // ==========================================================
 
   try {
-
     replenishment =
       await getLatestReplenishment();
-
   } catch (error) {
-
     replenishmentError =
       error instanceof Error
         ? error.message
-        : String(
-            error
-          );
-
+        : String(error);
   }
 
-
-  // ==========================================================
   // ТОВАРЫ БЕЗ MASTER_CODE
-  // ==========================================================
 
   try {
-
     unlinkedProducts =
       await getOzonUnlinkedProducts();
-
   } catch (error) {
-
     unlinkedProductsError =
       error instanceof Error
         ? error.message
-        : String(
-            error
-          );
-
+        : String(error);
   }
 
-
   const latestSync =
-    dashboard
-      ?.latest_sync
-    ?? null;
-
+    dashboard?.latest_sync ?? null;
 
   const summary =
-    dashboard
-      ?.summary
-    ?? null;
-
+    dashboard?.summary ?? null;
 
   const dailySales =
-    dashboard
-      ?.daily_sales
-    ?? [];
-
+    dashboard?.daily_sales ?? [];
 
   const products =
-    dashboard
-      ?.products
-    ?? [];
-
+    dashboard?.products ?? [];
 
   const clusterRowsByMasterCode =
     buildClusterRowsByMasterCode(
@@ -1083,252 +588,157 @@ export default async function OzonPage() {
       replenishment.items
     );
 
-
   return (
-
     <main className="page">
-
       <div className="container">
-
 
         {/* ===================================
             HEADER
             =================================== */}
 
         <header className="header">
-
           <div>
-
             <div className="small-label">
               СИСТЕМА ЗАКУПА
             </div>
-
 
             <h1 className="title">
               Ozon — синхронизация
             </h1>
 
-
             <p className="subtitle">
-
               FBO продажи, отмены
               и доступные остатки Ozon.
-
             </p>
-
           </div>
 
-
           <div className="header-actions">
-
             <ThemeToggle />
-
 
             <Link
               href="/stock-import"
-
-              className=
-                "secondary-button navigation-button"
+              className="secondary-button navigation-button"
             >
               Остатки склада
             </Link>
 
-
             <Link
               href="/"
-
-              className=
-                "secondary-button navigation-button"
+              className="secondary-button navigation-button"
             >
               ← Расчёт Китая
             </Link>
-
           </div>
-
         </header>
-
 
         {/* ===================================
             ОШИБКА DASHBOARD
             =================================== */}
 
-        {
-          dashboardError
-            ? (
+        {dashboardError ? (
+          <section className="section">
+            <h2 className="section-title">
+              Ошибка загрузки данных Ozon
+            </h2>
 
-              <section className="section">
-
-                <h2 className="section-title">
-                  Ошибка загрузки данных Ozon
-                </h2>
-
-
-                <div
-                  className="reason-text"
-
-                  style={{
-                    color:
-                      "#b42318",
-                  }}
-                >
-                  {dashboardError}
-                </div>
-
-              </section>
-
-            )
-            : null
-        }
-
+            <div
+              className="reason-text"
+              style={{
+                color: "#b42318",
+              }}
+            >
+              {dashboardError}
+            </div>
+          </section>
+        ) : null}
 
         {/* ===================================
             ОШИБКА ДЕТАЛИЗАЦИИ FBO
             =================================== */}
 
-        {
-          replenishmentError
-            ? (
+        {replenishmentError ? (
+          <section className="section">
+            <h2 className="section-title">
+              Ошибка загрузки расчёта FBO
+            </h2>
 
-              <section className="section">
-
-                <h2 className="section-title">
-                  Ошибка загрузки расчёта FBO
-                </h2>
-
-
-                <div
-                  className="reason-text"
-
-                  style={{
-                    color:
-                      "#b42318",
-                  }}
-                >
-                  {
-                    replenishmentError
-                  }
-                </div>
-
-              </section>
-
-            )
-            : null
-        }
-
+            <div
+              className="reason-text"
+              style={{
+                color: "#b42318",
+              }}
+            >
+              {replenishmentError}
+            </div>
+          </section>
+        ) : null}
 
         {/* ===================================
             СОСТОЯНИЕ СИНХРОНИЗАЦИИ
             =================================== */}
 
         <section className="section">
-
           <div
             style={{
-              display:
-                "flex",
-
-              justifyContent:
-                "space-between",
-
-              alignItems:
-                "flex-start",
-
-              gap:
-                "16px",
-
-              flexWrap:
-                "wrap",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              gap: "16px",
+              flexWrap: "wrap",
             }}
           >
-
             <div>
-
               <h2 className="section-title">
                 Состояние синхронизации
               </h2>
 
-
               <div className="reason-text">
-
                 Последняя успешная загрузка
                 FBO-данных из Ozon.
-
               </div>
-
             </div>
-
 
             <div
               style={{
-                padding:
-                  "8px 12px",
-
-                borderRadius:
-                  "999px",
-
+                padding: "8px 12px",
+                borderRadius: "999px",
                 background:
-                  latestSync?.status ===
-                  "success"
+                  latestSync?.status === "success"
                     ? "#ecfdf3"
                     : "#fff4ed",
-
                 color:
-                  latestSync?.status ===
-                  "success"
+                  latestSync?.status === "success"
                     ? "#027a48"
                     : "#b54708",
-
-                fontSize:
-                  "13px",
-
-                fontWeight:
-                  700,
+                fontSize: "13px",
+                fontWeight: 700,
               }}
             >
-              {
-                latestSync?.status ===
-                "success"
-                  ? "Успешно"
-                  : "Нет успешной загрузки"
-              }
+              {latestSync?.status === "success"
+                ? "Успешно"
+                : "Нет успешной загрузки"}
             </div>
-
           </div>
-
 
           <div
             style={{
-              display:
-                "grid",
-
+              display: "grid",
               gridTemplateColumns:
                 "repeat(auto-fit, minmax(190px, 1fr))",
-
-              gap:
-                "16px",
-
-              marginTop:
-                "20px",
+              gap: "16px",
+              marginTop: "20px",
             }}
           >
-
             <InfoCard
               label="Последняя синхронизация"
-
-              value={
-                formatDateTimeKrasnoyarsk(
-                  latestSync
-                    ?.created_at
-                )
-              }
-
+              value={formatDateTimeKrasnoyarsk(
+                latestSync?.created_at
+              )}
               hint="Красноярское время"
             />
 
-
             <InfoCard
               label="Период продаж"
-
               value={
                 latestSync
                   ? `${formatDate(
@@ -1338,615 +748,504 @@ export default async function OzonPage() {
                     )}`
                   : "—"
               }
-
               hint="Скользящие 28 дней"
             />
 
-
             <InfoCard
               label="Снимок остатков"
-
-              value={
-                formatDate(
-                  dashboard
-                    ?.stock_snapshot_date
-                )
-              }
-
+              value={formatDate(
+                dashboard?.stock_snapshot_date
+              )}
               hint="FBO"
             />
 
-
             <InfoCard
               label="Отправлений"
-
-              value={
-                formatNumber(
-                  latestSync
-                    ?.postings_received
-                )
-              }
-
+              value={formatNumber(
+                latestSync?.postings_received
+              )}
               hint="Получено из Ozon"
             />
-
           </div>
-
         </section>
-
 
         {/* ===================================
             ОСНОВНЫЕ ПОКАЗАТЕЛИ
             =================================== */}
 
         <section className="summary-grid">
-
-
           <div className="card">
-
             <div className="card-label">
               Продажи за 28 дней
             </div>
 
             <div className="big-number">
-              {
-                formatNumber(
-                  summary
-                    ?.sales_28_days
-                )
-              }
+              {formatNumber(
+                summary?.sales_28_days
+              )}
             </div>
 
             <div className="muted">
               шт., без отмен
             </div>
-
           </div>
 
-
           <div className="card">
-
             <div className="card-label">
               Отмены
             </div>
 
             <div className="big-number">
-              {
-                formatNumber(
-                  summary
-                    ?.cancelled_28_days
-                )
-              }
+              {formatNumber(
+                summary?.cancelled_28_days
+              )}
             </div>
 
             <div className="muted">
               шт. отдельно от продаж
             </div>
-
           </div>
 
-
           <div className="card">
-
             <div className="card-label">
               Остаток FBO
             </div>
 
             <div className="big-number">
-              {
-                formatNumber(
-                  summary
-                    ?.stock_quantity
-                )
-              }
+              {formatNumber(
+                summary?.stock_quantity
+              )}
             </div>
 
             <div className="muted">
               доступно к продаже
             </div>
-
           </div>
 
-
           <div className="card">
-
             <div className="card-label">
               Физических товаров
             </div>
 
             <div className="big-number">
-              {
-                formatNumber(
-                  summary
-                    ?.active_master_codes
-                )
-              }
+              {formatNumber(
+                summary?.active_master_codes
+              )}
             </div>
 
             <div className="muted">
               по master_code
             </div>
-
           </div>
 
-
           <div className="card">
-
             <div className="card-label">
               Размещений
             </div>
 
             <div className="big-number">
-              {
-                formatNumber(
-                  summary
-                    ?.active_listing_rows
-                )
-              }
+              {formatNumber(
+                summary?.active_listing_rows
+              )}
             </div>
 
             <div className="muted">
               активных строк products
             </div>
-
           </div>
-
         </section>
-
 
         {/* ===================================
             МЕТОДИКА СРАВНЕНИЯ
             =================================== */}
 
         <section className="section">
-
           <h2 className="section-title">
             Как сверять с кабинетом Ozon
           </h2>
 
-
           <div className="reason-text">
-
             Продажи:
             FBO за период,
             указанный выше.
             Отменённые отправления
             в продажи не входят.
-
           </div>
 
-
           <div className="reason-text">
-
             Отмены:
             считаются отдельно
             и отображаются
             отдельным показателем.
-
           </div>
 
-
           <div className="reason-text">
-
             Остаток:
             доступный FBO-остаток
             из /v1/analytics/stocks,
             поле available_stock_count.
-
           </div>
 
-
           <div className="reason-text">
-
             Для корректного сравнения
             в кабинете Ozon нужно выбирать
             тот же период и FBO.
-
           </div>
-
         </section>
-
 
         {/* ===================================
             ПРОДАЖИ ПО ДНЯМ
+            ОФОРМЛЕНИЕ КАК НА WILDBERRIES
             =================================== */}
 
         <section className="section">
-
           <h2 className="section-title">
             Продажи по дням
           </h2>
 
-
           <div className="reason-text">
-
             Этот блок удобнее всего
             использовать для контрольной
             сверки с кабинетом Ozon.
-
           </div>
-
 
           <div
             style={{
-              overflowX:
-                "auto",
-
-              marginTop:
-                "18px",
-
-              border:
-                "1px solid var(--border-color, #e5e7eb)",
-
-              borderRadius:
-                "12px",
+              overflowX: "auto",
+              marginTop: "18px",
+              border: "none",
+              borderRadius: "10px",
             }}
           >
-
             <table
               style={{
-                width:
-                  "100%",
-
-                borderCollapse:
-                  "collapse",
-
-                minWidth:
-                  "680px",
+                width: "100%",
+                minWidth: "680px",
+                borderCollapse: "separate",
+                borderSpacing: 0,
+                border: "none",
               }}
             >
-
               <thead>
-
-                <tr>
-
-                  <TableHeader>
+                <tr
+                  style={{
+                    background:
+                      "var(--table-header-bg, #1b2028)",
+                  }}
+                >
+                  <th
+                    style={{
+                      padding: "12px 14px",
+                      textAlign: "left",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      color:
+                        "var(--text-secondary, #b8c0cc)",
+                      border: "none",
+                      borderBottom:
+                        "1px solid var(--table-divider, #282e38)",
+                      borderTopLeftRadius: "10px",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     Дата
-                  </TableHeader>
+                  </th>
 
-                  <TableHeader align="right">
+                  <th
+                    style={{
+                      padding: "12px 14px",
+                      textAlign: "right",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      color:
+                        "var(--text-secondary, #b8c0cc)",
+                      border: "none",
+                      borderBottom:
+                        "1px solid var(--table-divider, #282e38)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     Продажи, шт.
-                  </TableHeader>
+                  </th>
 
-                  <TableHeader align="right">
+                  <th
+                    style={{
+                      padding: "12px 14px",
+                      textAlign: "right",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      color:
+                        "var(--text-secondary, #b8c0cc)",
+                      border: "none",
+                      borderBottom:
+                        "1px solid var(--table-divider, #282e38)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     Отмены, шт.
-                  </TableHeader>
+                  </th>
 
-                  <TableHeader align="right">
+                  <th
+                    style={{
+                      padding: "12px 14px",
+                      textAlign: "right",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      color:
+                        "var(--text-secondary, #b8c0cc)",
+                      border: "none",
+                      borderBottom:
+                        "1px solid var(--table-divider, #282e38)",
+                      borderTopRightRadius: "10px",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     Строк в БД
-                  </TableHeader>
-
+                  </th>
                 </tr>
-
               </thead>
 
-
               <tbody>
+                {dailySales.map((row, index) => {
+                  const isLast =
+                    index === dailySales.length - 1;
 
-                {
-                  dailySales.map(
-                    row => (
+                  const divider = isLast
+                    ? "none"
+                    : "1px solid var(--table-divider, #282e38)";
 
-                      <tr
-                        key={
-                          row.sale_date
-                        }
+                  return (
+                    <tr key={row.sale_date}>
+                      <td
+                        style={{
+                          padding: "12px 14px",
+                          textAlign: "left",
+                          fontSize: "13px",
+                          fontWeight: 700,
+                          border: "none",
+                          borderBottom: divider,
+                          whiteSpace: "nowrap",
+                        }}
                       >
+                        {formatDate(row.sale_date)}
+                      </td>
 
-                        <TableCell>
-                          {
-                            formatDate(
-                              row.sale_date
-                            )
-                          }
-                        </TableCell>
+                      <td
+                        style={{
+                          padding: "12px 14px",
+                          textAlign: "right",
+                          fontSize: "13px",
+                          border: "none",
+                          borderBottom: divider,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        <strong>
+                          {formatNumber(
+                            row.sales_quantity
+                          )}
+                        </strong>
+                      </td>
 
+                      <td
+                        style={{
+                          padding: "12px 14px",
+                          textAlign: "right",
+                          fontSize: "13px",
+                          border: "none",
+                          borderBottom: divider,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {formatNumber(
+                          row.cancelled_quantity
+                        )}
+                      </td>
 
-                        <TableCell align="right">
-
-                          <strong>
-                            {
-                              formatNumber(
-                                row.sales_quantity
-                              )
-                            }
-                          </strong>
-
-                        </TableCell>
-
-
-                        <TableCell align="right">
-
-                          {
-                            formatNumber(
-                              row.cancelled_quantity
-                            )
-                          }
-
-                        </TableCell>
-
-
-                        <TableCell align="right">
-
-                          {
-                            formatNumber(
-                              row.rows_count
-                            )
-                          }
-
-                        </TableCell>
-
-                      </tr>
-
-                    )
-                  )
-                }
-
+                      <td
+                        style={{
+                          padding: "12px 14px",
+                          textAlign: "right",
+                          fontSize: "13px",
+                          border: "none",
+                          borderBottom: divider,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {formatNumber(
+                          row.rows_count
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
-
             </table>
-
           </div>
-
         </section>
-
 
         {/* ===================================
             ТОВАРЫ БЕЗ MASTER_CODE
             =================================== */}
 
         <section className="section">
-
           <div
             style={{
-              display:
-                "flex",
-
-              justifyContent:
-                "space-between",
-
-              alignItems:
-                "flex-start",
-
-              gap:
-                "16px",
-
-              flexWrap:
-                "wrap",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              gap: "16px",
+              flexWrap: "wrap",
             }}
           >
-
             <div>
-
               <h2 className="section-title">
                 Товары без master_code
               </h2>
 
-
               <div className="reason-text">
-
                 Новые товары Ozon, которые
                 система пока не смогла
                 привязать к физическому товару.
-
               </div>
 
-
               <div className="reason-text">
-
                 Они не останавливают общую
                 синхронизацию и не участвуют
                 в расчёте потребности до
                 ручной привязки.
-
               </div>
-
             </div>
-
 
             <div
               style={{
-                padding:
-                  "8px 12px",
-
-                borderRadius:
-                  "999px",
-
+                padding: "8px 12px",
+                borderRadius: "999px",
                 background:
                   unlinkedProducts.length > 0
                     ? "#fff4ed"
                     : "#ecfdf3",
-
                 color:
                   unlinkedProducts.length > 0
                     ? "#b54708"
                     : "#027a48",
-
-                fontSize:
-                  "13px",
-
-                fontWeight:
-                  700,
+                fontSize: "13px",
+                fontWeight: 700,
               }}
             >
-              {
-                unlinkedProducts.length > 0
-                  ? `Требуют привязки: ${unlinkedProducts.length}`
-                  : "Все товары привязаны"
-              }
+              {unlinkedProducts.length > 0
+                ? `Требуют привязки: ${unlinkedProducts.length}`
+                : "Все товары привязаны"}
             </div>
-
           </div>
 
-
-          {
-            unlinkedProductsError
-              ? (
-
-                <div
-                  className="reason-text"
-
-                  style={{
-                    color:
-                      "#b42318",
-
-                    marginTop:
-                      "14px",
-                  }}
-                >
-                  Не удалось загрузить список:
-                  {" "}
-                  {unlinkedProductsError}
-                </div>
-
-              )
-              : (
-
-                <OzonUnlinkedProductsClient
-                  products={
-                    unlinkedProducts
-                  }
-                />
-
-              )
-          }
-
+          {unlinkedProductsError ? (
+            <div
+              className="reason-text"
+              style={{
+                color: "#b42318",
+                marginTop: "14px",
+              }}
+            >
+              Не удалось загрузить список:{" "}
+              {unlinkedProductsError}
+            </div>
+          ) : (
+            <OzonUnlinkedProductsClient
+              products={unlinkedProducts}
+            />
+          )}
         </section>
-
 
         {/* ===================================
             ТОВАРЫ
             =================================== */}
 
         <section className="section">
-
           <h2 className="section-title">
             Данные по товарам
           </h2>
 
-
           <div className="reason-text">
-
             Верхняя строка:
             агрегат физического товара
             по master_code.
-
           </div>
 
-
           <div className="reason-text">
-
             Раскрытие:
             продажи, отмены,
             средние продажи,
             остаток и дни запаса
             отдельно по каждому
             Ozon-размещению и кластеру.
-
           </div>
 
-
-          {
-            replenishment.run
-              ? (
-
-                <div
-                  className="muted"
-
-                  style={{
-                    marginTop:
-                      "6px",
-
-                    fontSize:
-                      "11px",
-                  }}
-                >
-                  Расшифровка по расчёту{" "}
-                  <strong>
-                    {
-                      replenishment
-                        .run
-                        .calculation_version
-                    }
-                  </strong>
-                  {" "}
-                  от{" "}
-                  {
-                    formatDateTimeKrasnoyarsk(
-                      replenishment
-                        .run
-                        .created_at
-                    )
-                  }.
-                </div>
-
-              )
-              : null
-          }
-
+          {replenishment.run ? (
+            <div
+              className="muted"
+              style={{
+                marginTop: "6px",
+                fontSize: "11px",
+              }}
+            >
+              Расшифровка по расчёту{" "}
+              <strong>
+                {
+                  replenishment.run
+                    .calculation_version
+                }
+              </strong>
+              {" "}от{" "}
+              {formatDateTimeKrasnoyarsk(
+                replenishment.run.created_at
+              )}.
+            </div>
+          ) : null}
 
           <OzonProductsTableClient
             products={
-              products as
-                OzonProductRow[]
+              products as OzonProductRow[]
             }
-
             clusterRowsByMasterCode={
               clusterRowsByMasterCode
             }
           />
-
         </section>
-
 
         {/* ===================================
             БЕЗОПАСНЫЙ РЕЖИМ
             =================================== */}
 
         <section className="section">
-
           <h2 className="section-title">
             Безопасный режим
           </h2>
 
-
           <div className="reason-text">
-
             Сначала система полностью
             получает и проверяет данные
             Ozon.
-
           </div>
 
-
           <div className="reason-text">
-
             Только после успешного
             завершения всех запросов
             продажи и остатки записываются
             в Supabase одной транзакцией.
-
           </div>
 
-
           <div className="reason-text">
-
             После успешной записи
             автоматически запускается
             расчёт потребности FBO.
-
           </div>
-
 
           <div className="reason-text">
-
             Ошибка API не считается
             нулевым остатком.
-
           </div>
-
         </section>
-
 
         {/* ===================================
             СИНХРОНИЗАЦИЯ
@@ -1954,176 +1253,50 @@ export default async function OzonPage() {
 
         <OzonStockSyncClient />
 
-
       </div>
-
     </main>
-
   );
-
 }
-
 
 // ============================================================
 // КОМПОНЕНТЫ
 // ============================================================
 
-function InfoCard(
-  {
-    label,
-    value,
-    hint,
-  }:
-  {
-    label:
-      string;
-
-    value:
-      string;
-
-    hint?:
-      string;
-  }
-) {
-
+function InfoCard({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+}) {
   return (
-
     <div className="card">
-
       <div className="card-label">
         {label}
       </div>
 
-
       <div
         style={{
-          fontSize:
-            "18px",
-
-          fontWeight:
-            700,
-
-          marginTop:
-            "6px",
+          fontSize: "18px",
+          fontWeight: 700,
+          marginTop: "6px",
         }}
       >
         {value}
       </div>
 
-
-      {
-        hint
-          ? (
-
-            <div
-              className="muted"
-
-              style={{
-                marginTop:
-                  "5px",
-              }}
-            >
-              {hint}
-            </div>
-
-          )
-          : null
-      }
-
+      {hint ? (
+        <div
+          className="muted"
+          style={{
+            marginTop: "5px",
+          }}
+        >
+          {hint}
+        </div>
+      ) : null}
     </div>
-
   );
-
-}
-
-
-function TableHeader(
-  {
-    children,
-    align = "left",
-  }:
-  {
-    children:
-      ReactNode;
-
-    align?:
-      "left"
-      | "right";
-  }
-) {
-
-  return (
-
-    <th
-      style={{
-        padding:
-          "12px 14px",
-
-        textAlign:
-          align,
-
-        borderBottom:
-          "1px solid var(--border-color, #e5e7eb)",
-
-        fontSize:
-          "12px",
-
-        fontWeight:
-          700,
-
-        whiteSpace:
-          "nowrap",
-
-        opacity:
-          0.75,
-      }}
-    >
-      {children}
-    </th>
-
-  );
-
-}
-
-
-function TableCell(
-  {
-    children,
-    align = "left",
-  }:
-  {
-    children:
-      ReactNode;
-
-    align?:
-      "left"
-      | "right";
-  }
-) {
-
-  return (
-
-    <td
-      style={{
-        padding:
-          "12px 14px",
-
-        textAlign:
-          align,
-
-        borderBottom:
-          "1px solid var(--border-color, #eef0f2)",
-
-        fontSize:
-          "13px",
-
-        verticalAlign:
-          "top",
-      }}
-    >
-      {children}
-    </td>
-
-  );
-
 }
