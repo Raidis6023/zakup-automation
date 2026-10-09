@@ -1,0 +1,98 @@
+
+/* ============================================================
+   WORKSPACE SHELL
+   ============================================================ */
+
+.workspace-content {
+  min-width: 0;
+}
+
+.workspace-content--module {
+  position: relative;
+}
+
+/* ============================================================
+   СТАРЫЕ СТРАНИЦЫ ВНУТРИ НОВОЙ ОБОЛОЧКИ
+   ============================================================ */
+
+.workspace-content--module .page {
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.workspace-content--module .page > .container {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+/* ============================================================
+   СКРЫВАЕМ ДУБЛИРУЮЩИЙ ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ
+   ============================================================ */
+
+.workspace-content--module
+.page
+.header-actions
+> .theme-toggle {
+  display: none;
+}
+
+/* ============================================================
+   ДЕКОРАТИВНЫЕ ПОЛОСЫ
+   ============================================================ */
+
+.workspace-corner-decoration {
+  position: absolute;
+  z-index: 0;
+
+  top: 19px;
+  right: 30px;
+
+  width: min(500px, 42%);
+
+  pointer-events: none;
+}
+
+.workspace-corner-decoration .home-decoration {
+  width: 100%;
+  height: 64px;
+}
+
+/* ============================================================
+   ШАПКА РАБОЧЕГО РАЗДЕЛА
+   ============================================================ */
+
+.workspace-content--module .page .header {
+  position: relative;
+  z-index: 1;
+
+  min-height: 74px;
+
+  padding-right: min(500px, 42%);
+}
+
+/* ============================================================
+   АДАПТАЦИЯ ПОД УЗКИЕ ЭКРАНЫ
+   ============================================================ */
+
+@media (max-width: 1100px) {
+  .workspace-corner-decoration {
+    width: min(350px, 40%);
+  }
+
+  .workspace-content--module .page .header {
+    padding-right: min(350px, 40%);
+  }
+}
+
+@media (max-width: 900px) {
+  .workspace-corner-decoration {
+    width: min(300px, 62%);
+  }
+
+  .workspace-content--module .page .header {
+    padding-top: 80px;
+    padding-right: 0;
+  }
+}
