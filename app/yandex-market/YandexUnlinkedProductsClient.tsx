@@ -312,8 +312,7 @@ export default function YandexUnlinkedProductsClient({
 
 
       const data =
-        await response.json()
-        as ApiResponse;
+        (await response.json()) as ApiResponse;
 
 
       if (
@@ -330,8 +329,7 @@ export default function YandexUnlinkedProductsClient({
 
 
       // ======================================================
-      // Убираем привязанный товар из списка сразу.
-      // Затем обновляем серверную страницу и KPI.
+      // УБИРАЕМ ТОВАР ИЗ СПИСКА
       // ======================================================
 
       setRows(
@@ -343,6 +341,10 @@ export default function YandexUnlinkedProductsClient({
           )
       );
 
+
+      // ======================================================
+      // ОЧИЩАЕМ INPUT
+      // ======================================================
 
       setMasterCodes(
         current => {
@@ -361,6 +363,10 @@ export default function YandexUnlinkedProductsClient({
         }
       );
 
+
+      // ======================================================
+      // ОБНОВЛЯЕМ СЕРВЕРНУЮ СТРАНИЦУ
+      // ======================================================
 
       router.refresh();
 
@@ -389,7 +395,8 @@ export default function YandexUnlinkedProductsClient({
   // ==========================================================
 
   if (
-    rows.length === 0
+    rows.length ===
+    0
   ) {
     return (
       <div
