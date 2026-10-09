@@ -1,14 +1,25 @@
+
 import type {
   Metadata,
 } from "next";
 
+import WorkspaceRouteFrame from "./WorkspaceRouteFrame";
+
 import "./globals.css";
+
+// ============================================================
+// МЕТАДАННЫЕ
+// ============================================================
 
 export const metadata: Metadata = {
   title: "Система закупа",
   description:
     "Автоматизация отдела закупа",
 };
+
+// ============================================================
+// ИНИЦИАЛИЗАЦИЯ ТЕМЫ
+// ============================================================
 
 const themeScript = `
 (function () {
@@ -42,6 +53,10 @@ const themeScript = `
 })();
 `;
 
+// ============================================================
+// ГЛАВНЫЙ LAYOUT ПРИЛОЖЕНИЯ
+// ============================================================
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -61,7 +76,9 @@ export default function RootLayout({
       </head>
 
       <body>
-        {children}
+        <WorkspaceRouteFrame>
+          {children}
+        </WorkspaceRouteFrame>
       </body>
     </html>
   );
