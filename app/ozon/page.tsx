@@ -18,6 +18,12 @@ import OzonProductsTableClient,
 }
   from "./OzonProductsTableClient";
 
+import OzonUnlinkedProductsClient,
+{
+  type OzonUnlinkedProductRow,
+}
+  from "./OzonUnlinkedProductsClient";
+
 
 export const dynamic =
   "force-dynamic";
@@ -215,19 +221,24 @@ function formatNumber(
     | null
     | undefined
 ) {
+
   if (
     value === null
     ||
     value === undefined
   ) {
+
     return "—";
+
   }
+
 
   return new Intl.NumberFormat(
     "ru-RU"
   ).format(
     value
   );
+
 }
 
 
@@ -237,9 +248,13 @@ function formatDate(
     | null
     | undefined
 ) {
+
   if (!value) {
+
     return "—";
+
   }
+
 
   const [
     year,
@@ -255,6 +270,7 @@ function formatDate(
         "-"
       );
 
+
   if (
     !year
     ||
@@ -262,10 +278,14 @@ function formatDate(
     ||
     !day
   ) {
+
     return value;
+
   }
 
+
   return `${day}.${month}.${year}`;
+
 }
 
 
@@ -275,22 +295,30 @@ function formatDateTimeKrasnoyarsk(
     | null
     | undefined
 ) {
+
   if (!value) {
+
     return "—";
+
   }
+
 
   const date =
     new Date(
       value
     );
 
+
   if (
     Number.isNaN(
       date.getTime()
     )
   ) {
+
     return value;
+
   }
+
 
   return new Intl.DateTimeFormat(
     "ru-RU",
@@ -319,6 +347,7 @@ function formatDateTimeKrasnoyarsk(
   ).format(
     date
   );
+
 }
 
 
@@ -327,30 +356,40 @@ function formatDateTimeKrasnoyarsk(
 // ============================================================
 
 function getSupabaseConfig() {
+
   const supabaseUrl =
     process.env
       .NEXT_PUBLIC_SUPABASE_URL;
+
 
   const supabaseSecretKey =
     process.env
       .SUPABASE_SECRET_KEY;
 
+
   if (!supabaseUrl) {
+
     throw new Error(
       "Не найдена NEXT_PUBLIC_SUPABASE_URL"
     );
+
   }
 
+
   if (!supabaseSecretKey) {
+
     throw new Error(
       "Не найдена SUPABASE_SECRET_KEY"
     );
+
   }
+
 
   return {
     supabaseUrl,
     supabaseSecretKey,
   };
+
 }
 
 
@@ -362,10 +401,12 @@ async function supabaseGet<T>(
   url: URL
 ):
 Promise<T> {
+
   const {
     supabaseSecretKey,
   } =
     getSupabaseConfig();
+
 
   const response =
     await fetch(
@@ -390,18 +431,24 @@ Promise<T> {
       }
     );
 
+
   const text =
     await response.text();
 
+
   if (!response.ok) {
+
     throw new Error(
       `Supabase GET ${response.status}: ${text}`
     );
+
   }
+
 
   return JSON.parse(
     text
   ) as T;
+
 }
 
 
@@ -411,11 +458,13 @@ Promise<T> {
 
 async function getOzonDashboard():
 Promise<DashboardData> {
+
   const {
     supabaseUrl,
     supabaseSecretKey,
   } =
     getSupabaseConfig();
+
 
   const response =
     await fetch(
@@ -448,18 +497,24 @@ Promise<DashboardData> {
       }
     );
 
+
   const text =
     await response.text();
 
+
   if (!response.ok) {
+
     throw new Error(
       `Supabase RPC error ${response.status}: ${text}`
     );
+
   }
+
 
   return JSON.parse(
     text
   ) as DashboardData;
+
 }
 
 
@@ -469,6 +524,7 @@ Promise<DashboardData> {
 
 async function getLatestReplenishment():
 Promise<ReplenishmentData> {
+
   const {
     supabaseUrl,
   } =
@@ -483,6 +539,7 @@ Promise<ReplenishmentData> {
     new URL(
       `${supabaseUrl}/rest/v1/ozon_fbo_replenishment_runs`
     );
+
 
   runUrl.searchParams.set(
     "select",
@@ -502,15 +559,18 @@ Promise<ReplenishmentData> {
     )
   );
 
+
   runUrl.searchParams.set(
     "status",
     "eq.success"
   );
 
+
   runUrl.searchParams.set(
     "order",
     "created_at.desc"
   );
+
 
   runUrl.searchParams.set(
     "limit",
@@ -534,6 +594,7 @@ Promise<ReplenishmentData> {
 
 
   if (!run) {
+
     return {
       run:
         null,
@@ -541,19 +602,18 @@ Promise<ReplenishmentData> {
       items:
         [],
     };
+
   }
 
 
   // ==========================================================
   // 2. ITEMS
-  //
-  // Строк сейчас больше 1000,
-  // поэтому читаем постранично.
   // ==========================================================
 
   const items:
     ReplenishmentItem[] =
     [];
+
 
   const pageSize =
     1000;
@@ -564,6 +624,7 @@ Promise<ReplenishmentData> {
     offset < 100000;
     offset += pageSize
   ) {
+
     const itemsUrl =
       new URL(
         `${supabaseUrl}/rest/v1/ozon_fbo_replenishment_items`
@@ -635,8 +696,11 @@ Promise<ReplenishmentData> {
       page.length <
       pageSize
     ) {
+
       break;
+
     }
+
   }
 
 
@@ -644,6 +708,69 @@ Promise<ReplenishmentData> {
     run,
     items,
   };
+
+}
+
+
+// ============================================================
+// ТОВАРЫ OZON БЕЗ MASTER_CODE
+// ============================================================
+
+async function getOzonUnlinkedProducts():
+Promise<OzonUnlinkedProductRow[]> {
+
+  const {
+    supabaseUrl,
+  } =
+    getSupabaseConfig();
+
+
+  const url =
+    new URL(
+      `${supabaseUrl}/rest/v1/ozon_unlinked_products`
+    );
+
+
+  url.searchParams.set(
+    "select",
+    [
+      "id",
+      "offer_id",
+      "ozon_product_id",
+      "ozon_sku",
+      "name",
+      "first_seen_at",
+      "last_seen_at",
+    ].join(
+      ","
+    )
+  );
+
+
+  url.searchParams.set(
+    "status",
+    "eq.pending"
+  );
+
+
+  url.searchParams.set(
+    "order",
+    "first_seen_at.desc"
+  );
+
+
+  url.searchParams.set(
+    "limit",
+    "1000"
+  );
+
+
+  return supabaseGet<
+    OzonUnlinkedProductRow[]
+  >(
+    url
+  );
+
 }
 
 
@@ -662,6 +789,7 @@ Record<
   string,
   OzonClusterDetailRow[]
 > {
+
   const productIndex =
     new Map<
       string,
@@ -676,24 +804,25 @@ Record<
     >();
 
 
-  // ==========================================================
-  // PRODUCT_ID → MASTER_CODE + OZON PRODUCT ID
-  // ==========================================================
-
   for (
     const product
     of products
   ) {
+
     for (
       const listing
       of product.listings
       ?? []
     ) {
+
       if (
         !listing.product_id
       ) {
+
         continue;
+
       }
+
 
       productIndex.set(
         listing.product_id,
@@ -706,13 +835,11 @@ Record<
             ?? null,
         }
       );
+
     }
+
   }
 
-
-  // ==========================================================
-  // ГРУППИРУЕМ СТРОКИ РАСЧЁТА
-  // ==========================================================
 
   const result:
     Record<
@@ -726,17 +853,17 @@ Record<
     const item
     of replenishmentItems
   ) {
+
     const mapping =
       productIndex.get(
         item.product_id
       );
 
 
-    // Если product_id почему-то не входит
-    // в текущий dashboard,
-    // не приписываем его чужому master_code.
     if (!mapping) {
+
       continue;
+
     }
 
 
@@ -745,10 +872,12 @@ Record<
         mapping.masterCode
       ]
     ) {
+
       result[
         mapping.masterCode
       ] =
         [];
+
     }
 
 
@@ -807,10 +936,12 @@ Record<
               ),
       }
     );
+
   }
 
 
   return result;
+
 }
 
 
@@ -819,6 +950,7 @@ Record<
 // ============================================================
 
 export default async function OzonPage() {
+
   let dashboard:
     DashboardData
     | null =
@@ -847,21 +979,35 @@ export default async function OzonPage() {
     null;
 
 
+  let unlinkedProducts:
+    OzonUnlinkedProductRow[] =
+    [];
+
+
+  let unlinkedProductsError:
+    string
+    | null =
+    null;
+
+
   // ==========================================================
   // DASHBOARD
   // ==========================================================
 
   try {
+
     dashboard =
       await getOzonDashboard();
 
   } catch (error) {
+
     dashboardError =
       error instanceof Error
         ? error.message
         : String(
             error
           );
+
   }
 
 
@@ -870,16 +1016,40 @@ export default async function OzonPage() {
   // ==========================================================
 
   try {
+
     replenishment =
       await getLatestReplenishment();
 
   } catch (error) {
+
     replenishmentError =
       error instanceof Error
         ? error.message
         : String(
             error
           );
+
+  }
+
+
+  // ==========================================================
+  // ТОВАРЫ БЕЗ MASTER_CODE
+  // ==========================================================
+
+  try {
+
+    unlinkedProducts =
+      await getOzonUnlinkedProducts();
+
+  } catch (error) {
+
+    unlinkedProductsError =
+      error instanceof Error
+        ? error.message
+        : String(
+            error
+          );
+
   }
 
 
@@ -1522,6 +1692,129 @@ export default async function OzonPage() {
 
 
         {/* ===================================
+            ТОВАРЫ БЕЗ MASTER_CODE
+            =================================== */}
+
+        <section className="section">
+
+          <div
+            style={{
+              display:
+                "flex",
+
+              justifyContent:
+                "space-between",
+
+              alignItems:
+                "flex-start",
+
+              gap:
+                "16px",
+
+              flexWrap:
+                "wrap",
+            }}
+          >
+
+            <div>
+
+              <h2 className="section-title">
+                Товары без master_code
+              </h2>
+
+
+              <div className="reason-text">
+
+                Новые товары Ozon, которые
+                система пока не смогла
+                привязать к физическому товару.
+
+              </div>
+
+
+              <div className="reason-text">
+
+                Они не останавливают общую
+                синхронизацию и не участвуют
+                в расчёте потребности до
+                ручной привязки.
+
+              </div>
+
+            </div>
+
+
+            <div
+              style={{
+                padding:
+                  "8px 12px",
+
+                borderRadius:
+                  "999px",
+
+                background:
+                  unlinkedProducts.length > 0
+                    ? "#fff4ed"
+                    : "#ecfdf3",
+
+                color:
+                  unlinkedProducts.length > 0
+                    ? "#b54708"
+                    : "#027a48",
+
+                fontSize:
+                  "13px",
+
+                fontWeight:
+                  700,
+              }}
+            >
+              {
+                unlinkedProducts.length > 0
+                  ? `Требуют привязки: ${unlinkedProducts.length}`
+                  : "Все товары привязаны"
+              }
+            </div>
+
+          </div>
+
+
+          {
+            unlinkedProductsError
+              ? (
+
+                <div
+                  className="reason-text"
+
+                  style={{
+                    color:
+                      "#b42318",
+
+                    marginTop:
+                      "14px",
+                  }}
+                >
+                  Не удалось загрузить список:
+                  {" "}
+                  {unlinkedProductsError}
+                </div>
+
+              )
+              : (
+
+                <OzonUnlinkedProductsClient
+                  products={
+                    unlinkedProducts
+                  }
+                />
+
+              )
+          }
+
+        </section>
+
+
+        {/* ===================================
             ТОВАРЫ
             =================================== */}
 
@@ -1667,6 +1960,7 @@ export default async function OzonPage() {
     </main>
 
   );
+
 }
 
 
@@ -1691,6 +1985,7 @@ function InfoCard(
       string;
   }
 ) {
+
   return (
 
     <div className="card">
@@ -1738,6 +2033,7 @@ function InfoCard(
     </div>
 
   );
+
 }
 
 
@@ -1755,6 +2051,7 @@ function TableHeader(
       | "right";
   }
 ) {
+
   return (
 
     <th
@@ -1785,6 +2082,7 @@ function TableHeader(
     </th>
 
   );
+
 }
 
 
@@ -1802,6 +2100,7 @@ function TableCell(
       | "right";
   }
 ) {
+
   return (
 
     <td
@@ -1826,4 +2125,5 @@ function TableCell(
     </td>
 
   );
+
 }
