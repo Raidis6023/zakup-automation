@@ -1,10 +1,8 @@
 export const runtime =
   "nodejs";
 
-
 export const dynamic =
   "force-dynamic";
-
 
 export const maxDuration =
   60;
@@ -17,59 +15,53 @@ export const maxDuration =
 const OZON_API_BASE =
   "https://api-seller.ozon.ru";
 
-
 const OZON_MAX_RETRIES =
   5;
-
 
 const OZON_TIMEOUT_MS =
   30000;
 
-
 const SUPABASE_PAGE_SIZE =
   1000;
+
+const OZON_MULTI_CLUSTER_LIMIT =
+  20;
 
 
 // ============================================================
 // ТИПЫ
 // ============================================================
 
+type ClusterType =
+  | "CLUSTER_TYPE_OZON"
+  | "CLUSTER_TYPE_CIS";
+
+
 type ReplenishmentRun = {
-  id:
-    string;
+  id: string;
 
-  created_at:
-    string;
+  created_at: string;
 
-  status:
-    string;
+  status: string;
 
-  calculation_version:
-    string;
+  calculation_version: string;
 
-  sales_date_from:
-    string;
+  sales_date_from: string;
 
-  sales_date_to:
-    string;
+  sales_date_to: string;
 
-  stock_snapshot_date:
-    string;
+  stock_snapshot_date: string;
 
-  total_product_cluster_pairs:
-    number;
+  total_product_cluster_pairs: number;
 
-  pairs_with_need:
-    number;
+  pairs_with_need: number;
 
-  total_need_units:
-    number;
+  total_need_units: number;
 };
 
 
 type ReplenishmentItem = {
-  product_id:
-    string;
+  product_id: string;
 
   offer_id:
     | string
@@ -84,15 +76,37 @@ type ReplenishmentItem = {
     | number
     | null;
 
-  cluster_id:
-    string;
+  cluster_id: string;
 
   cluster_name:
     | string
     | null;
 
-  calculated_need:
-    number;
+  calculated_need: number;
+};
+
+
+type LatestSync = {
+  id: string;
+
+  date_from: string;
+
+  date_to: string;
+
+  status: string;
+
+  created_at: string;
+};
+
+
+type DashboardData = {
+  latest_sync:
+    | LatestSync
+    | null;
+
+  stock_snapshot_date:
+    | string
+    | null;
 };
 
 
@@ -170,15 +184,16 @@ type SellerWarehouseResponse = {
 
 
 type PreparedItem = {
-  sku:
-    number;
+  sku: number;
 
-  quantity:
-    number;
+  quantity: number;
 };
 
 
 type PreparedCluster = {
+  cluster_type:
+    ClusterType;
+
   macrolocal_cluster_id:
     number;
 
@@ -193,16 +208,38 @@ type PreparedCluster = {
 };
 
 
+type DraftBatch = {
+  batch_index:
+    number;
+
+  cluster_type:
+    ClusterType;
+
+  macrolocal_clusters_count:
+    number;
+
+  total_units:
+    number;
+
+  clusters:
+    PreparedCluster[];
+};
+
+
 type UnresolvedRow = {
   product_id:
     string;
 
   offer_id:
-    string
+    | string
+    | null;
+
+  product_name:
+    | string
     | null;
 
   ozon_sku:
-    string
+    | string
     | number
     | null;
 
@@ -210,7 +247,7 @@ type UnresolvedRow = {
     string;
 
   cluster_name:
-    string
+    | string
     | null;
 
   calculated_need:
@@ -218,6 +255,38 @@ type UnresolvedRow = {
 
   reason:
     string;
+};
+
+
+type ExcludedRow = {
+  product_id:
+    string;
+
+  offer_id:
+    | string
+    | null;
+
+  product_name:
+    | string
+    | null;
+
+  ozon_sku:
+    | string
+    | number
+    | null;
+
+  cluster_id:
+    string;
+
+  cluster_name:
+    | string
+    | null;
+
+  calculated_need:
+    number;
+
+  reason:
+    "cis_not_belarus";
 };
 
 
@@ -298,8 +367,7 @@ function getConfig() {
 // ============================================================
 
 function normalizeKey(
-  value:
-    unknown
+  value: unknown
 ): string {
 
   return String(
@@ -311,9 +379,40 @@ function normalizeKey(
 }
 
 
+function normalizeLower(
+  value: unknown
+): string {
+
+  return normalizeKey(
+    value
+  ).toLowerCase();
+
+}
+
+
+function isBelarusCluster(
+  cluster: OzonCluster
+): boolean {
+
+  const name =
+    normalizeLower(
+      cluster.name
+    );
+
+
+  return (
+    name ===
+      "беларусь"
+    ||
+    name ===
+      "belarus"
+  );
+
+}
+
+
 function sleep(
-  milliseconds:
-    number
+  milliseconds: number
 ) {
 
   return new Promise<void>(
@@ -331,8 +430,7 @@ function sleep(
 
 
 function toPositiveInteger(
-  value:
-    unknown
+  value: unknown
 ):
 number | null {
 
@@ -377,13 +475,44 @@ number | null {
 }
 
 
+function chunkArray<T>(
+  values: T[],
+  size: number
+):
+T[][] {
+
+  const result:
+    T[][] =
+    [];
+
+
+  for (
+    let index = 0;
+    index < values.length;
+    index += size
+  ) {
+
+    result.push(
+      values.slice(
+        index,
+        index + size
+      )
+    );
+
+  }
+
+
+  return result;
+
+}
+
+
 // ============================================================
 // SUPABASE GET
 // ============================================================
 
 async function supabaseGet<T>(
-  url:
-    URL
+  url: URL
 ):
 Promise<T> {
 
@@ -445,15 +574,88 @@ Promise<T> {
 
 
 // ============================================================
+// SUPABASE RPC
+// ============================================================
+
+async function supabaseRpc<T>(
+  functionName: string,
+  body: unknown
+):
+Promise<T> {
+
+  const {
+    supabaseUrl,
+    supabaseSecretKey,
+  } =
+    getConfig();
+
+
+  const response =
+    await fetch(
+      `${supabaseUrl}/rest/v1/rpc/${functionName}`,
+      {
+        method:
+          "POST",
+
+        headers: {
+          apikey:
+            supabaseSecretKey,
+
+          Authorization:
+            `Bearer ${supabaseSecretKey}`,
+
+          "Content-Type":
+            "application/json",
+
+          Accept:
+            "application/json",
+        },
+
+        body:
+          JSON.stringify(
+            body
+          ),
+
+        cache:
+          "no-store",
+      }
+    );
+
+
+  const text =
+    await response.text();
+
+
+  if (!response.ok) {
+
+    throw new Error(
+      `Supabase RPC ${functionName} ${response.status}: ${text}`
+    );
+
+  }
+
+
+  if (!text) {
+
+    return {} as T;
+
+  }
+
+
+  return JSON.parse(
+    text
+  ) as T;
+
+}
+
+
+// ============================================================
 // OZON POST
 // ============================================================
 
 async function ozonPost<T>(
-  path:
-    string,
-
-  body:
-    unknown
+  path: string,
+  body: unknown
 ):
 Promise<T> {
 
@@ -649,6 +851,23 @@ Promise<T> {
 
 
 // ============================================================
+// DASHBOARD OZON
+// ============================================================
+
+async function getOzonDashboard():
+Promise<DashboardData> {
+
+  return supabaseRpc<
+    DashboardData
+  >(
+    "get_ozon_sync_dashboard",
+    {}
+  );
+
+}
+
+
+// ============================================================
 // ПОСЛЕДНИЙ РАСЧЁТ ПОТРЕБНОСТИ
 // ============================================================
 
@@ -731,8 +950,7 @@ Promise<
 // ============================================================
 
 async function getReplenishmentItems(
-  calculationRunId:
-    string
+  calculationRunId: string
 ):
 Promise<ReplenishmentItem[]> {
 
@@ -840,10 +1058,12 @@ Promise<ReplenishmentItem[]> {
 
 
 // ============================================================
-// КЛАСТЕРЫ OZON
+// КЛАСТЕРЫ
 // ============================================================
 
-async function getOzonClusters():
+async function getOzonClustersByType(
+  clusterType: ClusterType
+):
 Promise<OzonCluster[]> {
 
   const response =
@@ -853,7 +1073,7 @@ Promise<OzonCluster[]> {
       "/v1/cluster/list",
       {
         cluster_type:
-          "CLUSTER_TYPE_OZON",
+          clusterType,
       }
     );
 
@@ -862,13 +1082,20 @@ Promise<OzonCluster[]> {
     response.clusters
     ??
     []
+  ).map(
+    cluster => ({
+      ...cluster,
+
+      type:
+        clusterType,
+    })
   );
 
 }
 
 
 // ============================================================
-// СКЛАДЫ ПРОДАВЦА ДЛЯ FBO
+// СКЛАДЫ ПРОДАВЦА
 // ============================================================
 
 async function getSellerWarehouses():
@@ -900,8 +1127,11 @@ function prepareMultiClusterData(
   rows:
     ReplenishmentItem[],
 
-  clusters:
-    OzonCluster[]
+  allowedClusters:
+    OzonCluster[],
+
+  excludedCisClusterIds:
+    Set<string>
 ) {
 
   const clusterMap =
@@ -914,6 +1144,9 @@ function prepareMultiClusterData(
         clusterName:
           string;
 
+        clusterType:
+          ClusterType;
+
         macrolocalClusterId:
           number;
       }
@@ -922,7 +1155,7 @@ function prepareMultiClusterData(
 
   for (
     const cluster
-    of clusters
+    of allowedClusters
   ) {
 
     const clusterId =
@@ -937,10 +1170,36 @@ function prepareMultiClusterData(
       );
 
 
+    const rawClusterType =
+      normalizeKey(
+        cluster.type
+      );
+
+
+    const clusterType:
+      ClusterType
+      | null =
+
+      rawClusterType ===
+        "CLUSTER_TYPE_OZON"
+
+        ? "CLUSTER_TYPE_OZON"
+
+        : rawClusterType ===
+            "CLUSTER_TYPE_CIS"
+
+          ? "CLUSTER_TYPE_CIS"
+
+          : null;
+
+
     if (
       !clusterId
       ||
       macrolocalClusterId ===
+        null
+      ||
+      clusterType ===
         null
     ) {
 
@@ -959,6 +1218,8 @@ function prepareMultiClusterData(
             cluster.name
           ),
 
+        clusterType,
+
         macrolocalClusterId,
       }
     );
@@ -971,10 +1232,21 @@ function prepareMultiClusterData(
     [];
 
 
+  const excludedRows:
+    ExcludedRow[] =
+    [];
+
+
   const macroMap =
     new Map<
-      number,
+      string,
       {
+        clusterType:
+          ClusterType;
+
+        macrolocalClusterId:
+          number;
+
         sourceClusterIds:
           Set<string>;
 
@@ -993,12 +1265,16 @@ function prepareMultiClusterData(
   let totalInputUnits =
     0;
 
-
   let mappedRows =
     0;
 
-
   let mappedUnits =
+    0;
+
+  let excludedRowsCount =
+    0;
+
+  let excludedUnits =
     0;
 
 
@@ -1043,6 +1319,43 @@ function prepareMultiClusterData(
       );
 
 
+    // ========================================================
+    // СНГ, КРОМЕ БЕЛАРУСИ
+    //
+    // Это не ошибка.
+    // Такие строки сознательно исключаем
+    // из FBO-поставки.
+    // ========================================================
+
+    if (
+      excludedCisClusterIds.has(
+        clusterId
+      )
+    ) {
+
+      excludedRows.push(
+        {
+          ...row,
+
+          reason:
+            "cis_not_belarus",
+        }
+      );
+
+
+      excludedRowsCount +=
+        1;
+
+
+      excludedUnits +=
+        quantity;
+
+
+      continue;
+
+    }
+
+
     if (
       clusterId.startsWith(
         "warehouse:"
@@ -1077,7 +1390,7 @@ function prepareMultiClusterData(
           ...row,
 
           reason:
-            "cluster_not_found_in_ozon_cluster_list",
+            "cluster_not_found_in_allowed_cluster_list",
         }
       );
 
@@ -1145,15 +1458,25 @@ function prepareMultiClusterData(
     }
 
 
+    const macroKey =
+      `${cluster.clusterType}:${cluster.macrolocalClusterId}`;
+
+
     let macro =
       macroMap.get(
-        cluster.macrolocalClusterId
+        macroKey
       );
 
 
     if (!macro) {
 
       macro = {
+        clusterType:
+          cluster.clusterType,
+
+        macrolocalClusterId:
+          cluster.macrolocalClusterId,
+
         sourceClusterIds:
           new Set<string>(),
 
@@ -1169,7 +1492,7 @@ function prepareMultiClusterData(
 
 
       macroMap.set(
-        cluster.macrolocalClusterId,
+        macroKey,
         macro
       );
 
@@ -1222,15 +1545,10 @@ function prepareMultiClusterData(
   const preparedClusters:
     PreparedCluster[] =
     Array.from(
-      macroMap.entries()
+      macroMap.values()
     )
       .map(
-        (
-          [
-            macrolocalClusterId,
-            value,
-          ]
-        ) => {
+        value => {
 
           const items =
             Array.from(
@@ -1258,8 +1576,11 @@ function prepareMultiClusterData(
 
 
           return {
+            cluster_type:
+              value.clusterType,
+
             macrolocal_cluster_id:
-              macrolocalClusterId,
+              value.macrolocalClusterId,
 
             source_cluster_ids:
               Array.from(
@@ -1275,14 +1596,6 @@ function prepareMultiClusterData(
           };
 
         }
-      )
-      .sort(
-        (
-          left,
-          right
-        ) =>
-          left.macrolocal_cluster_id -
-          right.macrolocal_cluster_id
       );
 
 
@@ -1291,12 +1604,136 @@ function prepareMultiClusterData(
 
     unresolvedRows,
 
+    excludedRows,
+
     mappedRows,
 
     mappedUnits,
 
+    excludedRowsCount,
+
+    excludedUnits,
+
     totalInputUnits,
   };
+
+}
+
+
+// ============================================================
+// РАЗБИЕНИЕ НА ПАРТИИ
+// ============================================================
+
+function buildDraftBatches(
+  preparedClusters:
+    PreparedCluster[]
+):
+DraftBatch[] {
+
+  const result:
+    DraftBatch[] =
+    [];
+
+
+  let batchIndex =
+    1;
+
+
+  const clusterTypes:
+    ClusterType[] =
+    [
+      "CLUSTER_TYPE_OZON",
+      "CLUSTER_TYPE_CIS",
+    ];
+
+
+  for (
+    const clusterType
+    of clusterTypes
+  ) {
+
+    const clustersOfType =
+      preparedClusters.filter(
+        cluster =>
+          cluster.cluster_type ===
+          clusterType
+      );
+
+
+    const chunks =
+      chunkArray(
+        clustersOfType,
+        OZON_MULTI_CLUSTER_LIMIT
+      );
+
+
+    for (
+      const clusters
+      of chunks
+    ) {
+
+      if (
+        clusters.length ===
+        0
+      ) {
+
+        continue;
+
+      }
+
+
+      const totalUnits =
+        clusters.reduce(
+          (
+            clusterTotal,
+            cluster
+          ) =>
+
+            clusterTotal
+            +
+            cluster.items.reduce(
+              (
+                itemTotal,
+                item
+              ) =>
+                itemTotal +
+                item.quantity,
+
+              0
+            ),
+
+          0
+        );
+
+
+      result.push(
+        {
+          batch_index:
+            batchIndex,
+
+          cluster_type:
+            clusterType,
+
+          macrolocal_clusters_count:
+            clusters.length,
+
+          total_units:
+            totalUnits,
+
+          clusters,
+        }
+      );
+
+
+      batchIndex +=
+        1;
+
+    }
+
+  }
+
+
+  return result;
 
 }
 
@@ -1314,7 +1751,15 @@ export async function GET() {
   try {
 
     // ========================================================
-    // 1. ПОСЛЕДНИЙ РАСЧЁТ
+    // 1. ПОСЛЕДНЯЯ СИНХРОНИЗАЦИЯ
+    // ========================================================
+
+    const dashboard =
+      await getOzonDashboard();
+
+
+    // ========================================================
+    // 2. ПОСЛЕДНИЙ РАСЧЁТ FBO
     // ========================================================
 
     const run =
@@ -1349,8 +1794,30 @@ export async function GET() {
     }
 
 
+    const latestSync =
+      dashboard.latest_sync;
+
+
+    const calculationIsFresh =
+      Boolean(
+        latestSync
+        &&
+        latestSync.status ===
+          "success"
+        &&
+        latestSync.date_from ===
+          run.sales_date_from
+        &&
+        latestSync.date_to ===
+          run.sales_date_to
+        &&
+        dashboard.stock_snapshot_date ===
+          run.stock_snapshot_date
+      );
+
+
     // ========================================================
-    // 2. ПОТРЕБНОСТЬ
+    // 3. ПОТРЕБНОСТЬ
     // ========================================================
 
     const replenishmentItems =
@@ -1393,15 +1860,69 @@ export async function GET() {
 
 
     // ========================================================
-    // 3. КЛАСТЕРЫ OZON
+    // 4. КЛАСТЕРЫ
+    //
+    // РФ берём полностью.
+    // Из СНГ разрешаем только Беларусь.
+    // Остальное СНГ исключаем осознанно.
     // ========================================================
 
-    const clusters =
-      await getOzonClusters();
+    const [
+      ozonClusters,
+      cisClusters,
+    ] =
+      await Promise.all(
+        [
+          getOzonClustersByType(
+            "CLUSTER_TYPE_OZON"
+          ),
+
+          getOzonClustersByType(
+            "CLUSTER_TYPE_CIS"
+          ),
+        ]
+      );
+
+
+    const belarusClusters =
+      cisClusters.filter(
+        isBelarusCluster
+      );
+
+
+    const excludedCisClusters =
+      cisClusters.filter(
+        cluster =>
+          !isBelarusCluster(
+            cluster
+          )
+      );
+
+
+    const excludedCisClusterIds =
+      new Set<string>(
+        excludedCisClusters
+          .map(
+            cluster =>
+              normalizeKey(
+                cluster.id
+              )
+          )
+          .filter(
+            Boolean
+          )
+      );
+
+
+    const allowedClusters =
+      [
+        ...ozonClusters,
+        ...belarusClusters,
+      ];
 
 
     if (
-      clusters.length ===
+      allowedClusters.length ===
       0
     ) {
 
@@ -1422,7 +1943,7 @@ export async function GET() {
           run,
 
           error:
-            "Ozon не вернул список кластеров",
+            "Ozon не вернул разрешённые кластеры",
         },
         {
           status:
@@ -1434,18 +1955,25 @@ export async function GET() {
 
 
     // ========================================================
-    // 4. МАППИНГ НА MACROLOCAL
+    // 5. MACROLOCAL
     // ========================================================
 
     const prepared =
       prepareMultiClusterData(
         replenishmentItems,
-        clusters
+        allowedClusters,
+        excludedCisClusterIds
+      );
+
+
+    const draftBatches =
+      buildDraftBatches(
+        prepared.preparedClusters
       );
 
 
     // ========================================================
-    // 5. СКЛАДЫ ПРОДАВЦА
+    // 6. СКЛАДЫ ПРОДАВЦА
     // ========================================================
 
     let sellerWarehouses:
@@ -1485,47 +2013,6 @@ export async function GET() {
 
 
     // ========================================================
-    // 6. SUMMARY ПО MACRO CLUSTERS
-    // ========================================================
-
-    const clusterSummary =
-      prepared
-        .preparedClusters
-        .map(
-          cluster => ({
-            macrolocal_cluster_id:
-              cluster.macrolocal_cluster_id,
-
-            source_cluster_ids:
-              cluster.source_cluster_ids,
-
-            source_cluster_names:
-              cluster.source_cluster_names,
-
-            sku_count:
-              cluster.items.length,
-
-            total_units:
-              cluster.items.reduce(
-                (
-                  total,
-                  item
-                ) =>
-                  total +
-                  item.quantity,
-                0
-              ),
-
-            items_sample:
-              cluster.items.slice(
-                0,
-                10
-              ),
-          })
-        );
-
-
-    // ========================================================
     // 7. БЛОКИРОВКИ
     // ========================================================
 
@@ -1535,14 +2022,11 @@ export async function GET() {
 
 
     if (
-      prepared
-        .preparedClusters
-        .length >
-      20
+      !calculationIsFresh
     ) {
 
       blockingReasons.push(
-        "После объединения получилось больше 20 macrolocal_cluster_id"
+        "Последний расчёт потребности FBO не соответствует последней успешной синхронизации Ozon"
       );
 
     }
@@ -1556,7 +2040,19 @@ export async function GET() {
     ) {
 
       blockingReasons.push(
-        "Есть строки потребности, которые нельзя безопасно сопоставить с macrolocal_cluster_id или SKU"
+        "Есть строки разрешённой географии, которые нельзя безопасно сопоставить с кластером или SKU"
+      );
+
+    }
+
+
+    if (
+      belarusClusters.length ===
+      0
+    ) {
+
+      blockingReasons.push(
+        "В CLUSTER_TYPE_CIS не найден кластер Беларусь"
       );
 
     }
@@ -1572,6 +2068,11 @@ export async function GET() {
       );
 
     }
+
+
+    blockingReasons.push(
+      "Ещё не выбран seller_warehouse_id для этой поставки"
+    );
 
 
     blockingReasons.push(
@@ -1596,6 +2097,49 @@ export async function GET() {
 
         writes_to_database:
           false,
+
+
+        geography_policy: {
+          russia:
+            true,
+
+          belarus:
+            true,
+
+          other_cis:
+            false,
+        },
+
+
+        calculation_freshness: {
+          is_fresh:
+            calculationIsFresh,
+
+          latest_sync:
+            latestSync,
+
+          latest_stock_snapshot_date:
+            dashboard
+              .stock_snapshot_date,
+
+          replenishment_run: {
+            id:
+              run.id,
+
+            created_at:
+              run.created_at,
+
+            sales_date_from:
+              run.sales_date_from,
+
+            sales_date_to:
+              run.sales_date_to,
+
+            stock_snapshot_date:
+              run.stock_snapshot_date,
+          },
+        },
+
 
         run: {
           id:
@@ -1623,17 +2167,13 @@ export async function GET() {
             run.total_need_units,
         },
 
+
         source_need: {
           rows_loaded:
             replenishmentItems.length,
 
           units_loaded:
             prepared.totalInputUnits,
-        },
-
-        mapping: {
-          ozon_clusters_received:
-            clusters.length,
 
           mapped_rows:
             prepared.mappedRows,
@@ -1641,12 +2181,67 @@ export async function GET() {
           mapped_units:
             prepared.mappedUnits,
 
+          excluded_non_belarus_cis_rows:
+            prepared.excludedRowsCount,
+
+          excluded_non_belarus_cis_units:
+            prepared.excludedUnits,
+        },
+
+
+        clusters: {
+          russia_received:
+            ozonClusters.length,
+
+          cis_received:
+            cisClusters.length,
+
+          belarus_received:
+            belarusClusters.length,
+
+          excluded_cis_received:
+            excludedCisClusters.length,
+
+          excluded_cis_clusters:
+            excludedCisClusters.map(
+              cluster => ({
+                cluster_id:
+                  cluster.id
+                  ??
+                  null,
+
+                name:
+                  cluster.name
+                  ??
+                  null,
+
+                macrolocal_cluster_id:
+                  cluster.macrolocal_cluster_id
+                  ??
+                  null,
+              })
+            ),
+        },
+
+
+        mapping: {
+          mapped_rows:
+            prepared.mappedRows,
+
+          mapped_units:
+            prepared.mappedUnits,
+
           unresolved_rows:
-            prepared.unresolvedRows.length,
+            prepared
+              .unresolvedRows
+              .length,
 
           unresolved_units:
-            prepared.totalInputUnits -
-            prepared.mappedUnits,
+            prepared.totalInputUnits
+            -
+            prepared.mappedUnits
+            -
+            prepared.excludedUnits,
 
           unresolved_sample:
             prepared
@@ -1657,18 +2252,109 @@ export async function GET() {
               ),
         },
 
+
+        excluded_by_policy: {
+          reason:
+            "СНГ кроме Беларуси не участвует в поставках",
+
+          rows:
+            prepared.excludedRowsCount,
+
+          units:
+            prepared.excludedUnits,
+
+          sample:
+            prepared
+              .excludedRows
+              .slice(
+                0,
+                100
+              ),
+        },
+
+
         multi_cluster: {
-          macrolocal_clusters_count:
+          total_macrolocal_clusters_count:
             prepared
               .preparedClusters
               .length,
 
-          ozon_limit:
-            20,
+          ozon_limit_per_draft:
+            OZON_MULTI_CLUSTER_LIMIT,
 
           clusters:
-            clusterSummary,
+            prepared
+              .preparedClusters
+              .map(
+                cluster => ({
+                  cluster_type:
+                    cluster.cluster_type,
+
+                  macrolocal_cluster_id:
+                    cluster.macrolocal_cluster_id,
+
+                  source_cluster_ids:
+                    cluster.source_cluster_ids,
+
+                  source_cluster_names:
+                    cluster.source_cluster_names,
+
+                  sku_count:
+                    cluster.items.length,
+
+                  total_units:
+                    cluster.items.reduce(
+                      (
+                        total,
+                        item
+                      ) =>
+                        total +
+                        item.quantity,
+
+                      0
+                    ),
+
+                  items_sample:
+                    cluster.items.slice(
+                      0,
+                      10
+                    ),
+                })
+              ),
         },
+
+
+        draft_batches: {
+          count:
+            draftBatches.length,
+
+          batches:
+            draftBatches.map(
+              batch => ({
+                batch_index:
+                  batch.batch_index,
+
+                cluster_type:
+                  batch.cluster_type,
+
+                macrolocal_clusters_count:
+                  batch.macrolocal_clusters_count,
+
+                total_units:
+                  batch.total_units,
+
+                macrolocal_cluster_ids:
+                  batch
+                    .clusters
+                    .map(
+                      cluster =>
+                        cluster
+                          .macrolocal_cluster_id
+                    ),
+              })
+            ),
+        },
+
 
         seller_warehouses: {
           received:
@@ -1711,6 +2397,7 @@ export async function GET() {
             ),
         },
 
+
         draft: {
           method:
             "/v1/draft/multi-cluster/create",
@@ -1725,14 +2412,17 @@ export async function GET() {
             false,
 
           ready_for_real_creation:
-            false,
+            blockingReasons.length ===
+            0,
 
           blocking_reasons:
             blockingReasons,
         },
 
+
         next_step:
-          "Определить seller_warehouse_id и точку drop-off, после чего собрать точный delivery_info. Черновик Ozon этим endpoint не создаётся.",
+          "Используем Россию и Беларусь. Остальное СНГ исключено по бизнес-правилу и не блокирует поставку. После проверки свежести расчёта выбираем seller_warehouse_id и cross-dock точку.",
+
 
         duration_ms:
           Date.now()
