@@ -271,8 +271,6 @@ async function getLatestReplenishment():
   const { supabaseUrl } =
     getSupabaseConfig();
 
-  // 1. Последний успешный расчёт
-
   const runUrl = new URL(
     `${supabaseUrl}/rest/v1/ozon_fbo_replenishment_runs`
   );
@@ -320,8 +318,6 @@ async function getLatestReplenishment():
       items: [],
     };
   }
-
-  // 2. Детализация расчёта
 
   const items: ReplenishmentItem[] = [];
   const pageSize = 1000;
@@ -535,8 +531,6 @@ export default async function OzonPage() {
 
   let unlinkedProductsError: string | null = null;
 
-  // DASHBOARD
-
   try {
     dashboard = await getOzonDashboard();
   } catch (error) {
@@ -545,8 +539,6 @@ export default async function OzonPage() {
         ? error.message
         : String(error);
   }
-
-  // FBO CALCULATION DETAILS
 
   try {
     replenishment =
@@ -557,8 +549,6 @@ export default async function OzonPage() {
         ? error.message
         : String(error);
   }
-
-  // ТОВАРЫ БЕЗ MASTER_CODE
 
   try {
     unlinkedProducts =
@@ -592,9 +582,7 @@ export default async function OzonPage() {
     <main className="page">
       <div className="container">
 
-        {/* ===================================
-            HEADER
-            =================================== */}
+        {/* HEADER */}
 
         <header className="header">
           <div>
@@ -626,14 +614,12 @@ export default async function OzonPage() {
               href="/"
               className="secondary-button navigation-button"
             >
-              ← Расчёт Китая
+              ← Главная
             </Link>
           </div>
         </header>
 
-        {/* ===================================
-            ОШИБКА DASHBOARD
-            =================================== */}
+        {/* ОШИБКА DASHBOARD */}
 
         {dashboardError ? (
           <section className="section">
@@ -643,18 +629,14 @@ export default async function OzonPage() {
 
             <div
               className="reason-text"
-              style={{
-                color: "#b42318",
-              }}
+              style={{ color: "#b42318" }}
             >
               {dashboardError}
             </div>
           </section>
         ) : null}
 
-        {/* ===================================
-            ОШИБКА ДЕТАЛИЗАЦИИ FBO
-            =================================== */}
+        {/* ОШИБКА ДЕТАЛИЗАЦИИ FBO */}
 
         {replenishmentError ? (
           <section className="section">
@@ -664,18 +646,14 @@ export default async function OzonPage() {
 
             <div
               className="reason-text"
-              style={{
-                color: "#b42318",
-              }}
+              style={{ color: "#b42318" }}
             >
               {replenishmentError}
             </div>
           </section>
         ) : null}
 
-        {/* ===================================
-            СОСТОЯНИЕ СИНХРОНИЗАЦИИ
-            =================================== */}
+        {/* СОСТОЯНИЕ СИНХРОНИЗАЦИИ */}
 
         <section className="section">
           <div
@@ -769,9 +747,7 @@ export default async function OzonPage() {
           </div>
         </section>
 
-        {/* ===================================
-            ОСНОВНЫЕ ПОКАЗАТЕЛИ
-            =================================== */}
+        {/* ОСНОВНЫЕ ПОКАЗАТЕЛИ */}
 
         <section className="summary-grid">
           <div className="card">
@@ -855,9 +831,7 @@ export default async function OzonPage() {
           </div>
         </section>
 
-        {/* ===================================
-            МЕТОДИКА СРАВНЕНИЯ
-            =================================== */}
+        {/* МЕТОДИКА СРАВНЕНИЯ */}
 
         <section className="section">
           <h2 className="section-title">
@@ -893,10 +867,7 @@ export default async function OzonPage() {
           </div>
         </section>
 
-        {/* ===================================
-            ПРОДАЖИ ПО ДНЯМ
-            ОФОРМЛЕНИЕ КАК НА WILDBERRIES
-            =================================== */}
+        {/* ПРОДАЖИ ПО ДНЯМ */}
 
         <section className="section">
           <h2 className="section-title">
@@ -1084,9 +1055,7 @@ export default async function OzonPage() {
           </div>
         </section>
 
-        {/* ===================================
-            ТОВАРЫ БЕЗ MASTER_CODE
-            =================================== */}
+        {/* ТОВАРЫ БЕЗ MASTER_CODE */}
 
         <section className="section">
           <div
@@ -1157,9 +1126,7 @@ export default async function OzonPage() {
           )}
         </section>
 
-        {/* ===================================
-            ТОВАРЫ
-            =================================== */}
+        {/* ТОВАРЫ */}
 
         <section className="section">
           <h2 className="section-title">
@@ -1213,9 +1180,7 @@ export default async function OzonPage() {
           />
         </section>
 
-        {/* ===================================
-            БЕЗОПАСНЫЙ РЕЖИМ
-            =================================== */}
+        {/* БЕЗОПАСНЫЙ РЕЖИМ */}
 
         <section className="section">
           <h2 className="section-title">
@@ -1247,9 +1212,7 @@ export default async function OzonPage() {
           </div>
         </section>
 
-        {/* ===================================
-            СИНХРОНИЗАЦИЯ
-            =================================== */}
+        {/* СИНХРОНИЗАЦИЯ */}
 
         <OzonStockSyncClient />
 
