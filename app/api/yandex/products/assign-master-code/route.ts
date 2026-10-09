@@ -41,6 +41,13 @@ type AssignResult = {
 };
 
 
+type SupabaseError = {
+  message?: string;
+  details?: string;
+  hint?: string;
+};
+
+
 // ============================================================
 // SUPABASE CONFIG
 // ============================================================
@@ -103,23 +110,21 @@ function getSupabaseErrorMessage(
     const parsed =
       JSON.parse(
         text
-      ) as {
-        message?: string;
-        details?: string;
-        hint?: string;
-      };
+      ) as SupabaseError;
 
 
     if (
       parsed.message
       &&
-      parsed.message.trim()
+      parsed.message.trim() !==
+        ""
     ) {
       return parsed.message;
     }
 
   } catch {
-    // Возвращаем исходный текст.
+    // Если ответ не JSON,
+    // возвращаем исходный текст.
   }
 
 
@@ -136,14 +141,17 @@ export async function POST(
 ) {
   try {
 
+    // ========================================================
+    // 1. BODY
+    // ========================================================
+
     let body:
       AssignRequest;
 
 
     try {
       body =
-        await request.json()
-        as AssignRequest;
+        (await request.json()) as AssignRequest;
 
     } catch {
       return NextResponse.json(
@@ -161,6 +169,10 @@ export async function POST(
       );
     }
 
+
+    // ========================================================
+    // 2. YANDEX PRODUCT ID
+    // ========================================================
 
     const yandexProductId =
       Number(
@@ -191,6 +203,14 @@ export async function POST(
       );
     }
 
+
+    // ========================================================
+    // 3. MASTER CODE
+    //
+    // ВАЖНО:
+    // это может быть как существующий,
+    // так и совершенно новый master_code.
+    // ========================================================
 
     const masterCode =
       String(
@@ -239,6 +259,10 @@ export async function POST(
     }
 
 
+    // ========================================================
+    // 4. SUPABASE
+    // ========================================================
+
     const {
       supabaseUrl,
       supabaseSecretKey,
@@ -284,9 +308,13 @@ export async function POST(
       );
 
 
-    const text =
+    const responseText =
       await response.text();
 
+
+    // ========================================================
+    // 5. SUPABASE ERROR
+    // ========================================================
 
     if (!response.ok) {
       return NextResponse.json(
@@ -296,7 +324,7 @@ export async function POST(
 
           error:
             getSupabaseErrorMessage(
-              text
+              responseText
             ),
         },
         {
@@ -307,37 +335,49 @@ export async function POST(
     }
 
 
+    // ========================================================
+    // 6. RESULT
+    // ========================================================
+
     let result:
-      AssignResult;
+      AssignResult =
+      {
+        ok:
+          true,
+      };
 
 
-    try {
-      result =
-        text
-          ? JSON.parse(
-              text
-            ) as AssignResult
-          : {
-              ok:
-                true,
-            };
+    if (
+      responseText.trim() !==
+      ""
+    ) {
+      try {
+        result =
+          JSON.parse(
+            responseText
+          ) as AssignResult;
 
-    } catch {
-      return NextResponse.json(
-        {
-          ok:
-            false,
+      } catch {
+        return NextResponse.json(
+          {
+            ok:
+              false,
 
-          error:
-            "Supabase вернул неожиданный ответ",
-        },
-        {
-          status:
-            500,
-        }
-      );
+            error:
+              "Supabase вернул неожиданный ответ",
+          },
+          {
+            status:
+              500,
+          }
+        );
+      }
     }
 
+
+    // ========================================================
+    // 7. RESPONSE
+    // ========================================================
 
     return NextResponse.json(
       {
@@ -345,6 +385,10 @@ export async function POST(
           true,
 
         result,
+      },
+      {
+        status:
+          200,
       }
     );
 
