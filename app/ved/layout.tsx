@@ -1,7 +1,15 @@
 
 import type { ReactNode } from "react";
 
-import WorkspaceShell from "../WorkspaceShell";
+// ============================================================
+// LAYOUT РАЗДЕЛА ВЭД
+// ============================================================
+
+// Общая оболочка WorkSpace подключается
+// через app/layout.tsx.
+//
+// Дополнительная оболочка здесь больше
+// не требуется.
 
 export default function VedLayout({
   children,
@@ -9,8 +17,8 @@ export default function VedLayout({
   children: ReactNode;
 }) {
   return (
-    <WorkspaceShell module>
+    <>
       {children}
-    </WorkspaceShell>
+    </>
   );
 }
