@@ -4,6 +4,7 @@ import ThemeToggle from "../ThemeToggle";
 
 export const dynamic = "force-dynamic";
 
+
 // ============================================================
 // ТИПЫ
 // ============================================================
@@ -18,26 +19,45 @@ type RawYandexProduct = {
   };
 
   mapping?: {
-    marketSku?: number;
+    // ВАЖНО:
+    // marketSku храним строкой,
+    // потому что некоторые Product ID Яндекса
+    // превышают Number.MAX_SAFE_INTEGER.
+    marketSku?: string;
+
     marketSkuName?: string;
+    marketModelName?: string;
     marketCategoryId?: number;
     marketCategoryName?: string;
   };
 };
 
+
 type YandexProductRow = {
   id: number;
+
   offer_id: string;
-  market_sku: number | null;
+
+  // В Supabase market_sku теперь TEXT.
+  market_sku: string | null;
+
   market_category_name: string | null;
+
   master_code: string | null;
+
   first_seen_at: string;
+
   last_seen_at: string;
+
   is_active: boolean;
+
   raw_data: RawYandexProduct | null;
+
   created_at: string;
+
   updated_at: string;
 };
+
 
 // ============================================================
 // НАСТРОЙКИ SUPABASE
@@ -45,11 +65,13 @@ type YandexProductRow = {
 
 function getSupabaseConfig() {
   const supabaseUrl =
-    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+    ||
     process.env.SUPABASE_URL?.trim();
 
   const supabaseSecretKey =
-    process.env.SUPABASE_SECRET_KEY?.trim() ||
+    process.env.SUPABASE_SECRET_KEY?.trim()
+    ||
     process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
 
   if (!supabaseUrl) {
@@ -69,6 +91,7 @@ function getSupabaseConfig() {
     supabaseSecretKey,
   };
 }
+
 
 // ============================================================
 // ЗАГРУЗКА ТОВАРОВ
@@ -117,7 +140,8 @@ Promise<YandexProductRow[]> {
     await fetch(
       url.toString(),
       {
-        method: "GET",
+        method:
+          "GET",
 
         headers: {
           apikey:
@@ -148,6 +172,7 @@ Promise<YandexProductRow[]> {
     text
   ) as YandexProductRow[];
 }
+
 
 // ============================================================
 // ФОРМАТИРОВАНИЕ
@@ -201,6 +226,16 @@ function formatDateTimeKrasnoyarsk(
   ).format(date);
 }
 
+
+function formatNumber(
+  value: number
+): string {
+  return new Intl.NumberFormat(
+    "ru-RU"
+  ).format(value);
+}
+
+
 function getProductName(
   product: YandexProductRow
 ): string {
@@ -227,11 +262,13 @@ function getProductName(
   return "—";
 }
 
+
 function getLatestSync(
   products: YandexProductRow[]
 ): string | null {
   if (
-    products.length === 0
+    products.length ===
+    0
   ) {
     return null;
   }
@@ -267,6 +304,7 @@ function getLatestSync(
 
   return latest;
 }
+
 
 // ============================================================
 // СТРАНИЦА
@@ -311,6 +349,9 @@ export default async function YandexMarketPage() {
       ) =>
         product.market_sku !==
         null
+        &&
+        product.market_sku.trim() !==
+        ""
     );
 
   const unlinkedProducts =
@@ -321,7 +362,8 @@ export default async function YandexMarketPage() {
         !product.master_code
         ||
         product.master_code
-          .trim() === ""
+          .trim() ===
+          ""
     );
 
   const categories =
@@ -354,13 +396,15 @@ export default async function YandexMarketPage() {
             !a.master_code
             ||
             a.master_code
-              .trim() === "";
+              .trim() ===
+              "";
 
           const bUnlinked =
             !b.master_code
             ||
             b.master_code
-              .trim() === "";
+              .trim() ===
+              "";
 
           if (
             aUnlinked
@@ -425,6 +469,7 @@ export default async function YandexMarketPage() {
           </div>
         </header>
 
+
         {/* ===================================
             ОШИБКА
             =================================== */}
@@ -451,6 +496,7 @@ export default async function YandexMarketPage() {
             )
             : null
         }
+
 
         {/* ===================================
             СОСТОЯНИЕ СИНХРОНИЗАЦИИ
@@ -613,6 +659,7 @@ export default async function YandexMarketPage() {
           </div>
         </section>
 
+
         {/* ===================================
             КАК СВЕРЯТЬ
             =================================== */}
@@ -630,9 +677,10 @@ export default async function YandexMarketPage() {
           </div>
 
           <div className="reason-text">
-            Product ID — marketSku,
-            если Яндекс уже сопоставил
-            товар со своей карточкой.
+            Product ID — marketSku.
+            Он хранится как текст,
+            чтобы длинные идентификаторы
+            Яндекса не округлялись.
           </div>
 
           <div className="reason-text">
@@ -648,6 +696,7 @@ export default async function YandexMarketPage() {
             источниками API.
           </div>
         </section>
+
 
         {/* ===================================
             KPI КАТАЛОГА
@@ -695,7 +744,8 @@ export default async function YandexMarketPage() {
               value=
                 {
                   formatNumber(
-                    products.length -
+                    products.length
+                    -
                     unlinkedProducts.length
                   )
                 }
@@ -720,6 +770,7 @@ export default async function YandexMarketPage() {
             />
           </div>
         </section>
+
 
         {/* ===================================
             ТОВАРЫ БЕЗ MASTER_CODE
@@ -816,6 +867,7 @@ export default async function YandexMarketPage() {
           }
         </section>
 
+
         {/* ===================================
             ВСЕ ТОВАРЫ
             =================================== */}
@@ -844,6 +896,7 @@ export default async function YandexMarketPage() {
               }
           />
         </section>
+
 
         {/* ===================================
             БЕЗОПАСНЫЙ РЕЖИМ
@@ -886,6 +939,7 @@ export default async function YandexMarketPage() {
     </main>
   );
 }
+
 
 // ============================================================
 // INFO CARD
@@ -939,6 +993,7 @@ function InfoCard({
     </div>
   );
 }
+
 
 // ============================================================
 // ТАБЛИЦА
@@ -1163,6 +1218,7 @@ function ProductsTable({
   );
 }
 
+
 // ============================================================
 // HEADER CELL
 // ============================================================
@@ -1205,6 +1261,7 @@ function TableHeader({
     </th>
   );
 }
+
 
 // ============================================================
 // TABLE CELL
@@ -1265,6 +1322,7 @@ function TableCell({
   );
 }
 
+
 // ============================================================
 // STATUS BADGE
 // ============================================================
@@ -1314,17 +1372,4 @@ function StatusBadge({
       }
     </span>
   );
-}
-
-// ============================================================
-// FORMAT NUMBER
-// ============================================================
-
-function formatNumber(
-  value:
-    number
-): string {
-  return new Intl.NumberFormat(
-    "ru-RU"
-  ).format(value);
 }
