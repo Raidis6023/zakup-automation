@@ -1197,8 +1197,7 @@ Promise<T> {
               `пауза ${retryAfterMs} мс`,
             ].join(
               " | "
-            )
-          );
+          ));
 
 
           await sleep(
@@ -1275,8 +1274,7 @@ Promise<T> {
               `пауза ${retryAfterMs} мс`,
             ].join(
               " | "
-            )
-          );
+          ));
 
 
           await sleep(
@@ -2028,10 +2026,6 @@ async function upsertOzonUnlinkedProducts(
 
 // ============================================================
 // CLUSTERS
-//
-// Россия + СНГ.
-// Для поставки 3.1 потом отдельно оставляем только Россия + Беларусь.
-// Для синхронизации нам нужен полный справочник.
 // ============================================================
 
 async function getOzonClusters() {
@@ -2239,10 +2233,6 @@ async function getOzonClusters() {
 
 // ============================================================
 // FBO POSTINGS
-//
-// ВАЖНО:
-// financial_data = true,
-// потому что cluster_to теперь основной источник кластера продаж.
 // ============================================================
 
 async function getFboPostingsForRange(
@@ -2839,15 +2829,6 @@ function getUnresolvedSalesSkus(
 
 // ============================================================
 // SALES DATA
-//
-// ОСНОВНАЯ ЛОГИКА КЛАСТЕРА:
-//
-// 1. financial_data.cluster_to
-// 2. точное сопоставление по /v1/cluster/list
-// 3. только как резерв warehouse_id
-//
-// Если кластер всё равно не найден,
-// строка НЕ записывается и весь sync блокируется.
 // ============================================================
 
 function buildSalesData(
@@ -3142,10 +3123,6 @@ function buildSalesData(
       "";
 
 
-    // ========================================================
-    // 1. ОСНОВНОЙ СПОСОБ: CLUSTER_TO
-    // ========================================================
-
     if (clusterTo) {
 
       const normalizedClusterTo =
@@ -3238,10 +3215,6 @@ function buildSalesData(
     }
 
 
-    // ========================================================
-    // 2. РЕЗЕРВ: WAREHOUSE_ID
-    // ========================================================
-
     if (!clusterId) {
 
       const warehouseCluster =
@@ -3273,10 +3246,6 @@ function buildSalesData(
 
     }
 
-
-    // ========================================================
-    // 3. КЛАСТЕР НЕ ОПРЕДЕЛЁН
-    // ========================================================
 
     if (!clusterId) {
 
@@ -4668,6 +4637,26 @@ async function runDailySync(
     false;
 
 
+  let replenishmentAttempted =
+    false;
+
+
+  let replenishmentSucceeded =
+    false;
+
+
+  let replenishmentRunId:
+    string
+    | null =
+    null;
+
+
+  let replenishmentError:
+    string
+    | null =
+    null;
+
+
   try {
 
     // ========================================================
@@ -4773,7 +4762,7 @@ async function runDailySync(
 
 
     // ========================================================
-    // 4. CLUSTERS РФ + СНГ
+    // 4. CLUSTERS
     // ========================================================
 
     const clusterResult =
@@ -4814,7 +4803,7 @@ async function runDailySync(
 
 
     // ========================================================
-    // 5. FBO SALES
+    // 5. SALES
     // ========================================================
 
     const salesResult =
@@ -4957,14 +4946,6 @@ async function runDailySync(
       );
 
 
-    // ========================================================
-    // 8. STRONG CLUSTER VALIDATION
-    //
-    // Больше никаких warehouse:* в БД.
-    // Если Ozon внезапно перестал отдавать cluster_to,
-    // лучше остановить sync, чем тихо испортить расчёт.
-    // ========================================================
-
     if (
       salesData
         .unresolvedClusters
@@ -5012,7 +4993,7 @@ async function runDailySync(
 
 
     // ========================================================
-    // 9. PRODUCT CATALOG
+    // 8. CATALOG
     // ========================================================
 
     const ozonCatalog =
@@ -5102,7 +5083,7 @@ async function runDailySync(
 
 
     // ========================================================
-    // 10. PRODUCT INFO
+    // 9. PRODUCT INFO
     // ========================================================
 
     const stockProductInfo =
@@ -5145,7 +5126,7 @@ async function runDailySync(
 
 
     // ========================================================
-    // 11. UNLINKED QUEUE
+    // 10. UNLINKED QUEUE
     // ========================================================
 
     const unlinkedProducts =
@@ -5196,7 +5177,7 @@ async function runDailySync(
 
 
     // ========================================================
-    // 12. STOCK SKU RESOLUTION
+    // 11. STOCK SKU RESOLUTION
     // ========================================================
 
     const stockResolutionResult =
@@ -5253,7 +5234,7 @@ async function runDailySync(
 
 
     // ========================================================
-    // 13. STOCK SKU LIST
+    // 12. STOCK SKU LIST
     // ========================================================
 
     const stockSkus =
@@ -5306,7 +5287,7 @@ async function runDailySync(
 
 
     // ========================================================
-    // 14. ACTIVE PRODUCTS WITH SKU
+    // 13. ACTIVE PRODUCTS WITH SKU
     // ========================================================
 
     const activeCatalogProducts =
@@ -5392,7 +5373,7 @@ async function runDailySync(
 
 
     // ========================================================
-    // 15. STOCKS
+    // 14. STOCKS
     // ========================================================
 
     const stockResult =
@@ -5447,7 +5428,7 @@ async function runDailySync(
 
 
     // ========================================================
-    // 16. POSTING STATS
+    // 15. POSTING STATS
     // ========================================================
 
     const postingsInWindow =
@@ -5500,7 +5481,7 @@ async function runDailySync(
 
 
     // ========================================================
-    // 17. ATOMIC DATABASE WRITE
+    // 16. ATOMIC DATABASE WRITE
     // ========================================================
 
     writeAttempted =
@@ -5600,10 +5581,73 @@ async function runDailySync(
 
 
     // ========================================================
-    // 18. SUCCESS
+    // 17. АВТОМАТИЧЕСКИЙ РАСЧЁТ ПОТРЕБНОСТИ FBO
     //
-    // run_ozon_fbo_replenishment пока НЕ вызываем автоматически.
-    // Сначала один раз проверяем его вручную после этой синхронизации.
+    // ВАЖНО:
+    //
+    // Это отдельная транзакция.
+    //
+    // Если расчёт потребности упадёт,
+    // уже успешно записанные продажи и остатки НЕ теряем.
+    // ========================================================
+
+    replenishmentAttempted =
+      true;
+
+
+    try {
+
+      const rpcResult =
+        await supabaseRpc<
+          string
+        >(
+          "run_ozon_fbo_replenishment",
+          {}
+        );
+
+
+      const resolvedRunId =
+        normalizeKey(
+          rpcResult
+        );
+
+
+      if (!resolvedRunId) {
+
+        throw new Error(
+          "run_ozon_fbo_replenishment не вернул run_id"
+        );
+
+      }
+
+
+      replenishmentRunId =
+        resolvedRunId;
+
+
+      replenishmentSucceeded =
+        true;
+
+    } catch (error) {
+
+      replenishmentError =
+        error instanceof Error
+          ? error.message
+          : String(
+              error
+            );
+
+
+      console.error(
+        "OZON FBO REPLENISHMENT ERROR",
+        error
+      );
+
+    }
+
+
+    // ========================================================
+    // 18. SUCCESS
     // ========================================================
 
     return Response.json(
@@ -5616,6 +5660,9 @@ async function runDailySync(
 
         writes_to_database:
           true,
+
+        attention_required:
+          !replenishmentSucceeded,
 
 
         dates: {
@@ -5866,10 +5913,25 @@ async function runDailySync(
 
         replenishment: {
           automatically_started:
-            false,
+            true,
 
-          next_check:
-            "После успешной синхронизации вручную выполнить public.run_ozon_fbo_replenishment().",
+          attempted:
+            replenishmentAttempted,
+
+          succeeded:
+            replenishmentSucceeded,
+
+          run_id:
+            replenishmentRunId,
+
+          error:
+            replenishmentError,
+
+          calculation_function:
+            "run_ozon_fbo_replenishment",
+
+          ready_for_step_3_1:
+            replenishmentSucceeded,
         },
 
 
@@ -5906,6 +5968,18 @@ async function runDailySync(
         write_succeeded:
           writeSucceeded,
 
+        replenishment_attempted:
+          replenishmentAttempted,
+
+        replenishment_succeeded:
+          replenishmentSucceeded,
+
+        replenishment_run_id:
+          replenishmentRunId,
+
+        replenishment_error:
+          replenishmentError,
+
         error:
           error instanceof Error
             ? error.message
@@ -5918,9 +5992,13 @@ async function runDailySync(
           &&
           !writeSucceeded
 
-            ? "Если ошибка пришла от apply_ozon_daily_sync, транзакция PostgreSQL откатывается целиком."
+            ? "Ошибка произошла во время основной записи. apply_ozon_daily_sync откатывает свою транзакцию целиком."
 
-            : "До боевой записи дело не дошло.",
+            : writeSucceeded
+
+              ? "Основная синхронизация уже успешно записана. Ошибка после этого этапа не отменяет свежие продажи и остатки."
+
+              : "До боевой записи дело не дошло.",
 
         duration_ms:
           Date.now()
