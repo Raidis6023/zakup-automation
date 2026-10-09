@@ -12,7 +12,7 @@ import {
 
 
 // ============================================================
-// ТИПЫ
+// TYPES
 // ============================================================
 
 type SyncState = {
@@ -121,43 +121,50 @@ type ApiResult = {
 
 
 // ============================================================
-// ЛИМИТЫ WB
+// ЛИМИТЫ НАШИХ ДВУХ КНОПОК
 //
-// ВАЖНО:
+// ОСТАТКИ:
+// используемый нами stocks-report
+// минимальный интервал базового токена = 30 минут.
 //
-// Остатки:
-// /api/v2/stocks-report/products/products
-// базовый токен:
-// 2 запроса / час
-// интервал 30 минут
+// ПРОДАЖИ:
+// одна кнопка вызывает:
+// /supplier/sales
+// +
+// /supplier/orders
 //
-// Продажи:
-// /api/v1/supplier/sales
+// sales: 2 часа
+// orders: 3 часа
 //
-// Отмены:
-// /api/v1/supplier/orders
-//
-// Для базового токена:
-// 1 запрос / 2 часа.
-//
-// Кнопка "Продажи" вызывает ОБА метода,
-// поэтому после успешного обновления
-// блокируем её на 2 часа.
-//
-// Если WB реально вернул 429 и сообщил
-// более позднее время, оно имеет приоритет.
+// Поэтому вся кнопка снова доступна через 3 часа.
 // ============================================================
 
 const STOCKS_COOLDOWN_SECONDS =
-  30 * 60;
+  30
+  *
+  60;
 
 
 const SALES_COOLDOWN_SECONDS =
-  2 * 60 * 60;
+  3
+  *
+  60
+  *
+  60;
 
 
 // ============================================================
-// ОПРЕДЕЛЯЕМ ЛИМИТ ДЛЯ КНОПКИ
+// ПОСЛЕ 07:00 ДАЁМ CRON 2 МИНУТЫ НА ЗАВЕРШЕНИЕ
+// ============================================================
+
+const DAILY_SYNC_GRACE_SECONDS =
+  2
+  *
+  60;
+
+
+// ============================================================
+// КАКОЙ COOLDOWN У ЭТОЙ КНОПКИ
 // ============================================================
 
 function getCooldownSeconds(
@@ -193,7 +200,7 @@ function getCooldownSeconds(
 
 
 // ============================================================
-// ISO DATE HELPERS
+// TIMESTAMP
 // ============================================================
 
 function getTimestamp(
@@ -209,7 +216,7 @@ number | null {
   }
 
 
-  const timestamp =
+  const result =
     new Date(
       value
     ).getTime();
@@ -217,7 +224,7 @@ number | null {
 
   if (
     !Number.isFinite(
-      timestamp
+      result
     )
   ) {
 
@@ -226,12 +233,16 @@ number | null {
   }
 
 
-  return timestamp;
+  return result;
 
 }
 
 
-function addSecondsToIso(
+// ============================================================
+// + СЕКУНДЫ
+// ============================================================
+
+function addSeconds(
   value:
     string | null | undefined,
 
@@ -250,7 +261,8 @@ string | null {
     timestamp ===
       null
     ||
-    seconds <= 0
+    seconds <=
+      0
   ) {
 
     return null;
@@ -270,10 +282,10 @@ string | null {
 
 
 // ============================================================
-// БЕРЁМ БОЛЕЕ ПОЗДНЕЕ ВРЕМЯ
+// БОЛЕЕ ПОЗДНЯЯ ДАТА
 // ============================================================
 
-function getLaterIsoDate(
+function laterDate(
   first:
     string | null | undefined,
 
@@ -282,23 +294,23 @@ function getLaterIsoDate(
 ):
 string | null {
 
-  const firstTimestamp =
+  const firstTime =
     getTimestamp(
       first
     );
 
 
-  const secondTimestamp =
+  const secondTime =
     getTimestamp(
       second
     );
 
 
   if (
-    firstTimestamp ===
+    firstTime ===
       null
     &&
-    secondTimestamp ===
+    secondTime ===
       null
   ) {
 
@@ -308,7 +320,7 @@ string | null {
 
 
   if (
-    firstTimestamp ===
+    firstTime ===
       null
   ) {
 
@@ -320,7 +332,7 @@ string | null {
 
 
   if (
-    secondTimestamp ===
+    secondTime ===
       null
   ) {
 
@@ -331,8 +343,8 @@ string | null {
   }
 
 
-  return firstTimestamp >=
-    secondTimestamp
+  return firstTime >=
+    secondTime
 
     ?
     first
@@ -348,21 +360,15 @@ string | null {
 
 
 // ============================================================
-// РАСЧЁТ ФАКТИЧЕСКОГО NEXT_ALLOWED_AT
+// ФАКТИЧЕСКОЕ ВРЕМЯ СЛЕДУЮЩЕГО ЗАПРОСА
 //
-// 1. Берём сохранённое время WB, если оно есть.
+// Если WB уже сообщил next_allowed_at,
+// мы его не затираем.
 //
-// 2. Считаем минимально разрешённое время
-//    от последнего успешного запроса.
+// Одновременно считаем окно от последнего
+// успешного запроса.
 //
-// 3. Используем БОЛЕЕ ПОЗДНЕЕ.
-//
-// Это защищает от ситуации:
-//
-// наш расчёт: 10:00
-// WB после 429 сказал: 10:37
-//
-// → кнопка откроется в 10:37.
+// Выбираем более позднюю дату.
 // ============================================================
 
 function getEffectiveNextAllowedAt(
@@ -380,62 +386,99 @@ string | null {
     );
 
 
-  const calculatedFromSuccess =
-    addSecondsToIso(
+  const calculated =
+    addSeconds(
       state?.lastSuccessAt,
       cooldownSeconds
     );
 
 
-  return getLaterIsoDate(
+  return laterDate(
     state?.nextAllowedAt,
-    calculatedFromSuccess
+    calculated
   );
 
 }
 
 
 // ============================================================
-// СООБЩЕНИЕ API
+// БЛИЖАЙШИЕ 07:00 КРАСНОЯРСКА
+//
+// Красноярск UTC+7,
+// поэтому 07:00 Красноярска = 00:00 UTC.
 // ============================================================
 
-function getResultMessage(
-  data:
-    ApiResult | null,
-
-  fallback:
-    string
+function getNextDailySyncTimestamp(
+  now:
+    number
 ) {
 
+  const date =
+    new Date(
+      now
+    );
+
+
+  let next =
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+      0,
+      0,
+      0,
+      0
+    );
+
+
   if (
-    data
-    &&
-    typeof data.message ===
-      "string"
-    &&
-    data.message.trim()
+    next <=
+    now
   ) {
 
-    return data.message;
+    next +=
+      24
+      *
+      60
+      *
+      60
+      *
+      1000;
 
   }
 
 
-  if (
-    data
-    &&
-    typeof data.error ===
-      "string"
-    &&
-    data.error.trim()
-  ) {
+  return next;
 
-    return data.error;
-
-  }
+}
 
 
-  return fallback;
+// ============================================================
+// ПОСЛЕДНИЕ 07:00
+// ============================================================
+
+function getPreviousDailySyncTimestamp(
+  now:
+    number
+) {
+
+  const next =
+    getNextDailySyncTimestamp(
+      now
+    );
+
+
+  return (
+    next
+    -
+    24
+    *
+    60
+    *
+    60
+    *
+    1000
+  );
 
 }
 
@@ -460,14 +503,18 @@ function formatDuration(
 
   const hours =
     Math.floor(
-      safe / 3600
+      safe
+      /
+      3600
     );
 
 
   const minutes =
     Math.floor(
       (
-        safe % 3600
+        safe
+        %
+        3600
       )
       /
       60
@@ -475,7 +522,9 @@ function formatDuration(
 
 
   const seconds =
-    safe % 60;
+    safe
+    %
+    60;
 
 
   return [
@@ -507,7 +556,7 @@ function formatDuration(
 
 
 // ============================================================
-// ДАТА / ВРЕМЯ ПО КРАСНОЯРСКУ
+// ДАТА КРАСНОЯРСК
 // ============================================================
 
 function formatDateTime(
@@ -571,6 +620,51 @@ function formatDateTime(
 
 
 // ============================================================
+// API MESSAGE
+// ============================================================
+
+function getResultMessage(
+  data:
+    ApiResult | null,
+
+  fallback:
+    string
+) {
+
+  if (
+    data
+    &&
+    typeof data.message ===
+      "string"
+    &&
+    data.message.trim()
+  ) {
+
+    return data.message;
+
+  }
+
+
+  if (
+    data
+    &&
+    typeof data.error ===
+      "string"
+    &&
+    data.error.trim()
+  ) {
+
+    return data.error;
+
+  }
+
+
+  return fallback;
+
+}
+
+
+// ============================================================
 // COMPONENT
 // ============================================================
 
@@ -596,10 +690,6 @@ export default function WbSyncClient({
       ]
     );
 
-
-  // ==========================================================
-  // LOCAL STATE
-  // ==========================================================
 
   const [
     loading,
@@ -641,22 +731,24 @@ export default function WbSyncClient({
     rateState,
     setRateState,
   ] =
-    useState<SyncState>(() => {
-
-      return {
+    useState<SyncState>(
+      () => ({
 
         lastHttpStatus:
-          initialState?.lastHttpStatus
+          initialState
+            ?.lastHttpStatus
           ??
           null,
 
         lastAttemptAt:
-          initialState?.lastAttemptAt
+          initialState
+            ?.lastAttemptAt
           ??
           null,
 
         lastSuccessAt:
-          initialState?.lastSuccessAt
+          initialState
+            ?.lastSuccessAt
           ??
           null,
 
@@ -667,22 +759,23 @@ export default function WbSyncClient({
           ),
 
         retryAfterSeconds:
-          initialState?.retryAfterSeconds
+          initialState
+            ?.retryAfterSeconds
           ??
           null,
 
         lastMessage:
-          initialState?.lastMessage
+          initialState
+            ?.lastMessage
           ??
           null,
 
-      };
-
-    });
+      })
+    );
 
 
   // ==========================================================
-  // КОГДА SERVER COMPONENT ОБНОВИЛ ДАННЫЕ
+  // ОБНОВЛЕНИЕ ДАННЫХ ОТ SERVER COMPONENT
   // ==========================================================
 
   useEffect(
@@ -691,17 +784,20 @@ export default function WbSyncClient({
       setRateState({
 
         lastHttpStatus:
-          initialState?.lastHttpStatus
+          initialState
+            ?.lastHttpStatus
           ??
           null,
 
         lastAttemptAt:
-          initialState?.lastAttemptAt
+          initialState
+            ?.lastAttemptAt
           ??
           null,
 
         lastSuccessAt:
-          initialState?.lastSuccessAt
+          initialState
+            ?.lastSuccessAt
           ??
           null,
 
@@ -712,12 +808,14 @@ export default function WbSyncClient({
           ),
 
         retryAfterSeconds:
-          initialState?.retryAfterSeconds
+          initialState
+            ?.retryAfterSeconds
           ??
           null,
 
         lastMessage:
-          initialState?.lastMessage
+          initialState
+            ?.lastMessage
           ??
           null,
 
@@ -737,10 +835,7 @@ export default function WbSyncClient({
 
 
   // ==========================================================
-  // ТАЙМЕР
-  //
-  // Благодаря ему страницу не надо перезагружать.
-  // Когда лимит истекает, кнопка сама становится доступной.
+  // СЕКУНДНЫЙ ТАЙМЕР ДЛЯ COUNTDOWN
   // ==========================================================
 
   useEffect(
@@ -773,57 +868,71 @@ export default function WbSyncClient({
 
 
   // ==========================================================
-  // TIMESTAMP СЛЕДУЮЩЕЙ ПОПЫТКИ
+  // ПЕРИОДИЧЕСКИ ПЕРЕЧИТЫВАЕМ SUPABASE
+  //
+  // Это НЕ запрос к Wildberries.
+  //
+  // Нужно, чтобы уже открытая страница увидела,
+  // что ежедневный cron в 07:00 закончил работу.
+  // ==========================================================
+
+  useEffect(
+    () => {
+
+      const timer =
+        window.setInterval(
+          () => {
+
+            router.refresh();
+
+          },
+          60
+          *
+          1000
+        );
+
+
+      return () => {
+
+        window.clearInterval(
+          timer
+        );
+
+      };
+
+    },
+    [
+      router,
+    ]
+  );
+
+
+  // ==========================================================
+  // СОХРАНЁННЫЙ / РАССЧИТАННЫЙ RATE LIMIT
   // ==========================================================
 
   const nextAllowedTimestamp =
     useMemo(
       () => {
 
-        if (
-          !rateState.nextAllowedAt
-        ) {
-
-          return null;
-
-        }
-
-
-        const timestamp =
-          new Date(
-            rateState.nextAllowedAt
-          ).getTime();
-
-
-        if (
-          !Number.isFinite(
-            timestamp
-          )
-        ) {
-
-          return null;
-
-        }
-
-
-        return timestamp;
+        return getTimestamp(
+          rateState
+            .nextAllowedAt
+        );
 
       },
       [
-        rateState.nextAllowedAt,
+        rateState
+          .nextAllowedAt,
       ]
     );
 
 
-  // ==========================================================
-  // СКОЛЬКО ОСТАЛОСЬ
-  // ==========================================================
-
   const secondsRemaining =
     nextAllowedTimestamp
-      &&
-      nextAllowedTimestamp >
-        now
+    &&
+    nextAllowedTimestamp >
+      now
 
       ?
       Math.ceil(
@@ -846,10 +955,7 @@ export default function WbSyncClient({
 
 
   // ==========================================================
-  // 429 БЕЗ ВРЕМЕНИ
-  //
-  // Редкий случай, когда WB сказал "нельзя",
-  // но не сказал "когда можно".
+  // 429 БЕЗ ТОЧНОГО ВРЕМЕНИ
   // ==========================================================
 
   const unknownRateLimit =
@@ -861,14 +967,110 @@ export default function WbSyncClient({
     !rateState.nextAllowedAt;
 
 
-  const disabled =
-    loading
-    ||
-    activeKnownRateLimit;
+  // ==========================================================
+  // РЕЗЕРВ ПЕРЕД ЕЖЕДНЕВНЫМ 07:00
+  //
+  // Это важно.
+  //
+  // Если дать нажать продажи, например, в 05:30,
+  // трёхчасовой лимит не даст cron обновить данные в 07:00.
+  //
+  // Поэтому незадолго до ежедневного обновления
+  // ручную кнопку резервируем.
+  // ==========================================================
+
+  const nextDailySyncTimestamp =
+    getNextDailySyncTimestamp(
+      now
+    );
+
+
+  const reservationStartTimestamp =
+    nextDailySyncTimestamp
+    -
+    cooldownSeconds
+    *
+    1000;
+
+
+  const dailyReservationActive =
+    cooldownSeconds >
+      0
+    &&
+    now >=
+      reservationStartTimestamp
+    &&
+    now <
+      nextDailySyncTimestamp;
+
+
+  const secondsUntilDailySync =
+    dailyReservationActive
+
+      ?
+      Math.ceil(
+        (
+          nextDailySyncTimestamp
+          -
+          now
+        )
+        /
+        1000
+      )
+
+      :
+      0;
 
 
   // ==========================================================
-  // НАЖАТИЕ НА КНОПКУ
+  // НЕБОЛЬШОЕ ОКНО СРАЗУ ПОСЛЕ 07:00
+  //
+  // Не даём человеку нажать кнопку буквально в ту же секунду,
+  // пока cron ещё заканчивает запись в Supabase.
+  // ==========================================================
+
+  const previousDailySyncTimestamp =
+    getPreviousDailySyncTimestamp(
+      now
+    );
+
+
+  const secondsAfterDailySync =
+    Math.floor(
+      (
+        now
+        -
+        previousDailySyncTimestamp
+      )
+      /
+      1000
+    );
+
+
+  const dailySyncGraceActive =
+    secondsAfterDailySync >=
+      0
+    &&
+    secondsAfterDailySync <
+      DAILY_SYNC_GRACE_SECONDS;
+
+
+  // ==========================================================
+  // DISABLED
+  // ==========================================================
+
+  const disabled =
+    loading
+    ||
+    activeKnownRateLimit
+    ||
+    dailyReservationActive
+    ||
+    dailySyncGraceActive;
+
+
+  // ==========================================================
+  // RUN
   // ==========================================================
 
   async function runSync() {
@@ -940,7 +1142,7 @@ export default function WbSyncClient({
 
 
       // ======================================================
-      // ПРОВЕРЯЕМ, БЫЛ ЛИ RATE LIMIT
+      // RATE LIMIT
       // ======================================================
 
       const rateLimited =
@@ -959,10 +1161,6 @@ export default function WbSyncClient({
 
       if (rateLimited) {
 
-        // ====================================================
-        // ВРЕМЯ, КОТОРОЕ СООБЩИЛ WB / SERVER
-        // ====================================================
-
         const serverNextAllowedAt =
           typeof data?.nextAllowedAt ===
             "string"
@@ -974,25 +1172,19 @@ export default function WbSyncClient({
             null;
 
 
-        // ====================================================
-        // НАШ РАСЧЁТ ОТ ПОСЛЕДНЕГО УСПЕХА
-        // ====================================================
+        const calculatedFromLastSuccess =
+          addSeconds(
+            rateState
+              .lastSuccessAt,
 
-        const calculatedNextAllowedAt =
-          addSecondsToIso(
-            rateState.lastSuccessAt,
             cooldownSeconds
           );
 
 
-        // ====================================================
-        // БЕРЁМ БОЛЕЕ ПОЗДНЕЕ
-        // ====================================================
-
         const effectiveNextAllowedAt =
-          getLaterIsoDate(
+          laterDate(
             serverNextAllowedAt,
-            calculatedNextAllowedAt
+            calculatedFromLastSuccess
           );
 
 
@@ -1012,18 +1204,21 @@ export default function WbSyncClient({
               effectiveNextAllowedAt,
 
             retryAfterSeconds:
-              typeof data?.retryAfterSeconds ===
+              typeof data
+                ?.retryAfterSeconds ===
                 "number"
 
                 ?
                 data.retryAfterSeconds
 
                 :
-                typeof data?.retryAfterSecondsOriginally ===
-                    "number"
+                typeof data
+                  ?.retryAfterSecondsOriginally ===
+                  "number"
 
                   ?
-                  data.retryAfterSecondsOriginally
+                  data
+                    .retryAfterSecondsOriginally
 
                   :
                   null,
@@ -1048,7 +1243,7 @@ export default function WbSyncClient({
               "Wildberries временно ограничил запрос"
 
               :
-              "Wildberries ограничил запрос, но не сообщил время сброса лимита"
+              "Wildberries ограничил запрос, но не сообщил точное время сброса"
           )
         );
 
@@ -1067,7 +1262,7 @@ export default function WbSyncClient({
 
 
       // ======================================================
-      // ОБЫЧНАЯ ОШИБКА
+      // ДРУГАЯ ОШИБКА
       // ======================================================
 
       if (
@@ -1099,30 +1294,49 @@ export default function WbSyncClient({
 
 
       // ======================================================
-      // УСПЕШНАЯ СИНХРОНИЗАЦИЯ
+      // УСПЕХ
       // ======================================================
 
       const successAt =
-        data?.saved?.syncedAt
+        data?.saved
+          ?.syncedAt
         ??
-        data?.newSnapshot?.snapshotAt
+        data?.newSnapshot
+          ?.snapshotAt
         ??
-        new Date().toISOString();
+        new Date()
+          .toISOString();
 
 
       // ======================================================
-      // ПОСЛЕ УСПЕХА СРАЗУ РАССЧИТЫВАЕМ,
-      // КОГДА МОЖНО НАЖАТЬ ЕЩЁ РАЗ.
+      // ЕСЛИ СЕРВЕР УЖЕ ВЕРНУЛ nextAllowedAt,
+      // ИСПОЛЬЗУЕМ ЕГО.
       //
-      // Раньше здесь было nextAllowedAt: null.
-      // Поэтому интерфейс после успеха мог сразу писать,
-      // что кнопку снова можно нажимать.
+      // ИНАЧЕ СЧИТАЕМ ПО ЛИМИТУ МЕТОДА.
       // ======================================================
+
+      const serverNextAllowedAt =
+        typeof data?.nextAllowedAt ===
+          "string"
+
+          ?
+          data.nextAllowedAt
+
+          :
+          null;
+
 
       const calculatedNextAllowedAt =
-        addSecondsToIso(
+        addSeconds(
           successAt,
           cooldownSeconds
+        );
+
+
+      const effectiveNextAllowedAt =
+        laterDate(
+          serverNextAllowedAt,
+          calculatedNextAllowedAt
         );
 
 
@@ -1132,11 +1346,14 @@ export default function WbSyncClient({
           ...current,
 
           lastHttpStatus:
-            data?.wildberries?.status
+            data?.wildberries
+              ?.status
             ??
-            data?.wildberries?.salesStatus
+            data?.wildberries
+              ?.salesStatus
             ??
-            data?.wildberries?.ordersStatus
+            data?.wildberries
+              ?.ordersStatus
             ??
             200,
 
@@ -1147,7 +1364,7 @@ export default function WbSyncClient({
             successAt,
 
           nextAllowedAt:
-            calculatedNextAllowedAt,
+            effectiveNextAllowedAt,
 
           retryAfterSeconds:
             cooldownSeconds >
@@ -1236,7 +1453,7 @@ export default function WbSyncClient({
 
 
       {/* ======================================
-          СОСТОЯНИЕ ЛИМИТА
+          АКТИВНЫЙ ЛИМИТ
           ====================================== */}
 
       {
@@ -1313,7 +1530,8 @@ export default function WbSyncClient({
 
               {
                 formatDateTime(
-                  rateState.nextAllowedAt
+                  rateState
+                    .nextAllowedAt
                 )
               }
             </div>
@@ -1324,7 +1542,170 @@ export default function WbSyncClient({
       }
 
 
+      {/* ======================================
+          РЕЗЕРВ ПЕРЕД 07:00
+          ====================================== */}
+
       {
+        !activeKnownRateLimit
+        &&
+        dailyReservationActive
+        &&
+        (
+
+          <div
+            style={{
+              width:
+                "100%",
+
+              padding:
+                "10px 12px",
+
+              borderRadius:
+                "10px",
+
+              background:
+                "rgba(70, 110, 220, 0.10)",
+
+              border:
+                "1px solid rgba(70, 110, 220, 0.22)",
+
+              textAlign:
+                "right",
+            }}
+          >
+
+            <div
+              style={{
+                fontWeight:
+                  700,
+
+                fontSize:
+                  "13px",
+              }}
+            >
+              🕖 Резерв для обновления в 07:00
+            </div>
+
+
+            <div
+              className=
+                "muted"
+
+              style={{
+                marginTop:
+                  "4px",
+              }}
+            >
+              До автоматического обновления:{" "}
+
+              <strong>
+                {
+                  formatDuration(
+                    secondsUntilDailySync
+                  )
+                }
+              </strong>
+            </div>
+
+
+            <div
+              className=
+                "muted"
+
+              style={{
+                marginTop:
+                  "2px",
+              }}
+            >
+              Кнопка временно отключена,
+              чтобы ручной запрос не заблокировал
+              утреннее обновление WB.
+            </div>
+
+          </div>
+
+        )
+      }
+
+
+      {/* ======================================
+          CRON СЕЙЧАС ВЫПОЛНЯЕТСЯ
+          ====================================== */}
+
+      {
+        !activeKnownRateLimit
+        &&
+        !dailyReservationActive
+        &&
+        dailySyncGraceActive
+        &&
+        (
+
+          <div
+            style={{
+              width:
+                "100%",
+
+              padding:
+                "10px 12px",
+
+              borderRadius:
+                "10px",
+
+              background:
+                "rgba(70, 110, 220, 0.10)",
+
+              border:
+                "1px solid rgba(70, 110, 220, 0.22)",
+
+              textAlign:
+                "right",
+            }}
+          >
+
+            <div
+              style={{
+                fontWeight:
+                  700,
+
+                fontSize:
+                  "13px",
+              }}
+            >
+              🔄 Автообновление WB
+            </div>
+
+
+            <div
+              className=
+                "muted"
+
+              style={{
+                marginTop:
+                  "4px",
+              }}
+            >
+              Получаем свежие данные после 07:00.
+            </div>
+
+          </div>
+
+        )
+      }
+
+
+      {/* ======================================
+          НЕИЗВЕСТНЫЙ 429
+          ====================================== */}
+
+      {
+        !activeKnownRateLimit
+        &&
+        !dailyReservationActive
+        &&
+        !dailySyncGraceActive
+        &&
         unknownRateLimit
         &&
         (
@@ -1374,7 +1755,6 @@ export default function WbSyncClient({
               }}
             >
               Wildberries не сообщил точное время сброса.
-              Повторную попытку можно выполнить вручную.
             </div>
 
           </div>
@@ -1383,8 +1763,16 @@ export default function WbSyncClient({
       }
 
 
+      {/* ======================================
+          МОЖНО ОБНОВИТЬ
+          ====================================== */}
+
       {
         !activeKnownRateLimit
+        &&
+        !dailyReservationActive
+        &&
+        !dailySyncGraceActive
         &&
         !unknownRateLimit
         &&
@@ -1412,8 +1800,13 @@ export default function WbSyncClient({
       }
 
 
+      {/* ======================================
+          ПОСЛЕДНИЙ УСПЕХ
+          ====================================== */}
+
       {
-        rateState.lastSuccessAt
+        rateState
+          .lastSuccessAt
         &&
         (
 
@@ -1436,7 +1829,8 @@ export default function WbSyncClient({
 
             {
               formatDateTime(
-                rateState.lastSuccessAt
+                rateState
+                  .lastSuccessAt
               )
             }
           </div>
@@ -1446,7 +1840,7 @@ export default function WbSyncClient({
 
 
       {/* ======================================
-          КНОПКА
+          BUTTON
           ====================================== */}
 
       <button
@@ -1498,14 +1892,26 @@ export default function WbSyncClient({
               )}`
 
               :
-              label
+              dailyReservationActive
+
+                ?
+                "Автообновление в 07:00"
+
+                :
+                dailySyncGraceActive
+
+                  ?
+                  "Обновляем автоматически..."
+
+                  :
+                  label
         }
 
       </button>
 
 
       {/* ======================================
-          РЕЗУЛЬТАТ ПОСЛЕДНЕГО НАЖАТИЯ
+          MESSAGE
           ====================================== */}
 
       {
