@@ -5,7 +5,7 @@ export const dynamic =
   "force-dynamic";
 
 export const maxDuration =
-  300;
+  60;
 
 
 // ============================================================
@@ -15,17 +15,17 @@ export const maxDuration =
 const OZON_API_BASE =
   "https://api-seller.ozon.ru";
 
-const OZON_MAX_RETRIES =
+const TEST_PAGE_SIZE =
+  100;
+
+const MAX_TEST_PAGES =
   5;
 
-const OZON_REQUEST_INTERVAL_MS =
-  125;
+const OZON_MAX_RETRIES =
+  3;
 
-const OZON_RETRY_BASE_MS =
+const RETRY_DELAY_MS =
   1500;
-
-const MAX_POSTING_PAGES =
-  1000;
 
 
 // ============================================================
@@ -51,9 +51,6 @@ type OzonCluster = {
 
   name?:
     string;
-
-  type?:
-    string;
 };
 
 
@@ -68,9 +65,6 @@ type FboPosting = {
     string;
 
   status?:
-    string;
-
-  created_at?:
     string;
 
   analytics_data?: {
@@ -128,16 +122,9 @@ type ClusterReference = {
     string;
 
   type:
-    string;
+    "CLUSTER_TYPE_OZON"
+    | "CLUSTER_TYPE_CIS";
 };
-
-
-// ============================================================
-// СОСТОЯНИЕ RATE LIMIT
-// ============================================================
-
-let lastOzonRequestAt =
-  0;
 
 
 // ============================================================
@@ -275,38 +262,6 @@ function sleep(
 }
 
 
-async function waitForOzonSlot() {
-
-  const now =
-    Date.now();
-
-
-  const nextAllowed =
-    lastOzonRequestAt
-    +
-    OZON_REQUEST_INTERVAL_MS;
-
-
-  if (
-    nextAllowed >
-    now
-  ) {
-
-    await sleep(
-      nextAllowed
-      -
-      now
-    );
-
-  }
-
-
-  lastOzonRequestAt =
-    Date.now();
-
-}
-
-
 // ============================================================
 // SUPABASE GET
 // ============================================================
@@ -405,9 +360,6 @@ Promise<T> {
     attempt += 1
   ) {
 
-    await waitForOzonSlot();
-
-
     try {
 
       const response =
@@ -447,28 +399,26 @@ Promise<T> {
 
 
       if (
-        response.status ===
-          429
-        ||
-        response.status >=
-          500
+        (
+          response.status ===
+            429
+          ||
+          response.status >=
+            500
+        )
+        &&
+        attempt <
+          OZON_MAX_RETRIES
       ) {
 
-        if (
-          attempt <
-          OZON_MAX_RETRIES
-        ) {
-
-          await sleep(
-            OZON_RETRY_BASE_MS
-            *
-            attempt
-          );
+        await sleep(
+          RETRY_DELAY_MS
+          *
+          attempt
+        );
 
 
-          continue;
-
-        }
+        continue;
 
       }
 
@@ -510,7 +460,7 @@ Promise<T> {
 
 
       await sleep(
-        OZON_RETRY_BASE_MS
+        RETRY_DELAY_MS
         *
         attempt
       );
@@ -521,8 +471,7 @@ Promise<T> {
 
 
   throw (
-    lastError
-    instanceof Error
+    lastError instanceof Error
 
       ? lastError
 
@@ -744,14 +693,14 @@ Promise<ClusterReference[]> {
 
 
 // ============================================================
-// FBO POSTINGS С FINANCIAL_DATA
+// БЫСТРАЯ ВЫБОРКА FBO
+//
+// Только один день.
+// Максимум 5 × 100 = 500 postings.
 // ============================================================
 
-async function getFboPostings(
-  dateFrom:
-    string,
-
-  dateTo:
+async function getPostingSample(
+  date:
     string
 ) {
 
@@ -768,9 +717,13 @@ async function getFboPostings(
     0;
 
 
+  let hasMore =
+    false;
+
+
   for (
     let page = 1;
-    page <= MAX_POSTING_PAGES;
+    page <= MAX_TEST_PAGES;
     page += 1
   ) {
 
@@ -784,14 +737,14 @@ async function getFboPostings(
 
           filter: {
             since:
-              `${dateFrom}T00:00:00+03:00`,
+              `${date}T00:00:00+03:00`,
 
             to:
-              `${dateTo}T23:59:59+03:00`,
+              `${date}T23:59:59+03:00`,
           },
 
           limit:
-            100,
+            TEST_PAGE_SIZE,
 
           sort_dir:
             "asc",
@@ -826,15 +779,15 @@ async function getFboPostings(
     );
 
 
-    if (
-      !response.has_next
-    ) {
+    hasMore =
+      Boolean(
+        response.has_next
+      );
 
-      return {
-        postings,
 
-        requestsMade,
-      };
+    if (!hasMore) {
+
+      break;
 
     }
 
@@ -865,9 +818,11 @@ async function getFboPostings(
   }
 
 
-  throw new Error(
-    "Превышен лимит страниц FBO postings"
-  );
+  return {
+    postings,
+    requestsMade,
+    hasMore,
+  };
 
 }
 
@@ -912,14 +867,14 @@ export async function GET() {
 
 
     // ========================================================
-    // 2. СПРАВОЧНИК КЛАСТЕРОВ
+    // 2. СПРАВОЧНИК
     // ========================================================
 
     const clusters =
       await getAllClusters();
 
 
-    const clustersByNormalizedName =
+    const clustersByName =
       new Map<
         string,
         ClusterReference[]
@@ -931,13 +886,13 @@ export async function GET() {
       of clusters
     ) {
 
-      const normalized =
+      const key =
         normalizeClusterName(
           cluster.name
         );
 
 
-      if (!normalized) {
+      if (!key) {
 
         continue;
 
@@ -945,8 +900,8 @@ export async function GET() {
 
 
       const current =
-        clustersByNormalizedName.get(
-          normalized
+        clustersByName.get(
+          key
         )
         ??
         [];
@@ -957,8 +912,8 @@ export async function GET() {
       );
 
 
-      clustersByNormalizedName.set(
-        normalized,
+      clustersByName.set(
+        key,
         current
       );
 
@@ -966,58 +921,47 @@ export async function GET() {
 
 
     // ========================================================
-    // 3. POSTINGS С CLUSTER_TO
+    // 3. БЕРЁМ ТОЛЬКО ПОСЛЕДНИЙ ДЕНЬ
     // ========================================================
 
-    const postingResult =
-      await getFboPostings(
-        latestSync.date_from,
+    const sample =
+      await getPostingSample(
         latestSync.date_to
       );
 
 
-    const postings =
-      postingResult.postings;
-
-
     // ========================================================
-    // 4. АНАЛИЗ CLUSTER_TO
+    // 4. АНАЛИЗ
     // ========================================================
 
-    let postingsWithClusterTo =
+    let withClusterTo =
       0;
 
 
-    let postingsWithoutClusterTo =
+    let withoutClusterTo =
       0;
 
 
-    let postingsMatchedToCluster =
+    let matched =
       0;
 
 
-    let postingsAmbiguousCluster =
+    let unmatched =
       0;
 
 
-    let postingsUnmatchedCluster =
+    let ambiguous =
       0;
 
 
-    const clusterToStats =
+    const clusterStats =
       new Map<
         string,
         {
-          raw_name:
+          cluster_to:
             string;
 
           postings:
-            number;
-
-          products:
-            number;
-
-          units:
             number;
 
           matches:
@@ -1026,33 +970,19 @@ export async function GET() {
       >();
 
 
-    const missingByStatus =
-      new Map<
-        string,
-        number
-      >();
-
-
-    const warehouseClusterToMap =
-      new Map<
-        string,
-        {
-          warehouse_name:
-            string
-            | null;
-
-          cluster_to_values:
-            Set<string>;
-
-          postings:
-            number;
-        }
-      >();
+    const missingSample:
+      Array<
+        Record<
+          string,
+          unknown
+        >
+      > =
+      [];
 
 
     for (
       const posting
-      of postings
+      of sample.postings
     ) {
 
       const clusterTo =
@@ -1063,134 +993,44 @@ export async function GET() {
         );
 
 
-      const status =
-        normalizeKey(
-          posting.status
-        )
-        ||
-        "unknown";
-
-
-      const products =
-        posting.products
-        ??
-        [];
-
-
-      const productRows =
-        products.length;
-
-
-      const units =
-        products.reduce(
-          (
-            total,
-            product
-          ) =>
-            total
-            +
-            Math.max(
-              0,
-              Number(
-                product.quantity
-                ??
-                0
-              )
-              ||
-              0
-            ),
-
-          0
-        );
-
-
-      // ======================================================
-      // WAREHOUSE -> CLUSTER_TO ДЛЯ ДИАГНОСТИКИ
-      // ======================================================
-
-      const warehouseId =
-        normalizeKey(
-          posting
-            .analytics_data
-            ?.warehouse_id
-        );
-
-
-      if (warehouseId) {
-
-        let warehouse =
-          warehouseClusterToMap.get(
-            warehouseId
-          );
-
-
-        if (!warehouse) {
-
-          warehouse = {
-            warehouse_name:
-              normalizeKey(
-                posting
-                  .analytics_data
-                  ?.warehouse_name
-              )
-              ||
-              null,
-
-            cluster_to_values:
-              new Set<string>(),
-
-            postings:
-              0,
-          };
-
-
-          warehouseClusterToMap.set(
-            warehouseId,
-            warehouse
-          );
-
-        }
-
-
-        warehouse.postings +=
-          1;
-
-
-        if (clusterTo) {
-
-          warehouse
-            .cluster_to_values
-            .add(
-              clusterTo
-            );
-
-        }
-
-      }
-
-
-      // ======================================================
-      // НЕТ CLUSTER_TO
-      // ======================================================
-
       if (!clusterTo) {
 
-        postingsWithoutClusterTo +=
+        withoutClusterTo +=
           1;
 
 
-        missingByStatus.set(
-          status,
-          (
-            missingByStatus.get(
-              status
-            )
-            ??
-            0
-          )
-          +
-          1
-        );
+        if (
+          missingSample.length <
+          30
+        ) {
+
+          missingSample.push(
+            {
+              posting_number:
+                posting.posting_number
+                ??
+                null,
+
+              status:
+                posting.status
+                ??
+                null,
+
+              warehouse_id:
+                posting.analytics_data
+                  ?.warehouse_id
+                ??
+                null,
+
+              warehouse_name:
+                posting.analytics_data
+                  ?.warehouse_name
+                ??
+                null,
+            }
+          );
+
+        }
 
 
         continue;
@@ -1198,7 +1038,7 @@ export async function GET() {
       }
 
 
-      postingsWithClusterTo +=
+      withClusterTo +=
         1;
 
 
@@ -1209,7 +1049,7 @@ export async function GET() {
 
 
       const matches =
-        clustersByNormalizedName.get(
+        clustersByName.get(
           normalized
         )
         ??
@@ -1221,7 +1061,7 @@ export async function GET() {
         1
       ) {
 
-        postingsMatchedToCluster +=
+        matched +=
           1;
 
       } else if (
@@ -1229,247 +1069,97 @@ export async function GET() {
         1
       ) {
 
-        postingsAmbiguousCluster +=
+        ambiguous +=
           1;
 
       } else {
 
-        postingsUnmatchedCluster +=
+        unmatched +=
           1;
 
       }
 
 
-      let current =
-        clusterToStats.get(
+      let stats =
+        clusterStats.get(
           normalized
         );
 
 
-      if (!current) {
+      if (!stats) {
 
-        current = {
-          raw_name:
+        stats = {
+          cluster_to:
             clusterTo,
 
           postings:
-            0,
-
-          products:
-            0,
-
-          units:
             0,
 
           matches,
         };
 
 
-        clusterToStats.set(
+        clusterStats.set(
           normalized,
-          current
+          stats
         );
 
       }
 
 
-      current.postings +=
+      stats.postings +=
         1;
-
-
-      current.products +=
-        productRows;
-
-
-      current.units +=
-        units;
 
     }
 
 
-    // ========================================================
-    // 5. УНИКАЛЬНЫЕ CLUSTER_TO
-    // ========================================================
-
-    const uniqueClusterTo =
+    const uniqueClusters =
       Array.from(
-        clusterToStats.values()
+        clusterStats.values()
       );
 
 
-    const matchedClusterTo =
-      uniqueClusterTo.filter(
+    const matchedClusters =
+      uniqueClusters.filter(
         row =>
           row.matches.length ===
           1
       );
 
 
-    const ambiguousClusterTo =
-      uniqueClusterTo.filter(
-        row =>
-          row.matches.length >
-          1
-      );
-
-
-    const unmatchedClusterTo =
-      uniqueClusterTo.filter(
+    const unmatchedClusters =
+      uniqueClusters.filter(
         row =>
           row.matches.length ===
           0
       );
 
 
-    // ========================================================
-    // 6. МОЖНО ЛИ МАППИТЬ САМ WAREHOUSE_ID
-    // ========================================================
-
-    let warehousesWithOneClusterTo =
-      0;
-
-
-    let warehousesWithMultipleClusterTo =
-      0;
+    const ambiguousClusters =
+      uniqueClusters.filter(
+        row =>
+          row.matches.length >
+          1
+      );
 
 
-    let warehousesWithoutClusterTo =
-      0;
-
-
-    const multipleWarehouseSample:
-      Array<
-        Record<
-          string,
-          unknown
-        >
-      > =
-      [];
-
-
-    for (
-      const [
-        warehouseId,
-        warehouse,
-      ]
-      of warehouseClusterToMap
-    ) {
-
-      const size =
-        warehouse
-          .cluster_to_values
-          .size;
-
-
-      if (
-        size ===
-        0
-      ) {
-
-        warehousesWithoutClusterTo +=
-          1;
-
-      } else if (
-        size ===
-        1
-      ) {
-
-        warehousesWithOneClusterTo +=
-          1;
-
-      } else {
-
-        warehousesWithMultipleClusterTo +=
-          1;
-
-
-        if (
-          multipleWarehouseSample.length <
-          100
-        ) {
-
-          multipleWarehouseSample.push(
-            {
-              warehouse_id:
-                warehouseId,
-
-              warehouse_name:
-                warehouse.warehouse_name,
-
-              postings:
-                warehouse.postings,
-
-              cluster_to_values:
-                Array.from(
-                  warehouse
-                    .cluster_to_values
-                ),
-            }
-          );
-
-        }
-
-      }
-
-    }
-
-
-    // ========================================================
-    // 7. ИТОГ
-    // ========================================================
-
-    const clusterToCoveragePercent =
-      postings.length >
-      0
-
-        ? Number(
-            (
-              (
-                postingsWithClusterTo
-                /
-                postings.length
-              )
-              *
-              100
-            ).toFixed(
-              2
-            )
-          )
-
-        : 100;
-
-
-    const referenceMatchPercent =
-      postingsWithClusterTo >
-      0
-
-        ? Number(
-            (
-              (
-                postingsMatchedToCluster
-                /
-                postingsWithClusterTo
-              )
-              *
-              100
-            ).toFixed(
-              2
-            )
-          )
-
-        : 100;
-
-
-    const readyForDirectClusterTo =
-      postingsWithoutClusterTo ===
+    const ready =
+      sample.postings.length >
         0
       &&
-      postingsUnmatchedCluster ===
+      withoutClusterTo ===
         0
       &&
-      postingsAmbiguousCluster ===
+      unmatched ===
+        0
+      &&
+      ambiguous ===
         0;
 
+
+    // ========================================================
+    // 5. RESPONSE
+    // ========================================================
 
     return Response.json(
       {
@@ -1477,7 +1167,7 @@ export async function GET() {
           true,
 
         mode:
-          "read_only_cluster_to_check",
+          "fast_cluster_to_sample",
 
         writes_to_database:
           false,
@@ -1486,88 +1176,88 @@ export async function GET() {
           false,
 
 
-        latest_sync: {
-          date_from:
-            latestSync.date_from,
-
-          date_to:
+        sample: {
+          date:
             latestSync.date_to,
 
-          created_at:
-            latestSync.created_at,
+          max_pages:
+            MAX_TEST_PAGES,
+
+          page_size:
+            TEST_PAGE_SIZE,
+
+          requests_made:
+            sample.requestsMade,
+
+          postings_loaded:
+            sample.postings.length,
+
+          ozon_has_more:
+            sample.hasMore,
         },
 
 
-        ozon: {
-          posting_requests:
-            postingResult.requestsMade,
+        cluster_to: {
+          with_cluster_to:
+            withClusterTo,
 
-          postings_received:
-            postings.length,
-
-          reference_clusters:
-            clusters.length,
-        },
-
-
-        cluster_to_coverage: {
-          postings_with_cluster_to:
-            postingsWithClusterTo,
-
-          postings_without_cluster_to:
-            postingsWithoutClusterTo,
+          without_cluster_to:
+            withoutClusterTo,
 
           coverage_percent:
-            clusterToCoveragePercent,
+            sample.postings.length >
+            0
 
-          missing_by_status:
-            Object.fromEntries(
-              missingByStatus
-            ),
+              ? Number(
+                  (
+                    (
+                      withClusterTo
+                      /
+                      sample.postings.length
+                    )
+                    *
+                    100
+                  ).toFixed(
+                    2
+                  )
+                )
+
+              : 0,
         },
 
 
-        cluster_to_reference_match: {
-          postings_matched:
-            postingsMatchedToCluster,
+        reference_match: {
+          matched_postings:
+            matched,
 
-          postings_unmatched:
-            postingsUnmatchedCluster,
+          unmatched_postings:
+            unmatched,
 
-          postings_ambiguous:
-            postingsAmbiguousCluster,
-
-          match_percent:
-            referenceMatchPercent,
+          ambiguous_postings:
+            ambiguous,
 
           unique_cluster_to:
-            uniqueClusterTo.length,
+            uniqueClusters.length,
 
           unique_matched:
-            matchedClusterTo.length,
+            matchedClusters.length,
 
           unique_unmatched:
-            unmatchedClusterTo.length,
+            unmatchedClusters.length,
 
           unique_ambiguous:
-            ambiguousClusterTo.length,
+            ambiguousClusters.length,
         },
 
 
         matched_clusters:
-          matchedClusterTo.map(
+          matchedClusters.map(
             row => ({
               cluster_to:
-                row.raw_name,
+                row.cluster_to,
 
               postings:
                 row.postings,
-
-              products:
-                row.products,
-
-              units:
-                row.units,
 
               cluster:
                 row.matches[
@@ -1578,37 +1268,25 @@ export async function GET() {
 
 
         unmatched_clusters:
-          unmatchedClusterTo.map(
+          unmatchedClusters.map(
             row => ({
               cluster_to:
-                row.raw_name,
+                row.cluster_to,
 
               postings:
                 row.postings,
-
-              products:
-                row.products,
-
-              units:
-                row.units,
             })
           ),
 
 
         ambiguous_clusters:
-          ambiguousClusterTo.map(
+          ambiguousClusters.map(
             row => ({
               cluster_to:
-                row.raw_name,
+                row.cluster_to,
 
               postings:
                 row.postings,
-
-              products:
-                row.products,
-
-              units:
-                row.units,
 
               matches:
                 row.matches,
@@ -1616,34 +1294,20 @@ export async function GET() {
           ),
 
 
-        warehouse_diagnostic: {
-          unique_warehouse_ids:
-            warehouseClusterToMap.size,
-
-          warehouses_with_one_cluster_to:
-            warehousesWithOneClusterTo,
-
-          warehouses_with_multiple_cluster_to:
-            warehousesWithMultipleClusterTo,
-
-          warehouses_without_cluster_to:
-            warehousesWithoutClusterTo,
-
-          multiple_cluster_to_sample:
-            multipleWarehouseSample,
-        },
+        missing_cluster_to_sample:
+          missingSample,
 
 
-        ready_for_direct_cluster_to_mapping:
-          readyForDirectClusterTo,
+        ready_for_cluster_to_mapping:
+          ready,
 
 
         conclusion:
-          readyForDirectClusterTo
+          ready
 
-            ? "financial_data.cluster_to покрывает все FBO postings и однозначно совпадает со справочником /v1/cluster/list. Можно использовать cluster_to как источник кластера продаж."
+            ? "На тестовой выборке cluster_to заполнен у всех отправлений и однозначно сопоставляется со справочником Ozon."
 
-            : "cluster_to помогает, но покрытие или соответствие справочнику ещё не 100%. Смотрим unmatched_clusters, ambiguous_clusters и missing_by_status.",
+            : "Тестовая выборка показала ограничения cluster_to. Смотрим coverage и unmatched/missing.",
 
 
         duration_ms:
@@ -1660,7 +1324,7 @@ export async function GET() {
   } catch (error) {
 
     console.error(
-      "OZON CLUSTER_TO CHECK ERROR",
+      "OZON FAST CLUSTER_TO CHECK ERROR",
       error
     );
 
@@ -1671,7 +1335,7 @@ export async function GET() {
           false,
 
         mode:
-          "read_only_cluster_to_check",
+          "fast_cluster_to_sample",
 
         writes_to_database:
           false,
