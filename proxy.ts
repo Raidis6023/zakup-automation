@@ -15,20 +15,19 @@ export async function proxy(
   request: NextRequest
 ) {
 
+  const pathname =
+    request.nextUrl.pathname;
+
+
   // ==========================================================
   // OZON CRON
   //
-  // Этот endpoint вызывается Vercel Cron без пользовательской
-  // Supabase-сессии.
-  //
-  // Пользовательскую авторизацию WorkSpace здесь пропускаем.
-  // Сам endpoint защищён отдельно через:
-  //
-  // Authorization: Bearer CRON_SECRET
+  // Vercel Cron приходит без пользовательской Supabase-сессии.
+  // Сам endpoint защищён CRON_SECRET.
   // ==========================================================
 
   if (
-    request.nextUrl.pathname ===
+    pathname ===
     "/api/ozon/daily-sync"
   ) {
 
@@ -38,7 +37,79 @@ export async function proxy(
 
 
   // ==========================================================
+  // WB DAILY CRON
+  //
+  // Этот endpoint тоже вызывается непосредственно Vercel Cron.
+  // Пользовательская сессия ему не нужна.
+  //
+  // Сам /api/wb/daily-sync проверяет:
+  // Authorization: Bearer CRON_SECRET
+  // ==========================================================
+
+  if (
+    pathname ===
+    "/api/wb/daily-sync"
+  ) {
+
+    return NextResponse.next();
+
+  }
+
+
+  // ==========================================================
+  // ВНУТРЕННИЕ WB-ЗАПРОСЫ ОТ DAILY CRON
+  //
+  // /api/wb/daily-sync внутри вызывает:
+  //
+  // /api/wb/sync-orders
+  // /api/wb/sync-stocks
+  //
+  // Они тоже приходят без пользовательской Supabase-сессии.
+  //
+  // Но пропускаем их ТОЛЬКО если передан правильный CRON_SECRET.
+  // Просто открыть эти API наружу нельзя.
+  // ==========================================================
+
+  const isWbInternalSyncRoute =
+    pathname ===
+      "/api/wb/sync-orders"
+    ||
+    pathname ===
+      "/api/wb/sync-stocks";
+
+
+  if (
+    isWbInternalSyncRoute
+  ) {
+
+    const cronSecret =
+      process.env.CRON_SECRET;
+
+
+    const authorization =
+      request.headers.get(
+        "authorization"
+      );
+
+
+    if (
+      cronSecret
+      &&
+      authorization ===
+        `Bearer ${cronSecret}`
+    ) {
+
+      return NextResponse.next();
+
+    }
+
+  }
+
+
+  // ==========================================================
   // ОБЫЧНАЯ АВТОРИЗАЦИЯ WORKSPACE
+  //
+  // Все обычные страницы и API работают как раньше.
   // ==========================================================
 
   return updateSession(
