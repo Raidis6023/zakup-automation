@@ -9,6 +9,9 @@ import {
   createClient,
 } from "../../lib/supabase/server";
 
+import ProfileAvatarUploader
+  from "./ProfileAvatarUploader";
+
 import ProfileForm
   from "./ProfileForm";
 
@@ -25,37 +28,6 @@ type ProfileRow = {
   has_admin_access: boolean;
   admin_role_name: string | null;
 };
-
-
-function getInitials(
-  firstName: string,
-  lastName: string
-) {
-
-  const first =
-    firstName
-      .trim()
-      .charAt(
-        0
-      );
-
-
-  const last =
-    lastName
-      .trim()
-      .charAt(
-        0
-      );
-
-
-  return (
-    `${first}${last}`
-      .toUpperCase()
-    ||
-    "П"
-  );
-
-}
 
 
 export default async function ProfilePage() {
@@ -151,13 +123,6 @@ export default async function ProfilePage() {
     "Пользователь";
 
 
-  const initials =
-    getInitials(
-      profile.first_name,
-      profile.last_name
-    );
-
-
   const adminRole =
     profile.has_admin_access
 
@@ -168,6 +133,49 @@ export default async function ProfilePage() {
         )
 
       : "Нет";
+
+
+  let avatarUrl:
+    string | null =
+      null;
+
+
+  if (
+    profile.avatar_path
+  ) {
+
+    const {
+      data: signedData,
+      error: signedError,
+    } =
+      await supabase
+        .storage
+        .from(
+          "avatars"
+        )
+        .createSignedUrl(
+          profile.avatar_path,
+          60 * 60
+        );
+
+
+    if (
+      signedError
+    ) {
+
+      console.error(
+        "Не удалось получить аватар:",
+        signedError
+      );
+
+    } else {
+
+      avatarUrl =
+        signedData.signedUrl;
+
+    }
+
+  }
 
 
   return (
@@ -220,14 +228,23 @@ export default async function ProfilePage() {
               "profile-main"
           >
 
-            <div
-              className=
-                "profile-avatar"
-            >
-              {
-                initials
+            <ProfileAvatarUploader
+              firstName={
+                profile.first_name
               }
-            </div>
+
+              lastName={
+                profile.last_name
+              }
+
+              initialAvatarPath={
+                profile.avatar_path
+              }
+
+              initialAvatarUrl={
+                avatarUrl
+              }
+            />
 
 
             <div
