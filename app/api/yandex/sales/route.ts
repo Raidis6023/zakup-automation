@@ -12,6 +12,13 @@ export const runtime = "nodejs";
 
 
 // ============================================================
+// CONFIG
+// ============================================================
+
+const SALES_WINDOW_DAYS = 28;
+
+
+// ============================================================
 // TYPES
 // ============================================================
 
@@ -262,7 +269,7 @@ type PreparedData = {
 
 
 // ============================================================
-// CONFIG
+// ENV
 // ============================================================
 
 function getConfig() {
@@ -463,7 +470,7 @@ string {
 
 
 // ============================================================
-// JSON
+// SAFE JSON
 // ============================================================
 
 function parseYandexJson<T>(
@@ -536,10 +543,12 @@ async function fetchOrders(
 
 
     if (pageToken) {
+
       url.searchParams.set(
         "pageToken",
         pageToken
       );
+
     }
 
 
@@ -1262,7 +1271,11 @@ Promise<PreparedData> {
   const dateFrom =
     shiftDate(
       dateTo,
-      -13
+      -(
+        SALES_WINDOW_DAYS
+        -
+        1
+      )
     );
 
 
@@ -1320,9 +1333,7 @@ Promise<PreparedData> {
 
 
   // ==========================================================
-  // Какие order_id уже известны:
-  // - лежат в БД
-  // - либо пришли прямо сейчас в 14-дневном окне
+  // KNOWN ORDERS
   // ==========================================================
 
   const knownOrderIds =
@@ -1366,7 +1377,7 @@ Promise<PreparedData> {
 
 
   // ==========================================================
-  // Собираем parent order IDs из returns
+  // MISSING PARENT ORDERS
   // ==========================================================
 
   const missingParentIdsSet =
@@ -1446,7 +1457,7 @@ Promise<PreparedData> {
 
 
   // ==========================================================
-  // Убираем возможный дубль order_id
+  // ALL ORDERS FOR THIS RUN
   // ==========================================================
 
   const allOrderMap =
@@ -3061,7 +3072,7 @@ export async function GET() {
             data.dateTo,
 
           days:
-            14,
+            SALES_WINDOW_DAYS,
         },
 
         orders_pages:
@@ -3342,6 +3353,9 @@ export async function POST() {
 
           date_to:
             prepared.dateTo,
+
+          days:
+            SALES_WINDOW_DAYS,
         },
 
         window_orders_received:
