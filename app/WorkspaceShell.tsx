@@ -22,6 +22,12 @@ import HomeHeaderActions
 import WorkspaceDecoration
   from "./WorkspaceDecoration";
 
+import {
+  EmployeesIcon,
+  ProcurementIcon,
+  VedIcon,
+} from "./WorkspaceNavIcons";
+
 import "./home.css";
 import "./workspace-shell.css";
 import "./sidebar-collapse.css";
@@ -58,98 +64,6 @@ function SearchIcon() {
 }
 
 
-function CartIcon() {
-
-  return (
-
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-
-      <path
-        d="
-          M3 4h2
-          l2.1 10.1
-          a2 2 0 0 0 2 1.6
-          h7.7
-          a2 2 0 0 0 2-1.5
-          L20 8H7
-        "
-      />
-
-
-      <circle
-        cx="10"
-        cy="20"
-        r="1.3"
-      />
-
-
-      <circle
-        cx="17"
-        cy="20"
-        r="1.3"
-      />
-
-    </svg>
-
-  );
-
-}
-
-
-function GlobeIcon() {
-
-  return (
-
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-
-      <circle
-        cx="12"
-        cy="12"
-        r="9"
-      />
-
-
-      <path
-        d="M3 12h18"
-      />
-
-
-      <path
-        d="
-          M12 3
-          c2.4 2.5
-          3.6 5.5
-          3.6 9
-          S14.4 18.5
-          12 21
-        "
-      />
-
-
-      <path
-        d="
-          M12 3
-          C9.6 5.5
-          8.4 8.5
-          8.4 12
-          S9.6 18.5
-          12 21
-        "
-      />
-
-    </svg>
-
-  );
-
-}
-
-
 function AdminHomeIcon() {
 
   return (
@@ -172,53 +86,6 @@ function AdminHomeIcon() {
 
       <path
         d="m9.5 12 1.7 1.7 3.5-3.7"
-      />
-
-    </svg>
-
-  );
-
-}
-
-
-function UsersIcon() {
-
-  return (
-
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-
-      <circle
-        cx="9"
-        cy="8"
-        r="3"
-      />
-
-
-      <path
-        d="
-          M3.5 19
-          c.5-4 2.5-6 5.5-6
-          s5 2 5.5 6
-        "
-      />
-
-
-      <path
-        d="
-          M15 5.5
-          a3 3 0 0 1 0 5
-        "
-      />
-
-
-      <path
-        d="
-          M16 13
-          c2.5.4 4 2.3 4.5 5
-        "
       />
 
     </svg>
@@ -359,7 +226,7 @@ export default function WorkspaceShell({
         } catch {
 
           /*
-           * На работу самого переключателя
+           * На сам переключатель
            * ошибка localStorage не влияет.
            */
 
@@ -531,10 +398,10 @@ export default function WorkspaceShell({
 
                   <span
                     className=
-                      "home-workspace-icon"
+                      "home-brand-icon"
                   >
 
-                    <UsersIcon />
+                    <EmployeesIcon />
 
                   </span>
 
@@ -581,10 +448,10 @@ export default function WorkspaceShell({
 
                   <span
                     className=
-                      "home-workspace-icon"
+                      "home-brand-icon"
                   >
 
-                    <CartIcon />
+                    <ProcurementIcon />
 
                   </span>
 
@@ -614,10 +481,10 @@ export default function WorkspaceShell({
 
                   <span
                     className=
-                      "home-workspace-icon"
+                      "home-brand-icon"
                   >
 
-                    <GlobeIcon />
+                    <VedIcon />
 
                   </span>
 
@@ -655,6 +522,7 @@ export default function WorkspaceShell({
                         "/logos/ozon.png"
 
                       alt=""
+
                       className=
                         "home-brand-image"
                     />
