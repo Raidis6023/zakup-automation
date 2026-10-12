@@ -23,6 +23,8 @@
 
 
 :global(html[data-theme="dark"])
+.procurement,
+:global(html.dark)
 .procurement {
   --icon-bg-start: #ffffff;
   --icon-bg-end: #eaf3ff;
@@ -38,23 +40,33 @@
    ============================================================ */
 
 .ved {
-  --icon-bg-start: #12d7df;
-  --icon-bg-end: #0875d6;
+  --ved-bg-start: #16dedb;
+  --ved-bg-middle: #10bcd9;
+  --ved-bg-end: #087df0;
 
-  --icon-globe: #dffeff;
-  --icon-container: #ffffff;
-  --icon-container-detail: #1185cc;
+  --ved-symbol: #ffffff;
+  --ved-highlight: rgba(255, 255, 255, 0.22);
 }
 
 
+/*
+ * ТЁМНАЯ ТЕМА
+ *
+ * Меняем цвета местами:
+ *
+ * фон становится светлым;
+ * глобус и стрелки становятся бирюзово-синими.
+ */
 :global(html[data-theme="dark"])
+.ved,
+:global(html.dark)
 .ved {
-  --icon-bg-start: #ffffff;
-  --icon-bg-end: #eafcff;
+  --ved-bg-start: #ffffff;
+  --ved-bg-middle: #f6fbff;
+  --ved-bg-end: #eaf4ff;
 
-  --icon-globe: #16bfe2;
-  --icon-container: #0872d9;
-  --icon-container-detail: #ffffff;
+  --ved-symbol: #079bdc;
+  --ved-highlight: rgba(0, 174, 223, 0.08);
 }
 
 
@@ -72,6 +84,8 @@
 
 
 :global(html[data-theme="dark"])
+.employees,
+:global(html.dark)
 .employees {
   --icon-bg-start: #ffffff;
   --icon-bg-end: #edf2ff;
