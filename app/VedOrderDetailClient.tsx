@@ -932,9 +932,13 @@ function ProductPhoto(
 export default function VedOrderDetailClient(
   {
     orderId,
+    excelExportUrl,
+    excelExportAvailable,
   }:
   {
     orderId: string;
+    excelExportUrl?: string;
+    excelExportAvailable?: boolean;
   }
 ) {
 
@@ -3266,6 +3270,22 @@ export default function VedOrderDetailClient(
         }}
       >
 
+        {/* Данные заказа слева, экспорт справа */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "20px",
+            flexWrap: "wrap",
+          }}
+        >
+          <div
+            style={{
+              flex: "1 1 880px",
+              minWidth: 0,
+            }}
+          >
+
         <div className="small-label">
           ЗАКАЗ В КИТАЙ
         </div>
@@ -3463,6 +3483,30 @@ export default function VedOrderDetailClient(
 
           </div>
 
+        </div>
+
+          </div>
+
+          {excelExportAvailable && excelExportUrl && (
+            <a
+              href={excelExportUrl}
+              className="secondary-button"
+              title="Экспортировать актуальный заказ в Excel"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                textAlign: "center",
+                textDecoration: "none",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+                minHeight: "40px",
+                marginLeft: "auto",
+              }}
+            >
+              Экспорт Excel
+            </a>
+          )}
         </div>
 
       </section>
