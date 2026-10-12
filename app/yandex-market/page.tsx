@@ -1,5 +1,4 @@
 import {
-  Fragment,
   type CSSProperties,
   type ReactNode,
 } from "react";
@@ -130,9 +129,7 @@ type SalesDailyRow = {
 
 type ProductMetrics = {
   sales: number;
-
   cancellations: number;
-
   stock: number;
 };
 
@@ -144,9 +141,7 @@ type WarehouseMetrics = {
   warehouseName: string;
 
   sales: number;
-
   cancellations: number;
-
   stock: number;
 };
 
@@ -257,7 +252,7 @@ function getSupabaseHeaders(
 
 
 // ============================================================
-// LOADERS
+// GENERIC LOADERS
 // ============================================================
 
 async function fetchAllRows<T>(
@@ -1017,14 +1012,14 @@ function buildProductGroups(
 ):
 ProductGroup[] {
 
-  const linkedGroups =
+  const linked =
     new Map<
       string,
       ProductGroup
     >();
 
 
-  const unlinkedGroups:
+  const unlinked:
     ProductGroup[] =
     [];
 
@@ -1043,7 +1038,7 @@ ProductGroup[] {
 
     if (!masterCode) {
 
-      unlinkedGroups.push(
+      unlinked.push(
         {
           key:
             `unlinked:${product.id}`,
@@ -1069,7 +1064,7 @@ ProductGroup[] {
 
 
     let group =
-      linkedGroups.get(
+      linked.get(
         masterCode
       );
 
@@ -1092,7 +1087,7 @@ ProductGroup[] {
       };
 
 
-      linkedGroups.set(
+      linked.set(
         masterCode,
         group
       );
@@ -1109,10 +1104,10 @@ ProductGroup[] {
 
   const groups =
     [
-      ...unlinkedGroups,
+      ...unlinked,
 
       ...Array.from(
-        linkedGroups.values()
+        linked.values()
       ),
     ];
 
@@ -1128,9 +1123,7 @@ ProductGroup[] {
         &&
         b.masterCode
       ) {
-
         return -1;
-
       }
 
 
@@ -1139,9 +1132,7 @@ ProductGroup[] {
         &&
         !b.masterCode
       ) {
-
         return 1;
-
       }
 
 
@@ -1149,35 +1140,15 @@ ProductGroup[] {
         a.masterCode
         ??
         a.name
-      )
-        .localeCompare(
-          b.masterCode
-          ??
-          b.name,
-          "ru"
-        );
+      ).localeCompare(
+        b.masterCode
+        ??
+        b.name,
+        "ru"
+      );
 
     }
   );
-
-
-  for (
-    const group
-    of groups
-  ) {
-
-    group.products.sort(
-      (
-        a,
-        b
-      ) =>
-        a.offer_id.localeCompare(
-          b.offer_id,
-          "ru"
-        )
-    );
-
-  }
 
 
   return groups;
@@ -1225,7 +1196,7 @@ Map<
   WarehouseMetrics[]
 > {
 
-  const resultMap =
+  const result =
     new Map<
       string,
       Map<
@@ -1247,7 +1218,7 @@ Map<
   WarehouseMetrics {
 
     let offerMap =
-      resultMap.get(
+      result.get(
         offerId
       );
 
@@ -1255,13 +1226,10 @@ Map<
     if (!offerMap) {
 
       offerMap =
-        new Map<
-          string,
-          WarehouseMetrics
-        >();
+        new Map();
 
 
-      resultMap.set(
+      result.set(
         offerId,
         offerMap
       );
@@ -1282,20 +1250,16 @@ Map<
       );
 
 
-    const normalizedName =
-      warehouseName
-        ?.trim()
-      ||
-      "—";
-
-
     if (!metric) {
 
       metric = {
         warehouseId,
 
         warehouseName:
-          normalizedName,
+          warehouseName
+            ?.trim()
+          ||
+          "—",
 
         sales:
           0,
@@ -1391,14 +1355,14 @@ Map<
   for (
     const [
       offerId,
-      warehouseMap,
+      warehouses,
     ]
-    of resultMap
+    of result
   ) {
 
     const rows =
       Array.from(
-        warehouseMap.values()
+        warehouses.values()
       );
 
 
@@ -1472,10 +1436,6 @@ export default async function YandexMarketPage() {
     28;
 
 
-  // ==========================================================
-  // PRODUCTS
-  // ==========================================================
-
   try {
 
     products =
@@ -1490,10 +1450,6 @@ export default async function YandexMarketPage() {
 
   }
 
-
-  // ==========================================================
-  // STOCKS
-  // ==========================================================
 
   try {
 
@@ -1523,10 +1479,6 @@ export default async function YandexMarketPage() {
 
   }
 
-
-  // ==========================================================
-  // SALES
-  // ==========================================================
 
   try {
 
@@ -1575,10 +1527,6 @@ export default async function YandexMarketPage() {
 
   }
 
-
-  // ==========================================================
-  // TOTAL METRICS BY OFFER
-  // ==========================================================
 
   const metricsByOffer =
     new Map<
@@ -1684,10 +1632,6 @@ export default async function YandexMarketPage() {
     );
 
 
-  // ==========================================================
-  // CATALOG INFO
-  // ==========================================================
-
   const latestCatalogSync =
     getLatestCatalogSync(
       products
@@ -1704,8 +1648,7 @@ export default async function YandexMarketPage() {
   const productsWithMarketSku =
     products.filter(
       product =>
-        product.market_sku !==
-          null
+        product.market_sku
         &&
         product.market_sku
           .trim() !==
@@ -1744,7 +1687,7 @@ export default async function YandexMarketPage() {
     );
 
 
-  const productGroups =
+  const groups =
     buildProductGroups(
       products
     );
@@ -1753,11 +1696,31 @@ export default async function YandexMarketPage() {
   return (
     <main className="page">
 
-      <div className="container">
+      <style>
+        {`
+          .yandex-product-details > summary {
+            list-style: none;
+          }
 
-        {/* ===================================
-            HEADER
-            =================================== */}
+          .yandex-product-details > summary::-webkit-details-marker {
+            display: none;
+          }
+
+          .yandex-product-chevron {
+            display: inline-block;
+            transition: transform 0.15s ease;
+            transform-origin: center;
+          }
+
+          .yandex-product-details[open]
+            .yandex-product-chevron {
+            transform: rotate(90deg);
+          }
+        `}
+      </style>
+
+
+      <div className="container">
 
         <header className="header">
 
@@ -1810,10 +1773,6 @@ export default async function YandexMarketPage() {
         </header>
 
 
-        {/* ===================================
-            ERROR
-            =================================== */}
-
         {
           loadError
             ? (
@@ -1822,7 +1781,6 @@ export default async function YandexMarketPage() {
 
                 <h2 className="section-title">
                   Ошибка загрузки данных
-                  Яндекс Маркета
                 </h2>
 
 
@@ -1844,77 +1802,11 @@ export default async function YandexMarketPage() {
         }
 
 
-        {/* ===================================
-            CATALOG STATE
-            =================================== */}
-
         <section className="section">
 
-          <div
-            style={{
-              display:
-                "flex",
-
-              justifyContent:
-                "space-between",
-
-              gap:
-                "16px",
-
-              flexWrap:
-                "wrap",
-            }}
-          >
-
-            <div>
-
-              <h2 className="section-title">
-                Состояние каталога
-              </h2>
-
-
-              <div className="reason-text">
-                Последняя успешная загрузка
-                каталога товаров из
-                Яндекс Маркета.
-              </div>
-
-            </div>
-
-
-            <div
-              style={{
-                padding:
-                  "8px 12px",
-
-                borderRadius:
-                  "999px",
-
-                background:
-                  latestCatalogSync
-                    ? "#ecfdf3"
-                    : "#fff4ed",
-
-                color:
-                  latestCatalogSync
-                    ? "#027a48"
-                    : "#b54708",
-
-                fontSize:
-                  "13px",
-
-                fontWeight:
-                  700,
-              }}
-            >
-              {
-                latestCatalogSync
-                  ? "Успешно"
-                  : "Нет успешной загрузки"
-              }
-            </div>
-
-          </div>
+          <h2 className="section-title">
+            Состояние каталога
+          </h2>
 
 
           <div
@@ -1943,9 +1835,6 @@ export default async function YandexMarketPage() {
                     latestCatalogSync
                   )
                 }
-
-              hint=
-                "Красноярское время"
             />
 
 
@@ -1959,9 +1848,6 @@ export default async function YandexMarketPage() {
                     products.length
                   )
                 }
-
-              hint=
-                "строк yandex_products"
             />
 
 
@@ -1975,9 +1861,6 @@ export default async function YandexMarketPage() {
                     activeProducts.length
                   )
                 }
-
-              hint=
-                "is_active = true"
             />
 
 
@@ -1992,9 +1875,6 @@ export default async function YandexMarketPage() {
                       .length
                   )
                 }
-
-              hint=
-                "есть marketSku"
             />
 
 
@@ -2008,19 +1888,12 @@ export default async function YandexMarketPage() {
                     unlinkedProducts.length
                   )
                 }
-
-              hint=
-                "требуют привязки"
             />
 
           </div>
 
         </section>
 
-
-        {/* ===================================
-            UPDATE DATA
-            =================================== */}
 
         <section className="section">
 
@@ -2029,30 +1902,22 @@ export default async function YandexMarketPage() {
           </h2>
 
 
-          <div className="reason-text">
-            Остатки и продажи обновляются
-            независимо друг от друга.
-          </div>
-
-
           {
             syncStateError
               ? (
 
                 <div
                   style={{
-                    marginTop:
-                      "12px",
-
                     color:
                       "#f04438",
 
                     fontSize:
                       "12px",
+
+                    marginTop:
+                      "10px",
                   }}
                 >
-                  Ошибка получения данных:
-                  {" "}
                   {syncStateError}
                 </div>
 
@@ -2075,10 +1940,6 @@ export default async function YandexMarketPage() {
 
         </section>
 
-
-        {/* ===================================
-            CATALOG INFO
-            =================================== */}
 
         <section className="section">
 
@@ -2112,9 +1973,6 @@ export default async function YandexMarketPage() {
                     categories.size
                   )
                 }
-
-              hint=
-                "уникальных категорий Маркета"
             />
 
 
@@ -2130,9 +1988,6 @@ export default async function YandexMarketPage() {
                     unlinkedProducts.length
                   )
                 }
-
-              hint=
-                "физические товары"
             />
 
 
@@ -2146,19 +2001,12 @@ export default async function YandexMarketPage() {
                     unlinkedProducts.length
                   )
                 }
-
-              hint=
-                "пока не участвуют в общей номенклатуре"
             />
 
           </div>
 
         </section>
 
-
-        {/* ===================================
-            UNLINKED
-            =================================== */}
 
         <section className="section">
 
@@ -2181,14 +2029,7 @@ export default async function YandexMarketPage() {
               )
               : (
 
-                <div
-                  className="reason-text"
-
-                  style={{
-                    marginTop:
-                      "16px",
-                  }}
-                >
+                <div className="reason-text">
                   Непривязанных товаров нет.
                 </div>
 
@@ -2198,10 +2039,6 @@ export default async function YandexMarketPage() {
         </section>
 
 
-        {/* ===================================
-            PRODUCT DATA
-            =================================== */}
-
         <section className="section">
 
           <h2 className="section-title">
@@ -2210,7 +2047,7 @@ export default async function YandexMarketPage() {
 
 
           <div className="reason-text">
-            Продажи рассчитаны за последние
+            Продажи за последние
             {" "}
             {salesPeriodDays}
             {" "}
@@ -2218,16 +2055,10 @@ export default async function YandexMarketPage() {
           </div>
 
 
-          <div className="reason-text">
-            В «Отмены» входят прямые
-            отмены и невыкупы.
-          </div>
-
-
           <ProductGroups
             groups=
               {
-                productGroups
+                groups
               }
 
             metricsByOffer=
@@ -2263,13 +2094,12 @@ export default async function YandexMarketPage() {
 function InfoCard({
   label,
   value,
-  hint,
 }: {
-  label: string;
+  label:
+    string;
 
-  value: string;
-
-  hint?: string;
+  value:
+    string;
 }) {
 
   return (
@@ -2295,26 +2125,6 @@ function InfoCard({
         {value}
       </div>
 
-
-      {
-        hint
-          ? (
-
-            <div
-              className="muted"
-
-              style={{
-                marginTop:
-                  "5px",
-              }}
-            >
-              {hint}
-            </div>
-
-          )
-          : null
-      }
-
     </div>
   );
 
@@ -2322,7 +2132,7 @@ function InfoCard({
 
 
 // ============================================================
-// GROUPS
+// PRODUCT GROUPS
 // ============================================================
 
 function ProductGroups({
@@ -2353,25 +2163,66 @@ function ProductGroups({
   return (
     <div
       style={{
-        display:
-          "flex",
-
-        flexDirection:
-          "column",
-
-        gap:
-          "18px",
-
         marginTop:
           "18px",
+
+        border:
+          "1px solid var(--table-divider, #282e38)",
+
+        borderRadius:
+          "10px",
+
+        overflow:
+          "hidden",
       }}
     >
 
+      {/* COLUMN HEADERS */}
+
+      <div
+        style={{
+          display:
+            "grid",
+
+          gridTemplateColumns:
+            "150px minmax(260px, 1fr)",
+
+          background:
+            "var(--table-header-bg, #1b2028)",
+
+          borderBottom:
+            "1px solid var(--table-divider, #282e38)",
+        }}
+      >
+
+        <div
+          style={
+            groupHeaderCellStyle
+          }
+        >
+          master_code
+        </div>
+
+
+        <div
+          style={
+            groupHeaderCellStyle
+          }
+        >
+          Товар
+        </div>
+
+      </div>
+
+
       {
         groups.map(
-          group => (
+          (
+            group,
+            index
+          ) => (
 
-            <ProductGroupBlock
+            <ProductGroupRow
               key=
                 {
                   group.key
@@ -2380,6 +2231,12 @@ function ProductGroups({
               group=
                 {
                   group
+                }
+
+              isLast=
+                {
+                  index ===
+                  groups.length - 1
                 }
 
               metricsByOffer=
@@ -2409,17 +2266,21 @@ function ProductGroups({
 
 
 // ============================================================
-// ONE PRODUCT GROUP
+// COLLAPSIBLE PRODUCT ROW
 // ============================================================
 
-function ProductGroupBlock({
+function ProductGroupRow({
   group,
+  isLast,
   metricsByOffer,
   warehouseMetricsByOffer,
   periodDays,
 }: {
   group:
     ProductGroup;
+
+  isLast:
+    boolean;
 
   metricsByOffer:
     Map<
@@ -2437,7 +2298,7 @@ function ProductGroupBlock({
     number;
 }) {
 
-  const placementRows:
+  const rows:
     PlacementWarehouseRow[] =
     [];
 
@@ -2459,7 +2320,7 @@ function ProductGroupBlock({
     of group.products
   ) {
 
-    const productMetrics =
+    const metrics =
       metricsByOffer.get(
         product.offer_id
       )
@@ -2477,15 +2338,15 @@ function ProductGroupBlock({
 
 
     totalSales +=
-      productMetrics.sales;
+      metrics.sales;
 
 
     totalStock +=
-      productMetrics.stock;
+      metrics.stock;
 
 
     totalCancellations +=
-      productMetrics.cancellations;
+      metrics.cancellations;
 
 
     const warehouses =
@@ -2496,23 +2357,25 @@ function ProductGroupBlock({
       [];
 
 
-    const activeWarehouses =
-      warehouses.filter(
-        row =>
-          row.sales > 0
-          ||
-          row.cancellations > 0
-          ||
-          row.stock > 0
-      );
-
-
     for (
       const warehouse
-      of activeWarehouses
+      of warehouses
     ) {
 
-      placementRows.push(
+      if (
+        warehouse.sales === 0
+        &&
+        warehouse.cancellations === 0
+        &&
+        warehouse.stock === 0
+      ) {
+
+        continue;
+
+      }
+
+
+      rows.push(
         {
           offerId:
             product.offer_id,
@@ -2544,7 +2407,7 @@ function ProductGroupBlock({
   }
 
 
-  placementRows.sort(
+  rows.sort(
     (
       a,
       b
@@ -2577,24 +2440,23 @@ function ProductGroupBlock({
 
 
   return (
-    <div
+    <details
+      className=
+        "yandex-product-details"
+
       style={{
-        border:
-          "1px solid var(--table-divider, #282e38)",
-
-        borderRadius:
-          "10px",
-
-        overflow:
-          "hidden",
+        borderBottom:
+          isLast
+            ? "none"
+            : "1px solid var(--table-divider, #282e38)",
       }}
     >
 
       {/* ===================================
-          GROUP HEADER
+          ALWAYS VISIBLE ROW
           =================================== */}
 
-      <div
+      <summary
         style={{
           display:
             "grid",
@@ -2602,61 +2464,11 @@ function ProductGroupBlock({
           gridTemplateColumns:
             "150px minmax(260px, 1fr)",
 
-          background:
-            "var(--table-header-bg, #1b2028)",
+          cursor:
+            "pointer",
 
-          borderBottom:
-            "1px solid var(--table-divider, #282e38)",
-        }}
-      >
-
-        <div
-          style={{
-            padding:
-              "10px 14px",
-
-            fontSize:
-              "11px",
-
-            fontWeight:
-              700,
-
-            color:
-              "var(--text-secondary, #b8c0cc)",
-          }}
-        >
-          master_code
-        </div>
-
-
-        <div
-          style={{
-            padding:
-              "10px 14px",
-
-            fontSize:
-              "11px",
-
-            fontWeight:
-              700,
-
-            color:
-              "var(--text-secondary, #b8c0cc)",
-          }}
-        >
-          Товар
-        </div>
-
-      </div>
-
-
-      <div
-        style={{
-          display:
-            "grid",
-
-          gridTemplateColumns:
-            "150px minmax(260px, 1fr)",
+          userSelect:
+            "none",
         }}
       >
 
@@ -2670,13 +2482,36 @@ function ProductGroupBlock({
 
             fontWeight:
               700,
+
+            display:
+              "flex",
+
+            alignItems:
+              "center",
+
+            gap:
+              "8px",
           }}
         >
-          {
-            group.masterCode
-            ??
-            "—"
-          }
+
+          <span
+            className=
+              "yandex-product-chevron"
+
+            aria-hidden="true"
+          >
+            ▶
+          </span>
+
+
+          <span>
+            {
+              group.masterCode
+              ??
+              "—"
+            }
+          </span>
+
         </div>
 
 
@@ -2721,17 +2556,17 @@ function ProductGroupBlock({
 
         </div>
 
-      </div>
+      </summary>
 
 
       {/* ===================================
-          WAREHOUSE SECTION
+          EXPANDED CONTENT
           =================================== */}
 
       <div
         style={{
           padding:
-            "14px 14px 12px 42px",
+            "14px 14px 16px 42px",
 
           borderTop:
             "1px solid var(--table-divider, #282e38)",
@@ -2819,7 +2654,7 @@ function ProductGroupBlock({
               Строк:{" "}
               {
                 formatInteger(
-                  placementRows.length
+                  rows.length
                 )
               }
             </span>
@@ -2860,14 +2695,13 @@ function ProductGroupBlock({
 
 
         {
-          placementRows.length >
-          0
+          rows.length > 0
             ? (
 
               <WarehouseTable
                 rows=
                   {
-                    placementRows
+                    rows
                   }
 
                 periodDays=
@@ -2880,19 +2714,9 @@ function ProductGroupBlock({
             : (
 
               <div
-                style={{
-                  padding:
-                    "12px 0",
-
-                  fontSize:
-                    "12px",
-
-                  color:
-                    "var(--text-secondary, #b8c0cc)",
-                }}
+                className="reason-text"
               >
-                Нет продаж и остатков
-                по складам за текущий период.
+                Нет данных по складам.
               </div>
 
             )
@@ -2900,7 +2724,7 @@ function ProductGroupBlock({
 
       </div>
 
-    </div>
+    </details>
   );
 
 }
@@ -3018,13 +2842,8 @@ function WarehouseTable({
                     : null;
 
 
-                const isLast =
-                  index ===
-                  rows.length - 1;
-
-
                 return (
-                  <Fragment
+                  <tr
                     key={
                       [
                         row.offerId,
@@ -3036,115 +2855,135 @@ function WarehouseTable({
                     }
                   >
 
-                    <tr>
-
-                      <WarehouseCell
-                        isLast=
-                          {isLast}
-
-                        strong
-                      >
-                        {row.offerId}
-                      </WarehouseCell>
-
-
-                      <WarehouseCell
-                        isLast=
-                          {isLast}
-                      >
-                        {row.productId}
-                      </WarehouseCell>
-
-
-                      <WarehouseCell
-                        isLast=
-                          {isLast}
-                      >
-                        {row.warehouseName}
-                      </WarehouseCell>
-
-
-                      <WarehouseCell
-                        isLast=
-                          {isLast}
-
-                        numeric
-
-                        strong
-                      >
+                    <WarehouseCell
+                      isLast=
                         {
-                          formatInteger(
-                            row.sales
-                          )
+                          index ===
+                          rows.length - 1
                         }
-                      </WarehouseCell>
+
+                      strong
+                    >
+                      {row.offerId}
+                    </WarehouseCell>
 
 
-                      <WarehouseCell
-                        isLast=
-                          {isLast}
-
-                        numeric
-                      >
+                    <WarehouseCell
+                      isLast=
                         {
-                          formatAverage(
-                            average
-                          )
+                          index ===
+                          rows.length - 1
                         }
-                      </WarehouseCell>
+                    >
+                      {row.productId}
+                    </WarehouseCell>
 
 
-                      <WarehouseCell
-                        isLast=
-                          {isLast}
-
-                        numeric
-                      >
+                    <WarehouseCell
+                      isLast=
                         {
-                          formatInteger(
-                            row.cancellations
-                          )
+                          index ===
+                          rows.length - 1
                         }
-                      </WarehouseCell>
+                    >
+                      {row.warehouseName}
+                    </WarehouseCell>
 
 
-                      <WarehouseCell
-                        isLast=
-                          {isLast}
-
-                        numeric
-
-                        strong
-                      >
+                    <WarehouseCell
+                      isLast=
                         {
-                          formatInteger(
-                            row.stock
-                          )
+                          index ===
+                          rows.length - 1
                         }
-                      </WarehouseCell>
+
+                      numeric
+
+                      strong
+                    >
+                      {
+                        formatInteger(
+                          row.sales
+                        )
+                      }
+                    </WarehouseCell>
 
 
-                      <WarehouseCell
-                        isLast=
-                          {isLast}
-
-                        numeric
-
-                        strong
-                      >
+                    <WarehouseCell
+                      isLast=
                         {
-                          stockDays ===
-                          null
-                            ? "—"
-                            : formatStockDays(
-                                stockDays
-                              )
+                          index ===
+                          rows.length - 1
                         }
-                      </WarehouseCell>
 
-                    </tr>
+                      numeric
+                    >
+                      {
+                        formatAverage(
+                          average
+                        )
+                      }
+                    </WarehouseCell>
 
-                  </Fragment>
+
+                    <WarehouseCell
+                      isLast=
+                        {
+                          index ===
+                          rows.length - 1
+                        }
+
+                      numeric
+                    >
+                      {
+                        formatInteger(
+                          row.cancellations
+                        )
+                      }
+                    </WarehouseCell>
+
+
+                    <WarehouseCell
+                      isLast=
+                        {
+                          index ===
+                          rows.length - 1
+                        }
+
+                      numeric
+
+                      strong
+                    >
+                      {
+                        formatInteger(
+                          row.stock
+                        )
+                      }
+                    </WarehouseCell>
+
+
+                    <WarehouseCell
+                      isLast=
+                        {
+                          index ===
+                          rows.length - 1
+                        }
+
+                      numeric
+
+                      strong
+                    >
+                      {
+                        stockDays ===
+                        null
+                          ? "—"
+                          : formatStockDays(
+                              stockDays
+                            )
+                      }
+                    </WarehouseCell>
+
+                  </tr>
                 );
 
               }
@@ -3162,8 +3001,25 @@ function WarehouseTable({
 
 
 // ============================================================
-// WAREHOUSE HEADER
+// STYLES
 // ============================================================
+
+const groupHeaderCellStyle:
+CSSProperties = {
+
+  padding:
+    "10px 14px",
+
+  fontSize:
+    "11px",
+
+  fontWeight:
+    700,
+
+  color:
+    "var(--text-secondary, #b8c0cc)",
+};
+
 
 function WarehouseHeader({
   children,
@@ -3215,10 +3071,6 @@ function WarehouseHeader({
 
 }
 
-
-// ============================================================
-// WAREHOUSE CELL
-// ============================================================
 
 function WarehouseCell({
   children,
