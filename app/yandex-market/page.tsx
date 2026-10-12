@@ -141,35 +141,6 @@ type WarehouseMetrics = {
   warehouseName: string;
 
   sales: number;
-  cancellations: number;
-  stock: number;
-};
-
-
-type ProductGroup = {
-  key: string;
-
-  masterCode:
-    string | null;
-
-  name: string;
-
-  products:
-    YandexProductRow[];
-};
-
-
-type PlacementWarehouseRow = {
-  offerId: string;
-
-  productId: string;
-
-  warehouseId:
-    number | null;
-
-  warehouseName: string;
-
-  sales: number;
 
   cancellations: number;
 
@@ -774,52 +745,6 @@ string {
 }
 
 
-function formatPlacementsCount(
-  count: number
-):
-string {
-
-  const mod10 =
-    count % 10;
-
-
-  const mod100 =
-    count % 100;
-
-
-  if (
-    mod10 === 1
-    &&
-    mod100 !== 11
-  ) {
-
-    return `${count} размещение`;
-
-  }
-
-
-  if (
-    mod10 >= 2
-    &&
-    mod10 <= 4
-    &&
-    (
-      mod100 < 12
-      ||
-      mod100 > 14
-    )
-  ) {
-
-    return `${count} размещения`;
-
-  }
-
-
-  return `${count} размещений`;
-
-}
-
-
 // ============================================================
 // PRODUCT HELPERS
 // ============================================================
@@ -998,160 +923,6 @@ number {
   return days > 0
     ? days
     : 28;
-
-}
-
-
-// ============================================================
-// PRODUCT GROUPS
-// ============================================================
-
-function buildProductGroups(
-  products:
-    YandexProductRow[]
-):
-ProductGroup[] {
-
-  const linked =
-    new Map<
-      string,
-      ProductGroup
-    >();
-
-
-  const unlinked:
-    ProductGroup[] =
-    [];
-
-
-  for (
-    const product
-    of products
-  ) {
-
-    const masterCode =
-      product.master_code
-        ?.trim()
-      ||
-      null;
-
-
-    if (!masterCode) {
-
-      unlinked.push(
-        {
-          key:
-            `unlinked:${product.id}`,
-
-          masterCode:
-            null,
-
-          name:
-            getProductName(
-              product
-            ),
-
-          products: [
-            product,
-          ],
-        }
-      );
-
-
-      continue;
-
-    }
-
-
-    let group =
-      linked.get(
-        masterCode
-      );
-
-
-    if (!group) {
-
-      group = {
-        key:
-          masterCode,
-
-        masterCode,
-
-        name:
-          getProductName(
-            product
-          ),
-
-        products:
-          [],
-      };
-
-
-      linked.set(
-        masterCode,
-        group
-      );
-
-    }
-
-
-    group.products.push(
-      product
-    );
-
-  }
-
-
-  const groups =
-    [
-      ...unlinked,
-
-      ...Array.from(
-        linked.values()
-      ),
-    ];
-
-
-  groups.sort(
-    (
-      a,
-      b
-    ) => {
-
-      if (
-        !a.masterCode
-        &&
-        b.masterCode
-      ) {
-        return -1;
-      }
-
-
-      if (
-        a.masterCode
-        &&
-        !b.masterCode
-      ) {
-        return 1;
-      }
-
-
-      return (
-        a.masterCode
-        ??
-        a.name
-      ).localeCompare(
-        b.masterCode
-        ??
-        b.name,
-        "ru"
-      );
-
-    }
-  );
-
-
-  return groups;
 
 }
 
@@ -1528,6 +1299,10 @@ export default async function YandexMarketPage() {
   }
 
 
+  // ==========================================================
+  // TOTALS BY OFFER
+  // ==========================================================
+
   const metricsByOffer =
     new Map<
       string,
@@ -1687,9 +1462,45 @@ export default async function YandexMarketPage() {
     );
 
 
-  const groups =
-    buildProductGroups(
-      products
+  const sortedProducts =
+    [
+      ...products,
+    ].sort(
+      (
+        a,
+        b
+      ) => {
+
+        const masterCompare =
+          (
+            a.master_code
+            ??
+            ""
+          ).localeCompare(
+            b.master_code
+            ??
+            "",
+            "ru"
+          );
+
+
+        if (
+          masterCompare !==
+          0
+        ) {
+
+          return masterCompare;
+
+        }
+
+
+        return a.offer_id
+          .localeCompare(
+            b.offer_id,
+            "ru"
+          );
+
+      }
     );
 
 
@@ -1713,14 +1524,22 @@ export default async function YandexMarketPage() {
           }
 
           .yandex-product-details[open]
-            .yandex-product-chevron {
+          .yandex-product-chevron {
             transform: rotate(90deg);
+          }
+
+          .yandex-product-details > summary:hover {
+            background: rgba(255,255,255,0.02);
           }
         `}
       </style>
 
 
       <div className="container">
+
+        {/* ===================================
+            HEADER
+            =================================== */}
 
         <header className="header">
 
@@ -1773,6 +1592,10 @@ export default async function YandexMarketPage() {
         </header>
 
 
+        {/* ===================================
+            ERROR
+            =================================== */}
+
         {
           loadError
             ? (
@@ -1801,6 +1624,10 @@ export default async function YandexMarketPage() {
             : null
         }
 
+
+        {/* ===================================
+            CATALOG STATUS
+            =================================== */}
 
         <section className="section">
 
@@ -1895,6 +1722,10 @@ export default async function YandexMarketPage() {
         </section>
 
 
+        {/* ===================================
+            UPDATE
+            =================================== */}
+
         <section className="section">
 
           <h2 className="section-title">
@@ -1940,6 +1771,10 @@ export default async function YandexMarketPage() {
 
         </section>
 
+
+        {/* ===================================
+            CATALOG
+            =================================== */}
 
         <section className="section">
 
@@ -2008,6 +1843,10 @@ export default async function YandexMarketPage() {
         </section>
 
 
+        {/* ===================================
+            UNLINKED
+            =================================== */}
+
         <section className="section">
 
           <h2 className="section-title">
@@ -2039,6 +1878,10 @@ export default async function YandexMarketPage() {
         </section>
 
 
+        {/* ===================================
+            PRODUCT DATA
+            =================================== */}
+
         <section className="section">
 
           <h2 className="section-title">
@@ -2047,18 +1890,17 @@ export default async function YandexMarketPage() {
 
 
           <div className="reason-text">
-            Продажи за последние
-            {" "}
-            {salesPeriodDays}
-            {" "}
-            дней.
+            Основная строка показывает
+            общие показатели артикула.
+            При раскрытии — показатели
+            по конкретным складам.
           </div>
 
 
-          <ProductGroups
-            groups=
+          <ProductsTable
+            products=
               {
-                groups
+                sortedProducts
               }
 
             metricsByOffer=
@@ -2132,17 +1974,17 @@ function InfoCard({
 
 
 // ============================================================
-// PRODUCT GROUPS
+// PRODUCTS TABLE
 // ============================================================
 
-function ProductGroups({
-  groups,
+function ProductsTable({
+  products,
   metricsByOffer,
   warehouseMetricsByOffer,
   periodDays,
 }: {
-  groups:
-    ProductGroup[];
+  products:
+    YandexProductRow[];
 
   metricsByOffer:
     Map<
@@ -2177,7 +2019,9 @@ function ProductGroups({
       }}
     >
 
-      {/* COLUMN HEADERS */}
+      {/* ===================================
+          MAIN HEADER
+          =================================== */}
 
       <div
         style={{
@@ -2185,7 +2029,7 @@ function ProductGroups({
             "grid",
 
           gridTemplateColumns:
-            "150px minmax(260px, 1fr)",
+            "130px minmax(300px, 2fr) minmax(220px, 1.35fr) 120px 120px 105px 105px 105px",
 
           background:
             "var(--table-header-bg, #1b2028)",
@@ -2195,67 +2039,446 @@ function ProductGroups({
         }}
       >
 
-        <div
-          style={
-            groupHeaderCellStyle
-          }
-        >
+        <MainHeader>
           master_code
-        </div>
+        </MainHeader>
 
 
-        <div
-          style={
-            groupHeaderCellStyle
-          }
-        >
+        <MainHeader>
           Товар
-        </div>
+        </MainHeader>
+
+
+        <MainHeader>
+          Offer ID
+        </MainHeader>
+
+
+        <MainHeader numeric>
+          Продажи {periodDays} дн.
+        </MainHeader>
+
+
+        <MainHeader numeric>
+          Среднее / день
+        </MainHeader>
+
+
+        <MainHeader numeric>
+          Отмены
+        </MainHeader>
+
+
+        <MainHeader numeric>
+          Остаток
+        </MainHeader>
+
+
+        <MainHeader numeric>
+          Дней запаса
+        </MainHeader>
 
       </div>
 
 
+      {/* ===================================
+          PRODUCTS
+          =================================== */}
+
       {
-        groups.map(
+        products.map(
           (
-            group,
+            product,
             index
-          ) => (
+          ) => {
 
-            <ProductGroupRow
-              key=
-                {
-                  group.key
-                }
+            const metrics =
+              metricsByOffer.get(
+                product.offer_id
+              )
+              ??
+              {
+                sales:
+                  0,
 
-              group=
-                {
-                  group
-                }
+                cancellations:
+                  0,
 
-              isLast=
-                {
-                  index ===
-                  groups.length - 1
-                }
+                stock:
+                  0,
+              };
 
-              metricsByOffer=
-                {
-                  metricsByOffer
-                }
 
-              warehouseMetricsByOffer=
-                {
-                  warehouseMetricsByOffer
-                }
-
-              periodDays=
-                {
+            const average =
+              periodDays > 0
+                ? metrics.sales
+                  /
                   periodDays
-                }
-            />
+                : 0;
 
-          )
+
+            const stockDays =
+              average > 0
+                ? metrics.stock
+                  /
+                  average
+                : null;
+
+
+            const warehouses =
+              (
+                warehouseMetricsByOffer.get(
+                  product.offer_id
+                )
+                ??
+                []
+              )
+              .filter(
+                row =>
+                  row.sales > 0
+                  ||
+                  row.cancellations > 0
+                  ||
+                  row.stock > 0
+              );
+
+
+            return (
+              <details
+                key=
+                  {
+                    product.id
+                  }
+
+                className=
+                  "yandex-product-details"
+
+                style={{
+                  borderBottom:
+                    index ===
+                    products.length - 1
+                      ? "none"
+                      : "1px solid var(--table-divider, #282e38)",
+                }}
+              >
+
+                {/* ===========================
+                    MAIN PRODUCT ROW
+                    =========================== */}
+
+                <summary
+                  style={{
+                    display:
+                      "grid",
+
+                    gridTemplateColumns:
+                      "130px minmax(300px, 2fr) minmax(220px, 1.35fr) 120px 120px 105px 105px 105px",
+
+                    cursor:
+                      "pointer",
+
+                    userSelect:
+                      "none",
+
+                    alignItems:
+                      "center",
+                  }}
+                >
+
+                  <MainCell strong>
+
+                    <span
+                      style={{
+                        display:
+                          "inline-flex",
+
+                        alignItems:
+                          "center",
+
+                        gap:
+                          "7px",
+                      }}
+                    >
+
+                      <span
+                        className=
+                          "yandex-product-chevron"
+
+                        aria-hidden="true"
+                      >
+                        ▶
+                      </span>
+
+
+                      <span>
+                        {
+                          product.master_code
+                          ??
+                          "—"
+                        }
+                      </span>
+
+                    </span>
+
+                  </MainCell>
+
+
+                  <MainCell strong>
+                    {
+                      getProductName(
+                        product
+                      )
+                    }
+                  </MainCell>
+
+
+                  <MainCell strong>
+                    {
+                      product.offer_id
+                    }
+                  </MainCell>
+
+
+                  <MainCell
+                    numeric
+                    strong
+                  >
+                    {
+                      formatInteger(
+                        metrics.sales
+                      )
+                    }
+                  </MainCell>
+
+
+                  <MainCell numeric>
+                    {
+                      formatAverage(
+                        average
+                      )
+                    }
+                  </MainCell>
+
+
+                  <MainCell numeric>
+                    {
+                      formatInteger(
+                        metrics.cancellations
+                      )
+                    }
+                  </MainCell>
+
+
+                  <MainCell
+                    numeric
+                    strong
+                  >
+                    {
+                      formatInteger(
+                        metrics.stock
+                      )
+                    }
+                  </MainCell>
+
+
+                  <MainCell
+                    numeric
+                    strong
+                  >
+                    {
+                      stockDays ===
+                      null
+                        ? "—"
+                        : formatStockDays(
+                            stockDays
+                          )
+                    }
+                  </MainCell>
+
+                </summary>
+
+
+                {/* ===========================
+                    EXPANDED WAREHOUSES
+                    =========================== */}
+
+                <div
+                  style={{
+                    padding:
+                      "12px 18px 14px 28px",
+
+                    borderTop:
+                      "1px solid var(--table-divider, #282e38)",
+                  }}
+                >
+
+                  <div
+                    style={{
+                      display:
+                        "flex",
+
+                      justifyContent:
+                        "space-between",
+
+                      alignItems:
+                        "flex-start",
+
+                      gap:
+                        "16px",
+
+                      flexWrap:
+                        "wrap",
+
+                      marginBottom:
+                        "10px",
+                    }}
+                  >
+
+                    <div>
+
+                      <div
+                        style={{
+                          fontSize:
+                            "12px",
+
+                          fontWeight:
+                            700,
+                        }}
+                      >
+                        Продажи и остатки по складам
+                      </div>
+
+
+                      <div
+                        style={{
+                          marginTop:
+                            "3px",
+
+                          fontSize:
+                            "10px",
+
+                          color:
+                            "var(--text-secondary, #b8c0cc)",
+                        }}
+                      >
+                        По конкретным складам
+                        Яндекс Маркета.
+                      </div>
+
+                    </div>
+
+
+                    <div
+                      style={{
+                        display:
+                          "flex",
+
+                        gap:
+                          "16px",
+
+                        flexWrap:
+                          "wrap",
+
+                        fontSize:
+                          "10px",
+
+                        fontWeight:
+                          700,
+                      }}
+                    >
+
+                      <span>
+                        Строк:{" "}
+                        {
+                          formatInteger(
+                            warehouses.length
+                          )
+                        }
+                      </span>
+
+
+                      <span>
+                        Продажи:{" "}
+                        {
+                          formatInteger(
+                            metrics.sales
+                          )
+                        }
+                      </span>
+
+
+                      <span>
+                        Отмены:{" "}
+                        {
+                          formatInteger(
+                            metrics.cancellations
+                          )
+                        }
+                      </span>
+
+
+                      <span>
+                        Остаток:{" "}
+                        {
+                          formatInteger(
+                            metrics.stock
+                          )
+                        }
+                      </span>
+
+                    </div>
+
+                  </div>
+
+
+                  {
+                    warehouses.length >
+                    0
+                      ? (
+
+                        <WarehouseTable
+                          offerId=
+                            {
+                              product.offer_id
+                            }
+
+                          productId=
+                            {
+                              product.market_sku
+                              ??
+                              "—"
+                            }
+
+                          rows=
+                            {
+                              warehouses
+                            }
+
+                          periodDays=
+                            {
+                              periodDays
+                            }
+                        />
+
+                      )
+                      : (
+
+                        <div
+                          className=
+                            "reason-text"
+                        >
+                          Нет данных по складам.
+                        </div>
+
+                      )
+                  }
+
+                </div>
+
+              </details>
+            );
+
+          }
         )
       }
 
@@ -2266,480 +2489,23 @@ function ProductGroups({
 
 
 // ============================================================
-// COLLAPSIBLE PRODUCT ROW
-// ============================================================
-
-function ProductGroupRow({
-  group,
-  isLast,
-  metricsByOffer,
-  warehouseMetricsByOffer,
-  periodDays,
-}: {
-  group:
-    ProductGroup;
-
-  isLast:
-    boolean;
-
-  metricsByOffer:
-    Map<
-      string,
-      ProductMetrics
-    >;
-
-  warehouseMetricsByOffer:
-    Map<
-      string,
-      WarehouseMetrics[]
-    >;
-
-  periodDays:
-    number;
-}) {
-
-  const rows:
-    PlacementWarehouseRow[] =
-    [];
-
-
-  let totalSales =
-    0;
-
-
-  let totalStock =
-    0;
-
-
-  let totalCancellations =
-    0;
-
-
-  for (
-    const product
-    of group.products
-  ) {
-
-    const metrics =
-      metricsByOffer.get(
-        product.offer_id
-      )
-      ??
-      {
-        sales:
-          0,
-
-        cancellations:
-          0,
-
-        stock:
-          0,
-      };
-
-
-    totalSales +=
-      metrics.sales;
-
-
-    totalStock +=
-      metrics.stock;
-
-
-    totalCancellations +=
-      metrics.cancellations;
-
-
-    const warehouses =
-      warehouseMetricsByOffer.get(
-        product.offer_id
-      )
-      ??
-      [];
-
-
-    for (
-      const warehouse
-      of warehouses
-    ) {
-
-      if (
-        warehouse.sales === 0
-        &&
-        warehouse.cancellations === 0
-        &&
-        warehouse.stock === 0
-      ) {
-
-        continue;
-
-      }
-
-
-      rows.push(
-        {
-          offerId:
-            product.offer_id,
-
-          productId:
-            product.market_sku
-            ??
-            "—",
-
-          warehouseId:
-            warehouse.warehouseId,
-
-          warehouseName:
-            warehouse.warehouseName,
-
-          sales:
-            warehouse.sales,
-
-          cancellations:
-            warehouse.cancellations,
-
-          stock:
-            warehouse.stock,
-        }
-      );
-
-    }
-
-  }
-
-
-  rows.sort(
-    (
-      a,
-      b
-    ) => {
-
-      const offerCompare =
-        a.offerId.localeCompare(
-          b.offerId,
-          "ru"
-        );
-
-
-      if (
-        offerCompare !== 0
-      ) {
-
-        return offerCompare;
-
-      }
-
-
-      return a.warehouseName
-        .localeCompare(
-          b.warehouseName,
-          "ru"
-        );
-
-    }
-  );
-
-
-  return (
-    <details
-      className=
-        "yandex-product-details"
-
-      style={{
-        borderBottom:
-          isLast
-            ? "none"
-            : "1px solid var(--table-divider, #282e38)",
-      }}
-    >
-
-      {/* ===================================
-          ALWAYS VISIBLE ROW
-          =================================== */}
-
-      <summary
-        style={{
-          display:
-            "grid",
-
-          gridTemplateColumns:
-            "150px minmax(260px, 1fr)",
-
-          cursor:
-            "pointer",
-
-          userSelect:
-            "none",
-        }}
-      >
-
-        <div
-          style={{
-            padding:
-              "12px 14px",
-
-            fontSize:
-              "13px",
-
-            fontWeight:
-              700,
-
-            display:
-              "flex",
-
-            alignItems:
-              "center",
-
-            gap:
-              "8px",
-          }}
-        >
-
-          <span
-            className=
-              "yandex-product-chevron"
-
-            aria-hidden="true"
-          >
-            ▶
-          </span>
-
-
-          <span>
-            {
-              group.masterCode
-              ??
-              "—"
-            }
-          </span>
-
-        </div>
-
-
-        <div
-          style={{
-            padding:
-              "12px 14px",
-          }}
-        >
-
-          <div
-            style={{
-              fontSize:
-                "13px",
-
-              fontWeight:
-                700,
-            }}
-          >
-            {group.name}
-          </div>
-
-
-          <div
-            style={{
-              marginTop:
-                "4px",
-
-              fontSize:
-                "11px",
-
-              color:
-                "var(--text-secondary, #b8c0cc)",
-            }}
-          >
-            {
-              formatPlacementsCount(
-                group.products.length
-              )
-            }
-          </div>
-
-        </div>
-
-      </summary>
-
-
-      {/* ===================================
-          EXPANDED CONTENT
-          =================================== */}
-
-      <div
-        style={{
-          padding:
-            "14px 14px 16px 42px",
-
-          borderTop:
-            "1px solid var(--table-divider, #282e38)",
-        }}
-      >
-
-        <div
-          style={{
-            display:
-              "flex",
-
-            justifyContent:
-              "space-between",
-
-            alignItems:
-              "flex-start",
-
-            gap:
-              "16px",
-
-            flexWrap:
-              "wrap",
-
-            marginBottom:
-              "12px",
-          }}
-        >
-
-          <div>
-
-            <div
-              style={{
-                fontSize:
-                  "13px",
-
-                fontWeight:
-                  700,
-              }}
-            >
-              Продажи и остатки по складам
-            </div>
-
-
-            <div
-              style={{
-                marginTop:
-                  "3px",
-
-                fontSize:
-                  "11px",
-
-                color:
-                  "var(--text-secondary, #b8c0cc)",
-              }}
-            >
-              По конкретным складам
-              Яндекс Маркета,
-              без объединения SKU
-              по master_code.
-            </div>
-
-          </div>
-
-
-          <div
-            style={{
-              display:
-                "flex",
-
-              gap:
-                "18px",
-
-              flexWrap:
-                "wrap",
-
-              fontSize:
-                "11px",
-
-              fontWeight:
-                700,
-            }}
-          >
-
-            <span>
-              Строк:{" "}
-              {
-                formatInteger(
-                  rows.length
-                )
-              }
-            </span>
-
-
-            <span>
-              Продажи:{" "}
-              {
-                formatInteger(
-                  totalSales
-                )
-              }
-            </span>
-
-
-            <span>
-              Отмены:{" "}
-              {
-                formatInteger(
-                  totalCancellations
-                )
-              }
-            </span>
-
-
-            <span>
-              Остаток:{" "}
-              {
-                formatInteger(
-                  totalStock
-                )
-              }
-            </span>
-
-          </div>
-
-        </div>
-
-
-        {
-          rows.length > 0
-            ? (
-
-              <WarehouseTable
-                rows=
-                  {
-                    rows
-                  }
-
-                periodDays=
-                  {
-                    periodDays
-                  }
-              />
-
-            )
-            : (
-
-              <div
-                className="reason-text"
-              >
-                Нет данных по складам.
-              </div>
-
-            )
-        }
-
-      </div>
-
-    </details>
-  );
-
-}
-
-
-// ============================================================
 // WAREHOUSE TABLE
 // ============================================================
 
 function WarehouseTable({
+  offerId,
+  productId,
   rows,
   periodDays,
 }: {
+  offerId:
+    string;
+
+  productId:
+    string;
+
   rows:
-    PlacementWarehouseRow[];
+    WarehouseMetrics[];
 
   periodDays:
     number;
@@ -2759,7 +2525,7 @@ function WarehouseTable({
             "100%",
 
           minWidth:
-            "1050px",
+            "1000px",
 
           borderCollapse:
             "collapse",
@@ -2842,11 +2608,16 @@ function WarehouseTable({
                     : null;
 
 
+                const isLast =
+                  index ===
+                  rows.length - 1;
+
+
                 return (
                   <tr
                     key={
                       [
-                        row.offerId,
+                        offerId,
                         row.warehouseId
                         ??
                         "null",
@@ -2857,45 +2628,35 @@ function WarehouseTable({
 
                     <WarehouseCell
                       isLast=
-                        {
-                          index ===
-                          rows.length - 1
-                        }
+                        {isLast}
 
                       strong
                     >
-                      {row.offerId}
+                      {offerId}
                     </WarehouseCell>
 
 
                     <WarehouseCell
                       isLast=
-                        {
-                          index ===
-                          rows.length - 1
-                        }
+                        {isLast}
                     >
-                      {row.productId}
+                      {productId}
                     </WarehouseCell>
 
 
                     <WarehouseCell
                       isLast=
-                        {
-                          index ===
-                          rows.length - 1
-                        }
+                        {isLast}
                     >
-                      {row.warehouseName}
+                      {
+                        row.warehouseName
+                      }
                     </WarehouseCell>
 
 
                     <WarehouseCell
                       isLast=
-                        {
-                          index ===
-                          rows.length - 1
-                        }
+                        {isLast}
 
                       numeric
 
@@ -2911,10 +2672,7 @@ function WarehouseTable({
 
                     <WarehouseCell
                       isLast=
-                        {
-                          index ===
-                          rows.length - 1
-                        }
+                        {isLast}
 
                       numeric
                     >
@@ -2928,10 +2686,7 @@ function WarehouseTable({
 
                     <WarehouseCell
                       isLast=
-                        {
-                          index ===
-                          rows.length - 1
-                        }
+                        {isLast}
 
                       numeric
                     >
@@ -2945,10 +2700,7 @@ function WarehouseTable({
 
                     <WarehouseCell
                       isLast=
-                        {
-                          index ===
-                          rows.length - 1
-                        }
+                        {isLast}
 
                       numeric
 
@@ -2964,10 +2716,7 @@ function WarehouseTable({
 
                     <WarehouseCell
                       isLast=
-                        {
-                          index ===
-                          rows.length - 1
-                        }
+                        {isLast}
 
                       numeric
 
@@ -3001,25 +2750,103 @@ function WarehouseTable({
 
 
 // ============================================================
-// STYLES
+// MAIN HEADER
 // ============================================================
 
-const groupHeaderCellStyle:
-CSSProperties = {
+function MainHeader({
+  children,
+  numeric = false,
+}: {
+  children:
+    ReactNode;
 
-  padding:
-    "10px 14px",
+  numeric?:
+    boolean;
+}) {
 
-  fontSize:
-    "11px",
+  return (
+    <div
+      style={{
+        padding:
+          "9px 10px",
 
-  fontWeight:
-    700,
+        textAlign:
+          numeric
+            ? "right"
+            : "left",
 
-  color:
-    "var(--text-secondary, #b8c0cc)",
-};
+        fontSize:
+          "10px",
 
+        fontWeight:
+          700,
+
+        color:
+          "var(--text-secondary, #b8c0cc)",
+
+        whiteSpace:
+          "nowrap",
+      }}
+    >
+      {children}
+    </div>
+  );
+
+}
+
+
+// ============================================================
+// MAIN CELL
+// ============================================================
+
+function MainCell({
+  children,
+  numeric = false,
+  strong = false,
+}: {
+  children:
+    ReactNode;
+
+  numeric?:
+    boolean;
+
+  strong?:
+    boolean;
+}) {
+
+  return (
+    <div
+      style={{
+        padding:
+          "10px",
+
+        textAlign:
+          numeric
+            ? "right"
+            : "left",
+
+        fontSize:
+          "11px",
+
+        fontWeight:
+          strong
+            ? 700
+            : 500,
+
+        minWidth:
+          0,
+      }}
+    >
+      {children}
+    </div>
+  );
+
+}
+
+
+// ============================================================
+// WAREHOUSE HEADER
+// ============================================================
 
 function WarehouseHeader({
   children,
@@ -3036,7 +2863,7 @@ function WarehouseHeader({
     <th
       style={{
         padding:
-          "8px 10px",
+          "7px 9px",
 
         textAlign:
           numeric
@@ -3044,7 +2871,7 @@ function WarehouseHeader({
             : "left",
 
         fontSize:
-          "11px",
+          "10px",
 
         fontWeight:
           700,
@@ -3072,6 +2899,10 @@ function WarehouseHeader({
 }
 
 
+// ============================================================
+// WAREHOUSE CELL
+// ============================================================
+
 function WarehouseCell({
   children,
   isLast,
@@ -3095,7 +2926,7 @@ function WarehouseCell({
     <td
       style={{
         padding:
-          "8px 10px",
+          "7px 9px",
 
         textAlign:
           numeric
@@ -3103,7 +2934,7 @@ function WarehouseCell({
             : "left",
 
         fontSize:
-          "11px",
+          "10px",
 
         fontWeight:
           strong
