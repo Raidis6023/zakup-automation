@@ -5,6 +5,10 @@ import {
 } from "next/cache";
 
 import {
+  headers,
+} from "next/headers";
+
+import {
   redirect,
 } from "next/navigation";
 
@@ -149,6 +153,241 @@ async function callSupabaseRpc(
 
 
   return response.json();
+
+}
+
+
+// ============================================
+// АВТОМАТИЧЕСКАЯ ЗАГРУЗКА ФОТО ЗАКАЗА
+//
+// Используем уже существующий API:
+//
+// /api/ved-orders/[id]/sync-photos
+//
+// Он:
+// 1. проверяет фото в products;
+// 2. если фото нет — получает его из Ozon;
+// 3. записывает в products.main_photo_url;
+// 4. записывает snapshot в ved_order_items.photo_url.
+//
+// Ошибка фотографий НЕ отменяет уже
+// созданный заказ.
+// ============================================
+
+async function syncVedOrderPhotos(
+  orderId: string
+) {
+
+  const requestHeaders =
+    await headers();
+
+
+  const cookieHeader =
+    requestHeaders.get(
+      "cookie"
+    );
+
+
+  const forwardedHost =
+    requestHeaders.get(
+      "x-forwarded-host"
+    );
+
+
+  const regularHost =
+    requestHeaders.get(
+      "host"
+    );
+
+
+  const host =
+    forwardedHost
+    ??
+    regularHost;
+
+
+  const forwardedProtocol =
+    requestHeaders.get(
+      "x-forwarded-proto"
+    );
+
+
+  const vercelUrl =
+    process.env
+      .VERCEL_URL
+      ?.trim();
+
+
+  let origin:
+    string;
+
+
+  if (vercelUrl) {
+
+    origin =
+      vercelUrl.startsWith(
+        "http://"
+      )
+      ||
+      vercelUrl.startsWith(
+        "https://"
+      )
+
+        ? vercelUrl
+
+        : `https://${vercelUrl}`;
+
+  } else {
+
+    if (!host) {
+
+      throw new Error(
+        "Не удалось определить адрес WorkSpace для автоматической загрузки фотографий"
+      );
+
+    }
+
+
+    const protocol =
+      forwardedProtocol
+      ??
+      (
+        host.includes(
+          "localhost"
+        )
+          ? "http"
+          : "https"
+      );
+
+
+    origin =
+      `${protocol}://${host}`;
+
+  }
+
+
+  const controller =
+    new AbortController();
+
+
+  const timeout =
+    setTimeout(
+      () => {
+
+        controller.abort();
+
+      },
+      30000
+    );
+
+
+  try {
+
+    const response =
+      await fetch(
+        `${origin}/api/ved-orders/${encodeURIComponent(orderId)}/sync-photos`,
+        {
+          method:
+            "POST",
+
+          headers: {
+
+            "Content-Type":
+              "application/json",
+
+            ...(
+              cookieHeader
+
+                ? {
+                    Cookie:
+                      cookieHeader,
+                  }
+
+                : {}
+            ),
+
+          },
+
+          cache:
+            "no-store",
+
+          signal:
+            controller.signal,
+        }
+      );
+
+
+    const text =
+      await response.text();
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        `Автоматическая загрузка фото не выполнена. HTTP ${response.status}. ${text}`
+      );
+
+    }
+
+
+    if (!text.trim()) {
+
+      throw new Error(
+        "Автоматическая загрузка фото вернула пустой ответ"
+      );
+
+    }
+
+
+    const result =
+      JSON.parse(
+        text
+      ) as {
+        ok?: boolean;
+        error?: string;
+      };
+
+
+    if (!result.ok) {
+
+      throw new Error(
+        result.error
+        ??
+        "Не удалось автоматически загрузить фотографии из Ozon"
+      );
+
+    }
+
+
+    return result;
+
+  } catch (
+    error
+  ) {
+
+    if (
+      error instanceof Error
+      &&
+      error.name ===
+        "AbortError"
+    ) {
+
+      throw new Error(
+        "Автоматическая загрузка фотографий превысила 30 секунд"
+      );
+
+    }
+
+
+    throw error;
+
+  } finally {
+
+    clearTimeout(
+      timeout
+    );
+
+  }
 
 }
 
@@ -450,6 +689,10 @@ export async function createVedOrderDraft(
   }
 
 
+  // ==========================================
+  // СОЗДАЁМ САМ ЗАКАЗ
+  // ==========================================
+
   const result =
     await callSupabaseRpc(
       "create_ved_order_draft",
@@ -494,6 +737,37 @@ export async function createVedOrderDraft(
   }
 
 
+  // ==========================================
+  // АВТОМАТИЧЕСКИ ПОДТЯГИВАЕМ ФОТО
+  //
+  // Заказ к этому моменту уже существует.
+  //
+  // Поэтому проблема Ozon не должна
+  // уничтожать или дублировать заказ.
+  // ==========================================
+
+  try {
+
+    await syncVedOrderPhotos(
+      result.order_id
+    );
+
+  } catch (
+    error
+  ) {
+
+    console.error(
+      "VED order created, but automatic photo sync failed:",
+      error
+    );
+
+  }
+
+
+  // ==========================================
+  // ОБНОВЛЯЕМ СТРАНИЦЫ
+  // ==========================================
+
   revalidatePath(
     "/zakup"
   );
@@ -502,6 +776,14 @@ export async function createVedOrderDraft(
     "/ved"
   );
 
+  revalidatePath(
+    `/ved-orders/${result.order_id}`
+  );
+
+
+  // ==========================================
+  // И ТОЛЬКО ПОСЛЕ ФОТО ОТКРЫВАЕМ ЗАКАЗ
+  // ==========================================
 
   redirect(
     `/ved-orders/${result.order_id}`
