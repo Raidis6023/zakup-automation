@@ -151,6 +151,14 @@ export async function updateSession(
       .pathname;
 
 
+  const isApiRoute =
+    pathname === "/api"
+    ||
+    pathname.startsWith(
+      "/api/"
+    );
+
+
   // ==========================================================
   // ПУБЛИЧНЫЕ МАРШРУТЫ
   // ==========================================================
@@ -196,6 +204,34 @@ export async function updateSession(
     }
 
 
+    if (
+      isApiRoute
+    ) {
+
+      const apiResponse =
+        NextResponse.json(
+          {
+            ok:
+              false,
+
+            error:
+              "Требуется авторизация",
+          },
+          {
+            status:
+              401,
+          }
+        );
+
+
+      return copyCookies(
+        supabaseResponse,
+        apiResponse
+      );
+
+    }
+
+
     const loginUrl =
       request
         .nextUrl
@@ -204,6 +240,217 @@ export async function updateSession(
 
     loginUrl.pathname =
       "/login";
+
+
+    const redirectResponse =
+      NextResponse.redirect(
+        loginUrl
+      );
+
+
+    return copyCookies(
+      supabaseResponse,
+      redirectResponse
+    );
+
+  }
+
+
+  // ==========================================================
+  // ПРОВЕРЯЕМ БЛОКИРОВКУ ПОЛЬЗОВАТЕЛЯ
+  // ==========================================================
+
+  const {
+    data:
+      isBlocked,
+    error:
+      blockStatusError,
+  } =
+    await supabase
+      .rpc(
+        "app_get_my_block_status"
+      );
+
+
+  // ==========================================================
+  // ЕСЛИ НЕ УДАЛОСЬ ПРОВЕРИТЬ БЛОКИРОВКУ
+  //
+  // Закрытые страницы не открываем.
+  // Публичные страницы оставляем доступными.
+  // ==========================================================
+
+  if (
+    blockStatusError
+  ) {
+
+    console.error(
+      "Не удалось проверить блокировку пользователя:",
+      blockStatusError
+    );
+
+
+    if (
+      isPublicRoute
+    ) {
+
+      return supabaseResponse;
+
+    }
+
+
+    if (
+      isApiRoute
+    ) {
+
+      const apiResponse =
+        NextResponse.json(
+          {
+            ok:
+              false,
+
+            error:
+              "Не удалось проверить доступ пользователя",
+          },
+          {
+            status:
+              503,
+          }
+        );
+
+
+      return copyCookies(
+        supabaseResponse,
+        apiResponse
+      );
+
+    }
+
+
+    const loginUrl =
+      request
+        .nextUrl
+        .clone();
+
+
+    loginUrl.pathname =
+      "/login";
+
+
+    loginUrl.search =
+      "";
+
+
+    loginUrl.searchParams.set(
+      "access_error",
+      "1"
+    );
+
+
+    const redirectResponse =
+      NextResponse.redirect(
+        loginUrl
+      );
+
+
+    return copyCookies(
+      supabaseResponse,
+      redirectResponse
+    );
+
+  }
+
+
+  // ==========================================================
+  // ПОЛЬЗОВАТЕЛЬ ЗАБЛОКИРОВАН
+  //
+  // Сбрасываем текущую Supabase-сессию.
+  // ==========================================================
+
+  if (
+    isBlocked === true
+  ) {
+
+    const {
+      error:
+        signOutError,
+    } =
+      await supabase
+        .auth
+        .signOut();
+
+
+    if (
+      signOutError
+    ) {
+
+      console.error(
+        "Не удалось завершить сессию заблокированного пользователя:",
+        signOutError
+      );
+
+    }
+
+
+    if (
+      isApiRoute
+    ) {
+
+      const apiResponse =
+        NextResponse.json(
+          {
+            ok:
+              false,
+
+            error:
+              "Учётная запись заблокирована",
+          },
+          {
+            status:
+              403,
+          }
+        );
+
+
+      return copyCookies(
+        supabaseResponse,
+        apiResponse
+      );
+
+    }
+
+
+    /*
+     * Если пользователь уже находится на /login,
+     * не создаём цикл перенаправлений.
+     */
+
+    if (
+      pathname === "/login"
+    ) {
+
+      return supabaseResponse;
+
+    }
+
+
+    const loginUrl =
+      request
+        .nextUrl
+        .clone();
+
+
+    loginUrl.pathname =
+      "/login";
+
+
+    loginUrl.search =
+      "";
+
+
+    loginUrl.searchParams.set(
+      "blocked",
+      "1"
+    );
 
 
     const redirectResponse =
@@ -238,10 +485,6 @@ export async function updateSession(
 
   // ==========================================================
   // ЕСЛИ ПРОВЕРКА СЛОМАЛАСЬ
-  //
-  // Рабочие страницы не открываем.
-  // Иначе при проблеме БД можно было бы случайно обойти
-  // обязательную смену временного пароля.
   // ==========================================================
 
   if (
@@ -253,6 +496,34 @@ export async function updateSession(
     ) {
 
       return supabaseResponse;
+
+    }
+
+
+    if (
+      isApiRoute
+    ) {
+
+      const apiResponse =
+        NextResponse.json(
+          {
+            ok:
+              false,
+
+            error:
+              "Не удалось проверить состояние пароля",
+          },
+          {
+            status:
+              503,
+          }
+        );
+
+
+      return copyCookies(
+        supabaseResponse,
+        apiResponse
+      );
 
     }
 
@@ -291,6 +562,34 @@ export async function updateSession(
     !isSetPasswordRoute
   ) {
 
+    if (
+      isApiRoute
+    ) {
+
+      const apiResponse =
+        NextResponse.json(
+          {
+            ok:
+              false,
+
+            error:
+              "Необходимо изменить временный пароль",
+          },
+          {
+            status:
+              403,
+          }
+        );
+
+
+      return copyCookies(
+        supabaseResponse,
+        apiResponse
+      );
+
+    }
+
+
     const setPasswordUrl =
       request
         .nextUrl
@@ -317,8 +616,6 @@ export async function updateSession(
 
   // ==========================================================
   // ПАРОЛЬ УЖЕ ЗАМЕНЁН
-  //
-  // На /set-password такому пользователю делать нечего.
   // ==========================================================
 
   if (
@@ -354,15 +651,6 @@ export async function updateSession(
   // ==========================================================
   // ОБЫЧНАЯ ЗАЩИТА ЗАКРЫТЫХ МАРШРУТОВ
   // ==========================================================
-
-  if (
-    !isPublicRoute
-  ) {
-
-    return supabaseResponse;
-
-  }
-
 
   return supabaseResponse;
 
