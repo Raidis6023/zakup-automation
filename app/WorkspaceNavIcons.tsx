@@ -234,7 +234,7 @@ export function ProcurementIcon() {
 
 // ============================================================
 // ВЭД
-// КОНТЕЙНЕР + ЯРКИЙ ГЛОБУС
+// ГЛОБУС + КРУГОВЫЕ СТРЕЛКИ
 // ============================================================
 
 export function VedIcon() {
@@ -252,25 +252,59 @@ export function VedIcon() {
 
       <defs>
 
+        {/* ФОН */}
+
         <linearGradient
           id="ved-background"
           x1="7"
-          y1="4"
+          y1="5"
           x2="57"
-          y2="60"
+          y2="59"
           gradientUnits="userSpaceOnUse"
         >
 
           <stop
             offset="0%"
             stopColor=
-              "var(--icon-bg-start)"
+              "var(--ved-bg-start)"
+          />
+
+          <stop
+            offset="48%"
+            stopColor=
+              "var(--ved-bg-middle)"
           />
 
           <stop
             offset="100%"
             stopColor=
-              "var(--icon-bg-end)"
+              "var(--ved-bg-end)"
+          />
+
+        </linearGradient>
+
+
+        {/* ЛЁГКИЙ БЛИК */}
+
+        <linearGradient
+          id="ved-highlight"
+          x1="12"
+          y1="5"
+          x2="40"
+          y2="35"
+          gradientUnits="userSpaceOnUse"
+        >
+
+          <stop
+            offset="0%"
+            stopColor=
+              "var(--ved-highlight)"
+          />
+
+          <stop
+            offset="100%"
+            stopColor=
+              "rgba(255,255,255,0)"
           />
 
         </linearGradient>
@@ -278,7 +312,9 @@ export function VedIcon() {
       </defs>
 
 
-      {/* ФОН */}
+      {/* =====================================================
+          ФОН
+          ===================================================== */}
 
       <rect
         x="1"
@@ -291,121 +327,155 @@ export function VedIcon() {
       />
 
 
-      {/* ГЛОБУС НА ЗАДНЕМ ПЛАНЕ */}
+      {/* ЛЁГКИЙ ГЛЯНЦЕВЫЙ БЛИК */}
+
+      <path
+        d="
+          M8 10
+          C18 3
+          39 3
+          54 10
+          C42 13
+          22 14
+          8 10
+          Z
+        "
+        fill=
+          "url(#ved-highlight)"
+      />
+
+
+      {/* =====================================================
+          ГЛОБУС
+          ===================================================== */}
 
       <g
         fill="none"
         stroke=
-          "var(--icon-globe)"
-        strokeWidth="3"
+          "var(--ved-symbol)"
+        strokeWidth="3.2"
         strokeLinecap="round"
         strokeLinejoin="round"
       >
 
+        {/* КРУГ */}
+
         <circle
           cx="32"
-          cy="27"
+          cy="31"
           r="16"
         />
 
+
+        {/* ВЕРТИКАЛЬНЫЕ МЕРИДИАНЫ */}
+
         <path
           d="
-            M16 27
-            H48
+            M32 15
+            C25.5 20
+            24 26
+            24 31
+            C24 36
+            25.5 42
+            32 47
           "
         />
 
         <path
           d="
-            M19.5 18.5
-            C27 22
-            37 22
-            44.5 18.5
+            M32 15
+            C38.5 20
+            40 26
+            40 31
+            C40 36
+            38.5 42
+            32 47
+          "
+        />
+
+
+        {/* ГОРИЗОНТАЛЬНЫЕ ЛИНИИ */}
+
+        <path
+          d="
+            M18 24
+            C26 27
+            38 27
+            46 24
           "
         />
 
         <path
           d="
-            M19.5 35.5
-            C27 32
-            37 32
-            44.5 35.5
-          "
-        />
-
-        <path
-          d="
-            M32 11
-            C27 16
-            25 21
-            25 27
-            C25 33
-            27 38
-            32 43
-          "
-        />
-
-        <path
-          d="
-            M32 11
-            C37 16
-            39 21
-            39 27
-            C39 33
-            37 38
-            32 43
+            M18 38
+            C26 35
+            38 35
+            46 38
           "
         />
 
       </g>
 
 
-      {/* КОНТЕЙНЕР */}
+      {/* =====================================================
+          ЛЕВАЯ СТРЕЛКА
+          ===================================================== */}
 
       <path
         d="
-          M10 34
-          L28 29
-          L54 36
-          L54 52
-          L28 57
-          L10 50
-          Z
+          M14.5 39
+          C9.5 35
+          8.5 27
+          12.5 21
         "
-        fill=
-          "var(--icon-container)"
+        fill="none"
+        stroke=
+          "var(--ved-symbol)"
+        strokeWidth="3.8"
+        strokeLinecap="round"
       />
 
 
-      {/* РЁБРА КОНТЕЙНЕРА */}
+      <path
+        d="
+          M8.5 22
+          L13 17
+          L14.5 24
+          Z
+        "
+        fill=
+          "var(--ved-symbol)"
+      />
 
-      <g
+
+      {/* =====================================================
+          ПРАВАЯ СТРЕЛКА
+          ===================================================== */}
+
+      <path
+        d="
+          M49.5 22
+          C54.5 26
+          55.5 34
+          51.5 40
+        "
+        fill="none"
         stroke=
-          "var(--icon-container-detail)"
-        strokeWidth="2"
+          "var(--ved-symbol)"
+        strokeWidth="3.8"
         strokeLinecap="round"
-      >
-
-        <path d="M16 35.5V50" />
-        <path d="M21 34V52" />
-        <path d="M27 32V54" />
-
-        <path d="M34 32V54" />
-        <path d="M40 34V53" />
-        <path d="M46 35V52" />
-        <path d="M51 36V50" />
-
-      </g>
+      />
 
 
       <path
         d="
-          M28 29
-          V57
+          M55.5 39
+          L51 44
+          L49.5 37
+          Z
         "
-        stroke=
-          "var(--icon-container-detail)"
-        strokeWidth="2"
+        fill=
+          "var(--ved-symbol)"
       />
 
     </svg>
