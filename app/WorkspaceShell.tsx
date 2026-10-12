@@ -175,6 +175,53 @@ function AdminHomeIcon() {
 }
 
 
+function UsersIcon() {
+
+  return (
+
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+
+      <circle
+        cx="9"
+        cy="8"
+        r="3"
+      />
+
+
+      <path
+        d="
+          M3.5 19
+          c.5-4 2.5-6 5.5-6
+          s5 2 5.5 6
+        "
+      />
+
+
+      <path
+        d="
+          M15 5.5
+          a3 3 0 0 1 0 5
+        "
+      />
+
+
+      <path
+        d="
+          M16 13
+          c2.5.4 4 2.3 4.5 5
+        "
+      />
+
+    </svg>
+
+  );
+
+}
+
+
 // ============================================================
 // ТИПЫ
 // ============================================================
@@ -225,8 +272,6 @@ export default function WorkspaceShell({
           "home-sidebar"
       >
 
-        {/* ЛОГОТИП */}
-
         <div
           className=
             "home-company-logo"
@@ -245,10 +290,6 @@ export default function WorkspaceShell({
 
         </div>
 
-
-        {/* ========================================
-            АДМИНИСТРАТИВНОЕ МЕНЮ
-            ======================================== */}
 
         {
           adminMode
@@ -286,15 +327,35 @@ export default function WorkspaceShell({
 
                 </Link>
 
+
+                <Link
+                  href="/admin/users"
+
+                  className=
+                    "home-workspace-link"
+                >
+
+                  <span
+                    className=
+                      "home-workspace-icon"
+                  >
+
+                    <UsersIcon />
+
+                  </span>
+
+
+                  <span>
+                    Сотрудники
+                  </span>
+
+                </Link>
+
               </nav>
 
             )
 
             : (
-
-              /* ==================================
-                 РАБОЧИЕ РАЗДЕЛЫ
-                 ================================== */
 
               <nav
                 className=
@@ -368,8 +429,7 @@ export default function WorkspaceShell({
                       src=
                         "/logos/ozon.png"
 
-                      alt=
-                        "Ozon"
+                      alt="Ozon"
 
                       className=
                         "home-brand-image"
@@ -458,23 +518,15 @@ export default function WorkspaceShell({
       </aside>
 
 
-      {/* ==========================================
-          ОСНОВНАЯ ЧАСТЬ WORKSPACE
-          ========================================== */}
-
       <div
         className=
           "home-main"
       >
 
-        {/* ВЕРХНЯЯ ПАНЕЛЬ */}
-
         <header
           className=
             "home-topbar"
         >
-
-          {/* ПОИСК */}
 
           <div
             className=
@@ -517,17 +569,10 @@ export default function WorkspaceShell({
           </div>
 
 
-          {/* УВЕДОМЛЕНИЯ, КАЛЕНДАРЬ,
-              ТЕМА, РЕЖИМ И ПРОФИЛЬ */}
-
           <HomeHeaderActions />
 
         </header>
 
-
-        {/* ======================================
-            РАБОЧАЯ ОБЛАСТЬ
-            ====================================== */}
 
         <div
           className={
@@ -538,9 +583,6 @@ export default function WorkspaceShell({
             }`
           }
         >
-
-          {/* ДЕКОРАТИВНЫЕ ПОЛОСЫ
-              ВО ВНУТРЕННИХ РАЗДЕЛАХ */}
 
           {
             module
@@ -561,8 +603,6 @@ export default function WorkspaceShell({
               : null
           }
 
-
-          {/* СОДЕРЖИМОЕ ВЫБРАННОЙ СТРАНИЦЫ */}
 
           {
             children
