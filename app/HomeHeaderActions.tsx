@@ -1,7 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link
+  from "next/link";
+
+import {
+  useRouter,
+} from "next/navigation";
 
 import {
   useCallback,
@@ -11,17 +15,27 @@ import {
   useState,
 } from "react";
 
-import { createPortal } from "react-dom";
+import {
+  createPortal,
+} from "react-dom";
 
-import { createClient } from "../lib/supabase/client";
+import {
+  createClient,
+} from "../lib/supabase/client";
 
 import {
   approveAccessRequest,
   rejectAccessRequest,
 } from "./access-request-actions";
 
-import HomeThemeToggle from "./HomeThemeToggle";
-import styles from "./HomeHeaderActions.module.css";
+import HomeThemeToggle
+  from "./HomeThemeToggle";
+
+import WorkspaceModeSwitcher
+  from "./WorkspaceModeSwitcher";
+
+import styles
+  from "./HomeHeaderActions.module.css";
 
 
 // ============================================================
@@ -29,29 +43,39 @@ import styles from "./HomeHeaderActions.module.css";
 // ============================================================
 
 function BellIcon() {
+
   return (
+
     <svg
       viewBox="0 0 24 24"
       aria-hidden="true"
     >
+
       <path
         d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"
       />
 
+
       <path
         d="M10 21h4"
       />
+
     </svg>
+
   );
+
 }
 
 
 function CalendarIcon() {
+
   return (
+
     <svg
       viewBox="0 0 24 24"
       aria-hidden="true"
     >
+
       <rect
         x="3"
         y="5"
@@ -60,71 +84,100 @@ function CalendarIcon() {
         rx="2"
       />
 
+
       <path
         d="M16 3v4M8 3v4M3 10h18"
       />
+
     </svg>
+
   );
+
 }
 
 
 function ChevronIcon() {
+
   return (
+
     <svg
       viewBox="0 0 24 24"
       aria-hidden="true"
     >
+
       <path
         d="m7 9 5 5 5-5"
       />
+
     </svg>
+
   );
+
 }
 
 
 function ArrowLeftIcon() {
+
   return (
+
     <svg
       viewBox="0 0 24 24"
       aria-hidden="true"
     >
+
       <path
         d="m15 18-6-6 6-6"
       />
+
     </svg>
+
   );
+
 }
 
 
 function ArrowRightIcon() {
+
   return (
+
     <svg
       viewBox="0 0 24 24"
       aria-hidden="true"
     >
+
       <path
         d="m9 18 6-6-6-6"
       />
+
     </svg>
+
   );
+
 }
 
 
 function CloseIcon() {
+
   return (
+
     <svg
       viewBox="0 0 24 24"
       aria-hidden="true"
     >
+
       <path
         d="M6 6l12 12"
       />
 
+
       <path
         d="M18 6L6 18"
       />
+
     </svg>
+
   );
+
 }
 
 
@@ -133,35 +186,72 @@ function CloseIcon() {
 // ============================================================
 
 type AccessRequestNotificationRow = {
-  request_id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  department: string | null;
-  comment: string | null;
-  created_at: string;
+
+  request_id:
+    string;
+
+  first_name:
+    string;
+
+  last_name:
+    string;
+
+  email:
+    string;
+
+  department:
+    string | null;
+
+  comment:
+    string | null;
+
+  created_at:
+    string;
+
 };
 
 
 type NotificationItem = {
-  id: string;
-  type: "access_request";
-  title: string;
-  text: string;
-  createdAt: string;
+
+  id:
+    string;
+
+  type:
+    "access_request";
+
+  title:
+    string;
+
+  text:
+    string;
+
+  createdAt:
+    string;
 
   request: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    department: string | null;
-    comment: string | null;
+
+    firstName:
+      string;
+
+    lastName:
+      string;
+
+    email:
+      string;
+
+    department:
+      string | null;
+
+    comment:
+      string | null;
+
   };
+
 };
 
 
 type WorkingRole =
-  | ""
+  ""
   | "analyst"
   | "procurement"
   | "ved"
@@ -171,40 +261,64 @@ type WorkingRole =
 
 
 type CategoryMarketplace =
-  | ""
+  ""
   | "ozon"
   | "wildberries"
   | "yandex_market";
 
 
 type ApprovalResult = {
-  email: string;
-  fullName: string;
-  temporaryPassword: string;
+
+  email:
+    string;
+
+  fullName:
+    string;
+
+  temporaryPassword:
+    string;
+
 };
 
 
 type RequestAction =
-  | "approve"
+  "approve"
   | "reject"
   | null;
 
 
 type CopyStatus =
-  | "idle"
+  "idle"
   | "copied"
   | "error";
 
 
 type CurrentUserProfileRow = {
-  user_id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  avatar_path: string | null;
-  role_name: string;
-  has_admin_access: boolean;
-  admin_role_name: string | null;
+
+  user_id:
+    string;
+
+  first_name:
+    string;
+
+  last_name:
+    string;
+
+  email:
+    string;
+
+  avatar_path:
+    string | null;
+
+  role_name:
+    string;
+
+  has_admin_access:
+    boolean;
+
+  admin_role_name:
+    string | null;
+
 };
 
 
@@ -213,64 +327,121 @@ type CurrentUserProfileRow = {
 // ============================================================
 
 const WORKING_ROLES: Array<{
-  value: WorkingRole;
-  label: string;
+
+  value:
+    WorkingRole;
+
+  label:
+    string;
+
 }> = [
+
   {
-    value: "",
-    label: "Выберите роль",
+    value:
+      "",
+
+    label:
+      "Выберите роль",
   },
+
   {
-    value: "analyst",
-    label: "Аналитик",
+    value:
+      "analyst",
+
+    label:
+      "Аналитик",
   },
+
   {
-    value: "procurement",
-    label: "Закуп",
+    value:
+      "procurement",
+
+    label:
+      "Закуп",
   },
+
   {
-    value: "ved",
-    label: "ВЭД",
+    value:
+      "ved",
+
+    label:
+      "ВЭД",
   },
+
   {
-    value: "category_manager",
-    label: "Категорийный менеджер",
+    value:
+      "category_manager",
+
+    label:
+      "Категорийный менеджер",
   },
+
   {
-    value: "marketing",
-    label: "Маркетинг",
+    value:
+      "marketing",
+
+    label:
+      "Маркетинг",
   },
+
   {
-    value: "manager",
-    label: "Руководитель",
+    value:
+      "manager",
+
+    label:
+      "Руководитель",
   },
+
 ];
 
 
 const MARKETPLACES: Array<{
-  value: CategoryMarketplace;
-  label: string;
+
+  value:
+    CategoryMarketplace;
+
+  label:
+    string;
+
 }> = [
+
   {
-    value: "",
-    label: "Выберите маркетплейс",
+    value:
+      "",
+
+    label:
+      "Выберите маркетплейс",
   },
+
   {
-    value: "ozon",
-    label: "Ozon",
+    value:
+      "ozon",
+
+    label:
+      "Ozon",
   },
+
   {
-    value: "wildberries",
-    label: "Wildberries",
+    value:
+      "wildberries",
+
+    label:
+      "Wildberries",
   },
+
   {
-    value: "yandex_market",
-    label: "Яндекс Маркет",
+    value:
+      "yandex_market",
+
+    label:
+      "Яндекс Маркет",
   },
+
 ];
 
 
 const MONTH_NAMES = [
+
   "Январь",
   "Февраль",
   "Март",
@@ -283,10 +454,12 @@ const MONTH_NAMES = [
   "Октябрь",
   "Ноябрь",
   "Декабрь",
+
 ];
 
 
 const WEEK_DAYS = [
+
   "Пн",
   "Вт",
   "Ср",
@@ -294,6 +467,7 @@ const WEEK_DAYS = [
   "Пт",
   "Сб",
   "Вс",
+
 ];
 
 
@@ -302,36 +476,62 @@ const WEEK_DAYS = [
 // ============================================================
 
 function isSameDay(
-  first: Date,
-  second: Date
+  first:
+    Date,
+
+  second:
+    Date
 ) {
+
   return (
-    first.getFullYear() === second.getFullYear()
+
+    first.getFullYear() ===
+      second.getFullYear()
+
     &&
-    first.getMonth() === second.getMonth()
+
+    first.getMonth() ===
+      second.getMonth()
+
     &&
-    first.getDate() === second.getDate()
+
+    first.getDate() ===
+      second.getDate()
+
   );
+
 }
 
 
 function formatToday(
-  date: Date
+  date:
+    Date
 ) {
+
   return date.toLocaleDateString(
     "ru-RU",
     {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
+
+      day:
+        "numeric",
+
+      month:
+        "long",
+
+      year:
+        "numeric",
+
     }
   );
+
 }
 
 
 function formatNotificationTime(
-  value: string
+  value:
+    string
 ) {
+
   const date =
     new Date(
       value
@@ -343,77 +543,125 @@ function formatNotificationTime(
       date.getTime()
     )
   ) {
+
     return "";
+
   }
 
 
   return date.toLocaleString(
     "ru-RU",
     {
-      day: "2-digit",
-      month: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
+
+      day:
+        "2-digit",
+
+      month:
+        "2-digit",
+
+      hour:
+        "2-digit",
+
+      minute:
+        "2-digit",
+
     }
   );
+
 }
 
 
 function getWorkingRole(
-  value: string
-): WorkingRole {
+  value:
+    string
+):
+WorkingRole {
+
   switch (
     value
   ) {
+
     case "analyst":
+
       return "analyst";
 
+
     case "procurement":
+
       return "procurement";
 
+
     case "ved":
+
       return "ved";
 
+
     case "category_manager":
+
       return "category_manager";
 
+
     case "marketing":
+
       return "marketing";
 
+
     case "manager":
+
       return "manager";
 
+
     default:
+
       return "";
+
   }
+
 }
 
 
 function getCategoryMarketplace(
-  value: string
-): CategoryMarketplace {
+  value:
+    string
+):
+CategoryMarketplace {
+
   switch (
     value
   ) {
+
     case "ozon":
+
       return "ozon";
 
+
     case "wildberries":
+
       return "wildberries";
 
+
     case "yandex_market":
+
       return "yandex_market";
 
+
     default:
+
       return "";
+
   }
+
 }
 
 
 function getProfileInitials(
-  firstName: string,
-  lastName: string
+  firstName:
+    string,
+
+  lastName:
+    string
 ) {
+
   const firstInitial =
     firstName
       .trim()
@@ -440,6 +688,7 @@ function getProfileInitials(
     ||
     "П"
   );
+
 }
 
 
@@ -448,6 +697,7 @@ function getProfileInitials(
 // ============================================================
 
 export default function HomeHeaderActions() {
+
   const router =
     useRouter();
 
@@ -457,10 +707,13 @@ export default function HomeHeaderActions() {
     setOpenPanel,
   ] =
     useState<
-      | "calendar"
-      | "notifications"
-      | "profile"
-      | null
+      "calendar"
+      |
+      "notifications"
+      |
+      "profile"
+      |
+      null
     >(
       null
     );
@@ -630,6 +883,7 @@ export default function HomeHeaderActions() {
   ] =
     useState(
       () => {
+
         const now =
           new Date();
 
@@ -639,6 +893,7 @@ export default function HomeHeaderActions() {
           now.getMonth(),
           1
         );
+
       }
     );
 
@@ -658,6 +913,7 @@ export default function HomeHeaderActions() {
   const loadNotifications =
     useCallback(
       async () => {
+
         setNotificationsLoading(
           true
         );
@@ -669,6 +925,7 @@ export default function HomeHeaderActions() {
 
 
         try {
+
           const supabase =
             createClient();
 
@@ -686,6 +943,7 @@ export default function HomeHeaderActions() {
           if (
             error
           ) {
+
             const message =
               error
                 .message
@@ -701,12 +959,14 @@ export default function HomeHeaderActions() {
                 "требуется авторизация"
               )
             ) {
+
               setNotifications(
                 []
               );
 
 
               return "forbidden";
+
             }
 
 
@@ -716,6 +976,7 @@ export default function HomeHeaderActions() {
 
 
             return "error";
+
           }
 
 
@@ -732,6 +993,7 @@ export default function HomeHeaderActions() {
             NotificationItem[] =
               rows.map(
                 row => {
+
                   const fullName =
                     [
                       row.first_name,
@@ -754,6 +1016,7 @@ export default function HomeHeaderActions() {
 
 
                   return {
+
                     id:
                       row.request_id,
 
@@ -770,6 +1033,7 @@ export default function HomeHeaderActions() {
                       row.created_at,
 
                     request: {
+
                       firstName:
                         row.first_name,
 
@@ -784,8 +1048,11 @@ export default function HomeHeaderActions() {
 
                       comment:
                         row.comment,
+
                     },
+
                   };
+
                 }
               );
 
@@ -798,6 +1065,7 @@ export default function HomeHeaderActions() {
           return "success";
 
         } catch {
+
           setNotificationsError(
             "Не удалось загрузить уведомления"
           );
@@ -806,10 +1074,13 @@ export default function HomeHeaderActions() {
           return "error";
 
         } finally {
+
           setNotificationsLoading(
             false
           );
+
         }
+
       },
       []
     );
@@ -817,6 +1088,7 @@ export default function HomeHeaderActions() {
 
   useEffect(
     () => {
+
       let stopped =
         false;
 
@@ -827,6 +1099,7 @@ export default function HomeHeaderActions() {
 
 
       async function startNotifications() {
+
         const result =
           await loadNotifications();
 
@@ -837,17 +1110,22 @@ export default function HomeHeaderActions() {
           result !==
             "success"
         ) {
+
           return;
+
         }
 
 
         intervalId =
           window.setInterval(
             () => {
+
               void loadNotifications();
+
             },
             60 * 1000
           );
+
       }
 
 
@@ -855,6 +1133,7 @@ export default function HomeHeaderActions() {
 
 
       return () => {
+
         stopped =
           true;
 
@@ -863,11 +1142,15 @@ export default function HomeHeaderActions() {
           intervalId !==
             null
         ) {
+
           window.clearInterval(
             intervalId
           );
+
         }
+
       };
+
     },
     [
       loadNotifications,
@@ -881,12 +1164,15 @@ export default function HomeHeaderActions() {
 
   useEffect(
     () => {
+
       let active =
         true;
 
 
       async function loadCurrentProfile() {
+
         try {
+
           const supabase =
             createClient();
 
@@ -904,13 +1190,16 @@ export default function HomeHeaderActions() {
           if (
             !active
           ) {
+
             return;
+
           }
 
 
           if (
             error
           ) {
+
             console.error(
               "Ошибка загрузки профиля:",
               error
@@ -928,6 +1217,7 @@ export default function HomeHeaderActions() {
 
 
             return;
+
           }
 
 
@@ -959,6 +1249,7 @@ export default function HomeHeaderActions() {
           if (
             !profile
           ) {
+
             setCurrentProfile(
               null
             );
@@ -970,6 +1261,7 @@ export default function HomeHeaderActions() {
 
 
             return;
+
           }
 
 
@@ -981,9 +1273,13 @@ export default function HomeHeaderActions() {
           if (
             profile.avatar_path
           ) {
+
             const {
-              data: signedData,
-              error: signedError,
+              data:
+                signedData,
+
+              error:
+                signedError,
             } =
               await supabase
                 .storage
@@ -999,21 +1295,28 @@ export default function HomeHeaderActions() {
             if (
               signedError
             ) {
+
               console.error(
                 "Ошибка загрузки аватара:",
                 signedError
               );
+
             } else {
+
               nextAvatarUrl =
                 signedData.signedUrl;
+
             }
+
           }
 
 
           if (
             !active
           ) {
+
             return;
+
           }
 
 
@@ -1029,9 +1332,11 @@ export default function HomeHeaderActions() {
         } catch (
           error
         ) {
+
           if (
             active
           ) {
+
             console.error(
               "Ошибка загрузки профиля:",
               error
@@ -1046,17 +1351,23 @@ export default function HomeHeaderActions() {
             setProfileAvatarUrl(
               null
             );
+
           }
 
         } finally {
+
           if (
             active
           ) {
+
             setProfileLoading(
               false
             );
+
           }
+
         }
+
       }
 
 
@@ -1064,9 +1375,12 @@ export default function HomeHeaderActions() {
 
 
       return () => {
+
         active =
           false;
+
       };
+
     },
     []
   );
@@ -1078,38 +1392,48 @@ export default function HomeHeaderActions() {
 
   useEffect(
     () => {
+
       const interval =
         window.setInterval(
           () => {
+
             const now =
               new Date();
 
 
             setToday(
               previous => {
+
                 if (
                   isSameDay(
                     previous,
                     now
                   )
                 ) {
+
                   return previous;
+
                 }
 
 
                 return now;
+
               }
             );
+
           },
           60 * 1000
         );
 
 
       return () => {
+
         window.clearInterval(
           interval
         );
+
       };
+
     },
     []
   );
@@ -1121,14 +1445,18 @@ export default function HomeHeaderActions() {
 
   useEffect(
     () => {
+
       function handlePointerDown(
         event:
           MouseEvent
       ) {
+
         if (
           !actionsRef.current
         ) {
+
           return;
+
         }
 
 
@@ -1144,10 +1472,13 @@ export default function HomeHeaderActions() {
             target
           )
         ) {
+
           setOpenPanel(
             null
           );
+
         }
+
       }
 
 
@@ -1155,22 +1486,28 @@ export default function HomeHeaderActions() {
         event:
           KeyboardEvent
       ) {
+
         if (
           event.key !==
             "Escape"
         ) {
+
           return;
+
         }
 
 
         if (
           selectedNotification
         ) {
+
           if (
             requestAction !==
               null
           ) {
+
             return;
+
           }
 
 
@@ -1178,12 +1515,14 @@ export default function HomeHeaderActions() {
 
 
           return;
+
         }
 
 
         setOpenPanel(
           null
         );
+
       }
 
 
@@ -1200,6 +1539,7 @@ export default function HomeHeaderActions() {
 
 
       return () => {
+
         document.removeEventListener(
           "mousedown",
           handlePointerDown
@@ -1210,7 +1550,9 @@ export default function HomeHeaderActions() {
           "keydown",
           handleKeyDown
         );
+
       };
+
     },
     [
       selectedNotification,
@@ -1226,6 +1568,7 @@ export default function HomeHeaderActions() {
   const calendarCells =
     useMemo(
       () => {
+
         const year =
           visibleMonth
             .getFullYear();
@@ -1272,6 +1615,7 @@ export default function HomeHeaderActions() {
             _,
             index
           ) => {
+
             const day =
               index
               -
@@ -1285,7 +1629,9 @@ export default function HomeHeaderActions() {
               ||
               day > daysInMonth
             ) {
+
               return null;
+
             }
 
 
@@ -1294,8 +1640,10 @@ export default function HomeHeaderActions() {
               month,
               day
             );
+
           }
         );
+
       },
       [
         visibleMonth,
@@ -1304,6 +1652,7 @@ export default function HomeHeaderActions() {
 
 
   function showPreviousMonth() {
+
     setVisibleMonth(
       current =>
         new Date(
@@ -1312,10 +1661,12 @@ export default function HomeHeaderActions() {
           1
         )
     );
+
   }
 
 
   function showNextMonth() {
+
     setVisibleMonth(
       current =>
         new Date(
@@ -1324,10 +1675,12 @@ export default function HomeHeaderActions() {
           1
         )
     );
+
   }
 
 
   function showCurrentMonth() {
+
     const now =
       new Date();
 
@@ -1344,6 +1697,7 @@ export default function HomeHeaderActions() {
         1
       )
     );
+
   }
 
 
@@ -1352,6 +1706,7 @@ export default function HomeHeaderActions() {
   // ==========================================================
 
   function toggleNotifications() {
+
     const willOpen =
       openPanel !==
         "notifications";
@@ -1369,8 +1724,11 @@ export default function HomeHeaderActions() {
     if (
       willOpen
     ) {
+
       void loadNotifications();
+
     }
+
   }
 
 
@@ -1378,6 +1736,7 @@ export default function HomeHeaderActions() {
     notification:
       NotificationItem
   ) {
+
     setSelectedNotification(
       notification
     );
@@ -1416,15 +1775,19 @@ export default function HomeHeaderActions() {
     setOpenPanel(
       null
     );
+
   }
 
 
   function closeAccessRequest() {
+
     if (
       requestAction !==
         null
     ) {
+
       return;
+
     }
 
 
@@ -1456,6 +1819,7 @@ export default function HomeHeaderActions() {
     setCopyStatus(
       "idle"
     );
+
   }
 
 
@@ -1463,6 +1827,7 @@ export default function HomeHeaderActions() {
     role:
       WorkingRole
   ) {
+
     setSelectedRole(
       role
     );
@@ -1477,21 +1842,27 @@ export default function HomeHeaderActions() {
       role !==
         "category_manager"
     ) {
+
       setSelectedMarketplace(
         ""
       );
+
     }
+
   }
 
 
   async function handleApproveAccessRequest() {
+
     if (
       !selectedNotification
       ||
       requestAction !==
         null
     ) {
+
       return;
+
     }
 
 
@@ -1499,12 +1870,14 @@ export default function HomeHeaderActions() {
       selectedRole ===
         ""
     ) {
+
       setRequestActionError(
         "Выберите рабочую роль"
       );
 
 
       return;
+
     }
 
 
@@ -1515,12 +1888,14 @@ export default function HomeHeaderActions() {
       selectedMarketplace ===
         ""
     ) {
+
       setRequestActionError(
         "Выберите маркетплейс для категорийного менеджера"
       );
 
 
       return;
+
     }
 
 
@@ -1535,9 +1910,11 @@ export default function HomeHeaderActions() {
 
 
     try {
+
       const result =
         await approveAccessRequest(
           {
+
             requestId:
               selectedNotification.id,
 
@@ -1551,6 +1928,7 @@ export default function HomeHeaderActions() {
                 ? selectedMarketplace
 
                 : null,
+
           }
         );
 
@@ -1558,12 +1936,14 @@ export default function HomeHeaderActions() {
       if (
         !result.ok
       ) {
+
         setRequestActionError(
           result.error
         );
 
 
         return;
+
       }
 
 
@@ -1579,6 +1959,7 @@ export default function HomeHeaderActions() {
 
       setApprovalResult(
         {
+
           email:
             result.email,
 
@@ -1587,6 +1968,7 @@ export default function HomeHeaderActions() {
 
           temporaryPassword:
             result.temporaryPassword,
+
         }
       );
 
@@ -1596,26 +1978,33 @@ export default function HomeHeaderActions() {
       );
 
     } catch {
+
       setRequestActionError(
         "Не удалось одобрить заявку"
       );
 
     } finally {
+
       setRequestAction(
         null
       );
+
     }
+
   }
 
 
   async function handleRejectAccessRequest() {
+
     if (
       !selectedNotification
       ||
       requestAction !==
         null
     ) {
+
       return;
+
     }
 
 
@@ -1630,6 +2019,7 @@ export default function HomeHeaderActions() {
 
 
     try {
+
       const result =
         await rejectAccessRequest(
           selectedNotification.id
@@ -1639,12 +2029,14 @@ export default function HomeHeaderActions() {
       if (
         !result.ok
       ) {
+
         setRequestActionError(
           result.error
         );
 
 
         return;
+
       }
 
 
@@ -1692,27 +2084,35 @@ export default function HomeHeaderActions() {
       );
 
     } catch {
+
       setRequestActionError(
         "Не удалось отклонить заявку"
       );
 
     } finally {
+
       setRequestAction(
         null
       );
+
     }
+
   }
 
 
   async function copyTemporaryPassword() {
+
     if (
       !approvalResult
     ) {
+
       return;
+
     }
 
 
     try {
+
       await navigator
         .clipboard
         .writeText(
@@ -1726,10 +2126,13 @@ export default function HomeHeaderActions() {
       );
 
     } catch {
+
       setCopyStatus(
         "error"
       );
+
     }
+
   }
 
 
@@ -1738,6 +2141,7 @@ export default function HomeHeaderActions() {
   // ==========================================================
 
   function toggleProfileMenu() {
+
     setOpenPanel(
       current =>
         current ===
@@ -1747,14 +2151,18 @@ export default function HomeHeaderActions() {
 
           : "profile"
     );
+
   }
 
 
   async function handleLogout() {
+
     if (
       logoutLoading
     ) {
+
       return;
+
     }
 
 
@@ -1764,6 +2172,7 @@ export default function HomeHeaderActions() {
 
 
     try {
+
       const supabase =
         createClient();
 
@@ -1779,6 +2188,7 @@ export default function HomeHeaderActions() {
       if (
         error
       ) {
+
         console.error(
           "Ошибка выхода:",
           error
@@ -1791,6 +2201,7 @@ export default function HomeHeaderActions() {
 
 
         return;
+
       }
 
 
@@ -1809,6 +2220,7 @@ export default function HomeHeaderActions() {
     } catch (
       error
     ) {
+
       console.error(
         "Ошибка выхода:",
         error
@@ -1818,7 +2230,9 @@ export default function HomeHeaderActions() {
       setLogoutLoading(
         false
       );
+
     }
+
   }
 
 
@@ -1953,6 +2367,7 @@ export default function HomeHeaderActions() {
 
             onMouseDown={
               event => {
+
                 if (
                   event.target ===
                     event.currentTarget
@@ -1960,8 +2375,11 @@ export default function HomeHeaderActions() {
                   requestAction ===
                     null
                 ) {
+
                   closeAccessRequest();
+
                 }
+
               }
             }
           >
@@ -1998,7 +2416,9 @@ export default function HomeHeaderActions() {
                     null
                 }
               >
+
                 <CloseIcon />
+
               </button>
 
 
@@ -2006,6 +2426,7 @@ export default function HomeHeaderActions() {
                 approvalResult
 
                   ? (
+
                     <>
 
                       <div
@@ -2013,6 +2434,7 @@ export default function HomeHeaderActions() {
                           styles.modalHeader
                         }
                       >
+
                         <h2
                           id=
                             "access-request-title"
@@ -2026,6 +2448,7 @@ export default function HomeHeaderActions() {
                           Передайте сотруднику email
                           и временный пароль.
                         </p>
+
                       </div>
 
 
@@ -2049,6 +2472,7 @@ export default function HomeHeaderActions() {
                             styles.credentialRow
                           }
                         >
+
                           <span
                             className={
                               styles.credentialLabel
@@ -2068,6 +2492,7 @@ export default function HomeHeaderActions() {
                                 .fullName
                             }
                           </strong>
+
                         </div>
 
 
@@ -2076,6 +2501,7 @@ export default function HomeHeaderActions() {
                             styles.credentialRow
                           }
                         >
+
                           <span
                             className={
                               styles.credentialLabel
@@ -2095,6 +2521,7 @@ export default function HomeHeaderActions() {
                                 .email
                             }
                           </strong>
+
                         </div>
 
 
@@ -2103,6 +2530,7 @@ export default function HomeHeaderActions() {
                             styles.passwordBlock
                           }
                         >
+
                           <span
                             className={
                               styles.credentialLabel
@@ -2117,6 +2545,7 @@ export default function HomeHeaderActions() {
                               styles.passwordLine
                             }
                           >
+
                             <code
                               className={
                                 styles.passwordValue
@@ -2154,8 +2583,11 @@ export default function HomeHeaderActions() {
                                     : "Копировать"
                               }
                             </button>
+
                           </div>
+
                         </div>
+
                       </div>
 
 
@@ -2177,6 +2609,7 @@ export default function HomeHeaderActions() {
                           styles.footer
                         }
                       >
+
                         <span
                           className={
                             styles.footerHint
@@ -2201,12 +2634,15 @@ export default function HomeHeaderActions() {
                         >
                           Закрыть
                         </button>
+
                       </div>
 
                     </>
+
                   )
 
                   : (
+
                     <>
 
                       <div
@@ -2214,6 +2650,7 @@ export default function HomeHeaderActions() {
                           styles.modalHeader
                         }
                       >
+
                         <h2
                           id=
                             "access-request-title"
@@ -2226,6 +2663,7 @@ export default function HomeHeaderActions() {
                           Проверьте данные сотрудника
                           и назначьте ему рабочую роль.
                         </p>
+
                       </div>
 
 
@@ -2240,6 +2678,7 @@ export default function HomeHeaderActions() {
                             styles.requestRow
                           }
                         >
+
                           <span
                             className={
                               styles.requestLabel
@@ -2268,6 +2707,7 @@ export default function HomeHeaderActions() {
                                 .lastName
                             }
                           </span>
+
                         </div>
 
 
@@ -2276,6 +2716,7 @@ export default function HomeHeaderActions() {
                             styles.requestRow
                           }
                         >
+
                           <span
                             className={
                               styles.requestLabel
@@ -2296,6 +2737,7 @@ export default function HomeHeaderActions() {
                                 .email
                             }
                           </span>
+
                         </div>
 
 
@@ -2304,6 +2746,7 @@ export default function HomeHeaderActions() {
                             styles.requestRow
                           }
                         >
+
                           <span
                             className={
                               styles.requestLabel
@@ -2326,6 +2769,7 @@ export default function HomeHeaderActions() {
                               "Не указан"
                             }
                           </span>
+
                         </div>
 
 
@@ -2334,6 +2778,7 @@ export default function HomeHeaderActions() {
                             styles.requestRow
                           }
                         >
+
                           <span
                             className={
                               styles.requestLabel
@@ -2356,6 +2801,7 @@ export default function HomeHeaderActions() {
                               "Нет"
                             }
                           </span>
+
                         </div>
 
                       </div>
@@ -2372,6 +2818,7 @@ export default function HomeHeaderActions() {
                             styles.field
                           }
                         >
+
                           <label
                             htmlFor=
                               "access-request-role"
@@ -2404,9 +2851,11 @@ export default function HomeHeaderActions() {
                                 null
                             }
                           >
+
                             {
                               WORKING_ROLES.map(
                                 role => (
+
                                   <option
                                     key={
                                       role.value
@@ -2422,10 +2871,13 @@ export default function HomeHeaderActions() {
                                       role.label
                                     }
                                   </option>
+
                                 )
                               )
                             }
+
                           </select>
+
                         </div>
 
 
@@ -2434,11 +2886,13 @@ export default function HomeHeaderActions() {
                             "category_manager"
                           &&
                           (
+
                             <div
                               className={
                                 styles.field
                               }
                             >
+
                               <label
                                 htmlFor=
                                   "access-request-marketplace"
@@ -2457,6 +2911,7 @@ export default function HomeHeaderActions() {
 
                                 onChange={
                                   event => {
+
                                     setSelectedMarketplace(
                                       getCategoryMarketplace(
                                         event
@@ -2469,6 +2924,7 @@ export default function HomeHeaderActions() {
                                     setRequestActionError(
                                       null
                                     );
+
                                   }
                                 }
 
@@ -2477,9 +2933,11 @@ export default function HomeHeaderActions() {
                                     null
                                 }
                               >
+
                                 {
                                   MARKETPLACES.map(
                                     marketplace => (
+
                                       <option
                                         key={
                                           marketplace.value
@@ -2495,11 +2953,15 @@ export default function HomeHeaderActions() {
                                           marketplace.label
                                         }
                                       </option>
+
                                     )
                                   )
                                 }
+
                               </select>
+
                             </div>
+
                           )
                         }
 
@@ -2509,6 +2971,7 @@ export default function HomeHeaderActions() {
                             styles.adminNote
                           }
                         >
+
                           <strong>
                             Административные права:
                           </strong>
@@ -2517,6 +2980,7 @@ export default function HomeHeaderActions() {
 
                           не выдаются при обычном
                           одобрении заявки.
+
                         </div>
 
                       </div>
@@ -2526,6 +2990,7 @@ export default function HomeHeaderActions() {
                         requestActionError
                         &&
                         (
+
                           <div
                             className={
                               styles.actionError
@@ -2537,6 +3002,7 @@ export default function HomeHeaderActions() {
                               requestActionError
                             }
                           </div>
+
                         )
                       }
 
@@ -2546,6 +3012,7 @@ export default function HomeHeaderActions() {
                           styles.footer
                         }
                       >
+
                         <span
                           className={
                             styles.footerHint
@@ -2562,6 +3029,7 @@ export default function HomeHeaderActions() {
                             styles.footerActions
                           }
                         >
+
                           <button
                             type="button"
 
@@ -2613,10 +3081,13 @@ export default function HomeHeaderActions() {
                                 : "Одобрить"
                             }
                           </button>
+
                         </div>
+
                       </div>
 
                     </>
+
                   )
               }
 
@@ -2625,6 +3096,7 @@ export default function HomeHeaderActions() {
           </div>,
 
           document.body
+
         )
 
       : null;
@@ -2635,6 +3107,7 @@ export default function HomeHeaderActions() {
   // ==========================================================
 
   return (
+
     <>
 
       <div
@@ -2654,6 +3127,7 @@ export default function HomeHeaderActions() {
           className=
             "home-action-wrapper"
         >
+
           <button
             type="button"
 
@@ -2678,6 +3152,7 @@ export default function HomeHeaderActions() {
               toggleNotifications
             }
           >
+
             <BellIcon />
 
 
@@ -2685,6 +3160,7 @@ export default function HomeHeaderActions() {
               unreadCount > 0
               &&
               (
+
                 <span
                   className=
                     "home-notification-badge"
@@ -2693,8 +3169,10 @@ export default function HomeHeaderActions() {
                     unreadCount
                   }
                 </span>
+
               )
             }
+
           </button>
 
 
@@ -2703,12 +3181,14 @@ export default function HomeHeaderActions() {
               "notifications"
             &&
             (
+
               <div
                 className="
                   home-popup
                   home-notifications-popup
                 "
               >
+
                 <div
                   className=
                     "home-popup-header"
@@ -2726,11 +3206,13 @@ export default function HomeHeaderActions() {
                     0
 
                     ? (
+
                       <div
                         className="
                           home-notifications-empty
                         "
                       >
+
                         <div
                           className="
                             home-notifications-empty-icon
@@ -2749,7 +3231,9 @@ export default function HomeHeaderActions() {
                           Проверяем новые
                           уведомления.
                         </span>
+
                       </div>
+
                     )
 
                     : notificationsError
@@ -2758,11 +3242,13 @@ export default function HomeHeaderActions() {
                         0
 
                       ? (
+
                         <div
                           className="
                             home-notifications-empty
                           "
                         >
+
                           <div
                             className="
                               home-notifications-empty-icon
@@ -2782,18 +3268,22 @@ export default function HomeHeaderActions() {
                               notificationsError
                             }
                           </span>
+
                         </div>
+
                       )
 
                       : notifications.length ===
                           0
 
                         ? (
+
                           <div
                             className="
                               home-notifications-empty
                             "
                           >
+
                             <div
                               className="
                                 home-notifications-empty-icon
@@ -2812,18 +3302,23 @@ export default function HomeHeaderActions() {
                               Здесь появятся новые
                               системные уведомления.
                             </span>
+
                           </div>
+
                         )
 
                         : (
+
                           <div
                             className="
                               home-notifications-list
                             "
                           >
+
                             {
                               notifications.map(
                                 notification => (
+
                                   <button
                                     key={
                                       notification.id
@@ -2843,6 +3338,7 @@ export default function HomeHeaderActions() {
                                         )
                                     }
                                   >
+
                                     <strong>
                                       {
                                         notification.title
@@ -2878,16 +3374,23 @@ export default function HomeHeaderActions() {
                                           : ""
                                       }
                                     </span>
+
                                   </button>
+
                                 )
                               )
                             }
+
                           </div>
+
                         )
                 }
+
               </div>
+
             )
           }
+
         </div>
 
 
@@ -2899,6 +3402,7 @@ export default function HomeHeaderActions() {
           className=
             "home-action-wrapper"
         >
+
           <button
             type="button"
 
@@ -2932,7 +3436,9 @@ export default function HomeHeaderActions() {
                 )
             }
           >
+
             <CalendarIcon />
+
           </button>
 
 
@@ -2941,17 +3447,20 @@ export default function HomeHeaderActions() {
               "calendar"
             &&
             (
+
               <div
                 className="
                   home-popup
                   home-calendar-popup
                 "
               >
+
                 <div
                   className="
                     home-calendar-header
                   "
                 >
+
                   <button
                     type="button"
 
@@ -2966,11 +3475,14 @@ export default function HomeHeaderActions() {
                       showPreviousMonth
                     }
                   >
+
                     <ArrowLeftIcon />
+
                   </button>
 
 
                   <strong>
+
                     {
                       MONTH_NAMES[
                         visibleMonth
@@ -2984,6 +3496,7 @@ export default function HomeHeaderActions() {
                       visibleMonth
                         .getFullYear()
                     }
+
                   </strong>
 
 
@@ -3001,8 +3514,11 @@ export default function HomeHeaderActions() {
                       showNextMonth
                     }
                   >
+
                     <ArrowRightIcon />
+
                   </button>
+
                 </div>
 
 
@@ -3011,9 +3527,11 @@ export default function HomeHeaderActions() {
                     home-calendar-weekdays
                   "
                 >
+
                   {
                     WEEK_DAYS.map(
                       day => (
+
                         <span
                           key={
                             day
@@ -3023,9 +3541,11 @@ export default function HomeHeaderActions() {
                             day
                           }
                         </span>
+
                       )
                     )
                   }
+
                 </div>
 
 
@@ -3034,16 +3554,20 @@ export default function HomeHeaderActions() {
                     home-calendar-grid
                   "
                 >
+
                   {
                     calendarCells.map(
                       (
                         date,
                         index
                       ) => {
+
                         if (
                           !date
                         ) {
+
                           return (
+
                             <span
                               key={
                                 `empty-${index}`
@@ -3054,7 +3578,9 @@ export default function HomeHeaderActions() {
                                 empty
                               "
                             />
+
                           );
+
                         }
 
 
@@ -3066,6 +3592,7 @@ export default function HomeHeaderActions() {
 
 
                         return (
+
                           <button
                             key={
                               date.toISOString()
@@ -3093,10 +3620,13 @@ export default function HomeHeaderActions() {
                               date.getDate()
                             }
                           </button>
+
                         );
+
                       }
                     )
                   }
+
                 </div>
 
 
@@ -3119,9 +3649,12 @@ export default function HomeHeaderActions() {
                     )
                   }
                 </button>
+
               </div>
+
             )
           }
+
         </div>
 
 
@@ -3136,6 +3669,32 @@ export default function HomeHeaderActions() {
         ==================================================== */}
 
         <HomeThemeToggle />
+
+
+        {/* ====================================================
+            WORKSPACE MODE
+        ==================================================== */}
+
+        {
+          currentProfile
+            ?.has_admin_access
+          &&
+          (
+
+            <>
+
+              <div
+                className=
+                  "home-topbar-divider"
+              />
+
+
+              <WorkspaceModeSwitcher />
+
+            </>
+
+          )
+        }
 
 
         <div
@@ -3182,10 +3741,12 @@ export default function HomeHeaderActions() {
                   "hidden",
               }}
             >
+
               {
                 profileAvatarUrl
 
                   ? (
+
                     <img
                       src={
                         profileAvatarUrl
@@ -3207,10 +3768,12 @@ export default function HomeHeaderActions() {
                           "cover",
                       }}
                     />
+
                   )
 
                   : profileInitials
               }
+
             </span>
 
 
@@ -3218,6 +3781,7 @@ export default function HomeHeaderActions() {
               className=
                 "home-profile-text"
             >
+
               <strong>
                 {
                   profileFullName
@@ -3230,6 +3794,7 @@ export default function HomeHeaderActions() {
                   profileRoleName
                 }
               </span>
+
             </span>
 
 
@@ -3238,8 +3803,11 @@ export default function HomeHeaderActions() {
                 home-profile-chevron
               "
             >
+
               <ChevronIcon />
+
             </span>
+
           </button>
 
 
@@ -3248,6 +3816,7 @@ export default function HomeHeaderActions() {
               "profile"
             &&
             (
+
               <div
                 className={
                   styles.profileMenu
@@ -3259,6 +3828,7 @@ export default function HomeHeaderActions() {
                     styles.profileMenuHeader
                   }
                 >
+
                   <strong
                     className={
                       styles.profileMenuName
@@ -3274,6 +3844,7 @@ export default function HomeHeaderActions() {
                     profileEmail
                     &&
                     (
+
                       <span
                         className={
                           styles.profileMenuEmail
@@ -3283,6 +3854,7 @@ export default function HomeHeaderActions() {
                           profileEmail
                         }
                       </span>
+
                     )
                   }
 
@@ -3304,6 +3876,7 @@ export default function HomeHeaderActions() {
                     profileAdminRole
                     &&
                     (
+
                       <div
                         className={
                           styles.profileMenuAdmin
@@ -3313,8 +3886,10 @@ export default function HomeHeaderActions() {
                           profileAdminRole
                         }
                       </div>
+
                     )
                   }
+
                 </div>
 
 
@@ -3323,6 +3898,7 @@ export default function HomeHeaderActions() {
                     styles.profileMenuActions
                   }
                 >
+
                   <Link
                     href="/profile"
 
@@ -3364,10 +3940,14 @@ export default function HomeHeaderActions() {
                         : "Выйти"
                     }
                   </button>
+
                 </div>
+
               </div>
+
             )
           }
+
         </div>
 
       </div>
@@ -3378,5 +3958,7 @@ export default function HomeHeaderActions() {
       }
 
     </>
+
   );
+
 }
