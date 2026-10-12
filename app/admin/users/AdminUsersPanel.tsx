@@ -112,11 +112,11 @@ const MARKETPLACES: Array<{
   },
   {
     value: "wildberries",
-    label: "Wildberries",
+    label: "WB",
   },
   {
     value: "yandex_market",
-    label: "Яндекс Маркет",
+    label: "ЯМ",
   },
 ];
 
@@ -242,20 +242,55 @@ function getMarketplace(
 
 
 function getRoleLabel(
-  role: WorkingRole
+  role: WorkingRole,
+  marketplace: CategoryMarketplace | null = null
 ) {
+
+  if (
+    role === "category_manager"
+  ) {
+
+    if (
+      marketplace === "ozon"
+    ) {
+
+      return "Категорийный менеджер / Ozon";
+
+    }
+
+
+    if (
+      marketplace === "wildberries"
+    ) {
+
+      return "Категорийный менеджер / WB";
+
+    }
+
+
+    if (
+      marketplace === "yandex_market"
+    ) {
+
+      return "Категорийный менеджер / ЯМ";
+
+    }
+
+
+    return "Категорийный менеджер";
+
+  }
+
 
   const item =
     WORKING_ROLES.find(
       option =>
-        option.value ===
-          role
+        option.value === role
     );
 
 
   return (
-    item
-      ?.label
+    item?.label
     ??
     "Роль не назначена"
   );
@@ -270,14 +305,12 @@ function getMarketplaceLabel(
   const item =
     MARKETPLACES.find(
       option =>
-        option.value ===
-          marketplace
+        option.value === marketplace
     );
 
 
   return (
-    item
-      ?.label
+    item?.label
     ??
     ""
   );
@@ -716,7 +749,8 @@ export default function AdminUsersPanel() {
 
                 role_name:
                   getRoleLabel(
-                    nextRole
+                    nextRole,
+                    nextMarketplace
                   ),
 
                 category_marketplace:
@@ -756,11 +790,6 @@ export default function AdminUsersPanel() {
       );
 
 
-      /*
-       * Если пользователь поменял собственную
-       * рабочую роль, перезагружаем страницу,
-       * чтобы шапка сразу показала новую роль.
-       */
       if (
         targetUser.user_id ===
           currentUserId
@@ -826,11 +855,6 @@ export default function AdminUsersPanel() {
     clearStatus();
 
 
-    /*
-     * Если выбираем категорийного менеджера
-     * у сотрудника, который им ещё не является,
-     * сначала ждём выбор площадки.
-     */
     if (
       nextRole ===
         "category_manager"
