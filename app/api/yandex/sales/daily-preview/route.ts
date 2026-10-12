@@ -498,7 +498,7 @@ Promise<T[]> {
 
 
 // ============================================================
-// KEY
+// KEYS
 // ============================================================
 
 function makeSkuKey(
@@ -547,11 +547,32 @@ function makeDailyKey(
 //
 // ТОЛЬКО PREVIEW.
 // НИЧЕГО НЕ ПИШЕТ В yandex_sales_daily.
+//
+// ?includeRows=1
+// дополнительно вернёт полный daily_rows.
 // ============================================================
 
-export async function GET() {
+export async function GET(
+  request: Request
+) {
 
   try {
+
+    const requestUrl =
+      new URL(
+        request.url
+      );
+
+
+    const includeRows =
+      requestUrl
+        .searchParams
+        .get(
+          "includeRows"
+        )
+      ===
+      "1";
+
 
     const {
       supabaseUrl,
@@ -885,8 +906,6 @@ export async function GET() {
 
     // ========================================================
     // NEGATIVE EVENTS
-    //
-    // CANCELLED возврат не считаем.
     // ========================================================
 
     const negativeMap =
@@ -958,7 +977,7 @@ export async function GET() {
 
 
       // ------------------------------------------------------
-      // Возврат был отменён.
+      // Отменённый RETURN не считается возвратом.
       // ------------------------------------------------------
 
       if (
@@ -992,9 +1011,8 @@ export async function GET() {
 
 
       // ------------------------------------------------------
-      // Родительский заказ старше полного окна.
-      // Сырьё сохраняем, но daily по неполному дню
-      // из него сейчас не строим.
+      // Старые parent orders используются для понимания
+      // возвратов, но не входят в daily неполных старых дней.
       // ------------------------------------------------------
 
       if (
@@ -1382,8 +1400,7 @@ export async function GET() {
 
 
     // ========================================================
-    // RETURNS, ДЛЯ КОТОРЫХ НЕ НАШЁЛСЯ ORDER SKU
-    // В ПОЛНОМ ОКНЕ
+    // NEGATIVE EVENTS WITHOUT MATCHING ORDER SKU
     // ========================================================
 
     const unmatchedNegativeGroups:
@@ -1794,6 +1811,11 @@ export async function GET() {
             0,
             20
           ),
+
+        daily_rows:
+          includeRows
+          ? dailyRows
+          : undefined,
       }
     );
 
