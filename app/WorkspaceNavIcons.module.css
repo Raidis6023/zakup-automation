@@ -1,0 +1,81 @@
+.icon {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  border-radius: 9px;
+}
+
+
+/* ============================================================
+   ЗАКУП
+   ============================================================ */
+
+.procurement {
+  --icon-bg-start: #139cff;
+  --icon-bg-end: #0953f5;
+
+  --icon-main: #ffffff;
+  --icon-side: #dbeaff;
+  --icon-accent: #168cf5;
+}
+
+
+:global(html[data-theme="dark"])
+.procurement {
+  --icon-bg-start: #ffffff;
+  --icon-bg-end: #eaf3ff;
+
+  --icon-main: #0966ef;
+  --icon-side: #58b7ff;
+  --icon-accent: #ffffff;
+}
+
+
+/* ============================================================
+   ВЭД
+   ============================================================ */
+
+.ved {
+  --icon-bg-start: #12d7df;
+  --icon-bg-end: #0875d6;
+
+  --icon-globe: #dffeff;
+  --icon-container: #ffffff;
+  --icon-container-detail: #1185cc;
+}
+
+
+:global(html[data-theme="dark"])
+.ved {
+  --icon-bg-start: #ffffff;
+  --icon-bg-end: #eafcff;
+
+  --icon-globe: #16bfe2;
+  --icon-container: #0872d9;
+  --icon-container-detail: #ffffff;
+}
+
+
+/* ============================================================
+   СОТРУДНИКИ
+   ============================================================ */
+
+.employees {
+  --icon-bg-start: #8a45ff;
+  --icon-bg-end: #2638f5;
+
+  --icon-card: #ffffff;
+  --icon-detail: #5d38f5;
+}
+
+
+:global(html[data-theme="dark"])
+.employees {
+  --icon-bg-start: #ffffff;
+  --icon-bg-end: #edf2ff;
+
+  --icon-card: #5734ee;
+  --icon-detail: #ffffff;
+}
