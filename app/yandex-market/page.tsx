@@ -9,6 +9,9 @@ import ThemeToggle from "../ThemeToggle";
 import YandexUnlinkedProductsClient
   from "./YandexUnlinkedProductsClient";
 
+import YandexSyncActionsClient
+  from "./YandexSyncActionsClient";
+
 
 export const dynamic =
   "force-dynamic";
@@ -70,11 +73,22 @@ type YandexProductRow = {
 };
 
 
+type StockSyncRow = {
+  created_at: string;
+};
+
+
+type SalesDailySyncRow = {
+  updated_at: string;
+};
+
+
 // ============================================================
 // SUPABASE CONFIG
 // ============================================================
 
 function getSupabaseConfig() {
+
   const supabaseUrl =
     process.env
       .NEXT_PUBLIC_SUPABASE_URL
@@ -96,16 +110,20 @@ function getSupabaseConfig() {
 
 
   if (!supabaseUrl) {
+
     throw new Error(
       "Не найдена NEXT_PUBLIC_SUPABASE_URL или SUPABASE_URL"
     );
+
   }
 
 
   if (!supabaseSecretKey) {
+
     throw new Error(
       "Не найдена SUPABASE_SECRET_KEY или SUPABASE_SERVICE_ROLE_KEY"
     );
+
   }
 
 
@@ -113,6 +131,29 @@ function getSupabaseConfig() {
     supabaseUrl,
     supabaseSecretKey,
   };
+
+}
+
+
+// ============================================================
+// HEADERS
+// ============================================================
+
+function getSupabaseHeaders(
+  secretKey: string
+) {
+
+  return {
+    apikey:
+      secretKey,
+
+    Authorization:
+      `Bearer ${secretKey}`,
+
+    Accept:
+      "application/json",
+  };
+
 }
 
 
@@ -122,6 +163,7 @@ function getSupabaseConfig() {
 
 async function getYandexProducts():
 Promise<YandexProductRow[]> {
+
   const {
     supabaseUrl,
     supabaseSecretKey,
@@ -172,16 +214,10 @@ Promise<YandexProductRow[]> {
         method:
           "GET",
 
-        headers: {
-          apikey:
-            supabaseSecretKey,
-
-          Authorization:
-            `Bearer ${supabaseSecretKey}`,
-
-          Accept:
-            "application/json",
-        },
+        headers:
+          getSupabaseHeaders(
+            supabaseSecretKey
+          ),
 
         cache:
           "no-store",
@@ -194,15 +230,190 @@ Promise<YandexProductRow[]> {
 
 
   if (!response.ok) {
+
     throw new Error(
       `Supabase yandex_products: HTTP ${response.status}: ${text}`
     );
+
   }
 
 
   return JSON.parse(
     text
   ) as YandexProductRow[];
+
+}
+
+
+// ============================================================
+// LAST STOCK SYNC
+// ============================================================
+
+async function getLatestStockSync():
+Promise<string | null> {
+
+  const {
+    supabaseUrl,
+    supabaseSecretKey,
+  } =
+    getSupabaseConfig();
+
+
+  const url =
+    new URL(
+      `${supabaseUrl}/rest/v1/yandex_stock_sync_runs`
+    );
+
+
+  url.searchParams.set(
+    "select",
+    "created_at"
+  );
+
+
+  url.searchParams.set(
+    "status",
+    "eq.success"
+  );
+
+
+  url.searchParams.set(
+    "order",
+    "created_at.desc"
+  );
+
+
+  url.searchParams.set(
+    "limit",
+    "1"
+  );
+
+
+  const response =
+    await fetch(
+      url.toString(),
+      {
+        method:
+          "GET",
+
+        headers:
+          getSupabaseHeaders(
+            supabaseSecretKey
+          ),
+
+        cache:
+          "no-store",
+      }
+    );
+
+
+  const text =
+    await response.text();
+
+
+  if (!response.ok) {
+
+    throw new Error(
+      `Supabase yandex_stock_sync_runs: HTTP ${response.status}: ${text}`
+    );
+
+  }
+
+
+  const rows =
+    JSON.parse(
+      text
+    ) as StockSyncRow[];
+
+
+  return rows[0]
+    ?.created_at
+    ??
+    null;
+
+}
+
+
+// ============================================================
+// LAST SALES DAILY SYNC
+// ============================================================
+
+async function getLatestSalesSync():
+Promise<string | null> {
+
+  const {
+    supabaseUrl,
+    supabaseSecretKey,
+  } =
+    getSupabaseConfig();
+
+
+  const url =
+    new URL(
+      `${supabaseUrl}/rest/v1/yandex_sales_daily`
+    );
+
+
+  url.searchParams.set(
+    "select",
+    "updated_at"
+  );
+
+
+  url.searchParams.set(
+    "order",
+    "updated_at.desc"
+  );
+
+
+  url.searchParams.set(
+    "limit",
+    "1"
+  );
+
+
+  const response =
+    await fetch(
+      url.toString(),
+      {
+        method:
+          "GET",
+
+        headers:
+          getSupabaseHeaders(
+            supabaseSecretKey
+          ),
+
+        cache:
+          "no-store",
+      }
+    );
+
+
+  const text =
+    await response.text();
+
+
+  if (!response.ok) {
+
+    throw new Error(
+      `Supabase yandex_sales_daily: HTTP ${response.status}: ${text}`
+    );
+
+  }
+
+
+  const rows =
+    JSON.parse(
+      text
+    ) as SalesDailySyncRow[];
+
+
+  return rows[0]
+    ?.updated_at
+    ??
+    null;
+
 }
 
 
@@ -215,7 +426,9 @@ function formatDateTimeKrasnoyarsk(
     string
     | null
     | undefined
-): string {
+):
+string {
+
   if (!value) {
     return "—";
   }
@@ -263,24 +476,30 @@ function formatDateTimeKrasnoyarsk(
   ).format(
     date
   );
+
 }
 
 
 function formatNumber(
   value: number
-): string {
+):
+string {
+
   return new Intl.NumberFormat(
     "ru-RU"
   ).format(
     value
   );
+
 }
 
 
 function getProductName(
   product:
     YandexProductRow
-): string {
+):
+string {
+
   const offerName =
     product
       .raw_data
@@ -308,13 +527,16 @@ function getProductName(
 
 
   return "—";
+
 }
 
 
-function getLatestSync(
+function getLatestCatalogSync(
   products:
     YandexProductRow[]
-): string | null {
+):
+string | null {
+
   if (
     products.length ===
     0
@@ -336,6 +558,7 @@ function getLatestSync(
     const product
     of products
   ) {
+
     const time =
       new Date(
         product.last_seen_at
@@ -350,16 +573,20 @@ function getLatestSync(
       time >
         latestTime
     ) {
+
       latestTime =
         time;
 
       latest =
         product.last_seen_at;
+
     }
+
   }
 
 
   return latest;
+
 }
 
 
@@ -368,6 +595,7 @@ function getLatestSync(
 // ============================================================
 
 export default async function YandexMarketPage() {
+
   let products:
     YandexProductRow[] =
     [];
@@ -378,20 +606,98 @@ export default async function YandexMarketPage() {
     null;
 
 
+  let stockUpdatedAt:
+    string | null =
+    null;
+
+
+  let salesUpdatedAt:
+    string | null =
+    null;
+
+
+  let syncStateError:
+    string | null =
+    null;
+
+
   try {
+
     products =
       await getYandexProducts();
 
   } catch (error) {
+
     loadError =
       error instanceof Error
         ? error.message
         : String(error);
+
   }
 
 
-  const latestSync =
-    getLatestSync(
+  const [
+    stockResult,
+    salesResult,
+  ] =
+    await Promise.allSettled(
+      [
+        getLatestStockSync(),
+        getLatestSalesSync(),
+      ]
+    );
+
+
+  if (
+    stockResult.status ===
+    "fulfilled"
+  ) {
+
+    stockUpdatedAt =
+      stockResult.value;
+
+  } else {
+
+    syncStateError =
+      stockResult.reason
+        instanceof Error
+        ? stockResult.reason.message
+        : String(
+            stockResult.reason
+          );
+
+  }
+
+
+  if (
+    salesResult.status ===
+    "fulfilled"
+  ) {
+
+    salesUpdatedAt =
+      salesResult.value;
+
+  } else {
+
+    const salesError =
+      salesResult.reason
+        instanceof Error
+        ? salesResult.reason.message
+        : String(
+            salesResult.reason
+          );
+
+
+    syncStateError =
+      syncStateError
+        ? `${syncStateError}; ${salesError}`
+        : salesError;
+
+  }
+
+
+  const latestCatalogSync =
+    getLatestCatalogSync(
       products
     );
 
@@ -438,7 +744,8 @@ export default async function YandexMarketPage() {
         .filter(
           (
             value
-          ): value is string =>
+          ):
+          value is string =>
             Boolean(
               value
             )
@@ -454,6 +761,7 @@ export default async function YandexMarketPage() {
         a,
         b
       ) => {
+
         const aUnlinked =
           !a.master_code
           ||
@@ -474,9 +782,11 @@ export default async function YandexMarketPage() {
           aUnlinked !==
           bUnlinked
         ) {
+
           return aUnlinked
             ? -1
             : 1;
+
         }
 
 
@@ -485,6 +795,7 @@ export default async function YandexMarketPage() {
             b.offer_id,
             "ru"
           );
+
       }
     );
 
@@ -513,8 +824,8 @@ export default async function YandexMarketPage() {
 
 
             <p className="subtitle">
-              Товары каталога и подготовка
-              данных FBY Яндекс Маркета.
+              Товары каталога, остатки
+              и продажи FBY Яндекс Маркета.
             </p>
 
           </div>
@@ -584,7 +895,7 @@ export default async function YandexMarketPage() {
 
 
         {/* ===================================
-            SYNC STATE
+            CATALOG SYNC STATE
             =================================== */}
 
         <section className="section">
@@ -611,7 +922,7 @@ export default async function YandexMarketPage() {
             <div>
 
               <h2 className="section-title">
-                Состояние синхронизации
+                Состояние каталога
               </h2>
 
 
@@ -633,12 +944,12 @@ export default async function YandexMarketPage() {
                   "999px",
 
                 background:
-                  latestSync
+                  latestCatalogSync
                     ? "#ecfdf3"
                     : "#fff4ed",
 
                 color:
-                  latestSync
+                  latestCatalogSync
                     ? "#027a48"
                     : "#b54708",
 
@@ -650,7 +961,7 @@ export default async function YandexMarketPage() {
               }}
             >
               {
-                latestSync
+                latestCatalogSync
                   ? "Успешно"
                   : "Нет успешной загрузки"
               }
@@ -682,7 +993,7 @@ export default async function YandexMarketPage() {
               value=
                 {
                   formatDateTimeKrasnoyarsk(
-                    latestSync
+                    latestCatalogSync
                   )
                 }
 
@@ -761,6 +1072,77 @@ export default async function YandexMarketPage() {
 
 
         {/* ===================================
+            STOCKS + SALES
+            =================================== */}
+
+        <section className="section">
+
+          <h2 className="section-title">
+            Обновление данных
+          </h2>
+
+
+          <div className="reason-text">
+            Остатки и продажи обновляются
+            независимо друг от друга.
+          </div>
+
+
+          <div className="reason-text">
+            При обновлении продаж система
+            сначала получает свежие заказы,
+            отмены, невыкупы и возвраты,
+            а затем пересчитывает
+            yandex_sales_daily.
+          </div>
+
+
+          {
+            syncStateError
+              ? (
+
+                <div
+                  style={{
+                    marginTop:
+                      "12px",
+
+                    color:
+                      "#f04438",
+
+                    fontSize:
+                      "12px",
+
+                    lineHeight:
+                      1.45,
+                  }}
+                >
+                  Не удалось получить время
+                  последнего обновления:
+                  {" "}
+                  {syncStateError}
+                </div>
+
+              )
+              : null
+          }
+
+
+          <YandexSyncActionsClient
+            initialStockUpdatedAt=
+              {
+                stockUpdatedAt
+              }
+
+            initialSalesUpdatedAt=
+              {
+                salesUpdatedAt
+              }
+          />
+
+        </section>
+
+
+        {/* ===================================
             HOW TO CHECK
             =================================== */}
 
@@ -795,10 +1177,10 @@ export default async function YandexMarketPage() {
 
 
           <div className="reason-text">
-            Остатки, оборачиваемость,
-            продажи и поставки
-            подключим отдельными
-            источниками API.
+            Остатки и продажи
+            сохраняются отдельными
+            источниками данных
+            и не изменяют каталог.
           </div>
 
         </section>
@@ -1047,13 +1429,6 @@ export default async function YandexMarketPage() {
 
 
           <div className="reason-text">
-            Система получает каталог
-            Яндекс Маркета через
-            серверный API route.
-          </div>
-
-
-          <div className="reason-text">
             API-ключ Яндекс Маркета
             не передаётся в браузер
             пользователя.
@@ -1061,19 +1436,26 @@ export default async function YandexMarketPage() {
 
 
           <div className="reason-text">
-            Ошибка API не должна
-            превращаться в удаление
-            или обнуление уже
-            сохранённых товаров.
+            Обновление остатков
+            и продаж выполняется
+            через серверные API routes.
           </div>
 
 
           <div className="reason-text">
-            Полный исходный ответ
-            по товару сохраняется
-            в raw_data для проверки
-            и дальнейшего развития
-            интеграции.
+            Продажи считаются успешно
+            обновлёнными только после
+            успешного получения сырых
+            данных и пересчёта
+            yandex_sales_daily.
+          </div>
+
+
+          <div className="reason-text">
+            Ошибка одного из этапов
+            не должна отображаться
+            пользователю как успешное
+            обновление.
           </div>
 
         </section>
@@ -1082,6 +1464,7 @@ export default async function YandexMarketPage() {
 
     </main>
   );
+
 }
 
 
@@ -1100,6 +1483,7 @@ function InfoCard({
 
   hint?: string;
 }) {
+
   return (
     <div className="card">
 
@@ -1145,6 +1529,7 @@ function InfoCard({
 
     </div>
   );
+
 }
 
 
@@ -1158,6 +1543,7 @@ function ProductsTable({
   products:
     YandexProductRow[];
 }) {
+
   return (
     <div
       style={{
@@ -1242,6 +1628,7 @@ function ProductsTable({
                 product,
                 index
               ) => {
+
                 const isLast =
                   index ===
                   products.length - 1;
@@ -1353,6 +1740,7 @@ function ProductsTable({
 
                   </tr>
                 );
+
               }
             )
           }
@@ -1363,6 +1751,7 @@ function ProductsTable({
 
     </div>
   );
+
 }
 
 
@@ -1376,6 +1765,7 @@ function TableHeader({
   children:
     ReactNode;
 }) {
+
   return (
     <th
       style={{
@@ -1407,6 +1797,7 @@ function TableHeader({
       {children}
     </th>
   );
+
 }
 
 
@@ -1430,6 +1821,7 @@ function TableCell({
 
   nowrap?: boolean;
 }) {
+
   return (
     <td
       style={{
@@ -1462,4 +1854,5 @@ function TableCell({
       {children}
     </td>
   );
+
 }
