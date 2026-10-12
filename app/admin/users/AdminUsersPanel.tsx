@@ -26,15 +26,38 @@ type AdminLevel =
   | "senior_admin";
 
 
+type WorkingRole =
+  | "analyst"
+  | "procurement"
+  | "ved"
+  | "category_manager"
+  | "marketing"
+  | "manager";
+
+
+type CategoryMarketplace =
+  | "ozon"
+  | "wildberries"
+  | "yandex_market";
+
+
 type AdminUserRow = {
   user_id: string;
   first_name: string;
   last_name: string;
   email: string;
+
+  system_role: WorkingRole | null;
   role_name: string;
+
+  category_marketplace: CategoryMarketplace | null;
+  category_marketplace_name: string | null;
+
   admin_level: AdminLevel;
   admin_role_name: string | null;
   has_admin_access: boolean;
+
+  can_manage_working_role: boolean;
 };
 
 
@@ -42,6 +65,60 @@ type StatusType =
   | "idle"
   | "success"
   | "error";
+
+
+// ============================================================
+// CONSTANTS
+// ============================================================
+
+const WORKING_ROLES: Array<{
+  value: WorkingRole;
+  label: string;
+}> = [
+  {
+    value: "analyst",
+    label: "Аналитик",
+  },
+  {
+    value: "procurement",
+    label: "Закуп",
+  },
+  {
+    value: "ved",
+    label: "ВЭД",
+  },
+  {
+    value: "category_manager",
+    label: "Категорийный менеджер",
+  },
+  {
+    value: "marketing",
+    label: "Маркетинг",
+  },
+  {
+    value: "manager",
+    label: "Руководитель",
+  },
+];
+
+
+const MARKETPLACES: Array<{
+  value: CategoryMarketplace;
+  label: string;
+}> = [
+  {
+    value: "ozon",
+    label: "Ozon",
+  },
+  {
+    value: "wildberries",
+    label: "Wildberries",
+  },
+  {
+    value: "yandex_market",
+    label: "Яндекс Маркет",
+  },
+];
 
 
 // ============================================================
@@ -92,6 +169,118 @@ function getAdminLevel(
       return "none";
 
   }
+
+}
+
+
+function getWorkingRole(
+  value: string
+): WorkingRole | null {
+
+  switch (
+    value
+  ) {
+
+    case "analyst":
+      return "analyst";
+
+
+    case "procurement":
+      return "procurement";
+
+
+    case "ved":
+      return "ved";
+
+
+    case "category_manager":
+      return "category_manager";
+
+
+    case "marketing":
+      return "marketing";
+
+
+    case "manager":
+      return "manager";
+
+
+    default:
+      return null;
+
+  }
+
+}
+
+
+function getMarketplace(
+  value: string
+): CategoryMarketplace | null {
+
+  switch (
+    value
+  ) {
+
+    case "ozon":
+      return "ozon";
+
+
+    case "wildberries":
+      return "wildberries";
+
+
+    case "yandex_market":
+      return "yandex_market";
+
+
+    default:
+      return null;
+
+  }
+
+}
+
+
+function getRoleLabel(
+  role: WorkingRole
+) {
+
+  const item =
+    WORKING_ROLES.find(
+      option =>
+        option.value ===
+          role
+    );
+
+
+  return (
+    item
+      ?.label
+    ??
+    "Роль не назначена"
+  );
+
+}
+
+
+function getMarketplaceLabel(
+  marketplace: CategoryMarketplace
+) {
+
+  const item =
+    MARKETPLACES.find(
+      option =>
+        option.value ===
+          marketplace
+    );
+
+
+  return (
+    item
+      ?.label
+    ??
+    ""
+  );
 
 }
 
@@ -175,6 +364,17 @@ export default function AdminUsersPanel() {
   const [
     changingUserId,
     setChangingUserId,
+  ] =
+    useState<
+      string | null
+    >(
+      null
+    );
+
+
+  const [
+    pendingCategoryUserId,
+    setPendingCategoryUserId,
   ] =
     useState<
       string | null
@@ -310,8 +510,7 @@ export default function AdminUsersPanel() {
               data
               ??
               []
-            ) as
-              AdminUserRow[];
+            ) as AdminUserRow[];
 
 
           setUsers(
@@ -390,6 +589,323 @@ export default function AdminUsersPanel() {
 
 
   // ==========================================================
+  // STATUS
+  // ==========================================================
+
+  function clearStatus() {
+
+    setStatus(
+      "idle"
+    );
+
+
+    setStatusMessage(
+      ""
+    );
+
+  }
+
+
+  // ==========================================================
+  // CHANGE WORKING ROLE
+  // ==========================================================
+
+  async function saveWorkingRole(
+    targetUser:
+      AdminUserRow,
+
+    nextRole:
+      WorkingRole,
+
+    nextMarketplace:
+      CategoryMarketplace | null
+  ) {
+
+    if (
+      !targetUser.can_manage_working_role
+      ||
+      changingUserId !==
+        null
+    ) {
+
+      return;
+
+    }
+
+
+    setChangingUserId(
+      targetUser.user_id
+    );
+
+
+    clearStatus();
+
+
+    try {
+
+      const supabase =
+        createClient();
+
+
+      const {
+        error,
+      } =
+        await supabase
+          .rpc(
+            "app_set_user_working_role",
+            {
+              target_user_id:
+                targetUser.user_id,
+
+              new_system_role:
+                nextRole,
+
+              new_category_marketplace:
+                nextMarketplace,
+            }
+          );
+
+
+      if (
+        error
+      ) {
+
+        console.error(
+          "Ошибка изменения рабочей роли:",
+          error
+        );
+
+
+        setStatus(
+          "error"
+        );
+
+
+        setStatusMessage(
+          error.message
+          ||
+          "Не удалось изменить рабочую роль"
+        );
+
+
+        return;
+
+      }
+
+
+      setUsers(
+        current =>
+          current.map(
+            user => {
+
+              if (
+                user.user_id !==
+                  targetUser.user_id
+              ) {
+
+                return user;
+
+              }
+
+
+              return {
+                ...user,
+
+                system_role:
+                  nextRole,
+
+                role_name:
+                  getRoleLabel(
+                    nextRole
+                  ),
+
+                category_marketplace:
+                  nextMarketplace,
+
+                category_marketplace_name:
+                  nextMarketplace
+
+                    ? getMarketplaceLabel(
+                        nextMarketplace
+                      )
+
+                    : null,
+              };
+
+            }
+          )
+      );
+
+
+      setPendingCategoryUserId(
+        null
+      );
+
+
+      setStatus(
+        "success"
+      );
+
+
+      setStatusMessage(
+        `Рабочая роль пользователя ${
+          targetUser.first_name
+        } ${
+          targetUser.last_name
+        } обновлена`
+      );
+
+
+      /*
+       * Если пользователь поменял собственную
+       * рабочую роль, перезагружаем страницу,
+       * чтобы шапка сразу показала новую роль.
+       */
+      if (
+        targetUser.user_id ===
+          currentUserId
+      ) {
+
+        window.location.reload();
+
+      }
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        "Ошибка изменения рабочей роли:",
+        error
+      );
+
+
+      setStatus(
+        "error"
+      );
+
+
+      setStatusMessage(
+        "Не удалось изменить рабочую роль"
+      );
+
+    } finally {
+
+      setChangingUserId(
+        null
+      );
+
+    }
+
+  }
+
+
+  function handleWorkingRoleChange(
+    targetUser:
+      AdminUserRow,
+
+    value:
+      string
+  ) {
+
+    const nextRole =
+      getWorkingRole(
+        value
+      );
+
+
+    if (
+      !nextRole
+    ) {
+
+      return;
+
+    }
+
+
+    clearStatus();
+
+
+    /*
+     * Если выбираем категорийного менеджера
+     * у сотрудника, который им ещё не является,
+     * сначала ждём выбор площадки.
+     */
+    if (
+      nextRole ===
+        "category_manager"
+      &&
+      targetUser.system_role !==
+        "category_manager"
+    ) {
+
+      setPendingCategoryUserId(
+        targetUser.user_id
+      );
+
+
+      return;
+
+    }
+
+
+    setPendingCategoryUserId(
+      null
+    );
+
+
+    if (
+      nextRole ===
+        targetUser.system_role
+    ) {
+
+      return;
+
+    }
+
+
+    void saveWorkingRole(
+      targetUser,
+      nextRole,
+      null
+    );
+
+  }
+
+
+  function handleMarketplaceChange(
+    targetUser:
+      AdminUserRow,
+
+    value:
+      string
+  ) {
+
+    const nextMarketplace =
+      getMarketplace(
+        value
+      );
+
+
+    if (
+      !nextMarketplace
+    ) {
+
+      return;
+
+    }
+
+
+    void saveWorkingRole(
+      targetUser,
+      "category_manager",
+      nextMarketplace
+    );
+
+  }
+
+
+  // ==========================================================
   // CHANGE ADMIN LEVEL
   // ==========================================================
 
@@ -421,14 +937,7 @@ export default function AdminUsersPanel() {
     );
 
 
-    setStatus(
-      "idle"
-    );
-
-
-    setStatusMessage(
-      ""
-    );
+    clearStatus();
 
 
     try {
@@ -538,11 +1047,6 @@ export default function AdminUsersPanel() {
       );
 
 
-      /*
-       * Если текущий Старший администратор
-       * изменил собственные права,
-       * серверный layout перепроверит доступ.
-       */
       if (
         targetUser.user_id ===
           currentUserId
@@ -611,9 +1115,9 @@ export default function AdminUsersPanel() {
 
                 {" "}
 
-                вы можете выдавать,
-                изменять и снимать
-                административные права.
+                вы можете изменять рабочие роли
+                сотрудников и управлять
+                административными правами.
 
               </>
 
@@ -629,10 +1133,10 @@ export default function AdminUsersPanel() {
 
                 {" "}
 
-                список сотрудников доступен
-                для просмотра. Изменять
-                административные права может
-                только Старший администратор.
+                вы можете изменять рабочие роли
+                сотрудников. Административные
+                права изменяет только
+                Старший администратор.
 
               </>
 
@@ -744,175 +1248,386 @@ export default function AdminUsersPanel() {
 
                       {
                         users.map(
-                          user => (
+                          user => {
 
-                            <tr
-                              key={
-                                user.user_id
-                              }
-                            >
+                            const pendingCategory =
+                              pendingCategoryUserId ===
+                                user.user_id;
 
-                              <td>
 
-                                <div
-                                  className=
-                                    "admin-user-main"
-                                >
+                            const displayedRole =
+                              pendingCategory
 
-                                  <span
+                                ? "category_manager"
+
+                                : user.system_role;
+
+
+                            const showMarketplace =
+                              displayedRole ===
+                                "category_manager";
+
+
+                            return (
+
+                              <tr
+                                key={
+                                  user.user_id
+                                }
+                              >
+
+                                <td>
+
+                                  <div
                                     className=
-                                      "admin-user-name"
+                                      "admin-user-main"
                                   >
 
-                                    {
-                                      user.first_name
-                                    }
+                                    <span
+                                      className=
+                                        "admin-user-name"
+                                    >
 
-                                    {" "}
+                                      {
+                                        user.first_name
+                                      }
 
-                                    {
-                                      user.last_name
-                                    }
+                                      {" "}
+
+                                      {
+                                        user.last_name
+                                      }
 
 
-                                    {
-                                      user.user_id ===
-                                        currentUserId
-                                      &&
-                                      (
+                                      {
+                                        user.user_id ===
+                                          currentUserId
+                                        &&
+                                        (
+
+                                          <span
+                                            className=
+                                              "admin-user-you"
+                                          >
+                                            Вы
+                                          </span>
+
+                                        )
+                                      }
+
+                                    </span>
+
+
+                                    <span
+                                      className=
+                                        "admin-user-email"
+                                    >
+                                      {
+                                        user.email
+                                      }
+                                    </span>
+
+                                  </div>
+
+                                </td>
+
+
+                                <td>
+
+                                  {
+                                    user.can_manage_working_role
+
+                                      ? (
+
+                                        <div
+                                          className=
+                                            "admin-role-control"
+                                        >
+
+                                          <select
+                                            className=
+                                              "admin-working-role-select"
+
+                                            value={
+                                              displayedRole
+                                              ??
+                                              ""
+                                            }
+
+                                            disabled={
+                                              changingUserId !==
+                                                null
+                                            }
+
+                                            onChange={
+                                              event => {
+
+                                                handleWorkingRoleChange(
+                                                  user,
+                                                  event
+                                                    .currentTarget
+                                                    .value
+                                                );
+
+                                              }
+                                            }
+                                          >
+
+                                            {
+                                              !displayedRole
+                                              &&
+                                              (
+
+                                                <option
+                                                  value=""
+                                                  disabled
+                                                >
+                                                  Роль не назначена
+                                                </option>
+
+                                              )
+                                            }
+
+
+                                            {
+                                              WORKING_ROLES.map(
+                                                role => (
+
+                                                  <option
+                                                    key={
+                                                      role.value
+                                                    }
+
+                                                    value={
+                                                      role.value
+                                                    }
+                                                  >
+                                                    {
+                                                      role.label
+                                                    }
+                                                  </option>
+
+                                                )
+                                              )
+                                            }
+
+                                          </select>
+
+
+                                          {
+                                            showMarketplace
+                                            &&
+                                            (
+
+                                              <select
+                                                className=
+                                                  "admin-marketplace-select"
+
+                                                value={
+                                                  pendingCategory
+
+                                                    ? ""
+
+                                                    : (
+                                                        user
+                                                          .category_marketplace
+                                                        ??
+                                                        ""
+                                                      )
+                                                }
+
+                                                disabled={
+                                                  changingUserId !==
+                                                    null
+                                                }
+
+                                                onChange={
+                                                  event => {
+
+                                                    handleMarketplaceChange(
+                                                      user,
+                                                      event
+                                                        .currentTarget
+                                                        .value
+                                                    );
+
+                                                  }
+                                                }
+                                              >
+
+                                                <option
+                                                  value=""
+                                                  disabled
+                                                >
+                                                  Выберите маркетплейс
+                                                </option>
+
+
+                                                {
+                                                  MARKETPLACES.map(
+                                                    marketplace => (
+
+                                                      <option
+                                                        key={
+                                                          marketplace.value
+                                                        }
+
+                                                        value={
+                                                          marketplace.value
+                                                        }
+                                                      >
+                                                        {
+                                                          marketplace.label
+                                                        }
+                                                      </option>
+
+                                                    )
+                                                  )
+                                                }
+
+                                              </select>
+
+                                            )
+                                          }
+
+                                        </div>
+
+                                      )
+
+                                      : (
+
+                                        <div
+                                          className=
+                                            "admin-user-role"
+                                        >
+
+                                          <span
+                                            className=
+                                              "admin-role-locked"
+                                          >
+                                            {
+                                              user.role_name
+                                            }
+                                          </span>
+
+
+                                          {
+                                            user
+                                              .category_marketplace_name
+                                            &&
+                                            (
+
+                                              <span
+                                                className=
+                                                  "admin-user-marketplace"
+                                              >
+                                                {
+                                                  user
+                                                    .category_marketplace_name
+                                                }
+                                              </span>
+
+                                            )
+                                          }
+
+                                        </div>
+
+                                      )
+                                  }
+
+                                </td>
+
+
+                                <td>
+
+                                  {
+                                    canManageAdminLevels
+
+                                      ? (
+
+                                        <select
+                                          className=
+                                            "admin-level-select"
+
+                                          value={
+                                            user.admin_level
+                                          }
+
+                                          disabled={
+                                            changingUserId !==
+                                              null
+                                          }
+
+                                          onChange={
+                                            event => {
+
+                                              const nextLevel =
+                                                getAdminLevel(
+                                                  event
+                                                    .currentTarget
+                                                    .value
+                                                );
+
+
+                                              void handleAdminLevelChange(
+                                                user,
+                                                nextLevel
+                                              );
+
+                                            }
+                                          }
+                                        >
+
+                                          <option
+                                            value="none"
+                                          >
+                                            Без административных прав
+                                          </option>
+
+
+                                          <option
+                                            value="admin"
+                                          >
+                                            Администратор
+                                          </option>
+
+
+                                          <option
+                                            value="senior_admin"
+                                          >
+                                            Старший администратор
+                                          </option>
+
+                                        </select>
+
+                                      )
+
+                                      : (
 
                                         <span
-                                          className=
-                                            "admin-user-you"
+                                          className={
+                                            getBadgeClass(
+                                              user.admin_level
+                                            )
+                                          }
                                         >
-                                          Вы
+                                          {
+                                            getAdminLevelLabel(
+                                              user.admin_level
+                                            )
+                                          }
                                         </span>
 
                                       )
-                                    }
-
-                                  </span>
-
-
-                                  <span
-                                    className=
-                                      "admin-user-email"
-                                  >
-                                    {
-                                      user.email
-                                    }
-                                  </span>
-
-                                </div>
-
-                              </td>
-
-
-                              <td>
-
-                                <span
-                                  className=
-                                    "admin-user-role"
-                                >
-                                  {
-                                    user.role_name
                                   }
-                                </span>
 
-                              </td>
+                                </td>
 
+                              </tr>
 
-                              <td>
+                            );
 
-                                {
-                                  canManageAdminLevels
-
-                                    ? (
-
-                                      <select
-                                        className=
-                                          "admin-level-select"
-
-                                        value={
-                                          user.admin_level
-                                        }
-
-                                        disabled={
-                                          changingUserId !==
-                                            null
-                                        }
-
-                                        onChange={
-                                          event => {
-
-                                            const nextLevel =
-                                              getAdminLevel(
-                                                event
-                                                  .currentTarget
-                                                  .value
-                                              );
-
-
-                                            void handleAdminLevelChange(
-                                              user,
-                                              nextLevel
-                                            );
-
-                                          }
-                                        }
-                                      >
-
-                                        <option
-                                          value=
-                                            "none"
-                                        >
-                                          Без административных прав
-                                        </option>
-
-
-                                        <option
-                                          value=
-                                            "admin"
-                                        >
-                                          Администратор
-                                        </option>
-
-
-                                        <option
-                                          value=
-                                            "senior_admin"
-                                        >
-                                          Старший администратор
-                                        </option>
-
-                                      </select>
-
-                                    )
-
-                                    : (
-
-                                      <span
-                                        className={
-                                          getBadgeClass(
-                                            user.admin_level
-                                          )
-                                        }
-                                      >
-                                        {
-                                          getAdminLevelLabel(
-                                            user.admin_level
-                                          )
-                                        }
-                                      </span>
-
-                                    )
-                                }
-
-                              </td>
-
-                            </tr>
-
-                          )
+                          }
                         )
                       }
 
