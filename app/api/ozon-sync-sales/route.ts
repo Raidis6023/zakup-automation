@@ -6,23 +6,6 @@ import {
 // ============================================================
 // OZON → SUPABASE
 // ПОЛНАЯ СИНХРОНИЗАЦИЯ ПРОДАЖ FBO
-//
-// ПРАВИЛА:
-//
-// 1. Последние 28 ЗАВЕРШЁННЫХ дней.
-// 2. Часовой пояс расчёта — Москва UTC+3.
-// 3. cancelled НЕ входит в продажи.
-// 4. cancelled_quantity храним отдельно.
-// 5. Кластер берём непосредственно из:
-//      financial_data.cluster_from
-// 6. Группируем:
-//      дата + offer_id + cluster_from
-// 7. Проходим ВСЕ страницы Ozon.
-// 8. Никаких warehouse_id → cluster сопоставлений.
-// 9. Если хоть у одного товарного отправления
-//    нет cluster_from — ничего не сохраняем.
-// 10. Только после полной проверки
-//     вызываем Supabase.
 // ============================================================
 
 
@@ -32,11 +15,8 @@ import {
 
 type OzonPostingProduct = {
   sku?: number | string;
-
   name?: string;
-
   quantity?: number;
-
   offer_id?: string;
 };
 
@@ -48,7 +28,8 @@ type OzonPostingAnalytics = {
   warehouse_name?:
     string;
 
-  city?: string;
+  city?:
+    string;
 };
 
 
@@ -147,16 +128,74 @@ type SalesAggregate = {
 
 
 // ============================================================
+// OZON HTTP ERROR
+// ============================================================
+
+class OzonHttpError extends Error {
+
+  status:
+    number;
+
+  retryAfterSeconds:
+    number | null;
+
+  nextAllowedAt:
+    string | null;
+
+
+  constructor(
+    message:
+      string,
+
+    status:
+      number,
+
+    retryAfterSeconds:
+      number | null,
+
+    nextAllowedAt:
+      string | null
+  ) {
+
+    super(
+      message
+    );
+
+
+    this.name =
+      "OzonHttpError";
+
+
+    this.status =
+      status;
+
+
+    this.retryAfterSeconds =
+      retryAfterSeconds;
+
+
+    this.nextAllowedAt =
+      nextAllowedAt;
+
+  }
+
+}
+
+
+// ============================================================
 // OZON HEADERS
 // ============================================================
 
 function getOzonHeaders() {
 
   const clientId =
-    process.env.OZON_CLIENT_ID;
+    process.env
+      .OZON_CLIENT_ID;
+
 
   const apiKey =
-    process.env.OZON_API_KEY;
+    process.env
+      .OZON_API_KEY;
 
 
   if (!clientId) {
@@ -178,7 +217,6 @@ function getOzonHeaders() {
 
 
   return {
-
     "Client-Id":
       clientId,
 
@@ -190,8 +228,8 @@ function getOzonHeaders() {
 
     Accept:
       "application/json",
-
   };
+
 }
 
 
@@ -204,6 +242,7 @@ function getSupabaseConfig() {
   const supabaseUrl =
     process.env
       .NEXT_PUBLIC_SUPABASE_URL;
+
 
   const supabaseSecretKey =
     process.env
@@ -232,6 +271,7 @@ function getSupabaseConfig() {
     supabaseUrl,
     supabaseSecretKey,
   };
+
 }
 
 
@@ -240,13 +280,12 @@ function getSupabaseConfig() {
 // ============================================================
 
 function sleep(
-  milliseconds: number
+  milliseconds:
+    number
 ) {
 
   return new Promise<void>(
-    (
-      resolve
-    ) => {
+    resolve => {
 
       setTimeout(
         resolve,
@@ -255,19 +294,23 @@ function sleep(
 
     }
   );
+
 }
 
 
 // ============================================================
-// НОРМАЛИЗАЦИЯ ТЕКСТА
+// NORMALIZE
 // ============================================================
 
 function normalizeText(
-  value: unknown
+  value:
+    unknown
 ) {
 
   return String(
-    value ?? ""
+    value
+    ??
+    ""
   )
     .replace(
       /\u00A0/g,
@@ -278,20 +321,233 @@ function normalizeText(
       " "
     )
     .trim();
+
 }
 
 
 // ============================================================
-// OZON POST С RETRY
+// RETRY-AFTER
+// ============================================================
+
+function getRetryAfter(
+  response:
+    Response
+) {
+
+  const raw =
+    response.headers.get(
+      "retry-after"
+    );
+
+
+  if (!raw) {
+
+    return {
+      retryAfterSeconds:
+        null,
+
+      nextAllowedAt:
+        null,
+    };
+
+  }
+
+
+  const numeric =
+    Number(
+      raw
+    );
+
+
+  let seconds:
+    number | null =
+    null;
+
+
+  if (
+    Number.isFinite(
+      numeric
+    )
+    &&
+    numeric >=
+      0
+  ) {
+
+    seconds =
+      Math.ceil(
+        numeric
+      );
+
+  } else {
+
+    const date =
+      new Date(
+        raw
+      );
+
+
+    if (
+      Number.isFinite(
+        date.getTime()
+      )
+    ) {
+
+      seconds =
+        Math.max(
+          0,
+          Math.ceil(
+            (
+              date.getTime()
+              -
+              Date.now()
+            )
+            /
+            1000
+          )
+        );
+
+    }
+
+  }
+
+
+  if (
+    seconds ===
+    null
+  ) {
+
+    return {
+      retryAfterSeconds:
+        null,
+
+      nextAllowedAt:
+        null,
+    };
+
+  }
+
+
+  return {
+    retryAfterSeconds:
+      seconds,
+
+    nextAllowedAt:
+      new Date(
+        Date.now()
+        +
+        seconds
+        *
+        1000
+      ).toISOString(),
+  };
+
+}
+
+
+// ============================================================
+// SYNC STATE
+// ============================================================
+
+async function updateSyncState(
+  values:
+    Record<string, unknown>
+) {
+
+  const {
+    supabaseUrl,
+    supabaseSecretKey,
+  } =
+    getSupabaseConfig();
+
+
+  const response =
+    await fetch(
+      `${supabaseUrl}/rest/v1/ozon_sync_state?sync_key=eq.sales`,
+      {
+        method:
+          "PATCH",
+
+        headers: {
+          apikey:
+            supabaseSecretKey,
+
+          Authorization:
+            `Bearer ${supabaseSecretKey}`,
+
+          "Content-Type":
+            "application/json",
+
+          Prefer:
+            "return=minimal",
+        },
+
+        body:
+          JSON.stringify(
+            {
+              ...values,
+
+              updated_at:
+                new Date()
+                  .toISOString(),
+            }
+          ),
+
+        cache:
+          "no-store",
+      }
+    );
+
+
+  if (!response.ok) {
+
+    const text =
+      await response.text();
+
+
+    throw new Error(
+      `Не удалось обновить ozon_sync_state sales. HTTP ${response.status}: ${text}`
+    );
+
+  }
+
+}
+
+
+async function tryUpdateSyncState(
+  values:
+    Record<string, unknown>
+) {
+
+  try {
+
+    await updateSyncState(
+      values
+    );
+
+  } catch (error) {
+
+    console.error(
+      "Ozon sales sync-state error:",
+      error
+    );
+
+  }
+
+}
+
+
+// ============================================================
+// OZON POST
 // ============================================================
 
 async function ozonPost<T>(
-  endpoint: string,
+  endpoint:
+    string,
 
   body:
     Record<string, unknown>
 ):
-  Promise<T> {
+Promise<T> {
 
   const maxAttempts =
     3;
@@ -332,7 +588,8 @@ async function ozonPost<T>(
     } catch (error) {
 
       if (
-        attempt === maxAttempts
+        attempt ===
+        maxAttempts
       ) {
 
         throw new Error(
@@ -347,8 +604,11 @@ async function ozonPost<T>(
 
 
       await sleep(
-        1000 * attempt
+        1000
+        *
+        attempt
       );
+
 
       continue;
 
@@ -379,32 +639,88 @@ async function ozonPost<T>(
 
 
     // ========================================================
-    // 429 И 5xx МОГУТ БЫТЬ ВРЕМЕННЫМИ
+    // 429
     // ========================================================
 
-    const shouldRetry =
-      response.status === 429
-      ||
-      response.status >= 500;
+    if (
+      response.status ===
+      429
+    ) {
 
+      const {
+        retryAfterSeconds,
+        nextAllowedAt,
+      } =
+        getRetryAfter(
+          response
+        );
+
+
+      if (
+        attempt <
+          maxAttempts
+        &&
+        retryAfterSeconds !==
+          null
+        &&
+        retryAfterSeconds <=
+          5
+      ) {
+
+        await sleep(
+          Math.max(
+            1000,
+            retryAfterSeconds
+            *
+            1000
+          )
+        );
+
+
+        continue;
+
+      }
+
+
+      throw new OzonHttpError(
+        `Ozon временно ограничил запрос ${endpoint}`,
+        429,
+        retryAfterSeconds,
+        nextAllowedAt
+      );
+
+    }
+
+
+    // ========================================================
+    // 5xx
+    // ========================================================
 
     if (
-      shouldRetry
+      response.status >=
+        500
       &&
-      attempt < maxAttempts
+      attempt <
+        maxAttempts
     ) {
 
       await sleep(
-        1000 * attempt
+        1000
+        *
+        attempt
       );
+
 
       continue;
 
     }
 
 
-    throw new Error(
-      `Ошибка Ozon ${endpoint}. HTTP ${response.status}. ${text}`
+    throw new OzonHttpError(
+      `Ошибка Ozon ${endpoint}. HTTP ${response.status}. ${text}`,
+      response.status,
+      null,
+      null
     );
 
   }
@@ -413,6 +729,7 @@ async function ozonPost<T>(
   throw new Error(
     `Не удалось выполнить Ozon ${endpoint}`
   );
+
 }
 
 
@@ -421,12 +738,13 @@ async function ozonPost<T>(
 // ============================================================
 
 async function supabaseRpc<T>(
-  functionName: string,
+  functionName:
+    string,
 
   body:
     Record<string, unknown>
 ):
-  Promise<T> {
+Promise<T> {
 
   const {
     supabaseUrl,
@@ -443,7 +761,6 @@ async function supabaseRpc<T>(
           "POST",
 
         headers: {
-
           apikey:
             supabaseSecretKey,
 
@@ -491,6 +808,7 @@ async function supabaseRpc<T>(
     );
 
   }
+
 }
 
 
@@ -499,7 +817,8 @@ async function supabaseRpc<T>(
 // ============================================================
 
 function formatDateUtc(
-  date: Date
+  date:
+    Date
 ) {
 
   const year =
@@ -508,25 +827,26 @@ function formatDateUtc(
 
   const month =
     String(
-      date.getUTCMonth() + 1
-    )
-      .padStart(
-        2,
-        "0"
-      );
+      date.getUTCMonth()
+      +
+      1
+    ).padStart(
+      2,
+      "0"
+    );
 
 
   const day =
     String(
       date.getUTCDate()
-    )
-      .padStart(
-        2,
-        "0"
-      );
+    ).padStart(
+      2,
+      "0"
+    );
 
 
   return `${year}-${month}-${day}`;
+
 }
 
 
@@ -535,15 +855,21 @@ function formatDateUtc(
 // ============================================================
 
 function getCompletedMoscowRange(
-  numberOfDays: number
+  numberOfDays:
+    number
 ) {
 
-  // Москва UTC+3
   const moscowNow =
     new Date(
       Date.now()
       +
-      3 * 60 * 60 * 1000
+      3
+      *
+      60
+      *
+      60
+      *
+      1000
     );
 
 
@@ -562,8 +888,6 @@ function getCompletedMoscowRange(
     );
 
 
-  // Сегодня ещё не завершён.
-  // Берём вчера.
   const endDate =
     new Date(
       todayMoscow
@@ -573,7 +897,8 @@ function getCompletedMoscowRange(
 
   endDate.setUTCDate(
     endDate.getUTCDate()
-    - 1
+    -
+    1
   );
 
 
@@ -587,7 +912,9 @@ function getCompletedMoscowRange(
     startDate.getUTCDate()
     -
     (
-      numberOfDays - 1
+      numberOfDays
+      -
+      1
     )
   );
 
@@ -605,7 +932,6 @@ function getCompletedMoscowRange(
 
 
   return {
-
     dateFrom,
 
     dateTo,
@@ -615,8 +941,8 @@ function getCompletedMoscowRange(
 
     to:
       `${dateTo}T23:59:59.999+03:00`,
-
   };
+
 }
 
 
@@ -625,9 +951,10 @@ function getCompletedMoscowRange(
 // ============================================================
 
 function getMoscowDateFromTimestamp(
-  timestamp: string
+  timestamp:
+    string
 ):
-  string {
+string {
 
   const date =
     new Date(
@@ -652,21 +979,25 @@ function getMoscowDateFromTimestamp(
     new Date(
       date.getTime()
       +
-      3 * 60 * 60 * 1000
+      3
+      *
+      60
+      *
+      60
+      *
+      1000
     );
 
 
   return formatDateUtc(
     moscow
   );
+
 }
 
 
 // ============================================================
 // GET
-//
-// ТОЛЬКО ПРОВЕРКА.
-// НИЧЕГО НЕ ПИШЕМ.
 // ============================================================
 
 export async function GET() {
@@ -710,22 +1041,31 @@ export async function GET() {
         "financial_data.cluster_from",
     }
   );
+
 }
 
 
 // ============================================================
 // POST
-//
-// РЕАЛЬНАЯ СИНХРОНИЗАЦИЯ
 // ============================================================
 
 export async function POST() {
 
-  try {
+  const attemptAt =
+    new Date()
+      .toISOString();
 
-    // ========================================================
-    // 1. ДИАПАЗОН
-    // ========================================================
+
+  await tryUpdateSyncState({
+    last_attempt_at:
+      attemptAt,
+
+    last_message:
+      "Запущено обновление продаж Ozon",
+  });
+
+
+  try {
 
     const range =
       getCompletedMoscowRange(
@@ -734,12 +1074,12 @@ export async function POST() {
 
 
     // ========================================================
-    // 2. ПОЛУЧАЕМ ВСЕ FBO-ОТПРАВЛЕНИЯ
+    // 1. POSTINGS
     // ========================================================
 
     const allPostings:
       OzonFboPosting[] =
-        [];
+      [];
 
 
     let cursor =
@@ -773,17 +1113,13 @@ export async function POST() {
             cursor,
 
             filter: {
-
               since:
                 range.since,
 
               to:
                 range.to,
-
             },
 
-            // Максимум,
-            // подтверждённый самим Ozon.
             limit:
               100,
 
@@ -794,18 +1130,14 @@ export async function POST() {
               false,
 
             with: {
-
               analytics_data:
                 true,
 
-              // ОБЯЗАТЕЛЬНО:
-              // отсюда берём cluster_from.
               financial_data:
                 true,
 
               legal_info:
                 false,
-
             },
           }
         );
@@ -873,14 +1205,14 @@ export async function POST() {
         nextCursor;
 
 
-      // Небольшая пауза.
       await sleep(
         100
       );
 
 
       if (
-        page === maxPages
+        page ===
+        maxPages
       ) {
 
         throw new Error(
@@ -893,11 +1225,12 @@ export async function POST() {
 
 
     // ========================================================
-    // 3. ПРОВЕРЯЕМ, ЧТО ДАННЫЕ ЕСТЬ
+    // 2. VALIDATION
     // ========================================================
 
     if (
-      allPostings.length === 0
+      allPostings.length ===
+      0
     ) {
 
       throw new Error(
@@ -908,7 +1241,7 @@ export async function POST() {
 
 
     // ========================================================
-    // 4. ДЕДУПЛИКАЦИЯ POSTING_NUMBER
+    // 3. DEDUP
     // ========================================================
 
     const postingsByNumber =
@@ -952,19 +1285,12 @@ export async function POST() {
 
     const uniquePostings =
       Array.from(
-        postingsByNumber
-          .values()
+        postingsByNumber.values()
       );
 
 
     // ========================================================
-    // 5. ПРОВЕРЯЕМ CLUSTER_FROM
-    //
-    // Мы уже проверили первые 100.
-    // Теперь проверяем ВСЕ отправления.
-    //
-    // Если хоть где-нибудь отсутствует —
-    // НЕ ПИШЕМ В SUPABASE.
+    // 4. CLUSTER VALIDATION
     // ========================================================
 
     const postingsWithoutCluster:
@@ -978,7 +1304,7 @@ export async function POST() {
         warehouse_name:
           string;
       }> =
-        [];
+      [];
 
 
     for (
@@ -986,9 +1312,6 @@ export async function POST() {
       of uniquePostings
     ) {
 
-      // Если в отправлении вообще
-      // нет товаров, оно нам не влияет
-      // на товарные продажи.
       if (
         !Array.isArray(
           posting.products
@@ -997,7 +1320,9 @@ export async function POST() {
         posting.products.length ===
           0
       ) {
+
         continue;
+
       }
 
 
@@ -1011,35 +1336,32 @@ export async function POST() {
 
       if (!clusterFrom) {
 
-        postingsWithoutCluster.push(
-          {
-            posting_number:
-              normalizeText(
-                posting
-                  .posting_number
-              )
-              ||
-              "без номера",
+        postingsWithoutCluster.push({
+          posting_number:
+            normalizeText(
+              posting.posting_number
+            )
+            ||
+            "без номера",
 
-            warehouse_id:
-              normalizeText(
-                posting
-                  .analytics_data
-                  ?.warehouse_id
-              )
-              ||
-              "—",
+          warehouse_id:
+            normalizeText(
+              posting
+                .analytics_data
+                ?.warehouse_id
+            )
+            ||
+            "—",
 
-            warehouse_name:
-              normalizeText(
-                posting
-                  .analytics_data
-                  ?.warehouse_name
-              )
-              ||
-              "—",
-          }
-        );
+          warehouse_name:
+            normalizeText(
+              posting
+                .analytics_data
+                ?.warehouse_name
+            )
+            ||
+            "—",
+        });
 
       }
 
@@ -1058,9 +1380,7 @@ export async function POST() {
             10
           )
           .map(
-            (
-              item
-            ) =>
+            item =>
               `${item.posting_number}: ${item.warehouse_name}`
           )
           .join(
@@ -1076,14 +1396,12 @@ export async function POST() {
 
 
     // ========================================================
-    // 6. СТАТУСЫ
+    // 5. STATUSES
     // ========================================================
 
     const statusCounts:
-      Record<
-        string,
-        number
-      > = {};
+      Record<string, number> =
+      {};
 
 
     let cancelledPostings =
@@ -1111,9 +1429,11 @@ export async function POST() {
           statusCounts[
             status
           ]
-          ?? 0
+          ??
+          0
         )
-        + 1;
+        +
+        1;
 
 
       if (
@@ -1129,7 +1449,7 @@ export async function POST() {
 
 
     // ========================================================
-    // 7. СОБИРАЕМ PRODUCTS
+    // 6. PRODUCTS + AGGREGATE
     // ========================================================
 
     const productsByOffer =
@@ -1138,22 +1458,6 @@ export async function POST() {
         ProductForSupabase
       >();
 
-
-    // ========================================================
-    // 8. АГРЕГАЦИЯ
-    //
-    // КЛЮЧ:
-    //
-    // sale_date
-    // +
-    // offer_id
-    // +
-    // cluster_from
-    //
-    // ВАЖНО:
-    // cluster_from — строковый идентификатор
-    // нашего кластера продаж.
-    // ========================================================
 
     const aggregate =
       new Map<
@@ -1176,9 +1480,12 @@ export async function POST() {
 
 
       if (
-        products.length === 0
+        products.length ===
+        0
       ) {
+
         continue;
+
       }
 
 
@@ -1193,10 +1500,6 @@ export async function POST() {
         status ===
         "cancelled";
 
-
-      // ======================================================
-      // ДАТА
-      // ======================================================
 
       const createdAt =
         normalizeText(
@@ -1246,10 +1549,6 @@ export async function POST() {
       }
 
 
-      // ======================================================
-      // КЛАСТЕР
-      // ======================================================
-
       const clusterFrom =
         normalizeText(
           posting
@@ -1260,8 +1559,6 @@ export async function POST() {
 
       if (!clusterFrom) {
 
-        // До сюда уже не должны дойти,
-        // потому что проверили выше.
         throw new Error(
           `Отсутствует cluster_from у отправления ${
             normalizeText(
@@ -1272,10 +1569,6 @@ export async function POST() {
 
       }
 
-
-      // ======================================================
-      // СКЛАД
-      // ======================================================
 
       const warehouseId =
         normalizeText(
@@ -1292,10 +1585,6 @@ export async function POST() {
             ?.warehouse_name
         );
 
-
-      // ======================================================
-      // ТОВАРЫ
-      // ======================================================
 
       for (
         const product
@@ -1343,21 +1632,19 @@ export async function POST() {
 
               name:
                 productName
-                || null,
+                ||
+                null,
             }
           );
 
         }
 
 
-        // ====================================================
-        // QUANTITY
-        // ====================================================
-
         const rawQuantity =
           Number(
             product.quantity
-            ?? 0
+            ??
+            0
           );
 
 
@@ -1366,7 +1653,8 @@ export async function POST() {
             rawQuantity
           )
           ||
-          rawQuantity < 0
+          rawQuantity <
+            0
         ) {
 
           throw new Error(
@@ -1382,23 +1670,6 @@ export async function POST() {
           );
 
 
-        // ====================================================
-        // ВАЖНО:
-        //
-        // Для продаж cluster_id пока используем
-        // само нормализованное название cluster_from.
-        //
-        // Это стабильный ключ именно исторической
-        // записи отправления.
-        //
-        // cluster_name = такое же значение.
-        //
-        // Позже, когда будем делать распределение
-        // поставок Ozon по кластерам, создадим
-        // отдельный единый справочник кластеров
-        // и свяжем его и с остатками, и с продажами.
-        // ====================================================
-
         const clusterKey =
           clusterFrom;
 
@@ -1408,10 +1679,9 @@ export async function POST() {
             saleDate,
             offerId,
             clusterKey,
-          ]
-            .join(
-              "::"
-            );
+          ].join(
+            "::"
+          );
 
 
         const existing =
@@ -1455,8 +1725,8 @@ export async function POST() {
         if (isCancelled) {
 
           existing
-            .cancelled_quantity
-            += quantity;
+            .cancelled_quantity +=
+            quantity;
 
 
           existing
@@ -1464,12 +1734,9 @@ export async function POST() {
 
         } else {
 
-          // Пользовательское правило:
-          // всё, кроме cancelled,
-          // считается продажами.
           existing
-            .sales_quantity
-            += quantity;
+            .sales_quantity +=
+            quantity;
 
 
           existing
@@ -1511,7 +1778,7 @@ export async function POST() {
 
 
     // ========================================================
-    // 9. ГОТОВИМ СТРОКИ SUPABASE
+    // 7. DB ROWS
     // ========================================================
 
     const salesRows =
@@ -1519,9 +1786,7 @@ export async function POST() {
         aggregate.values()
       )
         .map(
-          (
-            row
-          ) => ({
+          row => ({
             offer_id:
               row.offer_id,
 
@@ -1541,7 +1806,6 @@ export async function POST() {
               row.cancelled_quantity,
 
             raw_payload: {
-
               source:
                 "v3/posting/fbo/list",
 
@@ -1563,14 +1827,14 @@ export async function POST() {
                 Array.from(
                   row.warehouse_names
                 ),
-
             },
           })
         );
 
 
     if (
-      salesRows.length === 0
+      salesRows.length ===
+      0
     ) {
 
       throw new Error(
@@ -1587,7 +1851,7 @@ export async function POST() {
 
 
     // ========================================================
-    // 10. ИТОГОВЫЕ ПОКАЗАТЕЛИ
+    // 8. TOTALS
     // ========================================================
 
     let totalSalesQuantity =
@@ -1616,28 +1880,22 @@ export async function POST() {
     const uniqueClusters =
       new Set(
         salesRows.map(
-          (
-            row
-          ) =>
+          row =>
             row.cluster_name
         )
       );
 
 
     // ========================================================
-    // 11. ТОЛЬКО ТЕПЕРЬ ПИШЕМ В SUPABASE
+    // 9. SAVE
     // ========================================================
 
     const saveResult =
       await supabaseRpc<
-        Record<
-          string,
-          unknown
-        >
+        Record<string, unknown>
       >(
         "save_ozon_sales_snapshot",
         {
-
           p_date_from:
             range.dateFrom,
 
@@ -1655,14 +1913,39 @@ export async function POST() {
 
           p_cancelled_postings:
             cancelledPostings,
-
         }
       );
 
 
     // ========================================================
-    // 12. УСПЕХ
+    // 10. SUCCESS STATE
     // ========================================================
+
+    const successAt =
+      new Date()
+        .toISOString();
+
+
+    await tryUpdateSyncState({
+      last_attempt_at:
+        attemptAt,
+
+      last_success_at:
+        successAt,
+
+      next_allowed_at:
+        null,
+
+      last_http_status:
+        200,
+
+      retry_after_seconds:
+        null,
+
+      last_message:
+        "Продажи Ozon успешно синхронизированы",
+    });
+
 
     return NextResponse.json(
       {
@@ -1672,8 +1955,22 @@ export async function POST() {
         message:
           "Продажи Ozon успешно синхронизированы",
 
-        period: {
+        lastHttpStatus:
+          200,
 
+        lastAttemptAt:
+          attemptAt,
+
+        lastSuccessAt:
+          successAt,
+
+        nextAllowedAt:
+          null,
+
+        retryAfterSeconds:
+          null,
+
+        period: {
           completedDays:
             28,
 
@@ -1685,11 +1982,9 @@ export async function POST() {
 
           dateTo:
             range.dateTo,
-
         },
 
         ozon: {
-
           pagesLoaded,
 
           postingsReceived:
@@ -1719,12 +2014,10 @@ export async function POST() {
 
           clusterSource:
             "financial_data.cluster_from",
-
         },
 
         supabase:
           saveResult,
-
       },
       {
         status:
@@ -1741,6 +2034,96 @@ export async function POST() {
     );
 
 
+    // ========================================================
+    // RATE LIMIT
+    // ========================================================
+
+    if (
+      error instanceof
+      OzonHttpError
+      &&
+      error.status ===
+        429
+    ) {
+
+      await tryUpdateSyncState({
+        last_attempt_at:
+          attemptAt,
+
+        next_allowed_at:
+          error.nextAllowedAt,
+
+        last_http_status:
+          429,
+
+        retry_after_seconds:
+          error.retryAfterSeconds,
+
+        last_message:
+          error.nextAllowedAt
+            ? "Ozon временно ограничил обновление продаж"
+            : "Ozon ограничил обновление продаж, но не сообщил точное время сброса",
+      });
+
+
+      return NextResponse.json(
+        {
+          ok:
+            false,
+
+          blockedByRateLimit:
+            true,
+
+          message:
+            error.nextAllowedAt
+              ? "Ozon временно ограничил обновление продаж"
+              : "Ozon ограничил обновление продаж, но не сообщил точное время сброса",
+
+          error:
+            error.message,
+
+          lastHttpStatus:
+            429,
+
+          lastAttemptAt:
+            attemptAt,
+
+          nextAllowedAt:
+            error.nextAllowedAt,
+
+          retryAfterSeconds:
+            error.retryAfterSeconds,
+        },
+        {
+          status:
+            429,
+        }
+      );
+
+    }
+
+
+    const status =
+      error instanceof
+        OzonHttpError
+        ? error.status
+        : null;
+
+
+    await tryUpdateSyncState({
+      last_attempt_at:
+        attemptAt,
+
+      last_http_status:
+        status,
+
+      last_message:
+        error instanceof Error
+          ? error.message
+          : "Неизвестная ошибка синхронизации продаж Ozon",
+    });
+
+
     return NextResponse.json(
       {
         ok:
@@ -1753,6 +2136,12 @@ export async function POST() {
           error instanceof Error
             ? error.message
             : "Неизвестная ошибка синхронизации продаж Ozon",
+
+        lastHttpStatus:
+          status,
+
+        lastAttemptAt:
+          attemptAt,
       },
       {
         status:
