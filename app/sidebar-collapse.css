@@ -1,0 +1,362 @@
+/* ============================================================
+   СВОРАЧИВАЕМОЕ ЛЕВОЕ МЕНЮ
+   ============================================================ */
+
+.home-shell {
+  --workspace-sidebar-expanded-width: 218px;
+  --workspace-sidebar-collapsed-width: 72px;
+
+  grid-template-columns:
+    var(--workspace-sidebar-expanded-width)
+    minmax(0, 1fr);
+
+  transition:
+    grid-template-columns 0.18s ease;
+}
+
+
+/* ============================================================
+   БЛОК ЛОГОТИПА
+   ============================================================ */
+
+/*
+ * Логотип всегда остаётся шириной
+ * как полный сайдбар, даже когда нижняя
+ * часть меню свёрнута.
+ */
+.home-company-logo {
+  position: relative;
+
+  z-index: 25;
+
+  box-sizing: border-box;
+
+  width:
+    var(--workspace-sidebar-expanded-width);
+
+  margin-left: -12px;
+
+  padding:
+    0
+    12px;
+
+  background:
+    var(--surface);
+}
+
+
+/*
+ * Горизонтальная линия под логотипом
+ * всегда остаётся полной ширины.
+ */
+.home-sidebar::after {
+  right: auto;
+
+  width:
+    var(--workspace-sidebar-expanded-width);
+}
+
+
+/* ============================================================
+   КНОПКА СВОРАЧИВАНИЯ
+   ============================================================ */
+
+.home-sidebar-toggle {
+  position: absolute;
+
+  top: 88px;
+
+  right: 6px;
+
+  z-index: 40;
+
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  width: 30px;
+
+  height: 30px;
+
+  padding: 0;
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius: 7px;
+
+  background:
+    var(--surface);
+
+  color:
+    var(--text-secondary);
+
+  box-shadow:
+    0 2px 8px
+    rgba(
+      0,
+      0,
+      0,
+      0.08
+    );
+
+  cursor: pointer;
+
+  transition:
+    right 0.18s ease,
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+
+.home-sidebar-toggle:hover {
+  border-color:
+    var(--home-blue);
+
+  background:
+    var(--surface-soft);
+
+  color:
+    var(--home-blue);
+}
+
+
+.home-sidebar-toggle svg {
+  width: 18px;
+
+  height: 18px;
+
+  fill: none;
+
+  stroke:
+    currentColor;
+
+  stroke-width: 2;
+
+  stroke-linecap: round;
+
+  stroke-linejoin: round;
+
+  transition:
+    transform 0.18s ease;
+}
+
+
+/* ============================================================
+   ПЛАВНОЕ ДВИЖЕНИЕ ВЕРХНЕЙ ПАНЕЛИ
+   ============================================================ */
+
+.home-topbar {
+  margin-left: 0;
+
+  transition:
+    margin-left 0.18s ease;
+}
+
+
+/* ============================================================
+   СВЁРНУТОЕ СОСТОЯНИЕ
+   ============================================================ */
+
+.home-shell--sidebar-collapsed {
+  grid-template-columns:
+    var(--workspace-sidebar-collapsed-width)
+    minmax(0, 1fr);
+}
+
+
+/*
+ * Убираем старую вертикальную границу,
+ * потому что она была рассчитана
+ * на полный сайдбар.
+ */
+.home-shell--sidebar-collapsed
+.home-sidebar {
+  border-right: none;
+}
+
+
+/*
+ * Новая правая граница узкого меню.
+ * Начинается только НИЖЕ логотипа.
+ */
+.home-shell--sidebar-collapsed
+.home-sidebar::before {
+  content: "";
+
+  position: absolute;
+
+  top:
+    var(--home-topbar-height);
+
+  right: 0;
+
+  bottom: 0;
+
+  width: 1px;
+
+  background:
+    var(--border);
+
+  pointer-events: none;
+}
+
+
+/*
+ * У верхнего блока логотипа граница
+ * остаётся на старом месте.
+ */
+.home-shell--sidebar-collapsed
+.home-company-logo {
+  border-right:
+    1px solid
+    var(--border);
+}
+
+
+/*
+ * Верхняя панель с поиском не двигается.
+ *
+ * Основная страница расширяется влево,
+ * а верхний блок остаётся там же,
+ * где был рядом с логотипом.
+ */
+.home-shell--sidebar-collapsed
+.home-topbar {
+  margin-left:
+    calc(
+      var(--workspace-sidebar-expanded-width)
+      -
+      var(--workspace-sidebar-collapsed-width)
+    );
+}
+
+
+/*
+ * Ссылки превращаются в компактные
+ * кнопки только с иконками.
+ */
+.home-shell--sidebar-collapsed
+.home-workspace-link {
+  justify-content: center;
+
+  gap: 0;
+
+  padding-left: 0;
+
+  padding-right: 0;
+}
+
+
+/*
+ * Текст разделов скрываем.
+ */
+.home-shell--sidebar-collapsed
+.home-workspace-label {
+  display: none;
+}
+
+
+/*
+ * Кнопку переносим к новой
+ * границе узкого меню.
+ */
+.home-shell--sidebar-collapsed
+.home-sidebar-toggle {
+  right: -15px;
+}
+
+
+/*
+ * Стрелка после сворачивания
+ * смотрит в обратную сторону.
+ */
+.home-shell--sidebar-collapsed
+.home-sidebar-toggle svg {
+  transform:
+    rotate(180deg);
+}
+
+
+/* ============================================================
+   ЭКРАНЫ ДО 1100 PX
+   ============================================================ */
+
+@media (
+  max-width: 1100px
+) {
+
+  .home-shell {
+    --workspace-sidebar-expanded-width: 190px;
+    --workspace-sidebar-collapsed-width: 72px;
+  }
+
+}
+
+
+/* ============================================================
+   МОБИЛЬНАЯ ВЕРСИЯ
+   ============================================================ */
+
+@media (
+  max-width: 800px
+) {
+
+  /*
+   * На мобильном экране сворачивание
+   * бокового меню не используем.
+   */
+  .home-sidebar-toggle {
+    display: none;
+  }
+
+
+  .home-shell--sidebar-collapsed
+  .home-sidebar::before {
+    display: none;
+  }
+
+
+  .home-shell--sidebar-collapsed
+  .home-company-logo {
+    border-right: none;
+  }
+
+
+  .home-shell--sidebar-collapsed
+  .home-topbar {
+    margin-left: 0;
+  }
+
+
+  .home-shell--sidebar-collapsed
+  .home-workspace-link {
+    justify-content: flex-start;
+
+    gap: 14px;
+
+    padding:
+      8px
+      14px;
+  }
+
+
+  .home-shell--sidebar-collapsed
+  .home-workspace-label {
+    display: inline;
+  }
+
+
+  .home-company-logo {
+    width: 204px;
+
+    margin-left: 0;
+
+    padding: 0;
+  }
+
+}
