@@ -58,6 +58,12 @@ type AdminUserRow = {
   has_admin_access: boolean;
 
   can_manage_working_role: boolean;
+
+  is_blocked: boolean;
+  blocked_at: string | null;
+  blocked_by: string | null;
+
+  can_manage_blocking: boolean;
 };
 
 
@@ -136,10 +142,8 @@ function getAdminLevelLabel(
     case "admin":
       return "Администратор";
 
-
     case "senior_admin":
       return "Старший администратор";
-
 
     default:
       return "Без административных прав";
@@ -160,10 +164,8 @@ function getAdminLevel(
     case "admin":
       return "admin";
 
-
     case "senior_admin":
       return "senior_admin";
-
 
     default:
       return "none";
@@ -184,26 +186,20 @@ function getWorkingRole(
     case "analyst":
       return "analyst";
 
-
     case "procurement":
       return "procurement";
-
 
     case "ved":
       return "ved";
 
-
     case "category_manager":
       return "category_manager";
-
 
     case "marketing":
       return "marketing";
 
-
     case "manager":
       return "manager";
-
 
     default:
       return null;
@@ -224,14 +220,11 @@ function getMarketplace(
     case "ozon":
       return "ozon";
 
-
     case "wildberries":
       return "wildberries";
 
-
     case "yandex_market":
       return "yandex_market";
-
 
     default:
       return null;
@@ -323,8 +316,7 @@ function getBadgeClass(
 ) {
 
   if (
-    level ===
-      "senior_admin"
+    level === "senior_admin"
   ) {
 
     return `
@@ -336,8 +328,7 @@ function getBadgeClass(
 
 
   if (
-    level ===
-      "admin"
+    level === "admin"
   ) {
 
     return `
@@ -603,8 +594,7 @@ export default function AdminUsersPanel() {
       () =>
         users.find(
           user =>
-            user.user_id ===
-              currentUserId
+            user.user_id === currentUserId
         )
         ??
         null,
@@ -644,21 +634,15 @@ export default function AdminUsersPanel() {
   // ==========================================================
 
   async function saveWorkingRole(
-    targetUser:
-      AdminUserRow,
-
-    nextRole:
-      WorkingRole,
-
-    nextMarketplace:
-      CategoryMarketplace | null
+    targetUser: AdminUserRow,
+    nextRole: WorkingRole,
+    nextMarketplace: CategoryMarketplace | null
   ) {
 
     if (
       !targetUser.can_manage_working_role
       ||
-      changingUserId !==
-        null
+      changingUserId !== null
     ) {
 
       return;
@@ -732,8 +716,7 @@ export default function AdminUsersPanel() {
             user => {
 
               if (
-                user.user_id !==
-                  targetUser.user_id
+                user.user_id !== targetUser.user_id
               ) {
 
                 return user;
@@ -791,8 +774,7 @@ export default function AdminUsersPanel() {
 
 
       if (
-        targetUser.user_id ===
-          currentUserId
+        targetUser.user_id === currentUserId
       ) {
 
         window.location.reload();
@@ -830,11 +812,8 @@ export default function AdminUsersPanel() {
 
 
   function handleWorkingRoleChange(
-    targetUser:
-      AdminUserRow,
-
-    value:
-      string
+    targetUser: AdminUserRow,
+    value: string
   ) {
 
     const nextRole =
@@ -856,11 +835,9 @@ export default function AdminUsersPanel() {
 
 
     if (
-      nextRole ===
-        "category_manager"
+      nextRole === "category_manager"
       &&
-      targetUser.system_role !==
-        "category_manager"
+      targetUser.system_role !== "category_manager"
     ) {
 
       setPendingCategoryUserId(
@@ -879,8 +856,7 @@ export default function AdminUsersPanel() {
 
 
     if (
-      nextRole ===
-        targetUser.system_role
+      nextRole === targetUser.system_role
     ) {
 
       return;
@@ -898,11 +874,8 @@ export default function AdminUsersPanel() {
 
 
   function handleMarketplaceChange(
-    targetUser:
-      AdminUserRow,
-
-    value:
-      string
+    targetUser: AdminUserRow,
+    value: string
   ) {
 
     const nextMarketplace =
@@ -934,21 +907,16 @@ export default function AdminUsersPanel() {
   // ==========================================================
 
   async function handleAdminLevelChange(
-    targetUser:
-      AdminUserRow,
-
-    nextLevel:
-      AdminLevel
+    targetUser: AdminUserRow,
+    nextLevel: AdminLevel
   ) {
 
     if (
       !canManageAdminLevels
       ||
-      changingUserId !==
-        null
+      changingUserId !== null
       ||
-      targetUser.admin_level ===
-        nextLevel
+      targetUser.admin_level === nextLevel
     ) {
 
       return;
@@ -1019,8 +987,7 @@ export default function AdminUsersPanel() {
             user => {
 
               if (
-                user.user_id !==
-                  targetUser.user_id
+                user.user_id !== targetUser.user_id
               ) {
 
                 return user;
@@ -1035,17 +1002,14 @@ export default function AdminUsersPanel() {
                   nextLevel,
 
                 has_admin_access:
-                  nextLevel !==
-                    "none",
+                  nextLevel !== "none",
 
                 admin_role_name:
-                  nextLevel ===
-                    "senior_admin"
+                  nextLevel === "senior_admin"
 
                     ? "Старший администратор"
 
-                    : nextLevel ===
-                        "admin"
+                    : nextLevel === "admin"
 
                       ? "Администратор"
 
@@ -1072,8 +1036,7 @@ export default function AdminUsersPanel() {
 
 
       if (
-        targetUser.user_id ===
-          currentUserId
+        targetUser.user_id === currentUserId
       ) {
 
         router.refresh();
@@ -1111,19 +1074,195 @@ export default function AdminUsersPanel() {
 
 
   // ==========================================================
+  // BLOCK / UNBLOCK USER
+  // ==========================================================
+
+  async function handleBlockedChange(
+    targetUser: AdminUserRow
+  ) {
+
+    if (
+      !targetUser.can_manage_blocking
+      ||
+      changingUserId !== null
+    ) {
+
+      return;
+
+    }
+
+
+    const nextBlocked =
+      !targetUser.is_blocked;
+
+
+    const actionConfirmed =
+      window.confirm(
+        nextBlocked
+
+          ? `Заблокировать пользователя ${targetUser.first_name} ${targetUser.last_name}?`
+
+          : `Разблокировать пользователя ${targetUser.first_name} ${targetUser.last_name}?`
+      );
+
+
+    if (
+      !actionConfirmed
+    ) {
+
+      return;
+
+    }
+
+
+    setChangingUserId(
+      targetUser.user_id
+    );
+
+
+    clearStatus();
+
+
+    try {
+
+      const supabase =
+        createClient();
+
+
+      const {
+        error,
+      } =
+        await supabase
+          .rpc(
+            "app_set_user_blocked",
+            {
+              target_user_id:
+                targetUser.user_id,
+
+              new_is_blocked:
+                nextBlocked,
+            }
+          );
+
+
+      if (
+        error
+      ) {
+
+        console.error(
+          "Ошибка изменения блокировки:",
+          error
+        );
+
+
+        setStatus(
+          "error"
+        );
+
+
+        setStatusMessage(
+          error.message
+          ||
+          "Не удалось изменить состояние учётной записи"
+        );
+
+
+        return;
+
+      }
+
+
+      setUsers(
+        current =>
+          current.map(
+            user => {
+
+              if (
+                user.user_id !== targetUser.user_id
+              ) {
+
+                return user;
+
+              }
+
+
+              return {
+                ...user,
+
+                is_blocked:
+                  nextBlocked,
+
+                blocked_at:
+                  nextBlocked
+                    ? new Date().toISOString()
+                    : null,
+
+                blocked_by:
+                  nextBlocked
+                    ? currentUserId
+                    : null,
+              };
+
+            }
+          )
+      );
+
+
+      setStatus(
+        "success"
+      );
+
+
+      setStatusMessage(
+        nextBlocked
+
+          ? `Пользователь ${targetUser.first_name} ${targetUser.last_name} заблокирован`
+
+          : `Пользователь ${targetUser.first_name} ${targetUser.last_name} разблокирован`
+      );
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        "Ошибка изменения блокировки:",
+        error
+      );
+
+
+      setStatus(
+        "error"
+      );
+
+
+      setStatusMessage(
+        "Не удалось изменить состояние учётной записи"
+      );
+
+    } finally {
+
+      setChangingUserId(
+        null
+      );
+
+    }
+
+  }
+
+
+  // ==========================================================
   // RENDER
   // ==========================================================
 
   return (
 
     <div
-      className=
-        "admin-users"
+      className="admin-users"
     >
 
       <div
-        className=
-          "admin-users-note"
+        className="admin-users-note"
       >
 
         {
@@ -1139,9 +1278,9 @@ export default function AdminUsersPanel() {
 
                 {" "}
 
-                вы можете изменять рабочие роли
-                сотрудников и управлять
-                административными правами.
+                вы можете изменять рабочие роли,
+                административные права и состояние
+                учётных записей сотрудников.
 
               </>
 
@@ -1158,9 +1297,9 @@ export default function AdminUsersPanel() {
                 {" "}
 
                 вы можете изменять рабочие роли
-                сотрудников. Административные
-                права изменяет только
-                Старший администратор.
+                и блокировать обычных сотрудников.
+                Административные права изменяет
+                только Старший администратор.
 
               </>
 
@@ -1172,16 +1311,14 @@ export default function AdminUsersPanel() {
 
       <div
         className={
-          status ===
-            "error"
+          status === "error"
 
             ? `
                 admin-users-status
                 admin-users-status-error
               `
 
-            : status ===
-                "success"
+            : status === "success"
 
               ? `
                   admin-users-status
@@ -1191,8 +1328,7 @@ export default function AdminUsersPanel() {
               : "admin-users-status"
         }
 
-        aria-live=
-          "polite"
+        aria-live="polite"
       >
         {
           statusMessage
@@ -1201,8 +1337,7 @@ export default function AdminUsersPanel() {
 
 
       <div
-        className=
-          "admin-users-card"
+        className="admin-users-card"
       >
 
         {
@@ -1211,22 +1346,19 @@ export default function AdminUsersPanel() {
             ? (
 
               <div
-                className=
-                  "admin-users-loading"
+                className="admin-users-loading"
               >
                 Загружаем сотрудников...
               </div>
 
             )
 
-            : users.length ===
-                0
+            : users.length === 0
 
               ? (
 
                 <div
-                  className=
-                    "admin-users-empty"
+                  className="admin-users-empty"
                 >
                   Сотрудники не найдены
                 </div>
@@ -1236,13 +1368,11 @@ export default function AdminUsersPanel() {
               : (
 
                 <div
-                  className=
-                    "admin-users-table-wrap"
+                  className="admin-users-table-wrap"
                 >
 
                   <table
-                    className=
-                      "admin-users-table"
+                    className="admin-users-table"
                   >
 
                     <thead>
@@ -1261,6 +1391,16 @@ export default function AdminUsersPanel() {
 
                         <th>
                           Административные права
+                        </th>
+
+
+                        <th>
+                          Статус
+                        </th>
+
+
+                        <th>
+                          Управление
                         </th>
 
                       </tr>
@@ -1303,13 +1443,11 @@ export default function AdminUsersPanel() {
                                 <td>
 
                                   <div
-                                    className=
-                                      "admin-user-main"
+                                    className="admin-user-main"
                                   >
 
                                     <span
-                                      className=
-                                        "admin-user-name"
+                                      className="admin-user-name"
                                     >
 
                                       {
@@ -1324,14 +1462,12 @@ export default function AdminUsersPanel() {
 
 
                                       {
-                                        user.user_id ===
-                                          currentUserId
+                                        user.user_id === currentUserId
                                         &&
                                         (
 
                                           <span
-                                            className=
-                                              "admin-user-you"
+                                            className="admin-user-you"
                                           >
                                             Вы
                                           </span>
@@ -1343,8 +1479,7 @@ export default function AdminUsersPanel() {
 
 
                                     <span
-                                      className=
-                                        "admin-user-email"
+                                      className="admin-user-email"
                                     >
                                       {
                                         user.email
@@ -1364,13 +1499,11 @@ export default function AdminUsersPanel() {
                                       ? (
 
                                         <div
-                                          className=
-                                            "admin-role-control"
+                                          className="admin-role-control"
                                         >
 
                                           <select
-                                            className=
-                                              "admin-working-role-select"
+                                            className="admin-working-role-select"
 
                                             value={
                                               displayedRole
@@ -1379,8 +1512,7 @@ export default function AdminUsersPanel() {
                                             }
 
                                             disabled={
-                                              changingUserId !==
-                                                null
+                                              changingUserId !== null
                                             }
 
                                             onChange={
@@ -1444,8 +1576,7 @@ export default function AdminUsersPanel() {
                                             (
 
                                               <select
-                                                className=
-                                                  "admin-marketplace-select"
+                                                className="admin-marketplace-select"
 
                                                 value={
                                                   pendingCategory
@@ -1461,8 +1592,7 @@ export default function AdminUsersPanel() {
                                                 }
 
                                                 disabled={
-                                                  changingUserId !==
-                                                    null
+                                                  changingUserId !== null
                                                 }
 
                                                 onChange={
@@ -1521,13 +1651,11 @@ export default function AdminUsersPanel() {
                                       : (
 
                                         <div
-                                          className=
-                                            "admin-user-role"
+                                          className="admin-user-role"
                                         >
 
                                           <span
-                                            className=
-                                              "admin-role-locked"
+                                            className="admin-role-locked"
                                           >
                                             {
                                               user.role_name
@@ -1542,8 +1670,7 @@ export default function AdminUsersPanel() {
                                             (
 
                                               <span
-                                                className=
-                                                  "admin-user-marketplace"
+                                                className="admin-user-marketplace"
                                               >
                                                 {
                                                   user
@@ -1570,16 +1697,14 @@ export default function AdminUsersPanel() {
                                       ? (
 
                                         <select
-                                          className=
-                                            "admin-level-select"
+                                          className="admin-level-select"
 
                                           value={
                                             user.admin_level
                                           }
 
                                           disabled={
-                                            changingUserId !==
-                                              null
+                                            changingUserId !== null
                                           }
 
                                           onChange={
@@ -1644,6 +1769,100 @@ export default function AdminUsersPanel() {
 
                                       )
                                   }
+
+                                </td>
+
+
+                                <td>
+
+                                  <span
+                                    className={
+                                      user.is_blocked
+
+                                        ? `
+                                            admin-account-status
+                                            admin-account-status-blocked
+                                          `
+
+                                        : "admin-account-status"
+                                    }
+                                  >
+                                    {
+                                      user.is_blocked
+
+                                        ? "Заблокирован"
+
+                                        : "Активен"
+                                    }
+                                  </span>
+
+                                </td>
+
+
+                                <td>
+
+                                  <div
+                                    className="admin-blocking-control"
+                                  >
+
+                                    {
+                                      user.can_manage_blocking
+
+                                        ? (
+
+                                          <button
+                                            type="button"
+
+                                            className={
+                                              user.is_blocked
+
+                                                ? `
+                                                    admin-block-button
+                                                    admin-unblock-button
+                                                  `
+
+                                                : "admin-block-button"
+                                            }
+
+                                            disabled={
+                                              changingUserId !== null
+                                            }
+
+                                            onClick={
+                                              () =>
+                                                void handleBlockedChange(
+                                                  user
+                                                )
+                                            }
+                                          >
+                                            {
+                                              changingUserId ===
+                                                user.user_id
+
+                                                ? "Сохраняем..."
+
+                                                : user.is_blocked
+
+                                                  ? "Разблокировать"
+
+                                                  : "Заблокировать"
+                                            }
+                                          </button>
+
+                                        )
+
+                                        : (
+
+                                          <span
+                                            className="admin-blocking-unavailable"
+                                          >
+                                            Недоступно
+                                          </span>
+
+                                        )
+                                    }
+
+                                  </div>
 
                                 </td>
 
