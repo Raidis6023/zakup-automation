@@ -7,6 +7,11 @@ import {
   usePathname,
 } from "next/navigation";
 
+import {
+  useEffect,
+  useState,
+} from "react";
+
 import type {
   ReactNode,
 } from "react";
@@ -19,6 +24,7 @@ import WorkspaceDecoration
 
 import "./home.css";
 import "./workspace-shell.css";
+import "./sidebar-collapse.css";
 
 
 // ============================================================
@@ -222,6 +228,26 @@ function UsersIcon() {
 }
 
 
+function SidebarToggleIcon() {
+
+  return (
+
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+
+      <path
+        d="m14 6-6 6 6 6"
+      />
+
+    </svg>
+
+  );
+
+}
+
+
 // ============================================================
 // ТИПЫ
 // ============================================================
@@ -247,6 +273,15 @@ export default function WorkspaceShell({
     "/";
 
 
+  const [
+    sidebarCollapsed,
+    setSidebarCollapsed,
+  ] =
+    useState(
+      false
+    );
+
+
   const adminMode =
     pathname ===
       "/admin"
@@ -262,11 +297,93 @@ export default function WorkspaceShell({
       : "/";
 
 
+  // ==========================================================
+  // ВОССТАНАВЛИВАЕМ СОСТОЯНИЕ САЙДБАРА
+  // ==========================================================
+
+  useEffect(
+    () => {
+
+      try {
+
+        const savedState =
+          window
+            .localStorage
+            .getItem(
+              "workspace-sidebar-collapsed"
+            );
+
+
+        setSidebarCollapsed(
+          savedState === "1"
+        );
+
+      } catch {
+
+        /*
+         * Если браузер запретил localStorage,
+         * меню просто останется раскрытым.
+         */
+
+      }
+
+    },
+    []
+  );
+
+
+  // ==========================================================
+  // СВОРАЧИВАНИЕ / РАЗВОРАЧИВАНИЕ
+  // ==========================================================
+
+  function toggleSidebar() {
+
+    setSidebarCollapsed(
+      current => {
+
+        const next =
+          !current;
+
+
+        try {
+
+          window
+            .localStorage
+            .setItem(
+              "workspace-sidebar-collapsed",
+              next
+                ? "1"
+                : "0"
+            );
+
+        } catch {
+
+          /*
+           * На работу самого переключателя
+           * ошибка localStorage не влияет.
+           */
+
+        }
+
+
+        return next;
+
+      }
+    );
+
+  }
+
+
   return (
 
     <div
-      className=
-        "home-shell"
+      className={
+        sidebarCollapsed
+
+          ? "home-shell home-shell--sidebar-collapsed"
+
+          : "home-shell"
+      }
     >
 
       {/* ==========================================
@@ -280,12 +397,6 @@ export default function WorkspaceShell({
 
         {/* ========================================
             ЛОГОТИП
-
-            В рабочем режиме:
-            → /
-
-            В режиме администрирования:
-            → /admin
             ======================================== */}
 
         <Link
@@ -319,6 +430,46 @@ export default function WorkspaceShell({
         </Link>
 
 
+        {/* ========================================
+            КНОПКА СВОРАЧИВАНИЯ
+            ======================================== */}
+
+        <button
+          type="button"
+
+          className=
+            "home-sidebar-toggle"
+
+          onClick={
+            toggleSidebar
+          }
+
+          aria-label={
+            sidebarCollapsed
+
+              ? "Развернуть левое меню"
+
+              : "Свернуть левое меню"
+          }
+
+          title={
+            sidebarCollapsed
+
+              ? "Развернуть меню"
+
+              : "Свернуть меню"
+          }
+        >
+
+          <SidebarToggleIcon />
+
+        </button>
+
+
+        {/* ========================================
+            АДМИНИСТРАТИВНЫЕ РАЗДЕЛЫ
+            ======================================== */}
+
         {
           adminMode
 
@@ -337,6 +488,12 @@ export default function WorkspaceShell({
 
                   className=
                     "home-workspace-link"
+
+                  aria-label=
+                    "Главная"
+
+                  title=
+                    "Главная"
                 >
 
                   <span
@@ -349,7 +506,10 @@ export default function WorkspaceShell({
                   </span>
 
 
-                  <span>
+                  <span
+                    className=
+                      "home-workspace-label"
+                  >
                     Главная
                   </span>
 
@@ -361,6 +521,12 @@ export default function WorkspaceShell({
 
                   className=
                     "home-workspace-link"
+
+                  aria-label=
+                    "Сотрудники"
+
+                  title=
+                    "Сотрудники"
                 >
 
                   <span
@@ -373,7 +539,10 @@ export default function WorkspaceShell({
                   </span>
 
 
-                  <span>
+                  <span
+                    className=
+                      "home-workspace-label"
+                  >
                     Сотрудники
                   </span>
 
@@ -384,6 +553,10 @@ export default function WorkspaceShell({
             )
 
             : (
+
+              /* ==================================
+                 РАБОЧИЕ РАЗДЕЛЫ
+                 ================================== */
 
               <nav
                 className=
@@ -398,6 +571,12 @@ export default function WorkspaceShell({
 
                   className=
                     "home-workspace-link"
+
+                  aria-label=
+                    "Закуп"
+
+                  title=
+                    "Закуп"
                 >
 
                   <span
@@ -410,7 +589,10 @@ export default function WorkspaceShell({
                   </span>
 
 
-                  <span>
+                  <span
+                    className=
+                      "home-workspace-label"
+                  >
                     Закуп
                   </span>
 
@@ -422,6 +604,12 @@ export default function WorkspaceShell({
 
                   className=
                     "home-workspace-link"
+
+                  aria-label=
+                    "ВЭД"
+
+                  title=
+                    "ВЭД"
                 >
 
                   <span
@@ -434,7 +622,10 @@ export default function WorkspaceShell({
                   </span>
 
 
-                  <span>
+                  <span
+                    className=
+                      "home-workspace-label"
+                  >
                     ВЭД
                   </span>
 
@@ -446,6 +637,12 @@ export default function WorkspaceShell({
 
                   className=
                     "home-workspace-link"
+
+                  aria-label=
+                    "Ozon"
+
+                  title=
+                    "Ozon"
                 >
 
                   <span
@@ -457,9 +654,7 @@ export default function WorkspaceShell({
                       src=
                         "/logos/ozon.png"
 
-                      alt=
-                        "Ozon"
-
+                      alt=""
                       className=
                         "home-brand-image"
                     />
@@ -467,7 +662,10 @@ export default function WorkspaceShell({
                   </span>
 
 
-                  <span>
+                  <span
+                    className=
+                      "home-workspace-label"
+                  >
                     Ozon
                   </span>
 
@@ -479,6 +677,12 @@ export default function WorkspaceShell({
 
                   className=
                     "home-workspace-link"
+
+                  aria-label=
+                    "Wildberries"
+
+                  title=
+                    "Wildberries"
                 >
 
                   <span
@@ -490,8 +694,7 @@ export default function WorkspaceShell({
                       src=
                         "/logos/wildberries.png"
 
-                      alt=
-                        "Wildberries"
+                      alt=""
 
                       className=
                         "home-brand-image"
@@ -500,7 +703,10 @@ export default function WorkspaceShell({
                   </span>
 
 
-                  <span>
+                  <span
+                    className=
+                      "home-workspace-label"
+                  >
                     Wildberries
                   </span>
 
@@ -512,6 +718,12 @@ export default function WorkspaceShell({
 
                   className=
                     "home-workspace-link"
+
+                  aria-label=
+                    "Яндекс Маркет"
+
+                  title=
+                    "Яндекс Маркет"
                 >
 
                   <span
@@ -523,8 +735,7 @@ export default function WorkspaceShell({
                       src=
                         "/logos/yandex-market.png"
 
-                      alt=
-                        "Яндекс Маркет"
+                      alt=""
 
                       className=
                         "home-brand-image"
@@ -533,7 +744,10 @@ export default function WorkspaceShell({
                   </span>
 
 
-                  <span>
+                  <span
+                    className=
+                      "home-workspace-label"
+                  >
                     Яндекс Маркет
                   </span>
 
