@@ -22,6 +22,9 @@ import HomeHeaderActions
 import WorkspaceDecoration
   from "./WorkspaceDecoration";
 
+import WorkspaceCompanyLogo
+  from "./WorkspaceCompanyLogo";
+
 import {
   EmployeesIcon,
   ProcurementIcon,
@@ -31,6 +34,7 @@ import {
 import "./home.css";
 import "./workspace-shell.css";
 import "./sidebar-collapse.css";
+import "./sidebar-visuals.css";
 
 
 // ============================================================
@@ -51,7 +55,6 @@ function SearchIcon() {
         cy="11"
         r="7"
       />
-
 
       <path
         d="m20 20-4.2-4.2"
@@ -82,7 +85,6 @@ function AdminHomeIcon() {
           -4.2-2-7-5.2-7-10V6z
         "
       />
-
 
       <path
         d="m9.5 12 1.7 1.7 3.5-3.7"
@@ -126,7 +128,7 @@ type WorkspaceShellProps = {
 
 
 // ============================================================
-// ОБЩАЯ ОБОЛОЧКА WORKSPACE
+// ОБОЛОЧКА WORKSPACE
 // ============================================================
 
 export default function WorkspaceShell({
@@ -188,7 +190,7 @@ export default function WorkspaceShell({
       } catch {
 
         /*
-         * Если браузер запретил localStorage,
+         * Если localStorage недоступен,
          * меню просто останется раскрытым.
          */
 
@@ -200,7 +202,7 @@ export default function WorkspaceShell({
 
 
   // ==========================================================
-  // СВОРАЧИВАНИЕ / РАЗВОРАЧИВАНИЕ
+  // СВОРАЧИВАНИЕ
   // ==========================================================
 
   function toggleSidebar() {
@@ -226,8 +228,7 @@ export default function WorkspaceShell({
         } catch {
 
           /*
-           * На сам переключатель
-           * ошибка localStorage не влияет.
+           * На работу меню это не влияет.
            */
 
         }
@@ -263,7 +264,7 @@ export default function WorkspaceShell({
       >
 
         {/* ========================================
-            ЛОГОТИП
+            SVG-ЛОГОТИП
             ======================================== */}
 
         <Link
@@ -283,16 +284,7 @@ export default function WorkspaceShell({
           }
         >
 
-          <img
-            src=
-              "/logos/babushkina-marketplace.png"
-
-            alt=
-              "ИП Бабушкина Маркетплейс"
-
-            className=
-              "home-company-logo-image"
-          />
+          <WorkspaceCompanyLogo />
 
         </Link>
 
@@ -334,7 +326,7 @@ export default function WorkspaceShell({
 
 
         {/* ========================================
-            АДМИНИСТРАТИВНЫЕ РАЗДЕЛЫ
+            РЕЖИМ АДМИНИСТРАТОРА
             ======================================== */}
 
         {
@@ -422,7 +414,7 @@ export default function WorkspaceShell({
             : (
 
               /* ==================================
-                 РАБОЧИЕ РАЗДЕЛЫ
+                 РАБОЧИЙ РЕЖИМ
                  ================================== */
 
               <nav
