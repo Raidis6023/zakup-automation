@@ -10,7 +10,7 @@
   /*
    * Общая высота верхней панели.
    * Используется и для самой панели,
-   * и для линии в левом меню.
+   * и для области логотипа.
    */
   --home-topbar-height: 80px;
 
@@ -46,7 +46,7 @@
   height: 100vh;
 
   padding:
-    16px
+    0
     12px
     24px;
 
@@ -96,11 +96,12 @@
 
   align-items: center;
 
-  justify-content: flex-start;
+  justify-content: center;
 
   width: 100%;
 
-  height: 70px;
+  height:
+    var(--home-topbar-height);
 
   margin-bottom: 12px;
 
@@ -121,7 +122,7 @@
 
   object-fit: contain;
 
-  object-position: left center;
+  object-position: center center;
 }
 
 
@@ -1408,17 +1409,14 @@ html[data-theme="dark"]
   }
 
 
-  /*
-   * На мобильной версии сайдбар уже становится
-   * отдельным верхним блоком, поэтому дополнительную
-   * горизонтальную линию здесь отключаем.
-   */
   .home-sidebar::after {
     display: none;
   }
 
 
   .home-company-logo {
+    justify-content: flex-start;
+
     width: 204px;
 
     height: 62px;
@@ -1433,6 +1431,8 @@ html[data-theme="dark"]
     max-width: 194px;
 
     height: 60px;
+
+    object-position: left center;
   }
 
 
