@@ -1,5 +1,4 @@
 import {
-  type CSSProperties,
   type ReactNode,
 } from "react";
 
@@ -1207,6 +1206,10 @@ export default async function YandexMarketPage() {
     28;
 
 
+  // ==========================================================
+  // PRODUCTS
+  // ==========================================================
+
   try {
 
     products =
@@ -1221,6 +1224,10 @@ export default async function YandexMarketPage() {
 
   }
 
+
+  // ==========================================================
+  // STOCKS
+  // ==========================================================
 
   try {
 
@@ -1250,6 +1257,10 @@ export default async function YandexMarketPage() {
 
   }
 
+
+  // ==========================================================
+  // SALES
+  // ==========================================================
 
   try {
 
@@ -1407,6 +1418,10 @@ export default async function YandexMarketPage() {
     );
 
 
+  // ==========================================================
+  // CATALOG
+  // ==========================================================
+
   const latestCatalogSync =
     getLatestCatalogSync(
       products
@@ -1423,11 +1438,10 @@ export default async function YandexMarketPage() {
   const productsWithMarketSku =
     products.filter(
       product =>
-        product.market_sku
-        &&
-        product.market_sku
-          .trim() !==
-          ""
+        Boolean(
+          product.market_sku
+            ?.trim()
+        )
     );
 
 
@@ -1454,7 +1468,8 @@ export default async function YandexMarketPage() {
         .filter(
           (
             value
-          ): value is string =>
+          ):
+          value is string =>
             Boolean(
               value
             )
@@ -1471,15 +1486,23 @@ export default async function YandexMarketPage() {
         b
       ) => {
 
+        const aMaster =
+          a.master_code
+            ?.trim()
+          ??
+          "";
+
+
+        const bMaster =
+          b.master_code
+            ?.trim()
+          ??
+          "";
+
+
         const masterCompare =
-          (
-            a.master_code
-            ??
-            ""
-          ).localeCompare(
-            b.master_code
-            ??
-            "",
+          aMaster.localeCompare(
+            bMaster,
             "ru"
           );
 
@@ -1519,8 +1542,8 @@ export default async function YandexMarketPage() {
 
           .yandex-product-chevron {
             display: inline-block;
-            transition: transform 0.15s ease;
             transform-origin: center;
+            transition: transform 0.15s ease;
           }
 
           .yandex-product-details[open]
@@ -1529,7 +1552,7 @@ export default async function YandexMarketPage() {
           }
 
           .yandex-product-details > summary:hover {
-            background: rgba(255,255,255,0.02);
+            background: rgba(255, 255, 255, 0.025);
           }
         `}
       </style>
@@ -1556,8 +1579,9 @@ export default async function YandexMarketPage() {
 
 
             <p className="subtitle">
-              Товары каталога, остатки
-              и продажи FBY Яндекс Маркета.
+              FBY продажи, отмены
+              и доступные остатки
+              Яндекс Маркета.
             </p>
 
           </div>
@@ -1604,6 +1628,7 @@ export default async function YandexMarketPage() {
 
                 <h2 className="section-title">
                   Ошибка загрузки данных
+                  Яндекс Маркета
                 </h2>
 
 
@@ -1636,6 +1661,12 @@ export default async function YandexMarketPage() {
           </h2>
 
 
+          <div className="reason-text">
+            Последняя успешная загрузка
+            каталога Яндекс Маркета.
+          </div>
+
+
           <div
             style={{
               display:
@@ -1662,6 +1693,9 @@ export default async function YandexMarketPage() {
                     latestCatalogSync
                   )
                 }
+
+              hint=
+                "Красноярское время"
             />
 
 
@@ -1675,6 +1709,9 @@ export default async function YandexMarketPage() {
                     products.length
                   )
                 }
+
+              hint=
+                "строк yandex_products"
             />
 
 
@@ -1688,6 +1725,9 @@ export default async function YandexMarketPage() {
                     activeProducts.length
                   )
                 }
+
+              hint=
+                "is_active = true"
             />
 
 
@@ -1702,6 +1742,9 @@ export default async function YandexMarketPage() {
                       .length
                   )
                 }
+
+              hint=
+                "есть marketSku"
             />
 
 
@@ -1715,6 +1758,9 @@ export default async function YandexMarketPage() {
                     unlinkedProducts.length
                   )
                 }
+
+              hint=
+                "требуют привязки"
             />
 
           </div>
@@ -1733,20 +1779,25 @@ export default async function YandexMarketPage() {
           </h2>
 
 
+          <div className="reason-text">
+            Остатки и продажи обновляются
+            независимо друг от друга.
+          </div>
+
+
           {
             syncStateError
               ? (
 
                 <div
+                  className="reason-text"
+
                   style={{
                     color:
-                      "#f04438",
-
-                    fontSize:
-                      "12px",
+                      "#b42318",
 
                     marginTop:
-                      "10px",
+                      "12px",
                   }}
                 >
                   {syncStateError}
@@ -1773,7 +1824,7 @@ export default async function YandexMarketPage() {
 
 
         {/* ===================================
-            CATALOG
+            CATALOG SUMMARY
             =================================== */}
 
         <section className="section">
@@ -1808,6 +1859,9 @@ export default async function YandexMarketPage() {
                     categories.size
                   )
                 }
+
+              hint=
+                "уникальных категорий Маркета"
             />
 
 
@@ -1823,6 +1877,9 @@ export default async function YandexMarketPage() {
                     unlinkedProducts.length
                   )
                 }
+
+              hint=
+                "размещений"
             />
 
 
@@ -1836,6 +1893,9 @@ export default async function YandexMarketPage() {
                     unlinkedProducts.length
                   )
                 }
+
+              hint=
+                "без master_code"
             />
 
           </div>
@@ -1854,6 +1914,13 @@ export default async function YandexMarketPage() {
           </h2>
 
 
+          <div className="reason-text">
+            Новые товары Яндекс Маркета,
+            которые пока не связаны
+            с физическим товаром.
+          </div>
+
+
           {
             unlinkedProducts.length
               ? (
@@ -1868,7 +1935,14 @@ export default async function YandexMarketPage() {
               )
               : (
 
-                <div className="reason-text">
+                <div
+                  className="reason-text"
+
+                  style={{
+                    marginTop:
+                      "14px",
+                  }}
+                >
                   Непривязанных товаров нет.
                 </div>
 
@@ -1879,7 +1953,7 @@ export default async function YandexMarketPage() {
 
 
         {/* ===================================
-            PRODUCT DATA
+            PRODUCTS
             =================================== */}
 
         <section className="section">
@@ -1892,8 +1966,16 @@ export default async function YandexMarketPage() {
           <div className="reason-text">
             Основная строка показывает
             общие показатели артикула.
-            При раскрытии — показатели
-            по конкретным складам.
+          </div>
+
+
+          <div className="reason-text">
+            Раскрытие:
+            продажи, отмены,
+            средние продажи,
+            остаток и дни запаса
+            отдельно по складам
+            Яндекс Маркета.
           </div>
 
 
@@ -1936,11 +2018,15 @@ export default async function YandexMarketPage() {
 function InfoCard({
   label,
   value,
+  hint,
 }: {
   label:
     string;
 
   value:
+    string;
+
+  hint?:
     string;
 }) {
 
@@ -1966,6 +2052,26 @@ function InfoCard({
       >
         {value}
       </div>
+
+
+      {
+        hint
+          ? (
+
+            <div
+              className="muted"
+
+              style={{
+                marginTop:
+                  "5px",
+              }}
+            >
+              {hint}
+            </div>
+
+          )
+          : null
+      }
 
     </div>
   );
@@ -2005,373 +2111,324 @@ function ProductsTable({
   return (
     <div
       style={{
+        overflowX:
+          "auto",
+
         marginTop:
           "18px",
 
         border:
-          "1px solid var(--table-divider, #282e38)",
+          "none",
 
         borderRadius:
           "10px",
-
-        overflow:
-          "hidden",
       }}
     >
 
-      {/* ===================================
-          MAIN HEADER
-          =================================== */}
-
       <div
         style={{
-          display:
-            "grid",
-
-          gridTemplateColumns:
-            "130px minmax(300px, 2fr) minmax(220px, 1.35fr) 120px 120px 105px 105px 105px",
-
-          background:
-            "var(--table-header-bg, #1b2028)",
-
-          borderBottom:
-            "1px solid var(--table-divider, #282e38)",
+          minWidth:
+            "1220px",
         }}
       >
 
-        <MainHeader>
-          master_code
-        </MainHeader>
+        {/* ===================================
+            TABLE HEADER
+            =================================== */}
+
+        <div
+          style={{
+            display:
+              "grid",
+
+            gridTemplateColumns:
+              "130px minmax(330px, 2.1fr) minmax(230px, 1.4fr) 135px 135px 110px 110px 115px",
+
+            background:
+              "var(--table-header-bg, #1b2028)",
+
+            borderBottom:
+              "1px solid var(--table-divider, #282e38)",
+          }}
+        >
+
+          <MainHeader>
+            master_code
+          </MainHeader>
 
 
-        <MainHeader>
-          Товар
-        </MainHeader>
+          <MainHeader>
+            Товар
+          </MainHeader>
 
 
-        <MainHeader>
-          Offer ID
-        </MainHeader>
+          <MainHeader>
+            Offer ID
+          </MainHeader>
 
 
-        <MainHeader numeric>
-          Продажи {periodDays} дн.
-        </MainHeader>
+          <MainHeader numeric>
+            Продажи {periodDays} дн.
+          </MainHeader>
 
 
-        <MainHeader numeric>
-          Среднее / день
-        </MainHeader>
+          <MainHeader numeric>
+            Среднее / день
+          </MainHeader>
 
 
-        <MainHeader numeric>
-          Отмены
-        </MainHeader>
+          <MainHeader numeric>
+            Отмены
+          </MainHeader>
 
 
-        <MainHeader numeric>
-          Остаток
-        </MainHeader>
+          <MainHeader numeric>
+            Остаток
+          </MainHeader>
 
 
-        <MainHeader numeric>
-          Дней запаса
-        </MainHeader>
+          <MainHeader numeric>
+            Дней запаса
+          </MainHeader>
 
-      </div>
-
-
-      {/* ===================================
-          PRODUCTS
-          =================================== */}
-
-      {
-        products.map(
-          (
-            product,
-            index
-          ) => {
-
-            const metrics =
-              metricsByOffer.get(
-                product.offer_id
-              )
-              ??
-              {
-                sales:
-                  0,
-
-                cancellations:
-                  0,
-
-                stock:
-                  0,
-              };
+        </div>
 
 
-            const average =
-              periodDays > 0
-                ? metrics.sales
-                  /
-                  periodDays
-                : 0;
+        {/* ===================================
+            PRODUCT ROWS
+            =================================== */}
 
+        {
+          products.map(
+            product => {
 
-            const stockDays =
-              average > 0
-                ? metrics.stock
-                  /
-                  average
-                : null;
-
-
-            const warehouses =
-              (
-                warehouseMetricsByOffer.get(
+              const metrics =
+                metricsByOffer.get(
                   product.offer_id
                 )
                 ??
-                []
-              )
-              .filter(
-                row =>
-                  row.sales > 0
-                  ||
-                  row.cancellations > 0
-                  ||
-                  row.stock > 0
-              );
+                {
+                  sales:
+                    0,
+
+                  cancellations:
+                    0,
+
+                  stock:
+                    0,
+                };
 
 
-            return (
-              <details
-                key=
-                  {
-                    product.id
-                  }
+              const average =
+                periodDays > 0
+                  ? metrics.sales
+                    /
+                    periodDays
+                  : 0;
 
-                className=
-                  "yandex-product-details"
 
-                style={{
-                  borderBottom:
-                    index ===
-                    products.length - 1
-                      ? "none"
-                      : "1px solid var(--table-divider, #282e38)",
-                }}
-              >
+              const stockDays =
+                average > 0
+                  ? metrics.stock
+                    /
+                    average
+                  : null;
 
-                {/* ===========================
-                    MAIN PRODUCT ROW
-                    =========================== */}
 
-                <summary
+              const warehouses =
+                (
+                  warehouseMetricsByOffer.get(
+                    product.offer_id
+                  )
+                  ??
+                  []
+                )
+                .filter(
+                  row =>
+                    row.sales > 0
+                    ||
+                    row.cancellations > 0
+                    ||
+                    row.stock > 0
+                );
+
+
+              return (
+                <details
+                  key=
+                    {
+                      product.id
+                    }
+
+                  className=
+                    "yandex-product-details"
+
                   style={{
-                    display:
-                      "grid",
-
-                    gridTemplateColumns:
-                      "130px minmax(300px, 2fr) minmax(220px, 1.35fr) 120px 120px 105px 105px 105px",
-
-                    cursor:
-                      "pointer",
-
-                    userSelect:
-                      "none",
-
-                    alignItems:
-                      "center",
-                  }}
-                >
-
-                  <MainCell strong>
-
-                    <span
-                      style={{
-                        display:
-                          "inline-flex",
-
-                        alignItems:
-                          "center",
-
-                        gap:
-                          "7px",
-                      }}
-                    >
-
-                      <span
-                        className=
-                          "yandex-product-chevron"
-
-                        aria-hidden="true"
-                      >
-                        ▶
-                      </span>
-
-
-                      <span>
-                        {
-                          product.master_code
-                          ??
-                          "—"
-                        }
-                      </span>
-
-                    </span>
-
-                  </MainCell>
-
-
-                  <MainCell strong>
-                    {
-                      getProductName(
-                        product
-                      )
-                    }
-                  </MainCell>
-
-
-                  <MainCell strong>
-                    {
-                      product.offer_id
-                    }
-                  </MainCell>
-
-
-                  <MainCell
-                    numeric
-                    strong
-                  >
-                    {
-                      formatInteger(
-                        metrics.sales
-                      )
-                    }
-                  </MainCell>
-
-
-                  <MainCell numeric>
-                    {
-                      formatAverage(
-                        average
-                      )
-                    }
-                  </MainCell>
-
-
-                  <MainCell numeric>
-                    {
-                      formatInteger(
-                        metrics.cancellations
-                      )
-                    }
-                  </MainCell>
-
-
-                  <MainCell
-                    numeric
-                    strong
-                  >
-                    {
-                      formatInteger(
-                        metrics.stock
-                      )
-                    }
-                  </MainCell>
-
-
-                  <MainCell
-                    numeric
-                    strong
-                  >
-                    {
-                      stockDays ===
-                      null
-                        ? "—"
-                        : formatStockDays(
-                            stockDays
-                          )
-                    }
-                  </MainCell>
-
-                </summary>
-
-
-                {/* ===========================
-                    EXPANDED WAREHOUSES
-                    =========================== */}
-
-                <div
-                  style={{
-                    padding:
-                      "12px 18px 14px 28px",
-
-                    borderTop:
+                    borderBottom:
                       "1px solid var(--table-divider, #282e38)",
                   }}
                 >
 
-                  <div
+                  {/* ===========================
+                      MAIN ARTICLE ROW
+                      =========================== */}
+
+                  <summary
                     style={{
                       display:
-                        "flex",
+                        "grid",
 
-                      justifyContent:
-                        "space-between",
+                      gridTemplateColumns:
+                        "130px minmax(330px, 2.1fr) minmax(230px, 1.4fr) 135px 135px 110px 110px 115px",
 
                       alignItems:
-                        "flex-start",
+                        "center",
 
-                      gap:
-                        "16px",
+                      cursor:
+                        "pointer",
 
-                      flexWrap:
-                        "wrap",
-
-                      marginBottom:
-                        "10px",
+                      userSelect:
+                        "none",
                     }}
                   >
 
-                    <div>
+                    <MainCell strong>
 
-                      <div
+                      <span
                         style={{
-                          fontSize:
-                            "12px",
+                          display:
+                            "inline-flex",
 
-                          fontWeight:
-                            700,
+                          alignItems:
+                            "center",
+
+                          gap:
+                            "8px",
                         }}
                       >
-                        Продажи и остатки по складам
-                      </div>
+
+                        <span
+                          className=
+                            "yandex-product-chevron"
+
+                          aria-hidden="true"
+                        >
+                          ▶
+                        </span>
 
 
-                      <div
-                        style={{
-                          marginTop:
-                            "3px",
+                        <span>
+                          {
+                            product.master_code
+                            ??
+                            "—"
+                          }
+                        </span>
 
-                          fontSize:
-                            "10px",
+                      </span>
 
-                          color:
-                            "var(--text-secondary, #b8c0cc)",
-                        }}
-                      >
-                        По конкретным складам
-                        Яндекс Маркета.
-                      </div>
+                    </MainCell>
 
-                    </div>
 
+                    <MainCell strong>
+                      {
+                        getProductName(
+                          product
+                        )
+                      }
+                    </MainCell>
+
+
+                    <MainCell strong>
+                      {
+                        product.offer_id
+                      }
+                    </MainCell>
+
+
+                    <MainCell
+                      numeric
+                      strong
+                    >
+                      {
+                        formatInteger(
+                          metrics.sales
+                        )
+                      }
+                    </MainCell>
+
+
+                    <MainCell numeric>
+                      {
+                        formatAverage(
+                          average
+                        )
+                      }
+                    </MainCell>
+
+
+                    <MainCell numeric>
+                      {
+                        formatInteger(
+                          metrics.cancellations
+                        )
+                      }
+                    </MainCell>
+
+
+                    <MainCell
+                      numeric
+                      strong
+                    >
+                      {
+                        formatInteger(
+                          metrics.stock
+                        )
+                      }
+                    </MainCell>
+
+
+                    <MainCell
+                      numeric
+                      strong
+                    >
+                      {
+                        stockDays ===
+                        null
+                          ? "—"
+                          : formatStockDays(
+                              stockDays
+                            )
+                      }
+                    </MainCell>
+
+                  </summary>
+
+
+                  {/* ===========================
+                      WAREHOUSE DETAILS
+                      =========================== */}
+
+                  <div
+                    style={{
+                      padding:
+                        "16px 18px 18px 38px",
+
+                      borderTop:
+                        "1px solid var(--table-divider, #282e38)",
+                    }}
+                  >
 
                     <div
                       style={{
                         display:
                           "flex",
+
+                        justifyContent:
+                          "space-between",
+
+                        alignItems:
+                          "flex-start",
 
                         gap:
                           "16px",
@@ -2379,108 +2436,156 @@ function ProductsTable({
                         flexWrap:
                           "wrap",
 
-                        fontSize:
-                          "10px",
-
-                        fontWeight:
-                          700,
+                        marginBottom:
+                          "14px",
                       }}
                     >
 
-                      <span>
-                        Строк:{" "}
-                        {
-                          formatInteger(
-                            warehouses.length
-                          )
-                        }
-                      </span>
+                      <div>
+
+                        <div
+                          style={{
+                            fontSize:
+                              "14px",
+
+                            fontWeight:
+                              700,
+                          }}
+                        >
+                          Продажи и остатки по складам
+                        </div>
 
 
-                      <span>
-                        Продажи:{" "}
-                        {
-                          formatInteger(
-                            metrics.sales
-                          )
-                        }
-                      </span>
+                        <div
+                          className="muted"
+
+                          style={{
+                            marginTop:
+                              "4px",
+
+                            fontSize:
+                              "11px",
+                          }}
+                        >
+                          По конкретным складам
+                          Яндекс Маркета.
+                        </div>
+
+                      </div>
 
 
-                      <span>
-                        Отмены:{" "}
-                        {
-                          formatInteger(
-                            metrics.cancellations
-                          )
-                        }
-                      </span>
+                      <div
+                        style={{
+                          display:
+                            "flex",
+
+                          gap:
+                            "18px",
+
+                          flexWrap:
+                            "wrap",
+
+                          fontSize:
+                            "12px",
+
+                          fontWeight:
+                            700,
+                        }}
+                      >
+
+                        <span>
+                          Строк:{" "}
+                          {
+                            formatInteger(
+                              warehouses.length
+                            )
+                          }
+                        </span>
 
 
-                      <span>
-                        Остаток:{" "}
-                        {
-                          formatInteger(
-                            metrics.stock
-                          )
-                        }
-                      </span>
+                        <span>
+                          Продажи:{" "}
+                          {
+                            formatInteger(
+                              metrics.sales
+                            )
+                          }
+                        </span>
+
+
+                        <span>
+                          Отмены:{" "}
+                          {
+                            formatInteger(
+                              metrics.cancellations
+                            )
+                          }
+                        </span>
+
+
+                        <span>
+                          Остаток:{" "}
+                          {
+                            formatInteger(
+                              metrics.stock
+                            )
+                          }
+                        </span>
+
+                      </div>
 
                     </div>
 
+
+                    {
+                      warehouses.length >
+                      0
+                        ? (
+
+                          <WarehouseTable
+                            offerId=
+                              {
+                                product.offer_id
+                              }
+
+                            productId=
+                              {
+                                product.market_sku
+                                ??
+                                "—"
+                              }
+
+                            rows=
+                              {
+                                warehouses
+                              }
+
+                            periodDays=
+                              {
+                                periodDays
+                              }
+                          />
+
+                        )
+                        : (
+
+                          <div className="reason-text">
+                            Нет данных по складам.
+                          </div>
+
+                        )
+                    }
+
                   </div>
 
+                </details>
+              );
 
-                  {
-                    warehouses.length >
-                    0
-                      ? (
+            }
+          )
+        }
 
-                        <WarehouseTable
-                          offerId=
-                            {
-                              product.offer_id
-                            }
-
-                          productId=
-                            {
-                              product.market_sku
-                              ??
-                              "—"
-                            }
-
-                          rows=
-                            {
-                              warehouses
-                            }
-
-                          periodDays=
-                            {
-                              periodDays
-                            }
-                        />
-
-                      )
-                      : (
-
-                        <div
-                          className=
-                            "reason-text"
-                        >
-                          Нет данных по складам.
-                        </div>
-
-                      )
-                  }
-
-                </div>
-
-              </details>
-            );
-
-          }
-        )
-      }
+      </div>
 
     </div>
   );
@@ -2516,6 +2621,12 @@ function WarehouseTable({
       style={{
         overflowX:
           "auto",
+
+        border:
+          "none",
+
+        borderRadius:
+          "10px",
       }}
     >
 
@@ -2528,7 +2639,10 @@ function WarehouseTable({
             "1000px",
 
           borderCollapse:
-            "collapse",
+            "separate",
+
+          borderSpacing:
+            0,
 
           border:
             "none",
@@ -2537,7 +2651,12 @@ function WarehouseTable({
 
         <thead>
 
-          <tr>
+          <tr
+            style={{
+              background:
+                "var(--table-header-bg, #1b2028)",
+            }}
+          >
 
             <WarehouseHeader>
               Offer ID
@@ -2608,9 +2727,11 @@ function WarehouseTable({
                     : null;
 
 
-                const isLast =
+                const divider =
                   index ===
-                  rows.length - 1;
+                  rows.length - 1
+                    ? "none"
+                    : "1px solid var(--table-divider, #282e38)";
 
 
                 return (
@@ -2627,8 +2748,8 @@ function WarehouseTable({
                   >
 
                     <WarehouseCell
-                      isLast=
-                        {isLast}
+                      divider=
+                        {divider}
 
                       strong
                     >
@@ -2637,16 +2758,16 @@ function WarehouseTable({
 
 
                     <WarehouseCell
-                      isLast=
-                        {isLast}
+                      divider=
+                        {divider}
                     >
                       {productId}
                     </WarehouseCell>
 
 
                     <WarehouseCell
-                      isLast=
-                        {isLast}
+                      divider=
+                        {divider}
                     >
                       {
                         row.warehouseName
@@ -2655,8 +2776,8 @@ function WarehouseTable({
 
 
                     <WarehouseCell
-                      isLast=
-                        {isLast}
+                      divider=
+                        {divider}
 
                       numeric
 
@@ -2671,8 +2792,8 @@ function WarehouseTable({
 
 
                     <WarehouseCell
-                      isLast=
-                        {isLast}
+                      divider=
+                        {divider}
 
                       numeric
                     >
@@ -2685,8 +2806,8 @@ function WarehouseTable({
 
 
                     <WarehouseCell
-                      isLast=
-                        {isLast}
+                      divider=
+                        {divider}
 
                       numeric
                     >
@@ -2699,8 +2820,8 @@ function WarehouseTable({
 
 
                     <WarehouseCell
-                      isLast=
-                        {isLast}
+                      divider=
+                        {divider}
 
                       numeric
 
@@ -2715,8 +2836,8 @@ function WarehouseTable({
 
 
                     <WarehouseCell
-                      isLast=
-                        {isLast}
+                      divider=
+                        {divider}
 
                       numeric
 
@@ -2768,7 +2889,7 @@ function MainHeader({
     <div
       style={{
         padding:
-          "9px 10px",
+          "12px 14px",
 
         textAlign:
           numeric
@@ -2776,7 +2897,7 @@ function MainHeader({
             : "left",
 
         fontSize:
-          "10px",
+          "12px",
 
         fontWeight:
           700,
@@ -2818,7 +2939,7 @@ function MainCell({
     <div
       style={{
         padding:
-          "10px",
+          "12px 14px",
 
         textAlign:
           numeric
@@ -2826,7 +2947,10 @@ function MainCell({
             : "left",
 
         fontSize:
-          "11px",
+          "13px",
+
+        lineHeight:
+          1.35,
 
         fontWeight:
           strong
@@ -2863,7 +2987,7 @@ function WarehouseHeader({
     <th
       style={{
         padding:
-          "7px 9px",
+          "12px 14px",
 
         textAlign:
           numeric
@@ -2871,7 +2995,7 @@ function WarehouseHeader({
             : "left",
 
         fontSize:
-          "10px",
+          "12px",
 
         fontWeight:
           700,
@@ -2887,9 +3011,6 @@ function WarehouseHeader({
 
         whiteSpace:
           "nowrap",
-
-        background:
-          "transparent",
       }}
     >
       {children}
@@ -2905,15 +3026,15 @@ function WarehouseHeader({
 
 function WarehouseCell({
   children,
-  isLast,
+  divider,
   numeric = false,
   strong = false,
 }: {
   children:
     ReactNode;
 
-  isLast:
-    boolean;
+  divider:
+    string;
 
   numeric?:
     boolean;
@@ -2926,7 +3047,7 @@ function WarehouseCell({
     <td
       style={{
         padding:
-          "7px 9px",
+          "12px 14px",
 
         textAlign:
           numeric
@@ -2934,7 +3055,10 @@ function WarehouseCell({
             : "left",
 
         fontSize:
-          "10px",
+          "13px",
+
+        lineHeight:
+          1.35,
 
         fontWeight:
           strong
@@ -2945,9 +3069,7 @@ function WarehouseCell({
           "none",
 
         borderBottom:
-          isLast
-            ? "none"
-            : "1px solid var(--table-divider, #282e38)",
+          divider,
 
         whiteSpace:
           "nowrap",
