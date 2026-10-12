@@ -16,6 +16,10 @@ import {
 } from "../../../lib/supabase/client";
 
 
+// ============================================================
+// TYPES
+// ============================================================
+
 type AdminLevel =
   | "none"
   | "admin"
@@ -40,6 +44,10 @@ type StatusType =
   | "error";
 
 
+// ============================================================
+// HELPERS
+// ============================================================
+
 function getAdminLevelLabel(
   level: AdminLevel
 ) {
@@ -51,11 +59,37 @@ function getAdminLevelLabel(
     case "admin":
       return "Администратор";
 
+
     case "senior_admin":
       return "Старший администратор";
 
+
     default:
       return "Без административных прав";
+
+  }
+
+}
+
+
+function getAdminLevel(
+  value: string
+): AdminLevel {
+
+  switch (
+    value
+  ) {
+
+    case "admin":
+      return "admin";
+
+
+    case "senior_admin":
+      return "senior_admin";
+
+
+    default:
+      return "none";
 
   }
 
@@ -96,6 +130,10 @@ function getBadgeClass(
 
 }
 
+
+// ============================================================
+// COMPONENT
+// ============================================================
 
 export default function AdminUsersPanel() {
 
@@ -164,6 +202,10 @@ export default function AdminUsersPanel() {
       ""
     );
 
+
+  // ==========================================================
+  // LOAD USERS
+  // ==========================================================
 
   const loadUsers =
     useCallback(
@@ -320,6 +362,10 @@ export default function AdminUsersPanel() {
   );
 
 
+  // ==========================================================
+  // CURRENT USER
+  // ==========================================================
+
   const currentUser =
     useMemo(
       () =>
@@ -342,6 +388,10 @@ export default function AdminUsersPanel() {
       ?.admin_level ===
         "senior_admin";
 
+
+  // ==========================================================
+  // CHANGE ADMIN LEVEL
+  // ==========================================================
 
   async function handleAdminLevelChange(
     targetUser:
@@ -490,8 +540,8 @@ export default function AdminUsersPanel() {
 
       /*
        * Если текущий Старший администратор
-       * изменил собственные права, серверный
-       * layout должен сразу перепроверить доступ.
+       * изменил собственные права,
+       * серверный layout перепроверит доступ.
        */
       if (
         targetUser.user_id ===
@@ -532,6 +582,10 @@ export default function AdminUsersPanel() {
   }
 
 
+  // ==========================================================
+  // RENDER
+  // ==========================================================
+
   return (
 
     <div
@@ -550,6 +604,7 @@ export default function AdminUsersPanel() {
             ? (
 
               <>
+
                 <strong>
                   Старший администратор:
                 </strong>
@@ -559,6 +614,7 @@ export default function AdminUsersPanel() {
                 вы можете выдавать,
                 изменять и снимать
                 административные права.
+
               </>
 
             )
@@ -566,6 +622,7 @@ export default function AdminUsersPanel() {
             : (
 
               <>
+
                 <strong>
                   Администратор:
                 </strong>
@@ -576,6 +633,7 @@ export default function AdminUsersPanel() {
                 для просмотра. Изменять
                 административные права может
                 только Старший администратор.
+
               </>
 
             )
@@ -605,7 +663,8 @@ export default function AdminUsersPanel() {
               : "admin-users-status"
         }
 
-        aria-live="polite"
+        aria-live=
+          "polite"
       >
         {
           statusMessage
@@ -666,9 +725,11 @@ export default function AdminUsersPanel() {
                           Сотрудник
                         </th>
 
+
                         <th>
                           Рабочая роль
                         </th>
+
 
                         <th>
                           Административные права
@@ -782,33 +843,44 @@ export default function AdminUsersPanel() {
                                         }
 
                                         onChange={
-                                          event =>
+                                          event => {
+
+                                            const nextLevel =
+                                              getAdminLevel(
+                                                event
+                                                  .currentTarget
+                                                  .value
+                                              );
+
+
                                             void handleAdminLevelChange(
                                               user,
-                                              event
-                                                .currentTarget
-                                                .value
-                                                as AdminLevel
-                                            )
+                                              nextLevel
+                                            );
+
+                                          }
                                         }
                                       >
 
                                         <option
-                                          value="none"
+                                          value=
+                                            "none"
                                         >
                                           Без административных прав
                                         </option>
 
 
                                         <option
-                                          value="admin"
+                                          value=
+                                            "admin"
                                         >
                                           Администратор
                                         </option>
 
 
                                         <option
-                                          value="senior_admin"
+                                          value=
+                                            "senior_admin"
                                         >
                                           Старший администратор
                                         </option>
