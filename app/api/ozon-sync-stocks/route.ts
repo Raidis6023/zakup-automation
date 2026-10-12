@@ -15,31 +15,23 @@ import {
 
 type OzonProductStock = {
   type?: string;
-
   present?: number;
-
   reserved?: number;
-
   sku?: number;
-
   warehouse_ids?: number[];
 };
 
 
 type OzonProduct = {
   product_id?: number;
-
   offer_id?: string;
-
   stocks?: OzonProductStock[];
 };
 
 
 type OzonProductsResponse = {
   items?: OzonProduct[];
-
   total?: number;
-
   cursor?: string;
 };
 
@@ -50,32 +42,21 @@ type OzonProductsResponse = {
 
 type OzonAnalyticsStockItem = {
   sku?: number | string;
-
   name?: string;
-
   offer_id?: string;
-
   warehouse_id?: number | string;
-
   warehouse_name?: string;
-
   cluster_id?: number | string;
-
   cluster_name?: string;
-
   available_stock_count?: number;
-
   valid_stock_count?: number;
-
   reserved_stock_count?: number;
-
   ads?: number;
-
   idc?: number | null;
-
   turnover_grade?: string;
 
-  [key: string]: unknown;
+  [key: string]:
+    unknown;
 };
 
 
@@ -85,11 +66,12 @@ type OzonAnalyticsResponse = {
 
 
 // ============================================================
-// ТИП ДЛЯ PRODUCTS В SUPABASE
+// SUPABASE
 // ============================================================
 
 type ProductForSupabase = {
-  offer_id: string;
+  offer_id:
+    string;
 
   ozon_product_id:
     number | null;
@@ -99,18 +81,18 @@ type ProductForSupabase = {
 };
 
 
-// ============================================================
-// ТИП АГРЕГИРОВАННОЙ СТРОКИ КЛАСТЕРА
-// ============================================================
-
 type ClusterStockRow = {
-  offer_id: string;
+  offer_id:
+    string;
 
-  cluster_id: string;
+  cluster_id:
+    string;
 
-  cluster_name: string | null;
+  cluster_name:
+    string | null;
 
-  quantity: number;
+  quantity:
+    number;
 
   raw_payload: {
     source:
@@ -135,16 +117,74 @@ type ClusterStockRow = {
 
 
 // ============================================================
+// OZON HTTP ERROR
+// ============================================================
+
+class OzonHttpError extends Error {
+
+  status:
+    number;
+
+  retryAfterSeconds:
+    number | null;
+
+  nextAllowedAt:
+    string | null;
+
+
+  constructor(
+    message:
+      string,
+
+    status:
+      number,
+
+    retryAfterSeconds:
+      number | null,
+
+    nextAllowedAt:
+      string | null
+  ) {
+
+    super(
+      message
+    );
+
+
+    this.name =
+      "OzonHttpError";
+
+
+    this.status =
+      status;
+
+
+    this.retryAfterSeconds =
+      retryAfterSeconds;
+
+
+    this.nextAllowedAt =
+      nextAllowedAt;
+
+  }
+
+}
+
+
+// ============================================================
 // HEADERS OZON
 // ============================================================
 
 function getOzonHeaders() {
 
   const clientId =
-    process.env.OZON_CLIENT_ID;
+    process.env
+      .OZON_CLIENT_ID;
+
 
   const apiKey =
-    process.env.OZON_API_KEY;
+    process.env
+      .OZON_API_KEY;
 
 
   if (!clientId) {
@@ -166,7 +206,6 @@ function getOzonHeaders() {
 
 
   return {
-
     "Client-Id":
       clientId,
 
@@ -178,13 +217,13 @@ function getOzonHeaders() {
 
     Accept:
       "application/json",
-
   };
+
 }
 
 
 // ============================================================
-// НАСТРОЙКИ SUPABASE
+// SUPABASE CONFIG
 // ============================================================
 
 function getSupabaseConfig() {
@@ -192,6 +231,7 @@ function getSupabaseConfig() {
   const supabaseUrl =
     process.env
       .NEXT_PUBLIC_SUPABASE_URL;
+
 
   const supabaseSecretKey =
     process.env
@@ -220,6 +260,7 @@ function getSupabaseConfig() {
     supabaseUrl,
     supabaseSecretKey,
   };
+
 }
 
 
@@ -228,13 +269,12 @@ function getSupabaseConfig() {
 // ============================================================
 
 function sleep(
-  milliseconds: number
+  milliseconds:
+    number
 ) {
 
   return new Promise<void>(
-    (
-      resolve
-    ) => {
+    resolve => {
 
       setTimeout(
         resolve,
@@ -243,18 +283,233 @@ function sleep(
 
     }
   );
+
 }
 
 
 // ============================================================
-// POST В OZON С ПОВТОРНЫМИ ПОПЫТКАМИ
+// RETRY-AFTER
+// ============================================================
+
+function getRetryAfter(
+  response:
+    Response
+) {
+
+  const raw =
+    response.headers.get(
+      "retry-after"
+    );
+
+
+  if (!raw) {
+
+    return {
+      retryAfterSeconds:
+        null,
+
+      nextAllowedAt:
+        null,
+    };
+
+  }
+
+
+  const numeric =
+    Number(
+      raw
+    );
+
+
+  let seconds:
+    number | null =
+    null;
+
+
+  if (
+    Number.isFinite(
+      numeric
+    )
+    &&
+    numeric >=
+      0
+  ) {
+
+    seconds =
+      Math.ceil(
+        numeric
+      );
+
+  } else {
+
+    const date =
+      new Date(
+        raw
+      );
+
+
+    if (
+      Number.isFinite(
+        date.getTime()
+      )
+    ) {
+
+      seconds =
+        Math.max(
+          0,
+          Math.ceil(
+            (
+              date.getTime()
+              -
+              Date.now()
+            )
+            /
+            1000
+          )
+        );
+
+    }
+
+  }
+
+
+  if (
+    seconds ===
+    null
+  ) {
+
+    return {
+      retryAfterSeconds:
+        null,
+
+      nextAllowedAt:
+        null,
+    };
+
+  }
+
+
+  return {
+    retryAfterSeconds:
+      seconds,
+
+    nextAllowedAt:
+      new Date(
+        Date.now()
+        +
+        seconds
+        *
+        1000
+      ).toISOString(),
+  };
+
+}
+
+
+// ============================================================
+// SYNC STATE
+// ============================================================
+
+async function updateSyncState(
+  values:
+    Record<string, unknown>
+) {
+
+  const {
+    supabaseUrl,
+    supabaseSecretKey,
+  } =
+    getSupabaseConfig();
+
+
+  const response =
+    await fetch(
+      `${supabaseUrl}/rest/v1/ozon_sync_state?sync_key=eq.stocks`,
+      {
+        method:
+          "PATCH",
+
+        headers: {
+          apikey:
+            supabaseSecretKey,
+
+          Authorization:
+            `Bearer ${supabaseSecretKey}`,
+
+          "Content-Type":
+            "application/json",
+
+          Prefer:
+            "return=minimal",
+        },
+
+        body:
+          JSON.stringify(
+            {
+              ...values,
+
+              updated_at:
+                new Date()
+                  .toISOString(),
+            }
+          ),
+
+        cache:
+          "no-store",
+      }
+    );
+
+
+  if (!response.ok) {
+
+    const text =
+      await response.text();
+
+
+    throw new Error(
+      `Не удалось обновить ozon_sync_state stocks. HTTP ${response.status}: ${text}`
+    );
+
+  }
+
+}
+
+
+async function tryUpdateSyncState(
+  values:
+    Record<string, unknown>
+) {
+
+  try {
+
+    await updateSyncState(
+      values
+    );
+
+  } catch (error) {
+
+    console.error(
+      "Ozon stocks sync-state error:",
+      error
+    );
+
+  }
+
+}
+
+
+// ============================================================
+// OZON POST
 // ============================================================
 
 async function ozonPost<T>(
-  endpoint: string,
-  body: Record<string, unknown>
+  endpoint:
+    string,
+
+  body:
+    Record<string, unknown>
 ):
-  Promise<T> {
+Promise<T> {
 
   const headers =
     getOzonHeaders();
@@ -280,7 +535,8 @@ async function ozonPost<T>(
         await fetch(
           `https://api-seller.ozon.ru${endpoint}`,
           {
-            method: "POST",
+            method:
+              "POST",
 
             headers,
 
@@ -297,7 +553,8 @@ async function ozonPost<T>(
     } catch (error) {
 
       if (
-        attempt === maxAttempts
+        attempt ===
+        maxAttempts
       ) {
 
         throw new Error(
@@ -312,8 +569,11 @@ async function ozonPost<T>(
 
 
       await sleep(
-        1000 * attempt
+        1000
+        *
+        attempt
       );
+
 
       continue;
 
@@ -344,33 +604,90 @@ async function ozonPost<T>(
 
 
     // ========================================================
-    // 429 / 5xx —
-    // временная ошибка, пробуем ещё раз
+    // 429
     // ========================================================
 
-    const shouldRetry =
-      response.status === 429
-      ||
-      response.status >= 500;
+    if (
+      response.status ===
+      429
+    ) {
 
+      const {
+        retryAfterSeconds,
+        nextAllowedAt,
+      } =
+        getRetryAfter(
+          response
+        );
+
+
+      // Если Ozon просит подождать буквально
+      // несколько секунд, маршрут может сам повторить запрос.
+      if (
+        attempt <
+          maxAttempts
+        &&
+        retryAfterSeconds !==
+          null
+        &&
+        retryAfterSeconds <=
+          5
+      ) {
+
+        await sleep(
+          Math.max(
+            1000,
+            retryAfterSeconds
+            *
+            1000
+          )
+        );
+
+
+        continue;
+
+      }
+
+
+      throw new OzonHttpError(
+        `Ozon временно ограничил запрос ${endpoint}`,
+        429,
+        retryAfterSeconds,
+        nextAllowedAt
+      );
+
+    }
+
+
+    // ========================================================
+    // 5xx
+    // ========================================================
 
     if (
-      shouldRetry
+      response.status >=
+        500
       &&
-      attempt < maxAttempts
+      attempt <
+        maxAttempts
     ) {
 
       await sleep(
-        1000 * attempt
+        1000
+        *
+        attempt
       );
+
 
       continue;
 
     }
 
 
-    throw new Error(
-      `Ошибка Ozon ${endpoint}. HTTP ${response.status}. ${responseText}`
+    throw new OzonHttpError(
+      `Ошибка Ozon ${endpoint}. HTTP ${response.status}. ${responseText}`,
+      response.status,
+      null,
+      null
     );
 
   }
@@ -379,6 +696,7 @@ async function ozonPost<T>(
   throw new Error(
     `Не удалось выполнить запрос Ozon ${endpoint}`
   );
+
 }
 
 
@@ -387,10 +705,13 @@ async function ozonPost<T>(
 // ============================================================
 
 async function supabaseRpc<T>(
-  functionName: string,
-  body: Record<string, unknown>
+  functionName:
+    string,
+
+  body:
+    Record<string, unknown>
 ):
-  Promise<T> {
+Promise<T> {
 
   const {
     supabaseUrl,
@@ -403,10 +724,10 @@ async function supabaseRpc<T>(
     await fetch(
       `${supabaseUrl}/rest/v1/rpc/${functionName}`,
       {
-        method: "POST",
+        method:
+          "POST",
 
         headers: {
-
           apikey:
             supabaseSecretKey,
 
@@ -454,21 +775,26 @@ async function supabaseRpc<T>(
     );
 
   }
+
 }
 
 
 // ============================================================
-// РАЗБИЕНИЕ МАССИВА НА ПАЧКИ
+// CHUNKS
 // ============================================================
 
 function chunkArray<T>(
-  items: T[],
-  size: number
+  items:
+    T[],
+
+  size:
+    number
 ):
-  T[][] {
+T[][] {
 
   const result:
-    T[][] = [];
+    T[][] =
+    [];
 
 
   for (
@@ -488,11 +814,12 @@ function chunkArray<T>(
 
 
   return result;
+
 }
 
 
 // ============================================================
-// ТЕКУЩАЯ ДАТА YYYY-MM-DD
+// SNAPSHOT DATE
 // ============================================================
 
 function getSnapshotDate() {
@@ -503,22 +830,20 @@ function getSnapshotDate() {
       0,
       10
     );
+
 }
 
 
 // ============================================================
 // GET
-//
-// НИЧЕГО НЕ СИНХРОНИЗИРУЕТ.
-// НУЖЕН ТОЛЬКО ДЛЯ ПРОВЕРКИ,
-// ЧТО МАРШРУТ СОБРАЛСЯ.
 // ============================================================
 
 export async function GET() {
 
   return NextResponse.json(
     {
-      ok: true,
+      ok:
+        true,
 
       message:
         "Маршрут синхронизации Ozon готов",
@@ -530,25 +855,39 @@ export async function GET() {
         false,
     }
   );
+
 }
 
 
 // ============================================================
 // POST
-//
-// ЗАПУСКАЕТ ПОЛНУЮ СИНХРОНИЗАЦИЮ.
 // ============================================================
 
 export async function POST() {
 
+  const attemptAt =
+    new Date()
+      .toISOString();
+
+
+  await tryUpdateSyncState({
+    last_attempt_at:
+      attemptAt,
+
+    last_message:
+      "Запущено обновление остатков Ozon",
+  });
+
+
   try {
 
     // ========================================================
-    // 1. ПОЛУЧАЕМ ВСЕ ТОВАРЫ OZON
+    // 1. ВСЕ ТОВАРЫ
     // ========================================================
 
     const allProducts:
-      OzonProduct[] = [];
+      OzonProduct[] =
+      [];
 
 
     let cursor =
@@ -556,15 +895,14 @@ export async function POST() {
 
 
     let expectedTotal:
-      number | null = null;
+      number | null =
+      null;
 
 
     const seenCursors =
       new Set<string>();
 
 
-    // Защита от бесконечной пагинации.
-    // Для 363 товаров этого более чем достаточно.
     const maxPages =
       100;
 
@@ -603,7 +941,8 @@ export async function POST() {
 
 
       if (
-        expectedTotal === null
+        expectedTotal ===
+          null
         &&
         typeof productsPage.total ===
           "number"
@@ -620,13 +959,9 @@ export async function POST() {
       );
 
 
-      // ======================================================
-      // ЕСЛИ ДОШЛИ ДО TOTAL —
-      // ПАГИНАЦИЯ ЗАКОНЧЕНА
-      // ======================================================
-
       if (
-        expectedTotal !== null
+        expectedTotal !==
+          null
         &&
         allProducts.length >=
           expectedTotal
@@ -637,12 +972,9 @@ export async function POST() {
       }
 
 
-      // ======================================================
-      // ПУСТАЯ СТРАНИЦА
-      // ======================================================
-
       if (
-        pageItems.length === 0
+        pageItems.length ===
+        0
       ) {
 
         break;
@@ -657,22 +989,12 @@ export async function POST() {
           : "";
 
 
-      // ======================================================
-      // НЕТ CURSOR —
-      // БОЛЬШЕ СТРАНИЦ НЕТ
-      // ======================================================
-
       if (!nextCursor) {
 
         break;
 
       }
 
-
-      // ======================================================
-      // OZON ВЕРНУЛ ТОТ ЖЕ CURSOR —
-      // НЕ ДАЁМ УЙТИ В ЦИКЛ
-      // ======================================================
 
       if (
         seenCursors.has(
@@ -699,11 +1021,12 @@ export async function POST() {
 
 
     // ========================================================
-    // 2. ПРОВЕРЯЕМ ПОЛНУЮ ВЫГРУЗКУ
+    // 2. VALIDATION
     // ========================================================
 
     if (
-      allProducts.length === 0
+      allProducts.length ===
+      0
     ) {
 
       throw new Error(
@@ -714,7 +1037,8 @@ export async function POST() {
 
 
     if (
-      expectedTotal !== null
+      expectedTotal !==
+        null
       &&
       allProducts.length <
         expectedTotal
@@ -728,7 +1052,7 @@ export async function POST() {
 
 
     // ========================================================
-    // 3. ДЕДУПЛИЦИРУЕМ ТОВАРЫ ПО OFFER_ID
+    // 3. DEDUP
     // ========================================================
 
     const productsByOffer =
@@ -746,13 +1070,16 @@ export async function POST() {
       const offerId =
         String(
           product.offer_id
-          ?? ""
+          ??
+          ""
         )
           .trim();
 
 
       if (!offerId) {
+
         continue;
+
       }
 
 
@@ -771,7 +1098,8 @@ export async function POST() {
 
 
     if (
-      uniqueProducts.length === 0
+      uniqueProducts.length ===
+      0
     ) {
 
       throw new Error(
@@ -782,7 +1110,7 @@ export async function POST() {
 
 
     // ========================================================
-    // 4. СОБИРАЕМ ВСЕ FBO SKU
+    // 4. FBO SKU
     // ========================================================
 
     const fboSkuSet =
@@ -796,22 +1124,30 @@ export async function POST() {
 
       for (
         const stock
-        of product.stocks ?? []
+        of product.stocks
+        ??
+        []
       ) {
 
         if (
           String(
-            stock.type ?? ""
+            stock.type
+            ??
+            ""
           ).toLowerCase() !==
             "fbo"
         ) {
+
           continue;
+
         }
 
 
         const sku =
           String(
-            stock.sku ?? ""
+            stock.sku
+            ??
+            ""
           )
             .trim();
 
@@ -819,9 +1155,12 @@ export async function POST() {
         if (
           !sku
           ||
-          sku === "0"
+          sku ===
+            "0"
         ) {
+
           continue;
+
         }
 
 
@@ -841,7 +1180,8 @@ export async function POST() {
 
 
     if (
-      fboSkus.length === 0
+      fboSkus.length ===
+      0
     ) {
 
       throw new Error(
@@ -852,9 +1192,7 @@ export async function POST() {
 
 
     // ========================================================
-    // 5. ANALYTICS/STOCKS
-    //
-    // ДО 100 SKU В ОДНОМ ЗАПРОСЕ
+    // 5. ANALYTICS
     // ========================================================
 
     const skuChunks =
@@ -866,7 +1204,7 @@ export async function POST() {
 
     const analyticsRows:
       OzonAnalyticsStockItem[] =
-        [];
+      [];
 
 
     for (
@@ -912,10 +1250,10 @@ export async function POST() {
       );
 
 
-      // Небольшой зазор между пачками.
       if (
         chunkIndex <
-          skuChunks.length - 1
+          skuChunks.length -
+          1
       ) {
 
         await sleep(
@@ -928,7 +1266,8 @@ export async function POST() {
 
 
     if (
-      analyticsRows.length === 0
+      analyticsRows.length ===
+      0
     ) {
 
       throw new Error(
@@ -939,7 +1278,7 @@ export async function POST() {
 
 
     // ========================================================
-    // 6. НАЗВАНИЯ ТОВАРОВ ИЗ ANALYTICS
+    // 6. PRODUCT NAMES
     // ========================================================
 
     const productNamesByOffer =
@@ -957,7 +1296,8 @@ export async function POST() {
       const offerId =
         String(
           row.offer_id
-          ?? ""
+          ??
+          ""
         )
           .trim();
 
@@ -965,7 +1305,8 @@ export async function POST() {
       const name =
         String(
           row.name
-          ?? ""
+          ??
+          ""
         )
           .trim();
 
@@ -991,12 +1332,12 @@ export async function POST() {
 
 
     // ========================================================
-    // 7. ГОТОВИМ PRODUCTS ДЛЯ SUPABASE
+    // 7. PRODUCTS FOR DB
     // ========================================================
 
     const productsForSupabase:
       ProductForSupabase[] =
-        [];
+      [];
 
 
     for (
@@ -1007,13 +1348,16 @@ export async function POST() {
       const offerId =
         String(
           product.offer_id
-          ?? ""
+          ??
+          ""
         )
           .trim();
 
 
       if (!offerId) {
+
         continue;
+
       }
 
 
@@ -1026,47 +1370,44 @@ export async function POST() {
             );
 
 
-      productsForSupabase.push(
-        {
-          offer_id:
-            offerId,
+      productsForSupabase.push({
+        offer_id:
+          offerId,
 
-          ozon_product_id:
-            Number.isFinite(
-              productId
-            )
-              ? productId
-              : null,
+        ozon_product_id:
+          Number.isFinite(
+            productId
+          )
+            ? productId
+            : null,
 
-          name:
-            productNamesByOffer.get(
-              offerId
-            )
-            ?? null,
-        }
-      );
+        name:
+          productNamesByOffer.get(
+            offerId
+          )
+          ??
+          null,
+      });
 
     }
 
 
     // ========================================================
-    // 8. ГРУППИРУЕМ:
-    //
-    // OFFER_ID + CLUSTER_ID
-    //
-    // И СУММИРУЕМ AVAILABLE_STOCK_COUNT
-    // ВСЕХ СКЛАДОВ КЛАСТЕРА
+    // 8. AGGREGATE
     // ========================================================
 
     type AggregateValue = {
-      offer_id: string;
+      offer_id:
+        string;
 
-      cluster_id: string;
+      cluster_id:
+        string;
 
       cluster_name:
         string | null;
 
-      quantity: number;
+      quantity:
+        number;
 
       warehouses:
         Array<{
@@ -1100,7 +1441,8 @@ export async function POST() {
       const offerId =
         String(
           row.offer_id
-          ?? ""
+          ??
+          ""
         )
           .trim();
 
@@ -1108,7 +1450,8 @@ export async function POST() {
       const clusterId =
         String(
           row.cluster_id
-          ?? ""
+          ??
+          ""
         )
           .trim();
 
@@ -1118,14 +1461,17 @@ export async function POST() {
         ||
         !clusterId
       ) {
+
         continue;
+
       }
 
 
       const clusterNameRaw =
         String(
           row.cluster_name
-          ?? ""
+          ??
+          ""
         )
           .trim();
 
@@ -1133,7 +1479,8 @@ export async function POST() {
       const warehouseIdRaw =
         String(
           row.warehouse_id
-          ?? ""
+          ??
+          ""
         )
           .trim();
 
@@ -1141,7 +1488,8 @@ export async function POST() {
       const warehouseNameRaw =
         String(
           row.warehouse_name
-          ?? ""
+          ??
+          ""
         )
           .trim();
 
@@ -1149,7 +1497,8 @@ export async function POST() {
       const skuRaw =
         String(
           row.sku
-          ?? ""
+          ??
+          ""
         )
           .trim();
 
@@ -1157,7 +1506,8 @@ export async function POST() {
       const quantityRaw =
         Number(
           row.available_stock_count
-          ?? 0
+          ??
+          0
         );
 
 
@@ -1190,24 +1540,25 @@ export async function POST() {
           quantity;
 
 
-        existing.warehouses.push(
-          {
-            sku:
-              skuRaw || null,
+        existing.warehouses.push({
+          sku:
+            skuRaw
+            ||
+            null,
 
-            warehouse_id:
-              warehouseIdRaw
-              || null,
+          warehouse_id:
+            warehouseIdRaw
+            ||
+            null,
 
-            warehouse_name:
-              warehouseNameRaw
-              || null,
+          warehouse_name:
+            warehouseNameRaw
+            ||
+            null,
 
-            available_stock_count:
-              quantity,
-          }
-        );
-
+          available_stock_count:
+            quantity,
+        });
 
       } else {
 
@@ -1222,22 +1573,27 @@ export async function POST() {
 
             cluster_name:
               clusterNameRaw
-              || null,
+              ||
+              null,
 
             quantity,
 
             warehouses: [
               {
                 sku:
-                  skuRaw || null,
+                  skuRaw
+                  ||
+                  null,
 
                 warehouse_id:
                   warehouseIdRaw
-                  || null,
+                  ||
+                  null,
 
                 warehouse_name:
                   warehouseNameRaw
-                  || null,
+                  ||
+                  null,
 
                 available_stock_count:
                   quantity,
@@ -1252,47 +1608,42 @@ export async function POST() {
 
 
     // ========================================================
-    // 9. ПРЕОБРАЗУЕМ В ФОРМАТ SUPABASE
+    // 9. DB ROWS
     // ========================================================
 
     const clusterRows:
       ClusterStockRow[] =
-        Array.from(
-          aggregated.values()
-        )
-          .map(
-            (
-              item
-            ) => {
+      Array.from(
+        aggregated.values()
+      )
+        .map(
+          item => ({
+            offer_id:
+              item.offer_id,
 
-              return {
-                offer_id:
-                  item.offer_id,
+            cluster_id:
+              item.cluster_id,
 
-                cluster_id:
-                  item.cluster_id,
+            cluster_name:
+              item.cluster_name,
 
-                cluster_name:
-                  item.cluster_name,
+            quantity:
+              item.quantity,
 
-                quantity:
-                  item.quantity,
+            raw_payload: {
+              source:
+                "v1/analytics/stocks",
 
-                raw_payload: {
-                  source:
-                    "v1/analytics/stocks",
-
-                  warehouses:
-                    item.warehouses,
-                },
-              };
-
-            }
-          );
+              warehouses:
+                item.warehouses,
+            },
+          })
+        );
 
 
     if (
-      clusterRows.length === 0
+      clusterRows.length ===
+      0
     ) {
 
       throw new Error(
@@ -1302,42 +1653,26 @@ export async function POST() {
     }
 
 
-    // ========================================================
-    // 10. СЧИТАЕМ УНИКАЛЬНЫЕ КЛАСТЕРЫ
-    // ========================================================
-
     const uniqueClusterIds =
       new Set(
         clusterRows.map(
-          (
-            row
-          ) =>
+          row =>
             row.cluster_id
         )
       );
 
-
-    // ========================================================
-    // 11. ДАТА СНИМКА
-    // ========================================================
 
     const snapshotDate =
       getSnapshotDate();
 
 
     // ========================================================
-    // 12. ТОЛЬКО ТЕПЕРЬ ПИШЕМ В SUPABASE
-    //
-    // ДО ЭТОГО МОМЕНТА В БАЗЕ
-    // НИЧЕГО НЕ МЕНЯЛОСЬ.
+    // 10. SAVE
     // ========================================================
 
     const saveResult =
       await supabaseRpc<
-        Record<
-          string,
-          unknown
-        >
+        Record<string, unknown>
       >(
         "save_ozon_stock_snapshot",
         {
@@ -1360,20 +1695,61 @@ export async function POST() {
 
 
     // ========================================================
-    // 13. РЕЗУЛЬТАТ
+    // 11. SUCCESS STATE
     // ========================================================
+
+    const successAt =
+      new Date()
+        .toISOString();
+
+
+    await tryUpdateSyncState({
+      last_attempt_at:
+        attemptAt,
+
+      last_success_at:
+        successAt,
+
+      next_allowed_at:
+        null,
+
+      last_http_status:
+        200,
+
+      retry_after_seconds:
+        null,
+
+      last_message:
+        "Остатки Ozon успешно синхронизированы",
+    });
+
 
     return NextResponse.json(
       {
-        ok: true,
+        ok:
+          true,
 
         message:
           "Остатки Ozon успешно синхронизированы",
 
         snapshotDate,
 
-        ozon: {
+        lastHttpStatus:
+          200,
 
+        lastAttemptAt:
+          attemptAt,
+
+        lastSuccessAt:
+          successAt,
+
+        nextAllowedAt:
+          null,
+
+        retryAfterSeconds:
+          null,
+
+        ozon: {
           reportedTotalProducts:
             expectedTotal,
 
@@ -1403,19 +1779,13 @@ export async function POST() {
           saveResult,
       },
       {
-        status: 200,
+        status:
+          200,
       }
     );
 
 
   } catch (error) {
-
-    // ========================================================
-    // ОШИБКА
-    //
-    // ЕСЛИ МЫ НЕ ДОШЛИ ДО save_ozon_stock_snapshot,
-    // НИКАКОЙ НОВЫЙ СНИМОК НЕ СОЗДАН.
-    // ========================================================
 
     console.error(
       "Ozon stock sync error:",
@@ -1423,17 +1793,115 @@ export async function POST() {
     );
 
 
+    // ========================================================
+    // RATE LIMIT
+    // ========================================================
+
+    if (
+      error instanceof
+      OzonHttpError
+      &&
+      error.status ===
+        429
+    ) {
+
+      await tryUpdateSyncState({
+        last_attempt_at:
+          attemptAt,
+
+        next_allowed_at:
+          error.nextAllowedAt,
+
+        last_http_status:
+          429,
+
+        retry_after_seconds:
+          error.retryAfterSeconds,
+
+        last_message:
+          error.nextAllowedAt
+            ? "Ozon временно ограничил обновление остатков"
+            : "Ozon ограничил обновление остатков, но не сообщил точное время сброса",
+      });
+
+
+      return NextResponse.json(
+        {
+          ok:
+            false,
+
+          blockedByRateLimit:
+            true,
+
+          message:
+            error.nextAllowedAt
+              ? "Ozon временно ограничил обновление остатков"
+              : "Ozon ограничил обновление остатков, но не сообщил точное время сброса",
+
+          error:
+            error.message,
+
+          lastHttpStatus:
+            429,
+
+          lastAttemptAt:
+            attemptAt,
+
+          nextAllowedAt:
+            error.nextAllowedAt,
+
+          retryAfterSeconds:
+            error.retryAfterSeconds,
+        },
+        {
+          status:
+            429,
+        }
+      );
+
+    }
+
+
+    const status =
+      error instanceof
+        OzonHttpError
+        ? error.status
+        : null;
+
+
+    await tryUpdateSyncState({
+      last_attempt_at:
+        attemptAt,
+
+      last_http_status:
+        status,
+
+      last_message:
+        error instanceof Error
+          ? error.message
+          : "Неизвестная ошибка синхронизации Ozon",
+    });
+
+
     return NextResponse.json(
       {
-        ok: false,
+        ok:
+          false,
 
         error:
           error instanceof Error
             ? error.message
             : "Неизвестная ошибка синхронизации Ozon",
+
+        lastHttpStatus:
+          status,
+
+        lastAttemptAt:
+          attemptAt,
       },
       {
-        status: 500,
+        status:
+          500,
       }
     );
 
