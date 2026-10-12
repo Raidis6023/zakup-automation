@@ -256,6 +256,12 @@ export default function WorkspaceShell({
     );
 
 
+  const homeHref =
+    adminMode
+      ? "/admin"
+      : "/";
+
+
   return (
 
     <div
@@ -274,15 +280,29 @@ export default function WorkspaceShell({
 
         {/* ========================================
             ЛОГОТИП
-            При нажатии возвращаемся на главную
+
+            В рабочем режиме:
+            → /
+
+            В режиме администрирования:
+            → /admin
             ======================================== */}
 
         <Link
-          href="/"
+          href={
+            homeHref
+          }
+
           className=
             "home-company-logo"
-          aria-label=
-            "Перейти на главную страницу"
+
+          aria-label={
+            adminMode
+
+              ? "Перейти на главную страницу администрирования"
+
+              : "Перейти на главную страницу"
+          }
         >
 
           <img
