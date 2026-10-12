@@ -1,0 +1,78 @@
+.notice {
+  margin:
+    0
+    0
+    18px;
+
+  padding:
+    13px
+    14px;
+
+  border:
+    1px solid
+    rgba(
+      217,
+      92,
+      92,
+      0.35
+    );
+
+  border-radius:
+    10px;
+
+  background:
+    rgba(
+      217,
+      92,
+      92,
+      0.08
+    );
+
+  color:
+    var(--text-secondary);
+
+  font-size:
+    12px;
+
+  line-height:
+    1.5;
+}
+
+
+.noticeTitle {
+  display:
+    block;
+
+  margin-bottom:
+    4px;
+
+  color:
+    #d95c5c;
+
+  font-size:
+    13px;
+
+  font-weight:
+    800;
+}
+
+
+.noticeText {
+  margin:
+    0;
+}
+
+
+.noticeNeutral {
+  border-color:
+    var(--border);
+
+  background:
+    var(--surface-soft);
+}
+
+
+.noticeNeutral .noticeTitle {
+  color:
+    var(--text);
+}
