@@ -52,6 +52,39 @@ type ApiResponse = {
 };
 
 
+const MASTER_CODE_LENGTH =
+  6;
+
+
+function normalizeMasterCode(
+  value:
+    string
+): string {
+
+  return value
+    .toUpperCase()
+    .replace(
+      /[^A-Z0-9]/g,
+      ""
+    )
+    .slice(
+      0,
+      MASTER_CODE_LENGTH
+    );
+}
+
+
+function isValidMasterCode(
+  value:
+    string
+): boolean {
+
+  return /^[A-Z0-9]{6}$/.test(
+    value
+  );
+}
+
+
 function formatDateTimeKrasnoyarsk(
   value:
     | string
@@ -193,12 +226,18 @@ export default function OzonUnlinkedProductsClient(
     value: string
   ) {
 
+    const normalizedValue =
+      normalizeMasterCode(
+        value
+      );
+
+
     setMasterCodes(
       previous => ({
         ...previous,
 
         [id]:
-          value.toUpperCase(),
+          normalizedValue,
       })
     );
 
@@ -236,24 +275,26 @@ export default function OzonUnlinkedProductsClient(
   ) {
 
     const masterCode =
-      (
+      normalizeMasterCode(
         masterCodes[
           row.id
         ]
         ?? ""
+      );
+
+
+    if (
+      !isValidMasterCode(
+        masterCode
       )
-        .trim()
-        .toUpperCase();
-
-
-    if (!masterCode) {
+    ) {
 
       setRowErrors(
         previous => ({
           ...previous,
 
           [row.id]:
-            "Введите master_code",
+            "master_code должен состоять ровно из 6 латинских букв или цифр",
         })
       );
 
@@ -592,6 +633,12 @@ export default function OzonUnlinkedProductsClient(
                     row.id;
 
 
+                  const masterCodeIsValid =
+                    isValidMasterCode(
+                      currentMasterCode
+                    );
+
+
                   const rowError =
                     rowErrors[
                       row.id
@@ -682,6 +729,8 @@ export default function OzonUnlinkedProductsClient(
                                   "Enter"
                                   &&
                                   !isBusy
+                                  &&
+                                  masterCodeIsValid
                                 ) {
 
                                   void assignMasterCode(
@@ -690,6 +739,18 @@ export default function OzonUnlinkedProductsClient(
 
                                 }
                               }
+                            }
+
+                            maxLength={
+                              MASTER_CODE_LENGTH
+                            }
+
+                            autoCapitalize="characters"
+
+                            autoComplete="off"
+
+                            spellCheck={
+                              false
                             }
 
                             placeholder=
@@ -781,8 +842,7 @@ export default function OzonUnlinkedProductsClient(
                           disabled={
                             isBusy
                             ||
-                            !currentMasterCode
-                              .trim()
+                            !masterCodeIsValid
                           }
 
                           style={{
@@ -798,8 +858,7 @@ export default function OzonUnlinkedProductsClient(
                             background:
                               isBusy
                               ||
-                              !currentMasterCode
-                                .trim()
+                              !masterCodeIsValid
                                 ? "#d0d5dd"
                                 : "#175cd3",
 
@@ -815,8 +874,7 @@ export default function OzonUnlinkedProductsClient(
                             cursor:
                               isBusy
                               ||
-                              !currentMasterCode
-                                .trim()
+                              !masterCodeIsValid
                                 ? "not-allowed"
                                 : "pointer",
 
