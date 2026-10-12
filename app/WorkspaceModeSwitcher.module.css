@@ -1,0 +1,151 @@
+.modeButton {
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 8px;
+
+  height: 36px;
+
+  padding:
+    0
+    12px;
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius: 9px;
+
+  background:
+    var(--surface-soft);
+
+  color:
+    var(--text-secondary);
+
+  font-family:
+    inherit;
+
+  font-size: 11px;
+
+  font-weight: 700;
+
+  white-space: nowrap;
+
+  cursor: pointer;
+
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+
+.modeButton:hover {
+  border-color:
+    var(--border-strong);
+
+  background:
+    var(--surface-strong);
+
+  color:
+    var(--text);
+}
+
+
+.modeButtonAdmin {
+  border-color:
+    rgba(
+      18,
+      111,
+      229,
+      0.45
+    );
+
+  background:
+    rgba(
+      18,
+      111,
+      229,
+      0.1
+    );
+
+  color:
+    #4b9df2;
+}
+
+
+.modeButtonAdmin:hover {
+  border-color:
+    rgba(
+      18,
+      111,
+      229,
+      0.7
+    );
+
+  background:
+    rgba(
+      18,
+      111,
+      229,
+      0.16
+    );
+
+  color:
+    #68adf5;
+}
+
+
+.modeIcon {
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  width: 16px;
+
+  height: 16px;
+
+  flex:
+    0 0 16px;
+}
+
+
+.modeIcon svg {
+  width: 16px;
+
+  height: 16px;
+
+  fill: none;
+
+  stroke:
+    currentColor;
+
+  stroke-width: 1.8;
+
+  stroke-linecap: round;
+
+  stroke-linejoin: round;
+}
+
+
+@media (
+  max-width: 900px
+) {
+
+  .modeLabel {
+    display: none;
+  }
+
+
+  .modeButton {
+    width: 36px;
+
+    padding: 0;
+  }
+
+}
