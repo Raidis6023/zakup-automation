@@ -7,6 +7,13 @@
   --home-blue-dark: #0f3f82;
   --home-blue-soft: #eef7ff;
 
+  /*
+   * Общая высота верхней панели.
+   * Используется и для самой панели,
+   * и для линии в левом меню.
+   */
+  --home-topbar-height: 80px;
+
   display: grid;
 
   grid-template-columns:
@@ -51,6 +58,32 @@
     var(--border);
 
   z-index: 20;
+}
+
+
+/*
+ * Продолжение линии верхней панели
+ * через левую часть сайта.
+ */
+.home-sidebar::after {
+  content: "";
+
+  position: absolute;
+
+  top:
+    calc(
+      var(--home-topbar-height) - 1px
+    );
+
+  left: 0;
+  right: 0;
+
+  height: 1px;
+
+  background:
+    var(--border);
+
+  pointer-events: none;
 }
 
 
@@ -249,7 +282,8 @@
 
   gap: 28px;
 
-  min-height: 80px;
+  min-height:
+    var(--home-topbar-height);
 
   padding:
     12px
@@ -1371,6 +1405,16 @@ html[data-theme="dark"]
     border-bottom:
       1px solid
       var(--border);
+  }
+
+
+  /*
+   * На мобильной версии сайдбар уже становится
+   * отдельным верхним блоком, поэтому дополнительную
+   * горизонтальную линию здесь отключаем.
+   */
+  .home-sidebar::after {
+    display: none;
   }
 
 
