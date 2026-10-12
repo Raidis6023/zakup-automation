@@ -21,10 +21,16 @@ type YandexPrice = {
   total?: number;
 };
 
+
 type YandexItem = {
   offerName?: string;
-  marketSku?: string | number;
+
+  marketSku?:
+    string
+    | number;
+
   shopSku?: string;
+
   count?: number;
 
   prices?: YandexPrice[] | null;
@@ -36,16 +42,26 @@ type YandexItem = {
 
   details?: unknown[] | null;
 
-  [key: string]: unknown;
+  [key: string]:
+    unknown;
 };
 
+
 type YandexOrder = {
-  id?: string | number;
+  id?:
+    string
+    | number;
+
   creationDate?: string;
+
   statusUpdateDate?: string;
+
   status?: string;
+
   partnerOrderId?: string;
+
   paymentType?: string;
+
   fake?: boolean;
 
   deliveryRegion?: {
@@ -54,13 +70,19 @@ type YandexOrder = {
   } | null;
 
   items?: YandexItem[];
-  initialItems?: YandexItem[] | null;
+
+  initialItems?:
+    YandexItem[]
+    | null;
 
   buyerType?: string;
+
   currency?: string;
 
-  [key: string]: unknown;
+  [key: string]:
+    unknown;
 };
+
 
 type YandexOrdersResponse = {
   status?: string;
@@ -79,25 +101,46 @@ type YandexOrdersResponse = {
   }>;
 };
 
+
 type YandexReturnItem = {
-  marketSku?: string | number;
+  marketSku?:
+    string
+    | number;
+
   shopSku?: string;
+
   count?: number;
+
   decisions?: unknown[] | null;
+
   instances?: unknown[] | null;
+
   tracks?: unknown[] | null;
 
-  [key: string]: unknown;
+  [key: string]:
+    unknown;
 };
 
+
 type YandexReturn = {
-  id?: string | number;
-  orderId?: string | number;
+  id?:
+    string
+    | number;
+
+  orderId?:
+    string
+    | number;
+
   creationDate?: string;
+
   updateDate?: string;
+
   refundStatus?: string;
+
   shipmentRecipientType?: string;
+
   shipmentStatus?: string;
+
   refundAmount?: number;
 
   amount?: {
@@ -108,10 +151,13 @@ type YandexReturn = {
   items?: YandexReturnItem[];
 
   returnType?: string;
+
   fastReturn?: boolean;
 
-  [key: string]: unknown;
+  [key: string]:
+    unknown;
 };
+
 
 type YandexReturnsResponse = {
   status?: string;
@@ -130,11 +176,13 @@ type YandexReturnsResponse = {
   }>;
 };
 
+
 type YandexProductRow = {
   id: number;
   offer_id: string;
   master_code: string | null;
 };
+
 
 type ProductRow = {
   id: string;
@@ -142,35 +190,74 @@ type ProductRow = {
   master_code: string | null;
 };
 
+
+type ExistingOrderRow = {
+  order_id: string;
+};
+
+
 type PreparedData = {
   campaignId: string;
+
   supabaseUrl: string;
+
   supabaseSecretKey: string;
 
   dateFrom: string;
+
   dateTo: string;
 
   ordersPages: number;
+
   returnsPages: number;
 
-  orders: YandexOrder[];
+  windowOrders: YandexOrder[];
+
+  parentOrders: YandexOrder[];
+
+  allOrders: YandexOrder[];
+
   returns: YandexReturn[];
 
-  yandexProductByOffer: Map<string, YandexProductRow>;
-  productByOffer: Map<string, ProductRow>;
+  parentOrdersRequested: number;
 
-  shopSkus: Set<string>;
+  parentOrdersStillMissing: string[];
+
+  yandexProductByOffer:
+    Map<
+      string,
+      YandexProductRow
+    >;
+
+  productByOffer:
+    Map<
+      string,
+      ProductRow
+    >;
+
+  shopSkus:
+    Set<string>;
 
   missingShopSkuLines: number;
-  missingYandexProductSkus: string[];
-  unlinkedYandexProductSkus: string[];
-  missingProductRowSkus: string[];
-  productWithoutMasterCodeSkus: string[];
-  masterCodeConflictSkus: Array<{
-    shop_sku: string;
-    yandex_master_code: string;
-    product_master_code: string;
-  }>;
+
+  missingYandexProductSkus:
+    string[];
+
+  unlinkedYandexProductSkus:
+    string[];
+
+  missingProductRowSkus:
+    string[];
+
+  productWithoutMasterCodeSkus:
+    string[];
+
+  masterCodeConflictSkus:
+    Array<{
+      shop_sku: string;
+      yandex_master_code: string;
+      product_master_code: string;
+    }>;
 };
 
 
@@ -179,33 +266,63 @@ type PreparedData = {
 // ============================================================
 
 function getConfig() {
+
   const yandexApiKey =
-    process.env.YANDEX_API_KEY?.trim();
+    process.env
+      .YANDEX_API_KEY
+      ?.trim();
+
 
   const campaignId =
-    process.env.YANDEX_CAMPAIGN_ID?.trim();
+    process.env
+      .YANDEX_CAMPAIGN_ID
+      ?.trim();
+
 
   const supabaseUrl =
-    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+    process.env
+      .NEXT_PUBLIC_SUPABASE_URL
+      ?.trim()
     ||
-    process.env.SUPABASE_URL?.trim();
+    process.env
+      .SUPABASE_URL
+      ?.trim();
+
 
   const supabaseSecretKey =
-    process.env.SUPABASE_SECRET_KEY?.trim()
+    process.env
+      .SUPABASE_SECRET_KEY
+      ?.trim()
     ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+    process.env
+      .SUPABASE_SERVICE_ROLE_KEY
+      ?.trim();
+
 
   if (!yandexApiKey) {
-    throw new Error("Не найдена YANDEX_API_KEY");
+    throw new Error(
+      "Не найдена YANDEX_API_KEY"
+    );
   }
+
 
   if (!campaignId) {
-    throw new Error("Не найдена YANDEX_CAMPAIGN_ID");
+    throw new Error(
+      "Не найдена YANDEX_CAMPAIGN_ID"
+    );
   }
 
-  if (!/^\d+$/.test(campaignId)) {
-    throw new Error("YANDEX_CAMPAIGN_ID должен быть числом");
+
+  if (
+    !/^\d+$/.test(
+      campaignId
+    )
+  ) {
+    throw new Error(
+      "YANDEX_CAMPAIGN_ID должен быть числом"
+    );
   }
+
 
   if (!supabaseUrl) {
     throw new Error(
@@ -213,11 +330,13 @@ function getConfig() {
     );
   }
 
+
   if (!supabaseSecretKey) {
     throw new Error(
       "Не найдена SUPABASE_SECRET_KEY или SUPABASE_SERVICE_ROLE_KEY"
     );
   }
+
 
   return {
     yandexApiKey,
@@ -225,6 +344,7 @@ function getConfig() {
     supabaseUrl,
     supabaseSecretKey,
   };
+
 }
 
 
@@ -232,48 +352,79 @@ function getConfig() {
 // DATE
 // ============================================================
 
-function getKrasnoyarskDate(): string {
+function getKrasnoyarskDate():
+string {
+
   const parts =
     new Intl.DateTimeFormat(
       "en-CA",
       {
-        timeZone: "Asia/Krasnoyarsk",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
+        timeZone:
+          "Asia/Krasnoyarsk",
+
+        year:
+          "numeric",
+
+        month:
+          "2-digit",
+
+        day:
+          "2-digit",
       }
     )
-      .formatToParts(new Date());
+      .formatToParts(
+        new Date()
+      );
+
 
   const year =
     parts.find(
-      part => part.type === "year"
+      part =>
+        part.type ===
+        "year"
     )?.value;
+
 
   const month =
     parts.find(
-      part => part.type === "month"
+      part =>
+        part.type ===
+        "month"
     )?.value;
+
 
   const day =
     parts.find(
-      part => part.type === "day"
+      part =>
+        part.type ===
+        "day"
     )?.value;
 
-  if (!year || !month || !day) {
+
+  if (
+    !year
+    ||
+    !month
+    ||
+    !day
+  ) {
     throw new Error(
       "Не удалось определить дату по Красноярску"
     );
   }
 
+
   return `${year}-${month}-${day}`;
+
 }
 
 
 function shiftDate(
   dateString: string,
   days: number
-): string {
+):
+string {
+
   const [
     year,
     month,
@@ -282,6 +433,7 @@ function shiftDate(
     dateString
       .split("-")
       .map(Number);
+
 
   const date =
     new Date(
@@ -292,38 +444,49 @@ function shiftDate(
       )
     );
 
+
   date.setUTCDate(
-    date.getUTCDate() + days
+    date.getUTCDate()
+    +
+    days
   );
+
 
   return date
     .toISOString()
-    .slice(0, 10);
+    .slice(
+      0,
+      10
+    );
+
 }
 
 
 // ============================================================
 // JSON
-// Защищаем длинные marketSku.
 // ============================================================
 
 function parseYandexJson<T>(
   text: string
-): T {
+):
+T {
+
   const safeText =
     text.replace(
       /"marketSku"\s*:\s*(\d+)/g,
       '"marketSku":"$1"'
     );
 
+
   return JSON.parse(
     safeText
   ) as T;
+
 }
 
 
 // ============================================================
-// FETCH ORDERS
+// FETCH ORDERS BY DATE
 // ============================================================
 
 async function fetchOrders(
@@ -332,25 +495,45 @@ async function fetchOrders(
   dateFrom: string,
   dateTo: string
 ) {
-  const orders: YandexOrder[] = [];
 
-  let pageToken: string | null = null;
-  let pages = 0;
+  const orders:
+    YandexOrder[] =
+    [];
 
-  const MAX_PAGES = 100;
 
-  while (pages < MAX_PAGES) {
-    pages += 1;
+  let pageToken:
+    string | null =
+    null;
+
+
+  let pages =
+    0;
+
+
+  const MAX_PAGES =
+    100;
+
+
+  while (
+    pages <
+    MAX_PAGES
+  ) {
+
+    pages +=
+      1;
+
 
     const url =
       new URL(
         `https://api.partner.market.yandex.ru/v2/campaigns/${campaignId}/stats/orders`
       );
 
+
     url.searchParams.set(
       "limit",
       "200"
     );
+
 
     if (pageToken) {
       url.searchParams.set(
@@ -359,16 +542,23 @@ async function fetchOrders(
       );
     }
 
+
     const response =
       await fetch(
         url.toString(),
         {
-          method: "POST",
+          method:
+            "POST",
 
           headers: {
-            "Api-Key": apiKey,
-            "Content-Type": "application/json",
-            Accept: "application/json",
+            "Api-Key":
+              apiKey,
+
+            "Content-Type":
+              "application/json",
+
+            Accept:
+              "application/json",
           },
 
           body:
@@ -377,35 +567,56 @@ async function fetchOrders(
               dateTo,
             }),
 
-          cache: "no-store",
+          cache:
+            "no-store",
         }
       );
+
 
     const text =
       await response.text();
 
-    let data: YandexOrdersResponse;
+
+    let data:
+      YandexOrdersResponse;
+
 
     try {
+
       data =
-        parseYandexJson<YandexOrdersResponse>(
+        parseYandexJson<
+          YandexOrdersResponse
+        >(
           text
         );
+
     } catch {
+
       throw new Error(
         `Некорректный JSON stats/orders, страница ${pages}: ${text}`
       );
+
     }
 
+
     if (!response.ok) {
+
       throw new Error(
         `Yandex stats/orders HTTP ${response.status}: ${text}`
       );
+
     }
 
+
     orders.push(
-      ...(data.result?.orders ?? [])
+      ...(
+        data.result
+          ?.orders
+        ??
+        []
+      )
     );
+
 
     const nextPageToken =
       data.result
@@ -415,35 +626,280 @@ async function fetchOrders(
       ??
       "";
 
+
     if (!nextPageToken) {
-      pageToken = null;
+
+      pageToken =
+        null;
+
       break;
+
     }
 
-    if (nextPageToken === pageToken) {
+
+    if (
+      nextPageToken ===
+      pageToken
+    ) {
+
       throw new Error(
         "stats/orders повторно вернул тот же nextPageToken"
       );
+
     }
+
 
     pageToken =
       nextPageToken;
+
   }
 
+
   if (
-    pages >= MAX_PAGES
+    pages >=
+      MAX_PAGES
     &&
     pageToken
   ) {
+
     throw new Error(
       "Достигнут лимит страниц stats/orders"
     );
+
   }
+
 
   return {
     pages,
     orders,
   };
+
+}
+
+
+// ============================================================
+// FETCH ORDERS BY IDS
+// ============================================================
+
+async function fetchOrdersByIds(
+  apiKey: string,
+  campaignId: string,
+  orderIds: string[]
+) {
+
+  if (
+    orderIds.length ===
+    0
+  ) {
+
+    return {
+      requests:
+        0,
+
+      orders:
+        [] as YandexOrder[],
+    };
+
+  }
+
+
+  const result:
+    YandexOrder[] =
+    [];
+
+
+  const chunkSize =
+    200;
+
+
+  let requests =
+    0;
+
+
+  for (
+    let index =
+      0;
+
+    index <
+      orderIds.length;
+
+    index +=
+      chunkSize
+  ) {
+
+    const chunk =
+      orderIds.slice(
+        index,
+        index +
+          chunkSize
+      );
+
+
+    const numericIds =
+      chunk.map(
+        value => {
+
+          const number =
+            Number(
+              value
+            );
+
+
+          if (
+            !Number.isSafeInteger(
+              number
+            )
+          ) {
+
+            throw new Error(
+              `Некорректный order_id: ${value}`
+            );
+
+          }
+
+
+          return number;
+
+        }
+      );
+
+
+    let pageToken:
+      string | null =
+      null;
+
+
+    do {
+
+      requests +=
+        1;
+
+
+      const url =
+        new URL(
+          `https://api.partner.market.yandex.ru/v2/campaigns/${campaignId}/stats/orders`
+        );
+
+
+      url.searchParams.set(
+        "limit",
+        "200"
+      );
+
+
+      if (pageToken) {
+
+        url.searchParams.set(
+          "pageToken",
+          pageToken
+        );
+
+      }
+
+
+      const response =
+        await fetch(
+          url.toString(),
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Api-Key":
+                apiKey,
+
+              "Content-Type":
+                "application/json",
+
+              Accept:
+                "application/json",
+            },
+
+            body:
+              JSON.stringify({
+                orders:
+                  numericIds,
+              }),
+
+            cache:
+              "no-store",
+          }
+        );
+
+
+      const text =
+        await response.text();
+
+
+      let data:
+        YandexOrdersResponse;
+
+
+      try {
+
+        data =
+          parseYandexJson<
+            YandexOrdersResponse
+          >(
+            text
+          );
+
+      } catch {
+
+        throw new Error(
+          `Некорректный JSON родительских заказов: ${text}`
+        );
+
+      }
+
+
+      if (!response.ok) {
+
+        throw new Error(
+          `Yandex parent orders HTTP ${response.status}: ${text}`
+        );
+
+      }
+
+
+      result.push(
+        ...(
+          data.result
+            ?.orders
+          ??
+          []
+        )
+      );
+
+
+      const next =
+        data.result
+          ?.paging
+          ?.nextPageToken
+          ?.trim()
+        ??
+        "";
+
+
+      pageToken =
+        next
+        ||
+        null;
+
+
+    } while (
+      pageToken
+    );
+
+  }
+
+
+  return {
+    requests,
+    orders:
+      result,
+  };
+
 }
 
 
@@ -457,83 +913,133 @@ async function fetchReturns(
   dateFrom: string,
   dateTo: string
 ) {
-  const returns: YandexReturn[] = [];
 
-  let pageToken: string | null = null;
-  let pages = 0;
+  const returns:
+    YandexReturn[] =
+    [];
 
-  const MAX_PAGES = 100;
 
-  while (pages < MAX_PAGES) {
-    pages += 1;
+  let pageToken:
+    string | null =
+    null;
+
+
+  let pages =
+    0;
+
+
+  const MAX_PAGES =
+    100;
+
+
+  while (
+    pages <
+    MAX_PAGES
+  ) {
+
+    pages +=
+      1;
+
 
     const url =
       new URL(
         `https://api.partner.market.yandex.ru/v2/campaigns/${campaignId}/returns`
       );
 
+
     url.searchParams.set(
       "fromDate",
       dateFrom
     );
+
 
     url.searchParams.set(
       "toDate",
       dateTo
     );
 
+
     url.searchParams.set(
       "limit",
       "100"
     );
 
+
     if (pageToken) {
+
       url.searchParams.set(
         "pageToken",
         pageToken
       );
+
     }
+
 
     const response =
       await fetch(
         url.toString(),
         {
-          method: "GET",
+          method:
+            "GET",
 
           headers: {
-            "Api-Key": apiKey,
-            Accept: "application/json",
+            "Api-Key":
+              apiKey,
+
+            Accept:
+              "application/json",
           },
 
-          cache: "no-store",
+          cache:
+            "no-store",
         }
       );
+
 
     const text =
       await response.text();
 
-    let data: YandexReturnsResponse;
+
+    let data:
+      YandexReturnsResponse;
+
 
     try {
+
       data =
-        parseYandexJson<YandexReturnsResponse>(
+        parseYandexJson<
+          YandexReturnsResponse
+        >(
           text
         );
+
     } catch {
+
       throw new Error(
         `Некорректный JSON returns, страница ${pages}: ${text}`
       );
+
     }
 
+
     if (!response.ok) {
+
       throw new Error(
         `Yandex returns HTTP ${response.status}: ${text}`
       );
+
     }
 
+
     returns.push(
-      ...(data.result?.returns ?? [])
+      ...(
+        data.result
+          ?.returns
+        ??
+        []
+      )
     );
+
 
     const nextPageToken =
       data.result
@@ -543,35 +1049,54 @@ async function fetchReturns(
       ??
       "";
 
+
     if (!nextPageToken) {
-      pageToken = null;
+
+      pageToken =
+        null;
+
       break;
+
     }
 
-    if (nextPageToken === pageToken) {
+
+    if (
+      nextPageToken ===
+      pageToken
+    ) {
+
       throw new Error(
         "returns повторно вернул тот же nextPageToken"
       );
+
     }
+
 
     pageToken =
       nextPageToken;
+
   }
 
+
   if (
-    pages >= MAX_PAGES
+    pages >=
+      MAX_PAGES
     &&
     pageToken
   ) {
+
     throw new Error(
       "Достигнут лимит страниц returns"
     );
+
   }
+
 
   return {
     pages,
     returns,
   };
+
 }
 
 
@@ -582,15 +1107,21 @@ async function fetchReturns(
 function getSupabaseHeaders(
   secretKey: string
 ) {
+
   return {
-    apikey: secretKey,
+    apikey:
+      secretKey,
+
     Authorization:
       `Bearer ${secretKey}`,
+
     "Content-Type":
       "application/json",
+
     Accept:
       "application/json",
   };
+
 }
 
 
@@ -599,76 +1130,112 @@ async function fetchAllSupabaseRows<T>(
   secretKey: string,
   table: string,
   select: string
-): Promise<T[]> {
-  const result: T[] = [];
+):
+Promise<T[]> {
 
-  const pageSize = 1000;
+  const result:
+    T[] =
+    [];
 
-  let offset = 0;
+
+  const pageSize =
+    1000;
+
+
+  let offset =
+    0;
+
 
   while (true) {
+
     const url =
       new URL(
         `${baseUrl}/rest/v1/${table}`
       );
+
 
     url.searchParams.set(
       "select",
       select
     );
 
+
     url.searchParams.set(
       "limit",
-      String(pageSize)
+      String(
+        pageSize
+      )
     );
+
 
     url.searchParams.set(
       "offset",
-      String(offset)
+      String(
+        offset
+      )
     );
+
 
     const response =
       await fetch(
         url.toString(),
         {
-          method: "GET",
+          method:
+            "GET",
+
           headers:
             getSupabaseHeaders(
               secretKey
             ),
-          cache: "no-store",
+
+          cache:
+            "no-store",
         }
       );
+
 
     const text =
       await response.text();
 
+
     if (!response.ok) {
+
       throw new Error(
         `Supabase ${table}: HTTP ${response.status}: ${text}`
       );
+
     }
 
+
     const rows =
-      JSON.parse(text) as T[];
+      JSON.parse(
+        text
+      ) as T[];
+
 
     result.push(
       ...rows
     );
 
+
     if (
-      rows.length
-      <
+      rows.length <
       pageSize
     ) {
+
       break;
+
     }
+
 
     offset +=
       pageSize;
+
   }
 
+
   return result;
+
 }
 
 
@@ -678,6 +1245,7 @@ async function fetchAllSupabaseRows<T>(
 
 async function prepareData():
 Promise<PreparedData> {
+
   const {
     yandexApiKey,
     campaignId,
@@ -686,8 +1254,10 @@ Promise<PreparedData> {
   } =
     getConfig();
 
+
   const dateTo =
     getKrasnoyarskDate();
+
 
   const dateFrom =
     shiftDate(
@@ -695,41 +1265,234 @@ Promise<PreparedData> {
       -13
     );
 
+
   const [
     ordersResult,
     returnsResult,
     yandexProducts,
     products,
+    existingOrders,
   ] =
-    await Promise.all([
-      fetchOrders(
-        yandexApiKey,
-        campaignId,
-        dateFrom,
-        dateTo
-      ),
+    await Promise.all(
+      [
+        fetchOrders(
+          yandexApiKey,
+          campaignId,
+          dateFrom,
+          dateTo
+        ),
 
-      fetchReturns(
-        yandexApiKey,
-        campaignId,
-        dateFrom,
-        dateTo
-      ),
+        fetchReturns(
+          yandexApiKey,
+          campaignId,
+          dateFrom,
+          dateTo
+        ),
 
-      fetchAllSupabaseRows<YandexProductRow>(
-        supabaseUrl,
-        supabaseSecretKey,
-        "yandex_products",
-        "id,offer_id,master_code"
-      ),
+        fetchAllSupabaseRows<
+          YandexProductRow
+        >(
+          supabaseUrl,
+          supabaseSecretKey,
+          "yandex_products",
+          "id,offer_id,master_code"
+        ),
 
-      fetchAllSupabaseRows<ProductRow>(
-        supabaseUrl,
-        supabaseSecretKey,
-        "products",
-        "id,offer_id,master_code"
-      ),
-    ]);
+        fetchAllSupabaseRows<
+          ProductRow
+        >(
+          supabaseUrl,
+          supabaseSecretKey,
+          "products",
+          "id,offer_id,master_code"
+        ),
+
+        fetchAllSupabaseRows<
+          ExistingOrderRow
+        >(
+          supabaseUrl,
+          supabaseSecretKey,
+          "yandex_orders",
+          "order_id"
+        ),
+      ]
+    );
+
+
+  // ==========================================================
+  // Какие order_id уже известны:
+  // - лежат в БД
+  // - либо пришли прямо сейчас в 14-дневном окне
+  // ==========================================================
+
+  const knownOrderIds =
+    new Set<string>();
+
+
+  for (
+    const row
+    of existingOrders
+  ) {
+
+    knownOrderIds.add(
+      row.order_id
+    );
+
+  }
+
+
+  for (
+    const order
+    of ordersResult.orders
+  ) {
+
+    const orderId =
+      String(
+        order.id
+        ??
+        ""
+      ).trim();
+
+
+    if (orderId) {
+
+      knownOrderIds.add(
+        orderId
+      );
+
+    }
+
+  }
+
+
+  // ==========================================================
+  // Собираем parent order IDs из returns
+  // ==========================================================
+
+  const missingParentIdsSet =
+    new Set<string>();
+
+
+  for (
+    const row
+    of returnsResult.returns
+  ) {
+
+    const orderId =
+      String(
+        row.orderId
+        ??
+        ""
+      ).trim();
+
+
+    if (
+      orderId
+      &&
+      !knownOrderIds.has(
+        orderId
+      )
+    ) {
+
+      missingParentIdsSet.add(
+        orderId
+      );
+
+    }
+
+  }
+
+
+  const missingParentIds =
+    Array.from(
+      missingParentIdsSet
+    )
+      .sort();
+
+
+  const parentResult =
+    await fetchOrdersByIds(
+      yandexApiKey,
+      campaignId,
+      missingParentIds
+    );
+
+
+  const receivedParentIds =
+    new Set(
+      parentResult.orders
+        .map(
+          order =>
+            String(
+              order.id
+              ??
+              ""
+            ).trim()
+        )
+        .filter(
+          Boolean
+        )
+    );
+
+
+  const parentOrdersStillMissing =
+    missingParentIds
+      .filter(
+        id =>
+          !receivedParentIds.has(
+            id
+          )
+      );
+
+
+  // ==========================================================
+  // Убираем возможный дубль order_id
+  // ==========================================================
+
+  const allOrderMap =
+    new Map<
+      string,
+      YandexOrder
+    >();
+
+
+  for (
+    const order
+    of [
+      ...ordersResult.orders,
+      ...parentResult.orders,
+    ]
+  ) {
+
+    const orderId =
+      String(
+        order.id
+        ??
+        ""
+      ).trim();
+
+
+    if (orderId) {
+
+      allOrderMap.set(
+        orderId,
+        order
+      );
+
+    }
+
+  }
+
+
+  const allOrders =
+    Array.from(
+      allOrderMap.values()
+    );
+
+
+  // ==========================================================
+  // PRODUCT MAPS
+  // ==========================================================
 
   const yandexProductByOffer =
     new Map<
@@ -737,15 +1500,19 @@ Promise<PreparedData> {
       YandexProductRow
     >();
 
+
   for (
     const row
     of yandexProducts
   ) {
+
     yandexProductByOffer.set(
       row.offer_id,
       row
     );
+
   }
+
 
   const productByOffer =
     new Map<
@@ -753,20 +1520,31 @@ Promise<PreparedData> {
       ProductRow
     >();
 
+
   for (
     const row
     of products
   ) {
+
     productByOffer.set(
       row.offer_id,
       row
     );
+
   }
+
+
+  // ==========================================================
+  // PREFLIGHT ITEMS
+  // ==========================================================
 
   const shopSkus =
     new Set<string>();
 
-  let missingShopSkuLines = 0;
+
+  let missingShopSkuLines =
+    0;
+
 
   function registerItem(
     item:
@@ -774,6 +1552,7 @@ Promise<PreparedData> {
       |
       YandexReturnItem
   ) {
+
     const shopSku =
       String(
         item.shopSku
@@ -781,59 +1560,95 @@ Promise<PreparedData> {
         ""
       ).trim();
 
+
     if (!shopSku) {
-      missingShopSkuLines += 1;
+
+      missingShopSkuLines +=
+        1;
+
       return;
+
     }
+
 
     shopSkus.add(
       shopSku
     );
+
   }
+
 
   for (
     const order
-    of ordersResult.orders
+    of allOrders
   ) {
+
     for (
       const item
       of order.items
       ??
       []
     ) {
+
       if (
         item.offerName ===
         "Доставка"
       ) {
+
         continue;
+
       }
+
 
       registerItem(
         item
       );
+
     }
+
   }
+
 
   for (
     const row
     of returnsResult.returns
   ) {
+
     for (
       const item
       of row.items
       ??
       []
     ) {
+
       registerItem(
         item
       );
+
     }
+
   }
 
-  const missingYandexProductSkus: string[] = [];
-  const unlinkedYandexProductSkus: string[] = [];
-  const missingProductRowSkus: string[] = [];
-  const productWithoutMasterCodeSkus: string[] = [];
+
+  const missingYandexProductSkus:
+    string[] =
+    [];
+
+
+  const unlinkedYandexProductSkus:
+    string[] =
+    [];
+
+
+  const missingProductRowSkus:
+    string[] =
+    [];
+
+
+  const productWithoutMasterCodeSkus:
+    string[] =
+    [];
+
 
   const masterCodeConflictSkus:
     Array<{
@@ -843,22 +1658,28 @@ Promise<PreparedData> {
     }> =
     [];
 
+
   for (
     const shopSku
     of shopSkus
   ) {
+
     const yp =
       yandexProductByOffer.get(
         shopSku
       );
 
+
     if (!yp) {
+
       missingYandexProductSkus.push(
         shopSku
       );
 
       continue;
+
     }
+
 
     const yandexMaster =
       yp.master_code
@@ -866,26 +1687,34 @@ Promise<PreparedData> {
       ||
       "";
 
+
     if (!yandexMaster) {
+
       unlinkedYandexProductSkus.push(
         shopSku
       );
 
       continue;
+
     }
+
 
     const product =
       productByOffer.get(
         shopSku
       );
 
+
     if (!product) {
+
       missingProductRowSkus.push(
         shopSku
       );
 
       continue;
+
     }
+
 
     const productMaster =
       product.master_code
@@ -893,36 +1722,50 @@ Promise<PreparedData> {
       ||
       "";
 
+
     if (!productMaster) {
+
       productWithoutMasterCodeSkus.push(
         shopSku
       );
 
       continue;
+
     }
+
 
     if (
       productMaster
       !==
       yandexMaster
     ) {
-      masterCodeConflictSkus.push({
-        shop_sku:
-          shopSku,
 
-        yandex_master_code:
-          yandexMaster,
+      masterCodeConflictSkus.push(
+        {
+          shop_sku:
+            shopSku,
 
-        product_master_code:
-          productMaster,
-      });
+          yandex_master_code:
+            yandexMaster,
+
+          product_master_code:
+            productMaster,
+        }
+      );
+
     }
+
   }
 
+
   missingYandexProductSkus.sort();
+
   unlinkedYandexProductSkus.sort();
+
   missingProductRowSkus.sort();
+
   productWithoutMasterCodeSkus.sort();
+
 
   masterCodeConflictSkus.sort(
     (
@@ -933,6 +1776,7 @@ Promise<PreparedData> {
         b.shop_sku
       )
   );
+
 
   return {
     campaignId,
@@ -948,11 +1792,21 @@ Promise<PreparedData> {
     returnsPages:
       returnsResult.pages,
 
-    orders:
+    windowOrders:
       ordersResult.orders,
+
+    parentOrders:
+      parentResult.orders,
+
+    allOrders,
 
     returns:
       returnsResult.returns,
+
+    parentOrdersRequested:
+      missingParentIds.length,
+
+    parentOrdersStillMissing,
 
     yandexProductByOffer,
     productByOffer,
@@ -966,6 +1820,7 @@ Promise<PreparedData> {
     productWithoutMasterCodeSkus,
     masterCodeConflictSkus,
   };
+
 }
 
 
@@ -976,19 +1831,30 @@ Promise<PreparedData> {
 function hasPreflightErrors(
   data: PreparedData
 ) {
+
   return (
-    data.missingShopSkuLines > 0
+    data.parentOrdersStillMissing.length >
+      0
     ||
-    data.missingYandexProductSkus.length > 0
+    data.missingShopSkuLines >
+      0
     ||
-    data.unlinkedYandexProductSkus.length > 0
+    data.missingYandexProductSkus.length >
+      0
     ||
-    data.missingProductRowSkus.length > 0
+    data.unlinkedYandexProductSkus.length >
+      0
     ||
-    data.productWithoutMasterCodeSkus.length > 0
+    data.missingProductRowSkus.length >
+      0
     ||
-    data.masterCodeConflictSkus.length > 0
+    data.productWithoutMasterCodeSkus.length >
+      0
+    ||
+    data.masterCodeConflictSkus.length >
+      0
   );
+
 }
 
 
@@ -1007,6 +1873,7 @@ function makeKey(
     undefined
   >
 ) {
+
   return createHash(
     "sha256"
   )
@@ -1020,9 +1887,14 @@ function makeKey(
               ""
             )
         )
-        .join("\u001f")
+        .join(
+          "\u001f"
+        )
     )
-    .digest("hex");
+    .digest(
+      "hex"
+    );
+
 }
 
 
@@ -1031,6 +1903,7 @@ function getPrice(
   type: string
 ):
 number | null {
+
   const price =
     item.prices
       ?.find(
@@ -1040,10 +1913,12 @@ number | null {
       )
       ?.costPerItem;
 
+
   return typeof price ===
     "number"
     ? price
     : null;
+
 }
 
 
@@ -1056,11 +1931,13 @@ function normalizeId(
     undefined
 ):
 string {
+
   return String(
     value
     ??
     ""
   ).trim();
+
 }
 
 
@@ -1072,9 +1949,11 @@ function buildOrderRows(
   data: PreparedData,
   syncRunId: string
 ) {
+
   const now =
     new Date()
       .toISOString();
+
 
   const orders:
     Record<
@@ -1082,6 +1961,7 @@ function buildOrderRows(
       unknown
     >[] =
     [];
+
 
   const itemMap =
     new Map<
@@ -1092,20 +1972,26 @@ function buildOrderRows(
       >
     >();
 
+
   for (
     const order
-    of data.orders
+    of data.allOrders
   ) {
+
     const orderId =
       normalizeId(
         order.id
       );
 
+
     if (!orderId) {
+
       throw new Error(
         "Получен заказ без id"
       );
+
     }
+
 
     const creationDate =
       String(
@@ -1117,79 +2003,86 @@ function buildOrderRows(
         10
       );
 
+
     if (
       !/^\d{4}-\d{2}-\d{2}$/
         .test(
           creationDate
         )
     ) {
+
       throw new Error(
         `У заказа ${orderId} нет корректной creationDate`
       );
+
     }
 
-    orders.push({
-      order_id:
-        orderId,
 
-      last_sync_run_id:
-        syncRunId,
+    orders.push(
+      {
+        order_id:
+          orderId,
 
-      creation_date:
-        creationDate,
+        last_sync_run_id:
+          syncRunId,
 
-      status_update_at:
-        order.statusUpdateDate
-        ??
-        null,
+        creation_date:
+          creationDate,
 
-      status:
-        order.status
-        ??
-        "UNKNOWN",
+        status_update_at:
+          order.statusUpdateDate
+          ??
+          null,
 
-      partner_order_id:
-        order.partnerOrderId
-        ??
-        null,
+        status:
+          order.status
+          ??
+          "UNKNOWN",
 
-      payment_type:
-        order.paymentType
-        ??
-        null,
+        partner_order_id:
+          order.partnerOrderId
+          ??
+          null,
 
-      fake:
-        order.fake ===
-        true,
+        payment_type:
+          order.paymentType
+          ??
+          null,
 
-      delivery_region_id:
-        order.deliveryRegion
-          ?.id
-        ??
-        null,
+        fake:
+          order.fake ===
+          true,
 
-      delivery_region_name:
-        order.deliveryRegion
-          ?.name
-        ??
-        null,
+        delivery_region_id:
+          order.deliveryRegion
+            ?.id
+          ??
+          null,
 
-      buyer_type:
-        order.buyerType
-        ??
-        null,
+        delivery_region_name:
+          order.deliveryRegion
+            ?.name
+          ??
+          null,
 
-      currency:
-        order.currency
-        ??
-        null,
+        buyer_type:
+          order.buyerType
+          ??
+          null,
 
-      raw_payload:
-        order,
+        currency:
+          order.currency
+          ??
+          null,
 
-      updated_at:
-        now,
-    });
+        raw_payload:
+          order,
+
+        updated_at:
+          now,
+      }
+    );
+
 
     for (
       const item
@@ -1197,12 +2090,16 @@ function buildOrderRows(
       ??
       []
     ) {
+
       if (
         item.offerName ===
         "Доставка"
       ) {
+
         continue;
+
       }
+
 
       const shopSku =
         String(
@@ -1211,11 +2108,15 @@ function buildOrderRows(
           ""
         ).trim();
 
+
       if (!shopSku) {
+
         throw new Error(
           `У заказа ${orderId} есть товар без shopSku`
         );
+
       }
+
 
       const yp =
         data
@@ -1224,12 +2125,14 @@ function buildOrderRows(
             shopSku
           );
 
+
       const product =
         data
           .productByOffer
           .get(
             shopSku
           );
+
 
       if (
         !yp
@@ -1238,10 +2141,13 @@ function buildOrderRows(
         ||
         !yp.master_code
       ) {
+
         throw new Error(
           `Не удалось сопоставить ${shopSku}`
         );
+
       }
+
 
       const marketSku =
         String(
@@ -1250,12 +2156,14 @@ function buildOrderRows(
           ""
         ).trim();
 
+
       const warehouseId =
         typeof item.warehouse
           ?.id ===
           "number"
-          ? item.warehouse.id
-          : null;
+        ? item.warehouse.id
+        : null;
+
 
       const marketplacePrice =
         getPrice(
@@ -1263,11 +2171,13 @@ function buildOrderRows(
           "MARKETPLACE"
         );
 
+
       const buyerPrice =
         getPrice(
           item,
           "BUYER"
         );
+
 
       const cashback =
         getPrice(
@@ -1275,24 +2185,30 @@ function buildOrderRows(
           "CASHBACK"
         );
 
+
       const itemKey =
-        makeKey([
-          orderId,
-          shopSku,
-          marketSku,
-          warehouseId,
-          item.offerName,
-          marketplacePrice,
-          buyerPrice,
-          cashback,
-        ]);
+        makeKey(
+          [
+            orderId,
+            shopSku,
+            marketSku,
+            warehouseId,
+            item.offerName,
+            marketplacePrice,
+            buyerPrice,
+            cashback,
+          ]
+        );
+
 
       const existing =
         itemMap.get(
           itemKey
         );
 
+
       if (existing) {
+
         existing.quantity =
           Number(
             existing.quantity
@@ -1306,14 +2222,18 @@ function buildOrderRows(
             0
           );
 
+
         existing.raw_payload
           .source_items
           .push(
             item
           );
 
+
         continue;
+
       }
+
 
       itemMap.set(
         itemKey,
@@ -1388,16 +2308,21 @@ function buildOrderRows(
             now,
         }
       );
+
     }
+
   }
+
 
   return {
     orders,
+
     items:
       Array.from(
         itemMap.values()
       ),
   };
+
 }
 
 
@@ -1409,9 +2334,11 @@ function buildReturnRows(
   data: PreparedData,
   syncRunId: string
 ) {
+
   const now =
     new Date()
       .toISOString();
+
 
   const returns:
     Record<
@@ -1419,6 +2346,7 @@ function buildReturnRows(
       unknown
     >[] =
     [];
+
 
   const itemMap =
     new Map<
@@ -1429,20 +2357,26 @@ function buildReturnRows(
       >
     >();
 
+
   for (
     const row
     of data.returns
   ) {
+
     const returnId =
       normalizeId(
         row.id
       );
 
+
     if (!returnId) {
+
       throw new Error(
         "Получен возврат без id"
       );
+
     }
+
 
     const orderId =
       normalizeId(
@@ -1451,77 +2385,81 @@ function buildReturnRows(
       ||
       null;
 
-    returns.push({
-      return_id:
-        returnId,
 
-      order_id:
-        orderId,
+    returns.push(
+      {
+        return_id:
+          returnId,
 
-      last_sync_run_id:
-        syncRunId,
+        order_id:
+          orderId,
 
-      creation_at:
-        row.creationDate
-        ??
-        null,
+        last_sync_run_id:
+          syncRunId,
 
-      update_at:
-        row.updateDate
-        ??
-        null,
+        creation_at:
+          row.creationDate
+          ??
+          null,
 
-      return_type:
-        row.returnType
-        ??
-        "UNKNOWN",
+        update_at:
+          row.updateDate
+          ??
+          null,
 
-      refund_status:
-        row.refundStatus
-        ??
-        null,
+        return_type:
+          row.returnType
+          ??
+          "UNKNOWN",
 
-      shipment_recipient_type:
-        row.shipmentRecipientType
-        ??
-        null,
+        refund_status:
+          row.refundStatus
+          ??
+          null,
 
-      shipment_status:
-        row.shipmentStatus
-        ??
-        null,
+        shipment_recipient_type:
+          row.shipmentRecipientType
+          ??
+          null,
 
-      refund_amount_raw:
-        typeof row.refundAmount ===
-        "number"
-        ? row.refundAmount
-        : null,
+        shipment_status:
+          row.shipmentStatus
+          ??
+          null,
 
-      amount:
-        typeof row.amount
-          ?.value ===
+        refund_amount_raw:
+          typeof row.refundAmount ===
           "number"
-        ? row.amount.value
-        : null,
+          ? row.refundAmount
+          : null,
 
-      currency:
-        row.amount
-          ?.currencyId
-        ??
-        null,
+        amount:
+          typeof row.amount
+            ?.value ===
+            "number"
+          ? row.amount.value
+          : null,
 
-      fast_return:
-        typeof row.fastReturn ===
-        "boolean"
-        ? row.fastReturn
-        : null,
+        currency:
+          row.amount
+            ?.currencyId
+          ??
+          null,
 
-      raw_payload:
-        row,
+        fast_return:
+          typeof row.fastReturn ===
+          "boolean"
+          ? row.fastReturn
+          : null,
 
-      updated_at:
-        now,
-    });
+        raw_payload:
+          row,
+
+        updated_at:
+          now,
+      }
+    );
+
 
     for (
       const item
@@ -1529,6 +2467,7 @@ function buildReturnRows(
       ??
       []
     ) {
+
       const shopSku =
         String(
           item.shopSku
@@ -1536,11 +2475,15 @@ function buildReturnRows(
           ""
         ).trim();
 
+
       if (!shopSku) {
+
         throw new Error(
           `У возврата ${returnId} есть товар без shopSku`
         );
+
       }
+
 
       const yp =
         data
@@ -1549,12 +2492,14 @@ function buildReturnRows(
             shopSku
           );
 
+
       const product =
         data
           .productByOffer
           .get(
             shopSku
           );
+
 
       if (
         !yp
@@ -1563,10 +2508,13 @@ function buildReturnRows(
         ||
         !yp.master_code
       ) {
+
         throw new Error(
           `Не удалось сопоставить возвратный товар ${shopSku}`
         );
+
       }
+
 
       const marketSku =
         String(
@@ -1575,19 +2523,25 @@ function buildReturnRows(
           ""
         ).trim();
 
+
       const itemKey =
-        makeKey([
-          returnId,
-          shopSku,
-          marketSku,
-        ]);
+        makeKey(
+          [
+            returnId,
+            shopSku,
+            marketSku,
+          ]
+        );
+
 
       const existing =
         itemMap.get(
           itemKey
         );
 
+
       if (existing) {
+
         existing.quantity =
           Number(
             existing.quantity
@@ -1601,6 +2555,7 @@ function buildReturnRows(
             0
           );
 
+
         existing.decisions =
           [
             ...(
@@ -1608,12 +2563,14 @@ function buildReturnRows(
               ??
               []
             ),
+
             ...(
               item.decisions
               ??
               []
             ),
           ];
+
 
         existing.instances =
           [
@@ -1622,12 +2579,14 @@ function buildReturnRows(
               ??
               []
             ),
+
             ...(
               item.instances
               ??
               []
             ),
           ];
+
 
         existing.tracks =
           [
@@ -1636,6 +2595,7 @@ function buildReturnRows(
               ??
               []
             ),
+
             ...(
               item.tracks
               ??
@@ -1643,14 +2603,18 @@ function buildReturnRows(
             ),
           ];
 
+
         existing.raw_payload
           .source_items
           .push(
             item
           );
 
+
         continue;
+
       }
+
 
       itemMap.set(
         itemKey,
@@ -1716,16 +2680,21 @@ function buildReturnRows(
             now,
         }
       );
+
     }
+
   }
+
 
   return {
     returns,
+
     items:
       Array.from(
         itemMap.values()
       ),
   };
+
 }
 
 
@@ -1737,21 +2706,25 @@ async function createSyncRun(
   data: PreparedData
 ):
 Promise<string> {
+
   const url =
     new URL(
       `${data.supabaseUrl}/rest/v1/yandex_sales_sync_runs`
     );
+
 
   url.searchParams.set(
     "select",
     "id"
   );
 
+
   const response =
     await fetch(
       url.toString(),
       {
-        method: "POST",
+        method:
+          "POST",
 
         headers: {
           ...getSupabaseHeaders(
@@ -1774,7 +2747,7 @@ Promise<string> {
               "running",
 
             orders_received:
-              data.orders.length,
+              data.allOrders.length,
 
             returns_received:
               data.returns.length,
@@ -1788,14 +2761,19 @@ Promise<string> {
       }
     );
 
+
   const text =
     await response.text();
 
+
   if (!response.ok) {
+
     throw new Error(
       `Не удалось создать sync run: ${response.status}: ${text}`
     );
+
   }
+
 
   const rows =
     JSON.parse(
@@ -1804,17 +2782,23 @@ Promise<string> {
       id: string;
     }>;
 
+
   const id =
     rows[0]
       ?.id;
 
+
   if (!id) {
+
     throw new Error(
       "Supabase не вернул id sync run"
     );
+
   }
 
+
   return id;
+
 }
 
 
@@ -1827,46 +2811,69 @@ async function upsertRows(
   secretKey: string,
   table: string,
   conflictColumn: string,
-  rows: Record<string, unknown>[]
+  rows:
+    Record<
+      string,
+      unknown
+    >[]
 ):
 Promise<number> {
+
   if (
     rows.length ===
     0
   ) {
+
     return 0;
+
   }
 
-  const batchSize = 200;
 
-  let saved = 0;
+  const batchSize =
+    200;
+
+
+  let saved =
+    0;
+
 
   for (
-    let index = 0;
-    index < rows.length;
-    index += batchSize
+    let index =
+      0;
+
+    index <
+      rows.length;
+
+    index +=
+      batchSize
   ) {
+
     const batch =
       rows.slice(
         index,
-        index + batchSize
+        index +
+          batchSize
       );
+
 
     const url =
       new URL(
         `${supabaseUrl}/rest/v1/${table}`
       );
 
+
     url.searchParams.set(
       "on_conflict",
       conflictColumn
     );
 
+
     const response =
       await fetch(
         url.toString(),
         {
-          method: "POST",
+          method:
+            "POST",
 
           headers: {
             ...getSupabaseHeaders(
@@ -1884,48 +2891,64 @@ Promise<number> {
         }
       );
 
+
     const text =
       await response.text();
 
+
     if (!response.ok) {
+
       throw new Error(
         `Supabase ${table}: HTTP ${response.status}: ${text}`
       );
+
     }
+
 
     saved +=
       batch.length;
+
   }
 
+
   return saved;
+
 }
 
 
 // ============================================================
-// FINISH / FAIL RUN
+// PATCH RUN
 // ============================================================
 
 async function patchSyncRun(
   supabaseUrl: string,
   secretKey: string,
   syncRunId: string,
-  body: Record<string, unknown>
+  body:
+    Record<
+      string,
+      unknown
+    >
 ) {
+
   const url =
     new URL(
       `${supabaseUrl}/rest/v1/yandex_sales_sync_runs`
     );
+
 
   url.searchParams.set(
     "id",
     `eq.${syncRunId}`
   );
 
+
   const response =
     await fetch(
       url.toString(),
       {
-        method: "PATCH",
+        method:
+          "PATCH",
 
         headers: {
           ...getSupabaseHeaders(
@@ -1943,32 +2966,36 @@ async function patchSyncRun(
       }
     );
 
+
   const text =
     await response.text();
 
+
   if (!response.ok) {
+
     throw new Error(
       `Не удалось обновить sync run: HTTP ${response.status}: ${text}`
     );
+
   }
+
 }
 
 
 // ============================================================
 // GET
-//
-// PREFLIGHT.
-// ЧИТАЕТ ЯНДЕКС И SUPABASE,
-// НО НИЧЕГО НЕ ЗАПИСЫВАЕТ.
 // ============================================================
 
 export async function GET() {
+
   try {
+
     const data =
       await prepareData();
 
+
     const orderItemLines =
-      data.orders.reduce(
+      data.allOrders.reduce(
         (
           total,
           order
@@ -1990,6 +3017,7 @@ export async function GET() {
         0
       );
 
+
     const returnItemLines =
       data.returns.reduce(
         (
@@ -2007,86 +3035,105 @@ export async function GET() {
         0
       );
 
-    return NextResponse.json({
-      ok: true,
 
-      mode:
-        "preflight_yandex_sales",
+    return NextResponse.json(
+      {
+        ok:
+          true,
 
-      writes_to_yandex:
-        false,
+        mode:
+          "preflight_yandex_sales_with_parent_orders",
 
-      writes_to_database:
-        false,
+        writes_to_yandex:
+          false,
 
-      campaign_id:
-        data.campaignId,
+        writes_to_database:
+          false,
 
-      period: {
-        date_from:
-          data.dateFrom,
+        campaign_id:
+          data.campaignId,
 
-        date_to:
-          data.dateTo,
+        period: {
+          date_from:
+            data.dateFrom,
 
-        days:
-          14,
-      },
+          date_to:
+            data.dateTo,
 
-      orders_pages:
-        data.ordersPages,
+          days:
+            14,
+        },
 
-      returns_pages:
-        data.returnsPages,
+        orders_pages:
+          data.ordersPages,
 
-      orders_received:
-        data.orders.length,
+        returns_pages:
+          data.returnsPages,
 
-      order_item_lines:
-        orderItemLines,
+        window_orders_received:
+          data.windowOrders.length,
 
-      returns_received:
-        data.returns.length,
+        parent_orders_requested:
+          data.parentOrdersRequested,
 
-      return_item_lines:
-        returnItemLines,
+        parent_orders_received:
+          data.parentOrders.length,
 
-      unique_shop_skus:
-        data.shopSkus.size,
+        parent_orders_still_missing:
+          data.parentOrdersStillMissing,
 
-      preflight_ok:
-        !hasPreflightErrors(
-          data
-        ),
+        total_orders_to_save:
+          data.allOrders.length,
 
-      missing_shop_sku_lines:
-        data.missingShopSkuLines,
+        order_item_lines:
+          orderItemLines,
 
-      missing_yandex_product_skus:
-        data.missingYandexProductSkus,
+        returns_received:
+          data.returns.length,
 
-      unlinked_yandex_product_skus:
-        data.unlinkedYandexProductSkus,
+        return_item_lines:
+          returnItemLines,
 
-      missing_product_row_skus:
-        data.missingProductRowSkus,
+        unique_shop_skus:
+          data.shopSkus.size,
 
-      product_without_master_code_skus:
-        data.productWithoutMasterCodeSkus,
+        preflight_ok:
+          !hasPreflightErrors(
+            data
+          ),
 
-      master_code_conflicts:
-        data.masterCodeConflictSkus,
-    });
+        missing_shop_sku_lines:
+          data.missingShopSkuLines,
+
+        missing_yandex_product_skus:
+          data.missingYandexProductSkus,
+
+        unlinked_yandex_product_skus:
+          data.unlinkedYandexProductSkus,
+
+        missing_product_row_skus:
+          data.missingProductRowSkus,
+
+        product_without_master_code_skus:
+          data.productWithoutMasterCodeSkus,
+
+        master_code_conflicts:
+          data.masterCodeConflictSkus,
+      }
+    );
 
   } catch (error) {
+
     console.error(
       "YANDEX SALES GET ERROR:",
       error
     );
 
+
     return NextResponse.json(
       {
-        ok: false,
+        ok:
+          false,
 
         writes_to_yandex:
           false,
@@ -2100,23 +3147,26 @@ export async function GET() {
           : String(error),
       },
       {
-        status: 500,
+        status:
+          500,
       }
     );
+
   }
+
 }
 
 
 // ============================================================
 // POST
-//
-// РЕАЛЬНАЯ СИНХРОНИЗАЦИЯ.
 // ============================================================
 
 export async function POST() {
+
   let syncRunId:
     string | null =
     null;
+
 
   let prepared:
     PreparedData
@@ -2124,18 +3174,23 @@ export async function POST() {
     null =
     null;
 
+
   try {
+
     prepared =
       await prepareData();
+
 
     if (
       hasPreflightErrors(
         prepared
       )
     ) {
+
       return NextResponse.json(
         {
-          ok: false,
+          ok:
+            false,
 
           writes_to_yandex:
             false,
@@ -2146,34 +3201,48 @@ export async function POST() {
           blocked_by_preflight:
             true,
 
+          parent_orders_still_missing:
+            prepared
+              .parentOrdersStillMissing,
+
           missing_shop_sku_lines:
-            prepared.missingShopSkuLines,
+            prepared
+              .missingShopSkuLines,
 
           missing_yandex_product_skus:
-            prepared.missingYandexProductSkus,
+            prepared
+              .missingYandexProductSkus,
 
           unlinked_yandex_product_skus:
-            prepared.unlinkedYandexProductSkus,
+            prepared
+              .unlinkedYandexProductSkus,
 
           missing_product_row_skus:
-            prepared.missingProductRowSkus,
+            prepared
+              .missingProductRowSkus,
 
           product_without_master_code_skus:
-            prepared.productWithoutMasterCodeSkus,
+            prepared
+              .productWithoutMasterCodeSkus,
 
           master_code_conflicts:
-            prepared.masterCodeConflictSkus,
+            prepared
+              .masterCodeConflictSkus,
         },
         {
-          status: 409,
+          status:
+            409,
         }
       );
+
     }
+
 
     syncRunId =
       await createSyncRun(
         prepared
       );
+
 
     const orderData =
       buildOrderRows(
@@ -2181,11 +3250,13 @@ export async function POST() {
         syncRunId
       );
 
+
     const returnData =
       buildReturnRows(
         prepared,
         syncRunId
       );
+
 
     const ordersSaved =
       await upsertRows(
@@ -2196,6 +3267,7 @@ export async function POST() {
         orderData.orders
       );
 
+
     const orderItemsSaved =
       await upsertRows(
         prepared.supabaseUrl,
@@ -2204,6 +3276,7 @@ export async function POST() {
         "item_key",
         orderData.items
       );
+
 
     const returnsSaved =
       await upsertRows(
@@ -2214,6 +3287,7 @@ export async function POST() {
         returnData.returns
       );
 
+
     const returnItemsSaved =
       await upsertRows(
         prepared.supabaseUrl,
@@ -2222,6 +3296,7 @@ export async function POST() {
         "item_key",
         returnData.items
       );
+
 
     await patchSyncRun(
       prepared.supabaseUrl,
@@ -2246,63 +3321,94 @@ export async function POST() {
       }
     );
 
-    return NextResponse.json({
-      ok: true,
 
-      writes_to_yandex:
-        false,
+    return NextResponse.json(
+      {
+        ok:
+          true,
 
-      writes_to_database:
-        true,
+        writes_to_yandex:
+          false,
 
-      sync_run_id:
-        syncRunId,
+        writes_to_database:
+          true,
 
-      period: {
-        date_from:
-          prepared.dateFrom,
+        sync_run_id:
+          syncRunId,
 
-        date_to:
-          prepared.dateTo,
-      },
+        period: {
+          date_from:
+            prepared.dateFrom,
 
-      orders_received:
-        prepared.orders.length,
+          date_to:
+            prepared.dateTo,
+        },
 
-      orders_saved:
-        ordersSaved,
+        window_orders_received:
+          prepared
+            .windowOrders
+            .length,
 
-      order_items_saved:
-        orderItemsSaved,
+        parent_orders_requested:
+          prepared
+            .parentOrdersRequested,
 
-      returns_received:
-        prepared.returns.length,
+        parent_orders_received:
+          prepared
+            .parentOrders
+            .length,
 
-      returns_saved:
-        returnsSaved,
+        parent_orders_still_missing:
+          prepared
+            .parentOrdersStillMissing
+            .length,
 
-      return_items_saved:
-        returnItemsSaved,
+        total_orders_received:
+          prepared
+            .allOrders
+            .length,
 
-      unmatched_order_items:
-        0,
+        orders_saved:
+          ordersSaved,
 
-      unmatched_return_items:
-        0,
-    });
+        order_items_saved:
+          orderItemsSaved,
+
+        returns_received:
+          prepared
+            .returns
+            .length,
+
+        returns_saved:
+          returnsSaved,
+
+        return_items_saved:
+          returnItemsSaved,
+
+        unmatched_order_items:
+          0,
+
+        unmatched_return_items:
+          0,
+      }
+    );
 
   } catch (error) {
+
     console.error(
       "YANDEX SALES POST ERROR:",
       error
     );
+
 
     if (
       syncRunId
       &&
       prepared
     ) {
+
       try {
+
         await patchSyncRun(
           prepared.supabaseUrl,
           prepared.supabaseSecretKey,
@@ -2321,19 +3427,25 @@ export async function POST() {
               : String(error),
           }
         );
+
       } catch (
         secondaryError
       ) {
+
         console.error(
           "YANDEX SALES FAILED RUN UPDATE ERROR:",
           secondaryError
         );
+
       }
+
     }
+
 
     return NextResponse.json(
       {
-        ok: false,
+        ok:
+          false,
 
         writes_to_yandex:
           false,
@@ -2350,8 +3462,11 @@ export async function POST() {
           : String(error),
       },
       {
-        status: 500,
+        status:
+          500,
       }
     );
+
   }
+
 }
