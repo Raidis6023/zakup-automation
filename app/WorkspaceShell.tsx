@@ -272,9 +272,17 @@ export default function WorkspaceShell({
           "home-sidebar"
       >
 
-        <div
+        {/* ========================================
+            ЛОГОТИП
+            При нажатии возвращаемся на главную
+            ======================================== */}
+
+        <Link
+          href="/"
           className=
             "home-company-logo"
+          aria-label=
+            "Перейти на главную страницу"
         >
 
           <img
@@ -288,7 +296,7 @@ export default function WorkspaceShell({
               "home-company-logo-image"
           />
 
-        </div>
+        </Link>
 
 
         {
@@ -429,7 +437,8 @@ export default function WorkspaceShell({
                       src=
                         "/logos/ozon.png"
 
-                      alt="Ozon"
+                      alt=
+                        "Ozon"
 
                       className=
                         "home-brand-image"
@@ -517,6 +526,10 @@ export default function WorkspaceShell({
 
       </aside>
 
+
+      {/* ==========================================
+          ОСНОВНАЯ ЧАСТЬ
+          ========================================== */}
 
       <div
         className=
