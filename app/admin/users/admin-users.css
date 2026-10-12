@@ -1,14 +1,19 @@
 .admin-users {
   display: flex;
+
   flex-direction: column;
+
   gap: 22px;
 }
 
 
 .admin-users-header {
   display: flex;
+
   align-items: flex-start;
+
   justify-content: space-between;
+
   gap: 24px;
 }
 
@@ -23,6 +28,7 @@
     var(--text);
 
   font-size: 28px;
+
   line-height: 1.2;
 }
 
@@ -34,6 +40,7 @@
     var(--text-muted);
 
   font-size: 13px;
+
   line-height: 1.5;
 }
 
@@ -56,6 +63,7 @@
     var(--text-muted);
 
   font-size: 12px;
+
   line-height: 1.5;
 }
 
@@ -112,9 +120,9 @@
 .admin-users-table {
   width: 100%;
 
-  border-collapse: collapse;
+  min-width: 980px;
 
-  min-width: 760px;
+  border-collapse: collapse;
 }
 
 
@@ -134,6 +142,7 @@
     var(--text-muted);
 
   font-size: 11px;
+
   font-weight: 800;
 
   text-align: left;
@@ -179,6 +188,7 @@
     var(--text);
 
   font-size: 13px;
+
   font-weight: 750;
 }
 
@@ -190,6 +200,7 @@
     #4b9df2;
 
   font-size: 10px;
+
   font-weight: 800;
 }
 
@@ -202,13 +213,155 @@
 }
 
 
+/* ============================================================
+   WORKING ROLE
+   ============================================================ */
+
+.admin-role-control {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  min-width: 0;
+}
+
+
+.admin-working-role-select,
+.admin-marketplace-select,
+.admin-level-select {
+  height: 38px;
+
+  padding:
+    0
+    36px
+    0
+    11px;
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius: 8px;
+
+  outline: none;
+
+  background:
+    var(--surface);
+
+  color:
+    var(--text);
+
+  font-family:
+    inherit;
+
+  font-size: 11px;
+
+  cursor: pointer;
+}
+
+
+.admin-working-role-select {
+  min-width: 190px;
+}
+
+
+.admin-marketplace-select {
+  min-width: 150px;
+}
+
+
+.admin-level-select {
+  min-width: 205px;
+}
+
+
+.admin-working-role-select:focus,
+.admin-marketplace-select:focus,
+.admin-level-select:focus {
+  border-color:
+    #126fe5;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(
+      18,
+      111,
+      229,
+      0.11
+    );
+}
+
+
+.admin-working-role-select:disabled,
+.admin-marketplace-select:disabled,
+.admin-level-select:disabled {
+  opacity: 0.55;
+
+  cursor: wait;
+}
+
+
 .admin-user-role {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 4px;
+}
+
+
+.admin-user-role-name {
   color:
     var(--text-secondary);
 
   font-weight: 650;
 }
 
+
+.admin-user-marketplace {
+  color:
+    var(--text-muted);
+
+  font-size: 10px;
+}
+
+
+.admin-role-locked {
+  display: inline-flex;
+
+  align-items: center;
+
+  min-height: 28px;
+
+  padding:
+    0
+    10px;
+
+  border:
+    1px solid
+    var(--border-soft);
+
+  border-radius: 999px;
+
+  background:
+    var(--surface-soft);
+
+  color:
+    var(--text-secondary);
+
+  font-size: 11px;
+
+  font-weight: 700;
+
+  white-space: nowrap;
+}
+
+
+/* ============================================================
+   ADMIN LEVEL
+   ============================================================ */
 
 .admin-level-badge {
   display: inline-flex;
@@ -234,6 +387,7 @@
     var(--text-secondary);
 
   font-size: 11px;
+
   font-weight: 700;
 
   white-space: nowrap;
@@ -284,61 +438,9 @@
 }
 
 
-.admin-level-select {
-  min-width: 205px;
-
-  height: 38px;
-
-  padding:
-    0
-    36px
-    0
-    11px;
-
-  border:
-    1px solid
-    var(--border);
-
-  border-radius: 8px;
-
-  outline: none;
-
-  background:
-    var(--surface);
-
-  color:
-    var(--text);
-
-  font-family:
-    inherit;
-
-  font-size: 11px;
-
-  cursor: pointer;
-}
-
-
-.admin-level-select:focus {
-  border-color:
-    #126fe5;
-
-  box-shadow:
-    0 0 0 3px
-    rgba(
-      18,
-      111,
-      229,
-      0.11
-    );
-}
-
-
-.admin-level-select:disabled {
-  opacity: 0.55;
-
-  cursor: wait;
-}
-
+/* ============================================================
+   EMPTY / LOADING
+   ============================================================ */
 
 .admin-users-loading,
 .admin-users-empty {
@@ -361,6 +463,19 @@
 
   .admin-users-header {
     flex-direction: column;
+  }
+
+
+  .admin-role-control {
+    align-items: stretch;
+
+    flex-direction: column;
+  }
+
+
+  .admin-working-role-select,
+  .admin-marketplace-select {
+    width: 100%;
   }
 
 }
