@@ -25,25 +25,13 @@ type HandoffReadiness = {
 // ============================================================
 // EXCEL AVAILABILITY
 //
-// Логика:
-//
-// draft
-//   → кнопка только если заказ полностью готов
-//
-// любой следующий статус
-//   → кнопка доступна постоянно
-//
-// В том числе:
-// sent_to_ved
-// ved_in_work
-// production_confirmed
-// in_transit
-// arrived
+// draft -> разрешён только для полностью готового заказа
+// прочие статусы -> экспорт разрешён
 // ============================================================
 
 async function isExcelExportAvailable(
   orderId: string
-) {
+): Promise<boolean> {
   try {
     const supabaseUrl =
       process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -51,50 +39,38 @@ async function isExcelExportAvailable(
     const supabaseSecretKey =
       process.env.SUPABASE_SECRET_KEY;
 
-    if (
-      !supabaseUrl ||
-      !supabaseSecretKey
-    ) {
+    if (!supabaseUrl || !supabaseSecretKey) {
       console.error(
         "Не настроены переменные Supabase для проверки Excel"
       );
-
       return false;
     }
 
     const headers = {
       apikey: supabaseSecretKey,
-      Authorization:
-        `Bearer ${supabaseSecretKey}`,
+      Authorization: `Bearer ${supabaseSecretKey}`,
       Accept: "application/json",
       "Content-Type": "application/json",
     };
 
-    // ========================================================
-    // 1. ПОЛУЧАЕМ СТАТУС ЗАКАЗА
-    // ========================================================
-
-    const orderResponse =
-      await fetch(
-        `${supabaseUrl}` +
-          `/rest/v1/ved_orders` +
-          `?id=eq.${encodeURIComponent(
-            orderId
-          )}` +
-          `&select=workflow_status`,
-        {
-          method: "GET",
-          headers,
-          cache: "no-store",
-        }
-      );
+    // 1. Получаем статус заказа.
+    const orderResponse = await fetch(
+      `${supabaseUrl}` +
+        `/rest/v1/ved_orders` +
+        `?id=eq.${encodeURIComponent(orderId)}` +
+        `&select=workflow_status`,
+      {
+        method: "GET",
+        headers,
+        cache: "no-store",
+      }
+    );
 
     if (!orderResponse.ok) {
       console.error(
         "Не удалось получить статус заказа для Excel:",
         await orderResponse.text()
       );
-
       return false;
     }
 
@@ -107,52 +83,41 @@ async function isExcelExportAvailable(
       return false;
     }
 
-    // ========================================================
-    // 2. ПОСЛЕ ЧЕРНОВИКА ЭКСПОРТ ДОСТУПЕН ВСЕГДА
-    // ========================================================
-
-    if (
-      order.workflow_status !== "draft"
-    ) {
+    // 2. После статуса draft экспорт доступен всегда.
+    if (order.workflow_status !== "draft") {
       return true;
     }
 
-    // ========================================================
-    // 3. ДЛЯ ЧЕРНОВИКА ПРОВЕРЯЕМ ГОТОВНОСТЬ
-    // ========================================================
-
-    const readinessResponse =
-      await fetch(
-        `${supabaseUrl}` +
-          `/rest/v1/rpc/get_ved_order_handoff_readiness`,
-        {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            p_order_id: orderId,
-          }),
-          cache: "no-store",
-        }
-      );
+    // 3. Для draft проверяем готовность.
+    const readinessResponse = await fetch(
+      `${supabaseUrl}` +
+        `/rest/v1/rpc/get_ved_order_handoff_readiness`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          p_order_id: orderId,
+        }),
+        cache: "no-store",
+      }
+    );
 
     if (!readinessResponse.ok) {
       console.error(
         "Не удалось проверить готовность заказа для Excel:",
         await readinessResponse.text()
       );
-
       return false;
     }
 
     const readinessData:
       | HandoffReadiness
       | HandoffReadiness[] =
-        await readinessResponse.json();
+      await readinessResponse.json();
 
-    const readiness =
-      Array.isArray(readinessData)
-        ? readinessData[0]
-        : readinessData;
+    const readiness = Array.isArray(readinessData)
+      ? readinessData[0]
+      : readinessData;
 
     return readiness?.ready === true;
   } catch (error) {
@@ -160,13 +125,12 @@ async function isExcelExportAvailable(
       "Ошибка проверки доступности Excel:",
       error
     );
-
     return false;
   }
 }
 
 // ============================================================
-// СТИЛЬ КНОПОК НАВИГАЦИИ
+// СТИЛИ НАВИГАЦИОННЫХ КНОПОК
 // ============================================================
 
 const headerButtonStyle = {
@@ -191,10 +155,6 @@ export default async function VedOrderPage({
 }) {
   const { id } = await params;
 
-  // ==========================================================
-  // EXCEL BUTTON
-  // ==========================================================
-
   const excelExportAvailable =
     await isExcelExportAvailable(id);
 
@@ -206,11 +166,7 @@ export default async function VedOrderPage({
   return (
     <main className="page">
       <div className="container">
-
-        {/* ====================================================
-            HEADER
-            ==================================================== */}
-
+        {/* ШАПКА С НАВИГАЦИЕЙ */}
         <header className="header">
           <div>
             <div className="small-label">
@@ -226,57 +182,7 @@ export default async function VedOrderPage({
             </div>
           </div>
 
-          {/* ==================================================
-              КНОПКИ В ПРАВОЙ ЧАСТИ ШАПКИ
-
-              1. Экспорт Excel
-              2. ВЭД
-              3. Главная
-
-              Декоративные полосы отображаются
-              общей оболочкой WorkSpace.
-              ================================================== */}
-
           <div className="header-actions">
-
-            {/* ================================================
-                ЭКСПОРТ EXCEL
-
-                В готовом draft появляется кнопка.
-
-                После передачи заказа дальше
-                остаётся доступной постоянно,
-                включая статус arrived.
-                ================================================ */}
-
-            {excelExportAvailable && (
-              <a
-                href={excelExportUrl}
-                className="secondary-button"
-                style={headerButtonStyle}
-                title="Экспортировать актуальный заказ в Excel"
-              >
-                Экспорт Excel
-              </a>
-            )}
-
-            {/* ================================================
-                ВОЗВРАТ В РАЗДЕЛ ВЭД
-                ================================================ */}
-
-            <Link
-              href="/ved"
-              className="secondary-button"
-              style={headerButtonStyle}
-              title="Вернуться в раздел ВЭД"
-            >
-              ВЭД
-            </Link>
-
-            {/* ================================================
-                ВОЗВРАТ НА ГЛАВНУЮ WORKSPACE
-                ================================================ */}
-
             <Link
               href="/"
               className="secondary-button"
@@ -286,33 +192,29 @@ export default async function VedOrderPage({
               Главная
             </Link>
 
+            <Link
+              href="/ved"
+              className="secondary-button"
+              style={headerButtonStyle}
+              title="Вернуться в раздел ВЭД"
+            >
+              ВЭД
+            </Link>
           </div>
         </header>
 
-        {/* ====================================================
-            TAKE IN WORK
-            ==================================================== */}
+        {/* ВЗЯТЬ В РАБОТУ */}
+        <VedTakeInWorkPanel orderId={id} />
 
-        <VedTakeInWorkPanel
-          orderId={id}
-        />
+        {/* ПРОИЗВОДСТВО */}
+        <VedProductionPanel orderId={id} />
 
-        {/* ====================================================
-            PRODUCTION
-            ==================================================== */}
-
-        <VedProductionPanel
-          orderId={id}
-        />
-
-        {/* ====================================================
-            ORDER DETAILS
-            ==================================================== */}
-
+        {/* ДЕТАЛИЗАЦИЯ ЗАКАЗА И ЭКСПОРТ EXCEL */}
         <VedOrderDetailClient
           orderId={id}
+          excelExportUrl={excelExportUrl}
+          excelExportAvailable={excelExportAvailable}
         />
-
       </div>
     </main>
   );
