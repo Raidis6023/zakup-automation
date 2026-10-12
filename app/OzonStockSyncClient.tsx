@@ -1,8 +1,54 @@
 "use client";
 
 import {
+  useEffect,
+  useMemo,
   useState,
 } from "react";
+
+import {
+  useRouter,
+} from "next/navigation";
+
+
+// ============================================================
+// ОБЩЕЕ СОСТОЯНИЕ СИНХРОНИЗАЦИИ
+// ============================================================
+
+type SyncState = {
+  lastHttpStatus:
+    number | null;
+
+  lastAttemptAt:
+    string | null;
+
+  lastSuccessAt:
+    string | null;
+
+  nextAllowedAt:
+    string | null;
+
+  retryAfterSeconds:
+    number | null;
+
+  lastMessage:
+    string | null;
+};
+
+
+type SyncStateResponse = {
+  ok?:
+    boolean;
+
+  error?:
+    string;
+
+  stocks?:
+    SyncState;
+
+  sales?:
+    SyncState;
+};
 
 
 // ============================================================
@@ -10,17 +56,37 @@ import {
 // ============================================================
 
 type StockSyncResult = {
+  ok:
+    boolean;
 
-  ok: boolean;
+  blockedByRateLimit?:
+    boolean;
 
-  message?: string;
+  message?:
+    string;
 
-  snapshotDate?: string;
+  snapshotDate?:
+    string;
 
-  error?: string;
+  error?:
+    string;
+
+  lastHttpStatus?:
+    number | null;
+
+  lastAttemptAt?:
+    string | null;
+
+  lastSuccessAt?:
+    string | null;
+
+  nextAllowedAt?:
+    string | null;
+
+  retryAfterSeconds?:
+    number | null;
 
   ozon?: {
-
     reportedTotalProducts:
       number | null;
 
@@ -44,27 +110,30 @@ type StockSyncResult = {
 
     clusterRowsPrepared:
       number;
-
   };
 
   supabase?: {
+    ok?:
+      boolean;
 
-    ok?: boolean;
+    sync_run_id?:
+      string;
 
-    sync_run_id?: string;
+    snapshot_date?:
+      string;
 
-    snapshot_date?: string;
+    products_received?:
+      number;
 
-    products_received?: number;
+    fbo_skus_received?:
+      number;
 
-    fbo_skus_received?: number;
+    analytics_rows_received?:
+      number;
 
-    analytics_rows_received?: number;
-
-    cluster_rows_saved?: number;
-
+    cluster_rows_saved?:
+      number;
   };
-
 };
 
 
@@ -73,15 +142,34 @@ type StockSyncResult = {
 // ============================================================
 
 type SalesSyncResult = {
+  ok:
+    boolean;
 
-  ok: boolean;
+  blockedByRateLimit?:
+    boolean;
 
-  message?: string;
+  message?:
+    string;
 
-  error?: string;
+  error?:
+    string;
+
+  lastHttpStatus?:
+    number | null;
+
+  lastAttemptAt?:
+    string | null;
+
+  lastSuccessAt?:
+    string | null;
+
+  nextAllowedAt?:
+    string | null;
+
+  retryAfterSeconds?:
+    number | null;
 
   period?: {
-
     completedDays:
       number;
 
@@ -93,11 +181,9 @@ type SalesSyncResult = {
 
     dateTo:
       string;
-
   };
 
   ozon?: {
-
     postingsReceived:
       number;
 
@@ -124,30 +210,76 @@ type SalesSyncResult = {
 
     cancelledQuantity:
       number;
-
   };
 
   supabase?: {
+    ok?:
+      boolean;
 
-    ok?: boolean;
+    sync_run_id?:
+      string;
 
-    sync_run_id?: string;
+    date_from?:
+      string;
 
-    date_from?: string;
+    date_to?:
+      string;
 
-    date_to?: string;
+    completed_days?:
+      number;
 
-    completed_days?: number;
+    postings_received?:
+      number;
 
-    postings_received?: number;
+    cancelled_postings?:
+      number;
 
-    cancelled_postings?: number;
-
-    aggregated_rows_saved?: number;
-
+    aggregated_rows_saved?:
+      number;
   };
-
 };
+
+
+// ============================================================
+// ПРОЧЕЕ
+// ============================================================
+
+type SyncKind =
+  | "stocks"
+  | "sales";
+
+
+const EMPTY_SYNC_STATE:
+  SyncState =
+{
+  lastHttpStatus:
+    null,
+
+  lastAttemptAt:
+    null,
+
+  lastSuccessAt:
+    null,
+
+  nextAllowedAt:
+    null,
+
+  retryAfterSeconds:
+    null,
+
+  lastMessage:
+    null,
+};
+
+
+// ============================================================
+// ПОСЛЕ 07:00 ДАЁМ DAILY-SYNC 2 МИНУТЫ
+// ============================================================
+
+const DAILY_SYNC_GRACE_SECONDS =
+  2
+  *
+  60;
 
 
 // ============================================================
@@ -162,10 +294,13 @@ function formatNumber(
 ) {
 
   if (
-    value === null ||
+    value === null
+    ||
     value === undefined
   ) {
+
     return "—";
+
   }
 
 
@@ -174,14 +309,327 @@ function formatNumber(
   ).toLocaleString(
     "ru-RU"
   );
+
 }
 
 
 // ============================================================
-// КОМПОНЕНТ
+// TIMESTAMP
+// ============================================================
+
+function getTimestamp(
+  value:
+    string | null | undefined
+):
+number | null {
+
+  if (!value) {
+
+    return null;
+
+  }
+
+
+  const result =
+    new Date(
+      value
+    ).getTime();
+
+
+  if (
+    !Number.isFinite(
+      result
+    )
+  ) {
+
+    return null;
+
+  }
+
+
+  return result;
+
+}
+
+
+// ============================================================
+// HH:MM:SS
+// ============================================================
+
+function formatDuration(
+  totalSeconds:
+    number
+) {
+
+  const safe =
+    Math.max(
+      0,
+      Math.floor(
+        totalSeconds
+      )
+    );
+
+
+  const hours =
+    Math.floor(
+      safe
+      /
+      3600
+    );
+
+
+  const minutes =
+    Math.floor(
+      (
+        safe
+        %
+        3600
+      )
+      /
+      60
+    );
+
+
+  const seconds =
+    safe
+    %
+    60;
+
+
+  return [
+    String(
+      hours
+    ).padStart(
+      2,
+      "0"
+    ),
+
+    String(
+      minutes
+    ).padStart(
+      2,
+      "0"
+    ),
+
+    String(
+      seconds
+    ).padStart(
+      2,
+      "0"
+    ),
+  ].join(
+    ":"
+  );
+
+}
+
+
+// ============================================================
+// КРАСНОЯРСКОЕ ВРЕМЯ
+// ============================================================
+
+function formatDateTime(
+  value:
+    string | null | undefined
+) {
+
+  if (!value) {
+
+    return "—";
+
+  }
+
+
+  const date =
+    new Date(
+      value
+    );
+
+
+  if (
+    !Number.isFinite(
+      date.getTime()
+    )
+  ) {
+
+    return "—";
+
+  }
+
+
+  return new Intl.DateTimeFormat(
+    "ru-RU",
+    {
+      timeZone:
+        "Asia/Krasnoyarsk",
+
+      day:
+        "2-digit",
+
+      month:
+        "2-digit",
+
+      year:
+        "numeric",
+
+      hour:
+        "2-digit",
+
+      minute:
+        "2-digit",
+
+      second:
+        "2-digit",
+    }
+  ).format(
+    date
+  );
+
+}
+
+
+// ============================================================
+// ПОСЛЕДНИЕ 07:00 КРАСНОЯРСКА
+//
+// 07:00 KRAT = 00:00 UTC
+// ============================================================
+
+function getPreviousDailySyncTimestamp(
+  now:
+    number
+) {
+
+  const date =
+    new Date(
+      now
+    );
+
+
+  let previous =
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+      0,
+      0,
+      0,
+      0
+    );
+
+
+  if (
+    previous >
+    now
+  ) {
+
+    previous -=
+      24
+      *
+      60
+      *
+      60
+      *
+      1000;
+
+  }
+
+
+  return previous;
+
+}
+
+
+// ============================================================
+// MESSAGE
+// ============================================================
+
+function getResultMessage(
+  data:
+    {
+      message?:
+        string;
+
+      error?:
+        string;
+    }
+    | null,
+
+  fallback:
+    string
+) {
+
+  if (
+    data?.message
+    &&
+    data.message.trim()
+  ) {
+
+    return data.message;
+
+  }
+
+
+  if (
+    data?.error
+    &&
+    data.error.trim()
+  ) {
+
+    return data.error;
+
+  }
+
+
+  return fallback;
+
+}
+
+
+// ============================================================
+// COMPONENT
 // ============================================================
 
 export default function OzonStockSyncClient() {
+
+  const router =
+    useRouter();
+
+
+  const [
+    now,
+    setNow,
+  ] =
+    useState(
+      Date.now()
+    );
+
+
+  const [
+    stateLoaded,
+    setStateLoaded,
+  ] =
+    useState(
+      false
+    );
+
+
+  const [
+    stocksState,
+    setStocksState,
+  ] =
+    useState<SyncState>(
+      EMPTY_SYNC_STATE
+    );
+
+
+  const [
+    salesState,
+    setSalesState,
+  ] =
+    useState<SyncState>(
+      EMPTY_SYNC_STATE
+    );
+
 
   // ==========================================================
   // ОСТАТКИ
@@ -191,7 +639,9 @@ export default function OzonStockSyncClient() {
     stockLoading,
     setStockLoading,
   ] =
-    useState(false);
+    useState(
+      false
+    );
 
 
   const [
@@ -200,7 +650,27 @@ export default function OzonStockSyncClient() {
   ] =
     useState<
       StockSyncResult | null
-    >(null);
+    >(
+      null
+    );
+
+
+  const [
+    stockMessage,
+    setStockMessage,
+  ] =
+    useState(
+      ""
+    );
+
+
+  const [
+    stockMessageError,
+    setStockMessageError,
+  ] =
+    useState(
+      false
+    );
 
 
   // ==========================================================
@@ -211,7 +681,9 @@ export default function OzonStockSyncClient() {
     salesLoading,
     setSalesLoading,
   ] =
-    useState(false);
+    useState(
+      false
+    );
 
 
   const [
@@ -220,7 +692,319 @@ export default function OzonStockSyncClient() {
   ] =
     useState<
       SalesSyncResult | null
-    >(null);
+    >(
+      null
+    );
+
+
+  const [
+    salesMessage,
+    setSalesMessage,
+  ] =
+    useState(
+      ""
+    );
+
+
+  const [
+    salesMessageError,
+    setSalesMessageError,
+  ] =
+    useState(
+      false
+    );
+
+
+  // ==========================================================
+  // ЧИТАЕМ СОСТОЯНИЕ ИЗ SUPABASE ЧЕРЕЗ SERVER ROUTE
+  // ==========================================================
+
+  async function loadSyncStates() {
+
+    try {
+
+      const response =
+        await fetch(
+          "/api/ozon-sync-state",
+          {
+            method:
+              "GET",
+
+            cache:
+              "no-store",
+          }
+        );
+
+
+      const data =
+        await response
+          .json() as
+          SyncStateResponse;
+
+
+      if (
+        !response.ok
+        ||
+        data.ok !==
+          true
+      ) {
+
+        throw new Error(
+          data.error
+          ??
+          `HTTP ${response.status}`
+        );
+
+      }
+
+
+      setStocksState(
+        data.stocks
+        ??
+        EMPTY_SYNC_STATE
+      );
+
+
+      setSalesState(
+        data.sales
+        ??
+        EMPTY_SYNC_STATE
+      );
+
+    } catch (error) {
+
+      console.error(
+        "Не удалось получить состояние Ozon:",
+        error
+      );
+
+    } finally {
+
+      setStateLoaded(
+        true
+      );
+
+    }
+
+  }
+
+
+  // ==========================================================
+  // INITIAL STATE
+  // ==========================================================
+
+  useEffect(
+    () => {
+
+      void loadSyncStates();
+
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    []
+  );
+
+
+  // ==========================================================
+  // СЕКУНДНЫЙ COUNTDOWN
+  // ==========================================================
+
+  useEffect(
+    () => {
+
+      const timer =
+        window.setInterval(
+          () => {
+
+            setNow(
+              Date.now()
+            );
+
+          },
+          1000
+        );
+
+
+      return () => {
+
+        window.clearInterval(
+          timer
+        );
+
+      };
+
+    },
+    []
+  );
+
+
+  // ==========================================================
+  // РАЗ В МИНУТУ ПЕРЕЧИТЫВАЕМ СОСТОЯНИЕ
+  //
+  // К OZON ЭТОТ ЗАПРОС НЕ ИДЁТ.
+  // ==========================================================
+
+  useEffect(
+    () => {
+
+      const timer =
+        window.setInterval(
+          () => {
+
+            void loadSyncStates();
+
+          },
+          60
+          *
+          1000
+        );
+
+
+      return () => {
+
+        window.clearInterval(
+          timer
+        );
+
+      };
+
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    []
+  );
+
+
+  // ==========================================================
+  // DAILY-SYNC GRACE
+  //
+  // ДО 07:00 НИЧЕГО НЕ РЕЗЕРВИРУЕМ.
+  // У OZON НЕТ WB-ШНОГО ТРЁХЧАСОВОГО COOLDOWN.
+  //
+  // ТОЛЬКО НЕ ДАЁМ НАЖАТЬ КНОПКУ
+  // В ПЕРВЫЕ 2 МИНУТЫ ПОСЛЕ 07:00.
+  // ==========================================================
+
+  const previousDailySyncTimestamp =
+    getPreviousDailySyncTimestamp(
+      now
+    );
+
+
+  const secondsAfterDailySync =
+    Math.floor(
+      (
+        now
+        -
+        previousDailySyncTimestamp
+      )
+      /
+      1000
+    );
+
+
+  const dailySyncGraceActive =
+    secondsAfterDailySync >=
+      0
+    &&
+    secondsAfterDailySync <
+      DAILY_SYNC_GRACE_SECONDS;
+
+
+  // ==========================================================
+  // СОСТОЯНИЕ ЛИМИТОВ
+  // ==========================================================
+
+  const stockNextAllowedTimestamp =
+    useMemo(
+      () =>
+        getTimestamp(
+          stocksState.nextAllowedAt
+        ),
+      [
+        stocksState.nextAllowedAt,
+      ]
+    );
+
+
+  const salesNextAllowedTimestamp =
+    useMemo(
+      () =>
+        getTimestamp(
+          salesState.nextAllowedAt
+        ),
+      [
+        salesState.nextAllowedAt,
+      ]
+    );
+
+
+  const stockSecondsRemaining =
+    stockNextAllowedTimestamp
+    &&
+    stockNextAllowedTimestamp >
+      now
+
+      ?
+      Math.ceil(
+        (
+          stockNextAllowedTimestamp
+          -
+          now
+        )
+        /
+        1000
+      )
+
+      :
+      0;
+
+
+  const salesSecondsRemaining =
+    salesNextAllowedTimestamp
+    &&
+    salesNextAllowedTimestamp >
+      now
+
+      ?
+      Math.ceil(
+        (
+          salesNextAllowedTimestamp
+          -
+          now
+        )
+        /
+        1000
+      )
+
+      :
+      0;
+
+
+  const stockRateLimitActive =
+    stockSecondsRemaining >
+    0;
+
+
+  const salesRateLimitActive =
+    salesSecondsRemaining >
+    0;
+
+
+  const stockUnknownRateLimit =
+    stocksState.lastHttpStatus ===
+      429
+    &&
+    !stockRateLimitActive
+    &&
+    !stocksState.nextAllowedAt;
+
+
+  const salesUnknownRateLimit =
+    salesState.lastHttpStatus ===
+      429
+    &&
+    !salesRateLimitActive
+    &&
+    !salesState.nextAllowedAt;
 
 
   // ==========================================================
@@ -229,12 +1013,40 @@ export default function OzonStockSyncClient() {
 
   async function runStockSync() {
 
+    if (
+      stockLoading
+      ||
+      salesLoading
+      ||
+      stockRateLimitActive
+      ||
+      dailySyncGraceActive
+      ||
+      !stateLoaded
+    ) {
+
+      return;
+
+    }
+
+
     setStockLoading(
       true
     );
 
+
     setStockResult(
       null
+    );
+
+
+    setStockMessage(
+      ""
+    );
+
+
+    setStockMessageError(
+      false
     );
 
 
@@ -269,17 +1081,164 @@ export default function OzonStockSyncClient() {
       );
 
 
+      if (
+        response.status ===
+          429
+        ||
+        data.blockedByRateLimit ===
+          true
+      ) {
+
+        setStocksState(
+          current => ({
+            ...current,
+
+            lastHttpStatus:
+              429,
+
+            lastAttemptAt:
+              data.lastAttemptAt
+              ??
+              new Date()
+                .toISOString(),
+
+            nextAllowedAt:
+              data.nextAllowedAt
+              ??
+              null,
+
+            retryAfterSeconds:
+              data.retryAfterSeconds
+              ??
+              null,
+
+            lastMessage:
+              getResultMessage(
+                data,
+                "Лимит Ozon"
+              ),
+          })
+        );
+
+
+        setStockMessage(
+          getResultMessage(
+            data,
+            "Ozon временно ограничил запрос остатков"
+          )
+        );
+
+
+        setStockMessageError(
+          false
+        );
+
+
+        return;
+
+      }
+
+
+      if (
+        !response.ok
+        ||
+        data.ok !==
+          true
+      ) {
+
+        setStockMessageError(
+          true
+        );
+
+
+        setStockMessage(
+          getResultMessage(
+            data,
+            `Ошибка HTTP ${response.status}`
+          )
+        );
+
+
+        return;
+
+      }
+
+
+      const successAt =
+        data.lastSuccessAt
+        ??
+        new Date()
+          .toISOString();
+
+
+      setStocksState({
+        lastHttpStatus:
+          data.lastHttpStatus
+          ??
+          200,
+
+        lastAttemptAt:
+          data.lastAttemptAt
+          ??
+          successAt,
+
+        lastSuccessAt:
+          successAt,
+
+        nextAllowedAt:
+          data.nextAllowedAt
+          ??
+          null,
+
+        retryAfterSeconds:
+          data.retryAfterSeconds
+          ??
+          null,
+
+        lastMessage:
+          data.message
+          ??
+          "Остатки Ozon успешно синхронизированы",
+      });
+
+
+      setStockMessage(
+        "Данные остатков обновлены только что"
+      );
+
+
+      setStockMessageError(
+        false
+      );
+
+
+      router.refresh();
+
+
     } catch (error) {
 
       setStockResult(
         {
-          ok: false,
+          ok:
+            false,
 
           error:
             error instanceof Error
               ? error.message
               : "Неизвестная ошибка синхронизации остатков",
         }
+      );
+
+
+      setStockMessageError(
+        true
+      );
+
+
+      setStockMessage(
+        error instanceof Error
+          ? error.message
+          : "Не удалось обновить остатки Ozon"
       );
 
     } finally {
@@ -299,12 +1258,40 @@ export default function OzonStockSyncClient() {
 
   async function runSalesSync() {
 
+    if (
+      stockLoading
+      ||
+      salesLoading
+      ||
+      salesRateLimitActive
+      ||
+      dailySyncGraceActive
+      ||
+      !stateLoaded
+    ) {
+
+      return;
+
+    }
+
+
     setSalesLoading(
       true
     );
 
+
     setSalesResult(
       null
+    );
+
+
+    setSalesMessage(
+      ""
+    );
+
+
+    setSalesMessageError(
+      false
     );
 
 
@@ -339,17 +1326,164 @@ export default function OzonStockSyncClient() {
       );
 
 
+      if (
+        response.status ===
+          429
+        ||
+        data.blockedByRateLimit ===
+          true
+      ) {
+
+        setSalesState(
+          current => ({
+            ...current,
+
+            lastHttpStatus:
+              429,
+
+            lastAttemptAt:
+              data.lastAttemptAt
+              ??
+              new Date()
+                .toISOString(),
+
+            nextAllowedAt:
+              data.nextAllowedAt
+              ??
+              null,
+
+            retryAfterSeconds:
+              data.retryAfterSeconds
+              ??
+              null,
+
+            lastMessage:
+              getResultMessage(
+                data,
+                "Лимит Ozon"
+              ),
+          })
+        );
+
+
+        setSalesMessage(
+          getResultMessage(
+            data,
+            "Ozon временно ограничил запрос продаж"
+          )
+        );
+
+
+        setSalesMessageError(
+          false
+        );
+
+
+        return;
+
+      }
+
+
+      if (
+        !response.ok
+        ||
+        data.ok !==
+          true
+      ) {
+
+        setSalesMessageError(
+          true
+        );
+
+
+        setSalesMessage(
+          getResultMessage(
+            data,
+            `Ошибка HTTP ${response.status}`
+          )
+        );
+
+
+        return;
+
+      }
+
+
+      const successAt =
+        data.lastSuccessAt
+        ??
+        new Date()
+          .toISOString();
+
+
+      setSalesState({
+        lastHttpStatus:
+          data.lastHttpStatus
+          ??
+          200,
+
+        lastAttemptAt:
+          data.lastAttemptAt
+          ??
+          successAt,
+
+        lastSuccessAt:
+          successAt,
+
+        nextAllowedAt:
+          data.nextAllowedAt
+          ??
+          null,
+
+        retryAfterSeconds:
+          data.retryAfterSeconds
+          ??
+          null,
+
+        lastMessage:
+          data.message
+          ??
+          "Продажи Ozon успешно синхронизированы",
+      });
+
+
+      setSalesMessage(
+        "Данные продаж обновлены только что"
+      );
+
+
+      setSalesMessageError(
+        false
+      );
+
+
+      router.refresh();
+
+
     } catch (error) {
 
       setSalesResult(
         {
-          ok: false,
+          ok:
+            false,
 
           error:
             error instanceof Error
               ? error.message
               : "Неизвестная ошибка синхронизации продаж",
         }
+      );
+
+
+      setSalesMessageError(
+        true
+      );
+
+
+      setSalesMessage(
+        error instanceof Error
+          ? error.message
+          : "Не удалось обновить продажи Ozon"
       );
 
     } finally {
@@ -392,14 +1526,51 @@ export default function OzonStockSyncClient() {
         </div>
 
 
-        <button
-          type="button"
+        <SyncControl
+          kind="stocks"
 
-          className="primary-button"
+          label="Обновить остатки Ozon"
 
-          disabled={
-            stockLoading ||
+          loadingLabel="Загружаем остатки..."
+
+          loading={
+            stockLoading
+          }
+
+          otherLoading={
             salesLoading
+          }
+
+          stateLoaded={
+            stateLoaded
+          }
+
+          state={
+            stocksState
+          }
+
+          rateLimitActive={
+            stockRateLimitActive
+          }
+
+          unknownRateLimit={
+            stockUnknownRateLimit
+          }
+
+          secondsRemaining={
+            stockSecondsRemaining
+          }
+
+          dailySyncGraceActive={
+            dailySyncGraceActive
+          }
+
+          message={
+            stockMessage
+          }
+
+          messageError={
+            stockMessageError
           }
 
           onClick={
@@ -407,13 +1578,7 @@ export default function OzonStockSyncClient() {
               void runStockSync();
             }
           }
-        >
-
-          {stockLoading
-            ? "Загружаем остатки..."
-            : "Обновить остатки Ozon"}
-
-        </button>
+        />
 
       </section>
 
@@ -450,7 +1615,8 @@ export default function OzonStockSyncClient() {
 
 
       {stockResult &&
-        !stockResult.ok && (
+        !stockResult.ok &&
+        !stockResult.blockedByRateLimit && (
 
         <section className="section">
 
@@ -490,7 +1656,6 @@ export default function OzonStockSyncClient() {
         <>
 
           <section className="summary-grid">
-
 
             <div className="card">
 
@@ -716,14 +1881,51 @@ export default function OzonStockSyncClient() {
         </div>
 
 
-        <button
-          type="button"
+        <SyncControl
+          kind="sales"
 
-          className="primary-button"
+          label="Обновить продажи Ozon"
 
-          disabled={
-            salesLoading ||
+          loadingLabel="Загружаем продажи..."
+
+          loading={
+            salesLoading
+          }
+
+          otherLoading={
             stockLoading
+          }
+
+          stateLoaded={
+            stateLoaded
+          }
+
+          state={
+            salesState
+          }
+
+          rateLimitActive={
+            salesRateLimitActive
+          }
+
+          unknownRateLimit={
+            salesUnknownRateLimit
+          }
+
+          secondsRemaining={
+            salesSecondsRemaining
+          }
+
+          dailySyncGraceActive={
+            dailySyncGraceActive
+          }
+
+          message={
+            salesMessage
+          }
+
+          messageError={
+            salesMessageError
           }
 
           onClick={
@@ -731,13 +1933,7 @@ export default function OzonStockSyncClient() {
               void runSalesSync();
             }
           }
-        >
-
-          {salesLoading
-            ? "Загружаем продажи..."
-            : "Обновить продажи Ozon"}
-
-        </button>
+        />
 
       </section>
 
@@ -784,7 +1980,8 @@ export default function OzonStockSyncClient() {
 
 
       {salesResult &&
-        !salesResult.ok && (
+        !salesResult.ok &&
+        !salesResult.blockedByRateLimit && (
 
         <section className="section">
 
@@ -824,7 +2021,6 @@ export default function OzonStockSyncClient() {
         <>
 
           <section className="summary-grid">
-
 
             <div className="card">
 
@@ -1163,4 +2359,551 @@ export default function OzonStockSyncClient() {
     </>
 
   );
+}
+
+
+// ============================================================
+// КНОПКА + СТАТУС
+// ============================================================
+
+function SyncControl({
+  kind,
+  label,
+  loadingLabel,
+  loading,
+  otherLoading,
+  stateLoaded,
+  state,
+  rateLimitActive,
+  unknownRateLimit,
+  secondsRemaining,
+  dailySyncGraceActive,
+  message,
+  messageError,
+  onClick,
+}: {
+  kind:
+    SyncKind;
+
+  label:
+    string;
+
+  loadingLabel:
+    string;
+
+  loading:
+    boolean;
+
+  otherLoading:
+    boolean;
+
+  stateLoaded:
+    boolean;
+
+  state:
+    SyncState;
+
+  rateLimitActive:
+    boolean;
+
+  unknownRateLimit:
+    boolean;
+
+  secondsRemaining:
+    number;
+
+  dailySyncGraceActive:
+    boolean;
+
+  message:
+    string;
+
+  messageError:
+    boolean;
+
+  onClick:
+    () => void;
+}) {
+
+  const disabled =
+    !stateLoaded
+    ||
+    loading
+    ||
+    otherLoading
+    ||
+    rateLimitActive
+    ||
+    dailySyncGraceActive;
+
+
+  return (
+
+    <div
+      style={{
+        display:
+          "flex",
+
+        flexDirection:
+          "column",
+
+        alignItems:
+          "flex-end",
+
+        gap:
+          "8px",
+
+        minWidth:
+          "280px",
+
+        maxWidth:
+          "440px",
+      }}
+    >
+
+
+      {/* СОСТОЯНИЕ ЕЩЁ ЗАГРУЖАЕТСЯ */}
+
+      {
+        !stateLoaded
+        &&
+        (
+
+          <div
+            className="muted"
+            style={{
+              width:
+                "100%",
+
+              textAlign:
+                "right",
+
+              fontSize:
+                "12px",
+            }}
+          >
+            Проверяем возможность обновления...
+          </div>
+
+        )
+      }
+
+
+      {/* АКТИВНЫЙ ЛИМИТ */}
+
+      {
+        stateLoaded
+        &&
+        rateLimitActive
+        &&
+        (
+
+          <div
+            style={{
+              width:
+                "100%",
+
+              padding:
+                "10px 12px",
+
+              borderRadius:
+                "10px",
+
+              background:
+                "rgba(220, 70, 70, 0.10)",
+
+              border:
+                "1px solid rgba(220, 70, 70, 0.22)",
+
+              textAlign:
+                "right",
+            }}
+          >
+
+            <div
+              style={{
+                fontWeight:
+                  700,
+
+                fontSize:
+                  "13px",
+              }}
+            >
+              🔴 Лимит Ozon
+            </div>
+
+
+            <div
+              className="muted"
+              style={{
+                marginTop:
+                  "4px",
+              }}
+            >
+              До следующей попытки:{" "}
+
+              <strong>
+                {
+                  formatDuration(
+                    secondsRemaining
+                  )
+                }
+              </strong>
+            </div>
+
+
+            <div
+              className="muted"
+              style={{
+                marginTop:
+                  "2px",
+              }}
+            >
+              Доступно с:{" "}
+
+              {
+                formatDateTime(
+                  state.nextAllowedAt
+                )
+              }
+            </div>
+
+          </div>
+
+        )
+      }
+
+
+      {/* DAILY SYNC */}
+
+      {
+        stateLoaded
+        &&
+        !rateLimitActive
+        &&
+        dailySyncGraceActive
+        &&
+        (
+
+          <div
+            style={{
+              width:
+                "100%",
+
+              padding:
+                "10px 12px",
+
+              borderRadius:
+                "10px",
+
+              background:
+                "rgba(70, 110, 220, 0.10)",
+
+              border:
+                "1px solid rgba(70, 110, 220, 0.22)",
+
+              textAlign:
+                "right",
+            }}
+          >
+
+            <div
+              style={{
+                fontWeight:
+                  700,
+
+                fontSize:
+                  "13px",
+              }}
+            >
+              🔄 Автообновление Ozon
+            </div>
+
+
+            <div
+              className="muted"
+              style={{
+                marginTop:
+                  "4px",
+              }}
+            >
+              Получаем свежие данные
+              после 07:00.
+            </div>
+
+          </div>
+
+        )
+      }
+
+
+      {/* НЕИЗВЕСТНЫЙ 429 */}
+
+      {
+        stateLoaded
+        &&
+        !rateLimitActive
+        &&
+        !dailySyncGraceActive
+        &&
+        unknownRateLimit
+        &&
+        (
+
+          <div
+            style={{
+              width:
+                "100%",
+
+              padding:
+                "10px 12px",
+
+              borderRadius:
+                "10px",
+
+              background:
+                "rgba(245, 158, 11, 0.10)",
+
+              border:
+                "1px solid rgba(245, 158, 11, 0.25)",
+
+              textAlign:
+                "right",
+            }}
+          >
+
+            <div
+              style={{
+                fontWeight:
+                  700,
+
+                fontSize:
+                  "13px",
+              }}
+            >
+              🟠 Последний запрос получил лимит Ozon
+            </div>
+
+
+            <div
+              className="muted"
+              style={{
+                marginTop:
+                  "4px",
+              }}
+            >
+              Ozon не сообщил точное время
+              окончания ограничения.
+            </div>
+
+          </div>
+
+        )
+      }
+
+
+      {/* МОЖНО ОБНОВИТЬ */}
+
+      {
+        stateLoaded
+        &&
+        !rateLimitActive
+        &&
+        !dailySyncGraceActive
+        &&
+        !unknownRateLimit
+        &&
+        (
+
+          <div
+            style={{
+              width:
+                "100%",
+
+              textAlign:
+                "right",
+
+              fontSize:
+                "13px",
+
+              fontWeight:
+                700,
+            }}
+          >
+            🟢 Можно обновить сейчас
+          </div>
+
+        )
+      }
+
+
+      {/* ПОСЛЕДНИЙ УСПЕХ */}
+
+      {
+        state.lastSuccessAt
+        &&
+        (
+
+          <div
+            className="muted"
+            style={{
+              width:
+                "100%",
+
+              textAlign:
+                "right",
+
+              fontSize:
+                "12px",
+            }}
+          >
+            Последнее успешное обновление:{" "}
+
+            {
+              formatDateTime(
+                state.lastSuccessAt
+              )
+            }
+          </div>
+
+        )
+      }
+
+
+      {/* BUTTON */}
+
+      <button
+        type="button"
+
+        className="primary-button"
+
+        disabled={
+          disabled
+        }
+
+        onClick={
+          onClick
+        }
+
+        style={{
+          opacity:
+            disabled
+              ? 0.55
+              : 1,
+
+          cursor:
+            disabled
+              ? "not-allowed"
+              : "pointer",
+        }}
+      >
+
+        {
+          !stateLoaded
+
+            ?
+            "Проверяем..."
+
+            :
+            loading
+
+              ?
+              loadingLabel
+
+              :
+              rateLimitActive
+
+                ?
+                `Лимит Ozon · ${formatDuration(
+                  secondsRemaining
+                )}`
+
+                :
+                dailySyncGraceActive
+
+                  ?
+                  "Обновляем автоматически..."
+
+                  :
+                  label
+        }
+
+      </button>
+
+
+      {/* MESSAGE */}
+
+      {
+        message
+        &&
+        (
+
+          <div
+            style={{
+              width:
+                "100%",
+
+              padding:
+                "8px 10px",
+
+              borderRadius:
+                "8px",
+
+              textAlign:
+                "right",
+
+              fontSize:
+                "12px",
+
+              fontWeight:
+                messageError
+                  ? 600
+                  : 700,
+
+              background:
+                messageError
+                  ? "rgba(220, 70, 70, 0.08)"
+                  : "rgba(40, 160, 90, 0.08)",
+
+              border:
+                messageError
+                  ? "1px solid rgba(220, 70, 70, 0.18)"
+                  : "1px solid rgba(40, 160, 90, 0.18)",
+
+              color:
+                messageError
+                  ? "#b42318"
+                  : undefined,
+            }}
+          >
+
+            {
+              !messageError
+              &&
+              kind ===
+                "stocks"
+                ? "✅ "
+                : null
+            }
+
+            {
+              !messageError
+              &&
+              kind ===
+                "sales"
+                ? "✅ "
+                : null
+            }
+
+            {message}
+
+          </div>
+
+        )
+      }
+
+    </div>
+
+  );
+
 }
