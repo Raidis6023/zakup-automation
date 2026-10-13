@@ -4,6 +4,7 @@ import {
   Fragment,
   useMemo,
   useState,
+  type ReactNode,
 } from "react";
 
 
@@ -113,19 +114,24 @@ function formatNumber(
     | null
     | undefined
 ) {
+
   if (
     value === null
     ||
     value === undefined
   ) {
+
     return "—";
+
   }
+
 
   return new Intl.NumberFormat(
     "ru-RU"
   ).format(
     value
   );
+
 }
 
 
@@ -136,15 +142,20 @@ function formatDecimal(
     | undefined,
 
   digits:
-    number = 1
+    number =
+      1
 ) {
+
   if (
     value === null
     ||
     value === undefined
   ) {
+
     return "—";
+
   }
+
 
   return new Intl.NumberFormat(
     "ru-RU",
@@ -158,6 +169,7 @@ function formatDecimal(
   ).format(
     value
   );
+
 }
 
 
@@ -165,13 +177,11 @@ function formatDecimal(
 // КОМПОНЕНТ
 // ============================================================
 
-export default function OzonProductsTableClient(
-  {
-    products,
-    clusterRowsByMasterCode,
-  }:
-  Props
-) {
+export default function OzonProductsTableClient({
+  products,
+  clusterRowsByMasterCode,
+}: Props) {
+
   const [
     expandedMasterCodes,
     setExpandedMasterCodes,
@@ -184,44 +194,57 @@ export default function OzonProductsTableClient(
 
 
   function toggleMasterCode(
-    masterCode: string
+    masterCode:
+      string
   ) {
+
     setExpandedMasterCodes(
       previous => {
+
         const next =
           new Set(
             previous
           );
+
 
         if (
           next.has(
             masterCode
           )
         ) {
+
           next.delete(
             masterCode
           );
+
         } else {
+
           next.add(
             masterCode
           );
+
         }
 
+
         return next;
+
       }
     );
+
   }
 
 
   const normalizedClusterRows =
     useMemo(
       () => {
+
         const result:
           Record<
             string,
             OzonClusterDetailRow[]
           > =
           {};
+
 
         for (
           const [
@@ -232,6 +255,7 @@ export default function OzonProductsTableClient(
             clusterRowsByMasterCode
           )
         ) {
+
           result[
             masterCode
           ] =
@@ -242,41 +266,52 @@ export default function OzonProductsTableClient(
                 left,
                 right
               ) => {
+
                 const clusterCompare =
                   (
                     left.cluster_name
-                    ?? ""
-                  )
-                    .localeCompare(
-                      right.cluster_name
-                      ?? "",
-                      "ru"
-                    );
+                    ??
+                    ""
+                  ).localeCompare(
+                    right.cluster_name
+                    ??
+                    "",
+                    "ru"
+                  );
+
 
                 if (
                   clusterCompare !==
                   0
                 ) {
+
                   return clusterCompare;
+
                 }
+
 
                 const offerCompare =
                   (
                     left.offer_id
-                    ?? ""
-                  )
-                    .localeCompare(
-                      right.offer_id
-                      ?? "",
-                      "ru"
-                    );
+                    ??
+                    ""
+                  ).localeCompare(
+                    right.offer_id
+                    ??
+                    "",
+                    "ru"
+                  );
+
 
                 if (
                   offerCompare !==
                   0
                 ) {
+
                   return offerCompare;
+
                 }
+
 
                 return (
                   left.cluster_id
@@ -285,11 +320,15 @@ export default function OzonProductsTableClient(
                       "ru"
                     )
                 );
+
               }
             );
+
         }
 
+
         return result;
+
       },
       [
         clusterRowsByMasterCode,
@@ -298,34 +337,19 @@ export default function OzonProductsTableClient(
 
 
   return (
+
     <div
-      style={{
-        overflowX:
-          "auto",
-
-        marginTop:
-          "18px",
-
-        border:
-          "1px solid var(--border-color, #e5e7eb)",
-
-        borderRadius:
-          "12px",
-      }}
+      className=
+        "ozon-products-table-shell"
     >
+
       <table
-        style={{
-          width:
-            "100%",
-
-          borderCollapse:
-            "collapse",
-
-          minWidth:
-            "1250px",
-        }}
+        className=
+          "ozon-products-table"
       >
+
         <thead>
+
           <tr>
 
             <TableHeader>
@@ -340,27 +364,38 @@ export default function OzonProductsTableClient(
               Offer ID
             </TableHeader>
 
-            <TableHeader align="right">
+            <TableHeader
+              align="right"
+            >
               Продажи 28 дн.
             </TableHeader>
 
-            <TableHeader align="right">
+            <TableHeader
+              align="right"
+            >
               Среднее / день
             </TableHeader>
 
-            <TableHeader align="right">
+            <TableHeader
+              align="right"
+            >
               Отмены
             </TableHeader>
 
-            <TableHeader align="right">
+            <TableHeader
+              align="right"
+            >
               Остаток
             </TableHeader>
 
-            <TableHeader align="right">
+            <TableHeader
+              align="right"
+            >
               Дней запаса
             </TableHeader>
 
           </tr>
+
         </thead>
 
 
@@ -369,8 +404,10 @@ export default function OzonProductsTableClient(
           {
             products.map(
               product => {
+
                 const masterCode =
                   product.master_code;
+
 
                 const isExpanded =
                   expandedMasterCodes
@@ -378,16 +415,20 @@ export default function OzonProductsTableClient(
                       masterCode
                     );
 
+
                 const clusterRows =
                   normalizedClusterRows[
                     masterCode
                   ]
-                  ?? [];
+                  ??
+                  [];
+
 
                 const offers =
                   (
                     product.listings
-                    ?? []
+                    ??
+                    []
                   )
                     .map(
                       listing =>
@@ -396,10 +437,11 @@ export default function OzonProductsTableClient(
                     .filter(
                       (
                         value
-                      ): value is string =>
-                        Boolean(
-                          value
-                        )
+                      ):
+                        value is string =>
+                          Boolean(
+                            value
+                          )
                     )
                     .join(
                       ", "
@@ -414,11 +456,10 @@ export default function OzonProductsTableClient(
                     }
                   >
 
-                    {/* =========================================
-                        ОСНОВНАЯ СТРОКА MASTER_CODE
-                        ========================================= */}
-
-                    <tr>
+                    <tr
+                      className=
+                        "ozon-products-master-row"
+                    >
 
                       <TableCell>
 
@@ -436,56 +477,13 @@ export default function OzonProductsTableClient(
                             isExpanded
                           }
 
-                          style={{
-                            display:
-                              "inline-flex",
-
-                            alignItems:
-                              "center",
-
-                            gap:
-                              "7px",
-
-                            padding:
-                              0,
-
-                            border:
-                              "none",
-
-                            background:
-                              "transparent",
-
-                            color:
-                              "inherit",
-
-                            cursor:
-                              "pointer",
-
-                            font:
-                              "inherit",
-                          }}
+                          className=
+                            "ozon-products-master-button"
                         >
 
                           <span
-                            style={{
-                              display:
-                                "inline-flex",
-
-                              alignItems:
-                                "center",
-
-                              justifyContent:
-                                "center",
-
-                              width:
-                                "14px",
-
-                              fontSize:
-                                "11px",
-
-                              opacity:
-                                0.8,
-                            }}
+                            className=
+                              "ozon-products-chevron"
                           >
                             {
                               isExpanded
@@ -496,16 +494,8 @@ export default function OzonProductsTableClient(
 
 
                           <span
-                            style={{
-                              fontFamily:
-                                "monospace",
-
-                              fontWeight:
-                                700,
-
-                              textDecoration:
-                                "underline",
-                            }}
+                            className=
+                              "ozon-products-master-code"
                           >
                             {
                               masterCode
@@ -520,10 +510,8 @@ export default function OzonProductsTableClient(
                       <TableCell>
 
                         <div
-                          style={{
-                            fontWeight:
-                              600,
-                          }}
+                          className=
+                            "ozon-products-product-name"
                         >
                           {
                             product
@@ -537,18 +525,12 @@ export default function OzonProductsTableClient(
                         {
                           product.listing_count >
                           1
+
                             ? (
 
                               <div
-                                className="muted"
-
-                                style={{
-                                  marginTop:
-                                    "4px",
-
-                                  fontSize:
-                                    "11px",
-                                }}
+                                className=
+                                  "ozon-products-listing-count"
                               >
                                 {
                                   product
@@ -558,6 +540,7 @@ export default function OzonProductsTableClient(
                               </div>
 
                             )
+
                             : null
                         }
 
@@ -567,13 +550,8 @@ export default function OzonProductsTableClient(
                       <TableCell>
 
                         <div
-                          style={{
-                            maxWidth:
-                              "360px",
-
-                            wordBreak:
-                              "break-word",
-                          }}
+                          className=
+                            "ozon-products-offers"
                         >
                           {
                             offers
@@ -585,7 +563,9 @@ export default function OzonProductsTableClient(
                       </TableCell>
 
 
-                      <TableCell align="right">
+                      <TableCell
+                        align="right"
+                      >
 
                         <strong>
                           {
@@ -599,8 +579,9 @@ export default function OzonProductsTableClient(
                       </TableCell>
 
 
-                      <TableCell align="right">
-
+                      <TableCell
+                        align="right"
+                      >
                         {
                           formatDecimal(
                             product
@@ -608,23 +589,24 @@ export default function OzonProductsTableClient(
                             2
                           )
                         }
-
                       </TableCell>
 
 
-                      <TableCell align="right">
-
+                      <TableCell
+                        align="right"
+                      >
                         {
                           formatNumber(
                             product
                               .cancelled_28_days
                           )
                         }
-
                       </TableCell>
 
 
-                      <TableCell align="right">
+                      <TableCell
+                        align="right"
+                      >
 
                         <strong>
                           {
@@ -638,8 +620,9 @@ export default function OzonProductsTableClient(
                       </TableCell>
 
 
-                      <TableCell align="right">
-
+                      <TableCell
+                        align="right"
+                      >
                         {
                           formatDecimal(
                             product
@@ -647,19 +630,14 @@ export default function OzonProductsTableClient(
                             1
                           )
                         }
-
                       </TableCell>
 
                     </tr>
 
 
-                    {/* =========================================
-                        РАСКРЫТИЕ:
-                        ПРОДАЖИ + ОСТАТКИ ПО КЛАСТЕРАМ
-                        ========================================= */}
-
                     {
                       isExpanded
+
                         ? (
 
                           <tr>
@@ -669,70 +647,33 @@ export default function OzonProductsTableClient(
                                 8
                               }
 
-                              style={{
-                                padding:
-                                  "0 12px 18px",
-
-                                borderBottom:
-                                  "1px solid var(--border-color, #eef0f2)",
-                              }}
+                              className=
+                                "ozon-products-expanded-cell"
                             >
 
                               <div
-                                style={{
-                                  padding:
-                                    "14px 30px 0",
-                                }}
+                                className=
+                                  "ozon-products-cluster-panel"
                               >
 
-                                {/* =============================
-                                    ЗАГОЛОВОК
-                                    ============================= */}
-
                                 <div
-                                  style={{
-                                    display:
-                                      "flex",
-
-                                    alignItems:
-                                      "flex-start",
-
-                                    justifyContent:
-                                      "space-between",
-
-                                    gap:
-                                      "16px",
-
-                                    flexWrap:
-                                      "wrap",
-                                  }}
+                                  className=
+                                    "ozon-products-cluster-heading"
                                 >
 
                                   <div>
 
                                     <div
-                                      style={{
-                                        fontWeight:
-                                          700,
-
-                                        fontSize:
-                                          "13px",
-                                      }}
+                                      className=
+                                        "ozon-products-cluster-title"
                                     >
                                       Продажи и остатки по кластерам
                                     </div>
 
 
                                     <div
-                                      className="muted"
-
-                                      style={{
-                                        marginTop:
-                                          "4px",
-
-                                        fontSize:
-                                          "11px",
-                                      }}
+                                      className=
+                                        "ozon-products-cluster-subtitle"
                                     >
                                       По конкретным Ozon-размещениям,
                                       без объединения SKU
@@ -751,37 +692,14 @@ export default function OzonProductsTableClient(
                                 </div>
 
 
-                                {/* =============================
-                                    ТАБЛИЦА
-                                    ============================= */}
-
                                 <div
-                                  style={{
-                                    overflowX:
-                                      "auto",
-
-                                    marginTop:
-                                      "14px",
-
-                                    border:
-                                      "1px solid var(--border-color, #d1d5db)",
-
-                                    borderRadius:
-                                      "11px",
-                                  }}
+                                  className=
+                                    "ozon-cluster-table-shell"
                                 >
 
                                   <table
-                                    style={{
-                                      width:
-                                        "100%",
-
-                                      minWidth:
-                                        "1320px",
-
-                                      borderCollapse:
-                                        "collapse",
-                                    }}
+                                    className=
+                                      "ozon-cluster-table"
                                   >
 
                                     <thead>
@@ -800,23 +718,33 @@ export default function OzonProductsTableClient(
                                           Кластер
                                         </ClusterHeader>
 
-                                        <ClusterHeader align="right">
+                                        <ClusterHeader
+                                          align="right"
+                                        >
                                           Продажи 28 дн.
                                         </ClusterHeader>
 
-                                        <ClusterHeader align="right">
+                                        <ClusterHeader
+                                          align="right"
+                                        >
                                           Среднее / день
                                         </ClusterHeader>
 
-                                        <ClusterHeader align="right">
+                                        <ClusterHeader
+                                          align="right"
+                                        >
                                           Отмены
                                         </ClusterHeader>
 
-                                        <ClusterHeader align="right">
+                                        <ClusterHeader
+                                          align="right"
+                                        >
                                           Остаток
                                         </ClusterHeader>
 
-                                        <ClusterHeader align="right">
+                                        <ClusterHeader
+                                          align="right"
+                                        >
                                           Дней запаса
                                         </ClusterHeader>
 
@@ -830,6 +758,7 @@ export default function OzonProductsTableClient(
                                       {
                                         clusterRows.length ===
                                         0
+
                                           ? (
 
                                             <tr>
@@ -839,28 +768,17 @@ export default function OzonProductsTableClient(
                                                   8
                                                 }
 
-                                                style={{
-                                                  padding:
-                                                    "18px",
-
-                                                  textAlign:
-                                                    "center",
-
-                                                  fontSize:
-                                                    "12px",
-
-                                                  opacity:
-                                                    0.65,
-                                                }}
+                                                className=
+                                                  "ozon-cluster-empty"
                                               >
-                                                Нет строк
-                                                последнего расчёта FBO
-                                                для этого товара.
+                                                Нет строк последнего
+                                                расчёта FBO для этого товара.
                                               </td>
 
                                             </tr>
 
                                           )
+
                                           : (
 
                                             clusterRows.map(
@@ -891,28 +809,26 @@ export default function OzonProductsTableClient(
 
 
                                                   <ClusterCell>
-
                                                     {
                                                       row.ozon_product_id
                                                       ??
                                                       "—"
                                                     }
-
                                                   </ClusterCell>
 
 
                                                   <ClusterCell>
-
                                                     {
                                                       row.cluster_name
                                                       ||
                                                       "—"
                                                     }
-
                                                   </ClusterCell>
 
 
-                                                  <ClusterCell align="right">
+                                                  <ClusterCell
+                                                    align="right"
+                                                  >
 
                                                     <strong>
                                                       {
@@ -925,30 +841,32 @@ export default function OzonProductsTableClient(
                                                   </ClusterCell>
 
 
-                                                  <ClusterCell align="right">
-
+                                                  <ClusterCell
+                                                    align="right"
+                                                  >
                                                     {
                                                       formatDecimal(
                                                         row.average_sales_per_day,
                                                         2
                                                       )
                                                     }
-
                                                   </ClusterCell>
 
 
-                                                  <ClusterCell align="right">
-
+                                                  <ClusterCell
+                                                    align="right"
+                                                  >
                                                     {
                                                       formatNumber(
                                                         row.cancelled_28_days
                                                       )
                                                     }
-
                                                   </ClusterCell>
 
 
-                                                  <ClusterCell align="right">
+                                                  <ClusterCell
+                                                    align="right"
+                                                  >
 
                                                     <strong>
                                                       {
@@ -961,15 +879,15 @@ export default function OzonProductsTableClient(
                                                   </ClusterCell>
 
 
-                                                  <ClusterCell align="right">
-
+                                                  <ClusterCell
+                                                    align="right"
+                                                  >
                                                     {
                                                       formatDecimal(
                                                         row.stock_days,
                                                         1
                                                       )
                                                     }
-
                                                   </ClusterCell>
 
                                                 </tr>
@@ -993,12 +911,14 @@ export default function OzonProductsTableClient(
                           </tr>
 
                         )
+
                         : null
                     }
 
                   </Fragment>
 
                 );
+
               }
             )
           }
@@ -1006,8 +926,11 @@ export default function OzonProductsTableClient(
         </tbody>
 
       </table>
+
     </div>
+
   );
+
 }
 
 
@@ -1015,15 +938,13 @@ export default function OzonProductsTableClient(
 // ИТОГИ РАСКРЫТИЯ
 // ============================================================
 
-function ClusterSummary(
-  {
-    rows,
-  }:
-  {
-    rows:
-      OzonClusterDetailRow[];
-  }
-) {
+function ClusterSummary({
+  rows,
+}: {
+  rows:
+    OzonClusterDetailRow[];
+}) {
+
   const sales =
     rows.reduce(
       (
@@ -1034,10 +955,12 @@ function ClusterSummary(
         +
         (
           row.sales_28_days
-          ?? 0
+          ??
+          0
         ),
       0
     );
+
 
   const stock =
     rows.reduce(
@@ -1049,30 +972,18 @@ function ClusterSummary(
         +
         (
           row.stock_quantity
-          ?? 0
+          ??
+          0
         ),
       0
     );
 
 
   return (
+
     <div
-      style={{
-        display:
-          "flex",
-
-        gap:
-          "18px",
-
-        flexWrap:
-          "wrap",
-
-        justifyContent:
-          "flex-end",
-
-        fontSize:
-          "11px",
-      }}
+      className=
+        "ozon-cluster-summary"
     >
 
       <span>
@@ -1111,7 +1022,9 @@ function ClusterSummary(
       </span>
 
     </div>
+
   );
+
 }
 
 
@@ -1119,87 +1032,67 @@ function ClusterSummary(
 // ОСНОВНАЯ ТАБЛИЦА
 // ============================================================
 
-function TableHeader(
-  {
-    children,
-    align = "left",
-  }:
-  {
-    children:
-      React.ReactNode;
+function TableHeader({
+  children,
+  align = "left",
+}: {
+  children:
+    ReactNode;
 
-    align?:
-      "left"
-      | "right";
-  }
-) {
+  align?:
+    "left"
+    |
+    "right";
+}) {
+
   return (
+
     <th
-      style={{
-        padding:
-          "12px 14px",
-
-        textAlign:
-          align,
-
-        borderBottom:
-          "1px solid var(--border-color, #e5e7eb)",
-
-        fontSize:
-          "12px",
-
-        fontWeight:
-          700,
-
-        whiteSpace:
-          "nowrap",
-
-        opacity:
-          0.75,
-      }}
+      className={
+        align === "right"
+          ? "ozon-table-right"
+          : undefined
+      }
     >
-      {children}
+      {
+        children
+      }
     </th>
+
   );
+
 }
 
 
-function TableCell(
-  {
-    children,
-    align = "left",
-  }:
-  {
-    children:
-      React.ReactNode;
+function TableCell({
+  children,
+  align = "left",
+}: {
+  children:
+    ReactNode;
 
-    align?:
-      "left"
-      | "right";
-  }
-) {
+  align?:
+    "left"
+    |
+    "right";
+}) {
+
   return (
+
     <td
-      style={{
-        padding:
-          "12px 14px",
-
-        textAlign:
-          align,
-
-        borderBottom:
-          "1px solid var(--border-color, #eef0f2)",
-
-        fontSize:
-          "13px",
-
-        verticalAlign:
-          "top",
-      }}
+      className={
+        align === "right"
+          ? "ozon-table-right"
+          : undefined
+      }
     >
-      {children}
+      {
+        children
+      }
     </td>
+
   );
+
 }
 
 
@@ -1207,88 +1100,65 @@ function TableCell(
 // ВНУТРЕННЯЯ ТАБЛИЦА КЛАСТЕРОВ
 // ============================================================
 
-function ClusterHeader(
-  {
-    children,
-    align = "left",
-  }:
-  {
-    children:
-      React.ReactNode;
+function ClusterHeader({
+  children,
+  align = "left",
+}: {
+  children:
+    ReactNode;
 
-    align?:
-      "left"
-      | "right";
-  }
-) {
+  align?:
+    "left"
+    |
+    "right";
+}) {
+
   return (
+
     <th
-      style={{
-        padding:
-          "10px 12px",
-
-        textAlign:
-          align,
-
-        borderBottom:
-          "1px solid var(--border-color, #d1d5db)",
-
-        fontSize:
-          "11px",
-
-        whiteSpace:
-          "nowrap",
-
-        fontWeight:
-          700,
-
-        opacity:
-          0.75,
-      }}
+      className={
+        align === "right"
+          ? "ozon-table-right"
+          : undefined
+      }
     >
-      {children}
+      {
+        children
+      }
     </th>
+
   );
+
 }
 
 
-function ClusterCell(
-  {
-    children,
-    align = "left",
-  }:
-  {
-    children:
-      React.ReactNode;
+function ClusterCell({
+  children,
+  align = "left",
+}: {
+  children:
+    ReactNode;
 
-    align?:
-      "left"
-      | "right";
-  }
-) {
+  align?:
+    "left"
+    |
+    "right";
+}) {
+
   return (
+
     <td
-      style={{
-        padding:
-          "9px 12px",
-
-        textAlign:
-          align,
-
-        borderBottom:
-          "1px solid var(--border-color, #e5e7eb)",
-
-        fontSize:
-          "11px",
-
-        verticalAlign:
-          "middle",
-
-        whiteSpace:
-          "nowrap",
-      }}
+      className={
+        align === "right"
+          ? "ozon-table-right"
+          : undefined
+      }
     >
-      {children}
+      {
+        children
+      }
     </td>
+
   );
+
 }
