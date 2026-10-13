@@ -20,7 +20,7 @@ const RETRY_DELAY_MS =
 
 
 // ============================================================
-// ТИПЫ
+// TYPES
 // ============================================================
 
 type StepName =
@@ -204,7 +204,8 @@ function getConfig() {
 
   const cronSecret =
     process.env
-      .CRON_SECRET;
+      .CRON_SECRET
+      ?.trim();
 
 
   if (!cronSecret) {
@@ -229,15 +230,12 @@ function getConfig() {
 
 function isAuthorized(
   request:
-    Request
+    Request,
+
+  cronSecret:
+    string
 ):
 boolean {
-
-  const {
-    cronSecret,
-  } =
-    getConfig();
-
 
   return (
     request.headers.get(
@@ -313,10 +311,14 @@ Promise<JsonObject> {
 
 async function runInternalPost({
   origin,
+  cronSecret,
   step,
   path,
 }: {
   origin:
+    string;
+
+  cronSecret:
     string;
 
   step:
@@ -353,6 +355,9 @@ Promise<StepResult> {
 
               "Content-Type":
                 "application/json",
+
+              Authorization:
+                `Bearer ${cronSecret}`,
             },
 
             cache:
@@ -398,9 +403,9 @@ Promise<StepResult> {
       // ======================================================
       // 5xx можно один раз повторить.
       //
-      // 4xx НЕ повторяем:
-      // preflight / mapping / validation
-      // сам по себе не починится.
+      // 4xx не повторяем:
+      // mapping / preflight / validation
+      // сами по себе не исправятся.
       // ======================================================
 
       if (
@@ -546,12 +551,19 @@ async function runDailySync(
   try {
 
     // ========================================================
-    // 1. AUTH
+    // 1. CONFIG + AUTH
     // ========================================================
+
+    const {
+      cronSecret,
+    } =
+      getConfig();
+
 
     if (
       !isAuthorized(
-        request
+        request,
+        cronSecret
       )
     ) {
 
@@ -605,6 +617,8 @@ async function runDailySync(
       await runInternalPost({
         origin,
 
+        cronSecret,
+
         step:
           "stocks",
 
@@ -625,19 +639,13 @@ async function runDailySync(
 
     // ========================================================
     // 4. SALES
-    //
-    // Сюда входят:
-    //
-    // - заказы;
-    // - отмены;
-    // - невыкупы;
-    // - возвраты;
-    // - parent orders.
     // ========================================================
 
     const salesResult =
       await runInternalPost({
         origin,
+
+        cronSecret,
 
         step:
           "sales",
@@ -695,17 +703,13 @@ async function runDailySync(
 
     // ========================================================
     // 5. SALES DAILY
-    //
-    // Пересчитывает:
-    //
-    // yandex_sales_daily
-    //
-    // за тот же 28-дневный период.
     // ========================================================
 
     const dailyResult =
       await runInternalPost({
         origin,
+
+        cronSecret,
 
         step:
           "sales_daily",
@@ -734,10 +738,8 @@ async function runDailySync(
 
 
     // ========================================================
-    // 6. RUN ID CHECK
-    //
-    // Если daily-sync сообщает свой sync_run_id,
-    // он обязан совпасть с только что созданным sales run.
+    // 6. ПРОВЕРЯЕМ, ЧТО DAILY ПЕРЕСЧИТАЛ
+    // ТОТ ЖЕ САМЫЙ SALES RUN
     // ========================================================
 
     if (
@@ -1028,9 +1030,6 @@ async function runDailySync(
 
 // ============================================================
 // ROUTES
-//
-// Как у Ozon:
-// можно вызывать и GET, и POST.
 // ============================================================
 
 export async function GET(
