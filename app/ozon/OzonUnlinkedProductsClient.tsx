@@ -42,12 +42,15 @@ type Props = {
 
 
 type ApiResponse = {
-  ok?: boolean;
+  ok?:
+    boolean;
 
-  error?: string;
+  error?:
+    string;
 
   result?: {
-    master_code?: string;
+    master_code?:
+      string;
   };
 };
 
@@ -56,10 +59,15 @@ const MASTER_CODE_LENGTH =
   6;
 
 
+// ============================================================
+// MASTER CODE
+// ============================================================
+
 function normalizeMasterCode(
   value:
     string
-): string {
+):
+  string {
 
   return value
     .toUpperCase()
@@ -71,19 +79,26 @@ function normalizeMasterCode(
       0,
       MASTER_CODE_LENGTH
     );
+
 }
 
 
 function isValidMasterCode(
   value:
     string
-): boolean {
+):
+  boolean {
 
   return /^[A-Z0-9]{6}$/.test(
     value
   );
+
 }
 
+
+// ============================================================
+// ДАТА
+// ============================================================
 
 function formatDateTimeKrasnoyarsk(
   value:
@@ -93,7 +108,9 @@ function formatDateTimeKrasnoyarsk(
 ) {
 
   if (!value) {
+
     return "—";
+
   }
 
 
@@ -108,7 +125,9 @@ function formatDateTimeKrasnoyarsk(
       date.getTime()
     )
   ) {
+
     return value;
+
   }
 
 
@@ -136,15 +155,17 @@ function formatDateTimeKrasnoyarsk(
   ).format(
     date
   );
+
 }
 
 
-export default function OzonUnlinkedProductsClient(
-  {
-    products,
-  }:
-  Props
-) {
+// ============================================================
+// COMPONENT
+// ============================================================
+
+export default function OzonUnlinkedProductsClient({
+  products,
+}: Props) {
 
   const router =
     useRouter();
@@ -166,7 +187,10 @@ export default function OzonUnlinkedProductsClient(
     setMasterCodes,
   ] =
     useState<
-      Record<string, string>
+      Record<
+        string,
+        string
+      >
     >(
       {}
     );
@@ -178,7 +202,8 @@ export default function OzonUnlinkedProductsClient(
   ] =
     useState<
       string
-      | null
+      |
+      null
     >(
       null
     );
@@ -189,7 +214,10 @@ export default function OzonUnlinkedProductsClient(
     setRowErrors,
   ] =
     useState<
-      Record<string, string>
+      Record<
+        string,
+        string
+      >
     >(
       {}
     );
@@ -201,7 +229,8 @@ export default function OzonUnlinkedProductsClient(
   ] =
     useState<
       string
-      | null
+      |
+      null
     >(
       null
     );
@@ -222,8 +251,11 @@ export default function OzonUnlinkedProductsClient(
 
 
   function setMasterCode(
-    id: string,
-    value: string
+    id:
+      string,
+
+    value:
+      string
   ) {
 
     const normalizedValue =
@@ -245,8 +277,14 @@ export default function OzonUnlinkedProductsClient(
     setRowErrors(
       previous => {
 
-        if (!previous[id]) {
+        if (
+          !previous[
+            id
+          ]
+        ) {
+
           return previous;
+
         }
 
 
@@ -255,10 +293,13 @@ export default function OzonUnlinkedProductsClient(
         };
 
 
-        delete next[id];
+        delete next[
+          id
+        ];
 
 
         return next;
+
       }
     );
 
@@ -266,6 +307,7 @@ export default function OzonUnlinkedProductsClient(
     setSuccessMessage(
       null
     );
+
   }
 
 
@@ -279,7 +321,8 @@ export default function OzonUnlinkedProductsClient(
         masterCodes[
           row.id
         ]
-        ?? ""
+        ??
+        ""
       );
 
 
@@ -300,6 +343,7 @@ export default function OzonUnlinkedProductsClient(
 
 
       return;
+
     }
 
 
@@ -327,6 +371,7 @@ export default function OzonUnlinkedProductsClient(
 
 
         return next;
+
       }
     );
 
@@ -365,7 +410,7 @@ export default function OzonUnlinkedProductsClient(
 
       let data:
         ApiResponse =
-        {};
+          {};
 
 
       if (text) {
@@ -375,7 +420,8 @@ export default function OzonUnlinkedProductsClient(
           data =
             JSON.parse(
               text
-            ) as ApiResponse;
+            ) as
+              ApiResponse;
 
         } catch {
 
@@ -395,7 +441,8 @@ export default function OzonUnlinkedProductsClient(
       if (
         !response.ok
         ||
-        data.ok !== true
+        data.ok !==
+          true
       ) {
 
         throw new Error(
@@ -431,6 +478,7 @@ export default function OzonUnlinkedProductsClient(
 
 
           return next;
+
         }
       );
 
@@ -442,15 +490,20 @@ export default function OzonUnlinkedProductsClient(
 
       router.refresh();
 
-    } catch (error) {
+    } catch (
+      error
+    ) {
 
       setRowErrors(
         previous => ({
           ...previous,
 
           [row.id]:
+
             error instanceof Error
+
               ? error.message
+
               : String(
                   error
                 ),
@@ -464,112 +517,64 @@ export default function OzonUnlinkedProductsClient(
       );
 
     }
+
   }
 
 
   if (
-    rows.length === 0
+    rows.length ===
+    0
   ) {
 
     return (
 
       <div
-        style={{
-          marginTop:
-            "18px",
-
-          padding:
-            "14px 16px",
-
-          border:
-            "1px solid var(--border-color, #e5e7eb)",
-
-          borderRadius:
-            "12px",
-
-          fontSize:
-            "13px",
-
-          opacity:
-            0.75,
-        }}
+        className=
+          "ozon-unlinked-empty"
       >
         Непривязанных товаров Ozon нет.
       </div>
 
     );
+
   }
 
 
   return (
 
     <div
-      style={{
-        marginTop:
-          "18px",
-      }}
+      className=
+        "ozon-unlinked-client"
     >
 
       {
         successMessage
+
           ? (
 
             <div
-              style={{
-                marginBottom:
-                  "12px",
-
-                padding:
-                  "10px 12px",
-
-                borderRadius:
-                  "10px",
-
-                background:
-                  "#ecfdf3",
-
-                color:
-                  "#027a48",
-
-                fontSize:
-                  "13px",
-
-                fontWeight:
-                  600,
-              }}
+              className=
+                "ozon-unlinked-success"
             >
-              {successMessage}
+              {
+                successMessage
+              }
             </div>
 
           )
+
           : null
       }
 
 
       <div
-        style={{
-          overflowX:
-            "auto",
-
-          border:
-            "1px solid var(--border-color, #e5e7eb)",
-
-          borderRadius:
-            "12px",
-        }}
+        className=
+          "ozon-unlinked-table-shell"
       >
 
         <table
-          style={{
-            width:
-              "100%",
-
-            borderCollapse:
-              "collapse",
-
-            minWidth:
-              "1180px",
-          }}
+          className=
+            "ozon-unlinked-table"
         >
 
           <thead>
@@ -625,7 +630,8 @@ export default function OzonUnlinkedProductsClient(
                     masterCodes[
                       row.id
                     ]
-                    ?? "";
+                    ??
+                    "";
 
 
                   const isBusy =
@@ -656,7 +662,9 @@ export default function OzonUnlinkedProductsClient(
                       <Cell>
 
                         <strong>
-                          {row.offer_id}
+                          {
+                            row.offer_id
+                          }
                         </strong>
 
                       </Cell>
@@ -665,7 +673,8 @@ export default function OzonUnlinkedProductsClient(
                       <Cell>
                         {
                           row.ozon_product_id
-                          ?? "—"
+                          ??
+                          "—"
                         }
                       </Cell>
 
@@ -673,7 +682,8 @@ export default function OzonUnlinkedProductsClient(
                       <Cell>
                         {
                           row.ozon_sku
-                          ?? "—"
+                          ??
+                          "—"
                         }
                       </Cell>
 
@@ -681,29 +691,26 @@ export default function OzonUnlinkedProductsClient(
                       <Cell>
                         {
                           row.name
-                          ?? "—"
+                          ??
+                          "—"
                         }
                       </Cell>
 
 
                       <Cell>
-
                         {
                           formatDateTimeKrasnoyarsk(
                             row.first_seen_at
                           )
                         }
-
                       </Cell>
 
 
                       <Cell>
 
                         <div
-                          style={{
-                            minWidth:
-                              "190px",
-                          }}
+                          className=
+                            "ozon-unlinked-master-wrap"
                         >
 
                           <input
@@ -726,7 +733,7 @@ export default function OzonUnlinkedProductsClient(
 
                                 if (
                                   event.key ===
-                                  "Enter"
+                                    "Enter"
                                   &&
                                   !isBusy
                                   &&
@@ -738,6 +745,7 @@ export default function OzonUnlinkedProductsClient(
                                   );
 
                                 }
+
                               }
                             }
 
@@ -745,9 +753,11 @@ export default function OzonUnlinkedProductsClient(
                               MASTER_CODE_LENGTH
                             }
 
-                            autoCapitalize="characters"
+                            autoCapitalize=
+                              "characters"
 
-                            autoComplete="off"
+                            autoComplete=
+                              "off"
 
                             spellCheck={
                               false
@@ -760,62 +770,32 @@ export default function OzonUnlinkedProductsClient(
                               isBusy
                             }
 
-                            style={{
-                              width:
-                                "100%",
+                            className={
+                              rowError
 
-                              boxSizing:
-                                "border-box",
+                                ? "ozon-unlinked-input ozon-unlinked-input--error"
 
-                              padding:
-                                "9px 10px",
-
-                              border:
-                                rowError
-                                  ? "1px solid #d92d20"
-                                  : "1px solid var(--border-color, #d0d5dd)",
-
-                              borderRadius:
-                                "8px",
-
-                              background:
-                                "var(--background, transparent)",
-
-                              color:
-                                "inherit",
-
-                              fontSize:
-                                "13px",
-
-                              outline:
-                                "none",
-                            }}
+                                : "ozon-unlinked-input"
+                            }
                           />
 
 
                           {
                             rowError
+
                               ? (
 
                                 <div
-                                  style={{
-                                    marginTop:
-                                      "5px",
-
-                                    color:
-                                      "#b42318",
-
-                                    fontSize:
-                                      "11px",
-
-                                    lineHeight:
-                                      1.35,
-                                  }}
+                                  className=
+                                    "ozon-unlinked-error"
                                 >
-                                  {rowError}
+                                  {
+                                    rowError
+                                  }
                                 </div>
 
                               )
+
                               : null
                           }
 
@@ -845,50 +825,16 @@ export default function OzonUnlinkedProductsClient(
                             !masterCodeIsValid
                           }
 
-                          style={{
-                            border:
-                              "none",
-
-                            borderRadius:
-                              "8px",
-
-                            padding:
-                              "9px 13px",
-
-                            background:
-                              isBusy
-                              ||
-                              !masterCodeIsValid
-                                ? "#d0d5dd"
-                                : "#175cd3",
-
-                            color:
-                              "#ffffff",
-
-                            fontSize:
-                              "13px",
-
-                            fontWeight:
-                              700,
-
-                            cursor:
-                              isBusy
-                              ||
-                              !masterCodeIsValid
-                                ? "not-allowed"
-                                : "pointer",
-
-                            whiteSpace:
-                              "nowrap",
-                          }}
+                          className=
+                            "ozon-unlinked-button"
                         >
-
                           {
                             isBusy
+
                               ? "Привязываю..."
+
                               : "Привязать"
                           }
-
                         </button>
 
                       </Cell>
@@ -896,6 +842,7 @@ export default function OzonUnlinkedProductsClient(
                     </tr>
 
                   );
+
                 }
               )
             }
@@ -908,16 +855,8 @@ export default function OzonUnlinkedProductsClient(
 
 
       <div
-        style={{
-          marginTop:
-            "10px",
-
-          fontSize:
-            "12px",
-
-          opacity:
-            0.7,
-        }}
+        className=
+          "ozon-unlinked-hint"
       >
         Можно ввести существующий master_code или новый.
         После привязки товар исчезнет из этого списка и будет
@@ -927,84 +866,49 @@ export default function OzonUnlinkedProductsClient(
     </div>
 
   );
+
 }
 
 
-function HeaderCell(
-  {
-    children,
-  }:
-  {
-    children:
-      ReactNode;
-  }
-) {
+// ============================================================
+// TABLE
+// ============================================================
+
+function HeaderCell({
+  children,
+}: {
+  children:
+    ReactNode;
+}) {
 
   return (
 
-    <th
-      style={{
-        padding:
-          "12px 14px",
-
-        textAlign:
-          "left",
-
-        borderBottom:
-          "1px solid var(--border-color, #e5e7eb)",
-
-        fontSize:
-          "12px",
-
-        fontWeight:
-          700,
-
-        whiteSpace:
-          "nowrap",
-
-        opacity:
-          0.75,
-      }}
-    >
-      {children}
+    <th>
+      {
+        children
+      }
     </th>
 
   );
+
 }
 
 
-function Cell(
-  {
-    children,
-  }:
-  {
-    children:
-      ReactNode;
-  }
-) {
+function Cell({
+  children,
+}: {
+  children:
+    ReactNode;
+}) {
 
   return (
 
-    <td
-      style={{
-        padding:
-          "12px 14px",
-
-        textAlign:
-          "left",
-
-        borderBottom:
-          "1px solid var(--border-color, #eef0f2)",
-
-        fontSize:
-          "13px",
-
-        verticalAlign:
-          "top",
-      }}
-    >
-      {children}
+    <td>
+      {
+        children
+      }
     </td>
 
   );
+
 }
