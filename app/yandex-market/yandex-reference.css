@@ -1,0 +1,1832 @@
+/* ============================================================
+   ЯНДЕКС МАРКЕТ — РЕФЕРЕНСНЫЙ ИНТЕРФЕЙС
+   ============================================================ */
+
+.yandex-reference-page {
+  --ym-yellow:
+    #f3c600;
+
+  --ym-yellow-soft:
+    rgba(
+      243,
+      198,
+      0,
+      0.12
+    );
+
+  --ym-green:
+    #24b67a;
+
+  --ym-red:
+    #df5a70;
+
+  --ym-blue:
+    #4f8fd8;
+
+  --ym-purple:
+    #9669d8;
+
+  --ym-orange:
+    #dc963f;
+
+  color:
+    var(--ws-text);
+}
+
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.yandex-reference-page
+.yandex-header {
+  align-items:
+    center;
+
+  margin-bottom:
+    18px;
+}
+
+
+.yandex-reference-page
+.yandex-title-wrap {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    13px;
+
+  min-width:
+    0;
+}
+
+
+.yandex-reference-page
+.yandex-title-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    46px;
+
+  height:
+    46px;
+
+  flex:
+    0 0
+    46px;
+
+  overflow:
+    hidden;
+
+  border-radius:
+    11px;
+}
+
+
+.yandex-reference-page
+.yandex-title-icon
+img {
+  display:
+    block;
+
+  width:
+    46px;
+
+  height:
+    46px;
+
+  object-fit:
+    contain;
+}
+
+
+.yandex-reference-page
+.yandex-header-actions {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    10px;
+}
+
+
+.yandex-reference-page
+.yandex-navigation-button {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  text-decoration:
+    none;
+
+  white-space:
+    nowrap;
+}
+
+
+/* ============================================================
+   ERROR
+   ============================================================ */
+
+.yandex-reference-page
+.yandex-error-section {
+  padding:
+    15px
+    17px;
+
+  border-color:
+    rgba(
+      223,
+      90,
+      112,
+      0.32
+    );
+}
+
+
+.yandex-reference-page
+.yandex-error-title {
+  color:
+    var(--ws-text);
+
+  font-weight:
+    700;
+}
+
+
+.yandex-reference-page
+.yandex-error-text {
+  margin-top:
+    5px;
+
+  color:
+    var(--ym-red);
+}
+
+
+/* ============================================================
+   CATALOG STATUS
+   ============================================================ */
+
+.yandex-reference-page
+.yandex-catalog-section {
+  padding:
+    0;
+
+  overflow:
+    hidden;
+}
+
+
+.yandex-reference-page
+.yandex-section-top {
+  display:
+    flex;
+
+  align-items:
+    flex-start;
+
+  justify-content:
+    space-between;
+
+  gap:
+    16px;
+
+  padding:
+    16px
+    18px;
+}
+
+
+.yandex-reference-page
+.yandex-section-heading {
+  min-width:
+    0;
+}
+
+
+.yandex-reference-page
+.yandex-status-badge {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  gap:
+    7px;
+
+  min-height:
+    30px;
+
+  padding:
+    5px
+    10px;
+
+  flex:
+    0 0
+    auto;
+
+  border:
+    1px solid
+    transparent;
+
+  border-radius:
+    999px;
+
+  font-size:
+    11px;
+
+  font-weight:
+    700;
+
+  white-space:
+    nowrap;
+}
+
+
+.yandex-reference-page
+.yandex-status-dot {
+  width:
+    8px;
+
+  height:
+    8px;
+
+  flex:
+    0 0
+    8px;
+
+  border-radius:
+    50%;
+
+  background:
+    currentColor;
+}
+
+
+.yandex-reference-page
+.yandex-status-badge--success {
+  color:
+    var(--ym-green);
+
+  background:
+    rgba(
+      36,
+      182,
+      122,
+      0.12
+    );
+
+  border-color:
+    rgba(
+      36,
+      182,
+      122,
+      0.23
+    );
+}
+
+
+.yandex-reference-page
+.yandex-status-badge--warning {
+  color:
+    var(--ym-orange);
+
+  background:
+    rgba(
+      220,
+      150,
+      63,
+      0.12
+    );
+
+  border-color:
+    rgba(
+      220,
+      150,
+      63,
+      0.23
+    );
+}
+
+
+/* ============================================================
+   STATUS INFO GRID
+   ============================================================ */
+
+.yandex-reference-page
+.yandex-status-grid {
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(
+      5,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap:
+    1px;
+
+  border-top:
+    1px solid
+    var(--ws-border);
+
+  background:
+    var(--ws-border);
+}
+
+
+.yandex-reference-page
+.yandex-info-card {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    12px;
+
+  min-width:
+    0;
+
+  min-height:
+    88px;
+
+  padding:
+    14px
+    16px;
+
+  background:
+    var(--ws-surface);
+}
+
+
+.yandex-reference-page
+.yandex-info-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    40px;
+
+  height:
+    40px;
+
+  flex:
+    0 0
+    40px;
+
+  border-radius:
+    10px;
+
+  color:
+    #b89100;
+
+  background:
+    var(--ym-yellow-soft);
+}
+
+
+.yandex-reference-page
+.yandex-info-icon
+svg {
+  width:
+    21px;
+
+  height:
+    21px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+.yandex-reference-page
+.yandex-info-copy {
+  min-width:
+    0;
+}
+
+
+.yandex-reference-page
+.yandex-info-value {
+  margin-top:
+    3px;
+
+  color:
+    var(--ws-text);
+
+  font-size:
+    15px;
+
+  font-weight:
+    700;
+
+  line-height:
+    1.3;
+}
+
+
+/* ============================================================
+   UPDATE SECTION
+   ============================================================ */
+
+.yandex-reference-page
+.yandex-update-section {
+  padding:
+    16px
+    18px;
+}
+
+
+.yandex-reference-page
+.yandex-update-error {
+  margin-top:
+    10px;
+
+  color:
+    var(--ym-red);
+}
+
+
+/* ============================================================
+   SYNC ACTIONS
+   ============================================================ */
+
+.yandex-sync-actions {
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap:
+    14px;
+
+  margin-top:
+    16px;
+}
+
+
+.yandex-sync-card {
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  min-height:
+    164px;
+
+  padding:
+    15px;
+
+  background:
+    var(--ws-surface-soft);
+
+  border:
+    1px solid
+    var(--ws-border-soft);
+
+  border-radius:
+    9px;
+}
+
+
+.yandex-sync-card-top {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    11px;
+}
+
+
+.yandex-sync-card-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    38px;
+
+  height:
+    38px;
+
+  flex:
+    0 0
+    38px;
+
+  border-radius:
+    9px;
+
+  color:
+    #b89100;
+
+  background:
+    var(--ym-yellow-soft);
+}
+
+
+.yandex-sync-card-icon
+svg {
+  width:
+    20px;
+
+  height:
+    20px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+.yandex-sync-card-copy {
+  min-width:
+    0;
+}
+
+
+.yandex-sync-card-title {
+  color:
+    var(--ws-text);
+
+  font-size:
+    13px;
+
+  font-weight:
+    700;
+}
+
+
+.yandex-sync-date {
+  margin-top:
+    3px;
+
+  color:
+    var(--ws-text-secondary);
+
+  font-size:
+    12px;
+
+  font-weight:
+    650;
+}
+
+
+.yandex-sync-hint {
+  margin-top:
+    3px;
+
+  color:
+    var(--ws-text-muted);
+
+  font-size:
+    10px;
+
+  line-height:
+    1.4;
+}
+
+
+.yandex-sync-button {
+  align-self:
+    flex-start;
+
+  min-width:
+    170px;
+
+  margin-top:
+    14px;
+}
+
+
+.yandex-sync-button:disabled {
+  cursor:
+    not-allowed;
+
+  opacity:
+    0.55;
+}
+
+
+.yandex-sync-message {
+  margin-top:
+    9px;
+
+  color:
+    var(--ym-green);
+
+  font-size:
+    11px;
+
+  line-height:
+    1.45;
+}
+
+
+.yandex-sync-message--error {
+  color:
+    var(--ym-red);
+}
+
+
+/* ============================================================
+   CATALOG SUMMARY
+   ============================================================ */
+
+.yandex-reference-page
+.yandex-summary-section {
+  padding:
+    0;
+
+  overflow:
+    hidden;
+}
+
+
+.yandex-reference-page
+.yandex-summary-header {
+  padding:
+    16px
+    18px;
+}
+
+
+.yandex-reference-page
+.yandex-summary-grid {
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(
+      3,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap:
+    1px;
+
+  border-top:
+    1px solid
+    var(--ws-border);
+
+  background:
+    var(--ws-border);
+}
+
+
+.yandex-reference-page
+.yandex-summary-card {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    12px;
+
+  min-height:
+    86px;
+
+  padding:
+    14px
+    16px;
+
+  background:
+    var(--ws-surface);
+}
+
+
+.yandex-reference-page
+.yandex-summary-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    42px;
+
+  height:
+    42px;
+
+  flex:
+    0 0
+    42px;
+
+  border-radius:
+    10px;
+}
+
+
+.yandex-reference-page
+.yandex-summary-icon
+svg {
+  width:
+    22px;
+
+  height:
+    22px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+.yandex-reference-page
+.yandex-summary-icon--yellow {
+  color:
+    #b89100;
+
+  background:
+    var(--ym-yellow-soft);
+}
+
+
+.yandex-reference-page
+.yandex-summary-icon--green {
+  color:
+    var(--ym-green);
+
+  background:
+    rgba(
+      36,
+      182,
+      122,
+      0.12
+    );
+}
+
+
+.yandex-reference-page
+.yandex-summary-icon--orange {
+  color:
+    var(--ym-orange);
+
+  background:
+    rgba(
+      220,
+      150,
+      63,
+      0.13
+    );
+}
+
+
+/* ============================================================
+   UNLINKED SECTION
+   ============================================================ */
+
+.yandex-reference-page
+.yandex-unlinked-section {
+  padding:
+    0;
+
+  overflow:
+    hidden;
+}
+
+
+.yandex-reference-page
+.yandex-unlinked-header {
+  display:
+    flex;
+
+  align-items:
+    flex-start;
+
+  justify-content:
+    space-between;
+
+  gap:
+    16px;
+
+  padding:
+    16px
+    18px;
+}
+
+
+.yandex-reference-page
+.yandex-unlinked-content {
+  padding:
+    0
+    18px
+    18px;
+}
+
+
+.yandex-reference-page
+.yandex-unlinked-badge {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  gap:
+    7px;
+
+  min-height:
+    30px;
+
+  padding:
+    5px
+    10px;
+
+  flex:
+    0 0
+    auto;
+
+  border:
+    1px solid
+    transparent;
+
+  border-radius:
+    999px;
+
+  font-size:
+    11px;
+
+  font-weight:
+    700;
+
+  white-space:
+    nowrap;
+}
+
+
+.yandex-reference-page
+.yandex-unlinked-badge--warning {
+  color:
+    var(--ym-orange);
+
+  background:
+    rgba(
+      220,
+      150,
+      63,
+      0.12
+    );
+
+  border-color:
+    rgba(
+      220,
+      150,
+      63,
+      0.23
+    );
+}
+
+
+.yandex-reference-page
+.yandex-unlinked-badge--success {
+  color:
+    var(--ym-green);
+
+  background:
+    rgba(
+      36,
+      182,
+      122,
+      0.12
+    );
+
+  border-color:
+    rgba(
+      36,
+      182,
+      122,
+      0.23
+    );
+}
+
+
+/* ============================================================
+   UNLINKED CLIENT
+   ============================================================ */
+
+.yandex-unlinked-client {
+  margin-top:
+    14px;
+}
+
+
+.yandex-unlinked-empty {
+  padding:
+    13px
+    14px;
+
+  background:
+    var(--ws-surface-soft);
+
+  border:
+    1px solid
+    var(--ws-border-soft);
+
+  border-radius:
+    8px;
+
+  color:
+    var(--ws-text-secondary);
+
+  font-size:
+    12px;
+}
+
+
+.yandex-unlinked-table-shell {
+  overflow-x:
+    auto;
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    9px;
+}
+
+
+.yandex-unlinked-table {
+  width:
+    100%;
+
+  min-width:
+    1180px;
+
+  border-collapse:
+    collapse;
+}
+
+
+.yandex-unlinked-table
+th {
+  padding:
+    10px
+    12px;
+
+  background:
+    var(--ws-surface-soft);
+
+  color:
+    var(--ws-text-muted);
+
+  border-bottom:
+    1px solid
+    var(--ws-border);
+
+  font-size:
+    10px;
+
+  font-weight:
+    650;
+
+  text-align:
+    left;
+
+  white-space:
+    nowrap;
+}
+
+
+.yandex-unlinked-table
+td {
+  padding:
+    11px
+    12px;
+
+  color:
+    var(--ws-text);
+
+  border-bottom:
+    1px solid
+    var(--ws-border-soft);
+
+  font-size:
+    12px;
+
+  vertical-align:
+    top;
+}
+
+
+.yandex-unlinked-table
+tbody
+tr:last-child
+td {
+  border-bottom:
+    none;
+}
+
+
+.yandex-unlinked-table
+tbody
+tr:hover {
+  background:
+    var(--ws-surface-hover);
+}
+
+
+.yandex-unlinked-product {
+  min-width:
+    280px;
+
+  max-width:
+    480px;
+
+  white-space:
+    normal;
+}
+
+
+.yandex-unlinked-master-wrap {
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    5px;
+
+  min-width:
+    190px;
+}
+
+
+.yandex-unlinked-input {
+  width:
+    190px;
+
+  box-sizing:
+    border-box;
+
+  min-height:
+    36px;
+
+  padding:
+    8px
+    9px;
+
+  background:
+    var(--ws-surface);
+
+  color:
+    var(--ws-text);
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    7px;
+
+  font-family:
+    inherit;
+
+  font-size:
+    12px;
+
+  outline:
+    none;
+}
+
+
+.yandex-unlinked-input:focus {
+  border-color:
+    var(--ws-blue);
+
+  box-shadow:
+    0 0 0 3px
+    rgba(
+      63,
+      143,
+      214,
+      0.08
+    );
+}
+
+
+.yandex-unlinked-error {
+  max-width:
+    220px;
+
+  color:
+    var(--ym-red);
+
+  font-size:
+    10px;
+
+  line-height:
+    1.35;
+}
+
+
+.yandex-unlinked-button {
+  min-width:
+    105px;
+
+  min-height:
+    36px;
+}
+
+
+.yandex-unlinked-button:disabled {
+  cursor:
+    not-allowed;
+
+  opacity:
+    0.55;
+}
+
+
+.yandex-unlinked-hint {
+  margin-top:
+    9px;
+
+  color:
+    var(--ws-text-muted);
+
+  font-size:
+    11px;
+
+  line-height:
+    1.45;
+}
+
+
+/* ============================================================
+   PRODUCTS SECTION
+   ============================================================ */
+
+.yandex-reference-page
+.yandex-products-section {
+  padding:
+    0;
+
+  overflow:
+    hidden;
+}
+
+
+.yandex-reference-page
+.yandex-products-header {
+  padding:
+    16px
+    18px;
+}
+
+
+.yandex-reference-page
+.yandex-products-table-shell {
+  overflow-x:
+    auto;
+
+  border-top:
+    1px solid
+    var(--ws-border);
+}
+
+
+.yandex-reference-page
+.yandex-products-table {
+  min-width:
+    1220px;
+}
+
+
+.yandex-reference-page
+.yandex-products-grid {
+  display:
+    grid;
+
+  grid-template-columns:
+    130px
+    minmax(
+      330px,
+      2.1fr
+    )
+    minmax(
+      230px,
+      1.4fr
+    )
+    135px
+    135px
+    110px
+    110px
+    115px;
+}
+
+
+.yandex-reference-page
+.yandex-products-table-header {
+  background:
+    var(--ws-surface-soft);
+
+  border-bottom:
+    1px solid
+    var(--ws-border);
+}
+
+
+.yandex-reference-page
+.yandex-main-header {
+  padding:
+    10px
+    12px;
+
+  color:
+    var(--ws-text-muted);
+
+  font-size:
+    10px;
+
+  font-weight:
+    650;
+
+  white-space:
+    nowrap;
+}
+
+
+.yandex-reference-page
+.yandex-main-header--right {
+  text-align:
+    right;
+}
+
+
+/* ============================================================
+   PRODUCT ROW
+   ============================================================ */
+
+.yandex-product-details {
+  border-bottom:
+    1px solid
+    var(--ws-border-soft);
+}
+
+
+.yandex-product-details:last-child {
+  border-bottom:
+    none;
+}
+
+
+.yandex-product-details
+> summary {
+  list-style:
+    none;
+
+  align-items:
+    center;
+
+  cursor:
+    pointer;
+
+  user-select:
+    none;
+
+  transition:
+    background-color
+      0.1s
+      ease;
+}
+
+
+.yandex-product-details
+> summary::-webkit-details-marker {
+  display:
+    none;
+}
+
+
+.yandex-product-details
+> summary:hover {
+  background:
+    var(--ws-surface-hover);
+}
+
+
+.yandex-product-chevron {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    16px;
+
+  height:
+    16px;
+
+  margin-right:
+    7px;
+
+  color:
+    var(--ws-blue);
+
+  font-size:
+    9px;
+
+  transform-origin:
+    center;
+
+  transition:
+    transform
+      0.15s
+      ease;
+}
+
+
+.yandex-product-details[open]
+.yandex-product-chevron {
+  transform:
+    rotate(
+      90deg
+    );
+}
+
+
+.yandex-reference-page
+.yandex-main-cell {
+  min-width:
+    0;
+
+  padding:
+    11px
+    12px;
+
+  color:
+    var(--ws-text);
+
+  font-size:
+    12px;
+
+  line-height:
+    1.35;
+}
+
+
+.yandex-reference-page
+.yandex-main-cell--right {
+  text-align:
+    right;
+}
+
+
+.yandex-reference-page
+.yandex-main-cell--strong {
+  font-weight:
+    700;
+}
+
+
+.yandex-reference-page
+.yandex-master-code {
+  color:
+    #b89100;
+
+  font-family:
+    monospace;
+
+  font-weight:
+    700;
+}
+
+
+/* ============================================================
+   WAREHOUSE EXPANSION
+   ============================================================ */
+
+.yandex-reference-page
+.yandex-warehouse-panel {
+  padding:
+    14px
+    18px
+    17px
+    38px;
+
+  background:
+    var(--ws-surface-soft);
+
+  border-top:
+    1px solid
+    var(--ws-border-soft);
+}
+
+
+.yandex-reference-page
+.yandex-warehouse-heading {
+  display:
+    flex;
+
+  align-items:
+    flex-start;
+
+  justify-content:
+    space-between;
+
+  gap:
+    16px;
+
+  flex-wrap:
+    wrap;
+
+  margin-bottom:
+    12px;
+}
+
+
+.yandex-reference-page
+.yandex-warehouse-title {
+  color:
+    var(--ws-text);
+
+  font-size:
+    12px;
+
+  font-weight:
+    700;
+}
+
+
+.yandex-reference-page
+.yandex-warehouse-summary {
+  display:
+    flex;
+
+  gap:
+    16px;
+
+  flex-wrap:
+    wrap;
+
+  color:
+    var(--ws-text-secondary);
+
+  font-size:
+    10px;
+}
+
+
+.yandex-reference-page
+.yandex-warehouse-summary
+strong {
+  color:
+    var(--ws-text);
+}
+
+
+.yandex-reference-page
+.yandex-warehouse-table-shell {
+  overflow-x:
+    auto;
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    8px;
+
+  background:
+    var(--ws-surface);
+}
+
+
+.yandex-reference-page
+.yandex-warehouse-table {
+  width:
+    100%;
+
+  min-width:
+    1000px;
+
+  border-collapse:
+    collapse;
+}
+
+
+.yandex-reference-page
+.yandex-warehouse-table
+th {
+  padding:
+    9px
+    10px;
+
+  background:
+    var(--ws-surface-soft);
+
+  color:
+    var(--ws-text-muted);
+
+  border-bottom:
+    1px solid
+    var(--ws-border);
+
+  font-size:
+    9px;
+
+  font-weight:
+    650;
+
+  text-align:
+    left;
+
+  white-space:
+    nowrap;
+}
+
+
+.yandex-reference-page
+.yandex-warehouse-table
+td {
+  padding:
+    9px
+    10px;
+
+  color:
+    var(--ws-text-secondary);
+
+  border-bottom:
+    1px solid
+    var(--ws-border-soft);
+
+  font-size:
+    10px;
+
+  vertical-align:
+    top;
+
+  white-space:
+    nowrap;
+}
+
+
+.yandex-reference-page
+.yandex-warehouse-table
+tbody
+tr:last-child
+td {
+  border-bottom:
+    none;
+}
+
+
+.yandex-reference-page
+.yandex-table-right {
+  text-align:
+    right !important;
+}
+
+
+.yandex-reference-page
+.yandex-warehouse-empty {
+  color:
+    var(--ws-text-muted);
+
+  font-size:
+    11px;
+}
+
+
+/* ============================================================
+   DARK
+   ============================================================ */
+
+html[data-theme="dark"]
+.yandex-reference-page {
+  --ym-yellow:
+    #f2d24b;
+
+  --ym-green:
+    #68ca9b;
+
+  --ym-red:
+    #ec8799;
+
+  --ym-blue:
+    #80afe1;
+
+  --ym-purple:
+    #b399e4;
+
+  --ym-orange:
+    #e4ae6b;
+}
+
+
+html[data-theme="dark"]
+.yandex-reference-page
+.yandex-info-icon,
+html[data-theme="dark"]
+.yandex-reference-page
+.yandex-summary-icon--yellow,
+html[data-theme="dark"]
+.yandex-sync-card-icon {
+  color:
+    #f2d24b;
+}
+
+
+html[data-theme="dark"]
+.yandex-reference-page
+.yandex-master-code {
+  color:
+    #e4c94e;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (
+  max-width: 1400px
+) {
+
+  .yandex-reference-page
+  .yandex-status-grid {
+    grid-template-columns:
+      repeat(
+        3,
+        minmax(
+          0,
+          1fr
+        )
+      );
+  }
+
+}
+
+
+@media (
+  max-width: 1000px
+) {
+
+  .yandex-reference-page
+  .yandex-summary-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+
+  .yandex-sync-actions {
+    grid-template-columns:
+      1fr;
+  }
+
+}
+
+
+@media (
+  max-width: 800px
+) {
+
+  .yandex-reference-page
+  .yandex-header {
+    align-items:
+      flex-start;
+  }
+
+
+  .yandex-reference-page
+  .yandex-header-actions {
+    flex-wrap:
+      wrap;
+  }
+
+
+  .yandex-reference-page
+  .yandex-section-top,
+  .yandex-reference-page
+  .yandex-unlinked-header {
+    flex-direction:
+      column;
+
+    align-items:
+      stretch;
+  }
+
+
+  .yandex-reference-page
+  .yandex-status-grid {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(
+          0,
+          1fr
+        )
+      );
+  }
+
+}
+
+
+@media (
+  max-width: 560px
+) {
+
+  .yandex-reference-page
+  .yandex-status-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+}
