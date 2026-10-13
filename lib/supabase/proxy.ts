@@ -8,6 +8,32 @@ import {
 } from "next/server";
 
 
+// ============================================================
+// СЛУЖЕБНЫЕ CRON-МАРШРУТЫ
+//
+// Эти маршруты могут работать:
+// 1. от обычной пользовательской сессии;
+// 2. от CRON_SECRET.
+//
+// Никакие остальные API-маршруты CRON_SECRET
+// через proxy не пропускает.
+// ============================================================
+
+const CRON_API_ROUTES =
+  new Set<string>([
+    "/api/ozon/daily-sync",
+
+    "/api/yandex/daily-sync",
+    "/api/yandex/stocks",
+    "/api/yandex/sales",
+    "/api/yandex/sales/daily-sync",
+  ]);
+
+
+// ============================================================
+// HELPERS
+// ============================================================
+
 function copyCookies(
   source: NextResponse,
   target: NextResponse
@@ -30,6 +56,65 @@ function copyCookies(
 }
 
 
+function normalizePathname(
+  pathname: string
+):
+string {
+
+  if (
+    pathname.length >
+    1
+  ) {
+
+    return pathname.replace(
+      /\/+$/,
+      ""
+    );
+
+  }
+
+
+  return pathname;
+
+}
+
+
+function hasValidCronAuthorization(
+  request: NextRequest
+):
+boolean {
+
+  const cronSecret =
+    process.env
+      .CRON_SECRET
+      ?.trim();
+
+
+  if (!cronSecret) {
+
+    return false;
+
+  }
+
+
+  const authorization =
+    request.headers.get(
+      "authorization"
+    );
+
+
+  return (
+    authorization ===
+    `Bearer ${cronSecret}`
+  );
+
+}
+
+
+// ============================================================
+// SESSION / ACCESS PROXY
+// ============================================================
+
 export async function updateSession(
   request: NextRequest
 ) {
@@ -39,6 +124,59 @@ export async function updateSession(
       request,
     });
 
+
+  const pathname =
+    request
+      .nextUrl
+      .pathname;
+
+
+  const normalizedPathname =
+    normalizePathname(
+      pathname
+    );
+
+
+  const isApiRoute =
+    pathname === "/api"
+    ||
+    pathname.startsWith(
+      "/api/"
+    );
+
+
+  // ==========================================================
+  // CRON / SERVER-TO-SERVER BYPASS
+  //
+  // ВАЖНО:
+  // bypass работает ТОЛЬКО:
+  //
+  // - для маршрутов из CRON_API_ROUTES;
+  // - при точном совпадении CRON_SECRET.
+  //
+  // Обычные запросы к этим же маршрутам
+  // без секрета продолжают проверяться
+  // через Supabase-сессию.
+  // ==========================================================
+
+  if (
+    CRON_API_ROUTES.has(
+      normalizedPathname
+    )
+    &&
+    hasValidCronAuthorization(
+      request
+    )
+  ) {
+
+    return supabaseResponse;
+
+  }
+
+
+  // ==========================================================
+  // SUPABASE CONFIG
+  // ==========================================================
 
   const supabaseUrl =
     process.env
@@ -62,6 +200,10 @@ export async function updateSession(
 
   }
 
+
+  // ==========================================================
+  // SUPABASE CLIENT
+  // ==========================================================
 
   const supabase =
     createServerClient(
@@ -143,20 +285,6 @@ export async function updateSession(
     await supabase
       .auth
       .getUser();
-
-
-  const pathname =
-    request
-      .nextUrl
-      .pathname;
-
-
-  const isApiRoute =
-    pathname === "/api"
-    ||
-    pathname.startsWith(
-      "/api/"
-    );
 
 
   // ==========================================================
@@ -274,9 +402,6 @@ export async function updateSession(
 
   // ==========================================================
   // ЕСЛИ НЕ УДАЛОСЬ ПРОВЕРИТЬ БЛОКИРОВКУ
-  //
-  // Закрытые страницы не открываем.
-  // Публичные страницы оставляем доступными.
   // ==========================================================
 
   if (
@@ -362,8 +487,6 @@ export async function updateSession(
 
   // ==========================================================
   // ПОЛЬЗОВАТЕЛЬ ЗАБЛОКИРОВАН
-  //
-  // Сбрасываем текущую Supabase-сессию.
   // ==========================================================
 
   if (
@@ -418,11 +541,6 @@ export async function updateSession(
 
     }
 
-
-    /*
-     * Если пользователь уже находится на /login,
-     * не создаём цикл перенаправлений.
-     */
 
     if (
       pathname === "/login"
