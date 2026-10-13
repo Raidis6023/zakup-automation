@@ -173,7 +173,8 @@ export default function WbUnmappedProductsTable({
 
 
   async function linkProduct(
-    nmId: number
+    nmId:
+      number
   ) {
 
     const masterCode =
@@ -202,6 +203,7 @@ export default function WbUnmappedProductsTable({
             "Введите master_code из 6 символов",
         })
       );
+
 
       return;
 
@@ -277,10 +279,10 @@ export default function WbUnmappedProductsTable({
 
           [nmId]:
             error instanceof Error
-              ?
-              error.message
-              :
-              "Ошибка привязки",
+
+              ? error.message
+
+              : "Ошибка привязки",
         })
       );
 
@@ -299,12 +301,12 @@ export default function WbUnmappedProductsTable({
 
     <section
       className=
-        "section"
+        "section wb-unmapped-section"
     >
 
       <div
         className=
-          "section-header"
+          "wb-unmapped-header"
       >
 
         <div>
@@ -331,11 +333,6 @@ export default function WbUnmappedProductsTable({
           <div
             className=
               "muted"
-
-            style={{
-              marginTop:
-                "6px",
-            }}
           >
             Они не участвуют
             в расчёте закупки
@@ -346,34 +343,21 @@ export default function WbUnmappedProductsTable({
 
 
         <div
-          style={{
-            display:
-              "inline-flex",
-
-            alignItems:
-              "center",
-
-            padding:
-              "7px 12px",
-
-            borderRadius:
-              "999px",
-
-            background:
-              "rgba(245, 120, 40, 0.12)",
-
-            fontSize:
-              "12px",
-
-            fontWeight:
-              700,
-
-            whiteSpace:
-              "nowrap",
-          }}
+          className=
+            "wb-unmapped-badge"
         >
+
+          <span
+            className=
+              "wb-unmapped-badge-dot"
+          />
+
+
           Требуют привязки:{" "}
-          {rows.length}
+          {
+            rows.length
+          }
+
         </div>
 
       </div>
@@ -381,67 +365,39 @@ export default function WbUnmappedProductsTable({
 
       <div
         className=
-          "table-wrapper"
+          "wb-unmapped-table-shell"
       >
 
         <table
           className=
-            "table"
-
-          style={{
-            minWidth:
-              "1180px",
-          }}
+            "wb-unmapped-table"
         >
 
           <thead>
 
             <tr>
 
-              <th
-                className=
-                  "left"
-              >
+              <th>
                 Артикул продавца
               </th>
 
-
-              <th
-                className=
-                  "left"
-              >
+              <th>
                 Артикул WB
               </th>
 
-
-              <th
-                className=
-                  "left"
-              >
+              <th>
                 Товар
               </th>
 
-
-              <th
-                className=
-                  "left"
-              >
+              <th>
                 Впервые найден
               </th>
 
-
-              <th
-                className=
-                  "left"
-              >
+              <th>
                 master_code
               </th>
 
-
-              <th
-                className=
-                  "left"
-              >
+              <th>
                 Действие
               </th>
 
@@ -491,15 +447,7 @@ export default function WbUnmappedProductsTable({
 
                       <td
                         className=
-                          "left"
-
-                        style={{
-                          whiteSpace:
-                            "normal",
-
-                          minWidth:
-                            "260px",
-                        }}
+                          "wb-unmapped-article"
                       >
 
                         <strong>
@@ -513,32 +461,16 @@ export default function WbUnmappedProductsTable({
                       </td>
 
 
-                      <td
-                        className=
-                          "left"
-                      >
-
+                      <td>
                         {
                           row.nmId
                         }
-
                       </td>
 
 
                       <td
                         className=
-                          "left"
-
-                        style={{
-                          whiteSpace:
-                            "normal",
-
-                          minWidth:
-                            "300px",
-
-                          maxWidth:
-                            "500px",
-                        }}
+                          "wb-unmapped-product"
                       >
 
                         {
@@ -552,56 +484,44 @@ export default function WbUnmappedProductsTable({
                           row.brandName
                           &&
                           row.brandName.trim()
-                          &&
-                          (
-                            <div
-                              className=
-                                "muted"
 
-                              style={{
-                                marginTop:
-                                  "4px",
-                              }}
-                            >
-                              {
-                                row.brandName
-                              }
-                            </div>
-                          )
+                            ? (
+
+                              <div
+                                className=
+                                  "muted wb-unmapped-brand"
+                              >
+                                {
+                                  row.brandName
+                                }
+                              </div>
+
+                            )
+
+                            : null
                         }
 
                       </td>
 
 
-                      <td
-                        className=
-                          "left"
-                      >
-
+                      <td>
                         {
                           formatDateTime(
                             row.firstSeenAt
                           )
                         }
-
                       </td>
 
 
-                      <td
-                        className=
-                          "left"
-                      >
+                      <td>
 
                         <div
-                          style={{
-                            minWidth:
-                              "180px",
-                          }}
+                          className=
+                            "wb-unmapped-master-wrap"
                         >
 
                           <input
-                            type=
-                              "text"
+                            type="text"
 
                             value={
                               value
@@ -658,7 +578,8 @@ export default function WbUnmappedProductsTable({
 
                                   event.preventDefault();
 
-                                  linkProduct(
+
+                                  void linkProduct(
                                     row.nmId
                                   );
 
@@ -667,34 +588,8 @@ export default function WbUnmappedProductsTable({
                               }
                             }
 
-                            style={{
-                              width:
-                                "170px",
-
-                              height:
-                                "38px",
-
-                              padding:
-                                "0 11px",
-
-                              border:
-                                "1px solid var(--border)",
-
-                              borderRadius:
-                                "8px",
-
-                              background:
-                                "var(--background)",
-
-                              color:
-                                "var(--text)",
-
-                              font:
-                                "inherit",
-
-                              fontSize:
-                                "13px",
-                            }}
+                            className=
+                              "wb-unmapped-input"
                           />
 
 
@@ -702,33 +597,23 @@ export default function WbUnmappedProductsTable({
                             errors[
                               row.nmId
                             ]
-                            &&
-                            (
-                              <div
-                                style={{
-                                  marginTop:
-                                    "5px",
 
-                                  maxWidth:
-                                    "220px",
+                              ? (
 
-                                  fontSize:
-                                    "11px",
+                                <div
+                                  className=
+                                    "wb-unmapped-error"
+                                >
+                                  {
+                                    errors[
+                                      row.nmId
+                                    ]
+                                  }
+                                </div>
 
-                                  color:
-                                    "#dc2626",
+                              )
 
-                                  whiteSpace:
-                                    "normal",
-                                }}
-                              >
-                                {
-                                  errors[
-                                    row.nmId
-                                  ]
-                                }
-                              </div>
-                            )
+                              : null
                           }
 
                         </div>
@@ -736,17 +621,13 @@ export default function WbUnmappedProductsTable({
                       </td>
 
 
-                      <td
-                        className=
-                          "left"
-                      >
+                      <td>
 
                         <button
-                          type=
-                            "button"
+                          type="button"
 
                           className=
-                            "primary-button"
+                            "primary-button wb-unmapped-button"
 
                           disabled={
                             !valid
@@ -755,21 +636,22 @@ export default function WbUnmappedProductsTable({
                           }
 
                           onClick={
-                            () =>
-                              linkProduct(
+                            () => {
+
+                              void linkProduct(
                                 row.nmId
-                              )
+                              );
+
+                            }
                           }
                         >
-
                           {
                             loading
-                              ?
-                              "Привязываем..."
-                              :
-                              "Привязать"
-                          }
 
+                              ? "Привязываем..."
+
+                              : "Привязать"
+                          }
                         </button>
 
                       </td>
@@ -791,21 +673,12 @@ export default function WbUnmappedProductsTable({
 
       <div
         className=
-          "muted"
-
-        style={{
-          marginTop:
-            "10px",
-
-          fontSize:
-            "11px",
-        }}
+          "wb-unmapped-hint"
       >
-        Можно ввести существующий
-        master_code или новый.
-        После привязки товар исчезнет
-        из этого списка и появится
-        в обычной таблице товаров.
+        Можно ввести существующий master_code
+        или новый. После привязки товар исчезнет
+        из этого списка и появится в обычной
+        таблице товаров.
       </div>
 
     </section>
