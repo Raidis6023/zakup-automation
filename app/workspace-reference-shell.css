@@ -1,0 +1,1283 @@
+/* ============================================================
+   WORKSPACE — REFERENCE SHELL
+   ------------------------------------------------------------
+   Общая визуальная оболочка WorkSpace по выбранным референсам.
+
+   Этот файл подключается ПОСЛЕДНИМ и переопределяет только
+   визуальное оформление оболочки.
+
+   Сами SVG / PNG иконки здесь НЕ меняются.
+   ============================================================ */
+
+
+/* ============================================================
+   ЦВЕТОВАЯ СИСТЕМА — СВЕТЛАЯ ТЕМА
+   ============================================================ */
+
+.home-shell {
+  --ws-page:
+    #f7fbff;
+
+  --ws-sidebar:
+    #ffffff;
+
+  --ws-topbar:
+    rgba(
+      255,
+      255,
+      255,
+      0.96
+    );
+
+  --ws-surface:
+    #ffffff;
+
+  --ws-surface-soft:
+    #f3f8fd;
+
+  --ws-surface-hover:
+    #edf6ff;
+
+  --ws-border:
+    #d8e7f4;
+
+  --ws-border-soft:
+    #e7f0f8;
+
+  --ws-text:
+    #132d49;
+
+  --ws-text-secondary:
+    #496985;
+
+  --ws-text-muted:
+    #7f98ae;
+
+  --ws-blue:
+    #0b82f4;
+
+  --ws-blue-hover:
+    #0874dc;
+
+  --ws-blue-soft:
+    #eaf5ff;
+
+  --ws-active:
+    #0c82f4;
+
+  --ws-active-text:
+    #ffffff;
+
+  --ws-nav-text:
+    #18354f;
+
+  --ws-nav-hover-text:
+    #076fcf;
+
+  --ws-icon:
+    #1769ad;
+
+  --ws-shadow-soft:
+    0 3px 14px
+    rgba(
+      30,
+      87,
+      137,
+      0.06
+    );
+
+  --ws-shadow-popup:
+    0 18px 45px
+    rgba(
+      28,
+      66,
+      104,
+      0.16
+    );
+
+  /*
+   * Референсы компактнее текущей версии.
+   * При этом не делаем панель слишком низкой.
+   */
+  --home-topbar-height:
+    72px;
+
+  background:
+    var(--ws-page);
+
+  color:
+    var(--ws-text);
+
+  transition:
+    grid-template-columns
+      0.18s
+      ease,
+    background-color
+      0.14s
+      ease,
+    color
+      0.14s
+      ease;
+}
+
+
+/* ============================================================
+   ЦВЕТОВАЯ СИСТЕМА — ТЁМНАЯ ТЕМА
+   ============================================================ */
+
+html[data-theme="dark"]
+.home-shell {
+  --ws-page:
+    #07182a;
+
+  --ws-sidebar:
+    #071629;
+
+  --ws-topbar:
+    rgba(
+      7,
+      22,
+      39,
+      0.97
+    );
+
+  --ws-surface:
+    #0c223a;
+
+  --ws-surface-soft:
+    #102b48;
+
+  --ws-surface-hover:
+    #123353;
+
+  --ws-border:
+    #173955;
+
+  --ws-border-soft:
+    #122f49;
+
+  --ws-text:
+    #f1f7fc;
+
+  --ws-text-secondary:
+    #b2c7d9;
+
+  --ws-text-muted:
+    #7795af;
+
+  --ws-blue:
+    #168cff;
+
+  --ws-blue-hover:
+    #349cff;
+
+  --ws-blue-soft:
+    #0c365d;
+
+  --ws-active:
+    #0d78dc;
+
+  --ws-active-text:
+    #ffffff;
+
+  --ws-nav-text:
+    #dbe9f4;
+
+  --ws-nav-hover-text:
+    #ffffff;
+
+  --ws-icon:
+    #66b6ff;
+
+  --ws-shadow-soft:
+    none;
+
+  --ws-shadow-popup:
+    0 20px 48px
+    rgba(
+      0,
+      0,
+      0,
+      0.36
+    );
+}
+
+
+/* ============================================================
+   ОБЩАЯ ОБОЛОЧКА
+   ============================================================ */
+
+.home-main {
+  min-width:
+    0;
+
+  min-height:
+    100vh;
+
+  background:
+    var(--ws-page);
+
+  transition:
+    background-color
+      0.14s
+      ease;
+}
+
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+
+.home-sidebar {
+  background:
+    var(--ws-sidebar);
+
+  border-right:
+    1px solid
+    var(--ws-border);
+
+  transition:
+    background-color
+      0.14s
+      ease,
+    border-color
+      0.14s
+      ease;
+}
+
+
+/*
+ * Горизонтальная линия между логотипом
+ * и рабочей частью меню.
+ */
+.home-sidebar::after {
+  background:
+    var(--ws-border);
+
+  transition:
+    background-color
+      0.14s
+      ease;
+}
+
+
+/*
+ * При свёрнутом меню нижняя вертикальная
+ * граница также должна использовать
+ * новую палитру.
+ */
+.home-shell--sidebar-collapsed
+.home-sidebar::before {
+  background:
+    var(--ws-border);
+
+  transition:
+    background-color
+      0.14s
+      ease;
+}
+
+
+/* ============================================================
+   ЛОГОТИП
+   ============================================================ */
+
+.home-company-logo {
+  background:
+    var(--ws-sidebar);
+
+  transition:
+    background-color
+      0.14s
+      ease,
+    border-color
+      0.14s
+      ease;
+}
+
+
+/*
+ * Верхняя область остаётся полной ширины,
+ * даже когда нижняя часть меню свёрнута.
+ */
+.home-shell--sidebar-collapsed
+.home-company-logo {
+  border-right:
+    1px solid
+    var(--ws-border);
+}
+
+
+/* ============================================================
+   НАВИГАЦИЯ
+   ============================================================ */
+
+.home-workspaces {
+  gap:
+    5px;
+}
+
+
+/*
+ * Саму структуру и размер иконок
+ * НЕ меняем.
+ *
+ * Меняется только оформление строки.
+ */
+.home-workspace-link {
+  position:
+    relative;
+
+  border:
+    1px solid
+    transparent;
+
+  border-radius:
+    10px;
+
+  background:
+    transparent;
+
+  color:
+    var(--ws-nav-text);
+
+  box-shadow:
+    none;
+
+  transition:
+    background-color
+      0.13s
+      ease,
+    border-color
+      0.13s
+      ease,
+    color
+      0.13s
+      ease,
+    box-shadow
+      0.13s
+      ease,
+    transform
+      0.05s
+      ease;
+}
+
+
+/*
+ * Текст пункта.
+ *
+ * Размер шрифта намеренно НЕ меняем.
+ */
+.home-workspace-label {
+  color:
+    var(--ws-nav-text);
+
+  transition:
+    color
+      0.13s
+      ease;
+}
+
+
+/* ============================================================
+   HOVER
+   ============================================================ */
+
+.home-workspace-link:hover {
+  background:
+    var(--ws-surface-hover);
+
+  border-color:
+    var(--ws-border-soft);
+
+  color:
+    var(--ws-nav-hover-text);
+}
+
+
+.home-workspace-link:hover
+.home-workspace-label {
+  color:
+    var(--ws-nav-hover-text);
+}
+
+
+/* ============================================================
+   АКТИВНЫЙ РАЗДЕЛ
+   ============================================================ */
+
+.home-workspace-link--active {
+  background:
+    var(--ws-active);
+
+  border-color:
+    var(--ws-active);
+
+  color:
+    var(--ws-active-text);
+
+  box-shadow:
+    0 4px 12px
+    rgba(
+      12,
+      130,
+      244,
+      0.16
+    );
+}
+
+
+.home-workspace-link--active:hover {
+  background:
+    var(--ws-blue-hover);
+
+  border-color:
+    var(--ws-blue-hover);
+
+  color:
+    var(--ws-active-text);
+}
+
+
+.home-workspace-link--active
+.home-workspace-label,
+.home-workspace-link--active:hover
+.home-workspace-label {
+  color:
+    var(--ws-active-text);
+}
+
+
+/*
+ * Линейные системные иконки,
+ * например "Главная" администратора.
+ *
+ * Сам SVG не меняется.
+ */
+.home-workspace-link--active
+.home-workspace-icon {
+  color:
+    var(--ws-active-text);
+}
+
+
+/* ============================================================
+   КНОПКА СВОРАЧИВАНИЯ
+   ============================================================ */
+
+.home-sidebar-toggle {
+  top:
+    80px;
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  background:
+    var(--ws-surface);
+
+  color:
+    var(--ws-text-secondary);
+
+  box-shadow:
+    0 3px 10px
+    rgba(
+      20,
+      68,
+      108,
+      0.09
+    );
+
+  transition:
+    right
+      0.18s
+      ease,
+    background-color
+      0.13s
+      ease,
+    color
+      0.13s
+      ease,
+    border-color
+      0.13s
+      ease,
+    box-shadow
+      0.13s
+      ease;
+}
+
+
+.home-sidebar-toggle:hover {
+  background:
+    var(--ws-blue-soft);
+
+  border-color:
+    var(--ws-blue);
+
+  color:
+    var(--ws-blue);
+}
+
+
+/* ============================================================
+   TOPBAR
+   ============================================================ */
+
+.home-topbar {
+  min-height:
+    var(--home-topbar-height);
+
+  gap:
+    22px;
+
+  padding:
+    10px
+    24px;
+
+  background:
+    var(--ws-topbar);
+
+  border-bottom:
+    1px solid
+    var(--ws-border);
+
+  backdrop-filter:
+    blur(16px);
+
+  -webkit-backdrop-filter:
+    blur(16px);
+
+  transition:
+    margin-left
+      0.18s
+      ease,
+    background-color
+      0.14s
+      ease,
+    border-color
+      0.14s
+      ease;
+}
+
+
+/* ============================================================
+   ПОИСК
+   ============================================================ */
+
+.home-search {
+  width:
+    min(
+      650px,
+      55vw
+    );
+
+  height:
+    42px;
+
+  padding:
+    0
+    10px;
+
+  background:
+    var(--ws-surface);
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    9px;
+
+  box-shadow:
+    var(--ws-shadow-soft);
+
+  transition:
+    background-color
+      0.14s
+      ease,
+    border-color
+      0.14s
+      ease,
+    box-shadow
+      0.14s
+      ease;
+}
+
+
+.home-search:focus-within {
+  border-color:
+    #8ac6f8;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(
+      22,
+      140,
+      255,
+      0.08
+    );
+}
+
+
+html[data-theme="dark"]
+.home-search:focus-within {
+  border-color:
+    #286b9d;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(
+      22,
+      140,
+      255,
+      0.09
+    );
+}
+
+
+/*
+ * Иконку поиска НЕ заменяем.
+ */
+.home-search-icon {
+  color:
+    var(--ws-icon);
+
+  transition:
+    color
+      0.14s
+      ease;
+}
+
+
+.home-search input {
+  color:
+    var(--ws-text);
+}
+
+
+.home-search input::placeholder {
+  color:
+    var(--ws-text-muted);
+}
+
+
+.home-search-shortcut {
+  min-height:
+    27px;
+
+  background:
+    var(--ws-surface-soft);
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  color:
+    var(--ws-text-muted);
+
+  transition:
+    background-color
+      0.14s
+      ease,
+    border-color
+      0.14s
+      ease,
+    color
+      0.14s
+      ease;
+}
+
+
+/* ============================================================
+   ПРАВАЯ ЧАСТЬ TOPBAR
+   ============================================================ */
+
+.home-topbar-right {
+  gap:
+    8px;
+}
+
+
+/*
+ * Уведомления, календарь и другие
+ * существующие пиктограммы остаются прежними.
+ *
+ * Меняем только кнопку вокруг них.
+ */
+.home-icon-button {
+  width:
+    38px;
+
+  height:
+    38px;
+
+  border:
+    1px solid
+    transparent;
+
+  border-radius:
+    9px;
+
+  background:
+    transparent;
+
+  color:
+    var(--ws-icon);
+
+  transition:
+    background-color
+      0.13s
+      ease,
+    color
+      0.13s
+      ease,
+    border-color
+      0.13s
+      ease;
+}
+
+
+.home-icon-button:hover,
+.home-icon-button.active {
+  background:
+    var(--ws-blue-soft);
+
+  border-color:
+    var(--ws-border-soft);
+
+  color:
+    var(--ws-blue);
+}
+
+
+/* ============================================================
+   РАЗДЕЛИТЕЛИ
+   ============================================================ */
+
+.home-topbar-divider {
+  height:
+    28px;
+
+  background:
+    var(--ws-border);
+
+  transition:
+    background-color
+      0.14s
+      ease;
+}
+
+
+/* ============================================================
+   ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ
+   ============================================================ */
+
+.home-theme-toggle {
+  background:
+    var(--ws-surface-soft);
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  transition:
+    background-color
+      0.14s
+      ease,
+    border-color
+      0.14s
+      ease;
+}
+
+
+.home-theme-toggle button {
+  color:
+    var(--ws-text-muted);
+
+  transition:
+    background-color
+      0.13s
+      ease,
+    color
+      0.13s
+      ease;
+}
+
+
+.home-theme-toggle button.active {
+  background:
+    var(--ws-surface);
+
+  color:
+    var(--ws-blue);
+
+  box-shadow:
+    0 1px 6px
+    rgba(
+      20,
+      83,
+      139,
+      0.12
+    );
+}
+
+
+/* ============================================================
+   ПРОФИЛЬ
+   ============================================================ */
+
+.home-profile {
+  min-width:
+    180px;
+
+  border:
+    1px solid
+    transparent;
+
+  border-radius:
+    10px;
+
+  background:
+    transparent;
+
+  color:
+    var(--ws-text);
+
+  transition:
+    background-color
+      0.13s
+      ease,
+    border-color
+      0.13s
+      ease,
+    color
+      0.13s
+      ease;
+}
+
+
+.home-profile:hover {
+  background:
+    var(--ws-surface-soft);
+
+  border-color:
+    var(--ws-border-soft);
+}
+
+
+.home-profile-text strong {
+  color:
+    var(--ws-text);
+}
+
+
+html[data-theme="dark"]
+.home-profile-text strong {
+  color:
+    var(--ws-text);
+}
+
+
+.home-profile-text span {
+  color:
+    var(--ws-text-muted);
+}
+
+
+.home-profile-chevron {
+  color:
+    var(--ws-icon);
+}
+
+
+/* ============================================================
+   AVATAR
+   ============================================================ */
+
+.home-avatar {
+  border:
+    2px solid
+    var(--ws-surface);
+
+  box-shadow:
+    0 0 0 1px
+    var(--ws-border);
+
+  transition:
+    border-color
+      0.14s
+      ease,
+    box-shadow
+      0.14s
+      ease;
+}
+
+
+/* ============================================================
+   POPUPS
+   ============================================================ */
+
+.home-popup {
+  background:
+    var(--ws-surface);
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  box-shadow:
+    var(--ws-shadow-popup);
+
+  color:
+    var(--ws-text);
+
+  transition:
+    background-color
+      0.14s
+      ease,
+    border-color
+      0.14s
+      ease,
+    color
+      0.14s
+      ease;
+}
+
+
+html[data-theme="dark"]
+.home-popup {
+  box-shadow:
+    var(--ws-shadow-popup);
+}
+
+
+.home-popup-header {
+  border-bottom:
+    1px solid
+    var(--ws-border-soft);
+
+  color:
+    var(--ws-text);
+}
+
+
+/* ============================================================
+   NOTIFICATIONS
+   ============================================================ */
+
+.home-notifications-empty-icon {
+  background:
+    var(--ws-blue-soft);
+
+  color:
+    var(--ws-blue);
+}
+
+
+.home-notifications-empty strong,
+.home-notification-item strong {
+  color:
+    var(--ws-text);
+}
+
+
+.home-notifications-empty span,
+.home-notification-item span {
+  color:
+    var(--ws-text-muted);
+}
+
+
+.home-notification-item {
+  border-bottom:
+    1px solid
+    var(--ws-border-soft);
+}
+
+
+/* ============================================================
+   КАЛЕНДАРЬ
+   ============================================================ */
+
+.home-calendar-header strong {
+  color:
+    var(--ws-text);
+}
+
+
+.home-calendar-arrow {
+  color:
+    var(--ws-text-secondary);
+}
+
+
+.home-calendar-arrow:hover {
+  background:
+    var(--ws-surface-soft);
+}
+
+
+.home-calendar-weekdays span {
+  color:
+    var(--ws-text-muted);
+}
+
+
+.home-calendar-day {
+  color:
+    var(--ws-text-secondary);
+}
+
+
+.home-calendar-day.today {
+  background:
+    var(--ws-blue);
+
+  color:
+    #ffffff;
+}
+
+
+.home-calendar-today-button {
+  background:
+    var(--ws-surface-soft);
+
+  border:
+    1px solid
+    var(--ws-border-soft);
+
+  color:
+    var(--ws-text-secondary);
+}
+
+
+.home-calendar-today-button:hover {
+  border-color:
+    var(--ws-blue);
+
+  color:
+    var(--ws-blue);
+}
+
+
+/* ============================================================
+   CONTENT
+   ============================================================ */
+
+.home-content {
+  min-height:
+    calc(
+      100vh -
+      var(--home-topbar-height)
+    );
+
+  padding:
+    24px
+    26px
+    46px;
+
+  background:
+    var(--ws-page);
+
+  transition:
+    background-color
+      0.14s
+      ease;
+}
+
+
+/* ============================================================
+   ГЛАВНАЯ СТРАНИЦА
+   ============================================================ */
+
+.home-title-row {
+  align-items:
+    flex-start;
+}
+
+
+.home-title-row h1 {
+  color:
+    var(--ws-text);
+
+  font-size:
+    31px;
+
+  font-weight:
+    750;
+
+  letter-spacing:
+    -0.02em;
+}
+
+
+html[data-theme="dark"]
+.home-title-row h1 {
+  color:
+    var(--ws-text);
+}
+
+
+.home-title-row p {
+  margin-top:
+    6px;
+
+  color:
+    var(--ws-text-muted);
+
+  font-size:
+    13px;
+}
+
+
+/* ============================================================
+   ДЕКОРАТИВНЫЕ ПОЛОСЫ
+   ============================================================ */
+
+.home-decoration {
+  opacity:
+    0.96;
+}
+
+
+/* ============================================================
+   ПЛАВНОЕ ПЕРЕКЛЮЧЕНИЕ ТЕМЫ
+   ------------------------------------------------------------
+   Быстро, чтобы интерфейс не "тормозил",
+   но без резкой белой/тёмной вспышки.
+   ============================================================ */
+
+.home-sidebar,
+.home-company-logo,
+.home-main,
+.home-content,
+.home-topbar,
+.home-search,
+.home-search-shortcut,
+.home-icon-button,
+.home-theme-toggle,
+.home-theme-toggle button,
+.home-profile,
+.home-popup,
+.home-sidebar-toggle,
+.home-workspace-link,
+.home-workspace-label {
+  transition-duration:
+    0.14s;
+}
+
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+
+@media (
+  prefers-reduced-motion:
+  reduce
+) {
+
+  .home-shell,
+  .home-sidebar,
+  .home-company-logo,
+  .home-main,
+  .home-content,
+  .home-topbar,
+  .home-search,
+  .home-search-shortcut,
+  .home-icon-button,
+  .home-theme-toggle,
+  .home-theme-toggle button,
+  .home-profile,
+  .home-popup,
+  .home-sidebar-toggle,
+  .home-workspace-link,
+  .home-workspace-label {
+    transition:
+      none;
+  }
+
+}
+
+
+/* ============================================================
+   <= 1100 PX
+   ============================================================ */
+
+@media (
+  max-width: 1100px
+) {
+
+  .home-topbar {
+    padding-left:
+      18px;
+
+    padding-right:
+      18px;
+  }
+
+
+  .home-content {
+    padding-left:
+      20px;
+
+    padding-right:
+      20px;
+  }
+
+}
+
+
+/* ============================================================
+   <= 800 PX
+   ============================================================ */
+
+@media (
+  max-width: 800px
+) {
+
+  .home-sidebar {
+    background:
+      var(--ws-sidebar);
+  }
+
+
+  .home-topbar {
+    gap:
+      10px;
+
+    padding:
+      12px
+      14px;
+  }
+
+
+  .home-content {
+    padding:
+      20px
+      14px
+      38px;
+  }
+
+
+  .home-title-row h1 {
+    font-size:
+      28px;
+  }
+
+}
+
+
+/* ============================================================
+   <= 520 PX
+   ============================================================ */
+
+@media (
+  max-width: 520px
+) {
+
+  .home-title-row h1 {
+    font-size:
+      26px;
+  }
+
+}
