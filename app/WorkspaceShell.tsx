@@ -25,6 +25,9 @@ import WorkspaceDecoration
 import WorkspaceCompanyLogo
   from "./WorkspaceCompanyLogo";
 
+import WorkspaceMarketplaceLogo
+  from "./WorkspaceMarketplaceLogos";
+
 import {
   EmployeesIcon,
   ProcurementIcon,
@@ -37,6 +40,7 @@ import "./sidebar-collapse.css";
 import "./sidebar-visuals.css";
 import "./workspace-reference-shell.css";
 import "./workspace-reference-components.css";
+import "./workspace-theme-polish.css";
 
 
 // ============================================================
@@ -716,15 +720,7 @@ export default function WorkspaceShell({
                       "home-brand-icon"
                   >
 
-                    <img
-                      src=
-                        "/logos/ozon.png"
-
-                      alt=""
-
-                      className=
-                        "home-brand-image"
-                    />
+                    <WorkspaceMarketplaceLogo kind="ozon" />
 
                   </span>
 
@@ -770,15 +766,7 @@ export default function WorkspaceShell({
                       "home-brand-icon"
                   >
 
-                    <img
-                      src=
-                        "/logos/wildberries.png"
-
-                      alt=""
-
-                      className=
-                        "home-brand-image"
-                    />
+                    <WorkspaceMarketplaceLogo kind="wildberries" />
 
                   </span>
 
@@ -824,15 +812,7 @@ export default function WorkspaceShell({
                       "home-brand-icon"
                   >
 
-                    <img
-                      src=
-                        "/logos/yandex-market.png"
-
-                      alt=""
-
-                      className=
-                        "home-brand-image"
-                    />
+                    <WorkspaceMarketplaceLogo kind="yandex-market" />
 
                   </span>
 
