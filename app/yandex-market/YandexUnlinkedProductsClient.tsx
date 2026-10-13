@@ -2,7 +2,6 @@
 
 import {
   useState,
-  type ReactNode,
 } from "react";
 
 import {
@@ -26,9 +25,11 @@ type RawYandexProduct = {
 
 
 export type YandexUnlinkedProductRow = {
-  id: number;
+  id:
+    number;
 
-  offer_id: string;
+  offer_id:
+    string;
 
   market_sku:
     | string
@@ -38,7 +39,8 @@ export type YandexUnlinkedProductRow = {
     | string
     | null;
 
-  first_seen_at: string;
+  first_seen_at:
+    string;
 
   raw_data:
     | RawYandexProduct
@@ -47,16 +49,21 @@ export type YandexUnlinkedProductRow = {
 
 
 type ApiResponse = {
-  ok?: boolean;
+  ok?:
+    boolean;
 
-  error?: string;
+  error?:
+    string;
 
   result?: {
-    master_code?: string;
+    master_code?:
+      string;
 
-    master_code_existed_before?: boolean;
+    master_code_existed_before?:
+      boolean;
 
-    created_new_master_code?: boolean;
+    created_new_master_code?:
+      boolean;
   };
 };
 
@@ -66,8 +73,11 @@ type ApiResponse = {
 // ============================================================
 
 function getProductName(
-  product: YandexUnlinkedProductRow
-): string {
+  product:
+    YandexUnlinkedProductRow
+):
+string {
+
   const offerName =
     product
       .raw_data
@@ -76,8 +86,12 @@ function getProductName(
       ?.trim();
 
 
-  if (offerName) {
+  if (
+    offerName
+  ) {
+
     return offerName;
+
   }
 
 
@@ -89,18 +103,26 @@ function getProductName(
       ?.trim();
 
 
-  if (marketName) {
+  if (
+    marketName
+  ) {
+
     return marketName;
+
   }
 
 
   return "—";
+
 }
 
 
 function formatDateTimeKrasnoyarsk(
-  value: string
-): string {
+  value:
+    string
+):
+string {
+
   const date =
     new Date(
       value
@@ -112,7 +134,9 @@ function formatDateTimeKrasnoyarsk(
       date.getTime()
     )
   ) {
+
     return value;
+
   }
 
 
@@ -140,6 +164,7 @@ function formatDateTimeKrasnoyarsk(
   ).format(
     date
   );
+
 }
 
 
@@ -153,6 +178,7 @@ export default function YandexUnlinkedProductsClient({
   products:
     YandexUnlinkedProductRow[];
 }) {
+
   const router =
     useRouter();
 
@@ -188,7 +214,8 @@ export default function YandexUnlinkedProductsClient({
   ] =
     useState<
       number
-      | null
+      |
+      null
     >(
       null
     );
@@ -213,9 +240,13 @@ export default function YandexUnlinkedProductsClient({
   // ==========================================================
 
   function changeMasterCode(
-    productId: number,
-    value: string
+    productId:
+      number,
+
+    value:
+      string
   ) {
+
     setMasterCodes(
       current => ({
         ...current,
@@ -234,6 +265,7 @@ export default function YandexUnlinkedProductsClient({
           "",
       })
     );
+
   }
 
 
@@ -242,8 +274,10 @@ export default function YandexUnlinkedProductsClient({
   // ==========================================================
 
   async function assignMasterCode(
-    product: YandexUnlinkedProductRow
+    product:
+      YandexUnlinkedProductRow
   ) {
+
     const masterCode =
       (
         masterCodes[
@@ -256,7 +290,10 @@ export default function YandexUnlinkedProductsClient({
         .toUpperCase();
 
 
-    if (!masterCode) {
+    if (
+      !masterCode
+    ) {
+
       setErrors(
         current => ({
           ...current,
@@ -266,7 +303,9 @@ export default function YandexUnlinkedProductsClient({
         })
       );
 
+
       return;
+
     }
 
 
@@ -286,6 +325,7 @@ export default function YandexUnlinkedProductsClient({
 
 
     try {
+
       const response =
         await fetch(
           "/api/yandex/products/assign-master-code",
@@ -312,25 +352,27 @@ export default function YandexUnlinkedProductsClient({
 
 
       const data =
-        (await response.json()) as ApiResponse;
+        (
+          await response.json()
+        ) as
+          ApiResponse;
 
 
       if (
         !response.ok
         ||
-        data.ok !== true
+        data.ok !==
+          true
       ) {
+
         throw new Error(
           data.error
           ??
           "Не удалось привязать master_code"
         );
+
       }
 
-
-      // ======================================================
-      // УБИРАЕМ ТОВАР ИЗ СПИСКА
-      // ======================================================
 
       setRows(
         current =>
@@ -342,16 +384,12 @@ export default function YandexUnlinkedProductsClient({
       );
 
 
-      // ======================================================
-      // ОЧИЩАЕМ INPUT
-      // ======================================================
-
       setMasterCodes(
         current => {
-          const next =
-            {
-              ...current,
-            };
+
+          const next = {
+            ...current,
+          };
 
 
           delete next[
@@ -360,33 +398,40 @@ export default function YandexUnlinkedProductsClient({
 
 
           return next;
+
         }
       );
 
 
-      // ======================================================
-      // ОБНОВЛЯЕМ СЕРВЕРНУЮ СТРАНИЦУ
-      // ======================================================
-
       router.refresh();
 
-    } catch (error) {
+    } catch (
+      error
+    ) {
+
       setErrors(
         current => ({
           ...current,
 
           [product.id]:
             error instanceof Error
+
               ? error.message
-              : String(error),
+
+              : String(
+                  error
+                ),
         })
       );
 
     } finally {
+
       setSubmittingId(
         null
       );
+
     }
+
   }
 
 
@@ -398,18 +443,18 @@ export default function YandexUnlinkedProductsClient({
     rows.length ===
     0
   ) {
-    return (
-      <div
-        className="reason-text"
 
-        style={{
-          marginTop:
-            "16px",
-        }}
+    return (
+
+      <div
+        className=
+          "yandex-unlinked-empty"
       >
         Непривязанных товаров нет.
       </div>
+
     );
+
   }
 
 
@@ -418,82 +463,53 @@ export default function YandexUnlinkedProductsClient({
   // ==========================================================
 
   return (
-    <>
+
+    <div
+      className=
+        "yandex-unlinked-client"
+    >
 
       <div
-        style={{
-          marginTop:
-            "18px",
-
-          overflowX:
-            "auto",
-
-          border:
-            "1px solid var(--table-divider, #282e38)",
-
-          borderRadius:
-            "10px",
-        }}
+        className=
+          "yandex-unlinked-table-shell"
       >
 
         <table
-          style={{
-            width:
-              "100%",
-
-            minWidth:
-              "1180px",
-
-            borderCollapse:
-              "separate",
-
-            borderSpacing:
-              0,
-          }}
+          className=
+            "yandex-unlinked-table"
         >
 
           <thead>
 
-            <tr
-              style={{
-                background:
-                  "var(--table-header-bg, #1b2028)",
-              }}
-            >
+            <tr>
 
-              <TableHeader>
+              <th>
                 Артикул
-              </TableHeader>
+              </th>
 
-
-              <TableHeader>
+              <th>
                 Product ID
-              </TableHeader>
+              </th>
 
-
-              <TableHeader>
+              <th>
                 Товар
-              </TableHeader>
+              </th>
 
-
-              <TableHeader>
+              <th>
                 Категория
-              </TableHeader>
+              </th>
 
-
-              <TableHeader>
+              <th>
                 Впервые найден
-              </TableHeader>
+              </th>
 
-
-              <TableHeader>
+              <th>
                 master_code
-              </TableHeader>
+              </th>
 
-
-              <TableHeader>
+              <th>
                 Действие
-              </TableHeader>
+              </th>
 
             </tr>
 
@@ -504,20 +520,7 @@ export default function YandexUnlinkedProductsClient({
 
             {
               rows.map(
-                (
-                  product,
-                  index
-                ) => {
-                  const isLast =
-                    index ===
-                    rows.length - 1;
-
-
-                  const divider =
-                    isLast
-                      ? "none"
-                      : "1px solid var(--table-divider, #282e38)";
-
+                product => {
 
                   const currentCode =
                     masterCodes[
@@ -541,273 +544,192 @@ export default function YandexUnlinkedProductsClient({
 
 
                   return (
+
                     <tr
                       key={
                         product.id
                       }
                     >
 
-                      <TableCell
-                        divider=
-                          {divider}
+                      <td>
 
-                        strong
-                      >
-                        {
-                          product
-                            .offer_id
-                        }
-                      </TableCell>
+                        <strong>
+                          {
+                            product
+                              .offer_id
+                          }
+                        </strong>
+
+                      </td>
 
 
-                      <TableCell
-                        divider=
-                          {divider}
-
-                        nowrap
-                      >
+                      <td>
                         {
                           product
                             .market_sku
                           ??
                           "—"
                         }
-                      </TableCell>
+                      </td>
 
 
-                      <TableCell
-                        divider=
-                          {divider}
+                      <td
+                        className=
+                          "yandex-unlinked-product"
                       >
                         {
                           getProductName(
                             product
                           )
                         }
-                      </TableCell>
+                      </td>
 
 
-                      <TableCell
-                        divider=
-                          {divider}
-                      >
+                      <td>
                         {
                           product
                             .market_category_name
                           ||
                           "—"
                         }
-                      </TableCell>
+                      </td>
 
 
-                      <TableCell
-                        divider=
-                          {divider}
-
-                        nowrap
-                      >
+                      <td>
                         {
                           formatDateTimeKrasnoyarsk(
                             product
                               .first_seen_at
                           )
                         }
-                      </TableCell>
+                      </td>
 
 
-                      <TableCell
-                        divider=
-                          {divider}
-                      >
+                      <td>
 
                         <div
-                          style={{
-                            display:
-                              "flex",
-
-                            flexDirection:
-                              "column",
-
-                            gap:
-                              "6px",
-                          }}
+                          className=
+                            "yandex-unlinked-master-wrap"
                         >
 
                           <input
                             type="text"
 
-                            value=
-                              {
-                                currentCode
-                              }
+                            value={
+                              currentCode
+                            }
 
-                            onChange=
-                              {
-                                event =>
-                                  changeMasterCode(
-                                    product.id,
-                                    event
-                                      .target
-                                      .value
-                                  )
-                              }
+                            onChange={
+                              event =>
+                                changeMasterCode(
+                                  product.id,
+                                  event
+                                    .target
+                                    .value
+                                )
+                            }
 
-                            onKeyDown=
-                              {
-                                event => {
-                                  if (
-                                    event.key ===
-                                    "Enter"
-                                  ) {
-                                    event.preventDefault();
+                            onKeyDown={
+                              event => {
 
-                                    void assignMasterCode(
-                                      product
-                                    );
-                                  }
+                                if (
+                                  event.key ===
+                                  "Enter"
+                                ) {
+
+                                  event
+                                    .preventDefault();
+
+
+                                  void assignMasterCode(
+                                    product
+                                  );
+
                                 }
+
                               }
+                            }
 
                             placeholder=
                               "Например, 01ABCD"
 
-                            disabled=
-                              {submitting}
+                            disabled={
+                              submitting
+                            }
 
                             autoComplete=
                               "off"
 
-                            spellCheck=
-                              {false}
+                            spellCheck={
+                              false
+                            }
 
-                            style={{
-                              width:
-                                "190px",
-
-                              boxSizing:
-                                "border-box",
-
-                              padding:
-                                "9px 10px",
-
-                              borderRadius:
-                                "9px",
-
-                              border:
-                                "1px solid var(--table-divider, #586170)",
-
-                              background:
-                                "var(--input-bg, #11151b)",
-
-                              color:
-                                "inherit",
-
-                              fontFamily:
-                                "inherit",
-
-                              fontSize:
-                                "13px",
-
-                              outline:
-                                "none",
-                            }}
+                            className=
+                              "yandex-unlinked-input"
                           />
 
 
                           {
                             error
+
                               ? (
+
                                 <div
-                                  style={{
-                                    maxWidth:
-                                      "220px",
-
-                                    color:
-                                      "#f04438",
-
-                                    fontSize:
-                                      "11px",
-
-                                    lineHeight:
-                                      1.35,
-                                  }}
+                                  className=
+                                    "yandex-unlinked-error"
                                 >
-                                  {error}
+                                  {
+                                    error
+                                  }
                                 </div>
+
                               )
+
                               : null
                           }
 
                         </div>
 
-                      </TableCell>
+                      </td>
 
 
-                      <TableCell
-                        divider=
-                          {divider}
-
-                        nowrap
-                      >
+                      <td>
 
                         <button
                           type="button"
 
                           className=
-                            "secondary-button"
+                            "secondary-button yandex-unlinked-button"
 
-                          disabled=
-                            {
-                              submitting
-                              ||
-                              !currentCode
-                                .trim()
-                            }
+                          disabled={
+                            submitting
+                            ||
+                            !currentCode
+                              .trim()
+                          }
 
-                          onClick=
-                            {
-                              () =>
-                                void assignMasterCode(
-                                  product
-                                )
-                            }
-
-                          style={{
-                            minWidth:
-                              "105px",
-
-                            opacity:
-                              (
-                                submitting
-                                ||
-                                !currentCode
-                                  .trim()
+                          onClick={
+                            () =>
+                              void assignMasterCode(
+                                product
                               )
-                                ? 0.55
-                                : 1,
-
-                            cursor:
-                              (
-                                submitting
-                                ||
-                                !currentCode
-                                  .trim()
-                              )
-                                ? "not-allowed"
-                                : "pointer",
-                          }}
+                          }
                         >
                           {
                             submitting
+
                               ? "Привязка..."
+
                               : "Привязать"
                           }
                         </button>
 
-                      </TableCell>
+                      </td>
 
                     </tr>
+
                   );
+
                 }
               )
             }
@@ -820,125 +742,17 @@ export default function YandexUnlinkedProductsClient({
 
 
       <div
-        className="muted"
-
-        style={{
-          marginTop:
-            "10px",
-
-          fontSize:
-            "11px",
-
-          lineHeight:
-            1.5,
-        }}
+        className=
+          "yandex-unlinked-hint"
       >
-        Можно указать существующий
-        master_code или ввести новый.
-        Если введённого кода ещё нет,
-        система создаст новый физический
+        Можно указать существующий master_code
+        или ввести новый. Если введённого кода
+        ещё нет, система создаст новый физический
         товар с этим master_code.
       </div>
 
-    </>
+    </div>
+
   );
-}
 
-
-// ============================================================
-// TABLE HEADER
-// ============================================================
-
-function TableHeader({
-  children,
-}: {
-  children:
-    ReactNode;
-}) {
-  return (
-    <th
-      style={{
-        padding:
-          "12px 14px",
-
-        textAlign:
-          "left",
-
-        fontSize:
-          "12px",
-
-        fontWeight:
-          700,
-
-        color:
-          "var(--text-secondary, #b8c0cc)",
-
-        border:
-          "none",
-
-        borderBottom:
-          "1px solid var(--table-divider, #282e38)",
-
-        whiteSpace:
-          "nowrap",
-      }}
-    >
-      {children}
-    </th>
-  );
-}
-
-
-// ============================================================
-// TABLE CELL
-// ============================================================
-
-function TableCell({
-  children,
-  divider,
-  strong = false,
-  nowrap = false,
-}: {
-  children:
-    ReactNode;
-
-  divider:
-    string;
-
-  strong?: boolean;
-
-  nowrap?: boolean;
-}) {
-  return (
-    <td
-      style={{
-        padding:
-          "11px 14px",
-
-        border:
-          "none",
-
-        borderBottom:
-          divider,
-
-        verticalAlign:
-          "top",
-
-        fontSize:
-          "12px",
-
-        fontWeight:
-          strong
-            ? 700
-            : 500,
-
-        whiteSpace:
-          nowrap
-            ? "nowrap"
-            : "normal",
-      }}
-    >
-      {children}
-    </td>
-  );
 }
