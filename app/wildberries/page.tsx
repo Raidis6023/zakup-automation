@@ -25,14 +25,6 @@ export const dynamic =
 // ТИПЫ DASHBOARD
 // ============================================================
 
-type DailySalesRow = {
-  date: string;
-  sales: number;
-  cancelled: number;
-  dbRows: number;
-};
-
-
 type ProductRow = {
   nmId: number;
   sellerArticle: string | null;
@@ -72,6 +64,8 @@ type DashboardData = {
     lastSuccessfulSyncAt: string | null;
     ordersLastSuccessAt: string | null;
     stocksLastSuccessAt: string | null;
+    cancellationsLastSuccessAt: string | null;
+    stocksAndSalesLastSuccessAt: string | null;
     ordersLastHttpStatus: number | null;
     stocksLastHttpStatus: number | null;
     stockSnapshotId: string | null;
@@ -97,7 +91,6 @@ type DashboardData = {
     listings: number;
   };
 
-  dailySales: DailySalesRow[];
   products: ProductRow[];
   unmappedProducts: UnmappedProductRow[];
 
@@ -1085,7 +1078,7 @@ export default async function WildberriesPage() {
                 className=
                   "subtitle"
               >
-                FBW продажи, отмены
+                FBW-выкупы, отмены
                 и доступные остатки Wildberries.
               </p>
 
@@ -1204,8 +1197,8 @@ export default async function WildberriesPage() {
                         className=
                           "reason-text"
                       >
-                        Последняя успешная загрузка
-                        FBW-данных из Wildberries.
+                        Отдельно контролируем свежесть
+                        остатков с продажами и отмен.
                       </div>
 
                     </div>
@@ -1249,7 +1242,7 @@ export default async function WildberriesPage() {
                       icon="clock"
 
                       label=
-                        "Последняя синхронизация"
+                        "Полный комплект данных"
 
                       value={
                         formatKrasnoyarskDateTime(
@@ -1260,7 +1253,7 @@ export default async function WildberriesPage() {
                       }
 
                       hint=
-                        "Красноярское время"
+                        "По самому старому из двух источников"
                     />
 
 
@@ -1268,7 +1261,7 @@ export default async function WildberriesPage() {
                       icon="calendar"
 
                       label=
-                        "Период продаж"
+                        "Период расчёта"
 
                       value={
                         `${formatDate(
@@ -1291,36 +1284,45 @@ export default async function WildberriesPage() {
                       icon="warehouse"
 
                       label=
-                        "Снимок остатков"
+                        "Остатки и продажи обновлены"
 
                       value={
-                        formatKrasnoyarskDate(
+                        formatKrasnoyarskDateTime(
                           dashboard
                             .status
-                            .stockSnapshotAt
-                        )
-                      }
-
-                      hint="FBW"
-                    />
-
-
-                    <InfoCard
-                      icon="orders"
-
-                      label=
-                        "Заказов"
-
-                      value={
-                        formatInteger(
+                            .stocksAndSalesLastSuccessAt
+                          ??
                           dashboard
-                            .summary
-                            .orderRows
+                            .status
+                            .stocksLastSuccessAt
                         )
                       }
 
                       hint=
-                        "Получено из Wildberries"
+                        "История остатков WB"
+                    />
+
+
+                    <InfoCard
+                      icon="cancel"
+
+                      label=
+                        "Отмены обновлены"
+
+                      value={
+                        formatKrasnoyarskDateTime(
+                          dashboard
+                            .status
+                            .cancellationsLastSuccessAt
+                          ??
+                          dashboard
+                            .status
+                            .ordersLastSuccessAt
+                        )
+                      }
+
+                      hint=
+                        "Только FBW"
                     />
 
                   </div>
@@ -1351,7 +1353,7 @@ export default async function WildberriesPage() {
                     }
 
                     caption=
-                      "шт., без отмен"
+                      "Выкупили, шт. по данным WB"
                   />
 
 
@@ -1369,7 +1371,7 @@ export default async function WildberriesPage() {
                     }
 
                     caption=
-                      "шт. отдельно от продаж"
+                      "FBW, считаются отдельно"
                   />
 
 
@@ -1466,19 +1468,23 @@ export default async function WildberriesPage() {
                     >
 
                       <InfoLine>
-                        Продажи считаются отдельно для каждого числового Артикула WB.
+                        «Продажи за 28 дней» — это показатель «Выкупили, шт.» из API отчёта «История остатков».
                       </InfoLine>
 
                       <InfoLine>
-                        Используются только FBW-заказы с типом склада «Склад WB».
+                        Продажи и остатки загружаются одним запросом и относятся только к складам WB.
                       </InfoLine>
 
                       <InfoLine>
-                        Отменённые заказы в продажи не входят и показываются отдельно.
+                        Выкуп в аналитике WB относится к дате первоначального заказа, поэтому последние дни могут дозревать позже.
                       </InfoLine>
 
                       <InfoLine>
-                        Остаток каждого Артикула WB берётся только из текущего FBW-остатка Wildberries.
+                        Отмены загружаются отдельно и считаются только для FBW-заказов с типом склада «Склад WB».
+                      </InfoLine>
+
+                      <InfoLine>
+                        Остаток каждого Артикула WB берётся из текущего FBW-остатка Wildberries.
                       </InfoLine>
 
                       <InfoLine>
@@ -1494,188 +1500,10 @@ export default async function WildberriesPage() {
                       </InfoLine>
 
                       <InfoLine>
-                        Период продаж совпадает с периодом Ozon, но данные двух площадок остаются раздельными.
+                        Период расчёта совпадает с периодом Ozon, но данные двух площадок остаются раздельными.
                       </InfoLine>
 
                     </div>
-
-                  </div>
-
-                </section>
-
-
-                {/* ===================================
-                    DAILY SALES
-                    =================================== */}
-
-                <section
-                  className=
-                    "section wb-daily-section"
-                >
-
-                  <div
-                    className=
-                      "wb-daily-header"
-                  >
-
-                    <h2
-                      className=
-                        "section-title"
-                    >
-                      Продажи по дням
-                    </h2>
-
-
-                    <div
-                      className=
-                        "reason-text"
-                    >
-                      Для контрольной сверки
-                      с кабинетом Wildberries.
-                    </div>
-
-                  </div>
-
-
-                  <div
-                    className=
-                      "wb-daily-table-shell"
-                  >
-
-                    <table
-                      className=
-                        "wb-daily-table"
-                    >
-
-                      <thead>
-
-                        <tr>
-
-                          <th
-                            style={{
-                              textAlign:
-                                "left",
-                            }}
-                          >
-                            Дата
-                          </th>
-
-
-                          <th
-                            style={{
-                              textAlign:
-                                "right",
-                            }}
-                          >
-                            Продажи, шт.
-                          </th>
-
-
-                          <th
-                            style={{
-                              textAlign:
-                                "right",
-                            }}
-                          >
-                            Отмены, шт.
-                          </th>
-
-
-                          <th
-                            style={{
-                              textAlign:
-                                "right",
-                            }}
-                          >
-                            Строк в БД
-                          </th>
-
-                        </tr>
-
-                      </thead>
-
-
-                      <tbody>
-
-                        {
-                          dashboard
-                            .dailySales
-                            .map(
-                              row => (
-
-                                <tr
-                                  key={
-                                    row.date
-                                  }
-                                >
-
-                                  <td>
-
-                                    <strong>
-                                      {
-                                        formatDate(
-                                          row.date
-                                        )
-                                      }
-                                    </strong>
-
-                                  </td>
-
-
-                                  <td
-                                    style={{
-                                      textAlign:
-                                        "right",
-                                    }}
-                                  >
-
-                                    <strong>
-                                      {
-                                        formatInteger(
-                                          row.sales
-                                        )
-                                      }
-                                    </strong>
-
-                                  </td>
-
-
-                                  <td
-                                    style={{
-                                      textAlign:
-                                        "right",
-                                    }}
-                                  >
-                                    {
-                                      formatInteger(
-                                        row.cancelled
-                                      )
-                                    }
-                                  </td>
-
-
-                                  <td
-                                    style={{
-                                      textAlign:
-                                        "right",
-                                    }}
-                                  >
-                                    {
-                                      formatInteger(
-                                        row.dbRows
-                                      )
-                                    }
-                                  </td>
-
-                                </tr>
-
-                              )
-                            )
-                        }
-
-                      </tbody>
-
-                    </table>
 
                   </div>
 
@@ -2058,11 +1886,15 @@ export default async function WildberriesPage() {
                       </InfoLine>
 
                       <InfoLine>
-                        Собственного ограничения по частоте ручных обновлений нет.
+                        Ручные обновления блокируются до следующего безопасного времени, чтобы не тратить лимит WB впустую.
                       </InfoLine>
 
                       <InfoLine>
-                        Если Wildberries сам вернёт лимит запросов, система покажет его отдельно.
+                        Перед утренним cron система резервирует лимит, чтобы автоматическое обновление не сорвалось.
+                      </InfoLine>
+
+                      <InfoLine>
+                        Если Wildberries сам вернёт дополнительный лимит запросов, система покажет его отдельно.
                       </InfoLine>
 
                       <InfoLine>
@@ -2100,7 +1932,7 @@ export default async function WildberriesPage() {
                         className=
                           "section-title"
                       >
-                        Остатки Wildberries
+                        Остатки и продажи Wildberries
                       </h2>
 
 
@@ -2108,8 +1940,9 @@ export default async function WildberriesPage() {
                         className=
                           "reason-text"
                       >
-                        Текущий FBW-остаток
-                        по Артикулам WB.
+                        Одним запросом обновляются
+                        текущий FBW-остаток и
+                        продажи за 28 дней.
                       </div>
 
                     </div>
@@ -2120,10 +1953,10 @@ export default async function WildberriesPage() {
                         "/api/wb/sync-stocks?force=1"
 
                       label=
-                        "Обновить остатки WB"
+                        "Обновить остатки и продажи WB"
 
                       loadingLabel=
-                        "Обновляем остатки..."
+                        "Обновляем остатки и продажи..."
 
                       initialState={
                         stocksState
@@ -2144,7 +1977,7 @@ export default async function WildberriesPage() {
                         className=
                           "section-title"
                       >
-                        Продажи Wildberries
+                        Отмены Wildberries
                       </h2>
 
 
@@ -2152,9 +1985,9 @@ export default async function WildberriesPage() {
                         className=
                           "reason-text"
                       >
-                        FBW-продажи Wildberries.
-                        Отменённые заказы
-                        считаются отдельно.
+                        Только FBW-отмены.
+                        Продажи этой кнопкой
+                        больше не загружаются.
                       </div>
 
                     </div>
@@ -2165,10 +1998,10 @@ export default async function WildberriesPage() {
                         "/api/wb/sync-orders"
 
                       label=
-                        "Обновить продажи WB"
+                        "Обновить отмены WB"
 
                       loadingLabel=
-                        "Обновляем продажи..."
+                        "Обновляем отмены..."
 
                       initialState={
                         ordersState
