@@ -130,9 +130,19 @@ const STOCKS_COOLDOWN_SECONDS =
   60;
 
 
-const SALES_COOLDOWN_SECONDS =
+const CANCELLATIONS_COOLDOWN_SECONDS =
   3
   *
+  60
+  *
+  60;
+
+
+const DAILY_SYNC_WINDOW_START_UTC_HOUR =
+  22;
+
+
+const DAILY_SYNC_WINDOW_SECONDS =
   60
   *
   60;
@@ -170,7 +180,7 @@ function getCooldownSeconds(
     )
   ) {
 
-    return SALES_COOLDOWN_SECONDS;
+    return CANCELLATIONS_COOLDOWN_SECONDS;
 
   }
 
@@ -375,10 +385,14 @@ string | null {
 
 
 // ============================================================
-// БЛИЖАЙШИЕ 07:00
+// ОКНО ЕЖЕДНЕВНОЙ СИНХРОНИЗАЦИИ
+//
+// Vercel Hobby запускает cron с расписанием 22:00 UTC
+// в гибком часовом окне.
+// Для Красноярска это примерно 05:00–06:00.
 // ============================================================
 
-function getNextDailySyncTimestamp(
+function getDailySyncWindowStartTimestamp(
   now:
     number
 ) {
@@ -389,24 +403,36 @@ function getNextDailySyncTimestamp(
     );
 
 
-  let next =
+  let start =
     Date.UTC(
       date.getUTCFullYear(),
       date.getUTCMonth(),
       date.getUTCDate(),
-      0,
+      DAILY_SYNC_WINDOW_START_UTC_HOUR,
       0,
       0,
       0
     );
 
 
+  const end =
+    start
+    +
+    DAILY_SYNC_WINDOW_SECONDS
+    *
+    1000
+    +
+    DAILY_SYNC_GRACE_SECONDS
+    *
+    1000;
+
+
   if (
-    next <=
-    now
+    now >=
+      end
   ) {
 
-    next +=
+    start +=
       24
       *
       60
@@ -418,37 +444,7 @@ function getNextDailySyncTimestamp(
   }
 
 
-  return next;
-
-}
-
-
-// ============================================================
-// ПОСЛЕДНИЕ 07:00
-// ============================================================
-
-function getPreviousDailySyncTimestamp(
-  now:
-    number
-) {
-
-  const next =
-    getNextDailySyncTimestamp(
-      now
-    );
-
-
-  return (
-    next
-    -
-    24
-    *
-    60
-    *
-    60
-    *
-    1000
-  );
+  return start;
 
 }
 
@@ -926,17 +922,29 @@ export default function WbSyncClient({
 
 
   // ==========================================================
-  // DAILY RESERVATION
+  // DAILY AUTO-SYNC WINDOW
   // ==========================================================
 
-  const nextDailySyncTimestamp =
-    getNextDailySyncTimestamp(
+  const dailySyncWindowStartTimestamp =
+    getDailySyncWindowStartTimestamp(
       now
     );
 
 
+  const dailySyncWindowEndTimestamp =
+    dailySyncWindowStartTimestamp
+    +
+    DAILY_SYNC_WINDOW_SECONDS
+    *
+    1000
+    +
+    DAILY_SYNC_GRACE_SECONDS
+    *
+    1000;
+
+
   const reservationStartTimestamp =
-    nextDailySyncTimestamp
+    dailySyncWindowStartTimestamp
     -
     cooldownSeconds
     *
@@ -951,7 +959,7 @@ export default function WbSyncClient({
       reservationStartTimestamp
     &&
     now <
-      nextDailySyncTimestamp;
+      dailySyncWindowStartTimestamp;
 
 
   const secondsUntilDailySync =
@@ -960,7 +968,7 @@ export default function WbSyncClient({
       ?
       Math.ceil(
         (
-          nextDailySyncTimestamp
+          dailySyncWindowStartTimestamp
           -
           now
         )
@@ -972,34 +980,29 @@ export default function WbSyncClient({
       0;
 
 
-  // ==========================================================
-  // GRACE AFTER 07:00
-  // ==========================================================
-
-  const previousDailySyncTimestamp =
-    getPreviousDailySyncTimestamp(
-      now
+  const lastSuccessTimestamp =
+    getTimestamp(
+      rateState
+        .lastSuccessAt
     );
 
 
-  const secondsAfterDailySync =
-    Math.floor(
-      (
-        now
-        -
-        previousDailySyncTimestamp
-      )
-      /
-      1000
-    );
-
-
-  const dailySyncGraceActive =
-    secondsAfterDailySync >=
-      0
+  const completedInCurrentWindow =
+    lastSuccessTimestamp !==
+      null
     &&
-    secondsAfterDailySync <
-      DAILY_SYNC_GRACE_SECONDS;
+    lastSuccessTimestamp >=
+      dailySyncWindowStartTimestamp;
+
+
+  const dailySyncWindowActive =
+    now >=
+      dailySyncWindowStartTimestamp
+    &&
+    now <
+      dailySyncWindowEndTimestamp
+    &&
+    !completedInCurrentWindow;
 
 
   const disabled =
@@ -1009,7 +1012,7 @@ export default function WbSyncClient({
     ||
     dailyReservationActive
     ||
-    dailySyncGraceActive;
+    dailySyncWindowActive;
 
 
   // ==========================================================
@@ -1419,7 +1422,7 @@ export default function WbSyncClient({
                 className=
                   "wb-sync-state-title"
               >
-                Резерв для обновления в 07:00
+                Резерв для утреннего автообновления
               </div>
 
 
@@ -1427,7 +1430,7 @@ export default function WbSyncClient({
                 className=
                   "wb-sync-state-text"
               >
-                До автоматического обновления:{" "}
+                До начала окна автообновления:{" "}
 
                 <strong>
                   {
@@ -1444,8 +1447,8 @@ export default function WbSyncClient({
                   "wb-sync-state-text"
               >
                 Ручной запрос временно отключён,
-                чтобы не заблокировать утреннее
-                обновление WB.
+                чтобы не занять лимит перед
+                автоматическим обновлением WB.
               </div>
 
             </div>
@@ -1461,7 +1464,7 @@ export default function WbSyncClient({
         &&
         !dailyReservationActive
         &&
-        dailySyncGraceActive
+        dailySyncWindowActive
 
           ? (
 
@@ -1482,7 +1485,7 @@ export default function WbSyncClient({
                 className=
                   "wb-sync-state-text"
               >
-                Получаем свежие данные после 07:00.
+                Автообновление выполняется в окне 05:00–06:00 по Красноярску.
               </div>
 
             </div>
@@ -1498,7 +1501,7 @@ export default function WbSyncClient({
         &&
         !dailyReservationActive
         &&
-        !dailySyncGraceActive
+        !dailySyncWindowActive
         &&
         unknownRateLimit
 
@@ -1537,7 +1540,7 @@ export default function WbSyncClient({
         &&
         !dailyReservationActive
         &&
-        !dailySyncGraceActive
+        !dailySyncWindowActive
         &&
         !unknownRateLimit
 
@@ -1610,11 +1613,11 @@ export default function WbSyncClient({
 
               : dailyReservationActive
 
-                ? "Автообновление в 07:00"
+                ? "Резерв для автообновления"
 
-                : dailySyncGraceActive
+                : dailySyncWindowActive
 
-                  ? "Обновляем автоматически..."
+                  ? "Автообновление WB..."
 
                   : label
         }
