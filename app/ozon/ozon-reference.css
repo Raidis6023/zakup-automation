@@ -1,0 +1,1985 @@
+/* ============================================================
+   OZON — РЕФЕРЕНСНЫЙ ИНТЕРФЕЙС
+   ============================================================ */
+
+.ozon-reference-page {
+  --ozon-blue:
+    #2165f5;
+
+  --ozon-green:
+    #24b67a;
+
+  --ozon-red:
+    #df5a70;
+
+  --ozon-purple:
+    #8b68d9;
+
+  --ozon-orange:
+    #dd963f;
+
+  color:
+    var(--ws-text);
+}
+
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.ozon-reference-page
+.ozon-header {
+  align-items:
+    center;
+
+  margin-bottom:
+    18px;
+}
+
+
+.ozon-reference-page
+.ozon-title-wrap {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    13px;
+
+  min-width:
+    0;
+}
+
+
+.ozon-reference-page
+.ozon-title-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    46px;
+
+  height:
+    46px;
+
+  flex:
+    0 0
+    46px;
+
+  overflow:
+    hidden;
+
+  border-radius:
+    11px;
+}
+
+
+.ozon-reference-page
+.ozon-title-icon
+img {
+  display:
+    block;
+
+  width:
+    46px;
+
+  height:
+    46px;
+
+  object-fit:
+    contain;
+}
+
+
+.ozon-reference-page
+.ozon-header-actions {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    10px;
+}
+
+
+.ozon-reference-page
+.ozon-navigation-button {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  text-decoration:
+    none;
+
+  white-space:
+    nowrap;
+}
+
+
+/* ============================================================
+   ERROR
+   ============================================================ */
+
+.ozon-reference-page
+.ozon-error-section {
+  padding:
+    15px
+    17px;
+
+  border-color:
+    rgba(
+      223,
+      90,
+      112,
+      0.32
+    );
+}
+
+
+.ozon-reference-page
+.ozon-error-title {
+  color:
+    var(--ws-text);
+
+  font-weight:
+    700;
+}
+
+
+.ozon-reference-page
+.ozon-error-text {
+  margin-top:
+    5px;
+
+  color:
+    var(--ozon-red);
+}
+
+
+/* ============================================================
+   СОСТОЯНИЕ СИНХРОНИЗАЦИИ
+   ============================================================ */
+
+.ozon-reference-page
+.ozon-sync-state-section {
+  padding:
+    0;
+
+  overflow:
+    hidden;
+}
+
+
+.ozon-reference-page
+.ozon-section-top {
+  display:
+    flex;
+
+  align-items:
+    flex-start;
+
+  justify-content:
+    space-between;
+
+  gap:
+    16px;
+
+  padding:
+    16px
+    18px;
+}
+
+
+.ozon-reference-page
+.ozon-section-heading {
+  min-width:
+    0;
+}
+
+
+.ozon-reference-page
+.ozon-status-badge {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  gap:
+    7px;
+
+  min-height:
+    30px;
+
+  padding:
+    5px
+    10px;
+
+  flex:
+    0 0
+    auto;
+
+  border:
+    1px solid
+    transparent;
+
+  border-radius:
+    999px;
+
+  font-size:
+    11px;
+
+  font-weight:
+    700;
+
+  white-space:
+    nowrap;
+}
+
+
+.ozon-reference-page
+.ozon-status-dot {
+  width:
+    8px;
+
+  height:
+    8px;
+
+  flex:
+    0 0
+    8px;
+
+  border-radius:
+    50%;
+
+  background:
+    currentColor;
+}
+
+
+.ozon-reference-page
+.ozon-status-badge--success {
+  color:
+    var(--ozon-green);
+
+  background:
+    rgba(
+      36,
+      182,
+      122,
+      0.12
+    );
+
+  border-color:
+    rgba(
+      36,
+      182,
+      122,
+      0.23
+    );
+}
+
+
+.ozon-reference-page
+.ozon-status-badge--warning {
+  color:
+    var(--ozon-orange);
+
+  background:
+    rgba(
+      221,
+      150,
+      63,
+      0.12
+    );
+
+  border-color:
+    rgba(
+      221,
+      150,
+      63,
+      0.23
+    );
+}
+
+
+/* ============================================================
+   SYNC INFO GRID
+   ============================================================ */
+
+.ozon-reference-page
+.ozon-sync-info-grid {
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap:
+    1px;
+
+  border-top:
+    1px solid
+    var(--ws-border);
+
+  background:
+    var(--ws-border);
+}
+
+
+.ozon-reference-page
+.ozon-info-card {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    12px;
+
+  min-width:
+    0;
+
+  min-height:
+    86px;
+
+  padding:
+    14px
+    16px;
+
+  background:
+    var(--ws-surface);
+}
+
+
+.ozon-reference-page
+.ozon-info-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    40px;
+
+  height:
+    40px;
+
+  flex:
+    0 0
+    40px;
+
+  border-radius:
+    10px;
+
+  color:
+    var(--ozon-blue);
+
+  background:
+    rgba(
+      33,
+      101,
+      245,
+      0.11
+    );
+}
+
+
+.ozon-reference-page
+.ozon-info-icon
+svg {
+  width:
+    21px;
+
+  height:
+    21px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+.ozon-reference-page
+.ozon-info-copy {
+  min-width:
+    0;
+}
+
+
+.ozon-reference-page
+.ozon-info-value {
+  margin-top:
+    3px;
+
+  color:
+    var(--ws-text);
+
+  font-size:
+    15px;
+
+  font-weight:
+    700;
+
+  line-height:
+    1.3;
+}
+
+
+/* ============================================================
+   SUMMARY
+   ============================================================ */
+
+.ozon-reference-page
+.ozon-summary-grid {
+  grid-template-columns:
+    repeat(
+      5,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap:
+    12px;
+}
+
+
+.ozon-reference-page
+.ozon-summary-card {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    12px;
+
+  min-height:
+    88px;
+}
+
+
+.ozon-reference-page
+.ozon-summary-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    42px;
+
+  height:
+    42px;
+
+  flex:
+    0 0
+    42px;
+
+  border-radius:
+    10px;
+}
+
+
+.ozon-reference-page
+.ozon-summary-icon
+svg {
+  width:
+    22px;
+
+  height:
+    22px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+.ozon-reference-page
+.ozon-summary-icon--blue {
+  color:
+    var(--ozon-blue);
+
+  background:
+    rgba(
+      33,
+      101,
+      245,
+      0.11
+    );
+}
+
+
+.ozon-reference-page
+.ozon-summary-icon--green {
+  color:
+    var(--ozon-green);
+
+  background:
+    rgba(
+      36,
+      182,
+      122,
+      0.12
+    );
+}
+
+
+.ozon-reference-page
+.ozon-summary-icon--red {
+  color:
+    var(--ozon-red);
+
+  background:
+    rgba(
+      223,
+      90,
+      112,
+      0.12
+    );
+}
+
+
+.ozon-reference-page
+.ozon-summary-icon--purple {
+  color:
+    var(--ozon-purple);
+
+  background:
+    rgba(
+      139,
+      104,
+      217,
+      0.13
+    );
+}
+
+
+.ozon-reference-page
+.ozon-summary-icon--orange {
+  color:
+    var(--ozon-orange);
+
+  background:
+    rgba(
+      221,
+      150,
+      63,
+      0.13
+    );
+}
+
+
+.ozon-reference-page
+.ozon-summary-copy {
+  min-width:
+    0;
+}
+
+
+/* ============================================================
+   INFO PANEL
+   ============================================================ */
+
+.ozon-reference-page
+.ozon-info-panel {
+  display:
+    flex;
+
+  align-items:
+    flex-start;
+
+  gap:
+    14px;
+
+  background:
+    rgba(
+      33,
+      101,
+      245,
+      0.06
+    );
+
+  border-color:
+    rgba(
+      33,
+      101,
+      245,
+      0.19
+    );
+}
+
+
+.ozon-reference-page
+.ozon-panel-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    40px;
+
+  height:
+    40px;
+
+  flex:
+    0 0
+    40px;
+
+  border-radius:
+    10px;
+
+  color:
+    var(--ozon-blue);
+
+  background:
+    rgba(
+      33,
+      101,
+      245,
+      0.12
+    );
+}
+
+
+.ozon-reference-page
+.ozon-panel-icon
+svg {
+  width:
+    21px;
+
+  height:
+    21px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+.ozon-reference-page
+.ozon-info-list {
+  display:
+    grid;
+
+  gap:
+    4px;
+
+  margin-top:
+    7px;
+}
+
+
+/* ============================================================
+   DAILY SALES
+   ============================================================ */
+
+.ozon-reference-page
+.ozon-daily-section {
+  padding:
+    0;
+
+  overflow:
+    hidden;
+}
+
+
+.ozon-reference-page
+.ozon-daily-header {
+  padding:
+    16px
+    18px;
+}
+
+
+.ozon-reference-page
+.ozon-daily-table-shell {
+  overflow-x:
+    auto;
+
+  border-top:
+    1px solid
+    var(--ws-border);
+}
+
+
+.ozon-reference-page
+.ozon-daily-table {
+  width:
+    100%;
+
+  min-width:
+    680px;
+
+  border-collapse:
+    collapse;
+}
+
+
+.ozon-reference-page
+.ozon-daily-table
+th {
+  padding:
+    11px
+    14px;
+
+  background:
+    var(--ws-surface-soft);
+
+  color:
+    var(--ws-text-muted);
+
+  border-bottom:
+    1px solid
+    var(--ws-border);
+
+  font-size:
+    11px;
+
+  font-weight:
+    650;
+
+  white-space:
+    nowrap;
+}
+
+
+.ozon-reference-page
+.ozon-daily-table
+td {
+  padding:
+    11px
+    14px;
+
+  color:
+    var(--ws-text);
+
+  border-bottom:
+    1px solid
+    var(--ws-border-soft);
+
+  font-size:
+    12px;
+
+  white-space:
+    nowrap;
+}
+
+
+.ozon-reference-page
+.ozon-daily-table
+tbody
+tr:last-child
+td {
+  border-bottom:
+    none;
+}
+
+
+.ozon-reference-page
+.ozon-daily-table
+tbody
+tr:hover {
+  background:
+    var(--ws-surface-hover);
+}
+
+
+/* ============================================================
+   UNLINKED
+   ============================================================ */
+
+.ozon-reference-page
+.ozon-unlinked-section {
+  padding:
+    0;
+
+  overflow:
+    hidden;
+}
+
+
+.ozon-reference-page
+.ozon-unlinked-header {
+  display:
+    flex;
+
+  align-items:
+    flex-start;
+
+  justify-content:
+    space-between;
+
+  gap:
+    16px;
+
+  padding:
+    16px
+    18px;
+}
+
+
+.ozon-reference-page
+.ozon-unlinked-content {
+  padding:
+    0
+    18px
+    18px;
+}
+
+
+.ozon-reference-page
+.ozon-unlinked-state {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  gap:
+    7px;
+
+  min-height:
+    30px;
+
+  padding:
+    5px
+    10px;
+
+  border:
+    1px solid
+    transparent;
+
+  border-radius:
+    999px;
+
+  font-size:
+    11px;
+
+  font-weight:
+    700;
+
+  white-space:
+    nowrap;
+}
+
+
+.ozon-reference-page
+.ozon-unlinked-state--warning {
+  color:
+    var(--ozon-orange);
+
+  background:
+    rgba(
+      221,
+      150,
+      63,
+      0.12
+    );
+
+  border-color:
+    rgba(
+      221,
+      150,
+      63,
+      0.23
+    );
+}
+
+
+.ozon-reference-page
+.ozon-unlinked-state--success {
+  color:
+    var(--ozon-green);
+
+  background:
+    rgba(
+      36,
+      182,
+      122,
+      0.12
+    );
+
+  border-color:
+    rgba(
+      36,
+      182,
+      122,
+      0.23
+    );
+}
+
+
+/* ============================================================
+   UNLINKED CLIENT
+   ============================================================ */
+
+.ozon-unlinked-client {
+  margin-top:
+    14px;
+}
+
+
+.ozon-unlinked-empty {
+  padding:
+    14px
+    15px;
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    9px;
+
+  background:
+    var(--ws-surface-soft);
+
+  color:
+    var(--ws-text-secondary);
+
+  font-size:
+    12px;
+}
+
+
+.ozon-unlinked-success {
+  margin-bottom:
+    11px;
+
+  padding:
+    10px
+    12px;
+
+  border:
+    1px solid
+    rgba(
+      36,
+      182,
+      122,
+      0.22
+    );
+
+  border-radius:
+    8px;
+
+  background:
+    rgba(
+      36,
+      182,
+      122,
+      0.10
+    );
+
+  color:
+    var(--ozon-green);
+
+  font-size:
+    12px;
+
+  font-weight:
+    650;
+}
+
+
+.ozon-unlinked-table-shell {
+  overflow-x:
+    auto;
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    9px;
+}
+
+
+.ozon-unlinked-table {
+  width:
+    100%;
+
+  min-width:
+    1180px;
+
+  border-collapse:
+    collapse;
+}
+
+
+.ozon-unlinked-table
+th {
+  padding:
+    10px
+    12px;
+
+  background:
+    var(--ws-surface-soft);
+
+  color:
+    var(--ws-text-muted);
+
+  border-bottom:
+    1px solid
+    var(--ws-border);
+
+  font-size:
+    10px;
+
+  font-weight:
+    650;
+
+  text-align:
+    left;
+
+  white-space:
+    nowrap;
+}
+
+
+.ozon-unlinked-table
+td {
+  padding:
+    11px
+    12px;
+
+  color:
+    var(--ws-text);
+
+  border-bottom:
+    1px solid
+    var(--ws-border-soft);
+
+  font-size:
+    12px;
+
+  vertical-align:
+    top;
+}
+
+
+.ozon-unlinked-table
+tbody
+tr:last-child
+td {
+  border-bottom:
+    none;
+}
+
+
+.ozon-unlinked-table
+tbody
+tr:hover {
+  background:
+    var(--ws-surface-hover);
+}
+
+
+.ozon-unlinked-master-wrap {
+  min-width:
+    180px;
+}
+
+
+.ozon-unlinked-input {
+  width:
+    100%;
+
+  box-sizing:
+    border-box;
+
+  min-height:
+    36px;
+
+  padding:
+    8px
+    9px;
+
+  background:
+    var(--ws-surface);
+
+  color:
+    var(--ws-text);
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    7px;
+
+  outline:
+    none;
+
+  font-size:
+    12px;
+
+  transition:
+    border-color
+      0.12s
+      ease,
+    box-shadow
+      0.12s
+      ease;
+}
+
+
+.ozon-unlinked-input:focus {
+  border-color:
+    var(--ws-blue);
+
+  box-shadow:
+    0 0 0 3px
+    rgba(
+      63,
+      143,
+      214,
+      0.08
+    );
+}
+
+
+.ozon-unlinked-input--error {
+  border-color:
+    var(--ozon-red);
+}
+
+
+.ozon-unlinked-error {
+  margin-top:
+    5px;
+
+  color:
+    var(--ozon-red);
+
+  font-size:
+    10px;
+
+  line-height:
+    1.35;
+}
+
+
+.ozon-unlinked-button {
+  min-height:
+    36px;
+
+  padding:
+    8px
+    12px;
+
+  border:
+    1px solid
+    var(--ws-blue);
+
+  border-radius:
+    7px;
+
+  background:
+    var(--ws-blue);
+
+  color:
+    #ffffff;
+
+  font-size:
+    11px;
+
+  font-weight:
+    650;
+
+  white-space:
+    nowrap;
+
+  cursor:
+    pointer;
+}
+
+
+.ozon-unlinked-button:disabled {
+  cursor:
+    not-allowed;
+
+  opacity:
+    0.46;
+}
+
+
+.ozon-unlinked-hint {
+  margin-top:
+    9px;
+
+  color:
+    var(--ws-text-muted);
+
+  font-size:
+    11px;
+
+  line-height:
+    1.45;
+}
+
+
+/* ============================================================
+   PRODUCTS SECTION
+   ============================================================ */
+
+.ozon-reference-page
+.ozon-products-section {
+  padding:
+    0;
+
+  overflow:
+    hidden;
+}
+
+
+.ozon-reference-page
+.ozon-products-header {
+  display:
+    flex;
+
+  align-items:
+    flex-start;
+
+  justify-content:
+    space-between;
+
+  gap:
+    16px;
+
+  padding:
+    16px
+    18px;
+}
+
+
+.ozon-reference-page
+.ozon-products-header-copy {
+  min-width:
+    0;
+}
+
+
+.ozon-reference-page
+.ozon-calculation-info {
+  margin-top:
+    6px;
+
+  color:
+    var(--ws-text-muted);
+
+  font-size:
+    10px;
+}
+
+
+/* ============================================================
+   PRODUCTS TABLE
+   ============================================================ */
+
+.ozon-products-table-shell {
+  overflow-x:
+    auto;
+
+  border-top:
+    1px solid
+    var(--ws-border);
+}
+
+
+.ozon-products-table {
+  width:
+    100%;
+
+  min-width:
+    1250px;
+
+  border-collapse:
+    collapse;
+}
+
+
+.ozon-products-table
+th {
+  padding:
+    10px
+    12px;
+
+  background:
+    var(--ws-surface-soft);
+
+  color:
+    var(--ws-text-muted);
+
+  border-bottom:
+    1px solid
+    var(--ws-border);
+
+  font-size:
+    10px;
+
+  font-weight:
+    650;
+
+  white-space:
+    nowrap;
+}
+
+
+.ozon-products-table
+td {
+  padding:
+    11px
+    12px;
+
+  color:
+    var(--ws-text);
+
+  border-bottom:
+    1px solid
+    var(--ws-border-soft);
+
+  font-size:
+    12px;
+
+  vertical-align:
+    middle;
+}
+
+
+.ozon-products-table
+.ozon-table-right {
+  text-align:
+    right;
+}
+
+
+.ozon-products-master-row {
+  transition:
+    background-color
+      0.1s
+      ease;
+}
+
+
+.ozon-products-master-row:hover {
+  background:
+    var(--ws-surface-hover);
+}
+
+
+.ozon-products-master-button {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  gap:
+    7px;
+
+  padding:
+    0;
+
+  border:
+    none;
+
+  background:
+    transparent;
+
+  color:
+    var(--ws-text);
+
+  cursor:
+    pointer;
+
+  font:
+    inherit;
+}
+
+
+.ozon-products-chevron {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    16px;
+
+  height:
+    16px;
+
+  color:
+    var(--ws-blue);
+
+  font-size:
+    9px;
+}
+
+
+.ozon-products-master-code {
+  color:
+    var(--ws-blue);
+
+  font-family:
+    monospace;
+
+  font-weight:
+    700;
+}
+
+
+.ozon-products-product-name {
+  color:
+    var(--ws-text);
+
+  font-weight:
+    600;
+}
+
+
+.ozon-products-listing-count {
+  margin-top:
+    3px;
+
+  color:
+    var(--ws-text-muted);
+
+  font-size:
+    10px;
+}
+
+
+.ozon-products-offers {
+  max-width:
+    360px;
+
+  color:
+    var(--ws-text-secondary);
+
+  word-break:
+    break-word;
+}
+
+
+/* ============================================================
+   EXPANDED CLUSTERS
+   ============================================================ */
+
+.ozon-products-expanded-cell {
+  padding:
+    0
+    12px
+    14px !important;
+
+  background:
+    var(--ws-surface-soft);
+}
+
+
+.ozon-products-cluster-panel {
+  padding:
+    14px
+    18px
+    4px;
+}
+
+
+.ozon-products-cluster-heading {
+  display:
+    flex;
+
+  align-items:
+    flex-start;
+
+  justify-content:
+    space-between;
+
+  gap:
+    16px;
+
+  flex-wrap:
+    wrap;
+}
+
+
+.ozon-products-cluster-title {
+  color:
+    var(--ws-text);
+
+  font-size:
+    12px;
+
+  font-weight:
+    700;
+}
+
+
+.ozon-products-cluster-subtitle {
+  margin-top:
+    3px;
+
+  color:
+    var(--ws-text-muted);
+
+  font-size:
+    10px;
+}
+
+
+.ozon-cluster-summary {
+  display:
+    flex;
+
+  gap:
+    16px;
+
+  flex-wrap:
+    wrap;
+
+  justify-content:
+    flex-end;
+
+  color:
+    var(--ws-text-secondary);
+
+  font-size:
+    10px;
+}
+
+
+.ozon-cluster-summary
+strong {
+  color:
+    var(--ws-text);
+}
+
+
+.ozon-cluster-table-shell {
+  overflow-x:
+    auto;
+
+  margin-top:
+    12px;
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    8px;
+
+  background:
+    var(--ws-surface);
+}
+
+
+.ozon-cluster-table {
+  width:
+    100%;
+
+  min-width:
+    1120px;
+
+  border-collapse:
+    collapse;
+}
+
+
+.ozon-cluster-table
+th {
+  padding:
+    9px
+    10px;
+
+  background:
+    var(--ws-surface-soft);
+
+  color:
+    var(--ws-text-muted);
+
+  border-bottom:
+    1px solid
+    var(--ws-border);
+
+  font-size:
+    9px;
+
+  font-weight:
+    650;
+
+  white-space:
+    nowrap;
+}
+
+
+.ozon-cluster-table
+td {
+  padding:
+    9px
+    10px;
+
+  color:
+    var(--ws-text-secondary);
+
+  border-bottom:
+    1px solid
+    var(--ws-border-soft);
+
+  font-size:
+    10px;
+
+  white-space:
+    nowrap;
+}
+
+
+.ozon-cluster-table
+tbody
+tr:last-child
+td {
+  border-bottom:
+    none;
+}
+
+
+.ozon-cluster-empty {
+  padding:
+    16px !important;
+
+  text-align:
+    center;
+
+  color:
+    var(--ws-text-muted) !important;
+}
+
+
+/* ============================================================
+   SAFE MODE
+   ============================================================ */
+
+.ozon-reference-page
+.ozon-safe-section {
+  display:
+    flex;
+
+  align-items:
+    flex-start;
+
+  gap:
+    14px;
+
+  background:
+    rgba(
+      36,
+      182,
+      122,
+      0.055
+    );
+
+  border-color:
+    rgba(
+      36,
+      182,
+      122,
+      0.18
+    );
+}
+
+
+.ozon-reference-page
+.ozon-safe-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    40px;
+
+  height:
+    40px;
+
+  flex:
+    0 0
+    40px;
+
+  border-radius:
+    10px;
+
+  color:
+    var(--ozon-green);
+
+  background:
+    rgba(
+      36,
+      182,
+      122,
+      0.11
+    );
+}
+
+
+/* ============================================================
+   SYNC CLIENT
+   ============================================================ */
+
+.ozon-reference-page
+.ozon-sync-module
+.controls {
+  border-color:
+    rgba(
+      33,
+      101,
+      245,
+      0.19
+    );
+}
+
+
+.ozon-reference-page
+.ozon-sync-module
+.controls-title {
+  font-size:
+    15px;
+}
+
+
+.ozon-reference-page
+.ozon-sync-module
+.summary-grid {
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(
+        0,
+        1fr
+      )
+    );
+}
+
+
+/* ============================================================
+   DARK
+   ============================================================ */
+
+html[data-theme="dark"]
+.ozon-reference-page {
+  --ozon-blue:
+    #6c9cff;
+
+  --ozon-green:
+    #68ca9b;
+
+  --ozon-red:
+    #ec8799;
+
+  --ozon-purple:
+    #b197e5;
+
+  --ozon-orange:
+    #e4ae6b;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (
+  max-width: 1350px
+) {
+
+  .ozon-reference-page
+  .ozon-summary-grid {
+    grid-template-columns:
+      repeat(
+        3,
+        minmax(
+          0,
+          1fr
+        )
+      );
+  }
+
+
+  .ozon-reference-page
+  .ozon-sync-info-grid {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(
+          0,
+          1fr
+        )
+      );
+  }
+
+}
+
+
+@media (
+  max-width: 1050px
+) {
+
+  .ozon-reference-page
+  .ozon-sync-module
+  .summary-grid {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(
+          0,
+          1fr
+        )
+      );
+  }
+
+}
+
+
+@media (
+  max-width: 800px
+) {
+
+  .ozon-reference-page
+  .ozon-header {
+    align-items:
+      flex-start;
+  }
+
+
+  .ozon-reference-page
+  .ozon-header-actions {
+    flex-wrap:
+      wrap;
+  }
+
+
+  .ozon-reference-page
+  .ozon-section-top,
+  .ozon-reference-page
+  .ozon-unlinked-header,
+  .ozon-reference-page
+  .ozon-products-header {
+    flex-direction:
+      column;
+
+    align-items:
+      stretch;
+  }
+
+
+  .ozon-reference-page
+  .ozon-summary-grid {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(
+          0,
+          1fr
+        )
+      );
+  }
+
+}
+
+
+@media (
+  max-width: 560px
+) {
+
+  .ozon-reference-page
+  .ozon-summary-grid,
+  .ozon-reference-page
+  .ozon-sync-info-grid,
+  .ozon-reference-page
+  .ozon-sync-module
+  .summary-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+}
