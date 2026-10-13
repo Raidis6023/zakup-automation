@@ -1091,7 +1091,7 @@ export default async function Home() {
 
               <div
                 className=
-                  "zakup-v2-metric-card"
+                  "zakup-v2-metric-card zakup-v2-metric-card--transport"
               >
 
                 <span
@@ -1108,16 +1108,8 @@ export default async function Home() {
 
                 <div
                   className=
-                    "zakup-v2-metric-copy"
+                    "zakup-v2-metric-copy zakup-v2-metric-copy--transport"
                 >
-
-                  <div
-                    className=
-                      "card-label"
-                  >
-                    Транспорт
-                  </div>
-
 
                   <div
                     className=
@@ -1329,86 +1321,67 @@ export default async function Home() {
                 }
 
                 className=
-                  "zakup-v2-simulation-input"
+                  "zakup-v2-simulation-controls"
               >
 
-                <label
-                  htmlFor=
-                    "newProductsVolume"
-
+                <div
                   className=
-                    "input-label"
+                    "zakup-v2-simulation-input"
                 >
-                  Новые товары, м³
-                </label>
+
+                  <label
+                    htmlFor=
+                      "newProductsVolume"
+
+                    className=
+                      "input-label"
+                  >
+                    Новые товары, м³
+                  </label>
 
 
-                <input
-                  id=
-                    "newProductsVolume"
+                  <input
+                    id=
+                      "newProductsVolume"
 
-                  name=
-                    "newProductsVolume"
+                    name=
+                      "newProductsVolume"
 
-                  type="number"
+                    type="number"
 
-                  step=
-                    "0.001"
+                    step=
+                      "0.001"
 
-                  min="0"
+                    min="0"
 
-                  defaultValue={
-                    newProductsVolume
-                  }
+                    defaultValue={
+                      newProductsVolume
+                    }
 
+                    className=
+                      "input"
+
+                    required
+                  />
+
+                </div>
+
+
+                <div
                   className=
-                    "input"
-
-                  required
-                />
-
-
-                <button
-                  type="submit"
-
-                  aria-label=
-                    "Пересчитать транспорт"
-
-                  hidden
-                />
-
-              </form>
-
-
-              <form
-                action={
-                  simulateChinaTransport
-                }
-
-                className=
-                  "zakup-v2-simulation-button"
-              >
-
-                <input
-                  type="hidden"
-
-                  name=
-                    "newProductsVolume"
-
-                  value={
-                    newProductsVolume
-                  }
-                />
-
-
-                <button
-                  type="submit"
-
-                  className=
-                    "primary-button"
+                    "zakup-v2-simulation-button"
                 >
-                  Пересчитать транспорт
-                </button>
+
+                  <button
+                    type="submit"
+
+                    className=
+                      "primary-button"
+                  >
+                    Пересчитать транспорт
+                  </button>
+
+                </div>
 
               </form>
 
