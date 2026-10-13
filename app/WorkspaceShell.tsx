@@ -36,6 +36,7 @@ import "./workspace-shell.css";
 import "./sidebar-collapse.css";
 import "./sidebar-visuals.css";
 import "./workspace-reference-shell.css";
+import "./workspace-reference-components.css";
 
 
 // ============================================================
