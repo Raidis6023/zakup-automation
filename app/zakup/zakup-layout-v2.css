@@ -1,0 +1,1659 @@
+/* ============================================================
+   ЗАКУП V2
+   ФИНАЛЬНАЯ КОМПОНОВКА ПО УТВЕРЖДЁННОМУ РЕФЕРЕНСУ
+   ============================================================ */
+
+.zakup-reference-page {
+  --zakup-v2-gap:
+    12px;
+
+  --zakup-v2-icon-size:
+    42px;
+
+  --zakup-v2-row-height:
+    100px;
+
+  --zakup-v2-green:
+    #19b978;
+
+  --zakup-v2-red:
+    #e84868;
+
+  --zakup-v2-purple:
+    #9162df;
+
+  --zakup-v2-orange:
+    #e6983e;
+
+  --zakup-v2-blue:
+    var(--ws-blue);
+}
+
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.zakup-reference-page
+.zakup-v2-header {
+  display:
+    flex;
+
+  align-items:
+    flex-start;
+
+  justify-content:
+    space-between;
+
+  gap:
+    24px;
+
+  margin-bottom:
+    18px;
+}
+
+
+.zakup-reference-page
+.zakup-v2-title {
+  min-width:
+    0;
+}
+
+
+.zakup-reference-page
+.zakup-v2-title
+.title {
+  margin-top:
+    2px;
+}
+
+
+.zakup-reference-page
+.zakup-v2-header-actions {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    10px;
+
+  flex:
+    0 0
+    auto;
+}
+
+
+.zakup-reference-page
+.zakup-v2-home-button {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  text-decoration:
+    none;
+
+  white-space:
+    nowrap;
+}
+
+
+/* ============================================================
+   ОСНОВНАЯ СЕТКА 50 / 50
+   ============================================================ */
+
+.zakup-reference-page
+.zakup-v2-main-grid {
+  display:
+    grid;
+
+  grid-template-columns:
+    minmax(
+      0,
+      1fr
+    )
+    minmax(
+      0,
+      1fr
+    );
+
+  gap:
+    var(
+      --zakup-v2-gap
+    );
+
+  align-items:
+    start;
+}
+
+
+.zakup-reference-page
+.zakup-v2-column {
+  display:
+    grid;
+
+  gap:
+    var(
+      --zakup-v2-gap
+    );
+
+  min-width:
+    0;
+}
+
+
+/* ============================================================
+   ВЕРХНИЕ БЛОКИ
+   ============================================================ */
+
+.zakup-reference-page
+.zakup-v2-action-strip {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  gap:
+    18px;
+
+  min-height:
+    var(
+      --zakup-v2-row-height
+    );
+
+  box-sizing:
+    border-box;
+
+  padding:
+    14px
+    16px;
+
+  background:
+    var(--ws-surface);
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    10px;
+}
+
+
+.zakup-reference-page
+.zakup-v2-action-copy {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    13px;
+
+  min-width:
+    0;
+
+  flex:
+    1 1
+    auto;
+}
+
+
+.zakup-reference-page
+.zakup-v2-action-text {
+  min-width:
+    0;
+}
+
+
+.zakup-reference-page
+.zakup-v2-action-text
+.controls-title {
+  margin:
+    0;
+}
+
+
+.zakup-reference-page
+.zakup-v2-action-text
+.muted {
+  margin-top:
+    4px;
+
+  line-height:
+    1.4;
+}
+
+
+.zakup-reference-page
+.zakup-v2-action-strip
+form {
+  flex:
+    0 0
+    auto;
+}
+
+
+.zakup-reference-page
+.zakup-v2-action-strip
+.primary-button {
+  min-height:
+    42px;
+
+  padding-left:
+    20px;
+
+  padding-right:
+    20px;
+
+  white-space:
+    nowrap;
+}
+
+
+/* ============================================================
+   ОБЩАЯ ИКОНКА ВЕРХНИХ БЛОКОВ
+   ============================================================ */
+
+.zakup-reference-page
+.zakup-v2-section-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    var(
+      --zakup-v2-icon-size
+    );
+
+  height:
+    var(
+      --zakup-v2-icon-size
+    );
+
+  flex:
+    0 0
+    var(
+      --zakup-v2-icon-size
+    );
+
+  border-radius:
+    10px;
+
+  background:
+    rgba(
+      63,
+      143,
+      214,
+      0.13
+    );
+
+  color:
+    var(--zakup-v2-blue);
+}
+
+
+.zakup-reference-page
+.zakup-v2-section-icon
+svg {
+  width:
+    23px;
+
+  height:
+    23px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+/* ============================================================
+   СИМУЛЯЦИЯ ТРАНСПОРТА
+   ============================================================ */
+
+.zakup-reference-page
+.zakup-v2-simulation-strip {
+  display:
+    grid;
+
+  grid-template-columns:
+    minmax(
+      0,
+      1fr
+    )
+    180px
+    auto;
+
+  align-items:
+    center;
+
+  gap:
+    14px;
+
+  min-height:
+    var(
+      --zakup-v2-row-height
+    );
+
+  box-sizing:
+    border-box;
+
+  padding:
+    14px
+    16px;
+
+  background:
+    var(--ws-surface);
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    10px;
+}
+
+
+.zakup-reference-page
+.zakup-v2-simulation-copy {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    13px;
+
+  min-width:
+    0;
+}
+
+
+.zakup-reference-page
+.zakup-v2-simulation-text {
+  min-width:
+    0;
+}
+
+
+.zakup-reference-page
+.zakup-v2-simulation-text
+.section-title {
+  margin:
+    0;
+}
+
+
+.zakup-reference-page
+.zakup-v2-simulation-description {
+  margin-top:
+    4px;
+
+  line-height:
+    1.4;
+}
+
+
+.zakup-reference-page
+.zakup-v2-simulation-input {
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  justify-content:
+    center;
+
+  min-width:
+    0;
+}
+
+
+.zakup-reference-page
+.zakup-v2-simulation-input
+.input-label {
+  margin-bottom:
+    6px;
+
+  white-space:
+    nowrap;
+}
+
+
+.zakup-reference-page
+.zakup-v2-simulation-input
+.input {
+  width:
+    100%;
+
+  height:
+    42px;
+
+  box-sizing:
+    border-box;
+}
+
+
+.zakup-reference-page
+.zakup-v2-simulation-button {
+  display:
+    flex;
+
+  align-items:
+    flex-end;
+
+  height:
+    100%;
+}
+
+
+.zakup-reference-page
+.zakup-v2-simulation-button
+.primary-button {
+  min-height:
+    42px;
+
+  padding-left:
+    20px;
+
+  padding-right:
+    20px;
+
+  white-space:
+    nowrap;
+}
+
+
+/* ============================================================
+   ВАЖНО:
+   КНОПКИ И INPUT СТОЯТ НА ОДНОЙ ВЫСОТЕ
+   ============================================================ */
+
+.zakup-reference-page
+.zakup-v2-action-strip,
+.zakup-reference-page
+.zakup-v2-simulation-strip {
+  min-height:
+    100px;
+}
+
+
+.zakup-reference-page
+.zakup-v2-action-strip
+.primary-button,
+.zakup-reference-page
+.zakup-v2-simulation-strip
+.primary-button,
+.zakup-reference-page
+.zakup-v2-simulation-strip
+.input {
+  height:
+    42px;
+}
+
+
+/* ============================================================
+   ЛЕВЫЕ 4 КАРТОЧКИ
+   ============================================================ */
+
+.zakup-reference-page
+.zakup-v2-left-metrics {
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap:
+    var(
+      --zakup-v2-gap
+    );
+}
+
+
+.zakup-reference-page
+.zakup-v2-metric-card {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    13px;
+
+  min-height:
+    104px;
+
+  box-sizing:
+    border-box;
+
+  padding:
+    15px
+    16px;
+
+  background:
+    var(--ws-surface);
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    10px;
+}
+
+
+.zakup-reference-page
+.zakup-v2-metric-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    var(
+      --zakup-v2-icon-size
+    );
+
+  height:
+    var(
+      --zakup-v2-icon-size
+    );
+
+  flex:
+    0 0
+    var(
+      --zakup-v2-icon-size
+    );
+
+  border-radius:
+    10px;
+}
+
+
+.zakup-reference-page
+.zakup-v2-metric-icon
+svg {
+  width:
+    24px;
+
+  height:
+    24px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+.zakup-reference-page
+.zakup-v2-metric-icon--green {
+  color:
+    var(--zakup-v2-green);
+
+  background:
+    rgba(
+      25,
+      185,
+      120,
+      0.13
+    );
+}
+
+
+.zakup-reference-page
+.zakup-v2-metric-icon--blue {
+  color:
+    var(--zakup-v2-blue);
+
+  background:
+    rgba(
+      63,
+      143,
+      214,
+      0.13
+    );
+}
+
+
+.zakup-reference-page
+.zakup-v2-metric-icon--red {
+  color:
+    var(--zakup-v2-red);
+
+  background:
+    rgba(
+      232,
+      72,
+      104,
+      0.13
+    );
+}
+
+
+.zakup-reference-page
+.zakup-v2-metric-icon--purple {
+  color:
+    var(--zakup-v2-purple);
+
+  background:
+    rgba(
+      145,
+      98,
+      223,
+      0.14
+    );
+}
+
+
+.zakup-reference-page
+.zakup-v2-metric-copy {
+  min-width:
+    0;
+}
+
+
+.zakup-reference-page
+.zakup-v2-metric-copy
+.card-label {
+  margin-bottom:
+    3px;
+}
+
+
+.zakup-reference-page
+.zakup-v2-metric-value {
+  color:
+    var(--ws-text);
+
+  font-size:
+    20px;
+
+  font-weight:
+    750;
+
+  line-height:
+    1.15;
+}
+
+
+.zakup-reference-page
+.zakup-v2-metric-subtitle {
+  margin-top:
+    5px;
+}
+
+
+/* ============================================================
+   КАРТОЧКА ТРАНСПОРТА
+   ============================================================ */
+
+.zakup-reference-page
+.zakup-v2-transport-options {
+  display:
+    grid;
+
+  gap:
+    2px;
+
+  margin-top:
+    3px;
+
+  color:
+    var(--ws-text);
+
+  font-size:
+    13px;
+
+  font-weight:
+    700;
+
+  line-height:
+    1.25;
+}
+
+
+/* ============================================================
+   ПРАВЫЕ 4 КАРТОЧКИ
+   ============================================================ */
+
+.zakup-reference-page
+.zakup-v2-result-grid {
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap:
+    var(
+      --zakup-v2-gap
+    );
+}
+
+
+.zakup-reference-page
+.zakup-v2-result-card {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    13px;
+
+  min-height:
+    104px;
+
+  box-sizing:
+    border-box;
+
+  padding:
+    15px
+    16px;
+
+  background:
+    var(--ws-surface);
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    10px;
+}
+
+
+.zakup-reference-page
+.zakup-v2-result-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    var(
+      --zakup-v2-icon-size
+    );
+
+  height:
+    var(
+      --zakup-v2-icon-size
+    );
+
+  flex:
+    0 0
+    var(
+      --zakup-v2-icon-size
+    );
+
+  border-radius:
+    10px;
+}
+
+
+.zakup-reference-page
+.zakup-v2-result-icon
+svg {
+  width:
+    24px;
+
+  height:
+    24px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+.zakup-reference-page
+.zakup-v2-result-icon--green {
+  color:
+    var(--zakup-v2-green);
+
+  background:
+    rgba(
+      25,
+      185,
+      120,
+      0.13
+    );
+}
+
+
+.zakup-reference-page
+.zakup-v2-result-icon--purple {
+  color:
+    var(--zakup-v2-purple);
+
+  background:
+    rgba(
+      145,
+      98,
+      223,
+      0.14
+    );
+}
+
+
+.zakup-reference-page
+.zakup-v2-result-icon--blue {
+  color:
+    var(--zakup-v2-blue);
+
+  background:
+    rgba(
+      63,
+      143,
+      214,
+      0.13
+    );
+}
+
+
+.zakup-reference-page
+.zakup-v2-result-icon--orange {
+  color:
+    var(--zakup-v2-orange);
+
+  background:
+    rgba(
+      230,
+      152,
+      62,
+      0.13
+    );
+}
+
+
+.zakup-reference-page
+.zakup-v2-result-copy {
+  min-width:
+    0;
+}
+
+
+.zakup-reference-page
+.zakup-v2-result-value {
+  display:
+    block;
+
+  margin-top:
+    3px;
+
+  color:
+    var(--ws-text);
+
+  font-size:
+    20px;
+
+  font-weight:
+    750;
+
+  line-height:
+    1.15;
+}
+
+
+.zakup-reference-page
+.zakup-v2-result-subtitle {
+  margin-top:
+    6px;
+}
+
+
+/* ============================================================
+   ФОРМИРОВАНИЕ ЗАКАЗА + РЕШЕНИЕ
+   ============================================================ */
+
+.zakup-reference-page
+.zakup-v2-bottom-grid {
+  display:
+    grid;
+
+  grid-template-columns:
+    minmax(
+      0,
+      1fr
+    )
+    minmax(
+      0,
+      1fr
+    );
+
+  gap:
+    var(
+      --zakup-v2-gap
+    );
+
+  margin-top:
+    var(
+      --zakup-v2-gap
+    );
+}
+
+
+.zakup-reference-page
+.zakup-v2-order-strip,
+.zakup-reference-page
+.zakup-v2-decision-strip {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  gap:
+    16px;
+
+  min-height:
+    76px;
+
+  box-sizing:
+    border-box;
+
+  padding:
+    12px
+    14px;
+
+  background:
+    var(--ws-surface);
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    10px;
+}
+
+
+.zakup-reference-page
+.zakup-v2-order-copy,
+.zakup-reference-page
+.zakup-v2-decision-copy {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    12px;
+
+  min-width:
+    0;
+
+  flex:
+    1 1
+    auto;
+}
+
+
+.zakup-reference-page
+.zakup-v2-order-text,
+.zakup-reference-page
+.zakup-v2-decision-text {
+  min-width:
+    0;
+}
+
+
+.zakup-reference-page
+.zakup-v2-order-icon,
+.zakup-reference-page
+.zakup-v2-decision-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    var(
+      --zakup-v2-icon-size
+    );
+
+  height:
+    var(
+      --zakup-v2-icon-size
+    );
+
+  flex:
+    0 0
+    var(
+      --zakup-v2-icon-size
+    );
+
+  border-radius:
+    10px;
+}
+
+
+.zakup-reference-page
+.zakup-v2-order-icon {
+  color:
+    var(--zakup-v2-green);
+
+  background:
+    rgba(
+      25,
+      185,
+      120,
+      0.13
+    );
+}
+
+
+.zakup-reference-page
+.zakup-v2-decision-icon {
+  color:
+    #ffffff;
+
+  background:
+    var(--ws-blue);
+}
+
+
+.zakup-reference-page
+.zakup-v2-order-icon
+svg,
+.zakup-reference-page
+.zakup-v2-decision-icon
+svg {
+  width:
+    23px;
+
+  height:
+    23px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+.zakup-reference-page
+.zakup-v2-order-strip
+.primary-button {
+  min-height:
+    42px;
+
+  flex:
+    0 0
+    auto;
+
+  white-space:
+    nowrap;
+}
+
+
+.zakup-reference-page
+.zakup-v2-order-title,
+.zakup-reference-page
+.zakup-v2-decision-title {
+  display:
+    block;
+
+  color:
+    var(--ws-text);
+
+  font-size:
+    14px;
+
+  font-weight:
+    750;
+}
+
+
+.zakup-reference-page
+.zakup-v2-order-description,
+.zakup-reference-page
+.zakup-v2-decision-description {
+  margin-top:
+    4px;
+}
+
+
+/* ============================================================
+   ТАБЛИЦА ТОВАРОВ
+   ============================================================ */
+
+.zakup-reference-page
+.zakup-products-collapsible {
+  margin-top:
+    var(
+      --zakup-v2-gap
+    );
+
+  padding:
+    0;
+
+  overflow:
+    hidden;
+}
+
+
+.zakup-reference-page
+.zakup-products-toggle {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    12px;
+
+  width:
+    100%;
+
+  min-height:
+    72px;
+
+  box-sizing:
+    border-box;
+
+  padding:
+    12px
+    14px;
+
+  border:
+    none;
+
+  background:
+    transparent;
+
+  color:
+    inherit;
+
+  font:
+    inherit;
+
+  text-align:
+    left;
+
+  cursor:
+    pointer;
+
+  transition:
+    background-color
+      0.12s
+      ease;
+}
+
+
+.zakup-reference-page
+.zakup-products-toggle:hover {
+  background:
+    var(--ws-surface-hover);
+}
+
+
+.zakup-reference-page
+.zakup-products-toggle:focus-visible {
+  outline:
+    2px solid
+    var(--ws-blue);
+
+  outline-offset:
+    -2px;
+}
+
+
+.zakup-reference-page
+.zakup-products-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    var(
+      --zakup-v2-icon-size
+    );
+
+  height:
+    var(
+      --zakup-v2-icon-size
+    );
+
+  flex:
+    0 0
+    var(
+      --zakup-v2-icon-size
+    );
+
+  border-radius:
+    10px;
+
+  color:
+    var(--zakup-v2-purple);
+
+  background:
+    rgba(
+      145,
+      98,
+      223,
+      0.14
+    );
+}
+
+
+.zakup-reference-page
+.zakup-products-icon
+svg {
+  width:
+    23px;
+
+  height:
+    23px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+.zakup-reference-page
+.zakup-products-toggle-copy {
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  min-width:
+    0;
+}
+
+
+.zakup-reference-page
+.zakup-products-toggle-title {
+  color:
+    var(--ws-text);
+
+  font-size:
+    15px;
+
+  font-weight:
+    750;
+}
+
+
+.zakup-reference-page
+.zakup-products-toggle-subtitle {
+  margin-top:
+    3px;
+
+  font-size:
+    11px;
+}
+
+
+.zakup-reference-page
+.zakup-products-table-content {
+  border-top:
+    1px solid
+    var(--ws-border);
+}
+
+
+/* ============================================================
+   ТАБЛИЦА:
+   ВЕРТИКАЛЬНЫЕ ГРАНИЦЫ ТОЧНО КАК ГОРИЗОНТАЛЬНЫЕ
+   ============================================================ */
+
+.zakup-reference-page
+.zakup-products-table-content
+.table-wrapper {
+  border:
+    none;
+
+  border-radius:
+    0;
+}
+
+
+.zakup-reference-page
+.zakup-products-table-content
+.table {
+  border-collapse:
+    collapse;
+}
+
+
+.zakup-reference-page
+.zakup-products-table-content
+.table
+th,
+.zakup-reference-page
+.zakup-products-table-content
+.table
+td {
+  border-right:
+    1px solid
+    var(--ws-border-soft);
+
+  border-bottom:
+    1px solid
+    var(--ws-border-soft);
+}
+
+
+.zakup-reference-page
+.zakup-products-table-content
+.table
+th:last-child,
+.zakup-reference-page
+.zakup-products-table-content
+.table
+td:last-child {
+  border-right:
+    none;
+}
+
+
+.zakup-reference-page
+.zakup-products-table-content
+.table
+tbody
+tr:last-child
+td {
+  border-bottom:
+    none;
+}
+
+
+/* ============================================================
+   РУЧНЫЕ КОРРЕКТИРОВКИ
+   ============================================================ */
+
+.zakup-reference-page
+.zakup-adjustments-section {
+  margin-top:
+    18px;
+}
+
+
+/* ============================================================
+   DARK
+   ============================================================ */
+
+html[data-theme="dark"]
+.zakup-reference-page
+.zakup-v2-action-strip,
+html[data-theme="dark"]
+.zakup-reference-page
+.zakup-v2-simulation-strip,
+html[data-theme="dark"]
+.zakup-reference-page
+.zakup-v2-metric-card,
+html[data-theme="dark"]
+.zakup-reference-page
+.zakup-v2-result-card,
+html[data-theme="dark"]
+.zakup-reference-page
+.zakup-v2-order-strip,
+html[data-theme="dark"]
+.zakup-reference-page
+.zakup-v2-decision-strip {
+  box-shadow:
+    none;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (
+  max-width: 1250px
+) {
+
+  .zakup-reference-page
+  .zakup-v2-simulation-strip {
+    grid-template-columns:
+      minmax(
+        0,
+        1fr
+      )
+      150px
+      auto;
+  }
+
+
+  .zakup-reference-page
+  .zakup-v2-simulation-description {
+    max-width:
+      250px;
+  }
+
+}
+
+
+@media (
+  max-width: 1050px
+) {
+
+  .zakup-reference-page
+  .zakup-v2-main-grid,
+  .zakup-reference-page
+  .zakup-v2-bottom-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+
+  .zakup-reference-page
+  .zakup-v2-simulation-description {
+    max-width:
+      none;
+  }
+
+}
+
+
+@media (
+  max-width: 720px
+) {
+
+  .zakup-reference-page
+  .zakup-v2-header {
+    flex-direction:
+      column;
+  }
+
+
+  .zakup-reference-page
+  .zakup-v2-action-strip {
+    align-items:
+      stretch;
+
+    flex-direction:
+      column;
+  }
+
+
+  .zakup-reference-page
+  .zakup-v2-action-strip
+  form,
+  .zakup-reference-page
+  .zakup-v2-action-strip
+  .primary-button {
+    width:
+      100%;
+  }
+
+
+  .zakup-reference-page
+  .zakup-v2-simulation-strip {
+    grid-template-columns:
+      1fr;
+  }
+
+
+  .zakup-reference-page
+  .zakup-v2-simulation-input {
+    width:
+      100%;
+  }
+
+
+  .zakup-reference-page
+  .zakup-v2-simulation-button {
+    display:
+      block;
+
+    height:
+      auto;
+  }
+
+
+  .zakup-reference-page
+  .zakup-v2-simulation-button
+  .primary-button {
+    width:
+      100%;
+  }
+
+
+  .zakup-reference-page
+  .zakup-v2-left-metrics,
+  .zakup-reference-page
+  .zakup-v2-result-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+
+  .zakup-reference-page
+  .zakup-v2-order-strip,
+  .zakup-reference-page
+  .zakup-v2-decision-strip {
+    align-items:
+      flex-start;
+
+    flex-direction:
+      column;
+  }
+
+
+  .zakup-reference-page
+  .zakup-v2-order-strip
+  form,
+  .zakup-reference-page
+  .zakup-v2-order-strip
+  .primary-button {
+    width:
+      100%;
+  }
+
+}
