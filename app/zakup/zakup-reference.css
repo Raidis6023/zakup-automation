@@ -1,0 +1,1099 @@
+/* ============================================================
+   ЗАКУП — РЕФЕРЕНСНЫЙ ИНТЕРФЕЙС
+   ============================================================ */
+
+.zakup-reference-page {
+  --zakup-green:
+    #19b978;
+
+  --zakup-red:
+    #e84868;
+
+  --zakup-purple:
+    #9162df;
+
+  --zakup-orange:
+    #e6983e;
+
+  --zakup-blue:
+    var(--ws-blue);
+
+  --zakup-icon-bg:
+    rgba(
+      63,
+      143,
+      214,
+      0.12
+    );
+
+  --zakup-decision-bg:
+    rgba(
+      63,
+      143,
+      214,
+      0.08
+    );
+
+  color:
+    var(--ws-text);
+}
+
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.zakup-reference-page
+.zakup-header {
+  align-items:
+    center;
+
+  margin-bottom:
+    18px;
+}
+
+
+.zakup-reference-page
+.zakup-title-block {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    13px;
+
+  min-width:
+    0;
+}
+
+
+.zakup-reference-page
+.zakup-title-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    42px;
+
+  height:
+    42px;
+
+  flex:
+    0 0
+    42px;
+
+  border-radius:
+    10px;
+
+  background:
+    var(--zakup-icon-bg);
+
+  color:
+    var(--zakup-blue);
+}
+
+
+.zakup-reference-page
+.zakup-title-icon
+svg {
+  width:
+    23px;
+
+  height:
+    23px;
+}
+
+
+.zakup-reference-page
+.zakup-header-actions {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    10px;
+}
+
+
+.zakup-reference-page
+.zakup-version {
+  min-width:
+    120px;
+
+  padding:
+    10px
+    13px;
+}
+
+
+.zakup-reference-page
+.zakup-version
+.small-label {
+  margin-bottom:
+    2px;
+}
+
+
+.zakup-reference-page
+.zakup-version
+strong {
+  display:
+    block;
+
+  color:
+    var(--ws-text);
+
+  font-size:
+    14px;
+}
+
+
+/* ============================================================
+   SECTION ICON
+   ============================================================ */
+
+.zakup-reference-page
+.zakup-section-heading {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    12px;
+
+  min-width:
+    0;
+}
+
+
+.zakup-reference-page
+.zakup-section-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    42px;
+
+  height:
+    42px;
+
+  flex:
+    0 0
+    42px;
+
+  border-radius:
+    10px;
+
+  background:
+    var(--zakup-icon-bg);
+
+  color:
+    var(--zakup-blue);
+}
+
+
+.zakup-reference-page
+.zakup-section-icon
+svg {
+  width:
+    23px;
+
+  height:
+    23px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+/* ============================================================
+   УПРАВЛЕНИЕ РАСЧЁТОМ
+   ============================================================ */
+
+.zakup-reference-page
+.zakup-control-strip {
+  min-height:
+    72px;
+
+  padding:
+    11px
+    14px;
+
+  border-color:
+    color-mix(
+      in srgb,
+      var(--ws-blue) 36%,
+      var(--ws-border)
+    );
+}
+
+
+.zakup-reference-page
+.zakup-control-strip
+.zakup-control-content {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    12px;
+}
+
+
+.zakup-reference-page
+.zakup-control-strip
+.primary-button {
+  min-height:
+    42px;
+
+  padding-left:
+    18px;
+
+  padding-right:
+    18px;
+}
+
+
+/* ============================================================
+   ОСНОВНЫЕ МЕТРИКИ
+   ============================================================ */
+
+.zakup-reference-page
+.zakup-summary-grid {
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap:
+    12px;
+}
+
+
+.zakup-reference-page
+.zakup-metric-card {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    13px;
+
+  min-height:
+    86px;
+
+  padding:
+    14px
+    15px;
+}
+
+
+.zakup-reference-page
+.zakup-metric-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    42px;
+
+  height:
+    42px;
+
+  flex:
+    0 0
+    42px;
+
+  border-radius:
+    10px;
+}
+
+
+.zakup-reference-page
+.zakup-metric-icon
+svg {
+  width:
+    24px;
+
+  height:
+    24px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+.zakup-reference-page
+.zakup-metric-icon--green {
+  background:
+    rgba(
+      25,
+      185,
+      120,
+      0.13
+    );
+
+  color:
+    var(--zakup-green);
+}
+
+
+.zakup-reference-page
+.zakup-metric-icon--red {
+  background:
+    rgba(
+      232,
+      72,
+      104,
+      0.13
+    );
+
+  color:
+    var(--zakup-red);
+}
+
+
+.zakup-reference-page
+.zakup-metric-icon--blue {
+  background:
+    rgba(
+      63,
+      143,
+      214,
+      0.13
+    );
+
+  color:
+    var(--zakup-blue);
+}
+
+
+.zakup-reference-page
+.zakup-metric-icon--purple {
+  background:
+    rgba(
+      145,
+      98,
+      223,
+      0.14
+    );
+
+  color:
+    var(--zakup-purple);
+}
+
+
+.zakup-reference-page
+.zakup-metric-copy {
+  min-width:
+    0;
+}
+
+
+.zakup-reference-page
+.zakup-metric-copy
+.card-label {
+  margin-bottom:
+    2px;
+}
+
+
+.zakup-reference-page
+.zakup-metric-copy
+.big-number {
+  margin-bottom:
+    2px;
+
+  font-size:
+    19px;
+}
+
+
+/* ============================================================
+   СИМУЛЯЦИЯ ТРАНСПОРТА
+   ============================================================ */
+
+.zakup-reference-page
+.zakup-transport-input-section {
+  border-color:
+    color-mix(
+      in srgb,
+      var(--ws-blue) 26%,
+      var(--ws-border)
+    );
+}
+
+
+.zakup-reference-page
+.zakup-transport-form {
+  margin-top:
+    12px;
+}
+
+
+.zakup-reference-page
+.zakup-transport-form
+.input {
+  width:
+    160px;
+}
+
+
+.zakup-reference-page
+.zakup-transport-form
+.secondary-button {
+  min-width:
+    166px;
+}
+
+
+/* ============================================================
+   РЕЗУЛЬТАТ ТРАНСПОРТА
+   ============================================================ */
+
+.zakup-reference-page
+.zakup-transport-result {
+  padding:
+    14px;
+}
+
+
+.zakup-reference-page
+.zakup-transport-result
+.section-header {
+  margin-bottom:
+    12px;
+}
+
+
+.zakup-reference-page
+.zakup-result-grid {
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(
+        0,
+        1fr
+      )
+    );
+}
+
+
+.zakup-reference-page
+.zakup-result-card {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    12px;
+
+  min-height:
+    72px;
+}
+
+
+.zakup-reference-page
+.zakup-result-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    40px;
+
+  height:
+    40px;
+
+  flex:
+    0 0
+    40px;
+
+  border-radius:
+    9px;
+}
+
+
+.zakup-reference-page
+.zakup-result-icon
+svg {
+  width:
+    22px;
+
+  height:
+    22px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+.zakup-reference-page
+.zakup-result-icon--green {
+  color:
+    var(--zakup-green);
+
+  background:
+    rgba(
+      25,
+      185,
+      120,
+      0.13
+    );
+}
+
+
+.zakup-reference-page
+.zakup-result-icon--purple {
+  color:
+    var(--zakup-purple);
+
+  background:
+    rgba(
+      145,
+      98,
+      223,
+      0.14
+    );
+}
+
+
+.zakup-reference-page
+.zakup-result-icon--blue {
+  color:
+    var(--zakup-blue);
+
+  background:
+    rgba(
+      63,
+      143,
+      214,
+      0.13
+    );
+}
+
+
+.zakup-reference-page
+.zakup-result-icon--orange {
+  color:
+    var(--zakup-orange);
+
+  background:
+    rgba(
+      230,
+      152,
+      62,
+      0.13
+    );
+}
+
+
+.zakup-reference-page
+.zakup-result-copy {
+  min-width:
+    0;
+}
+
+
+.zakup-reference-page
+.zakup-result-copy
+.transport-value {
+  font-size:
+    18px;
+}
+
+
+/* ============================================================
+   РЕШЕНИЕ
+   ============================================================ */
+
+.zakup-reference-page
+.zakup-decision-box {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    11px;
+
+  margin-top:
+    10px;
+
+  padding:
+    10px
+    12px;
+
+  background:
+    var(--zakup-decision-bg);
+
+  border-color:
+    color-mix(
+      in srgb,
+      var(--ws-blue) 34%,
+      var(--ws-border)
+    );
+}
+
+
+.zakup-reference-page
+.zakup-decision-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    34px;
+
+  height:
+    34px;
+
+  flex:
+    0 0
+    34px;
+
+  border-radius:
+    9px;
+
+  background:
+    var(--ws-blue);
+
+  color:
+    #ffffff;
+}
+
+
+.zakup-reference-page
+.zakup-decision-icon
+svg {
+  width:
+    18px;
+
+  height:
+    18px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    2;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+.zakup-reference-page
+.zakup-decision-copy
+.reason-text {
+  margin-top:
+    2px;
+}
+
+
+/* ============================================================
+   ФОРМИРОВАНИЕ ЗАКАЗА
+   ============================================================ */
+
+.zakup-reference-page
+.zakup-order-strip {
+  min-height:
+    62px;
+
+  padding:
+    10px
+    14px;
+}
+
+
+.zakup-reference-page
+.zakup-order-content {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    12px;
+}
+
+
+.zakup-reference-page
+.zakup-order-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    38px;
+
+  height:
+    38px;
+
+  flex:
+    0 0
+    38px;
+
+  border-radius:
+    9px;
+
+  background:
+    rgba(
+      25,
+      185,
+      120,
+      0.13
+    );
+
+  color:
+    var(--zakup-green);
+}
+
+
+.zakup-reference-page
+.zakup-order-icon
+svg {
+  width:
+    21px;
+
+  height:
+    21px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+/* ============================================================
+   ТОВАРЫ
+   ============================================================ */
+
+.zakup-reference-page
+.zakup-products-section {
+  padding:
+    0;
+
+  overflow:
+    hidden;
+}
+
+
+.zakup-reference-page
+.zakup-products-section
+.section-header {
+  align-items:
+    center;
+
+  margin:
+    0;
+
+  padding:
+    12px
+    14px;
+}
+
+
+.zakup-reference-page
+.zakup-products-heading {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    11px;
+}
+
+
+.zakup-reference-page
+.zakup-products-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    36px;
+
+  height:
+    36px;
+
+  flex:
+    0 0
+    36px;
+
+  border-radius:
+    9px;
+
+  color:
+    var(--zakup-purple);
+
+  background:
+    rgba(
+      145,
+      98,
+      223,
+      0.14
+    );
+}
+
+
+.zakup-reference-page
+.zakup-products-icon
+svg {
+  width:
+    20px;
+
+  height:
+    20px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+.zakup-reference-page
+.zakup-products-section
+.table-wrapper {
+  border:
+    none;
+
+  border-top:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    0;
+}
+
+
+/* ============================================================
+   РУЧНЫЕ КОРРЕКТИРОВКИ
+   ============================================================ */
+
+.zakup-reference-page
+.zakup-adjustments-section {
+  margin-top:
+    18px;
+}
+
+
+/* ============================================================
+   ТЁМНАЯ ТЕМА
+   ============================================================ */
+
+html[data-theme="dark"]
+.zakup-reference-page {
+  --zakup-icon-bg:
+    rgba(
+      63,
+      143,
+      214,
+      0.14
+    );
+
+  --zakup-decision-bg:
+    rgba(
+      63,
+      143,
+      214,
+      0.09
+    );
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (
+  max-width: 1250px
+) {
+
+  .zakup-reference-page
+  .zakup-summary-grid,
+  .zakup-reference-page
+  .zakup-result-grid {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(
+          0,
+          1fr
+        )
+      );
+  }
+
+}
+
+
+@media (
+  max-width: 900px
+) {
+
+  .zakup-reference-page
+  .zakup-header {
+    align-items:
+      flex-start;
+  }
+
+
+  .zakup-reference-page
+  .zakup-header-actions {
+    flex-wrap:
+      wrap;
+  }
+
+}
+
+
+@media (
+  max-width: 700px
+) {
+
+  .zakup-reference-page
+  .zakup-summary-grid,
+  .zakup-reference-page
+  .zakup-result-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+
+  .zakup-reference-page
+  .zakup-metric-card,
+  .zakup-reference-page
+  .zakup-result-card {
+    min-height:
+      70px;
+  }
+
+
+  .zakup-reference-page
+  .zakup-title-block {
+    align-items:
+      flex-start;
+  }
+
+}
