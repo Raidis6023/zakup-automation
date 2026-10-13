@@ -2,17 +2,41 @@
 
 import {
   useEffect,
+  useRef,
   useState,
 } from "react";
 
+import {
+  flushSync,
+} from "react-dom";
+
 
 // ============================================================
-// ICONS
+// ТИПЫ
+// ============================================================
+
+type Theme = "light" | "dark";
+
+type ThemeViewTransition = {
+  finished: Promise<void>;
+  skipTransition: () => void;
+};
+
+type DocumentWithViewTransition = Document & {
+  startViewTransition?: (
+    update: () => void
+  ) => ThemeViewTransition;
+};
+
+
+// ============================================================
+// ИКОНКИ
 // ============================================================
 
 function SunIcon() {
 
   return (
+
     <svg
       viewBox="0 0 24 24"
       aria-hidden="true"
@@ -38,6 +62,7 @@ function SunIcon() {
       />
 
     </svg>
+
   );
 
 }
@@ -46,6 +71,7 @@ function SunIcon() {
 function MoonIcon() {
 
   return (
+
     <svg
       viewBox="0 0 24 24"
       aria-hidden="true"
@@ -62,13 +88,14 @@ function MoonIcon() {
       />
 
     </svg>
+
   );
 
 }
 
 
 // ============================================================
-// COMPONENT
+// ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ
 // ============================================================
 
 export default function HomeThemeToggle() {
@@ -77,25 +104,27 @@ export default function HomeThemeToggle() {
     theme,
     setTheme,
   ] =
-    useState<
-      "light"
-      |
-      "dark"
-    >(
+    useState<Theme>(
       "light"
     );
 
 
+  const activeTransitionRef =
+    useRef<
+      ThemeViewTransition | null
+    >(
+      null
+    );
+
+
+  // ==========================================================
+  // ВОССТАНАВЛИВАЕМ ТЕКУЩУЮ ТЕМУ
+  // ==========================================================
+
   useEffect(
     () => {
 
-      const savedTheme =
-        localStorage.getItem(
-          "theme"
-        );
-
-
-      const currentTheme =
+      const documentTheme =
         document
           .documentElement
           .dataset
@@ -103,16 +132,39 @@ export default function HomeThemeToggle() {
 
 
       if (
-        savedTheme === "dark"
+        documentTheme === "light"
         ||
-        currentTheme === "dark"
+        documentTheme === "dark"
       ) {
 
         setTheme(
-          "dark"
+          documentTheme
         );
 
-      } else {
+        return;
+
+      }
+
+
+      try {
+
+        const savedTheme =
+          window.localStorage.getItem(
+            "theme"
+          )
+          ??
+          window.localStorage.getItem(
+            "zakup-theme"
+          );
+
+
+        setTheme(
+          savedTheme === "dark"
+            ? "dark"
+            : "light"
+        );
+
+      } catch {
 
         setTheme(
           "light"
@@ -125,38 +177,199 @@ export default function HomeThemeToggle() {
   );
 
 
+  // ==========================================================
+  // ПЕРЕКЛЮЧЕНИЕ ТЕМЫ
+  // ==========================================================
+
   function applyTheme(
-    nextTheme:
-      "light"
-      |
-      "dark"
+    nextTheme: Theme
   ) {
 
-    document
-      .documentElement
-      .dataset
-      .theme =
-        nextTheme;
+    const root =
+      document.documentElement;
 
 
-    localStorage.setItem(
-      "theme",
-      nextTheme
+    if (
+      root.dataset.theme === nextTheme
+    ) {
+
+      setTheme(
+        nextTheme
+      );
+
+      return;
+
+    }
+
+
+    // ========================================================
+    // МЕНЯЕМ ТЕМУ ВСЕГО ДОКУМЕНТА
+    // ========================================================
+
+    const updateDocumentTheme =
+      () => {
+
+        root.dataset.theme =
+          nextTheme;
+
+        root.classList.toggle(
+          "dark",
+          nextTheme === "dark"
+        );
+
+
+        try {
+
+          window.localStorage.setItem(
+            "theme",
+            nextTheme
+          );
+
+          window.localStorage.setItem(
+            "zakup-theme",
+            nextTheme
+          );
+
+        } catch {
+
+          // localStorage может быть недоступен.
+          // Переключению темы это не мешает.
+
+        }
+
+
+        flushSync(
+          () => {
+
+            setTheme(
+              nextTheme
+            );
+
+          }
+        );
+
+      };
+
+
+    // ========================================================
+    // ПРОВЕРЯЕМ НАСТРОЙКУ АНИМАЦИИ
+    // ========================================================
+
+    const reducedMotion =
+      window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+      ).matches;
+
+
+    const viewDocument =
+      document as
+        DocumentWithViewTransition;
+
+
+    // ========================================================
+    // ЕДИНЫЙ ПЕРЕХОД ВСЕЙ СТРАНИЦЫ
+    // ========================================================
+
+    if (
+      !reducedMotion
+      &&
+      viewDocument.startViewTransition
+    ) {
+
+      activeTransitionRef.current
+        ?.skipTransition();
+
+
+      root.classList.add(
+        "workspace-theme-changing"
+      );
+
+
+      const transition =
+        viewDocument.startViewTransition(
+          updateDocumentTheme
+        );
+
+
+      activeTransitionRef.current =
+        transition;
+
+
+      const finish =
+        () => {
+
+          if (
+            activeTransitionRef.current ===
+              transition
+          ) {
+
+            activeTransitionRef.current =
+              null;
+
+
+            root.classList.remove(
+              "workspace-theme-changing"
+            );
+
+          }
+
+        };
+
+
+      void transition.finished.then(
+        finish,
+        finish
+      );
+
+
+      return;
+
+    }
+
+
+    // ========================================================
+    // ЗАПАСНОЙ ВАРИАНТ ДЛЯ СТАРЫХ БРАУЗЕРОВ
+    // ========================================================
+
+    root.classList.add(
+      "workspace-theme-changing"
     );
 
 
-    setTheme(
-      nextTheme
+    updateDocumentTheme();
+
+
+    window.requestAnimationFrame(
+      () => {
+
+        window.requestAnimationFrame(
+          () => {
+
+            root.classList.remove(
+              "workspace-theme-changing"
+            );
+
+          }
+        );
+
+      }
     );
 
   }
 
 
+  // ==========================================================
+  // ИНТЕРФЕЙС
+  // ==========================================================
+
   return (
 
     <div
-      className="home-theme-toggle"
-      aria-label="Переключение темы"
+      className=
+        "home-theme-toggle"
+
+      aria-label=
+        "Переключение темы"
     >
 
       <button
@@ -168,7 +381,12 @@ export default function HomeThemeToggle() {
             : ""
         }
 
-        aria-label="Светлая тема"
+        aria-label=
+          "Светлая тема"
+
+        aria-pressed={
+          theme === "light"
+        }
 
         onClick={
           () =>
@@ -177,7 +395,9 @@ export default function HomeThemeToggle() {
             )
         }
       >
+
         <SunIcon />
+
       </button>
 
 
@@ -190,7 +410,12 @@ export default function HomeThemeToggle() {
             : ""
         }
 
-        aria-label="Тёмная тема"
+        aria-label=
+          "Тёмная тема"
+
+        aria-pressed={
+          theme === "dark"
+        }
 
         onClick={
           () =>
@@ -199,7 +424,9 @@ export default function HomeThemeToggle() {
             )
         }
       >
+
         <MoonIcon />
+
       </button>
 
     </div>
