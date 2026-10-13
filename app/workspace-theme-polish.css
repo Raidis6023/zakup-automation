@@ -1,16 +1,7 @@
 /* ============================================================
    ПЛАВНОЕ ПЕРЕКЛЮЧЕНИЕ ТЕМЫ WORKSPACE
-
-   Файл импортируется ПОСЛЕДНИМ в WorkspaceShell.tsx.
-   Оригинальные home.css, globals.css и sidebar-visuals.css
-   изменять не требуется.
    ============================================================ */
 
-/*
- * Градиент WorkSpace состоит из двух цветов.
- * Зарегистрированные свойства позволяют анимировать
- * сами цвета градиента, а не переключать фон скачком.
- */
 @property --workspace-gradient-top {
   syntax: "<color>";
   inherits: false;
@@ -39,10 +30,11 @@
     color 0.22s ease;
 }
 
-/*
- * Поверхности WorkSpace синхронизируются с градиентом.
- * Движение элементов, эффекты наведения и размеры не меняются.
- */
+
+/* ============================================================
+   ПЛАВНОЕ ИЗМЕНЕНИЕ ОСНОВНЫХ ЭЛЕМЕНТОВ
+   ============================================================ */
+
 .home-sidebar,
 .home-topbar,
 .home-search,
@@ -72,10 +64,6 @@
     color 0.22s ease;
 }
 
-/*
- * Системные подписи и основной заголовок переключаются
- * одновременно с остальными цветами.
- */
 .home-company-logo-main,
 .home-workspace-label,
 .home-title-row h1,
@@ -87,8 +75,11 @@
 .home-popup-header,
 .home-notification-item strong,
 .home-notification-item span {
-  transition: color 0.22s ease, fill 0.22s ease;
+  transition:
+    color 0.22s ease,
+    fill 0.22s ease;
 }
+
 
 /* ============================================================
    SVG-ЛОГОТИПЫ МАРКЕТПЛЕЙСОВ
@@ -106,58 +97,132 @@
   transition: opacity 0.22s ease;
 }
 
-.workspace-marketplace-logo-light { opacity: 1; }
-.workspace-marketplace-logo-dark { opacity: 0; }
+.workspace-marketplace-logo-light {
+  opacity: 1;
+}
 
-html[data-theme="dark"] .workspace-marketplace-logo-light,
-html.dark .workspace-marketplace-logo-light { opacity: 0; }
+.workspace-marketplace-logo-dark {
+  opacity: 0;
+}
 
-html[data-theme="dark"] .workspace-marketplace-logo-dark,
-html.dark .workspace-marketplace-logo-dark { opacity: 1; }
+html[data-theme="dark"]
+.workspace-marketplace-logo-light,
+html.dark
+.workspace-marketplace-logo-light {
+  opacity: 0;
+}
 
-/* Ozon: синий + белый; в тёмной теме наоборот. */
-.workspace-marketplace-logo--ozon .workspace-marketplace-logo-light .workspace-marketplace-logo-bg {
+html[data-theme="dark"]
+.workspace-marketplace-logo-dark,
+html.dark
+.workspace-marketplace-logo-dark {
+  opacity: 1;
+}
+
+
+/* ============================================================
+   OZON
+   ============================================================ */
+
+.workspace-marketplace-logo--ozon
+.workspace-marketplace-logo-light
+.workspace-marketplace-logo-bg {
   fill: #2762fd;
 }
-.workspace-marketplace-logo--ozon .workspace-marketplace-logo-light .workspace-marketplace-logo-glyph {
+
+.workspace-marketplace-logo--ozon
+.workspace-marketplace-logo-light
+.workspace-marketplace-logo-glyph {
   fill: #fefefe;
 }
-.workspace-marketplace-logo--ozon .workspace-marketplace-logo-dark .workspace-marketplace-logo-bg {
+
+.workspace-marketplace-logo--ozon
+.workspace-marketplace-logo-dark
+.workspace-marketplace-logo-bg {
   fill: #ffffff;
 }
-.workspace-marketplace-logo--ozon .workspace-marketplace-logo-dark .workspace-marketplace-logo-glyph {
+
+.workspace-marketplace-logo--ozon
+.workspace-marketplace-logo-dark
+.workspace-marketplace-logo-glyph {
   fill: #2762fd;
 }
 
-/* Wildberries: фирменный градиент + белый; в тёмной теме наоборот. */
-.workspace-marketplace-logo--wildberries .workspace-marketplace-logo-light .workspace-marketplace-logo-bg {
-  fill: url(#workspace-marketplace-gradient-wildberries);
-}
-.workspace-marketplace-logo--wildberries .workspace-marketplace-logo-light .workspace-marketplace-logo-glyph {
-  fill: #ffffff;
-}
-.workspace-marketplace-logo--wildberries .workspace-marketplace-logo-dark .workspace-marketplace-logo-bg {
-  fill: #ffffff;
-}
-.workspace-marketplace-logo--wildberries .workspace-marketplace-logo-dark .workspace-marketplace-logo-glyph {
+
+/* ============================================================
+   WILDBERRIES
+   ============================================================ */
+
+.workspace-marketplace-logo--wildberries
+.workspace-marketplace-logo-light
+.workspace-marketplace-logo-bg {
   fill: url(#workspace-marketplace-gradient-wildberries);
 }
 
-/* Яндекс Маркет: оранжевый + жёлтый; в тёмной теме наоборот. */
-.workspace-marketplace-logo--yandex-market .workspace-marketplace-logo-light .workspace-marketplace-logo-bg {
+.workspace-marketplace-logo--wildberries
+.workspace-marketplace-logo-light
+.workspace-marketplace-logo-glyph {
+  fill: #ffffff;
+}
+
+.workspace-marketplace-logo--wildberries
+.workspace-marketplace-logo-dark
+.workspace-marketplace-logo-bg {
+  fill: #ffffff;
+}
+
+.workspace-marketplace-logo--wildberries
+.workspace-marketplace-logo-dark
+.workspace-marketplace-logo-glyph {
+  fill: url(#workspace-marketplace-gradient-wildberries);
+}
+
+
+/* ============================================================
+   ЯНДЕКС МАРКЕТ
+
+   НОВАЯ РАСЦВЕТКА:
+
+   Светлая тема:
+   - Оранжевый фон
+   - Белая буква М
+
+   Тёмная тема:
+   - Белый фон
+   - Оранжевая буква М
+   ============================================================ */
+
+.workspace-marketplace-logo--yandex-market
+.workspace-marketplace-logo-light
+.workspace-marketplace-logo-bg {
   fill: #ff4112;
 }
-.workspace-marketplace-logo--yandex-market .workspace-marketplace-logo-light .workspace-marketplace-logo-glyph {
-  fill: #ffdd00;
+
+.workspace-marketplace-logo--yandex-market
+.workspace-marketplace-logo-light
+.workspace-marketplace-logo-glyph {
+  fill: #ffffff;
 }
-.workspace-marketplace-logo--yandex-market .workspace-marketplace-logo-dark .workspace-marketplace-logo-bg {
-  fill: #ffdd00;
+
+.workspace-marketplace-logo--yandex-market
+.workspace-marketplace-logo-dark
+.workspace-marketplace-logo-bg {
+  fill: #ffffff;
 }
-.workspace-marketplace-logo--yandex-market .workspace-marketplace-logo-dark .workspace-marketplace-logo-glyph {
+
+.workspace-marketplace-logo--yandex-market
+.workspace-marketplace-logo-dark
+.workspace-marketplace-logo-glyph {
   fill: #ff4112;
 }
+
+
+/* ============================================================
+   УМЕНЬШЕННАЯ АНИМАЦИЯ
+   ============================================================ */
 
 @media (prefers-reduced-motion: reduce) {
+
   .home-shell,
   .home-sidebar,
   .home-topbar,
@@ -175,4 +240,5 @@ html.dark .workspace-marketplace-logo-dark { opacity: 1; }
   .workspace-marketplace-logo-dark {
     transition-duration: 0.01ms !important;
   }
+
 }
