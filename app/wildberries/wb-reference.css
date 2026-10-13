@@ -1,0 +1,1841 @@
+/* ============================================================
+   WILDBERRIES — РЕФЕРЕНСНЫЙ ИНТЕРФЕЙС
+   ============================================================ */
+
+.wb-reference-page {
+  --wb-accent:
+    #c91ed8;
+
+  --wb-accent-soft:
+    rgba(
+      201,
+      30,
+      216,
+      0.11
+    );
+
+  --wb-green:
+    #24b67a;
+
+  --wb-red:
+    #df5a70;
+
+  --wb-orange:
+    #dd963f;
+
+  --wb-blue:
+    #4f8fd8;
+
+  --wb-purple:
+    #9c65dc;
+
+  color:
+    var(--ws-text);
+}
+
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.wb-reference-page
+.wb-header {
+  align-items:
+    center;
+
+  margin-bottom:
+    18px;
+}
+
+
+.wb-reference-page
+.wb-title-wrap {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    13px;
+
+  min-width:
+    0;
+}
+
+
+.wb-reference-page
+.wb-title-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    46px;
+
+  height:
+    46px;
+
+  flex:
+    0 0
+    46px;
+
+  overflow:
+    hidden;
+
+  border-radius:
+    11px;
+}
+
+
+.wb-reference-page
+.wb-title-icon
+img {
+  display:
+    block;
+
+  width:
+    46px;
+
+  height:
+    46px;
+
+  object-fit:
+    contain;
+}
+
+
+.wb-reference-page
+.wb-header-actions {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    10px;
+}
+
+
+.wb-reference-page
+.wb-navigation-button {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  text-decoration:
+    none;
+
+  white-space:
+    nowrap;
+}
+
+
+/* ============================================================
+   ERROR
+   ============================================================ */
+
+.wb-reference-page
+.wb-error-section {
+  padding:
+    15px
+    17px;
+
+  border-color:
+    rgba(
+      223,
+      90,
+      112,
+      0.32
+    );
+}
+
+
+.wb-reference-page
+.wb-error-title {
+  color:
+    var(--ws-text);
+
+  font-weight:
+    700;
+}
+
+
+.wb-reference-page
+.wb-error-text {
+  margin-top:
+    5px;
+
+  color:
+    var(--wb-red);
+}
+
+
+/* ============================================================
+   SYNC STATE
+   ============================================================ */
+
+.wb-reference-page
+.wb-sync-state-section {
+  padding:
+    0;
+
+  overflow:
+    hidden;
+}
+
+
+.wb-reference-page
+.wb-section-top {
+  display:
+    flex;
+
+  align-items:
+    flex-start;
+
+  justify-content:
+    space-between;
+
+  gap:
+    16px;
+
+  padding:
+    16px
+    18px;
+}
+
+
+.wb-reference-page
+.wb-section-heading {
+  min-width:
+    0;
+}
+
+
+.wb-reference-page
+.wb-status-badge {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  gap:
+    7px;
+
+  min-height:
+    30px;
+
+  padding:
+    5px
+    10px;
+
+  flex:
+    0 0
+    auto;
+
+  border:
+    1px solid
+    transparent;
+
+  border-radius:
+    999px;
+
+  font-size:
+    11px;
+
+  font-weight:
+    700;
+
+  white-space:
+    nowrap;
+}
+
+
+.wb-reference-page
+.wb-status-dot {
+  width:
+    8px;
+
+  height:
+    8px;
+
+  flex:
+    0 0
+    8px;
+
+  border-radius:
+    50%;
+
+  background:
+    currentColor;
+}
+
+
+.wb-reference-page
+.wb-status-badge--success {
+  color:
+    var(--wb-green);
+
+  background:
+    rgba(
+      36,
+      182,
+      122,
+      0.12
+    );
+
+  border-color:
+    rgba(
+      36,
+      182,
+      122,
+      0.23
+    );
+}
+
+
+.wb-reference-page
+.wb-status-badge--warning {
+  color:
+    var(--wb-orange);
+
+  background:
+    rgba(
+      221,
+      150,
+      63,
+      0.12
+    );
+
+  border-color:
+    rgba(
+      221,
+      150,
+      63,
+      0.23
+    );
+}
+
+
+/* ============================================================
+   SYNC INFO
+   ============================================================ */
+
+.wb-reference-page
+.wb-sync-info-grid {
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap:
+    1px;
+
+  border-top:
+    1px solid
+    var(--ws-border);
+
+  background:
+    var(--ws-border);
+}
+
+
+.wb-reference-page
+.wb-info-card {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    12px;
+
+  min-width:
+    0;
+
+  min-height:
+    86px;
+
+  padding:
+    14px
+    16px;
+
+  background:
+    var(--ws-surface);
+}
+
+
+.wb-reference-page
+.wb-info-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    40px;
+
+  height:
+    40px;
+
+  flex:
+    0 0
+    40px;
+
+  border-radius:
+    10px;
+
+  color:
+    var(--wb-accent);
+
+  background:
+    var(--wb-accent-soft);
+}
+
+
+.wb-reference-page
+.wb-info-icon
+svg {
+  width:
+    21px;
+
+  height:
+    21px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+.wb-reference-page
+.wb-info-copy {
+  min-width:
+    0;
+}
+
+
+.wb-reference-page
+.wb-info-value {
+  margin-top:
+    3px;
+
+  color:
+    var(--ws-text);
+
+  font-size:
+    15px;
+
+  font-weight:
+    700;
+
+  line-height:
+    1.3;
+}
+
+
+/* ============================================================
+   KPI
+   ============================================================ */
+
+.wb-reference-page
+.wb-summary-grid {
+  grid-template-columns:
+    repeat(
+      5,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap:
+    12px;
+}
+
+
+.wb-reference-page
+.wb-summary-card {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    12px;
+
+  min-height:
+    88px;
+}
+
+
+.wb-reference-page
+.wb-summary-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    42px;
+
+  height:
+    42px;
+
+  flex:
+    0 0
+    42px;
+
+  border-radius:
+    10px;
+}
+
+
+.wb-reference-page
+.wb-summary-icon
+svg {
+  width:
+    22px;
+
+  height:
+    22px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+.wb-reference-page
+.wb-summary-icon--green {
+  color:
+    var(--wb-green);
+
+  background:
+    rgba(
+      36,
+      182,
+      122,
+      0.12
+    );
+}
+
+
+.wb-reference-page
+.wb-summary-icon--red {
+  color:
+    var(--wb-red);
+
+  background:
+    rgba(
+      223,
+      90,
+      112,
+      0.12
+    );
+}
+
+
+.wb-reference-page
+.wb-summary-icon--purple {
+  color:
+    var(--wb-purple);
+
+  background:
+    rgba(
+      156,
+      101,
+      220,
+      0.13
+    );
+}
+
+
+.wb-reference-page
+.wb-summary-icon--blue {
+  color:
+    var(--wb-blue);
+
+  background:
+    rgba(
+      79,
+      143,
+      216,
+      0.12
+    );
+}
+
+
+.wb-reference-page
+.wb-summary-icon--orange {
+  color:
+    var(--wb-orange);
+
+  background:
+    rgba(
+      221,
+      150,
+      63,
+      0.13
+    );
+}
+
+
+.wb-reference-page
+.wb-summary-copy {
+  min-width:
+    0;
+}
+
+
+/* ============================================================
+   INFO PANEL
+   ============================================================ */
+
+.wb-reference-page
+.wb-info-panel {
+  display:
+    flex;
+
+  align-items:
+    flex-start;
+
+  gap:
+    14px;
+
+  background:
+    rgba(
+      201,
+      30,
+      216,
+      0.045
+    );
+
+  border-color:
+    rgba(
+      201,
+      30,
+      216,
+      0.17
+    );
+}
+
+
+.wb-reference-page
+.wb-panel-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    40px;
+
+  height:
+    40px;
+
+  flex:
+    0 0
+    40px;
+
+  border-radius:
+    10px;
+
+  color:
+    var(--wb-accent);
+
+  background:
+    var(--wb-accent-soft);
+}
+
+
+.wb-reference-page
+.wb-panel-icon
+svg {
+  width:
+    21px;
+
+  height:
+    21px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+.wb-reference-page
+.wb-info-list {
+  display:
+    grid;
+
+  gap:
+    4px;
+
+  margin-top:
+    7px;
+}
+
+
+/* ============================================================
+   DAILY SALES
+   ============================================================ */
+
+.wb-reference-page
+.wb-daily-section {
+  padding:
+    0;
+
+  overflow:
+    hidden;
+}
+
+
+.wb-reference-page
+.wb-daily-header {
+  padding:
+    16px
+    18px;
+}
+
+
+.wb-reference-page
+.wb-daily-table-shell {
+  overflow-x:
+    auto;
+
+  border-top:
+    1px solid
+    var(--ws-border);
+}
+
+
+.wb-reference-page
+.wb-daily-table {
+  width:
+    100%;
+
+  min-width:
+    680px;
+
+  border-collapse:
+    collapse;
+}
+
+
+.wb-reference-page
+.wb-daily-table
+th {
+  padding:
+    11px
+    14px;
+
+  background:
+    var(--ws-surface-soft);
+
+  color:
+    var(--ws-text-muted);
+
+  border-bottom:
+    1px solid
+    var(--ws-border);
+
+  font-size:
+    11px;
+
+  font-weight:
+    650;
+
+  white-space:
+    nowrap;
+}
+
+
+.wb-reference-page
+.wb-daily-table
+td {
+  padding:
+    11px
+    14px;
+
+  color:
+    var(--ws-text);
+
+  border-bottom:
+    1px solid
+    var(--ws-border-soft);
+
+  font-size:
+    12px;
+
+  white-space:
+    nowrap;
+}
+
+
+.wb-reference-page
+.wb-daily-table
+tbody
+tr:last-child
+td {
+  border-bottom:
+    none;
+}
+
+
+.wb-reference-page
+.wb-daily-table
+tbody
+tr:hover {
+  background:
+    var(--ws-surface-hover);
+}
+
+
+/* ============================================================
+   UNMAPPED SECTION
+   ============================================================ */
+
+.wb-unmapped-section {
+  padding:
+    0 !important;
+
+  overflow:
+    hidden;
+}
+
+
+.wb-unmapped-header {
+  display:
+    flex;
+
+  align-items:
+    flex-start;
+
+  justify-content:
+    space-between;
+
+  gap:
+    16px;
+
+  padding:
+    16px
+    18px;
+}
+
+
+.wb-unmapped-badge {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  gap:
+    7px;
+
+  min-height:
+    30px;
+
+  padding:
+    5px
+    10px;
+
+  border:
+    1px solid
+    rgba(
+      221,
+      150,
+      63,
+      0.23
+    );
+
+  border-radius:
+    999px;
+
+  color:
+    var(--wb-orange);
+
+  background:
+    rgba(
+      221,
+      150,
+      63,
+      0.12
+    );
+
+  font-size:
+    11px;
+
+  font-weight:
+    700;
+
+  white-space:
+    nowrap;
+}
+
+
+.wb-unmapped-badge-dot {
+  width:
+    8px;
+
+  height:
+    8px;
+
+  flex:
+    0 0
+    8px;
+
+  border-radius:
+    50%;
+
+  background:
+    currentColor;
+}
+
+
+.wb-unmapped-table-shell {
+  overflow-x:
+    auto;
+
+  border-top:
+    1px solid
+    var(--ws-border);
+}
+
+
+.wb-unmapped-table {
+  width:
+    100%;
+
+  min-width:
+    1180px;
+
+  border-collapse:
+    collapse;
+}
+
+
+.wb-unmapped-table
+th {
+  padding:
+    10px
+    12px;
+
+  background:
+    var(--ws-surface-soft);
+
+  color:
+    var(--ws-text-muted);
+
+  border-bottom:
+    1px solid
+    var(--ws-border);
+
+  font-size:
+    10px;
+
+  font-weight:
+    650;
+
+  text-align:
+    left;
+
+  white-space:
+    nowrap;
+}
+
+
+.wb-unmapped-table
+td {
+  padding:
+    11px
+    12px;
+
+  color:
+    var(--ws-text);
+
+  border-bottom:
+    1px solid
+    var(--ws-border-soft);
+
+  font-size:
+    12px;
+
+  vertical-align:
+    top;
+}
+
+
+.wb-unmapped-table
+tbody
+tr:last-child
+td {
+  border-bottom:
+    none;
+}
+
+
+.wb-unmapped-table
+tbody
+tr:hover {
+  background:
+    var(--ws-surface-hover);
+}
+
+
+.wb-unmapped-product {
+  min-width:
+    300px;
+
+  max-width:
+    500px;
+
+  white-space:
+    normal;
+}
+
+
+.wb-unmapped-article {
+  min-width:
+    250px;
+
+  white-space:
+    normal;
+}
+
+
+.wb-unmapped-brand {
+  margin-top:
+    4px;
+}
+
+
+.wb-unmapped-master-wrap {
+  min-width:
+    180px;
+}
+
+
+.wb-unmapped-input {
+  width:
+    170px;
+
+  height:
+    36px;
+
+  box-sizing:
+    border-box;
+
+  padding:
+    0
+    10px;
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    7px;
+
+  background:
+    var(--ws-surface);
+
+  color:
+    var(--ws-text);
+
+  font:
+    inherit;
+
+  font-size:
+    12px;
+
+  outline:
+    none;
+}
+
+
+.wb-unmapped-input:focus {
+  border-color:
+    var(--ws-blue);
+
+  box-shadow:
+    0 0 0 3px
+    rgba(
+      63,
+      143,
+      214,
+      0.08
+    );
+}
+
+
+.wb-unmapped-error {
+  max-width:
+    220px;
+
+  margin-top:
+    5px;
+
+  color:
+    var(--wb-red);
+
+  font-size:
+    10px;
+
+  line-height:
+    1.35;
+
+  white-space:
+    normal;
+}
+
+
+.wb-unmapped-button {
+  min-height:
+    36px;
+}
+
+
+.wb-unmapped-hint {
+  padding:
+    10px
+    18px
+    14px;
+
+  color:
+    var(--ws-text-muted);
+
+  font-size:
+    11px;
+
+  line-height:
+    1.45;
+}
+
+
+/* ============================================================
+   PRODUCTS
+   ============================================================ */
+
+.wb-reference-page
+.wb-products-section {
+  padding:
+    0;
+
+  overflow:
+    hidden;
+}
+
+
+.wb-reference-page
+.wb-products-header {
+  padding:
+    16px
+    18px;
+}
+
+
+.wb-reference-page
+.wb-products-table-shell {
+  overflow-x:
+    auto;
+
+  border-top:
+    1px solid
+    var(--ws-border);
+}
+
+
+.wb-reference-page
+.wb-products-table {
+  width:
+    100%;
+
+  min-width:
+    1450px;
+
+  border-collapse:
+    collapse;
+}
+
+
+.wb-reference-page
+.wb-products-table
+th {
+  padding:
+    10px
+    12px;
+
+  background:
+    var(--ws-surface-soft);
+
+  color:
+    var(--ws-text-muted);
+
+  border-bottom:
+    1px solid
+    var(--ws-border);
+
+  font-size:
+    10px;
+
+  font-weight:
+    650;
+
+  white-space:
+    nowrap;
+}
+
+
+.wb-reference-page
+.wb-products-table
+td {
+  padding:
+    11px
+    12px;
+
+  color:
+    var(--ws-text);
+
+  border-bottom:
+    1px solid
+    var(--ws-border-soft);
+
+  font-size:
+    12px;
+
+  vertical-align:
+    middle;
+}
+
+
+.wb-reference-page
+.wb-products-table
+tbody
+tr:last-child
+td {
+  border-bottom:
+    none;
+}
+
+
+.wb-reference-page
+.wb-products-table
+tbody
+tr:hover {
+  background:
+    var(--ws-surface-hover);
+}
+
+
+.wb-reference-page
+.wb-product-name-cell {
+  min-width:
+    320px;
+
+  max-width:
+    520px;
+
+  white-space:
+    normal;
+}
+
+
+.wb-reference-page
+.wb-seller-article-cell {
+  min-width:
+    240px;
+
+  max-width:
+    360px;
+
+  white-space:
+    normal;
+}
+
+
+.wb-reference-page
+.wb-master-code {
+  color:
+    var(--wb-accent);
+
+  font-family:
+    monospace;
+
+  font-weight:
+    700;
+}
+
+
+/* ============================================================
+   SAFE MODE
+   ============================================================ */
+
+.wb-reference-page
+.wb-safe-section {
+  display:
+    flex;
+
+  align-items:
+    flex-start;
+
+  gap:
+    14px;
+
+  background:
+    rgba(
+      36,
+      182,
+      122,
+      0.055
+    );
+
+  border-color:
+    rgba(
+      36,
+      182,
+      122,
+      0.18
+    );
+}
+
+
+.wb-reference-page
+.wb-safe-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    40px;
+
+  height:
+    40px;
+
+  flex:
+    0 0
+    40px;
+
+  border-radius:
+    10px;
+
+  color:
+    var(--wb-green);
+
+  background:
+    rgba(
+      36,
+      182,
+      122,
+      0.11
+    );
+}
+
+
+.wb-reference-page
+.wb-safe-icon
+svg {
+  width:
+    21px;
+
+  height:
+    21px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+/* ============================================================
+   MANUAL SYNC
+   ============================================================ */
+
+.wb-reference-page
+.wb-manual-sync-grid {
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap:
+    14px;
+}
+
+
+.wb-reference-page
+.wb-sync-section {
+  display:
+    flex;
+
+  align-items:
+    flex-start;
+
+  justify-content:
+    space-between;
+
+  gap:
+    18px;
+
+  margin:
+    0;
+}
+
+
+/* ============================================================
+   WB SYNC CLIENT
+   ============================================================ */
+
+.wb-sync-client {
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  align-items:
+    flex-end;
+
+  gap:
+    8px;
+
+  min-width:
+    280px;
+
+  max-width:
+    430px;
+}
+
+
+.wb-sync-state-box {
+  width:
+    100%;
+
+  box-sizing:
+    border-box;
+
+  padding:
+    9px
+    11px;
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    8px;
+
+  text-align:
+    right;
+}
+
+
+.wb-sync-state-box--danger {
+  color:
+    var(--wb-red);
+
+  background:
+    rgba(
+      223,
+      90,
+      112,
+      0.09
+    );
+
+  border-color:
+    rgba(
+      223,
+      90,
+      112,
+      0.20
+    );
+}
+
+
+.wb-sync-state-box--info {
+  color:
+    var(--wb-blue);
+
+  background:
+    rgba(
+      79,
+      143,
+      216,
+      0.09
+    );
+
+  border-color:
+    rgba(
+      79,
+      143,
+      216,
+      0.20
+    );
+}
+
+
+.wb-sync-state-box--warning {
+  color:
+    var(--wb-orange);
+
+  background:
+    rgba(
+      221,
+      150,
+      63,
+      0.09
+    );
+
+  border-color:
+    rgba(
+      221,
+      150,
+      63,
+      0.21
+    );
+}
+
+
+.wb-sync-state-title {
+  font-size:
+    12px;
+
+  font-weight:
+    700;
+}
+
+
+.wb-sync-state-text {
+  margin-top:
+    3px;
+
+  color:
+    var(--ws-text-muted);
+
+  font-size:
+    11px;
+
+  line-height:
+    1.4;
+}
+
+
+.wb-sync-ready {
+  width:
+    100%;
+
+  color:
+    var(--wb-green);
+
+  text-align:
+    right;
+
+  font-size:
+    12px;
+
+  font-weight:
+    700;
+}
+
+
+.wb-sync-last-success {
+  width:
+    100%;
+
+  text-align:
+    right;
+
+  font-size:
+    11px;
+}
+
+
+.wb-sync-button {
+  min-width:
+    190px;
+}
+
+
+.wb-sync-button:disabled {
+  cursor:
+    not-allowed;
+
+  opacity:
+    0.55;
+}
+
+
+.wb-sync-message {
+  max-width:
+    420px;
+
+  color:
+    var(--ws-text-muted);
+
+  text-align:
+    right;
+
+  font-size:
+    11px;
+}
+
+
+.wb-sync-message--error {
+  color:
+    var(--wb-red);
+}
+
+
+/* ============================================================
+   DARK
+   ============================================================ */
+
+html[data-theme="dark"]
+.wb-reference-page {
+  --wb-accent:
+    #df72e8;
+
+  --wb-green:
+    #68ca9b;
+
+  --wb-red:
+    #ec8799;
+
+  --wb-orange:
+    #e4ae6b;
+
+  --wb-blue:
+    #80afe1;
+
+  --wb-purple:
+    #b399e4;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (
+  max-width: 1350px
+) {
+
+  .wb-reference-page
+  .wb-summary-grid {
+    grid-template-columns:
+      repeat(
+        3,
+        minmax(
+          0,
+          1fr
+        )
+      );
+  }
+
+
+  .wb-reference-page
+  .wb-sync-info-grid {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(
+          0,
+          1fr
+        )
+      );
+  }
+
+}
+
+
+@media (
+  max-width: 1050px
+) {
+
+  .wb-reference-page
+  .wb-manual-sync-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+}
+
+
+@media (
+  max-width: 800px
+) {
+
+  .wb-reference-page
+  .wb-header {
+    align-items:
+      flex-start;
+  }
+
+
+  .wb-reference-page
+  .wb-header-actions {
+    flex-wrap:
+      wrap;
+  }
+
+
+  .wb-reference-page
+  .wb-section-top,
+  .wb-unmapped-header {
+    flex-direction:
+      column;
+
+    align-items:
+      stretch;
+  }
+
+
+  .wb-reference-page
+  .wb-summary-grid {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(
+          0,
+          1fr
+        )
+      );
+  }
+
+
+  .wb-reference-page
+  .wb-sync-section {
+    flex-direction:
+      column;
+  }
+
+
+  .wb-sync-client {
+    align-items:
+      stretch;
+
+    width:
+      100%;
+
+    min-width:
+      0;
+
+    max-width:
+      none;
+  }
+
+
+  .wb-sync-state-box,
+  .wb-sync-ready,
+  .wb-sync-last-success,
+  .wb-sync-message {
+    text-align:
+      left;
+  }
+
+}
+
+
+@media (
+  max-width: 560px
+) {
+
+  .wb-reference-page
+  .wb-summary-grid,
+  .wb-reference-page
+  .wb-sync-info-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+}
