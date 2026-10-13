@@ -20,10 +20,10 @@ export async function proxy(
 
 
   // ==========================================================
-  // OZON CRON
+  // OZON DAILY CRON
   //
-  // Vercel Cron приходит без пользовательской Supabase-сессии.
-  // Сам endpoint защищён CRON_SECRET.
+  // Вызывается Vercel Cron.
+  // Сам endpoint отдельно проверяет CRON_SECRET.
   // ==========================================================
 
   if (
@@ -39,11 +39,8 @@ export async function proxy(
   // ==========================================================
   // WB DAILY CRON
   //
-  // Этот endpoint тоже вызывается непосредственно Vercel Cron.
-  // Пользовательская сессия ему не нужна.
-  //
-  // Сам /api/wb/daily-sync проверяет:
-  // Authorization: Bearer CRON_SECRET
+  // Вызывается Vercel Cron.
+  // Сам endpoint отдельно проверяет CRON_SECRET.
   // ==========================================================
 
   if (
@@ -57,20 +54,18 @@ export async function proxy(
 
 
   // ==========================================================
-  // ВНУТРЕННИЕ WB-ЗАПРОСЫ ОТ DAILY CRON
+  // ВНУТРЕННИЕ WB ROUTES
   //
-  // /api/wb/daily-sync внутри вызывает:
+  // daily-sync вызывает:
   //
   // /api/wb/sync-orders
   // /api/wb/sync-stocks
   //
-  // Они тоже приходят без пользовательской Supabase-сессии.
-  //
-  // Но пропускаем их ТОЛЬКО если передан правильный CRON_SECRET.
-  // Просто открыть эти API наружу нельзя.
+  // Для них используем отдельный служебный заголовок,
+  // чтобы не зависеть от обработки Authorization.
   // ==========================================================
 
-  const isWbInternalSyncRoute =
+  const isWbInternalRoute =
     pathname ===
       "/api/wb/sync-orders"
     ||
@@ -79,24 +74,33 @@ export async function proxy(
 
 
   if (
-    isWbInternalSyncRoute
+    isWbInternalRoute
   ) {
 
     const cronSecret =
       process.env.CRON_SECRET;
 
 
-    const authorization =
+    const internalSecret =
       request.headers.get(
-        "authorization"
+        "x-wb-internal-secret"
+      );
+
+
+    const internalMarker =
+      request.headers.get(
+        "x-internal-wb-daily-sync"
       );
 
 
     if (
       cronSecret
       &&
-      authorization ===
-        `Bearer ${cronSecret}`
+      internalMarker ===
+        "1"
+      &&
+      internalSecret ===
+        cronSecret
     ) {
 
       return NextResponse.next();
@@ -108,8 +112,6 @@ export async function proxy(
 
   // ==========================================================
   // ОБЫЧНАЯ АВТОРИЗАЦИЯ WORKSPACE
-  //
-  // Все обычные страницы и API работают как раньше.
   // ==========================================================
 
   return updateSession(
