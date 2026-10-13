@@ -38,14 +38,62 @@
   background:
     var(--surface);
 
+  /*
+   * ВАЖНО:
+   *
+   * Одна постоянная вертикальная граница.
+   *
+   * Она не появляется и не исчезает
+   * при сворачивании меню.
+   *
+   * Поэтому не будет мигания.
+   */
+  border-right:
+    1px solid
+    var(--border);
+
   transition:
-    background-color 0.22s ease;
+    background-color 0.22s ease,
+    border-color 0.22s ease;
+}
+
+
+/* ============================================================
+   ОТКЛЮЧАЕМ СТАРЫЕ АНИМИРУЕМЫЕ ЛИНИИ
+   ============================================================ */
+
+/*
+ * Раньше правая линия рисовалась через
+ * ::before с opacity или clip-path.
+ *
+ * Теперь это не требуется.
+ */
+
+.home-company-logo::before {
+  content: none;
+}
+
+
+/*
+ * Вторую горизонтальную линию
+ * на логотипе не создаём.
+ */
+
+.home-company-logo::after {
+  content: none;
 }
 
 
 /* ============================================================
    ГОРИЗОНТАЛЬНАЯ ЛИНИЯ ПОД ЛОГОТИПОМ
    ============================================================ */
+
+/*
+ * Сохраняем исправленное выравнивание.
+ *
+ * Линия располагается точно на высоте
+ * верхней панели WorkSpace.
+ */
 
 .home-sidebar::after {
   content: "";
@@ -77,30 +125,42 @@
 
 
 /* ============================================================
-   ПРАВАЯ ВЕРТИКАЛЬНАЯ ЛИНИЯ ЛОГОТИПА
+   ВЕРТИКАЛЬНАЯ ГРАНИЦА ЛЕВОГО МЕНЮ
    ============================================================ */
 
 /*
- * Вертикальная линия:
+ * Убираем стандартный border сайдбара.
  *
- * - имеет толщину ровно 1px;
- * - использует тот же цвет, что нижняя;
- * - не меняет прозрачность;
- * - не становится ярче при появлении.
+ * Вместо него используем одну линию
+ * только НИЖЕ блока логотипа.
  *
- * Вместо opacity используем clip-path.
+ * Сверху границей занимается сам логотип.
  *
- * В раскрытом состоянии линия скрыта.
- * В свёрнутом постепенно открывается
- * сверху вниз за 180 мс.
+ * Таким образом линии не накладываются.
  */
 
-.home-company-logo::before {
+.home-sidebar {
+  border-right: none;
+}
+
+
+/*
+ * Вертикальная граница нижней части меню.
+ *
+ * При сворачивании следует за изменением
+ * ширины сайдбара.
+ *
+ * Верхняя линия логотипа при этом
+ * остаётся на своём месте.
+ */
+
+.home-sidebar::before {
   content: "";
 
   position: absolute;
 
-  top: 0;
+  top:
+    var(--home-topbar-height);
 
   right: 0;
 
@@ -111,25 +171,10 @@
   background:
     var(--border);
 
-  opacity: 1;
-
-  clip-path:
-    inset(0 0 100% 0);
-
   pointer-events: none;
 
   transition:
-    clip-path 0.18s ease,
     background-color 0.22s ease;
-}
-
-
-/*
- * Не создаём второй горизонтальной линии.
- */
-
-.home-company-logo::after {
-  content: none;
 }
 
 
@@ -259,69 +304,14 @@
 
 
 /*
- * Убираем стандартную правую границу
- * полного сайдбара.
- */
-
-.home-shell--sidebar-collapsed
-.home-sidebar {
-  border-right: none;
-}
-
-
-/* ============================================================
-   ВЕРТИКАЛЬНАЯ ГРАНИЦА УЗКОГО МЕНЮ
-   ============================================================ */
-
-.home-shell--sidebar-collapsed
-.home-sidebar::before {
-  content: "";
-
-  position: absolute;
-
-  top:
-    var(--home-topbar-height);
-
-  right: 0;
-
-  bottom: 0;
-
-  width: 1px;
-
-  background:
-    var(--border);
-
-  pointer-events: none;
-}
-
-
-/* ============================================================
-   ПОЯВЛЕНИЕ ЛИНИИ СПРАВА ОТ ЛОГОТИПА
-   ============================================================ */
-
-/*
- * Теперь не усиливаем яркость линии.
+ * Обрати внимание:
  *
- * Она всегда имеет один и тот же цвет
- * и просто открывается сверху вниз.
+ * Здесь больше нет никаких правил,
+ * которые создают или удаляют
+ * правую границу логотипа.
+ *
+ * Она остаётся неизменной.
  */
-
-.home-shell--sidebar-collapsed
-.home-company-logo::before {
-  clip-path:
-    inset(0 0 0 0);
-}
-
-
-/*
- * Не используем border-right:
- * он мог создавать вторую границу.
- */
-
-.home-shell--sidebar-collapsed
-.home-company-logo {
-  border-right: none;
-}
 
 
 /* ============================================================
@@ -356,7 +346,7 @@
 
 
 /*
- * Скрываем только текст пункта меню.
+ * Скрываем только подписи.
  */
 
 .home-shell--sidebar-collapsed
@@ -376,8 +366,7 @@
 
 
 /*
- * Стрелка после сворачивания
- * смотрит вправо.
+ * Стрелка смотрит вправо.
  */
 
 .home-shell--sidebar-collapsed
@@ -391,9 +380,7 @@
    ЭКРАНЫ ДО 1100 PX
    ============================================================ */
 
-@media (
-  max-width: 1100px
-) {
+@media (max-width: 1100px) {
 
   .home-shell {
     --workspace-sidebar-expanded-width: 190px;
@@ -407,9 +394,7 @@
    МОБИЛЬНАЯ ВЕРСИЯ
    ============================================================ */
 
-@media (
-  max-width: 800px
-) {
+@media (max-width: 800px) {
 
   .home-workspace-link {
     padding:
@@ -419,8 +404,8 @@
 
 
   /*
-   * На мобильных экранах
-   * сворачивание не используется.
+   * Сворачивание на мобильных
+   * устройствах отключено.
    */
 
   .home-sidebar-toggle {
@@ -428,19 +413,29 @@
   }
 
 
-  .home-shell--sidebar-collapsed
-  .home-sidebar::before {
+  /*
+   * Возвращаем обычное оформление
+   * мобильного меню.
+   */
+
+  .home-sidebar {
+    border-right: none;
+  }
+
+
+  .home-sidebar::before,
+  .home-sidebar::after {
     display: none;
   }
 
 
-  .home-company-logo::before {
-    display: none;
-  }
-
-
-  .home-shell--sidebar-collapsed
   .home-company-logo {
+    width: 204px;
+
+    margin-left: 0;
+
+    padding: 0;
+
     border-right: none;
   }
 
@@ -468,15 +463,6 @@
     display: inline;
   }
 
-
-  .home-company-logo {
-    width: 204px;
-
-    margin-left: 0;
-
-    padding: 0;
-  }
-
 }
 
 
@@ -486,9 +472,15 @@
 
 @media (prefers-reduced-motion: reduce) {
 
-  .home-company-logo::before {
-    transition:
-      background-color 0.22s ease;
+  .home-shell {
+    transition: none;
+  }
+
+
+  .home-sidebar-toggle,
+  .home-sidebar-toggle svg,
+  .home-topbar {
+    transition: none;
   }
 
 }
