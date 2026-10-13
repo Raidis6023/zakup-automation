@@ -16,41 +16,26 @@
 
 
 /* ============================================================
-   БЛОК ЛОГОТИПА
+   ЛОГОТИП И ЕГО ПОСТОЯННАЯ ПРАВАЯ ГРАНИЦА
    ============================================================ */
 
-.home-company-logo {
+.home-shell .home-company-logo {
   position: relative;
-
   z-index: 25;
-
   box-sizing: border-box;
 
-  width:
-    var(--workspace-sidebar-expanded-width);
-
+  width: var(--workspace-sidebar-expanded-width);
   margin-left: -12px;
+  padding: 0 12px;
 
-  padding:
-    0
-    12px;
-
-  background:
-    var(--surface);
+  background: var(--surface);
 
   /*
-   * ВАЖНО:
-   *
-   * Одна постоянная вертикальная граница.
-   *
-   * Она не появляется и не исчезает
-   * при сворачивании меню.
-   *
-   * Поэтому не будет мигания.
+   * Правая линия существует ВСЕГДА.
+   * При сворачивании она не исчезает,
+   * не появляется и не перемещается.
    */
-  border-right:
-    1px solid
-    var(--border);
+  border-right: 1px solid var(--border);
 
   transition:
     background-color 0.22s ease,
@@ -58,28 +43,12 @@
 }
 
 
-/* ============================================================
-   ОТКЛЮЧАЕМ СТАРЫЕ АНИМИРУЕМЫЕ ЛИНИИ
-   ============================================================ */
-
 /*
- * Раньше правая линия рисовалась через
- * ::before с opacity или clip-path.
- *
- * Теперь это не требуется.
+ * Убираем дополнительные линии,
+ * ранее создававшиеся на логотипе.
  */
-
-.home-company-logo::before {
-  content: none;
-}
-
-
-/*
- * Вторую горизонтальную линию
- * на логотипе не создаём.
- */
-
-.home-company-logo::after {
+.home-shell .home-company-logo::before,
+.home-shell .home-company-logo::after {
   content: none;
 }
 
@@ -88,32 +57,19 @@
    ГОРИЗОНТАЛЬНАЯ ЛИНИЯ ПОД ЛОГОТИПОМ
    ============================================================ */
 
-/*
- * Сохраняем исправленное выравнивание.
- *
- * Линия располагается точно на высоте
- * верхней панели WorkSpace.
- */
-
-.home-sidebar::after {
+.home-shell .home-sidebar::after {
   content: "";
 
   position: absolute;
 
-  top:
-    var(--home-topbar-height);
-
+  top: var(--home-topbar-height);
   left: 0;
-
   right: auto;
 
-  width:
-    var(--workspace-sidebar-expanded-width);
-
+  width: var(--workspace-sidebar-expanded-width);
   height: 1px;
 
-  background:
-    var(--border);
+  background: var(--border);
 
   z-index: 30;
 
@@ -125,51 +81,33 @@
 
 
 /* ============================================================
-   ВЕРТИКАЛЬНАЯ ГРАНИЦА ЛЕВОГО МЕНЮ
+   ВЕРТИКАЛЬНАЯ ГРАНИЦА НИЖНЕЙ ЧАСТИ МЕНЮ
    ============================================================ */
 
-/*
- * Убираем стандартный border сайдбара.
- *
- * Вместо него используем одну линию
- * только НИЖЕ блока логотипа.
- *
- * Сверху границей занимается сам логотип.
- *
- * Таким образом линии не накладываются.
- */
-
-.home-sidebar {
+.home-shell .home-sidebar {
   border-right: none;
 }
 
 
 /*
- * Вертикальная граница нижней части меню.
+ * Только нижняя граница сайдбара
+ * следует за его шириной.
  *
- * При сворачивании следует за изменением
- * ширины сайдбара.
- *
- * Верхняя линия логотипа при этом
- * остаётся на своём месте.
+ * Правая граница логотипа от этого
+ * совершенно не зависит.
  */
-
-.home-sidebar::before {
+.home-shell .home-sidebar::before {
   content: "";
 
   position: absolute;
 
-  top:
-    var(--home-topbar-height);
-
+  top: var(--home-topbar-height);
   right: 0;
-
   bottom: 0;
 
   width: 1px;
 
-  background:
-    var(--border);
+  background: var(--border);
 
   pointer-events: none;
 
@@ -186,7 +124,6 @@
   justify-content: flex-start;
 
   padding-left: 7px;
-
   padding-right: 14px;
 }
 
@@ -199,7 +136,6 @@
   position: absolute;
 
   top: 88px;
-
   right: 6px;
 
   z-index: 40;
@@ -207,11 +143,9 @@
   display: inline-flex;
 
   align-items: center;
-
   justify-content: center;
 
   width: 30px;
-
   height: 30px;
 
   padding: 0;
@@ -222,20 +156,13 @@
 
   border-radius: 7px;
 
-  background:
-    var(--surface);
+  background: var(--surface);
 
-  color:
-    var(--text-secondary);
+  color: var(--text-secondary);
 
   box-shadow:
     0 2px 8px
-    rgba(
-      0,
-      0,
-      0,
-      0.08
-    );
+    rgba(0, 0, 0, 0.08);
 
   cursor: pointer;
 
@@ -248,31 +175,24 @@
 
 
 .home-sidebar-toggle:hover {
-  border-color:
-    var(--home-blue);
+  border-color: var(--home-blue);
 
-  background:
-    var(--surface-soft);
+  background: var(--surface-soft);
 
-  color:
-    var(--home-blue);
+  color: var(--home-blue);
 }
 
 
 .home-sidebar-toggle svg {
   width: 18px;
-
   height: 18px;
 
   fill: none;
 
-  stroke:
-    currentColor;
-
+  stroke: currentColor;
   stroke-width: 2;
 
   stroke-linecap: round;
-
   stroke-linejoin: round;
 
   transition:
@@ -281,14 +201,80 @@
 
 
 /* ============================================================
-   ВЕРХНЯЯ ПАНЕЛЬ
+   НЕПОДВИЖНАЯ ВЕРХНЯЯ ПАНЕЛЬ
    ============================================================ */
 
-.home-topbar {
+/*
+ * Главное изменение.
+ *
+ * Раньше верхняя панель находилась
+ * внутри изменяющей ширину сетки.
+ *
+ * При сворачивании меню она пыталась
+ * компенсировать изменение положения
+ * через margin-left.
+ *
+ * Из-за этого поисковое поле
+ * двигалось влево и вправо.
+ *
+ * Теперь верхняя панель закреплена
+ * относительно окна браузера.
+ *
+ * Её левая координата всегда равна
+ * ширине раскрытого меню.
+ *
+ * Таким образом:
+ *
+ * - сайдбар сворачивается;
+ * - рабочая область расширяется;
+ * - поиск остаётся неподвижным;
+ * - правая линия логотипа не перекрывается.
+ */
+
+.home-shell .home-topbar {
+  position: fixed;
+
+  top: 0;
+
+  left:
+    var(--workspace-sidebar-expanded-width);
+
+  right: 0;
+
+  width: auto;
+
   margin-left: 0;
 
+  z-index: 50;
+
+  /*
+   * Положение панели не анимируем.
+   *
+   * Оставляем переходы только цветов
+   * для светлой и тёмной тем.
+   */
   transition:
-    margin-left 0.18s ease;
+    background-color 0.22s ease,
+    border-color 0.22s ease,
+    color 0.22s ease;
+}
+
+
+/* ============================================================
+   МЕСТО ПОД ВЕРХНЮЮ ПАНЕЛЬ
+   ============================================================ */
+
+/*
+ * position: fixed исключает верхнюю
+ * панель из обычного потока страницы.
+ *
+ * Поэтому сохраняем место под неё,
+ * чтобы заголовки и таблицы не уехали вверх.
+ */
+
+.home-shell .home-main {
+  padding-top:
+    var(--home-topbar-height);
 }
 
 
@@ -304,29 +290,16 @@
 
 
 /*
- * Обрати внимание:
+ * Обратите внимание:
  *
- * Здесь больше нет никаких правил,
- * которые создают или удаляют
- * правую границу логотипа.
+ * Здесь НЕТ изменений для:
  *
- * Она остаётся неизменной.
+ * - правой границы логотипа;
+ * - верхней панели;
+ * - поисковой строки.
+ *
+ * Они остаются на прежнем месте.
  */
-
-
-/* ============================================================
-   ВЕРХНЯЯ ПАНЕЛЬ ПРИ СВОРАЧИВАНИИ
-   ============================================================ */
-
-.home-shell--sidebar-collapsed
-.home-topbar {
-  margin-left:
-    calc(
-      var(--workspace-sidebar-expanded-width)
-      -
-      var(--workspace-sidebar-collapsed-width)
-    );
-}
 
 
 /* ============================================================
@@ -340,15 +313,13 @@
   gap: 0;
 
   padding-left: 7px;
-
   padding-right: 0;
 }
 
 
 /*
- * Скрываем только подписи.
+ * Скрываем только текст пунктов меню.
  */
-
 .home-shell--sidebar-collapsed
 .home-workspace-label {
   display: none;
@@ -366,9 +337,9 @@
 
 
 /*
- * Стрелка смотрит вправо.
+ * При сворачивании стрелка
+ * поворачивается вправо.
  */
-
 .home-shell--sidebar-collapsed
 .home-sidebar-toggle svg {
   transform:
@@ -397,39 +368,31 @@
 @media (max-width: 800px) {
 
   .home-workspace-link {
-    padding:
-      8px
-      14px;
+    padding: 8px 14px;
   }
 
 
   /*
-   * Сворачивание на мобильных
-   * устройствах отключено.
+   * На мобильных устройствах
+   * сворачивание отключено.
    */
-
   .home-sidebar-toggle {
     display: none;
   }
 
 
-  /*
-   * Возвращаем обычное оформление
-   * мобильного меню.
-   */
-
-  .home-sidebar {
+  .home-shell .home-sidebar {
     border-right: none;
   }
 
 
-  .home-sidebar::before,
-  .home-sidebar::after {
+  .home-shell .home-sidebar::before,
+  .home-shell .home-sidebar::after {
     display: none;
   }
 
 
-  .home-company-logo {
+  .home-shell .home-company-logo {
     width: 204px;
 
     margin-left: 0;
@@ -440,9 +403,25 @@
   }
 
 
-  .home-shell--sidebar-collapsed
-  .home-topbar {
+  /*
+   * На мобильном экране верхняя панель
+   * остаётся в обычном потоке страницы.
+   */
+  .home-shell .home-topbar {
+    position: static;
+
+    top: auto;
+    left: auto;
+    right: auto;
+
+    width: auto;
+
     margin-left: 0;
+  }
+
+
+  .home-shell .home-main {
+    padding-top: 0;
   }
 
 
@@ -452,9 +431,7 @@
 
     gap: 14px;
 
-    padding:
-      8px
-      14px;
+    padding: 8px 14px;
   }
 
 
@@ -478,8 +455,7 @@
 
 
   .home-sidebar-toggle,
-  .home-sidebar-toggle svg,
-  .home-topbar {
+  .home-sidebar-toggle svg {
     transition: none;
   }
 
