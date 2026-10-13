@@ -1,83 +1,66 @@
 /* ============================================================
-   ПЛАВНОЕ ПЕРЕКЛЮЧЕНИЕ ТЕМЫ WORKSPACE
+   ЕДИНОЕ БЫСТРОЕ ПЕРЕКЛЮЧЕНИЕ ТЕМЫ WORKSPACE
+
+   Вместо множества переходов по 150–220 мс
+   используем один переход всей страницы за 130 мс.
+
+   При переключении внутренние цветовые переходы
+   временно отключаются.
+
+   Обычные эффекты наведения и сворачивание меню
+   сохраняются.
    ============================================================ */
 
-@property --workspace-gradient-top {
-  syntax: "<color>";
-  inherits: false;
-  initial-value: #ffffff;
-}
 
-@property --workspace-gradient-bottom {
-  syntax: "<color>";
-  inherits: false;
-  initial-value: #f4f5f7;
-}
+/* ============================================================
+   ОТКЛЮЧАЕМ РАЗРОЗНЕННЫЕ ПЕРЕХОДЫ
+   ============================================================ */
 
-.home-shell {
-  --workspace-gradient-top: var(--surface);
-  --workspace-gradient-bottom: var(--background);
-
-  background: linear-gradient(
-    180deg,
-    var(--workspace-gradient-top) 0%,
-    var(--workspace-gradient-bottom) 100%
-  );
-
-  transition:
-    --workspace-gradient-top 0.22s ease,
-    --workspace-gradient-bottom 0.22s ease,
-    color 0.22s ease;
+html.workspace-theme-changing,
+html.workspace-theme-changing *,
+html.workspace-theme-changing *::before,
+html.workspace-theme-changing *::after {
+  transition: none !important;
 }
 
 
 /* ============================================================
-   ПЛАВНОЕ ИЗМЕНЕНИЕ ОСНОВНЫХ ЭЛЕМЕНТОВ
+   ЕДИНЫЙ ПЕРЕХОД СТРАНИЦЫ
    ============================================================ */
 
-.home-sidebar,
-.home-topbar,
-.home-search,
-.home-search-shortcut,
-.home-popup,
-.home-theme-toggle,
-.home-theme-toggle button,
-.home-brand-icon,
-.home-notifications-empty-icon,
-.home-calendar-today-button,
-.home-calendar-day.today,
-.home-avatar,
-.home-content .page,
-.home-content .section,
-.home-content .card,
-.home-content .controls,
-.home-content .version-box,
-.home-content .reason-box,
-.home-content .transport-card,
-.home-content .adjustment-card,
-.home-content .table thead,
-.home-content .table th,
-.home-content .table td {
-  transition:
-    background-color 0.22s ease,
-    border-color 0.22s ease,
-    color 0.22s ease;
+/*
+ * Старое состояние остаётся под новым.
+ *
+ * Новое состояние целиком проявляется поверх него.
+ *
+ * Поэтому фон, таблицы, меню, текст и логотипы
+ * не переключаются в разные моменты времени.
+ */
+
+::view-transition-old(root) {
+  animation: none;
 }
 
-.home-company-logo-main,
-.home-workspace-label,
-.home-title-row h1,
-.home-profile-text strong,
-.home-profile-text span,
-.home-search-icon,
-.home-search input,
-.home-search input::placeholder,
-.home-popup-header,
-.home-notification-item strong,
-.home-notification-item span {
-  transition:
-    color 0.22s ease,
-    fill 0.22s ease;
+
+::view-transition-new(root) {
+  animation:
+    workspace-theme-reveal
+    130ms
+    ease-out
+    both;
+}
+
+
+@keyframes workspace-theme-reveal {
+
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+
 }
 
 
@@ -87,23 +70,31 @@
 
 .workspace-marketplace-logo {
   display: block;
+
   width: 51px;
   height: 51px;
-  flex: 0 0 51px;
+
+  flex:
+    0 0 51px;
 }
+
 
 .workspace-marketplace-logo-light,
 .workspace-marketplace-logo-dark {
-  transition: opacity 0.22s ease;
+  transition:
+    opacity 0.15s ease;
 }
+
 
 .workspace-marketplace-logo-light {
   opacity: 1;
 }
 
+
 .workspace-marketplace-logo-dark {
   opacity: 0;
 }
+
 
 html[data-theme="dark"]
 .workspace-marketplace-logo-light,
@@ -111,6 +102,7 @@ html.dark
 .workspace-marketplace-logo-light {
   opacity: 0;
 }
+
 
 html[data-theme="dark"]
 .workspace-marketplace-logo-dark,
@@ -130,17 +122,20 @@ html.dark
   fill: #2762fd;
 }
 
+
 .workspace-marketplace-logo--ozon
 .workspace-marketplace-logo-light
 .workspace-marketplace-logo-glyph {
   fill: #fefefe;
 }
 
+
 .workspace-marketplace-logo--ozon
 .workspace-marketplace-logo-dark
 .workspace-marketplace-logo-bg {
   fill: #ffffff;
 }
+
 
 .workspace-marketplace-logo--ozon
 .workspace-marketplace-logo-dark
@@ -156,8 +151,10 @@ html.dark
 .workspace-marketplace-logo--wildberries
 .workspace-marketplace-logo-light
 .workspace-marketplace-logo-bg {
-  fill: url(#workspace-marketplace-gradient-wildberries);
+  fill:
+    url(#workspace-marketplace-gradient-wildberries);
 }
+
 
 .workspace-marketplace-logo--wildberries
 .workspace-marketplace-logo-light
@@ -165,31 +162,30 @@ html.dark
   fill: #ffffff;
 }
 
+
 .workspace-marketplace-logo--wildberries
 .workspace-marketplace-logo-dark
 .workspace-marketplace-logo-bg {
   fill: #ffffff;
 }
 
+
 .workspace-marketplace-logo--wildberries
 .workspace-marketplace-logo-dark
 .workspace-marketplace-logo-glyph {
-  fill: url(#workspace-marketplace-gradient-wildberries);
+  fill:
+    url(#workspace-marketplace-gradient-wildberries);
 }
 
 
 /* ============================================================
    ЯНДЕКС МАРКЕТ
 
-   НОВАЯ РАСЦВЕТКА:
-
    Светлая тема:
-   - Оранжевый фон
-   - Белая буква М
+   оранжевый фон + белая буква.
 
    Тёмная тема:
-   - Белый фон
-   - Оранжевая буква М
+   белый фон + оранжевая буква.
    ============================================================ */
 
 .workspace-marketplace-logo--yandex-market
@@ -198,17 +194,20 @@ html.dark
   fill: #ff4112;
 }
 
+
 .workspace-marketplace-logo--yandex-market
 .workspace-marketplace-logo-light
 .workspace-marketplace-logo-glyph {
   fill: #ffffff;
 }
 
+
 .workspace-marketplace-logo--yandex-market
 .workspace-marketplace-logo-dark
 .workspace-marketplace-logo-bg {
   fill: #ffffff;
 }
+
 
 .workspace-marketplace-logo--yandex-market
 .workspace-marketplace-logo-dark
@@ -223,22 +222,15 @@ html.dark
 
 @media (prefers-reduced-motion: reduce) {
 
-  .home-shell,
-  .home-sidebar,
-  .home-topbar,
-  .home-search,
-  .home-search-shortcut,
-  .home-popup,
-  .home-theme-toggle,
-  .home-theme-toggle button,
-  .home-brand-icon,
-  .home-content .page,
-  .home-content .section,
-  .home-content .card,
-  .home-content .controls,
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+
+
   .workspace-marketplace-logo-light,
   .workspace-marketplace-logo-dark {
-    transition-duration: 0.01ms !important;
+    transition: none !important;
   }
 
 }
