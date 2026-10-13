@@ -36,17 +36,85 @@ type Props = {
 
 
 // ============================================================
+// ICONS
+// ============================================================
+
+function StocksIcon() {
+
+  return (
+
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+
+      <path
+        d="
+          M12 3
+          20 7
+          12 11
+          4 7
+          Z
+        "
+      />
+
+      <path
+        d="
+          M4 7
+          v10
+          l8 4
+          8-4
+          V7
+        "
+      />
+
+      <path
+        d="M12 11v10"
+      />
+
+    </svg>
+
+  );
+
+}
+
+
+function SalesIcon() {
+
+  return (
+
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+
+      <path
+        d="M4 19V11M10 19V5M16 19V8M22 19V3"
+      />
+
+    </svg>
+
+  );
+
+}
+
+
+// ============================================================
 // FORMAT
 // ============================================================
 
 function formatDateTimeKrasnoyarsk(
   value:
     string
-    | null
-): string {
+    |
+    null
+):
+string {
 
   if (!value) {
+
     return "Ещё не обновлялись";
+
   }
 
 
@@ -61,7 +129,9 @@ function formatDateTimeKrasnoyarsk(
       date.getTime()
     )
   ) {
+
     return value;
+
   }
 
 
@@ -101,7 +171,8 @@ function formatDateTimeKrasnoyarsk(
 // ============================================================
 
 async function postJson(
-  url: string
+  url:
+    string
 ):
 Promise<ApiResponse> {
 
@@ -130,9 +201,12 @@ Promise<ApiResponse> {
 
     data =
       text
+
         ? JSON.parse(
             text
-          ) as ApiResponse
+          ) as
+            ApiResponse
+
         : {};
 
   } catch {
@@ -147,7 +221,8 @@ Promise<ApiResponse> {
   if (
     !response.ok
     ||
-    data.ok !== true
+    data.ok !==
+      true
   ) {
 
     throw new Error(
@@ -298,7 +373,9 @@ export default function YandexSyncActionsClient({
       ||
       salesLoading
     ) {
+
       return;
+
     }
 
 
@@ -341,7 +418,9 @@ export default function YandexSyncActionsClient({
 
       router.refresh();
 
-    } catch (error) {
+    } catch (
+      error
+    ) {
 
       setStockError(
         true
@@ -350,8 +429,12 @@ export default function YandexSyncActionsClient({
 
       setStockMessage(
         error instanceof Error
+
           ? error.message
-          : String(error)
+
+          : String(
+              error
+            )
       );
 
     } finally {
@@ -367,9 +450,6 @@ export default function YandexSyncActionsClient({
 
   // ==========================================================
   // SALES
-  //
-  // 1. Сырые заказы + возвраты.
-  // 2. Только после успеха пересчитываем daily.
   // ==========================================================
 
   async function updateSales() {
@@ -379,7 +459,9 @@ export default function YandexSyncActionsClient({
       ||
       stockLoading
     ) {
+
       return;
+
     }
 
 
@@ -432,7 +514,9 @@ export default function YandexSyncActionsClient({
 
       router.refresh();
 
-    } catch (error) {
+    } catch (
+      error
+    ) {
 
       setSalesError(
         true
@@ -441,8 +525,12 @@ export default function YandexSyncActionsClient({
 
       setSalesMessage(
         error instanceof Error
+
           ? error.message
-          : String(error)
+
+          : String(
+              error
+            )
       );
 
     } finally {
@@ -463,66 +551,69 @@ export default function YandexSyncActionsClient({
 
 
   return (
+
     <div
-      style={{
-        display:
-          "grid",
-
-        gridTemplateColumns:
-          "repeat(auto-fit, minmax(290px, 1fr))",
-
-        gap:
-          "16px",
-
-        marginTop:
-          "18px",
-      }}
+      className=
+        "yandex-sync-actions"
     >
 
       {/* ===================================
           STOCKS
           =================================== */}
 
-      <div className="card">
-
-        <div className="card-label">
-          Остатки
-        </div>
-
+      <div
+        className=
+          "yandex-sync-card"
+      >
 
         <div
-          style={{
-            marginTop:
-              "8px",
-
-            fontSize:
-              "13px",
-
-            fontWeight:
-              700,
-          }}
+          className=
+            "yandex-sync-card-top"
         >
-          {
-            formatDateTimeKrasnoyarsk(
-              stockUpdatedAt
-            )
-          }
-        </div>
+
+          <span
+            className=
+              "yandex-sync-card-icon"
+          >
+            <StocksIcon />
+          </span>
 
 
-        <div
-          className="muted"
+          <div
+            className=
+              "yandex-sync-card-copy"
+          >
 
-          style={{
-            marginTop:
-              "5px",
+            <div
+              className=
+                "yandex-sync-card-title"
+            >
+              Остатки
+            </div>
 
-            fontSize:
-              "11px",
-          }}
-        >
-          Последнее успешное обновление,
-          красноярское время
+
+            <div
+              className=
+                "yandex-sync-date"
+            >
+              {
+                formatDateTimeKrasnoyarsk(
+                  stockUpdatedAt
+                )
+              }
+            </div>
+
+
+            <div
+              className=
+                "yandex-sync-hint"
+            >
+              Последнее успешное обновление,
+              красноярское время
+            </div>
+
+          </div>
+
         </div>
 
 
@@ -530,38 +621,22 @@ export default function YandexSyncActionsClient({
           type="button"
 
           className=
-            "secondary-button"
+            "secondary-button yandex-sync-button"
 
-          disabled=
-            {anyLoading}
+          disabled={
+            anyLoading
+          }
 
-          onClick=
-            {
-              () =>
-                void updateStocks()
-            }
-
-          style={{
-            marginTop:
-              "14px",
-
-            minWidth:
-              "170px",
-
-            opacity:
-              anyLoading
-                ? 0.6
-                : 1,
-
-            cursor:
-              anyLoading
-                ? "not-allowed"
-                : "pointer",
-          }}
+          onClick={
+            () =>
+              void updateStocks()
+          }
         >
           {
             stockLoading
+
               ? "Обновляем..."
+
               : "Обновить остатки"
           }
         </button>
@@ -569,29 +644,25 @@ export default function YandexSyncActionsClient({
 
         {
           stockMessage
+
             ? (
 
               <div
-                style={{
-                  marginTop:
-                    "10px",
+                className={
+                  stockError
 
-                  fontSize:
-                    "12px",
+                    ? "yandex-sync-message yandex-sync-message--error"
 
-                  lineHeight:
-                    1.45,
-
-                  color:
-                    stockError
-                      ? "#f04438"
-                      : "#027a48",
-                }}
+                    : "yandex-sync-message"
+                }
               >
-                {stockMessage}
+                {
+                  stockMessage
+                }
               </div>
 
             )
+
             : null
         }
 
@@ -602,46 +673,59 @@ export default function YandexSyncActionsClient({
           SALES
           =================================== */}
 
-      <div className="card">
-
-        <div className="card-label">
-          Продажи
-        </div>
-
+      <div
+        className=
+          "yandex-sync-card"
+      >
 
         <div
-          style={{
-            marginTop:
-              "8px",
-
-            fontSize:
-              "13px",
-
-            fontWeight:
-              700,
-          }}
+          className=
+            "yandex-sync-card-top"
         >
-          {
-            formatDateTimeKrasnoyarsk(
-              salesUpdatedAt
-            )
-          }
-        </div>
+
+          <span
+            className=
+              "yandex-sync-card-icon"
+          >
+            <SalesIcon />
+          </span>
 
 
-        <div
-          className="muted"
+          <div
+            className=
+              "yandex-sync-card-copy"
+          >
 
-          style={{
-            marginTop:
-              "5px",
+            <div
+              className=
+                "yandex-sync-card-title"
+            >
+              Продажи
+            </div>
 
-            fontSize:
-              "11px",
-          }}
-        >
-          Последний успешный пересчёт
-          yandex_sales_daily
+
+            <div
+              className=
+                "yandex-sync-date"
+            >
+              {
+                formatDateTimeKrasnoyarsk(
+                  salesUpdatedAt
+                )
+              }
+            </div>
+
+
+            <div
+              className=
+                "yandex-sync-hint"
+            >
+              Последний успешный пересчёт
+              yandex_sales_daily
+            </div>
+
+          </div>
+
         </div>
 
 
@@ -649,38 +733,22 @@ export default function YandexSyncActionsClient({
           type="button"
 
           className=
-            "secondary-button"
+            "secondary-button yandex-sync-button"
 
-          disabled=
-            {anyLoading}
+          disabled={
+            anyLoading
+          }
 
-          onClick=
-            {
-              () =>
-                void updateSales()
-            }
-
-          style={{
-            marginTop:
-              "14px",
-
-            minWidth:
-              "170px",
-
-            opacity:
-              anyLoading
-                ? 0.6
-                : 1,
-
-            cursor:
-              anyLoading
-                ? "not-allowed"
-                : "pointer",
-          }}
+          onClick={
+            () =>
+              void updateSales()
+          }
         >
           {
             salesLoading
+
               ? "Обновляем..."
+
               : "Обновить продажи"
           }
         </button>
@@ -688,35 +756,32 @@ export default function YandexSyncActionsClient({
 
         {
           salesMessage
+
             ? (
 
               <div
-                style={{
-                  marginTop:
-                    "10px",
+                className={
+                  salesError
 
-                  fontSize:
-                    "12px",
+                    ? "yandex-sync-message yandex-sync-message--error"
 
-                  lineHeight:
-                    1.45,
-
-                  color:
-                    salesError
-                      ? "#f04438"
-                      : "#027a48",
-                }}
+                    : "yandex-sync-message"
+                }
               >
-                {salesMessage}
+                {
+                  salesMessage
+                }
               </div>
 
             )
+
             : null
         }
 
       </div>
 
     </div>
+
   );
 
 }
