@@ -16,14 +16,14 @@ export default function WorkspaceCompanyLogo() {
 
       <text
         x="0"
-        y="22"
-        textLength="181"
+        y="23"
+        textLength="191"
         lengthAdjust="spacingAndGlyphs"
         className=
           "home-company-logo-main"
         fontFamily=
           "Arial, Helvetica, sans-serif"
-        fontSize="20"
+        fontSize="22"
         fontWeight="900"
       >
         ИП Бабушкина
