@@ -35,6 +35,7 @@ import "./home.css";
 import "./workspace-shell.css";
 import "./sidebar-collapse.css";
 import "./sidebar-visuals.css";
+import "./workspace-reference-shell.css";
 
 
 // ============================================================
@@ -127,6 +128,16 @@ type WorkspaceShellProps = {
 };
 
 
+type WorkspaceNavKey =
+  | "admin-home"
+  | "admin-users"
+  | "procurement"
+  | "ved"
+  | "ozon"
+  | "wildberries"
+  | "yandex-market";
+
+
 // ============================================================
 // ОБОЛОЧКА WORKSPACE
 // ============================================================
@@ -164,6 +175,136 @@ export default function WorkspaceShell({
     adminMode
       ? "/admin"
       : "/";
+
+
+  // ==========================================================
+  // АКТИВНЫЙ ПУНКТ МЕНЮ
+  // ==========================================================
+
+  function isNavActive(
+    key: WorkspaceNavKey
+  ) {
+
+    switch (key) {
+
+      case "admin-home":
+
+        return (
+          pathname ===
+          "/admin"
+        );
+
+
+      case "admin-users":
+
+        return (
+          pathname ===
+            "/admin/users"
+          ||
+          pathname.startsWith(
+            "/admin/users/"
+          )
+        );
+
+
+      case "procurement":
+
+        return (
+          pathname ===
+            "/zakup"
+          ||
+          pathname.startsWith(
+            "/zakup/"
+          )
+          ||
+          pathname ===
+            "/stock-import"
+          ||
+          pathname.startsWith(
+            "/stock-import/"
+          )
+        );
+
+
+      case "ved":
+
+        return (
+          pathname ===
+            "/ved"
+          ||
+          pathname.startsWith(
+            "/ved/"
+          )
+          ||
+          pathname ===
+            "/ved-orders"
+          ||
+          pathname.startsWith(
+            "/ved-orders/"
+          )
+        );
+
+
+      case "ozon":
+
+        return (
+          pathname ===
+            "/ozon"
+          ||
+          pathname.startsWith(
+            "/ozon/"
+          )
+        );
+
+
+      case "wildberries":
+
+        return (
+          pathname ===
+            "/wildberries"
+          ||
+          pathname.startsWith(
+            "/wildberries/"
+          )
+        );
+
+
+      case "yandex-market":
+
+        return (
+          pathname ===
+            "/yandex-market"
+          ||
+          pathname.startsWith(
+            "/yandex-market/"
+          )
+        );
+
+
+      default:
+
+        return false;
+
+    }
+
+  }
+
+
+  function navClass(
+    key: WorkspaceNavKey
+  ) {
+
+    return (
+      isNavActive(
+        key
+      )
+
+        ? "home-workspace-link home-workspace-link--active"
+
+        : "home-workspace-link"
+    );
+
+  }
 
 
   // ==========================================================
@@ -264,7 +405,7 @@ export default function WorkspaceShell({
       >
 
         {/* ========================================
-            SVG-ЛОГОТИП
+            ЛОГОТИП
             ======================================== */}
 
         <Link
@@ -345,8 +486,21 @@ export default function WorkspaceShell({
                 <Link
                   href="/admin"
 
-                  className=
-                    "home-workspace-link"
+                  className={
+                    navClass(
+                      "admin-home"
+                    )
+                  }
+
+                  aria-current={
+                    isNavActive(
+                      "admin-home"
+                    )
+
+                      ? "page"
+
+                      : undefined
+                  }
 
                   aria-label=
                     "Главная"
@@ -378,8 +532,21 @@ export default function WorkspaceShell({
                 <Link
                   href="/admin/users"
 
-                  className=
-                    "home-workspace-link"
+                  className={
+                    navClass(
+                      "admin-users"
+                    )
+                  }
+
+                  aria-current={
+                    isNavActive(
+                      "admin-users"
+                    )
+
+                      ? "page"
+
+                      : undefined
+                  }
 
                   aria-label=
                     "Сотрудники"
@@ -428,8 +595,21 @@ export default function WorkspaceShell({
                 <Link
                   href="/zakup"
 
-                  className=
-                    "home-workspace-link"
+                  className={
+                    navClass(
+                      "procurement"
+                    )
+                  }
+
+                  aria-current={
+                    isNavActive(
+                      "procurement"
+                    )
+
+                      ? "page"
+
+                      : undefined
+                  }
 
                   aria-label=
                     "Закуп"
@@ -461,8 +641,21 @@ export default function WorkspaceShell({
                 <Link
                   href="/ved"
 
-                  className=
-                    "home-workspace-link"
+                  className={
+                    navClass(
+                      "ved"
+                    )
+                  }
+
+                  aria-current={
+                    isNavActive(
+                      "ved"
+                    )
+
+                      ? "page"
+
+                      : undefined
+                  }
 
                   aria-label=
                     "ВЭД"
@@ -494,8 +687,21 @@ export default function WorkspaceShell({
                 <Link
                   href="/ozon"
 
-                  className=
-                    "home-workspace-link"
+                  className={
+                    navClass(
+                      "ozon"
+                    )
+                  }
+
+                  aria-current={
+                    isNavActive(
+                      "ozon"
+                    )
+
+                      ? "page"
+
+                      : undefined
+                  }
 
                   aria-label=
                     "Ozon"
@@ -535,8 +741,21 @@ export default function WorkspaceShell({
                 <Link
                   href="/wildberries"
 
-                  className=
-                    "home-workspace-link"
+                  className={
+                    navClass(
+                      "wildberries"
+                    )
+                  }
+
+                  aria-current={
+                    isNavActive(
+                      "wildberries"
+                    )
+
+                      ? "page"
+
+                      : undefined
+                  }
 
                   aria-label=
                     "Wildberries"
@@ -576,8 +795,21 @@ export default function WorkspaceShell({
                 <Link
                   href="/yandex-market"
 
-                  className=
-                    "home-workspace-link"
+                  className={
+                    navClass(
+                      "yandex-market"
+                    )
+                  }
+
+                  aria-current={
+                    isNavActive(
+                      "yandex-market"
+                    )
+
+                      ? "page"
+
+                      : undefined
+                  }
 
                   aria-label=
                     "Яндекс Маркет"
