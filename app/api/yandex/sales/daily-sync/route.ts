@@ -88,6 +88,8 @@ type PreviewResponse = {
   checks?: unknown;
 
   capped_cases?: unknown;
+
+  error?: string;
 };
 
 
@@ -108,11 +110,6 @@ type RpcResponse = {
 
 // ============================================================
 // POST
-//
-// 1. Строит тот же проверенный preview.
-// 2. Требует preview_ok = true.
-// 3. Получает полный массив daily_rows.
-// 4. Одним атомарным RPC заменяет полный период.
 // ============================================================
 
 export async function POST(
@@ -129,7 +126,7 @@ export async function POST(
 
 
     // ========================================================
-    // PREVIEW
+    // PREVIEW URL
     // ========================================================
 
     const previewUrl =
@@ -145,11 +142,61 @@ export async function POST(
     );
 
 
+    // ========================================================
+    // FORWARD AUTH
+    //
+    // Ручной запуск из сайта:
+    //   Cookie
+    //
+    // Cron / server-to-server:
+    //   Authorization: Bearer CRON_SECRET
+    //
+    // Если присутствуют оба,
+    // передаём оба.
+    // ========================================================
+
     const cookie =
       request.headers.get(
         "cookie"
       );
 
+
+    const authorization =
+      request.headers.get(
+        "authorization"
+      );
+
+
+    const previewHeaders:
+      Record<
+        string,
+        string
+      > =
+      {
+        Accept:
+          "application/json",
+      };
+
+
+    if (cookie) {
+
+      previewHeaders.Cookie =
+        cookie;
+
+    }
+
+
+    if (authorization) {
+
+      previewHeaders.Authorization =
+        authorization;
+
+    }
+
+
+    // ========================================================
+    // PREVIEW REQUEST
+    // ========================================================
 
     const previewResponse =
       await fetch(
@@ -159,12 +206,7 @@ export async function POST(
             "GET",
 
           headers:
-            cookie
-            ? {
-                Cookie:
-                  cookie,
-              }
-            : undefined,
+            previewHeaders,
 
           cache:
             "no-store",
@@ -196,6 +238,10 @@ export async function POST(
     }
 
 
+    // ========================================================
+    // PREVIEW HTTP / OK CHECK
+    // ========================================================
+
     if (
       !previewResponse.ok
       ||
@@ -214,6 +260,9 @@ export async function POST(
           blocked_by_preview:
             true,
 
+          preview_http_status:
+            previewResponse.status,
+
           preview,
         },
         {
@@ -224,6 +273,10 @@ export async function POST(
 
     }
 
+
+    // ========================================================
+    // PREVIEW BUSINESS CHECK
+    // ========================================================
 
     if (
       preview.preview_ok !==
@@ -254,6 +307,10 @@ export async function POST(
 
     }
 
+
+    // ========================================================
+    // ROWS CHECK
+    // ========================================================
 
     if (
       !Array.isArray(
@@ -302,6 +359,10 @@ export async function POST(
 
     }
 
+
+    // ========================================================
+    // RUN / PERIOD
+    // ========================================================
 
     const syncRunId =
       preview.sync_run_id
@@ -395,10 +456,10 @@ export async function POST(
 
       rpcResult =
         rpcText
-        ? JSON.parse(
-            rpcText
-          ) as RpcResponse
-        : {};
+          ? JSON.parse(
+              rpcText
+            ) as RpcResponse
+          : {};
 
     } catch {
 
@@ -512,8 +573,8 @@ export async function POST(
 
         error:
           error instanceof Error
-          ? error.message
-          : String(error),
+            ? error.message
+            : String(error),
       },
       {
         status:
