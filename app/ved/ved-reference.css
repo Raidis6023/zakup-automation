@@ -1,0 +1,1036 @@
+/* ============================================================
+   ВЭД — РЕФЕРЕНСНЫЙ ИНТЕРФЕЙС
+   ============================================================ */
+
+.ved-reference-page {
+  --ved-blue:
+    var(--ws-blue);
+
+  --ved-green:
+    #21b878;
+
+  --ved-purple:
+    #8e68da;
+
+  --ved-orange:
+    #dc963f;
+
+  --ved-red:
+    #dc5470;
+
+  --ved-yellow:
+    #c99a45;
+
+  color:
+    var(--ws-text);
+}
+
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.ved-reference-page
+.ved-header {
+  align-items:
+    center;
+
+  margin-bottom:
+    18px;
+}
+
+
+.ved-reference-page
+.ved-title-wrap {
+  min-width:
+    0;
+}
+
+
+.ved-reference-page
+.ved-header-actions {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    10px;
+}
+
+
+.ved-reference-page
+.ved-back-link {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  min-width:
+    112px;
+
+  text-decoration:
+    none;
+}
+
+
+/* ============================================================
+   SUMMARY
+   ============================================================ */
+
+.ved-reference-page
+.ved-summary-grid {
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap:
+    12px;
+
+  margin-bottom:
+    18px;
+}
+
+
+.ved-reference-page
+.ved-summary-card {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    14px;
+
+  min-height:
+    94px;
+
+  padding:
+    15px;
+}
+
+
+.ved-reference-page
+.ved-summary-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    48px;
+
+  height:
+    48px;
+
+  flex:
+    0 0
+    48px;
+
+  border-radius:
+    11px;
+}
+
+
+.ved-reference-page
+.ved-summary-icon
+svg {
+  width:
+    25px;
+
+  height:
+    25px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+.ved-reference-page
+.ved-summary-icon--blue {
+  background:
+    rgba(
+      63,
+      143,
+      214,
+      0.14
+    );
+
+  color:
+    var(--ved-blue);
+}
+
+
+.ved-reference-page
+.ved-summary-icon--green {
+  background:
+    rgba(
+      33,
+      184,
+      120,
+      0.14
+    );
+
+  color:
+    var(--ved-green);
+}
+
+
+.ved-reference-page
+.ved-summary-icon--purple {
+  background:
+    rgba(
+      142,
+      104,
+      218,
+      0.15
+    );
+
+  color:
+    var(--ved-purple);
+}
+
+
+.ved-reference-page
+.ved-summary-icon--orange {
+  background:
+    rgba(
+      220,
+      150,
+      63,
+      0.14
+    );
+
+  color:
+    var(--ved-orange);
+}
+
+
+.ved-reference-page
+.ved-summary-copy {
+  min-width:
+    0;
+}
+
+
+.ved-reference-page
+.ved-summary-copy
+.card-label {
+  margin-bottom:
+    3px;
+}
+
+
+.ved-reference-page
+.ved-summary-copy
+.big-number {
+  margin-bottom:
+    2px;
+
+  font-size:
+    22px;
+}
+
+
+/* ============================================================
+   ORDERS SECTION
+   ============================================================ */
+
+.ved-reference-page
+.ved-orders-section {
+  padding:
+    0;
+
+  overflow:
+    hidden;
+}
+
+
+.ved-reference-page
+.ved-orders-header {
+  align-items:
+    center;
+
+  margin:
+    0;
+
+  padding:
+    16px
+    18px;
+}
+
+
+.ved-reference-page
+.ved-orders-heading {
+  min-width:
+    0;
+}
+
+
+.ved-reference-page
+.ved-orders-count {
+  flex:
+    0 0
+    auto;
+
+  color:
+    var(--ws-text-muted);
+
+  font-size:
+    12px;
+}
+
+
+.ved-reference-page
+.ved-orders-count
+strong {
+  color:
+    var(--ws-text);
+
+  font-size:
+    13px;
+}
+
+
+/* ============================================================
+   EMPTY
+   ============================================================ */
+
+.ved-reference-page
+.ved-empty {
+  margin:
+    0
+    18px
+    18px;
+}
+
+
+/* ============================================================
+   TABLE
+   ============================================================ */
+
+.ved-reference-page
+.ved-orders-section
+.table-wrapper {
+  border:
+    none;
+
+  border-top:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    0;
+}
+
+
+.ved-reference-page
+.ved-orders-table {
+  min-width:
+    1220px;
+}
+
+
+.ved-reference-page
+.ved-orders-table
+th {
+  height:
+    44px;
+
+  padding:
+    10px
+    12px;
+
+  background:
+    var(--ws-surface-soft);
+
+  color:
+    var(--ws-text-secondary);
+
+  font-size:
+    11px;
+
+  font-weight:
+    650;
+}
+
+
+.ved-reference-page
+.ved-orders-table
+td {
+  min-height:
+    62px;
+
+  padding:
+    13px
+    12px;
+
+  vertical-align:
+    middle;
+}
+
+
+.ved-reference-page
+.ved-orders-table
+tbody
+tr:last-child
+td {
+  border-bottom:
+    none;
+}
+
+
+/* ============================================================
+   ORDER LINK
+   ============================================================ */
+
+.ved-reference-page
+.ved-order-link {
+  color:
+    var(--ws-blue);
+
+  text-decoration:
+    none;
+}
+
+
+.ved-reference-page
+.ved-order-link:hover {
+  text-decoration:
+    underline;
+}
+
+
+.ved-reference-page
+.ved-order-created {
+  margin-top:
+    4px;
+}
+
+
+/* ============================================================
+   STATUS
+   ============================================================ */
+
+.ved-reference-page
+.ved-status {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  gap:
+    7px;
+
+  min-height:
+    28px;
+
+  padding:
+    5px
+    9px;
+
+  border:
+    1px solid
+    transparent;
+
+  border-radius:
+    7px;
+
+  font-size:
+    11px;
+
+  font-weight:
+    650;
+
+  white-space:
+    nowrap;
+}
+
+
+.ved-reference-page
+.ved-status-dot {
+  width:
+    8px;
+
+  height:
+    8px;
+
+  flex:
+    0 0
+    8px;
+
+  border-radius:
+    50%;
+
+  background:
+    currentColor;
+}
+
+
+/* WAITING */
+
+.ved-reference-page
+.ved-status--waiting {
+  background:
+    rgba(
+      63,
+      143,
+      214,
+      0.13
+    );
+
+  border-color:
+    rgba(
+      63,
+      143,
+      214,
+      0.22
+    );
+
+  color:
+    var(--ved-blue);
+}
+
+
+/* WORK */
+
+.ved-reference-page
+.ved-status--work {
+  background:
+    rgba(
+      63,
+      143,
+      214,
+      0.15
+    );
+
+  border-color:
+    rgba(
+      63,
+      143,
+      214,
+      0.28
+    );
+
+  color:
+    var(--ved-blue);
+}
+
+
+/* RETURN */
+
+.ved-reference-page
+.ved-status--returned {
+  background:
+    rgba(
+      201,
+      154,
+      69,
+      0.14
+    );
+
+  border-color:
+    rgba(
+      201,
+      154,
+      69,
+      0.25
+    );
+
+  color:
+    var(--ved-yellow);
+}
+
+
+/* PRODUCTION */
+
+.ved-reference-page
+.ved-status--production {
+  background:
+    rgba(
+      142,
+      104,
+      218,
+      0.14
+    );
+
+  border-color:
+    rgba(
+      142,
+      104,
+      218,
+      0.25
+    );
+
+  color:
+    var(--ved-purple);
+}
+
+
+/* TRANSIT */
+
+.ved-reference-page
+.ved-status--transit {
+  background:
+    rgba(
+      220,
+      150,
+      63,
+      0.14
+    );
+
+  border-color:
+    rgba(
+      220,
+      150,
+      63,
+      0.25
+    );
+
+  color:
+    var(--ved-orange);
+}
+
+
+/* ARRIVED */
+
+.ved-reference-page
+.ved-status--arrived {
+  background:
+    rgba(
+      33,
+      184,
+      120,
+      0.14
+    );
+
+  border-color:
+    rgba(
+      33,
+      184,
+      120,
+      0.25
+    );
+
+  color:
+    var(--ved-green);
+}
+
+
+/* REJECTED */
+
+.ved-reference-page
+.ved-status--rejected {
+  background:
+    rgba(
+      220,
+      84,
+      112,
+      0.14
+    );
+
+  border-color:
+    rgba(
+      220,
+      84,
+      112,
+      0.25
+    );
+
+  color:
+    var(--ved-red);
+}
+
+
+/* DEFAULT */
+
+.ved-reference-page
+.ved-status--default {
+  background:
+    var(--ws-surface-soft);
+
+  border-color:
+    var(--ws-border);
+
+  color:
+    var(--ws-text-secondary);
+}
+
+
+/* ============================================================
+   NUMBERS
+   ============================================================ */
+
+.ved-reference-page
+.ved-number-strong {
+  color:
+    var(--ws-text);
+
+  font-weight:
+    700;
+}
+
+
+/* ============================================================
+   ACTION
+   ============================================================ */
+
+.ved-reference-page
+.ved-action-cell {
+  min-width:
+    122px;
+}
+
+
+.ved-reference-page
+.ved-action-button {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  min-width:
+    100px;
+
+  text-decoration:
+    none;
+}
+
+
+.ved-reference-page
+.ved-action-cell
+form {
+  display:
+    flex;
+
+  justify-content:
+    flex-end;
+}
+
+
+/* ============================================================
+   LOGIC BOX
+   ============================================================ */
+
+.ved-reference-page
+.ved-logic-section {
+  padding:
+    0;
+
+  border:
+    none;
+
+  background:
+    transparent;
+}
+
+
+.ved-reference-page
+.ved-logic-box {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    15px;
+
+  margin:
+    0;
+
+  padding:
+    16px
+    18px;
+
+  background:
+    rgba(
+      63,
+      143,
+      214,
+      0.09
+    );
+
+  border:
+    1px solid
+    rgba(
+      63,
+      143,
+      214,
+      0.25
+    );
+
+  border-radius:
+    10px;
+}
+
+
+.ved-reference-page
+.ved-logic-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    42px;
+
+  height:
+    42px;
+
+  flex:
+    0 0
+    42px;
+
+  border-radius:
+    50%;
+
+  background:
+    var(--ws-blue);
+
+  color:
+    #ffffff;
+}
+
+
+.ved-reference-page
+.ved-logic-icon
+svg {
+  width:
+    22px;
+
+  height:
+    22px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    2;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+.ved-reference-page
+.ved-logic-copy {
+  min-width:
+    0;
+}
+
+
+.ved-reference-page
+.ved-logic-copy
+strong {
+  display:
+    block;
+
+  margin-bottom:
+    4px;
+
+  color:
+    var(--ws-text);
+
+  font-size:
+    14px;
+}
+
+
+/* ============================================================
+   ERROR
+   ============================================================ */
+
+.ved-reference-page
+.ved-error-section {
+  padding:
+    18px;
+}
+
+
+.ved-reference-page
+.ved-error-section
+.error-box {
+  margin:
+    0;
+
+  max-width:
+    none;
+}
+
+
+/* ============================================================
+   DARK
+   ============================================================ */
+
+html[data-theme="dark"]
+.ved-reference-page
+.ved-status--waiting,
+html[data-theme="dark"]
+.ved-reference-page
+.ved-status--work {
+  color:
+    #75afe0;
+}
+
+
+html[data-theme="dark"]
+.ved-reference-page
+.ved-status--production {
+  color:
+    #b497ea;
+}
+
+
+html[data-theme="dark"]
+.ved-reference-page
+.ved-status--transit {
+  color:
+    #e5ae69;
+}
+
+
+html[data-theme="dark"]
+.ved-reference-page
+.ved-status--arrived {
+  color:
+    #67cb9a;
+}
+
+
+html[data-theme="dark"]
+.ved-reference-page
+.ved-status--rejected {
+  color:
+    #ec8599;
+}
+
+
+html[data-theme="dark"]
+.ved-reference-page
+.ved-status--returned {
+  color:
+    #dbb56f;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (
+  max-width: 1250px
+) {
+
+  .ved-reference-page
+  .ved-summary-grid {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(
+          0,
+          1fr
+        )
+      );
+  }
+
+}
+
+
+@media (
+  max-width: 800px
+) {
+
+  .ved-reference-page
+  .ved-header {
+    align-items:
+      flex-start;
+  }
+
+
+  .ved-reference-page
+  .ved-header-actions {
+    flex-wrap:
+      wrap;
+  }
+
+
+  .ved-reference-page
+  .ved-orders-header {
+    align-items:
+      flex-start;
+
+    flex-direction:
+      column;
+  }
+
+
+  .ved-reference-page
+  .ved-logic-box {
+    align-items:
+      flex-start;
+  }
+
+}
+
+
+@media (
+  max-width: 620px
+) {
+
+  .ved-reference-page
+  .ved-summary-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+
+  .ved-reference-page
+  .ved-summary-card {
+    min-height:
+      78px;
+  }
+
+}
