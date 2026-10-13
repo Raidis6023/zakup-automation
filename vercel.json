@@ -5,12 +5,12 @@
       "schedule": "0 0 * * *"
     },
     {
-      "path": "/api/wb/daily-sync",
-      "schedule": "0 0 * * *"
+      "path": "/api/yandex/daily-sync",
+      "schedule": "15 0 * * *"
     },
     {
-      "path": "/api/yandex/daily-sync",
-      "schedule": "0 0 * * *"
+      "path": "/api/wb/daily-sync",
+      "schedule": "30 0 * * *"
     }
   ]
 }
