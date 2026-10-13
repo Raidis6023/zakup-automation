@@ -121,22 +121,7 @@ type ApiResult = {
 
 
 // ============================================================
-// ЛИМИТЫ НАШИХ ДВУХ КНОПОК
-//
-// ОСТАТКИ:
-// используемый нами stocks-report
-// минимальный интервал базового токена = 30 минут.
-//
-// ПРОДАЖИ:
-// одна кнопка вызывает:
-// /supplier/sales
-// +
-// /supplier/orders
-//
-// sales: 2 часа
-// orders: 3 часа
-//
-// Поэтому вся кнопка снова доступна через 3 часа.
+// ЛИМИТЫ
 // ============================================================
 
 const STOCKS_COOLDOWN_SECONDS =
@@ -153,10 +138,6 @@ const SALES_COOLDOWN_SECONDS =
   60;
 
 
-// ============================================================
-// ПОСЛЕ 07:00 ДАЁМ CRON 2 МИНУТЫ НА ЗАВЕРШЕНИЕ
-// ============================================================
-
 const DAILY_SYNC_GRACE_SECONDS =
   2
   *
@@ -164,7 +145,7 @@ const DAILY_SYNC_GRACE_SECONDS =
 
 
 // ============================================================
-// КАКОЙ COOLDOWN У ЭТОЙ КНОПКИ
+// COOLDOWN
 // ============================================================
 
 function getCooldownSeconds(
@@ -360,15 +341,7 @@ string | null {
 
 
 // ============================================================
-// ФАКТИЧЕСКОЕ ВРЕМЯ СЛЕДУЮЩЕГО ЗАПРОСА
-//
-// Если WB уже сообщил next_allowed_at,
-// мы его не затираем.
-//
-// Одновременно считаем окно от последнего
-// успешного запроса.
-//
-// Выбираем более позднюю дату.
+// NEXT ALLOWED
 // ============================================================
 
 function getEffectiveNextAllowedAt(
@@ -402,10 +375,7 @@ string | null {
 
 
 // ============================================================
-// БЛИЖАЙШИЕ 07:00 КРАСНОЯРСКА
-//
-// Красноярск UTC+7,
-// поэтому 07:00 Красноярска = 00:00 UTC.
+// БЛИЖАЙШИЕ 07:00
 // ============================================================
 
 function getNextDailySyncTimestamp(
@@ -556,7 +526,7 @@ function formatDuration(
 
 
 // ============================================================
-// ДАТА КРАСНОЯРСК
+// ДАТА
 // ============================================================
 
 function formatDateTime(
@@ -775,7 +745,7 @@ export default function WbSyncClient({
 
 
   // ==========================================================
-  // ОБНОВЛЕНИЕ ДАННЫХ ОТ SERVER COMPONENT
+  // SERVER STATE
   // ==========================================================
 
   useEffect(
@@ -835,7 +805,7 @@ export default function WbSyncClient({
 
 
   // ==========================================================
-  // СЕКУНДНЫЙ ТАЙМЕР ДЛЯ COUNTDOWN
+  // COUNTDOWN
   // ==========================================================
 
   useEffect(
@@ -868,12 +838,7 @@ export default function WbSyncClient({
 
 
   // ==========================================================
-  // ПЕРИОДИЧЕСКИ ПЕРЕЧИТЫВАЕМ SUPABASE
-  //
-  // Это НЕ запрос к Wildberries.
-  //
-  // Нужно, чтобы уже открытая страница увидела,
-  // что ежедневный cron в 07:00 закончил работу.
+  // REFRESH SUPABASE STATE
   // ==========================================================
 
   useEffect(
@@ -908,19 +873,16 @@ export default function WbSyncClient({
 
 
   // ==========================================================
-  // СОХРАНЁННЫЙ / РАССЧИТАННЫЙ RATE LIMIT
+  // RATE LIMIT
   // ==========================================================
 
   const nextAllowedTimestamp =
     useMemo(
-      () => {
-
-        return getTimestamp(
+      () =>
+        getTimestamp(
           rateState
             .nextAllowedAt
-        );
-
-      },
+        ),
       [
         rateState
           .nextAllowedAt,
@@ -954,10 +916,6 @@ export default function WbSyncClient({
     0;
 
 
-  // ==========================================================
-  // 429 БЕЗ ТОЧНОГО ВРЕМЕНИ
-  // ==========================================================
-
   const unknownRateLimit =
     rateState.lastHttpStatus ===
       429
@@ -968,15 +926,7 @@ export default function WbSyncClient({
 
 
   // ==========================================================
-  // РЕЗЕРВ ПЕРЕД ЕЖЕДНЕВНЫМ 07:00
-  //
-  // Это важно.
-  //
-  // Если дать нажать продажи, например, в 05:30,
-  // трёхчасовой лимит не даст cron обновить данные в 07:00.
-  //
-  // Поэтому незадолго до ежедневного обновления
-  // ручную кнопку резервируем.
+  // DAILY RESERVATION
   // ==========================================================
 
   const nextDailySyncTimestamp =
@@ -1023,10 +973,7 @@ export default function WbSyncClient({
 
 
   // ==========================================================
-  // НЕБОЛЬШОЕ ОКНО СРАЗУ ПОСЛЕ 07:00
-  //
-  // Не даём человеку нажать кнопку буквально в ту же секунду,
-  // пока cron ещё заканчивает запись в Supabase.
+  // GRACE AFTER 07:00
   // ==========================================================
 
   const previousDailySyncTimestamp =
@@ -1055,10 +1002,6 @@ export default function WbSyncClient({
       DAILY_SYNC_GRACE_SECONDS;
 
 
-  // ==========================================================
-  // DISABLED
-  // ==========================================================
-
   const disabled =
     loading
     ||
@@ -1075,7 +1018,9 @@ export default function WbSyncClient({
 
   async function runSync() {
 
-    if (disabled) {
+    if (
+      disabled
+    ) {
 
       return;
 
@@ -1118,20 +1063,20 @@ export default function WbSyncClient({
 
       let data:
         ApiResult | null =
-        null;
+          null;
 
 
       try {
 
         data =
           text
-            ?
-            JSON.parse(
-              text
-            ) as ApiResult
 
-            :
-            null;
+            ? JSON.parse(
+                text
+              ) as
+                ApiResult
+
+            : null;
 
       } catch {
 
@@ -1140,10 +1085,6 @@ export default function WbSyncClient({
 
       }
 
-
-      // ======================================================
-      // RATE LIMIT
-      // ======================================================
 
       const rateLimited =
         response.status ===
@@ -1159,17 +1100,17 @@ export default function WbSyncClient({
           true;
 
 
-      if (rateLimited) {
+      if (
+        rateLimited
+      ) {
 
         const serverNextAllowedAt =
           typeof data?.nextAllowedAt ===
             "string"
 
-            ?
-            data.nextAllowedAt
+            ? data.nextAllowedAt
 
-            :
-            null;
+            : null;
 
 
         const calculatedFromLastSuccess =
@@ -1208,20 +1149,16 @@ export default function WbSyncClient({
                 ?.retryAfterSeconds ===
                 "number"
 
-                ?
-                data.retryAfterSeconds
+                ? data.retryAfterSeconds
 
-                :
-                typeof data
-                  ?.retryAfterSecondsOriginally ===
-                  "number"
+                : typeof data
+                    ?.retryAfterSecondsOriginally ===
+                    "number"
 
-                  ?
-                  data
-                    .retryAfterSecondsOriginally
+                  ? data
+                      .retryAfterSecondsOriginally
 
-                  :
-                  null,
+                  : null,
 
             lastMessage:
               getResultMessage(
@@ -1239,11 +1176,9 @@ export default function WbSyncClient({
 
             effectiveNextAllowedAt
 
-              ?
-              "Wildberries временно ограничил запрос"
+              ? "Wildberries временно ограничил запрос"
 
-              :
-              "Wildberries ограничил запрос, но не сообщил точное время сброса"
+              : "Wildberries ограничил запрос, но не сообщил точное время сброса"
           )
         );
 
@@ -1260,10 +1195,6 @@ export default function WbSyncClient({
 
       }
 
-
-      // ======================================================
-      // ДРУГАЯ ОШИБКА
-      // ======================================================
 
       if (
         !response.ok
@@ -1293,10 +1224,6 @@ export default function WbSyncClient({
       }
 
 
-      // ======================================================
-      // УСПЕХ
-      // ======================================================
-
       const successAt =
         data?.saved
           ?.syncedAt
@@ -1308,22 +1235,13 @@ export default function WbSyncClient({
           .toISOString();
 
 
-      // ======================================================
-      // ЕСЛИ СЕРВЕР УЖЕ ВЕРНУЛ nextAllowedAt,
-      // ИСПОЛЬЗУЕМ ЕГО.
-      //
-      // ИНАЧЕ СЧИТАЕМ ПО ЛИМИТУ МЕТОДА.
-      // ======================================================
-
       const serverNextAllowedAt =
         typeof data?.nextAllowedAt ===
           "string"
 
-          ?
-          data.nextAllowedAt
+          ? data.nextAllowedAt
 
-          :
-          null;
+          : null;
 
 
       const calculatedNextAllowedAt =
@@ -1370,11 +1288,9 @@ export default function WbSyncClient({
             cooldownSeconds >
               0
 
-              ?
-              cooldownSeconds
+              ? cooldownSeconds
 
-              :
-              null,
+              : null,
 
           lastMessage:
             getResultMessage(
@@ -1408,11 +1324,9 @@ export default function WbSyncClient({
       setMessage(
         syncError instanceof Error
 
-          ?
-          syncError.message
+          ? syncError.message
 
-          :
-          "Не удалось выполнить синхронизацию"
+          : "Не удалось выполнить синхронизацию"
       );
 
     } finally {
@@ -1426,212 +1340,121 @@ export default function WbSyncClient({
   }
 
 
-  // ==========================================================
-  // UI
-  // ==========================================================
-
   return (
 
     <div
-      style={{
-        display:
-          "flex",
-
-        flexDirection:
-          "column",
-
-        alignItems:
-          "flex-end",
-
-        gap:
-          "8px",
-
-        minWidth:
-          "280px",
-      }}
+      className=
+        "wb-sync-client"
     >
-
-
-      {/* ======================================
-          АКТИВНЫЙ ЛИМИТ
-          ====================================== */}
 
       {
         activeKnownRateLimit
-        &&
-        (
 
-          <div
-            style={{
-              width:
-                "100%",
-
-              padding:
-                "10px 12px",
-
-              borderRadius:
-                "10px",
-
-              background:
-                "rgba(220, 70, 70, 0.10)",
-
-              border:
-                "1px solid rgba(220, 70, 70, 0.22)",
-
-              textAlign:
-                "right",
-            }}
-          >
-
-            <div
-              style={{
-                fontWeight:
-                  700,
-
-                fontSize:
-                  "13px",
-              }}
-            >
-              🔴 Лимит Wildberries
-            </div>
-
+          ? (
 
             <div
               className=
-                "muted"
-
-              style={{
-                marginTop:
-                  "4px",
-              }}
+                "wb-sync-state-box wb-sync-state-box--danger"
             >
-              До следующей попытки:{" "}
 
-              <strong>
+              <div
+                className=
+                  "wb-sync-state-title"
+              >
+                Лимит Wildberries
+              </div>
+
+
+              <div
+                className=
+                  "wb-sync-state-text"
+              >
+                До следующей попытки:{" "}
+
+                <strong>
+                  {
+                    formatDuration(
+                      secondsRemaining
+                    )
+                  }
+                </strong>
+              </div>
+
+
+              <div
+                className=
+                  "wb-sync-state-text"
+              >
+                Доступно с:{" "}
+
                 {
-                  formatDuration(
-                    secondsRemaining
+                  formatDateTime(
+                    rateState
+                      .nextAllowedAt
                   )
                 }
-              </strong>
+              </div>
+
             </div>
 
+          )
 
-            <div
-              className=
-                "muted"
-
-              style={{
-                marginTop:
-                  "2px",
-              }}
-            >
-              Доступно с:{" "}
-
-              {
-                formatDateTime(
-                  rateState
-                    .nextAllowedAt
-                )
-              }
-            </div>
-
-          </div>
-
-        )
+          : null
       }
 
-
-      {/* ======================================
-          РЕЗЕРВ ПЕРЕД 07:00
-          ====================================== */}
 
       {
         !activeKnownRateLimit
         &&
         dailyReservationActive
-        &&
-        (
 
-          <div
-            style={{
-              width:
-                "100%",
-
-              padding:
-                "10px 12px",
-
-              borderRadius:
-                "10px",
-
-              background:
-                "rgba(70, 110, 220, 0.10)",
-
-              border:
-                "1px solid rgba(70, 110, 220, 0.22)",
-
-              textAlign:
-                "right",
-            }}
-          >
-
-            <div
-              style={{
-                fontWeight:
-                  700,
-
-                fontSize:
-                  "13px",
-              }}
-            >
-              🕖 Резерв для обновления в 07:00
-            </div>
-
+          ? (
 
             <div
               className=
-                "muted"
-
-              style={{
-                marginTop:
-                  "4px",
-              }}
+                "wb-sync-state-box wb-sync-state-box--info"
             >
-              До автоматического обновления:{" "}
 
-              <strong>
-                {
-                  formatDuration(
-                    secondsUntilDailySync
-                  )
-                }
-              </strong>
+              <div
+                className=
+                  "wb-sync-state-title"
+              >
+                Резерв для обновления в 07:00
+              </div>
+
+
+              <div
+                className=
+                  "wb-sync-state-text"
+              >
+                До автоматического обновления:{" "}
+
+                <strong>
+                  {
+                    formatDuration(
+                      secondsUntilDailySync
+                    )
+                  }
+                </strong>
+              </div>
+
+
+              <div
+                className=
+                  "wb-sync-state-text"
+              >
+                Ручной запрос временно отключён,
+                чтобы не заблокировать утреннее
+                обновление WB.
+              </div>
+
             </div>
 
+          )
 
-            <div
-              className=
-                "muted"
-
-              style={{
-                marginTop:
-                  "2px",
-              }}
-            >
-              Кнопка временно отключена,
-              чтобы ручной запрос не заблокировал
-              утреннее обновление WB.
-            </div>
-
-          </div>
-
-        )
+          : null
       }
 
-
-      {/* ======================================
-          CRON СЕЙЧАС ВЫПОЛНЯЕТСЯ
-          ====================================== */}
 
       {
         !activeKnownRateLimit
@@ -1639,65 +1462,36 @@ export default function WbSyncClient({
         !dailyReservationActive
         &&
         dailySyncGraceActive
-        &&
-        (
 
-          <div
-            style={{
-              width:
-                "100%",
-
-              padding:
-                "10px 12px",
-
-              borderRadius:
-                "10px",
-
-              background:
-                "rgba(70, 110, 220, 0.10)",
-
-              border:
-                "1px solid rgba(70, 110, 220, 0.22)",
-
-              textAlign:
-                "right",
-            }}
-          >
-
-            <div
-              style={{
-                fontWeight:
-                  700,
-
-                fontSize:
-                  "13px",
-              }}
-            >
-              🔄 Автообновление WB
-            </div>
-
+          ? (
 
             <div
               className=
-                "muted"
-
-              style={{
-                marginTop:
-                  "4px",
-              }}
+                "wb-sync-state-box wb-sync-state-box--info"
             >
-              Получаем свежие данные после 07:00.
+
+              <div
+                className=
+                  "wb-sync-state-title"
+              >
+                Автообновление WB
+              </div>
+
+
+              <div
+                className=
+                  "wb-sync-state-text"
+              >
+                Получаем свежие данные после 07:00.
+              </div>
+
             </div>
 
-          </div>
+          )
 
-        )
+          : null
       }
 
-
-      {/* ======================================
-          НЕИЗВЕСТНЫЙ 429
-          ====================================== */}
 
       {
         !activeKnownRateLimit
@@ -1707,65 +1501,36 @@ export default function WbSyncClient({
         !dailySyncGraceActive
         &&
         unknownRateLimit
-        &&
-        (
 
-          <div
-            style={{
-              width:
-                "100%",
-
-              padding:
-                "10px 12px",
-
-              borderRadius:
-                "10px",
-
-              background:
-                "rgba(245, 158, 11, 0.10)",
-
-              border:
-                "1px solid rgba(245, 158, 11, 0.25)",
-
-              textAlign:
-                "right",
-            }}
-          >
-
-            <div
-              style={{
-                fontWeight:
-                  700,
-
-                fontSize:
-                  "13px",
-              }}
-            >
-              🟠 Последний запрос получил лимит WB
-            </div>
-
+          ? (
 
             <div
               className=
-                "muted"
-
-              style={{
-                marginTop:
-                  "4px",
-              }}
+                "wb-sync-state-box wb-sync-state-box--warning"
             >
-              Wildberries не сообщил точное время сброса.
+
+              <div
+                className=
+                  "wb-sync-state-title"
+              >
+                Последний запрос получил лимит WB
+              </div>
+
+
+              <div
+                className=
+                  "wb-sync-state-text"
+              >
+                Wildberries не сообщил точное время сброса.
+              </div>
+
             </div>
 
-          </div>
+          )
 
-        )
+          : null
       }
 
-
-      {/* ======================================
-          МОЖНО ОБНОВИТЬ
-          ====================================== */}
 
       {
         !activeKnownRateLimit
@@ -1775,81 +1540,53 @@ export default function WbSyncClient({
         !dailySyncGraceActive
         &&
         !unknownRateLimit
-        &&
-        (
 
-          <div
-            style={{
-              width:
-                "100%",
+          ? (
 
-              textAlign:
-                "right",
+            <div
+              className=
+                "wb-sync-ready"
+            >
+              ● Можно обновить сейчас
+            </div>
 
-              fontSize:
-                "13px",
+          )
 
-              fontWeight:
-                700,
-            }}
-          >
-            🟢 Можно обновить сейчас
-          </div>
-
-        )
+          : null
       }
 
-
-      {/* ======================================
-          ПОСЛЕДНИЙ УСПЕХ
-          ====================================== */}
 
       {
         rateState
           .lastSuccessAt
-        &&
-        (
 
-          <div
-            className=
-              "muted"
+          ? (
 
-            style={{
-              width:
-                "100%",
+            <div
+              className=
+                "muted wb-sync-last-success"
+            >
+              Последнее успешное обновление:{" "}
 
-              textAlign:
-                "right",
+              {
+                formatDateTime(
+                  rateState
+                    .lastSuccessAt
+                )
+              }
+            </div>
 
-              fontSize:
-                "12px",
-            }}
-          >
-            Последнее успешное обновление:{" "}
+          )
 
-            {
-              formatDateTime(
-                rateState
-                  .lastSuccessAt
-              )
-            }
-          </div>
-
-        )
+          : null
       }
 
 
-      {/* ======================================
-          BUTTON
-          ====================================== */}
-
       <button
-
-        type=
-          "button"
+        type="button"
 
         className=
-          "primary-button"
+          "primary-button wb-sync-button"
 
         onClick={
           runSync
@@ -1858,90 +1595,55 @@ export default function WbSyncClient({
         disabled={
           disabled
         }
-
-        style={{
-          opacity:
-            disabled
-              ?
-              0.55
-              :
-              1,
-
-          cursor:
-            disabled
-              ?
-              "not-allowed"
-              :
-              "pointer",
-        }}
-
       >
 
         {
           loading
 
-            ?
-            loadingLabel
+            ? loadingLabel
 
-            :
-            activeKnownRateLimit
+            : activeKnownRateLimit
 
-              ?
-              `Лимит WB · ${formatDuration(
-                secondsRemaining
-              )}`
+              ? `Лимит WB · ${formatDuration(
+                  secondsRemaining
+                )}`
 
-              :
-              dailyReservationActive
+              : dailyReservationActive
 
-                ?
-                "Автообновление в 07:00"
+                ? "Автообновление в 07:00"
 
-                :
-                dailySyncGraceActive
+                : dailySyncGraceActive
 
-                  ?
-                  "Обновляем автоматически..."
+                  ? "Обновляем автоматически..."
 
-                  :
-                  label
+                  : label
         }
 
       </button>
 
 
-      {/* ======================================
-          MESSAGE
-          ====================================== */}
-
       {
         message
-        &&
-        (
 
-          <div
-            className=
-              "muted"
+          ? (
 
-            style={{
-              maxWidth:
-                "420px",
-
-              textAlign:
-                "right",
-
-              color:
+            <div
+              className={
                 error
-                  ?
-                  "#b42318"
-                  :
-                  undefined,
-            }}
-          >
-            {message}
-          </div>
 
-        )
+                  ? "wb-sync-message wb-sync-message--error"
+
+                  : "wb-sync-message"
+              }
+            >
+              {
+                message
+              }
+            </div>
+
+          )
+
+          : null
       }
 
     </div>
