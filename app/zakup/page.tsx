@@ -8,10 +8,11 @@ import {
   createVedOrderDraft,
 } from "../actions";
 
-import ThemeToggle
-from "../ThemeToggle";
+import ZakupProductsSectionClient
+from "./ZakupProductsSectionClient";
 
 import "./zakup-reference.css";
+import "./zakup-layout-v2.css";
 
 
 // ============================================================
@@ -97,19 +98,15 @@ type ChinaDashboard = {
 
 
 // ============================================================
-// ИКОНКИ СТРАНИЦЫ ЗАКУПА
+// ИКОНКИ
 // ============================================================
 
 type ReferenceIconName =
-  | "cube"
   | "calculate"
   | "sales"
   | "box"
   | "truck"
-  | "transport"
-  | "chart"
   | "document"
-  | "products"
   | "info";
 
 
@@ -125,10 +122,12 @@ function ReferenceIcon({
   ) {
 
     return (
+
       <svg
         viewBox="0 0 24 24"
         aria-hidden="true"
       >
+
         <circle
           cx="9"
           cy="20"
@@ -151,7 +150,9 @@ function ReferenceIcon({
             H6
           "
         />
+
       </svg>
+
     );
 
   }
@@ -163,10 +164,12 @@ function ReferenceIcon({
   ) {
 
     return (
+
       <svg
         viewBox="0 0 24 24"
         aria-hidden="true"
       >
+
         <path
           d="
             M12 3
@@ -193,7 +196,9 @@ function ReferenceIcon({
             v10
           "
         />
+
       </svg>
+
     );
 
   }
@@ -205,10 +210,12 @@ function ReferenceIcon({
   ) {
 
     return (
+
       <svg
         viewBox="0 0 24 24"
         aria-hidden="true"
       >
+
         <path
           d="
             M3 6
@@ -240,97 +247,9 @@ function ReferenceIcon({
           cy="18"
           r="2"
         />
+
       </svg>
-    );
 
-  }
-
-
-  if (
-    name ===
-    "transport"
-  ) {
-
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          d="
-            M3 6
-            h11
-            v10
-            H3
-            Z
-          "
-        />
-
-        <path
-          d="
-            M14 10
-            h4
-            l3 3
-            v3
-            h-7
-          "
-        />
-
-        <circle
-          cx="7"
-          cy="18"
-          r="2"
-        />
-
-        <circle
-          cx="18"
-          cy="18"
-          r="2"
-        />
-      </svg>
-    );
-
-  }
-
-
-  if (
-    name ===
-    "chart"
-  ) {
-
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          d="
-            M5 20
-            V12
-          "
-        />
-
-        <path
-          d="
-            M10 20
-            V7
-          "
-        />
-
-        <path
-          d="
-            M15 20
-            V10
-          "
-        />
-
-        <path
-          d="
-            M20 20
-            V4
-          "
-        />
-      </svg>
     );
 
   }
@@ -342,10 +261,12 @@ function ReferenceIcon({
   ) {
 
     return (
+
       <svg
         viewBox="0 0 24 24"
         aria-hidden="true"
       >
+
         <path
           d="
             M6 3
@@ -378,92 +299,9 @@ function ReferenceIcon({
             h6
           "
         />
+
       </svg>
-    );
 
-  }
-
-
-  if (
-    name ===
-    "products"
-  ) {
-
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          d="
-            M12 3
-            19 7
-            12 11
-            5 7
-            Z
-          "
-        />
-
-        <path
-          d="
-            M5 7
-            v9
-            l7 4
-            7-4
-            V7
-          "
-        />
-
-        <path
-          d="
-            M12 11
-            v9
-          "
-        />
-      </svg>
-    );
-
-  }
-
-
-  if (
-    name ===
-    "calculate"
-  ) {
-
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          d="
-            M6 4
-            h12
-          "
-        />
-
-        <path
-          d="
-            M6 9
-            h12
-          "
-        />
-
-        <path
-          d="
-            M6 14
-            h12
-          "
-        />
-
-        <path
-          d="
-            M6 19
-            h12
-          "
-        />
-      </svg>
     );
 
   }
@@ -475,10 +313,12 @@ function ReferenceIcon({
   ) {
 
     return (
+
       <svg
         viewBox="0 0 24 24"
         aria-hidden="true"
       >
+
         <circle
           cx="12"
           cy="12"
@@ -498,66 +338,64 @@ function ReferenceIcon({
             h.01
           "
         />
+
       </svg>
+
     );
 
   }
 
 
   return (
+
     <svg
       viewBox="0 0 24 24"
       aria-hidden="true"
     >
+
       <path
-        d="
-          M12 3
-          20 7
-          12 11
-          4 7
-          Z
-        "
+        d="M6 4h12"
       />
 
       <path
-        d="
-          M4 7
-          v10
-          l8 4
-          8-4
-          V7
-        "
+        d="M6 9h12"
       />
 
       <path
-        d="
-          M12 11
-          v10
-        "
+        d="M6 14h12"
       />
+
+      <path
+        d="M6 19h12"
+      />
+
     </svg>
+
   );
 
 }
 
 
 // ============================================================
-// ПОЛУЧЕНИЕ ДАННЫХ ИЗ SUPABASE
+// ДАННЫЕ SUPABASE
 // ============================================================
 
 async function getChinaDashboard():
-  Promise<ChinaDashboard> {
+Promise<ChinaDashboard> {
 
   const supabaseUrl =
     process.env
       .NEXT_PUBLIC_SUPABASE_URL;
+
 
   const supabaseSecretKey =
     process.env
       .SUPABASE_SECRET_KEY;
 
 
-  if (!supabaseUrl) {
+  if (
+    !supabaseUrl
+  ) {
 
     throw new Error(
       "Не найдена переменная NEXT_PUBLIC_SUPABASE_URL"
@@ -566,7 +404,9 @@ async function getChinaDashboard():
   }
 
 
-  if (!supabaseSecretKey) {
+  if (
+    !supabaseSecretKey
+  ) {
 
     throw new Error(
       "Не найдена переменная SUPABASE_SECRET_KEY"
@@ -604,7 +444,9 @@ async function getChinaDashboard():
     );
 
 
-  if (!response.ok) {
+  if (
+    !response.ok
+  ) {
 
     const errorText =
       await response.text();
@@ -627,7 +469,8 @@ async function getChinaDashboard():
 // ============================================================
 
 function transportName(
-  scenario?: string
+  scenario?:
+    string
 ) {
 
   switch (
@@ -661,7 +504,7 @@ function transportName(
 
     default:
 
-      return "Не рассчитано";
+      return "Требуется расчет транспорта";
 
   }
 
@@ -669,7 +512,7 @@ function transportName(
 
 
 // ============================================================
-// ФОРМАТИРОВАНИЕ ЧИСЕЛ
+// ФОРМАТИРОВАНИЕ
 // ============================================================
 
 function formatNumber(
@@ -714,7 +557,67 @@ function formatNumber(
 
 
 // ============================================================
-// СТРАНИЦА ЗАКУПА
+// КОЛИЧЕСТВО SKU В ВЫБРАННОМ ОБЪЁМЕ
+// ============================================================
+
+function getSelectedSkuCount(
+  items:
+    ChinaItem[],
+
+  scenario:
+    string
+    |
+    null
+    |
+    undefined
+) {
+
+  if (
+    scenario ===
+      "container"
+    ||
+    scenario ===
+      "container_manual_review"
+  ) {
+
+    return items.filter(
+      item =>
+        item
+          .container_effective_final_units >
+        0
+    ).length;
+
+  }
+
+
+  if (
+    scenario ===
+      "truck_90"
+    ||
+    scenario ===
+      "truck_100"
+    ||
+    scenario ===
+      "manual_review_over_100"
+  ) {
+
+    return items.filter(
+      item =>
+        item
+          .truck_effective_final_units >
+        0
+    ).length;
+
+  }
+
+
+  return 0;
+
+}
+
+
+// ============================================================
+// PAGE
 // ============================================================
 
 export default async function Home() {
@@ -768,16 +671,16 @@ export default async function Home() {
   }
 
 
-  const simulation =
-    dashboard.simulation;
-
-
   const run =
     dashboard.run;
 
 
+  const simulation =
+    dashboard.simulation;
+
+
   // ==========================================================
-  // СЦЕНАРИЙ ДЛЯ ФОРМИРОВАНИЯ ЗАКАЗА
+  // СЦЕНАРИЙ ФОРМИРОВАНИЯ ЗАКАЗА
   // ==========================================================
 
   const orderScenario:
@@ -812,9 +715,7 @@ export default async function Home() {
       null
 
       ? dashboard.items.some(
-          (
-            item
-          ) =>
+          item =>
 
             orderScenario ===
               "container"
@@ -843,6 +744,119 @@ export default async function Home() {
     );
 
 
+  // ==========================================================
+  // ДАННЫЕ ТРАНСПОРТА
+  // ==========================================================
+
+  const newProductsVolume =
+    simulation
+      ?.new_products_volume_m3
+    ??
+    0;
+
+
+  const containerTotalVolume =
+    simulation
+      ?.container_total_volume_m3
+    ??
+    0;
+
+
+  const truckTotalVolume =
+    simulation
+      ?.truck_total_volume_m3
+    ??
+    0;
+
+
+  const selectedTransportVolume =
+    simulation
+      ?.selected_transport_volume_m3
+    ??
+    0;
+
+
+  const selectedSkuCount =
+    getSelectedSkuCount(
+      dashboard.items,
+      simulation
+        ?.transport_scenario
+    );
+
+
+  // Системы новых артикулов пока нет.
+  // В будущем здесь появится реальное значение.
+  const newProductsCount =
+    0;
+
+
+  // ==========================================================
+  // ТЕКСТ ФОРМИРОВАНИЯ ЗАКАЗА
+  // ==========================================================
+
+  let orderDescription =
+    "Сначала выполните расчёт транспорта.";
+
+
+  if (
+    simulation
+  ) {
+
+    if (
+      canCreateOrder
+      &&
+      orderScenario
+    ) {
+
+      orderDescription =
+        `Будет создан внутренний черновик ВЭД. Сценарий: ${
+          orderScenario ===
+            "container"
+
+            ? "контейнер"
+
+            : "фура"
+        }.`;
+
+    } else if (
+      orderScenario
+    ) {
+
+      orderDescription =
+        "В выбранном сценарии нет SKU с итоговым количеством больше 0.";
+
+    } else {
+
+      orderDescription =
+        "Текущий транспортный сценарий требует ручного решения.";
+
+    }
+
+  }
+
+
+  // ==========================================================
+  // РЕШЕНИЕ
+  // ==========================================================
+
+  const decisionTitle =
+    simulation
+
+      ? `Решение: ${transportName(
+          simulation
+            .transport_scenario
+        )}`
+
+      : "Решение: Требуется расчет транспорта";
+
+
+  const decisionDescription =
+    simulation
+      ?.decision_reason
+    ??
+    "Для определения транспорта выполните расчёт.";
+
+
   return (
 
     <main
@@ -861,97 +875,53 @@ export default async function Home() {
 
         <header
           className=
-            "header zakup-header"
+            "zakup-v2-header"
         >
 
           <div
             className=
-              "zakup-title-block"
+              "zakup-v2-title"
           >
 
-            <span
+            <div
               className=
-                "zakup-title-icon"
+                "small-label"
             >
-
-              <ReferenceIcon
-                name="cube"
-              />
-
-            </span>
-
-
-            <div>
-
-              <div
-                className=
-                  "small-label"
-              >
-                СИСТЕМА ЗАКУПА / РАСЧЁТЫ ПОТРЕБНОСТИ
-              </div>
-
-
-              <h1
-                className=
-                  "title"
-              >
-                Китай — расчёт потребности
-              </h1>
-
-
-              <p
-                className=
-                  "subtitle"
-              >
-                Тестовый режим.
-                Формируется внутренний черновик ВЭД.
-                Внешний заказ поставщику автоматически
-                не отправляется.
-              </p>
-
+              СИСТЕМА ЗАКУПА / РАСЧЁТЫ ПОТРЕБНОСТИ
             </div>
+
+
+            <h1
+              className=
+                "title"
+            >
+              Китай — расчёт потребности
+            </h1>
+
+
+            <p
+              className=
+                "subtitle"
+            >
+              Тестовый режим.
+              Формируется внутренний черновик ВЭД.
+              Внешний заказ поставщику автоматически
+              не отправляется.
+            </p>
 
           </div>
 
 
           <div
             className=
-              "header-actions zakup-header-actions"
+              "zakup-v2-header-actions"
           >
-
-            <ThemeToggle />
-
-
-            <div
-              className=
-                "version-box zakup-version"
-            >
-
-              <div
-                className=
-                  "small-label"
-              >
-                Версия расчёта
-              </div>
-
-
-              <strong>
-                {
-                  run
-                    ?.calculation_version
-                  ??
-                  "—"
-                }
-              </strong>
-
-            </div>
-
 
             <Link
               href="/"
 
               className=
-                "secondary-button navigation-button"
+                "secondary-button zakup-v2-home-button"
             >
               ← Главная
             </Link>
@@ -962,725 +932,44 @@ export default async function Home() {
 
 
         {/* ===================================
-            УПРАВЛЕНИЕ РАСЧЁТОМ
+            ОСНОВНАЯ СЕТКА
             =================================== */}
 
-        <section
+        <div
           className=
-            "controls zakup-control-strip"
+            "zakup-v2-main-grid"
         >
 
-          <div
-            className=
-              "zakup-control-content"
-          >
-
-            <span
-              className=
-                "zakup-section-icon"
-            >
-
-              <ReferenceIcon
-                name="calculate"
-              />
-
-            </span>
-
-
-            <div>
-
-              <h2
-                className=
-                  "controls-title"
-              >
-                Управление расчётом
-              </h2>
-
-
-              <div
-                className=
-                  "muted"
-              >
-                Создание нового расчёта
-                потребности по текущим данным
-              </div>
-
-            </div>
-
-          </div>
-
-
-          <form
-            action={
-              runChinaCalculation
-            }
-          >
-
-            <button
-              type="submit"
-
-              className=
-                "primary-button"
-            >
-              Рассчитать потребность Китай
-            </button>
-
-          </form>
-
-        </section>
-
-
-        {/* ===================================
-            ОСНОВНЫЕ ПАРАМЕТРЫ
-            =================================== */}
-
-        <section
-          className=
-            "summary-grid zakup-summary-grid"
-        >
+          {/* =================================
+              ЛЕВАЯ ПОЛОВИНА
+              ================================= */}
 
           <div
             className=
-              "card zakup-metric-card"
+              "zakup-v2-column"
           >
 
-            <span
-              className=
-                "zakup-metric-icon zakup-metric-icon--green"
-            >
-
-              <ReferenceIcon
-                name="sales"
-              />
-
-            </span>
-
-
-            <div
-              className=
-                "zakup-metric-copy"
-            >
-
-              <div
-                className=
-                  "card-label"
-              >
-                Продажи
-              </div>
-
-
-              <div
-                className=
-                  "big-number"
-              >
-                {
-                  run
-                    ?.sales_window_days
-                  ??
-                  28
-                } дней
-              </div>
-
-
-              <div
-                className=
-                  "muted"
-              >
-                Период среднего значения
-              </div>
-
-            </div>
-
-          </div>
-
-
-          <div
-            className=
-              "card zakup-metric-card"
-          >
-
-            <span
-              className=
-                "zakup-metric-icon zakup-metric-icon--red"
-            >
-
-              <ReferenceIcon
-                name="box"
-              />
-
-            </span>
-
-
-            <div
-              className=
-                "zakup-metric-copy"
-            >
-
-              <div
-                className=
-                  "card-label"
-              >
-                Контейнер
-              </div>
-
-
-              <div
-                className=
-                  "big-number"
-              >
-                {
-                  run
-                    ?.container_order_point_days
-                  ??
-                  100
-                } дней
-              </div>
-
-
-              <div
-                className=
-                  "muted"
-              >
-                90 дней плечо + 10 дней буфер
-              </div>
-
-            </div>
-
-          </div>
-
-
-          <div
-            className=
-              "card zakup-metric-card"
-          >
-
-            <span
-              className=
-                "zakup-metric-icon zakup-metric-icon--blue"
-            >
-
-              <ReferenceIcon
-                name="box"
-              />
-
-            </span>
-
-
-            <div
-              className=
-                "zakup-metric-copy"
-            >
-
-              <div
-                className=
-                  "card-label"
-              >
-                Фура
-              </div>
-
-
-              <div
-                className=
-                  "big-number"
-              >
-                {
-                  run
-                    ?.truck_order_point_days
-                  ??
-                  70
-                } дней
-              </div>
-
-
-              <div
-                className=
-                  "muted"
-              >
-                60 дней плечо + 10 дней буфер
-              </div>
-
-            </div>
-
-          </div>
-
-
-          <div
-            className=
-              "card zakup-metric-card"
-          >
-
-            <span
-              className=
-                "zakup-metric-icon zakup-metric-icon--purple"
-            >
-
-              <ReferenceIcon
-                name="truck"
-              />
-
-            </span>
-
-
-            <div
-              className=
-                "zakup-metric-copy"
-            >
-
-              <div
-                className=
-                  "card-label"
-              >
-                Транспорт
-              </div>
-
-
-              <div
-                className=
-                  "big-number"
-              >
-                {
-                  transportName(
-                    simulation
-                      ?.transport_scenario
-                  )
-                }
-              </div>
-
-
-              <div
-                className=
-                  "muted"
-              >
-                Текущий результат симуляции
-              </div>
-
-            </div>
-
-          </div>
-
-        </section>
-
-
-        {/* ===================================
-            НАСТРОЙКА СИМУЛЯЦИИ
-            =================================== */}
-
-        <section
-          className=
-            "section zakup-transport-input-section"
-        >
-
-          <div
-            className=
-              "zakup-section-heading"
-          >
-
-            <span
-              className=
-                "zakup-section-icon"
-            >
-
-              <ReferenceIcon
-                name="transport"
-              />
-
-            </span>
-
-
-            <div>
-
-              <h2
-                className=
-                  "section-title"
-              >
-                Симуляция транспорта
-              </h2>
-
-
-              <div
-                className=
-                  "muted"
-              >
-                Укажите общий объём новых товаров.
-                Объём действующих SKU система
-                считает автоматически.
-              </div>
-
-            </div>
-
-          </div>
-
-
-          <form
-            action={
-              simulateChinaTransport
-            }
-
-            className=
-              "transport-form zakup-transport-form"
-          >
-
-            <div
-              className=
-                "input-group"
-            >
-
-              <label
-                htmlFor=
-                  "newProductsVolume"
-
-                className=
-                  "input-label"
-              >
-                Новые товары, м³
-              </label>
-
-
-              <input
-                id=
-                  "newProductsVolume"
-
-                name=
-                  "newProductsVolume"
-
-                type="number"
-
-                step=
-                  "0.001"
-
-                min="0"
-
-                defaultValue={
-                  simulation
-                    ?.new_products_volume_m3
-                  ??
-                  0
-                }
-
-                className=
-                  "input"
-
-                required
-              />
-
-            </div>
-
-
-            <button
-              type="submit"
-
-              className=
-                "secondary-button"
-            >
-              Пересчитать транспорт
-            </button>
-
-          </form>
-
-        </section>
-
-
-        {/* ===================================
-            РЕЗУЛЬТАТ ТРАНСПОРТА
-            =================================== */}
-
-        {
-          simulation
-          &&
-          (
+            {/* ===============================
+                УПРАВЛЕНИЕ РАСЧЁТОМ
+                =============================== */}
 
             <section
               className=
-                "section zakup-transport-result"
+                "zakup-v2-action-strip"
             >
 
               <div
                 className=
-                  "section-header"
-              >
-
-                <div
-                  className=
-                    "zakup-section-heading"
-                >
-
-                  <span
-                    className=
-                      "zakup-section-icon"
-                  >
-
-                    <ReferenceIcon
-                      name="chart"
-                    />
-
-                  </span>
-
-
-                  <div>
-
-                    <h2
-                      className=
-                        "section-title"
-                    >
-                      Транспортная симуляция
-                    </h2>
-
-
-                    <div
-                      className=
-                        "muted"
-                    >
-                      Последний рассчитанный сценарий
-                    </div>
-
-                  </div>
-
-                </div>
-
-              </div>
-
-
-              <div
-                className=
-                  "transport-grid zakup-result-grid"
-              >
-
-                <div
-                  className=
-                    "transport-card zakup-result-card"
-                >
-
-                  <span
-                    className=
-                      "zakup-result-icon zakup-result-icon--green"
-                  >
-
-                    <ReferenceIcon
-                      name="box"
-                    />
-
-                  </span>
-
-
-                  <div
-                    className=
-                      "zakup-result-copy"
-                  >
-
-                    <span
-                      className=
-                        "card-label"
-                    >
-                      Новые товары
-                    </span>
-
-
-                    <strong
-                      className=
-                        "transport-value"
-                    >
-                      {
-                        formatNumber(
-                          simulation
-                            .new_products_volume_m3,
-                          3
-                        )
-                      } м³
-                    </strong>
-
-                  </div>
-
-                </div>
-
-
-                <div
-                  className=
-                    "transport-card zakup-result-card"
-                >
-
-                  <span
-                    className=
-                      "zakup-result-icon zakup-result-icon--purple"
-                  >
-
-                    <ReferenceIcon
-                      name="box"
-                    />
-
-                  </span>
-
-
-                  <div
-                    className=
-                      "zakup-result-copy"
-                  >
-
-                    <span
-                      className=
-                        "card-label"
-                    >
-                      Контейнерный расчёт
-                    </span>
-
-
-                    <strong
-                      className=
-                        "transport-value"
-                    >
-                      {
-                        formatNumber(
-                          simulation
-                            .container_total_volume_m3,
-                          3
-                        )
-                      } м³
-                    </strong>
-
-
-                    <div
-                      className=
-                        "muted"
-                    >
-                      Действующие SKU:{" "}
-                      {
-                        formatNumber(
-                          simulation
-                            .container_existing_volume_m3,
-                          3
-                        )
-                      } м³
-                    </div>
-
-                  </div>
-
-                </div>
-
-
-                <div
-                  className=
-                    "transport-card zakup-result-card"
-                >
-
-                  <span
-                    className=
-                      "zakup-result-icon zakup-result-icon--blue"
-                  >
-
-                    <ReferenceIcon
-                      name="truck"
-                    />
-
-                  </span>
-
-
-                  <div
-                    className=
-                      "zakup-result-copy"
-                  >
-
-                    <span
-                      className=
-                        "card-label"
-                    >
-                      После пересчёта под фуру
-                    </span>
-
-
-                    <strong
-                      className=
-                        "transport-value"
-                    >
-                      {
-                        formatNumber(
-                          simulation
-                            .truck_total_volume_m3,
-                          3
-                        )
-                      } м³
-                    </strong>
-
-
-                    <div
-                      className=
-                        "muted"
-                    >
-                      Действующие SKU:{" "}
-                      {
-                        formatNumber(
-                          simulation
-                            .truck_existing_volume_m3,
-                          3
-                        )
-                      } м³
-                    </div>
-
-                  </div>
-
-                </div>
-
-
-                <div
-                  className=
-                    "transport-card zakup-result-card"
-                >
-
-                  <span
-                    className=
-                      "zakup-result-icon zakup-result-icon--orange"
-                  >
-
-                    <ReferenceIcon
-                      name="box"
-                    />
-
-                  </span>
-
-
-                  <div
-                    className=
-                      "zakup-result-copy"
-                  >
-
-                    <span
-                      className=
-                        "card-label"
-                    >
-                      Выбранный объём
-                    </span>
-
-
-                    <strong
-                      className=
-                        "transport-value"
-                    >
-                      {
-                        formatNumber(
-                          simulation
-                            .selected_transport_volume_m3,
-                          3
-                        )
-                      } м³
-                    </strong>
-
-                  </div>
-
-                </div>
-
-              </div>
-
-
-              <div
-                className=
-                  "reason-box zakup-decision-box"
+                  "zakup-v2-action-copy"
               >
 
                 <span
                   className=
-                    "zakup-decision-icon"
+                    "zakup-v2-section-icon"
                 >
 
                   <ReferenceIcon
-                    name="info"
+                    name="calculate"
                   />
 
                 </span>
@@ -1688,27 +977,663 @@ export default async function Home() {
 
                 <div
                   className=
-                    "zakup-decision-copy"
+                    "zakup-v2-action-text"
                 >
 
-                  <strong>
-                    Решение:{" "}
+                  <h2
+                    className=
+                      "controls-title"
+                  >
+                    Управление расчётом
+                  </h2>
+
+
+                  <div
+                    className=
+                      "muted"
+                  >
+                    Создайте новый расчёт потребности
+                    по текущим данным
+                  </div>
+
+                </div>
+
+              </div>
+
+
+              <form
+                action={
+                  runChinaCalculation
+                }
+              >
+
+                <button
+                  type="submit"
+
+                  className=
+                    "primary-button"
+                >
+                  Рассчитать потребность Китай
+                </button>
+
+              </form>
+
+            </section>
+
+
+            {/* ===============================
+                ЛЕВЫЕ 4 КАРТОЧКИ
+                =============================== */}
+
+            <section
+              className=
+                "zakup-v2-left-metrics"
+            >
+
+              {/* ПРОДАЖИ */}
+
+              <div
+                className=
+                  "zakup-v2-metric-card"
+              >
+
+                <span
+                  className=
+                    "zakup-v2-metric-icon zakup-v2-metric-icon--green"
+                >
+
+                  <ReferenceIcon
+                    name="sales"
+                  />
+
+                </span>
+
+
+                <div
+                  className=
+                    "zakup-v2-metric-copy"
+                >
+
+                  <div
+                    className=
+                      "card-label"
+                  >
+                    Продажи
+                  </div>
+
+
+                  <div
+                    className=
+                      "zakup-v2-metric-value"
+                  >
                     {
-                      transportName(
-                        simulation
-                          .transport_scenario
+                      run
+                        ?.sales_window_days
+                      ??
+                      28
+                    } дней
+                  </div>
+
+
+                  <div
+                    className=
+                      "muted zakup-v2-metric-subtitle"
+                  >
+                    Период среднего значения
+                  </div>
+
+                </div>
+
+              </div>
+
+
+              {/* ТРАНСПОРТ */}
+
+              <div
+                className=
+                  "zakup-v2-metric-card"
+              >
+
+                <span
+                  className=
+                    "zakup-v2-metric-icon zakup-v2-metric-icon--purple"
+                >
+
+                  <ReferenceIcon
+                    name="truck"
+                  />
+
+                </span>
+
+
+                <div
+                  className=
+                    "zakup-v2-metric-copy"
+                >
+
+                  <div
+                    className=
+                      "card-label"
+                  >
+                    Транспорт
+                  </div>
+
+
+                  <div
+                    className=
+                      "zakup-v2-transport-options"
+                  >
+
+                    <span>
+                      Контейнер 68 м³
+                    </span>
+
+                    <span>
+                      Фура 90 м³
+                    </span>
+
+                    <span>
+                      Фура 100 м³
+                    </span>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+
+              {/* ФУРА */}
+
+              <div
+                className=
+                  "zakup-v2-metric-card"
+              >
+
+                <span
+                  className=
+                    "zakup-v2-metric-icon zakup-v2-metric-icon--blue"
+                >
+
+                  <ReferenceIcon
+                    name="box"
+                  />
+
+                </span>
+
+
+                <div
+                  className=
+                    "zakup-v2-metric-copy"
+                >
+
+                  <div
+                    className=
+                      "card-label"
+                  >
+                    Фура
+                  </div>
+
+
+                  <div
+                    className=
+                      "zakup-v2-metric-value"
+                  >
+                    {
+                      run
+                        ?.truck_order_point_days
+                      ??
+                      70
+                    } дней
+                  </div>
+
+
+                  <div
+                    className=
+                      "muted zakup-v2-metric-subtitle"
+                  >
+                    60 дней плечо + 10 дней буфер
+                  </div>
+
+                </div>
+
+              </div>
+
+
+              {/* КОНТЕЙНЕР */}
+
+              <div
+                className=
+                  "zakup-v2-metric-card"
+              >
+
+                <span
+                  className=
+                    "zakup-v2-metric-icon zakup-v2-metric-icon--red"
+                >
+
+                  <ReferenceIcon
+                    name="box"
+                  />
+
+                </span>
+
+
+                <div
+                  className=
+                    "zakup-v2-metric-copy"
+                >
+
+                  <div
+                    className=
+                      "card-label"
+                  >
+                    Контейнер
+                  </div>
+
+
+                  <div
+                    className=
+                      "zakup-v2-metric-value"
+                  >
+                    {
+                      run
+                        ?.container_order_point_days
+                      ??
+                      100
+                    } дней
+                  </div>
+
+
+                  <div
+                    className=
+                      "muted zakup-v2-metric-subtitle"
+                  >
+                    90 дней плечо + 10 дней буфер
+                  </div>
+
+                </div>
+
+              </div>
+
+            </section>
+
+          </div>
+
+
+          {/* =================================
+              ПРАВАЯ ПОЛОВИНА
+              ================================= */}
+
+          <div
+            className=
+              "zakup-v2-column"
+          >
+
+            {/* ===============================
+                СИМУЛЯЦИЯ ТРАНСПОРТА
+                =============================== */}
+
+            <section
+              className=
+                "zakup-v2-simulation-strip"
+            >
+
+              <div
+                className=
+                  "zakup-v2-simulation-copy"
+              >
+
+                <span
+                  className=
+                    "zakup-v2-section-icon"
+                >
+
+                  <ReferenceIcon
+                    name="truck"
+                  />
+
+                </span>
+
+
+                <div
+                  className=
+                    "zakup-v2-simulation-text"
+                >
+
+                  <h2
+                    className=
+                      "section-title"
+                  >
+                    Симуляция транспорта
+                  </h2>
+
+
+                  <div
+                    className=
+                      "muted zakup-v2-simulation-description"
+                  >
+                    Укажите общий объём новых товаров.
+                    <br />
+                    SKU системы считаются автоматически.
+                  </div>
+
+                </div>
+
+              </div>
+
+
+              <form
+                action={
+                  simulateChinaTransport
+                }
+
+                className=
+                  "zakup-v2-simulation-input"
+              >
+
+                <label
+                  htmlFor=
+                    "newProductsVolume"
+
+                  className=
+                    "input-label"
+                >
+                  Новые товары, м³
+                </label>
+
+
+                <input
+                  id=
+                    "newProductsVolume"
+
+                  name=
+                    "newProductsVolume"
+
+                  type="number"
+
+                  step=
+                    "0.001"
+
+                  min="0"
+
+                  defaultValue={
+                    newProductsVolume
+                  }
+
+                  className=
+                    "input"
+
+                  required
+                />
+
+
+                <button
+                  type="submit"
+
+                  aria-label=
+                    "Пересчитать транспорт"
+
+                  hidden
+                />
+
+              </form>
+
+
+              <form
+                action={
+                  simulateChinaTransport
+                }
+
+                className=
+                  "zakup-v2-simulation-button"
+              >
+
+                <input
+                  type="hidden"
+
+                  name=
+                    "newProductsVolume"
+
+                  value={
+                    newProductsVolume
+                  }
+                />
+
+
+                <button
+                  type="submit"
+
+                  className=
+                    "primary-button"
+                >
+                  Пересчитать транспорт
+                </button>
+
+              </form>
+
+            </section>
+
+
+            {/* ===============================
+                ПРАВЫЕ 4 КАРТОЧКИ
+                =============================== */}
+
+            <section
+              className=
+                "zakup-v2-result-grid"
+            >
+
+              {/* НОВЫЕ ТОВАРЫ */}
+
+              <div
+                className=
+                  "zakup-v2-result-card"
+              >
+
+                <span
+                  className=
+                    "zakup-v2-result-icon zakup-v2-result-icon--green"
+                >
+
+                  <ReferenceIcon
+                    name="box"
+                  />
+
+                </span>
+
+
+                <div
+                  className=
+                    "zakup-v2-result-copy"
+                >
+
+                  <div
+                    className=
+                      "card-label"
+                  >
+                    Новые товары
+                  </div>
+
+
+                  <strong
+                    className=
+                      "zakup-v2-result-value"
+                  >
+                    {
+                      formatNumber(
+                        newProductsVolume,
+                        3
                       )
-                    }
+                    } м³
                   </strong>
 
 
                   <div
                     className=
-                      "reason-text"
+                      "muted zakup-v2-result-subtitle"
+                  >
+                    Количество новых артикулов:{" "}
+                    {
+                      newProductsCount
+                    }
+                  </div>
+
+                </div>
+
+              </div>
+
+
+              {/* КОНТЕЙНЕРНЫЙ ОБЪЁМ */}
+
+              <div
+                className=
+                  "zakup-v2-result-card"
+              >
+
+                <span
+                  className=
+                    "zakup-v2-result-icon zakup-v2-result-icon--purple"
+                >
+
+                  <ReferenceIcon
+                    name="box"
+                  />
+
+                </span>
+
+
+                <div
+                  className=
+                    "zakup-v2-result-copy"
+                >
+
+                  <div
+                    className=
+                      "card-label"
+                  >
+                    Контейнерный объём
+                  </div>
+
+
+                  <strong
+                    className=
+                      "zakup-v2-result-value"
                   >
                     {
-                      simulation
-                        .decision_reason
+                      formatNumber(
+                        containerTotalVolume,
+                        3
+                      )
+                    } м³
+                  </strong>
+
+                </div>
+
+              </div>
+
+
+              {/* ПОСЛЕ ПЕРЕВОЗА ПОД ФУРУ */}
+
+              <div
+                className=
+                  "zakup-v2-result-card"
+              >
+
+                <span
+                  className=
+                    "zakup-v2-result-icon zakup-v2-result-icon--blue"
+                >
+
+                  <ReferenceIcon
+                    name="truck"
+                  />
+
+                </span>
+
+
+                <div
+                  className=
+                    "zakup-v2-result-copy"
+                >
+
+                  <div
+                    className=
+                      "card-label"
+                  >
+                    После перевоза под фуру
+                  </div>
+
+
+                  <strong
+                    className=
+                      "zakup-v2-result-value"
+                  >
+                    {
+                      formatNumber(
+                        truckTotalVolume,
+                        3
+                      )
+                    } м³
+                  </strong>
+
+                </div>
+
+              </div>
+
+
+              {/* ВЫБРАННЫЙ ОБЪЁМ */}
+
+              <div
+                className=
+                  "zakup-v2-result-card"
+              >
+
+                <span
+                  className=
+                    "zakup-v2-result-icon zakup-v2-result-icon--orange"
+                >
+
+                  <ReferenceIcon
+                    name="box"
+                  />
+
+                </span>
+
+
+                <div
+                  className=
+                    "zakup-v2-result-copy"
+                >
+
+                  <div
+                    className=
+                      "card-label"
+                  >
+                    Выбранный объём
+                  </div>
+
+
+                  <strong
+                    className=
+                      "zakup-v2-result-value"
+                  >
+                    {
+                      formatNumber(
+                        selectedTransportVolume,
+                        3
+                      )
+                    } м³
+                  </strong>
+
+
+                  <div
+                    className=
+                      "muted zakup-v2-result-subtitle"
+                  >
+                    Количество выбранных SKU:{" "}
+                    {
+                      selectedSkuCount
                     }
                   </div>
 
@@ -1718,88 +1643,81 @@ export default async function Home() {
 
             </section>
 
-          )
-        }
+          </div>
+
+        </div>
 
 
         {/* ===================================
-            ФОРМИРОВАНИЕ ЗАКАЗА
+            ФОРМИРОВАНИЕ ЗАКАЗА + РЕШЕНИЕ
             =================================== */}
 
-        {
-          simulation
-          &&
-          (
+        <div
+          className=
+            "zakup-v2-bottom-grid"
+        >
 
-            <section
+          {/* =================================
+              ФОРМИРОВАНИЕ ЗАКАЗА
+              ================================= */}
+
+          <section
+            className=
+              "zakup-v2-order-strip"
+          >
+
+            <div
               className=
-                "controls zakup-order-strip"
+                "zakup-v2-order-copy"
             >
+
+              <span
+                className=
+                  "zakup-v2-order-icon"
+              >
+
+                <ReferenceIcon
+                  name="document"
+                />
+
+              </span>
+
 
               <div
                 className=
-                  "zakup-order-content"
+                  "zakup-v2-order-text"
               >
 
-                <span
+                <strong
                   className=
-                    "zakup-order-icon"
+                    "zakup-v2-order-title"
                 >
-
-                  <ReferenceIcon
-                    name="document"
-                  />
-
-                </span>
+                  Формирование заказа
+                </strong>
 
 
-                <div>
-
-                  <h2
-                    className=
-                      "controls-title"
-                  >
-                    Формирование заказа
-                  </h2>
-
-
-                  <div
-                    className=
-                      "muted"
-                  >
-
-                    {
-                      canCreateOrder
-
-                        ? `Будет создан внутренний черновик ВЭД. Сценарий: ${
-                            orderScenario ===
-                              "container"
-
-                              ? "контейнер"
-
-                              : "фура"
-                          }.`
-
-                        : orderScenario
-
-                          ? "В выбранном сценарии нет SKU с итоговым количеством больше 0."
-
-                          : "Текущий транспортный сценарий требует ручного решения. Автоматическое формирование заказа недоступно."
-                    }
-
-                  </div>
-
+                <div
+                  className=
+                    "muted zakup-v2-order-description"
+                >
+                  {
+                    orderDescription
+                  }
                 </div>
 
               </div>
 
+            </div>
 
-              {
-                canCreateOrder
-                &&
-                orderScenario
-                &&
-                (
+
+            {
+              canCreateOrder
+              &&
+              orderScenario
+              &&
+              simulation
+
+                ? (
 
                   <form
                     action={
@@ -1836,7 +1754,7 @@ export default async function Home() {
                       type="submit"
 
                       className=
-                        "secondary-button"
+                        "primary-button"
                     >
                       Сформировать заказ
                     </button>
@@ -1844,81 +1762,96 @@ export default async function Home() {
                   </form>
 
                 )
-              }
 
-            </section>
+                : (
 
-          )
-        }
+                  <button
+                    type="button"
+
+                    className=
+                      "primary-button"
+
+                    disabled
+                  >
+                    Сформировать заказ
+                  </button>
+
+                )
+            }
+
+          </section>
 
 
-        {/* ===================================
-            ОСНОВНАЯ ТАБЛИЦА ТОВАРОВ
-            =================================== */}
+          {/* =================================
+              РЕШЕНИЕ
+              ================================= */}
 
-        <section
-          className=
-            "section zakup-products-section"
-        >
-
-          <div
+          <section
             className=
-              "section-header"
+              "zakup-v2-decision-strip"
           >
 
             <div
               className=
-                "zakup-products-heading"
+                "zakup-v2-decision-copy"
             >
 
               <span
                 className=
-                  "zakup-products-icon"
+                  "zakup-v2-decision-icon"
               >
 
                 <ReferenceIcon
-                  name="products"
+                  name="info"
                 />
 
               </span>
 
 
-              <div>
+              <div
+                className=
+                  "zakup-v2-decision-text"
+              >
 
-                <h2
+                <strong
                   className=
-                    "section-title"
+                    "zakup-v2-decision-title"
                 >
-                  Товары
-                </h2>
+                  {
+                    decisionTitle
+                  }
+                </strong>
 
 
                 <div
                   className=
-                    "muted"
+                    "muted zakup-v2-decision-description"
                 >
-                  Итоговые значения уже
-                  учитывают ручные корректировки
+                  {
+                    decisionDescription
+                  }
                 </div>
 
               </div>
 
             </div>
 
+          </section>
 
-            <div
-              className=
-                "muted"
-            >
-              SKU: {
-                dashboard
-                  .items
-                  .length
-              }
-            </div>
+        </div>
 
-          </div>
 
+        {/* ===================================
+            ТОВАРЫ
+            =================================== */}
+
+        <ZakupProductsSectionClient
+          skuCount={
+            dashboard
+              .items
+              .length
+          }
+        >
 
           <div
             className=
@@ -2027,9 +1960,7 @@ export default async function Home() {
 
                 {
                   dashboard.items.map(
-                    (
-                      item
-                    ) => (
+                    item => (
 
                       <tr
                         key={
@@ -2256,7 +2187,7 @@ export default async function Home() {
 
           </div>
 
-        </section>
+        </ZakupProductsSectionClient>
 
 
         {/* ===================================
@@ -2305,9 +2236,7 @@ export default async function Home() {
 
             {
               dashboard.items.map(
-                (
-                  item
-                ) => (
+                item => (
 
                   <div
                     className=
@@ -2388,6 +2317,10 @@ export default async function Home() {
 
                     </div>
 
+
+                    {/* ===========================
+                        КОНТЕЙНЕР
+                        =========================== */}
 
                     <form
                       action={
@@ -2557,8 +2490,7 @@ export default async function Home() {
                         className=
                           "secondary-button"
 
-                        type=
-                          "submit"
+                        type="submit"
                       >
                         Сохранить
                       </button>
@@ -2612,6 +2544,10 @@ export default async function Home() {
                       )
                     }
 
+
+                    {/* ===========================
+                        ФУРА
+                        =========================== */}
 
                     <form
                       action={
@@ -2781,8 +2717,7 @@ export default async function Home() {
                         className=
                           "secondary-button"
 
-                        type=
-                          "submit"
+                        type="submit"
                       >
                         Сохранить
                       </button>
@@ -2856,6 +2791,7 @@ export default async function Home() {
             "footer"
         >
           Последний расчёт:{" "}
+
           {
             run
               ?.calculated_at
