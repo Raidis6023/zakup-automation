@@ -1,0 +1,1110 @@
+/* ============================================================
+   WORKSPACE — REFERENCE COMPONENTS
+   ------------------------------------------------------------
+   Общие визуальные стили содержимого страниц:
+   карточки, секции, кнопки, поля, таблицы, статусы.
+
+   Файл подключается ПОСЛЕДНИМ после остальных CSS.
+   ============================================================ */
+
+
+/* ============================================================
+   СТРАНИЦА МОДУЛЯ
+   ============================================================ */
+
+.workspace-content--module
+.page {
+  color:
+    var(--ws-text);
+}
+
+
+/* ============================================================
+   HEADER СТРАНИЦЫ
+   ============================================================ */
+
+.workspace-content--module
+.page
+.header {
+  gap:
+    22px;
+
+  margin-bottom:
+    22px;
+}
+
+
+/* ============================================================
+   МАЛЕНЬКИЙ ВЕРХНИЙ LABEL
+   ============================================================ */
+
+.workspace-content--module
+.small-label {
+  margin-bottom:
+    5px;
+
+  color:
+    var(--ws-text-muted);
+
+  font-size:
+    10px;
+
+  font-weight:
+    700;
+
+  letter-spacing:
+    0.11em;
+}
+
+
+/* ============================================================
+   ЗАГОЛОВОК СТРАНИЦЫ
+   ============================================================ */
+
+.workspace-content--module
+.title {
+  color:
+    var(--ws-text);
+
+  font-size:
+    30px;
+
+  line-height:
+    1.12;
+
+  font-weight:
+    750;
+
+  letter-spacing:
+    -0.02em;
+}
+
+
+/* ============================================================
+   ПОДЗАГОЛОВОК
+   ============================================================ */
+
+.workspace-content--module
+.subtitle {
+  margin-top:
+    6px;
+
+  color:
+    var(--ws-text-muted);
+
+  font-size:
+    13px;
+
+  line-height:
+    1.45;
+}
+
+
+/* ============================================================
+   ОБЫЧНЫЙ MUTED TEXT
+   ============================================================ */
+
+.workspace-content--module
+.muted {
+  color:
+    var(--ws-text-muted);
+
+  font-size:
+    12px;
+
+  line-height:
+    1.45;
+}
+
+
+/* ============================================================
+   КАРТОЧКИ И СЕКЦИИ
+   ============================================================ */
+
+.workspace-content--module
+.card,
+.workspace-content--module
+.section,
+.workspace-content--module
+.controls,
+.workspace-content--module
+.version-box {
+  background:
+    var(--ws-surface);
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  box-shadow:
+    none;
+
+  transition:
+    background-color
+      0.14s
+      ease,
+    border-color
+      0.14s
+      ease;
+}
+
+
+/* ============================================================
+   CONTROLS
+   ============================================================ */
+
+.workspace-content--module
+.controls {
+  padding:
+    16px
+    18px;
+
+  margin-bottom:
+    16px;
+
+  border-radius:
+    10px;
+}
+
+
+.workspace-content--module
+.controls-title {
+  margin-bottom:
+    4px;
+
+  color:
+    var(--ws-text);
+
+  font-size:
+    16px;
+
+  font-weight:
+    700;
+}
+
+
+/* ============================================================
+   SUMMARY GRID
+   ============================================================ */
+
+.workspace-content--module
+.summary-grid {
+  gap:
+    12px;
+
+  margin-bottom:
+    18px;
+}
+
+
+.workspace-content--module
+.card {
+  padding:
+    16px;
+
+  border-radius:
+    10px;
+}
+
+
+.workspace-content--module
+.card-label {
+  margin-bottom:
+    6px;
+
+  color:
+    var(--ws-text-muted);
+
+  font-size:
+    11px;
+
+  font-weight:
+    500;
+}
+
+
+.workspace-content--module
+.big-number {
+  margin-bottom:
+    4px;
+
+  color:
+    var(--ws-text);
+
+  font-size:
+    21px;
+
+  font-weight:
+    750;
+}
+
+
+/* ============================================================
+   SECTION
+   ============================================================ */
+
+.workspace-content--module
+.section {
+  padding:
+    18px;
+
+  margin-bottom:
+    18px;
+
+  border-radius:
+    10px;
+}
+
+
+.workspace-content--module
+.section-header {
+  gap:
+    14px;
+
+  margin-bottom:
+    15px;
+}
+
+
+.workspace-content--module
+.section-title {
+  color:
+    var(--ws-text);
+
+  font-size:
+    17px;
+
+  font-weight:
+    700;
+
+  line-height:
+    1.25;
+}
+
+
+/* ============================================================
+   VERSION BOX
+   ============================================================ */
+
+.workspace-content--module
+.version-box {
+  min-width:
+    135px;
+
+  padding:
+    11px
+    14px;
+
+  border-radius:
+    9px;
+
+  color:
+    var(--ws-text);
+}
+
+
+/* ============================================================
+   PRIMARY BUTTON
+   ============================================================ */
+
+.workspace-content--module
+.primary-button {
+  min-height:
+    38px;
+
+  padding:
+    9px
+    15px;
+
+  background:
+    var(--ws-blue);
+
+  color:
+    #ffffff;
+
+  border:
+    1px solid
+    var(--ws-blue);
+
+  border-radius:
+    8px;
+
+  box-shadow:
+    none;
+
+  font-size:
+    12px;
+
+  font-weight:
+    650;
+
+  transition:
+    background-color
+      0.12s
+      ease,
+    border-color
+      0.12s
+      ease,
+    transform
+      0.05s
+      ease,
+    opacity
+      0.12s
+      ease;
+}
+
+
+.workspace-content--module
+.primary-button:hover {
+  background:
+    var(--ws-blue-hover);
+
+  border-color:
+    var(--ws-blue-hover);
+}
+
+
+.workspace-content--module
+.primary-button:active {
+  transform:
+    translateY(
+      1px
+    );
+}
+
+
+/* ============================================================
+   SECONDARY BUTTON
+   ============================================================ */
+
+.workspace-content--module
+.secondary-button {
+  min-height:
+    38px;
+
+  padding:
+    9px
+    14px;
+
+  background:
+    var(--ws-surface-soft);
+
+  color:
+    var(--ws-text-secondary);
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    8px;
+
+  box-shadow:
+    none;
+
+  font-size:
+    12px;
+
+  font-weight:
+    600;
+
+  transition:
+    background-color
+      0.12s
+      ease,
+    border-color
+      0.12s
+      ease,
+    color
+      0.12s
+      ease,
+    transform
+      0.05s
+      ease;
+}
+
+
+.workspace-content--module
+.secondary-button:hover {
+  background:
+    var(--ws-surface-hover);
+
+  border-color:
+    var(--ws-border);
+
+  color:
+    var(--ws-text);
+}
+
+
+/* ============================================================
+   INPUT LABEL
+   ============================================================ */
+
+.workspace-content--module
+.input-label {
+  margin-bottom:
+    5px;
+
+  color:
+    var(--ws-text-secondary);
+
+  font-size:
+    11px;
+
+  font-weight:
+    500;
+}
+
+
+/* ============================================================
+   INPUTS
+   ============================================================ */
+
+.workspace-content--module
+.input,
+.workspace-content--module
+.adjustment-input,
+.workspace-content--module
+.comment-input {
+  min-height:
+    38px;
+
+  padding:
+    9px
+    10px;
+
+  background:
+    var(--ws-surface);
+
+  color:
+    var(--ws-text);
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    7px;
+
+  box-shadow:
+    none;
+
+  font-size:
+    12px;
+
+  transition:
+    background-color
+      0.12s
+      ease,
+    border-color
+      0.12s
+      ease,
+    box-shadow
+      0.12s
+      ease;
+}
+
+
+.workspace-content--module
+.input:hover,
+.workspace-content--module
+.adjustment-input:hover,
+.workspace-content--module
+.comment-input:hover {
+  border-color:
+    var(--ws-text-muted);
+}
+
+
+.workspace-content--module
+.input:focus,
+.workspace-content--module
+.adjustment-input:focus,
+.workspace-content--module
+.comment-input:focus {
+  border-color:
+    var(--ws-blue);
+
+  box-shadow:
+    0 0 0 3px
+    rgba(
+      63,
+      143,
+      214,
+      0.09
+    );
+
+  outline:
+    none;
+}
+
+
+.workspace-content--module
+.input::placeholder,
+.workspace-content--module
+.adjustment-input::placeholder,
+.workspace-content--module
+.comment-input::placeholder {
+  color:
+    var(--ws-text-muted);
+}
+
+
+/* ============================================================
+   TRANSPORT GRID
+   ============================================================ */
+
+.workspace-content--module
+.transport-grid {
+  gap:
+    10px;
+}
+
+
+.workspace-content--module
+.transport-card {
+  padding:
+    13px;
+
+  background:
+    var(--ws-surface-soft);
+
+  border:
+    1px solid
+    var(--ws-border-soft);
+
+  border-radius:
+    8px;
+}
+
+
+.workspace-content--module
+.transport-value {
+  margin-bottom:
+    5px;
+
+  color:
+    var(--ws-text);
+
+  font-size:
+    18px;
+
+  font-weight:
+    700;
+}
+
+
+/* ============================================================
+   REASON BOX
+   ============================================================ */
+
+.workspace-content--module
+.reason-box {
+  margin-top:
+    14px;
+
+  padding:
+    13px;
+
+  background:
+    var(--ws-surface-soft);
+
+  border:
+    1px solid
+    var(--ws-border-soft);
+
+  border-radius:
+    8px;
+
+  color:
+    var(--ws-text);
+}
+
+
+.workspace-content--module
+.reason-text {
+  margin-top:
+    5px;
+
+  color:
+    var(--ws-text-secondary);
+
+  font-size:
+    12px;
+
+  line-height:
+    1.45;
+}
+
+
+/* ============================================================
+   TABLE WRAPPER
+   ============================================================ */
+
+.workspace-content--module
+.table-wrapper {
+  border:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    8px;
+
+  background:
+    var(--ws-surface);
+
+  overflow-x:
+    auto;
+}
+
+
+/* ============================================================
+   TABLE
+   ============================================================ */
+
+.workspace-content--module
+.table {
+  color:
+    var(--ws-text);
+
+  font-size:
+    12px;
+}
+
+
+/* ============================================================
+   TABLE HEADER
+   ============================================================ */
+
+.workspace-content--module
+.table
+thead {
+  background:
+    var(--ws-surface-soft);
+}
+
+
+.workspace-content--module
+.table
+th {
+  padding:
+    10px
+    9px;
+
+  color:
+    var(--ws-text-muted);
+
+  border-bottom:
+    1px solid
+    var(--ws-border);
+
+  font-size:
+    10px;
+
+  font-weight:
+    650;
+
+  text-transform:
+    none;
+}
+
+
+/* ============================================================
+   TABLE BODY
+   ============================================================ */
+
+.workspace-content--module
+.table
+td {
+  padding:
+    11px
+    9px;
+
+  color:
+    var(--ws-text);
+
+  border-bottom:
+    1px solid
+    var(--ws-border-soft);
+
+  font-size:
+    12px;
+}
+
+
+.workspace-content--module
+.table
+tbody
+tr {
+  background:
+    transparent;
+
+  transition:
+    background-color
+      0.1s
+      ease;
+}
+
+
+.workspace-content--module
+.table
+tbody
+tr:hover {
+  background:
+    var(--ws-surface-hover);
+}
+
+
+/* ============================================================
+   СКРОЛЛ ТАБЛИЦ
+   ============================================================ */
+
+.workspace-content--module
+.table-wrapper::-webkit-scrollbar {
+  height:
+    7px;
+}
+
+
+.workspace-content--module
+.table-wrapper::-webkit-scrollbar-track {
+  background:
+    var(--ws-surface-soft);
+}
+
+
+.workspace-content--module
+.table-wrapper::-webkit-scrollbar-thumb {
+  background:
+    var(--ws-border);
+
+  border-radius:
+    20px;
+}
+
+
+.workspace-content--module
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+  background:
+    var(--ws-text-muted);
+}
+
+
+/* ============================================================
+   ADJUSTMENT CARDS
+   ============================================================ */
+
+.workspace-content--module
+.adjustments-list {
+  gap:
+    10px;
+}
+
+
+.workspace-content--module
+.adjustment-card {
+  padding:
+    15px;
+
+  background:
+    var(--ws-surface-soft);
+
+  border:
+    1px solid
+    var(--ws-border-soft);
+
+  border-radius:
+    9px;
+}
+
+
+.workspace-content--module
+.adjustment-product {
+  margin-bottom:
+    13px;
+}
+
+
+.workspace-content--module
+.adjustment-product
+strong {
+  color:
+    var(--ws-text);
+
+  font-size:
+    13px;
+}
+
+
+/* ============================================================
+   ADJUSTMENT FORM
+   ============================================================ */
+
+.workspace-content--module
+.adjustment-form {
+  gap:
+    10px;
+
+  padding:
+    12px
+    0;
+
+  border-top:
+    1px solid
+    var(--ws-border-soft);
+}
+
+
+/* ============================================================
+   IMPORT STATUS
+   ============================================================ */
+
+.workspace-content--module
+.import-status {
+  align-items:
+    center;
+
+  padding:
+    4px
+    7px;
+
+  border-radius:
+    999px;
+
+  border:
+    1px solid
+    transparent;
+
+  font-size:
+    10px;
+
+  font-weight:
+    650;
+}
+
+
+.workspace-content--module
+.import-status-matched {
+  background:
+    rgba(
+      50,
+      160,
+      100,
+      0.11
+    );
+
+  color:
+    #2f9b65;
+
+  border-color:
+    rgba(
+      50,
+      160,
+      100,
+      0.18
+    );
+}
+
+
+.workspace-content--module
+.import-status-new_product {
+  background:
+    rgba(
+      63,
+      143,
+      214,
+      0.11
+    );
+
+  color:
+    #3f8fd6;
+
+  border-color:
+    rgba(
+      63,
+      143,
+      214,
+      0.18
+    );
+}
+
+
+.workspace-content--module
+.import-status-error {
+  background:
+    rgba(
+      211,
+      78,
+      78,
+      0.11
+    );
+
+  color:
+    #d34e4e;
+
+  border-color:
+    rgba(
+      211,
+      78,
+      78,
+      0.18
+    );
+}
+
+
+/* ============================================================
+   DARK STATUS ADJUSTMENTS
+   ============================================================ */
+
+html[data-theme="dark"]
+.workspace-content--module
+.import-status-matched {
+  color:
+    #65c894;
+}
+
+
+html[data-theme="dark"]
+.workspace-content--module
+.import-status-new_product {
+  color:
+    #73afe3;
+}
+
+
+html[data-theme="dark"]
+.workspace-content--module
+.import-status-error {
+  color:
+    #ee8585;
+}
+
+
+/* ============================================================
+   ERROR BOX
+   ============================================================ */
+
+.workspace-content--module
+.error-box {
+  background:
+    var(--ws-surface);
+
+  color:
+    var(--ws-text);
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    10px;
+
+  box-shadow:
+    none;
+}
+
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+
+.workspace-content--module
+.footer {
+  color:
+    var(--ws-text-muted);
+
+  font-size:
+    11px;
+}
+
+
+/* ============================================================
+   ПЛАВНАЯ ТЕМА
+   ============================================================ */
+
+.workspace-content--module
+.card,
+.workspace-content--module
+.section,
+.workspace-content--module
+.controls,
+.workspace-content--module
+.version-box,
+.workspace-content--module
+.transport-card,
+.workspace-content--module
+.reason-box,
+.workspace-content--module
+.table-wrapper,
+.workspace-content--module
+.table thead,
+.workspace-content--module
+.adjustment-card,
+.workspace-content--module
+.input,
+.workspace-content--module
+.adjustment-input,
+.workspace-content--module
+.comment-input {
+  transition-duration:
+    0.14s;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (
+  max-width: 900px
+) {
+
+  .workspace-content--module
+  .title {
+    font-size:
+      27px;
+  }
+
+
+  .workspace-content--module
+  .section {
+    padding:
+      16px;
+  }
+
+}
+
+
+@media (
+  max-width: 700px
+) {
+
+  .workspace-content--module
+  .controls {
+    padding:
+      14px;
+  }
+
+
+  .workspace-content--module
+  .card {
+    padding:
+      14px;
+  }
+
+
+  .workspace-content--module
+  .section {
+    padding:
+      14px;
+  }
+
+
+  .workspace-content--module
+  .title {
+    font-size:
+      25px;
+  }
+
+}
