@@ -94,7 +94,7 @@ function getCronSecret() {
 
 
 // ============================================================
-// AUTH VERCEL CRON
+// ПРОВЕРКА VERCEL CRON
 // ============================================================
 
 function isAuthorized(
@@ -125,19 +125,17 @@ function isAuthorized(
 
 
 // ============================================================
-// ВНУТРЕННИЙ ВЫЗОВ НАШИХ WB ROUTES
-//
-// Передаём тот же CRON_SECRET,
-// чтобы proxy.ts понимал:
-//
-// это внутренний доверенный запрос от daily-sync,
-// а не посторонний запрос из интернета.
+// ВНУТРЕННИЙ ВЫЗОВ WB ROUTE
 // ============================================================
 
 async function callRoute(
   url:
     string,
+
   cronSecret:
+    string,
+
+  name:
     string
 ):
 Promise<InternalResult> {
@@ -158,16 +156,19 @@ Promise<InternalResult> {
           cache:
             "no-store",
 
+          redirect:
+            "manual",
+
           headers: {
 
             Accept:
               "application/json",
 
-            Authorization:
-              `Bearer ${cronSecret}`,
-
             "X-Internal-WB-Daily-Sync":
               "1",
+
+            "X-WB-Internal-Secret":
+              cronSecret,
 
           },
         }
@@ -182,6 +183,45 @@ Promise<InternalResult> {
       parseJson(
         text
       );
+
+
+    // ========================================================
+    // ПИШЕМ ДИАГНОСТИКУ В VERCEL LOGS
+    //
+    // Секреты сюда НЕ выводятся.
+    // ========================================================
+
+    console.log(
+      `[WB DAILY] ${name}`,
+      {
+        status:
+          response.status,
+
+        redirected:
+          response.status >= 300
+          &&
+          response.status < 400,
+
+        location:
+          response.headers.get(
+            "location"
+          ),
+
+        ok:
+          response.ok,
+
+        apiOk:
+          data?.ok,
+
+        blockedByRateLimit:
+          data?.blockedByRateLimit,
+
+        message:
+          data?.message
+          ??
+          null,
+      }
+    );
 
 
     const logicalOk =
@@ -214,6 +254,12 @@ Promise<InternalResult> {
   } catch (
     error
   ) {
+
+    console.error(
+      `[WB DAILY] ${name} exception`,
+      error
+    );
+
 
     return {
 
@@ -265,7 +311,7 @@ async function runDailySync(
 
 
   // ==========================================================
-  // 1. AUTH
+  // 1. AUTH VERCEL CRON
   // ==========================================================
 
   if (
@@ -301,25 +347,17 @@ async function runDailySync(
 
   // ==========================================================
   // 3. DOMAIN
+  //
+  // Используем основной production domain,
+  // а не случайный deployment hostname.
   // ==========================================================
 
   const origin =
-    new URL(
-      request.url
-    ).origin;
+    "https://zakup-automation.vercel.app";
 
 
   // ==========================================================
   // 4. ROUTES
-  //
-  // sync-orders:
-  // реальные FBW продажи + FBW отмены
-  //
-  // sync-stocks:
-  // текущий FBW остаток
-  //
-  // force=1 нужен остаткам,
-  // чтобы cron не остановился на проверке свежести.
   // ==========================================================
 
   const salesUrl =
@@ -342,12 +380,14 @@ async function runDailySync(
 
       callRoute(
         salesUrl,
-        cronSecret
+        cronSecret,
+        "sales-and-cancellations"
       ),
 
       callRoute(
         stocksUrl,
-        cronSecret
+        cronSecret,
+        "stocks"
       ),
 
     ]);
@@ -379,13 +419,16 @@ async function runDailySync(
     schedule: {
 
       utc:
-        "00:00",
+        "22:00",
 
       krasnoyarsk:
-        "07:00",
+        "05:00–06:00",
 
       timezone:
         "Asia/Krasnoyarsk",
+
+      note:
+        "На Vercel Hobby cron имеет гибкое окно до 1 часа. Запуск сделан заранее, чтобы к 07:00 данные были свежими.",
 
     },
 
@@ -432,6 +475,32 @@ async function runDailySync(
       startedAt,
 
   };
+
+
+  console.log(
+    "[WB DAILY] finished",
+    {
+      ok:
+        allOk,
+
+      salesStatus:
+        salesResult.httpStatus,
+
+      salesOk:
+        salesResult.ok,
+
+      stocksStatus:
+        stocksResult.httpStatus,
+
+      stocksOk:
+        stocksResult.ok,
+
+      durationMs:
+        Date.now()
+        -
+        startedAt,
+    }
+  );
 
 
   return NextResponse.json(
