@@ -123,71 +123,74 @@
 
 /* ============================================================
    ЦВЕТОВАЯ СИСТЕМА — ТЁМНАЯ ТЕМА
+   ------------------------------------------------------------
+   Сделано чуть темнее и спокойнее,
+   чтобы убрать "кислотный" синий оттенок.
    ============================================================ */
 
 html[data-theme="dark"]
 .home-shell {
   --ws-page:
-    #07182a;
+    #041425;
 
   --ws-sidebar:
-    #071629;
+    #061323;
 
   --ws-topbar:
     rgba(
-      7,
-      22,
-      39,
+      6,
+      19,
+      35,
       0.97
     );
 
   --ws-surface:
-    #0c223a;
+    #0a1d32;
 
   --ws-surface-soft:
-    #102b48;
+    #0e2741;
 
   --ws-surface-hover:
-    #123353;
+    #12304d;
 
   --ws-border:
-    #173955;
+    #14324b;
 
   --ws-border-soft:
-    #122f49;
+    #15354f;
 
   --ws-text:
-    #f1f7fc;
+    #eef5fb;
 
   --ws-text-secondary:
-    #b2c7d9;
+    #b2c4d5;
 
   --ws-text-muted:
-    #7795af;
+    #7991a7;
 
   --ws-blue:
-    #168cff;
+    #1178dc;
 
   --ws-blue-hover:
-    #349cff;
+    #2588e8;
 
   --ws-blue-soft:
-    #0c365d;
+    #103250;
 
   --ws-active:
-    #0d78dc;
+    #0f6fc9;
 
   --ws-active-text:
     #ffffff;
 
   --ws-nav-text:
-    #dbe9f4;
+    #d9e7f3;
 
   --ws-nav-hover-text:
     #ffffff;
 
   --ws-icon:
-    #66b6ff;
+    #63adf2;
 
   --ws-shadow-soft:
     none;
@@ -198,7 +201,7 @@ html[data-theme="dark"]
       0,
       0,
       0,
-      0.36
+      0.38
     );
 }
 
@@ -420,8 +423,8 @@ html[data-theme="dark"]
     0 4px 12px
     rgba(
       12,
-      130,
-      244,
+      110,
+      185,
       0.16
     );
 }
@@ -622,14 +625,14 @@ html[data-theme="dark"]
 html[data-theme="dark"]
 .home-search:focus-within {
   border-color:
-    #286b9d;
+    #2f6b98;
 
   box-shadow:
     0 0 0 3px
     rgba(
-      22,
-      140,
-      255,
+      17,
+      120,
+      220,
       0.09
     );
 }
