@@ -1,0 +1,178 @@
+/* ============================================================
+   ПЛАВНОЕ ПЕРЕКЛЮЧЕНИЕ ТЕМЫ WORKSPACE
+
+   Файл импортируется ПОСЛЕДНИМ в WorkspaceShell.tsx.
+   Оригинальные home.css, globals.css и sidebar-visuals.css
+   изменять не требуется.
+   ============================================================ */
+
+/*
+ * Градиент WorkSpace состоит из двух цветов.
+ * Зарегистрированные свойства позволяют анимировать
+ * сами цвета градиента, а не переключать фон скачком.
+ */
+@property --workspace-gradient-top {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: #ffffff;
+}
+
+@property --workspace-gradient-bottom {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: #f4f5f7;
+}
+
+.home-shell {
+  --workspace-gradient-top: var(--surface);
+  --workspace-gradient-bottom: var(--background);
+
+  background: linear-gradient(
+    180deg,
+    var(--workspace-gradient-top) 0%,
+    var(--workspace-gradient-bottom) 100%
+  );
+
+  transition:
+    --workspace-gradient-top 0.22s ease,
+    --workspace-gradient-bottom 0.22s ease,
+    color 0.22s ease;
+}
+
+/*
+ * Поверхности WorkSpace синхронизируются с градиентом.
+ * Движение элементов, эффекты наведения и размеры не меняются.
+ */
+.home-sidebar,
+.home-topbar,
+.home-search,
+.home-search-shortcut,
+.home-popup,
+.home-theme-toggle,
+.home-theme-toggle button,
+.home-brand-icon,
+.home-notifications-empty-icon,
+.home-calendar-today-button,
+.home-calendar-day.today,
+.home-avatar,
+.home-content .page,
+.home-content .section,
+.home-content .card,
+.home-content .controls,
+.home-content .version-box,
+.home-content .reason-box,
+.home-content .transport-card,
+.home-content .adjustment-card,
+.home-content .table thead,
+.home-content .table th,
+.home-content .table td {
+  transition:
+    background-color 0.22s ease,
+    border-color 0.22s ease,
+    color 0.22s ease;
+}
+
+/*
+ * Системные подписи и основной заголовок переключаются
+ * одновременно с остальными цветами.
+ */
+.home-company-logo-main,
+.home-workspace-label,
+.home-title-row h1,
+.home-profile-text strong,
+.home-profile-text span,
+.home-search-icon,
+.home-search input,
+.home-search input::placeholder,
+.home-popup-header,
+.home-notification-item strong,
+.home-notification-item span {
+  transition: color 0.22s ease, fill 0.22s ease;
+}
+
+/* ============================================================
+   SVG-ЛОГОТИПЫ МАРКЕТПЛЕЙСОВ
+   ============================================================ */
+
+.workspace-marketplace-logo {
+  display: block;
+  width: 51px;
+  height: 51px;
+  flex: 0 0 51px;
+}
+
+.workspace-marketplace-logo-light,
+.workspace-marketplace-logo-dark {
+  transition: opacity 0.22s ease;
+}
+
+.workspace-marketplace-logo-light { opacity: 1; }
+.workspace-marketplace-logo-dark { opacity: 0; }
+
+html[data-theme="dark"] .workspace-marketplace-logo-light,
+html.dark .workspace-marketplace-logo-light { opacity: 0; }
+
+html[data-theme="dark"] .workspace-marketplace-logo-dark,
+html.dark .workspace-marketplace-logo-dark { opacity: 1; }
+
+/* Ozon: синий + белый; в тёмной теме наоборот. */
+.workspace-marketplace-logo--ozon .workspace-marketplace-logo-light .workspace-marketplace-logo-bg {
+  fill: #2762fd;
+}
+.workspace-marketplace-logo--ozon .workspace-marketplace-logo-light .workspace-marketplace-logo-glyph {
+  fill: #fefefe;
+}
+.workspace-marketplace-logo--ozon .workspace-marketplace-logo-dark .workspace-marketplace-logo-bg {
+  fill: #ffffff;
+}
+.workspace-marketplace-logo--ozon .workspace-marketplace-logo-dark .workspace-marketplace-logo-glyph {
+  fill: #2762fd;
+}
+
+/* Wildberries: фирменный градиент + белый; в тёмной теме наоборот. */
+.workspace-marketplace-logo--wildberries .workspace-marketplace-logo-light .workspace-marketplace-logo-bg {
+  fill: url(#workspace-marketplace-gradient-wildberries);
+}
+.workspace-marketplace-logo--wildberries .workspace-marketplace-logo-light .workspace-marketplace-logo-glyph {
+  fill: #ffffff;
+}
+.workspace-marketplace-logo--wildberries .workspace-marketplace-logo-dark .workspace-marketplace-logo-bg {
+  fill: #ffffff;
+}
+.workspace-marketplace-logo--wildberries .workspace-marketplace-logo-dark .workspace-marketplace-logo-glyph {
+  fill: url(#workspace-marketplace-gradient-wildberries);
+}
+
+/* Яндекс Маркет: оранжевый + жёлтый; в тёмной теме наоборот. */
+.workspace-marketplace-logo--yandex-market .workspace-marketplace-logo-light .workspace-marketplace-logo-bg {
+  fill: #ff4112;
+}
+.workspace-marketplace-logo--yandex-market .workspace-marketplace-logo-light .workspace-marketplace-logo-glyph {
+  fill: #ffdd00;
+}
+.workspace-marketplace-logo--yandex-market .workspace-marketplace-logo-dark .workspace-marketplace-logo-bg {
+  fill: #ffdd00;
+}
+.workspace-marketplace-logo--yandex-market .workspace-marketplace-logo-dark .workspace-marketplace-logo-glyph {
+  fill: #ff4112;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-shell,
+  .home-sidebar,
+  .home-topbar,
+  .home-search,
+  .home-search-shortcut,
+  .home-popup,
+  .home-theme-toggle,
+  .home-theme-toggle button,
+  .home-brand-icon,
+  .home-content .page,
+  .home-content .section,
+  .home-content .card,
+  .home-content .controls,
+  .workspace-marketplace-logo-light,
+  .workspace-marketplace-logo-dark {
+    transition-duration: 0.01ms !important;
+  }
+}
