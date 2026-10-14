@@ -8,20 +8,12 @@ export const maxDuration =
   300;
 
 
-// ============================================================
-// SETTINGS
-// ============================================================
-
 const INTERNAL_MAX_RETRIES =
   2;
 
 const RETRY_DELAY_MS =
   3000;
 
-
-// ============================================================
-// TYPES
-// ============================================================
 
 type StepName =
   | "stocks"
@@ -68,9 +60,18 @@ type Config = {
 };
 
 
-// ============================================================
-// ERROR
-// ============================================================
+type TriggerAuth = {
+  mode:
+    "cron"
+    | "user";
+
+  authorization:
+    string | null;
+
+  cookie:
+    string | null;
+};
+
 
 class YandexDailySyncStepError
   extends Error {
@@ -153,10 +154,6 @@ class YandexDailySyncStepError
 }
 
 
-// ============================================================
-// HELPERS
-// ============================================================
-
 function sleep(
   milliseconds:
     number
@@ -211,20 +208,6 @@ value is JsonObject {
 }
 
 
-// ============================================================
-// PRODUCTION BASE URL
-//
-// Vercel Cron может запускать route через длинный URL
-// конкретного deployment:
-//
-// zakup-automation-xxxxx.vercel.app
-//
-// Такой URL защищён Vercel Authentication.
-//
-// Для внутренних вызовов всегда используем
-// канонический production domain.
-// ============================================================
-
 function getInternalBaseUrl():
 string {
 
@@ -263,20 +246,10 @@ string {
   }
 
 
-  // ==========================================================
-  // FALLBACK
-  //
-  // Наш текущий публичный production domain.
-  // ==========================================================
-
   return "https://zakup-automation.vercel.app";
 
 }
 
-
-// ============================================================
-// CONFIG
-// ============================================================
 
 function getConfig():
 Config {
@@ -336,9 +309,7 @@ Config {
 
   return {
     cronSecret,
-
     supabaseUrl,
-
     supabaseSecretKey,
 
     internalBaseUrl:
@@ -348,33 +319,64 @@ Config {
 }
 
 
-// ============================================================
-// AUTH
-// ============================================================
-
-function isAuthorized(
+function getTriggerAuth(
   request:
     Request,
 
   cronSecret:
     string
 ):
-boolean {
+TriggerAuth | null {
 
-  return (
+  const authorization =
     request.headers.get(
       "authorization"
-    )
-    ===
+    );
+
+
+  const cookie =
+    request.headers.get(
+      "cookie"
+    );
+
+
+  if (
+    authorization ===
     `Bearer ${cronSecret}`
-  );
+  ) {
+
+    return {
+      mode:
+        "cron",
+
+      authorization,
+
+      cookie:
+        null,
+    };
+
+  }
+
+
+  if (cookie) {
+
+    return {
+      mode:
+        "user",
+
+      authorization:
+        null,
+
+      cookie,
+    };
+
+  }
+
+
+  return null;
 
 }
 
-
-// ============================================================
-// SUPABASE HEADERS
-// ============================================================
 
 function getSupabaseHeaders(
   secretKey:
@@ -398,19 +400,19 @@ function getSupabaseHeaders(
 }
 
 
-// ============================================================
-// JOURNAL: CREATE RUN
-// ============================================================
-
 async function createJournalRun({
   config,
   request,
+  triggerAuth,
 }: {
   config:
     Config;
 
   request:
     Request;
+
+  triggerAuth:
+    TriggerAuth;
 }):
 Promise<string> {
 
@@ -457,6 +459,9 @@ Promise<string> {
               "running",
 
             details: {
+              trigger_mode:
+                triggerAuth.mode,
+
               request_method:
                 request.method,
 
@@ -526,10 +531,6 @@ Promise<string> {
 
 }
 
-
-// ============================================================
-// JOURNAL: FINISH RUN
-// ============================================================
 
 async function finishJournalRun({
   config,
@@ -648,10 +649,6 @@ async function finishJournalRun({
 }
 
 
-// ============================================================
-// RESPONSE PARSER
-// ============================================================
-
 async function parseResponse(
   response:
     Response
@@ -705,21 +702,17 @@ Promise<JsonObject> {
 }
 
 
-// ============================================================
-// INTERNAL POST
-// ============================================================
-
 async function runInternalPost({
   baseUrl,
-  cronSecret,
+  triggerAuth,
   step,
   path,
 }: {
   baseUrl:
     string;
 
-  cronSecret:
-    string;
+  triggerAuth:
+    TriggerAuth;
 
   step:
     StepName;
@@ -742,6 +735,40 @@ Promise<StepResult> {
 
     try {
 
+      const headers:
+        Record<
+          string,
+          string
+        > =
+        {
+          Accept:
+            "application/json",
+
+          "Content-Type":
+            "application/json",
+        };
+
+
+      if (
+        triggerAuth.authorization
+      ) {
+
+        headers.Authorization =
+          triggerAuth.authorization;
+
+      }
+
+
+      if (
+        triggerAuth.cookie
+      ) {
+
+        headers.Cookie =
+          triggerAuth.cookie;
+
+      }
+
+
       const response =
         await fetch(
           `${baseUrl}${path}`,
@@ -749,16 +776,7 @@ Promise<StepResult> {
             method:
               "POST",
 
-            headers: {
-              Accept:
-                "application/json",
-
-              "Content-Type":
-                "application/json",
-
-              Authorization:
-                `Bearer ${cronSecret}`,
-            },
+            headers,
 
             cache:
               "no-store",
@@ -781,7 +799,6 @@ Promise<StepResult> {
 
         return {
           step,
-
           path,
 
           status:
@@ -816,7 +833,6 @@ Promise<StepResult> {
 
       throw new YandexDailySyncStepError({
         step,
-
         path,
 
         status:
@@ -869,7 +885,6 @@ Promise<StepResult> {
 
   throw new YandexDailySyncStepError({
     step,
-
     path,
 
     status:
@@ -888,10 +903,6 @@ Promise<StepResult> {
 
 }
 
-
-// ============================================================
-// SERIALIZE STEPS
-// ============================================================
 
 function serializeCompletedSteps(
   steps:
@@ -919,10 +930,6 @@ function serializeCompletedSteps(
 
 }
 
-
-// ============================================================
-// DAILY SYNC
-// ============================================================
 
 async function runDailySync(
   request:
@@ -953,10 +960,6 @@ async function runDailySync(
     Config;
 
 
-  // ==========================================================
-  // CONFIG
-  // ==========================================================
-
   try {
 
     config =
@@ -975,9 +978,7 @@ async function runDailySync(
         error:
           error instanceof Error
             ? error.message
-            : String(
-                error
-              ),
+            : String(error),
       },
       {
         status:
@@ -988,16 +989,14 @@ async function runDailySync(
   }
 
 
-  // ==========================================================
-  // AUTH
-  // ==========================================================
-
-  if (
-    !isAuthorized(
+  const triggerAuth =
+    getTriggerAuth(
       request,
       config.cronSecret
-    )
-  ) {
+    );
+
+
+  if (!triggerAuth) {
 
     return Response.json(
       {
@@ -1018,14 +1017,11 @@ async function runDailySync(
 
   try {
 
-    // ========================================================
-    // JOURNAL START
-    // ========================================================
-
     journalRunId =
       await createJournalRun({
         config,
         request,
+        triggerAuth,
       });
 
 
@@ -1033,16 +1029,10 @@ async function runDailySync(
       config.internalBaseUrl;
 
 
-    // ========================================================
-    // 1. STOCKS
-    // ========================================================
-
     const stocksResult =
       await runInternalPost({
         baseUrl,
-
-        cronSecret:
-          config.cronSecret,
+        triggerAuth,
 
         step:
           "stocks",
@@ -1057,16 +1047,10 @@ async function runDailySync(
     );
 
 
-    // ========================================================
-    // 2. SALES
-    // ========================================================
-
     const salesResult =
       await runInternalPost({
         baseUrl,
-
-        cronSecret:
-          config.cronSecret,
+        triggerAuth,
 
         step:
           "sales",
@@ -1107,25 +1091,16 @@ async function runDailySync(
         body: {
           error:
             "Синхронизация продаж завершилась без sync_run_id",
-
-          response:
-            salesResult.body,
         },
       });
 
     }
 
 
-    // ========================================================
-    // 3. SALES DAILY
-    // ========================================================
-
     const dailyResult =
       await runInternalPost({
         baseUrl,
-
-        cronSecret:
-          config.cronSecret,
+        triggerAuth,
 
         step:
           "sales_daily",
@@ -1177,22 +1152,18 @@ async function runDailySync(
 
           actual_sync_run_id:
             dailySyncRunId,
-
-          response:
-            dailyResult.body,
         },
       });
 
     }
 
 
-    // ========================================================
-    // SUCCESS JOURNAL
-    // ========================================================
+    const finishedAt =
+      new Date();
+
 
     await finishJournalRun({
       config,
-
       journalRunId,
 
       status:
@@ -1207,6 +1178,9 @@ async function runDailySync(
         null,
 
       details: {
+        trigger_mode:
+          triggerAuth.mode,
+
         started_at:
           startedAtIso,
 
@@ -1224,16 +1198,6 @@ async function runDailySync(
     });
 
 
-    const finishedAt =
-      new Date();
-
-
-    const durationMs =
-      finishedAt.getTime()
-      -
-      startedAtMs;
-
-
     return Response.json(
       {
         ok:
@@ -1244,6 +1208,9 @@ async function runDailySync(
 
         source:
           "yandex_daily_sync",
+
+        trigger_mode:
+          triggerAuth.mode,
 
         writes_to_yandex:
           false,
@@ -1257,53 +1224,6 @@ async function runDailySync(
         sales_sync_run_id:
           salesSyncRunId,
 
-        internal_base_url:
-          baseUrl,
-
-        steps: {
-          stocks: {
-            ok:
-              true,
-
-            status:
-              stocksResult.status,
-
-            attempts:
-              stocksResult.attempts,
-
-            body:
-              stocksResult.body,
-          },
-
-          sales: {
-            ok:
-              true,
-
-            status:
-              salesResult.status,
-
-            attempts:
-              salesResult.attempts,
-
-            body:
-              salesResult.body,
-          },
-
-          sales_daily: {
-            ok:
-              true,
-
-            status:
-              dailyResult.status,
-
-            attempts:
-              dailyResult.attempts,
-
-            body:
-              dailyResult.body,
-          },
-        },
-
         started_at:
           startedAtIso,
 
@@ -1311,7 +1231,20 @@ async function runDailySync(
           finishedAt.toISOString(),
 
         duration_ms:
-          durationMs,
+          finishedAt.getTime()
+          -
+          startedAtMs,
+
+        steps: {
+          stocks:
+            stocksResult,
+
+          sales:
+            salesResult,
+
+          sales_daily:
+            dailyResult,
+        },
       },
       {
         status:
@@ -1321,67 +1254,20 @@ async function runDailySync(
 
   } catch (error) {
 
-    let failedStep:
-      string | null =
-      null;
-
-
-    let errorMessage:
-      string;
-
-
-    let errorDetails:
-      unknown;
-
-
-    if (
+    const failedStep =
       error instanceof
-      YandexDailySyncStepError
-    ) {
-
-      failedStep =
-        error.step;
+        YandexDailySyncStepError
+        ? error.step
+        : null;
 
 
-      errorMessage =
-        error.message;
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : String(
+            error
+          );
 
-
-      errorDetails = {
-        path:
-          error.path,
-
-        status:
-          error.status,
-
-        attempts:
-          error.attempts,
-
-        body:
-          error.body,
-      };
-
-    } else {
-
-      errorMessage =
-        error instanceof Error
-          ? error.message
-          : String(
-              error
-            );
-
-
-      errorDetails = {
-        raw_error:
-          errorMessage,
-      };
-
-    }
-
-
-    // ========================================================
-    // FAILED JOURNAL
-    // ========================================================
 
     if (
       journalRunId
@@ -1391,7 +1277,6 @@ async function runDailySync(
 
         await finishJournalRun({
           config,
-
           journalRunId,
 
           status:
@@ -1404,19 +1289,40 @@ async function runDailySync(
           errorMessage,
 
           details: {
+            trigger_mode:
+              triggerAuth.mode,
+
             started_at:
               startedAtIso,
 
             internal_base_url:
               config.internalBaseUrl,
 
-            failed:
-              errorDetails,
-
             completed_steps:
               serializeCompletedSteps(
                 completedSteps
               ),
+
+            failed:
+              error instanceof
+                YandexDailySyncStepError
+                ? {
+                    path:
+                      error.path,
+
+                    status:
+                      error.status,
+
+                    attempts:
+                      error.attempts,
+
+                    body:
+                      error.body,
+                  }
+                : {
+                    error:
+                      errorMessage,
+                  },
           },
         });
 
@@ -1434,75 +1340,19 @@ async function runDailySync(
     }
 
 
-    if (
-      error instanceof
-      YandexDailySyncStepError
-    ) {
-
-      return Response.json(
-        {
-          ok:
-            false,
-
-          mode:
-            "write_sync",
-
-          source:
-            "yandex_daily_sync",
-
-          writes_to_yandex:
-            false,
-
-          journal_run_id:
-            journalRunId,
-
-          failed_step:
-            error.step,
-
-          failed_path:
-            error.path,
-
-          failed_status:
-            error.status,
-
-          failed_attempts:
-            error.attempts,
-
-          failed_body:
-            error.body,
-
-          completed_steps:
-            serializeCompletedSteps(
-              completedSteps
-            ),
-
-          duration_ms:
-            Date.now()
-            -
-            startedAtMs,
-        },
-        {
-          status:
-            500,
-        }
-      );
-
-    }
-
-
     return Response.json(
       {
         ok:
           false,
-
-        mode:
-          "write_sync",
 
         source:
           "yandex_daily_sync",
 
         journal_run_id:
           journalRunId,
+
+        failed_step:
+          failedStep,
 
         error:
           errorMessage,
@@ -1511,11 +1361,6 @@ async function runDailySync(
           serializeCompletedSteps(
             completedSteps
           ),
-
-        duration_ms:
-          Date.now()
-          -
-          startedAtMs,
       },
       {
         status:
@@ -1527,10 +1372,6 @@ async function runDailySync(
 
 }
 
-
-// ============================================================
-// ROUTES
-// ============================================================
 
 export async function GET(
   request:
