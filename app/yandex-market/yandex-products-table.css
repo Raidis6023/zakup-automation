@@ -3,7 +3,7 @@
    ТАБЛИЦА "ДАННЫЕ ПО ТОВАРАМ"
 
    Основная таблица.
-   Раскрытие по складам специально не переоформляем.
+   Раскрытие по складам отдельно не переоформляем.
    ============================================================ */
 
 .yandex-reference-page {
@@ -74,8 +74,7 @@
     border-box;
 
   padding:
-    12px
-    14px;
+    12px 14px;
 
   border:
     none;
@@ -142,8 +141,7 @@
     42px;
 
   flex:
-    0 0
-    42px;
+    0 0 42px;
 
   border-radius:
     10px;
@@ -255,12 +253,18 @@ svg {
     100%;
 
   min-width:
-    1368px;
+    1385px;
 }
 
 
 /* ============================================================
    GRID
+
+   Свободное пространство теперь забирают
+   Товар и Артикул.
+
+   Числовые столбцы остаются компактными,
+   поэтому значения не уезжают к краю экрана.
    ============================================================ */
 
 .yandex-reference-page
@@ -272,26 +276,23 @@ svg {
     120px
     minmax(
       420px,
-      560px
+      1.55fr
     )
     minmax(
-      300px,
-      420px
+      280px,
+      1fr
     )
-    120px
-    120px
-    92px
-    92px
-    104px;
-
-  justify-content:
-    start;
+    130px
+    135px
+    95px
+    95px
+    110px;
 
   width:
     100%;
 
   min-width:
-    1368px;
+    1385px;
 }
 
 
@@ -317,6 +318,9 @@ svg {
 .ym-products-header-cell {
   min-width:
     0;
+
+  overflow:
+    hidden;
 
   border-right:
     1px solid
@@ -349,6 +353,9 @@ svg {
   width:
     100%;
 
+  min-width:
+    0;
+
   min-height:
     40px;
 
@@ -356,8 +363,10 @@ svg {
     border-box;
 
   padding:
-    12px
-    14px;
+    12px 14px;
+
+  overflow:
+    hidden;
 
   border:
     none;
@@ -396,6 +405,20 @@ svg {
     background-color
       0.12s
       ease;
+}
+
+
+.yandex-reference-page
+.ym-products-sort-button
+> span:first-child {
+  min-width:
+    0;
+
+  overflow:
+    hidden;
+
+  white-space:
+    nowrap;
 }
 
 
@@ -450,9 +473,17 @@ svg {
   width:
     13px;
 
-  flex:
-    0 0
+  min-width:
     13px;
+
+  height:
+    16px;
+
+  flex:
+    0 0 13px;
+
+  overflow:
+    hidden;
 
   font-size:
     13px;
@@ -461,7 +492,7 @@ svg {
     800;
 
   line-height:
-    1;
+    16px;
 }
 
 
@@ -541,8 +572,7 @@ svg {
     border-box;
 
   padding:
-    12px
-    14px;
+    12px 14px;
 
   color:
     var(--ws-text);
@@ -625,8 +655,7 @@ svg {
     15px;
 
   flex:
-    0 0
-    15px;
+    0 0 15px;
 
   align-items:
     center;
