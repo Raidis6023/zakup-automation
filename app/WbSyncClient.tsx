@@ -91,103 +91,53 @@ type ApiResult = {
     number | null;
 
   saved?: {
-
     syncedAt?:
       string;
-
   };
 
   newSnapshot?: {
-
     snapshotAt?:
       string;
-
   };
 
   wildberries?: {
-
     status?:
       number;
-
-    salesStatus?:
-      number;
-
-    ordersStatus?:
-      number;
-
   };
 
 };
 
 
 // ============================================================
-// ЛИМИТЫ
+// НАШ ЕДИНЫЙ ЛИМИТ КНОПКИ
 // ============================================================
 
-const STOCKS_COOLDOWN_SECONDS =
+const WB_COOLDOWN_SECONDS =
   30
   *
   60;
 
 
-const CANCELLATIONS_COOLDOWN_SECONDS =
-  3
-  *
-  60
-  *
-  60;
+// ============================================================
+// УТРЕННИЙ CRON
+//
+// vercel.json: 22:00 UTC
+// Красноярск: 05:00 следующего дня
+// Hobby может выполнить cron в течение примерно часа.
+// ============================================================
 
-
-const DAILY_SYNC_WINDOW_START_UTC_HOUR =
+const DAILY_SYNC_UTC_HOUR =
   22;
-
 
 const DAILY_SYNC_WINDOW_SECONDS =
   60
   *
   60;
 
-
 const DAILY_SYNC_GRACE_SECONDS =
-  2
+  5
   *
   60;
-
-
-// ============================================================
-// COOLDOWN
-// ============================================================
-
-function getCooldownSeconds(
-  endpoint:
-    string
-) {
-
-  if (
-    endpoint.startsWith(
-      "/api/wb/sync-stocks"
-    )
-  ) {
-
-    return STOCKS_COOLDOWN_SECONDS;
-
-  }
-
-
-  if (
-    endpoint.startsWith(
-      "/api/wb/sync-orders"
-    )
-  ) {
-
-    return CANCELLATIONS_COOLDOWN_SECONDS;
-
-  }
-
-
-  return 0;
-
-}
 
 
 // ============================================================
@@ -213,25 +163,14 @@ number | null {
     ).getTime();
 
 
-  if (
-    !Number.isFinite(
-      result
-    )
-  ) {
-
-    return null;
-
-  }
-
-
-  return result;
+  return Number.isFinite(
+    result
+  )
+    ? result
+    : null;
 
 }
 
-
-// ============================================================
-// + СЕКУНДЫ
-// ============================================================
 
 function addSeconds(
   value:
@@ -249,11 +188,9 @@ string | null {
 
 
   if (
-    timestamp ===
-      null
+    timestamp === null
     ||
-    seconds <=
-      0
+    seconds <= 0
   ) {
 
     return null;
@@ -271,10 +208,6 @@ string | null {
 
 }
 
-
-// ============================================================
-// БОЛЕЕ ПОЗДНЯЯ ДАТА
-// ============================================================
 
 function laterDate(
   first:
@@ -298,11 +231,9 @@ string | null {
 
 
   if (
-    firstTime ===
-      null
+    firstTime === null
     &&
-    secondTime ===
-      null
+    secondTime === null
   ) {
 
     return null;
@@ -311,8 +242,7 @@ string | null {
 
 
   if (
-    firstTime ===
-      null
+    firstTime === null
   ) {
 
     return second
@@ -323,8 +253,7 @@ string | null {
 
 
   if (
-    secondTime ===
-      null
+    secondTime === null
   ) {
 
     return first
@@ -334,45 +263,23 @@ string | null {
   }
 
 
-  return firstTime >=
-    secondTime
-
-    ?
-    first
-    ??
-    null
-
-    :
-    second
-    ??
-    null;
+  return firstTime >= secondTime
+    ? first ?? null
+    : second ?? null;
 
 }
 
 
-// ============================================================
-// NEXT ALLOWED
-// ============================================================
-
 function getEffectiveNextAllowedAt(
   state:
-    SyncState | null | undefined,
-
-  endpoint:
-    string
+    SyncState | null | undefined
 ):
 string | null {
-
-  const cooldownSeconds =
-    getCooldownSeconds(
-      endpoint
-    );
-
 
   const calculated =
     addSeconds(
       state?.lastSuccessAt,
-      cooldownSeconds
+      WB_COOLDOWN_SECONDS
     );
 
 
@@ -385,14 +292,10 @@ string | null {
 
 
 // ============================================================
-// ОКНО ЕЖЕДНЕВНОЙ СИНХРОНИЗАЦИИ
-//
-// Vercel Hobby запускает cron с расписанием 22:00 UTC
-// в гибком часовом окне.
-// Для Красноярска это примерно 05:00–06:00.
+// УТРЕННЕЕ ОКНО CRON
 // ============================================================
 
-function getDailySyncWindowStartTimestamp(
+function getNextDailySyncStart(
   now:
     number
 ) {
@@ -403,36 +306,23 @@ function getDailySyncWindowStartTimestamp(
     );
 
 
-  let start =
+  let result =
     Date.UTC(
       date.getUTCFullYear(),
       date.getUTCMonth(),
       date.getUTCDate(),
-      DAILY_SYNC_WINDOW_START_UTC_HOUR,
+      DAILY_SYNC_UTC_HOUR,
       0,
       0,
       0
     );
 
 
-  const end =
-    start
-    +
-    DAILY_SYNC_WINDOW_SECONDS
-    *
-    1000
-    +
-    DAILY_SYNC_GRACE_SECONDS
-    *
-    1000;
-
-
   if (
-    now >=
-      end
+    result <= now
   ) {
 
-    start +=
+    result +=
       24
       *
       60
@@ -444,13 +334,35 @@ function getDailySyncWindowStartTimestamp(
   }
 
 
-  return start;
+  return result;
+
+}
+
+
+function getPreviousDailySyncStart(
+  now:
+    number
+) {
+
+  return (
+    getNextDailySyncStart(
+      now
+    )
+    -
+    24
+    *
+    60
+    *
+    60
+    *
+    1000
+  );
 
 }
 
 
 // ============================================================
-// HH:MM:SS
+// FORMAT
 // ============================================================
 
 function formatDuration(
@@ -521,10 +433,6 @@ function formatDuration(
 }
 
 
-// ============================================================
-// ДАТА
-// ============================================================
-
 function formatDateTime(
   value:
     string | null
@@ -585,10 +493,6 @@ function formatDateTime(
 }
 
 
-// ============================================================
-// API MESSAGE
-// ============================================================
-
 function getResultMessage(
   data:
     ApiResult | null,
@@ -600,8 +504,7 @@ function getResultMessage(
   if (
     data
     &&
-    typeof data.message ===
-      "string"
+    typeof data.message === "string"
     &&
     data.message.trim()
   ) {
@@ -614,8 +517,7 @@ function getResultMessage(
   if (
     data
     &&
-    typeof data.error ===
-      "string"
+    typeof data.error === "string"
     &&
     data.error.trim()
   ) {
@@ -643,18 +545,6 @@ export default function WbSyncClient({
 
   const router =
     useRouter();
-
-
-  const cooldownSeconds =
-    useMemo(
-      () =>
-        getCooldownSeconds(
-          endpoint
-        ),
-      [
-        endpoint,
-      ]
-    );
 
 
   const [
@@ -701,38 +591,32 @@ export default function WbSyncClient({
       () => ({
 
         lastHttpStatus:
-          initialState
-            ?.lastHttpStatus
+          initialState?.lastHttpStatus
           ??
           null,
 
         lastAttemptAt:
-          initialState
-            ?.lastAttemptAt
+          initialState?.lastAttemptAt
           ??
           null,
 
         lastSuccessAt:
-          initialState
-            ?.lastSuccessAt
+          initialState?.lastSuccessAt
           ??
           null,
 
         nextAllowedAt:
           getEffectiveNextAllowedAt(
-            initialState,
-            endpoint
+            initialState
           ),
 
         retryAfterSeconds:
-          initialState
-            ?.retryAfterSeconds
+          initialState?.retryAfterSeconds
           ??
           null,
 
         lastMessage:
-          initialState
-            ?.lastMessage
+          initialState?.lastMessage
           ??
           null,
 
@@ -750,38 +634,32 @@ export default function WbSyncClient({
       setRateState({
 
         lastHttpStatus:
-          initialState
-            ?.lastHttpStatus
+          initialState?.lastHttpStatus
           ??
           null,
 
         lastAttemptAt:
-          initialState
-            ?.lastAttemptAt
+          initialState?.lastAttemptAt
           ??
           null,
 
         lastSuccessAt:
-          initialState
-            ?.lastSuccessAt
+          initialState?.lastSuccessAt
           ??
           null,
 
         nextAllowedAt:
           getEffectiveNextAllowedAt(
-            initialState,
-            endpoint
+            initialState
           ),
 
         retryAfterSeconds:
-          initialState
-            ?.retryAfterSeconds
+          initialState?.retryAfterSeconds
           ??
           null,
 
         lastMessage:
-          initialState
-            ?.lastMessage
+          initialState?.lastMessage
           ??
           null,
 
@@ -789,7 +667,6 @@ export default function WbSyncClient({
 
     },
     [
-      endpoint,
       initialState?.lastHttpStatus,
       initialState?.lastAttemptAt,
       initialState?.lastSuccessAt,
@@ -801,7 +678,7 @@ export default function WbSyncClient({
 
 
   // ==========================================================
-  // COUNTDOWN
+  // CLOCK
   // ==========================================================
 
   useEffect(
@@ -810,22 +687,18 @@ export default function WbSyncClient({
       const timer =
         window.setInterval(
           () => {
-
             setNow(
               Date.now()
             );
-
           },
           1000
         );
 
 
       return () => {
-
         window.clearInterval(
           timer
         );
-
       };
 
     },
@@ -834,7 +707,7 @@ export default function WbSyncClient({
 
 
   // ==========================================================
-  // REFRESH SUPABASE STATE
+  // ПОДТЯГИВАЕМ STATE ИЗ SUPABASE
   // ==========================================================
 
   useEffect(
@@ -843,9 +716,7 @@ export default function WbSyncClient({
       const timer =
         window.setInterval(
           () => {
-
             router.refresh();
-
           },
           60
           *
@@ -854,11 +725,9 @@ export default function WbSyncClient({
 
 
       return () => {
-
         window.clearInterval(
           timer
         );
-
       };
 
     },
@@ -869,19 +738,17 @@ export default function WbSyncClient({
 
 
   // ==========================================================
-  // RATE LIMIT
+  // 30 МИНУТ
   // ==========================================================
 
   const nextAllowedTimestamp =
     useMemo(
       () =>
         getTimestamp(
-          rateState
-            .nextAllowedAt
+          rateState.nextAllowedAt
         ),
       [
-        rateState
-          .nextAllowedAt,
+        rateState.nextAllowedAt,
       ]
     );
 
@@ -889,32 +756,25 @@ export default function WbSyncClient({
   const secondsRemaining =
     nextAllowedTimestamp
     &&
-    nextAllowedTimestamp >
-      now
-
-      ?
-      Math.ceil(
-        (
-          nextAllowedTimestamp
-          -
-          now
+    nextAllowedTimestamp > now
+      ? Math.ceil(
+          (
+            nextAllowedTimestamp
+            -
+            now
+          )
+          /
+          1000
         )
-        /
-        1000
-      )
-
-      :
-      0;
+      : 0;
 
 
   const activeKnownRateLimit =
-    secondsRemaining >
-    0;
+    secondsRemaining > 0;
 
 
   const unknownRateLimit =
-    rateState.lastHttpStatus ===
-      429
+    rateState.lastHttpStatus === 429
     &&
     !activeKnownRateLimit
     &&
@@ -922,87 +782,71 @@ export default function WbSyncClient({
 
 
   // ==========================================================
-  // DAILY AUTO-SYNC WINDOW
+  // РЕЗЕРВ ПЕРЕД CRON И ВО ВРЕМЯ ЕГО ОКНА
   // ==========================================================
 
-  const dailySyncWindowStartTimestamp =
-    getDailySyncWindowStartTimestamp(
+  const nextDailyStart =
+    getNextDailySyncStart(
       now
     );
 
 
-  const dailySyncWindowEndTimestamp =
-    dailySyncWindowStartTimestamp
-    +
-    DAILY_SYNC_WINDOW_SECONDS
-    *
-    1000
-    +
-    DAILY_SYNC_GRACE_SECONDS
-    *
-    1000;
-
-
-  const reservationStartTimestamp =
-    dailySyncWindowStartTimestamp
-    -
-    cooldownSeconds
-    *
-    1000;
-
-
-  const dailyReservationActive =
-    cooldownSeconds >
-      0
-    &&
-    now >=
-      reservationStartTimestamp
-    &&
-    now <
-      dailySyncWindowStartTimestamp;
-
-
-  const secondsUntilDailySync =
-    dailyReservationActive
-
-      ?
-      Math.ceil(
-        (
-          dailySyncWindowStartTimestamp
-          -
-          now
-        )
-        /
-        1000
-      )
-
-      :
-      0;
-
-
-  const lastSuccessTimestamp =
-    getTimestamp(
-      rateState
-        .lastSuccessAt
+  const previousDailyStart =
+    getPreviousDailySyncStart(
+      now
     );
 
 
-  const completedInCurrentWindow =
-    lastSuccessTimestamp !==
-      null
+  const reservationStart =
+    nextDailyStart
+    -
+    WB_COOLDOWN_SECONDS
+    *
+    1000;
+
+
+  const currentWindowEnd =
+    previousDailyStart
+    +
+    (
+      DAILY_SYNC_WINDOW_SECONDS
+      +
+      DAILY_SYNC_GRACE_SECONDS
+    )
+    *
+    1000;
+
+
+  const beforeDailySyncReservation =
+    now >= reservationStart
     &&
-    lastSuccessTimestamp >=
-      dailySyncWindowStartTimestamp;
+    now < nextDailyStart;
 
 
   const dailySyncWindowActive =
-    now >=
-      dailySyncWindowStartTimestamp
+    now >= previousDailyStart
     &&
-    now <
-      dailySyncWindowEndTimestamp
-    &&
-    !completedInCurrentWindow;
+    now < currentWindowEnd;
+
+
+  const dailyReservationActive =
+    beforeDailySyncReservation
+    ||
+    dailySyncWindowActive;
+
+
+  const secondsUntilDailySync =
+    beforeDailySyncReservation
+      ? Math.ceil(
+          (
+            nextDailyStart
+            -
+            now
+          )
+          /
+          1000
+        )
+      : 0;
 
 
   const disabled =
@@ -1010,9 +854,7 @@ export default function WbSyncClient({
     ||
     activeKnownRateLimit
     ||
-    dailyReservationActive
-    ||
-    dailySyncWindowActive;
+    dailyReservationActive;
 
 
   // ==========================================================
@@ -1034,11 +876,9 @@ export default function WbSyncClient({
       true
     );
 
-
     setMessage(
       ""
     );
-
 
     setError(
       false
@@ -1073,12 +913,9 @@ export default function WbSyncClient({
 
         data =
           text
-
             ? JSON.parse(
                 text
-              ) as
-                ApiResult
-
+              ) as ApiResult
             : null;
 
       } catch {
@@ -1090,17 +927,13 @@ export default function WbSyncClient({
 
 
       const rateLimited =
-        response.status ===
-          429
+        response.status === 429
         ||
-        data?.wbStatus ===
-          429
+        data?.wbStatus === 429
         ||
-        data?.lastHttpStatus ===
-          429
+        data?.lastHttpStatus === 429
         ||
-        data?.blockedByRateLimit ===
-          true;
+        data?.blockedByRateLimit === true;
 
 
       if (
@@ -1108,20 +941,15 @@ export default function WbSyncClient({
       ) {
 
         const serverNextAllowedAt =
-          typeof data?.nextAllowedAt ===
-            "string"
-
+          typeof data?.nextAllowedAt === "string"
             ? data.nextAllowedAt
-
             : null;
 
 
         const calculatedFromLastSuccess =
           addSeconds(
-            rateState
-              .lastSuccessAt,
-
-            cooldownSeconds
+            rateState.lastSuccessAt,
+            WB_COOLDOWN_SECONDS
           );
 
 
@@ -1148,19 +976,10 @@ export default function WbSyncClient({
               effectiveNextAllowedAt,
 
             retryAfterSeconds:
-              typeof data
-                ?.retryAfterSeconds ===
-                "number"
-
+              typeof data?.retryAfterSeconds === "number"
                 ? data.retryAfterSeconds
-
-                : typeof data
-                    ?.retryAfterSecondsOriginally ===
-                    "number"
-
-                  ? data
-                      .retryAfterSecondsOriginally
-
+                : typeof data?.retryAfterSecondsOriginally === "number"
+                  ? data.retryAfterSecondsOriginally
                   : null,
 
             lastMessage:
@@ -1176,12 +995,7 @@ export default function WbSyncClient({
         setMessage(
           getResultMessage(
             data,
-
-            effectiveNextAllowedAt
-
-              ? "Wildberries временно ограничил запрос"
-
-              : "Wildberries ограничил запрос, но не сообщил точное время сброса"
+            "Wildberries временно ограничил запрос"
           )
         );
 
@@ -1193,7 +1007,6 @@ export default function WbSyncClient({
 
         router.refresh();
 
-
         return;
 
       }
@@ -1202,8 +1015,7 @@ export default function WbSyncClient({
       if (
         !response.ok
         ||
-        data?.ok ===
-          false
+        data?.ok === false
       ) {
 
         setError(
@@ -1221,36 +1033,30 @@ export default function WbSyncClient({
 
         router.refresh();
 
-
         return;
 
       }
 
 
       const successAt =
-        data?.saved
-          ?.syncedAt
+        data?.saved?.syncedAt
         ??
-        data?.newSnapshot
-          ?.snapshotAt
+        data?.newSnapshot?.snapshotAt
         ??
         new Date()
           .toISOString();
 
 
       const serverNextAllowedAt =
-        typeof data?.nextAllowedAt ===
-          "string"
-
+        typeof data?.nextAllowedAt === "string"
           ? data.nextAllowedAt
-
           : null;
 
 
       const calculatedNextAllowedAt =
         addSeconds(
           successAt,
-          cooldownSeconds
+          WB_COOLDOWN_SECONDS
         );
 
 
@@ -1267,14 +1073,7 @@ export default function WbSyncClient({
           ...current,
 
           lastHttpStatus:
-            data?.wildberries
-              ?.status
-            ??
-            data?.wildberries
-              ?.salesStatus
-            ??
-            data?.wildberries
-              ?.ordersStatus
+            data?.wildberries?.status
             ??
             200,
 
@@ -1288,12 +1087,7 @@ export default function WbSyncClient({
             effectiveNextAllowedAt,
 
           retryAfterSeconds:
-            cooldownSeconds >
-              0
-
-              ? cooldownSeconds
-
-              : null,
+            WB_COOLDOWN_SECONDS,
 
           lastMessage:
             getResultMessage(
@@ -1326,9 +1120,7 @@ export default function WbSyncClient({
 
       setMessage(
         syncError instanceof Error
-
           ? syncError.message
-
           : "Не удалось выполнить синхронизацию"
       );
 
@@ -1346,33 +1138,28 @@ export default function WbSyncClient({
   return (
 
     <div
-      className=
-        "wb-sync-client"
+      className="wb-sync-client"
     >
 
       {
         activeKnownRateLimit
-
           ? (
 
             <div
-              className=
-                "wb-sync-state-box wb-sync-state-box--danger"
+              className="wb-sync-state-box wb-sync-state-box--danger"
             >
 
               <div
-                className=
-                  "wb-sync-state-title"
+                className="wb-sync-state-title"
               >
-                Лимит Wildberries
+                Следующее обновление WB
               </div>
 
 
               <div
-                className=
-                  "wb-sync-state-text"
+                className="wb-sync-state-text"
               >
-                До следующей попытки:{" "}
+                До следующего запроса:{" "}
 
                 <strong>
                   {
@@ -1385,15 +1172,12 @@ export default function WbSyncClient({
 
 
               <div
-                className=
-                  "wb-sync-state-text"
+                className="wb-sync-state-text"
               >
                 Доступно с:{" "}
-
                 {
                   formatDateTime(
-                    rateState
-                      .nextAllowedAt
+                    rateState.nextAllowedAt
                   )
                 }
               </div>
@@ -1401,7 +1185,6 @@ export default function WbSyncClient({
             </div>
 
           )
-
           : null
       }
 
@@ -1409,28 +1192,24 @@ export default function WbSyncClient({
       {
         !activeKnownRateLimit
         &&
-        dailyReservationActive
-
+        beforeDailySyncReservation
           ? (
 
             <div
-              className=
-                "wb-sync-state-box wb-sync-state-box--info"
+              className="wb-sync-state-box wb-sync-state-box--info"
             >
 
               <div
-                className=
-                  "wb-sync-state-title"
+                className="wb-sync-state-title"
               >
                 Резерв для утреннего автообновления
               </div>
 
 
               <div
-                className=
-                  "wb-sync-state-text"
+                className="wb-sync-state-text"
               >
-                До начала окна автообновления:{" "}
+                До начала окна cron:{" "}
 
                 <strong>
                   {
@@ -1443,55 +1222,44 @@ export default function WbSyncClient({
 
 
               <div
-                className=
-                  "wb-sync-state-text"
+                className="wb-sync-state-text"
               >
-                Ручной запрос временно отключён,
-                чтобы не занять лимит перед
-                автоматическим обновлением WB.
+                Ручной запрос временно отключён, чтобы не занять 30-минутное окно перед утренней синхронизацией.
               </div>
 
             </div>
 
           )
-
           : null
       }
 
 
       {
         !activeKnownRateLimit
-        &&
-        !dailyReservationActive
         &&
         dailySyncWindowActive
-
           ? (
 
             <div
-              className=
-                "wb-sync-state-box wb-sync-state-box--info"
+              className="wb-sync-state-box wb-sync-state-box--info"
             >
 
               <div
-                className=
-                  "wb-sync-state-title"
+                className="wb-sync-state-title"
               >
-                Автообновление WB
+                Утреннее автообновление WB
               </div>
 
 
               <div
-                className=
-                  "wb-sync-state-text"
+                className="wb-sync-state-text"
               >
-                Автообновление выполняется в окне 05:00–06:00 по Красноярску.
+                Сейчас идёт окно автоматической синхронизации 05:00–06:00 по Красноярску.
               </div>
 
             </div>
 
           )
-
           : null
       }
 
@@ -1501,28 +1269,22 @@ export default function WbSyncClient({
         &&
         !dailyReservationActive
         &&
-        !dailySyncWindowActive
-        &&
         unknownRateLimit
-
           ? (
 
             <div
-              className=
-                "wb-sync-state-box wb-sync-state-box--warning"
+              className="wb-sync-state-box wb-sync-state-box--warning"
             >
 
               <div
-                className=
-                  "wb-sync-state-title"
+                className="wb-sync-state-title"
               >
                 Последний запрос получил лимит WB
               </div>
 
 
               <div
-                className=
-                  "wb-sync-state-text"
+                className="wb-sync-state-text"
               >
                 Wildberries не сообщил точное время сброса.
               </div>
@@ -1530,7 +1292,6 @@ export default function WbSyncClient({
             </div>
 
           )
-
           : null
       }
 
@@ -1540,61 +1301,46 @@ export default function WbSyncClient({
         &&
         !dailyReservationActive
         &&
-        !dailySyncWindowActive
-        &&
         !unknownRateLimit
-
           ? (
 
             <div
-              className=
-                "wb-sync-ready"
+              className="wb-sync-ready"
             >
               ● Можно обновить сейчас
             </div>
 
           )
-
           : null
       }
 
 
       {
-        rateState
-          .lastSuccessAt
-
+        rateState.lastSuccessAt
           ? (
 
             <div
-              className=
-                "muted wb-sync-last-success"
+              className="muted wb-sync-last-success"
             >
               Последнее успешное обновление:{" "}
-
               {
                 formatDateTime(
-                  rateState
-                    .lastSuccessAt
+                  rateState.lastSuccessAt
                 )
               }
             </div>
 
           )
-
           : null
       }
 
 
       <button
         type="button"
-
-        className=
-          "primary-button wb-sync-button"
-
+        className="primary-button wb-sync-button"
         onClick={
           runSync
         }
-
         disabled={
           disabled
         }
@@ -1602,23 +1348,15 @@ export default function WbSyncClient({
 
         {
           loading
-
             ? loadingLabel
-
             : activeKnownRateLimit
-
               ? `Лимит WB · ${formatDuration(
                   secondsRemaining
                 )}`
-
-              : dailyReservationActive
-
+              : beforeDailySyncReservation
                 ? "Резерв для автообновления"
-
                 : dailySyncWindowActive
-
                   ? "Автообновление WB..."
-
                   : label
         }
 
@@ -1627,15 +1365,12 @@ export default function WbSyncClient({
 
       {
         message
-
           ? (
 
             <div
               className={
                 error
-
                   ? "wb-sync-message wb-sync-message--error"
-
                   : "wb-sync-message"
               }
             >
@@ -1645,7 +1380,6 @@ export default function WbSyncClient({
             </div>
 
           )
-
           : null
       }
 
