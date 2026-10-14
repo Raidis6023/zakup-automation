@@ -1048,47 +1048,39 @@ export default async function WildberriesPage() {
       >
 
         {/* =====================================================
-            HEADER
+            STICKY HEADER
+
+            Больше нет:
+            - СИСТЕМА ЗАКУПА
+            - логотипа WB слева
+            - "— синхронизация"
+
+            Остаётся:
+            - Wildberries
+            - подпись
+            - кнопки справа
+            - полосы справа
             ===================================================== */}
 
         <header
-          className="header wb-header"
+          className="header wb-header wb-page-sticky-header"
         >
 
           <div
-            className="wb-title-wrap"
+            className="wb-title-wrap wb-title-wrap--text-only"
           >
-
-            <span
-              className="wb-title-icon"
-            >
-
-              <img
-                src="/logos/wildberries.png"
-                alt=""
-              />
-
-            </span>
-
 
             <div>
 
-              <div
-                className="small-label"
-              >
-                СИСТЕМА ЗАКУПА
-              </div>
-
-
               <h1
-                className="title"
+                className="title wb-page-title"
               >
-                Wildberries — синхронизация
+                Wildberries
               </h1>
 
 
               <p
-                className="subtitle"
+                className="subtitle wb-page-subtitle"
               >
                 Продажи, аналитические отмены и доступные FBW-остатки Wildberries.
               </p>
