@@ -62,6 +62,9 @@ type Config = {
 
   supabaseSecretKey:
     string;
+
+  internalBaseUrl:
+    string;
 };
 
 
@@ -209,6 +212,69 @@ value is JsonObject {
 
 
 // ============================================================
+// PRODUCTION BASE URL
+//
+// Vercel Cron может запускать route через длинный URL
+// конкретного deployment:
+//
+// zakup-automation-xxxxx.vercel.app
+//
+// Такой URL защищён Vercel Authentication.
+//
+// Для внутренних вызовов всегда используем
+// канонический production domain.
+// ============================================================
+
+function getInternalBaseUrl():
+string {
+
+  const productionHost =
+    process.env
+      .VERCEL_PROJECT_PRODUCTION_URL
+      ?.trim()
+    ||
+    process.env
+      .NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL
+      ?.trim();
+
+
+  if (productionHost) {
+
+    if (
+      productionHost.startsWith(
+        "http://"
+      )
+      ||
+      productionHost.startsWith(
+        "https://"
+      )
+    ) {
+
+      return productionHost.replace(
+        /\/+$/,
+        ""
+      );
+
+    }
+
+
+    return `https://${productionHost}`;
+
+  }
+
+
+  // ==========================================================
+  // FALLBACK
+  //
+  // Наш текущий публичный production domain.
+  // ==========================================================
+
+  return "https://zakup-automation.vercel.app";
+
+}
+
+
+// ============================================================
 // CONFIG
 // ============================================================
 
@@ -270,8 +336,13 @@ Config {
 
   return {
     cronSecret,
+
     supabaseUrl,
+
     supabaseSecretKey,
+
+    internalBaseUrl:
+      getInternalBaseUrl(),
   };
 
 }
@@ -391,6 +462,12 @@ Promise<string> {
 
               request_path:
                 requestUrl.pathname,
+
+              request_origin:
+                requestUrl.origin,
+
+              internal_base_url:
+                config.internalBaseUrl,
 
               user_agent:
                 request.headers.get(
@@ -633,12 +710,12 @@ Promise<JsonObject> {
 // ============================================================
 
 async function runInternalPost({
-  origin,
+  baseUrl,
   cronSecret,
   step,
   path,
 }: {
-  origin:
+  baseUrl:
     string;
 
   cronSecret:
@@ -667,7 +744,7 @@ Promise<StepResult> {
 
       const response =
         await fetch(
-          `${origin}${path}`,
+          `${baseUrl}${path}`,
           {
             method:
               "POST",
@@ -718,11 +795,6 @@ Promise<StepResult> {
 
       }
 
-
-      // ======================================================
-      // Только временные 5xx повторяем.
-      // 4xx сами себя не починят.
-      // ======================================================
 
       if (
         response.status >=
@@ -818,7 +890,7 @@ Promise<StepResult> {
 
 
 // ============================================================
-// SERIALIZE STEPS FOR JOURNAL
+// SERIALIZE STEPS
 // ============================================================
 
 function serializeCompletedSteps(
@@ -918,9 +990,6 @@ async function runDailySync(
 
   // ==========================================================
   // AUTH
-  //
-  // Не пишем неавторизованные попытки в журнал,
-  // чтобы таблица не превратилась в мусорку.
   // ==========================================================
 
   if (
@@ -960,18 +1029,8 @@ async function runDailySync(
       });
 
 
-    // ========================================================
-    // ORIGIN
-    // ========================================================
-
-    const requestUrl =
-      new URL(
-        request.url
-      );
-
-
-    const origin =
-      requestUrl.origin;
+    const baseUrl =
+      config.internalBaseUrl;
 
 
     // ========================================================
@@ -980,7 +1039,7 @@ async function runDailySync(
 
     const stocksResult =
       await runInternalPost({
-        origin,
+        baseUrl,
 
         cronSecret:
           config.cronSecret,
@@ -1004,7 +1063,7 @@ async function runDailySync(
 
     const salesResult =
       await runInternalPost({
-        origin,
+        baseUrl,
 
         cronSecret:
           config.cronSecret,
@@ -1063,7 +1122,7 @@ async function runDailySync(
 
     const dailyResult =
       await runInternalPost({
-        origin,
+        baseUrl,
 
         cronSecret:
           config.cronSecret,
@@ -1151,6 +1210,9 @@ async function runDailySync(
         started_at:
           startedAtIso,
 
+        internal_base_url:
+          baseUrl,
+
         sales_sync_run_id:
           salesSyncRunId,
 
@@ -1194,6 +1256,9 @@ async function runDailySync(
 
         sales_sync_run_id:
           salesSyncRunId,
+
+        internal_base_url:
+          baseUrl,
 
         steps: {
           stocks: {
@@ -1255,10 +1320,6 @@ async function runDailySync(
     );
 
   } catch (error) {
-
-    // ========================================================
-    // DETERMINE FAILURE
-    // ========================================================
 
     let failedStep:
       string | null =
@@ -1346,6 +1407,9 @@ async function runDailySync(
             started_at:
               startedAtIso,
 
+            internal_base_url:
+              config.internalBaseUrl,
+
             failed:
               errorDetails,
 
@@ -1369,10 +1433,6 @@ async function runDailySync(
 
     }
 
-
-    // ========================================================
-    // RESPONSE
-    // ========================================================
 
     if (
       error instanceof
