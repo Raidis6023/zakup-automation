@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  useEffect,
   useState,
 } from "react";
 
@@ -10,93 +9,31 @@ import {
 } from "next/navigation";
 
 
-// ============================================================
-// TYPES
-// ============================================================
+type Props = {
+  initialSyncUpdatedAt:
+    string | null;
 
-type ApiResponse = {
+  periodDateFrom:
+    string | null;
+
+  periodDateTo:
+    string | null;
+};
+
+
+type SyncResponse = {
   ok?: boolean;
 
+  finished_at?: string;
+
+  failed_step?: string;
+
+  failed_body?: {
+    error?: string;
+  };
+
   error?: string;
-
-  message?: string;
-
-  [key: string]:
-    unknown;
 };
-
-
-type Props = {
-  initialStockUpdatedAt:
-    string | null;
-
-  initialSalesUpdatedAt:
-    string | null;
-};
-
-
-// ============================================================
-// ICONS
-// ============================================================
-
-function StocksIcon() {
-
-  return (
-
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-
-      <path
-        d="
-          M12 3
-          20 7
-          12 11
-          4 7
-          Z
-        "
-      />
-
-      <path
-        d="
-          M4 7
-          v10
-          l8 4
-          8-4
-          V7
-        "
-      />
-
-      <path
-        d="M12 11v10"
-      />
-
-    </svg>
-
-  );
-
-}
-
-
-function SalesIcon() {
-
-  return (
-
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-
-      <path
-        d="M4 19V11M10 19V5M16 19V8M22 19V3"
-      />
-
-    </svg>
-
-  );
-
-}
 
 
 // ============================================================
@@ -106,15 +43,12 @@ function SalesIcon() {
 function formatDateTimeKrasnoyarsk(
   value:
     string
-    |
-    null
+    | null
 ):
 string {
 
   if (!value) {
-
-    return "Ещё не обновлялись";
-
+    return "—";
   }
 
 
@@ -166,77 +100,172 @@ string {
 }
 
 
-// ============================================================
-// FETCH
-// ============================================================
-
-async function postJson(
-  url:
+function formatPeriodDate(
+  value:
     string
+    | null
 ):
-Promise<ApiResponse> {
+string {
 
-  const response =
-    await fetch(
-      url,
-      {
-        method:
-          "POST",
-
-        cache:
-          "no-store",
-      }
-    );
-
-
-  const text =
-    await response.text();
-
-
-  let data:
-    ApiResponse;
-
-
-  try {
-
-    data =
-      text
-
-        ? JSON.parse(
-            text
-          ) as
-            ApiResponse
-
-        : {};
-
-  } catch {
-
-    throw new Error(
-      `Сервер вернул некорректный ответ: ${text}`
-    );
-
+  if (!value) {
+    return "—";
   }
+
+
+  const [
+    year,
+    month,
+    day,
+  ] =
+    value.split(
+      "-"
+    );
 
 
   if (
-    !response.ok
+    !year
     ||
-    data.ok !==
-      true
+    !month
+    ||
+    !day
   ) {
 
-    throw new Error(
-      data.error
-      ??
-      data.message
-      ??
-      `HTTP ${response.status}`
-    );
+    return value;
 
   }
 
 
-  return data;
+  return `${day}.${month}.${year}`;
+
+}
+
+
+// ============================================================
+// ICONS
+// ============================================================
+
+function CheckIcon() {
+
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="20"
+      height="20"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M5 12.5l4 4L19 7"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+
+}
+
+
+function ClockIcon() {
+
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="8"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+
+      <path
+        d="M12 7.5V12l3 2"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+
+}
+
+
+function CalendarIcon() {
+
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M7 3v3M17 3v3M4 9h16"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+
+      <rect
+        x="4"
+        y="5"
+        width="16"
+        height="15"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+
+}
+
+
+function RefreshIcon({
+  spinning = false,
+}: {
+  spinning?: boolean;
+}) {
+
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="17"
+      height="17"
+      fill="none"
+      aria-hidden="true"
+      style={{
+        animation:
+          spinning
+            ? "yandex-sync-spin 0.9s linear infinite"
+            : undefined,
+      }}
+    >
+      <path
+        d="M20 7v5h-5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+
+      <path
+        d="M18.2 8.3A7 7 0 1 0 19 15"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
 
 }
 
@@ -246,8 +275,9 @@ Promise<ApiResponse> {
 // ============================================================
 
 export default function YandexSyncActionsClient({
-  initialStockUpdatedAt,
-  initialSalesUpdatedAt,
+  initialSyncUpdatedAt,
+  periodDateFrom,
+  periodDateTo,
 }: Props) {
 
   const router =
@@ -255,123 +285,42 @@ export default function YandexSyncActionsClient({
 
 
   const [
-    stockUpdatedAt,
-    setStockUpdatedAt,
+    syncUpdatedAt,
+    setSyncUpdatedAt,
+  ] =
+    useState<string | null>(
+      initialSyncUpdatedAt
+    );
+
+
+  const [
+    status,
+    setStatus,
   ] =
     useState<
-      string | null
+      "idle"
+      | "loading"
+      | "success"
+      | "error"
     >(
-      initialStockUpdatedAt
+      "idle"
     );
 
 
   const [
-    salesUpdatedAt,
-    setSalesUpdatedAt,
+    errorMessage,
+    setErrorMessage,
   ] =
-    useState<
-      string | null
-    >(
-      initialSalesUpdatedAt
-    );
-
-
-  const [
-    stockLoading,
-    setStockLoading,
-  ] =
-    useState(
-      false
-    );
-
-
-  const [
-    salesLoading,
-    setSalesLoading,
-  ] =
-    useState(
-      false
-    );
-
-
-  const [
-    stockMessage,
-    setStockMessage,
-  ] =
-    useState<
-      string | null
-    >(
+    useState<string | null>(
       null
     );
 
 
-  const [
-    salesMessage,
-    setSalesMessage,
-  ] =
-    useState<
-      string | null
-    >(
-      null
-    );
-
-
-  const [
-    stockError,
-    setStockError,
-  ] =
-    useState(
-      false
-    );
-
-
-  const [
-    salesError,
-    setSalesError,
-  ] =
-    useState(
-      false
-    );
-
-
-  useEffect(
-    () => {
-
-      setStockUpdatedAt(
-        initialStockUpdatedAt
-      );
-
-    },
-    [
-      initialStockUpdatedAt,
-    ]
-  );
-
-
-  useEffect(
-    () => {
-
-      setSalesUpdatedAt(
-        initialSalesUpdatedAt
-      );
-
-    },
-    [
-      initialSalesUpdatedAt,
-    ]
-  );
-
-
-  // ==========================================================
-  // STOCKS
-  // ==========================================================
-
-  async function updateStocks() {
+  async function handleSync() {
 
     if (
-      stockLoading
-      ||
-      salesLoading
+      status ===
+      "loading"
     ) {
 
       return;
@@ -379,68 +328,119 @@ export default function YandexSyncActionsClient({
     }
 
 
-    setStockLoading(
-      true
+    setStatus(
+      "loading"
     );
 
 
-    setStockError(
-      false
-    );
-
-
-    setStockMessage(
-      "Получаем свежие остатки Яндекс Маркета..."
+    setErrorMessage(
+      null
     );
 
 
     try {
 
-      await postJson(
-        "/api/yandex/stocks"
-      );
+      const response =
+        await fetch(
+          "/api/yandex/daily-sync",
+          {
+            method:
+              "POST",
+
+            headers: {
+              Accept:
+                "application/json",
+            },
+
+            cache:
+              "no-store",
+          }
+        );
 
 
-      const now =
+      const text =
+        await response.text();
+
+
+      let body:
+        SyncResponse;
+
+
+      try {
+
+        body =
+          text
+            ? JSON.parse(
+                text
+              ) as SyncResponse
+            : {};
+
+      } catch {
+
+        throw new Error(
+          `Сервер вернул некорректный ответ: ${text}`
+        );
+
+      }
+
+
+      if (
+        !response.ok
+        ||
+        body.ok !==
+          true
+      ) {
+
+        const failedStep =
+          body.failed_step
+            ? `Этап: ${body.failed_step}. `
+            : "";
+
+
+        const reason =
+          body.failed_body
+            ?.error
+          ||
+          body.error
+          ||
+          `HTTP ${response.status}`;
+
+
+        throw new Error(
+          `${failedStep}${reason}`
+        );
+
+      }
+
+
+      setSyncUpdatedAt(
+        body.finished_at
+        ??
         new Date()
-          .toISOString();
-
-
-      setStockUpdatedAt(
-        now
+          .toISOString()
       );
 
 
-      setStockMessage(
-        "Остатки успешно обновлены."
+      setStatus(
+        "success"
       );
 
 
       router.refresh();
 
-    } catch (
-      error
-    ) {
+    } catch (error) {
 
-      setStockError(
-        true
+      setStatus(
+        "error"
       );
 
 
-      setStockMessage(
+      setErrorMessage(
         error instanceof Error
-
           ? error.message
-
           : String(
               error
             )
-      );
-
-    } finally {
-
-      setStockLoading(
-        false
       );
 
     }
@@ -448,168 +448,255 @@ export default function YandexSyncActionsClient({
   }
 
 
-  // ==========================================================
-  // SALES
-  // ==========================================================
-
-  async function updateSales() {
-
-    if (
-      salesLoading
-      ||
-      stockLoading
-    ) {
-
-      return;
-
-    }
+  const isLoading =
+    status ===
+    "loading";
 
 
-    setSalesLoading(
-      true
-    );
-
-
-    setSalesError(
-      false
-    );
-
-
-    setSalesMessage(
-      "Получаем заказы, отмены, невыкупы и возвраты..."
-    );
-
-
-    try {
-
-      await postJson(
-        "/api/yandex/sales"
-      );
-
-
-      setSalesMessage(
-        "Данные получены. Пересчитываем дневные продажи..."
-      );
-
-
-      await postJson(
-        "/api/yandex/sales/daily-sync"
-      );
-
-
-      const now =
-        new Date()
-          .toISOString();
-
-
-      setSalesUpdatedAt(
-        now
-      );
-
-
-      setSalesMessage(
-        "Продажи успешно обновлены."
-      );
-
-
-      router.refresh();
-
-    } catch (
-      error
-    ) {
-
-      setSalesError(
-        true
-      );
-
-
-      setSalesMessage(
-        error instanceof Error
-
-          ? error.message
-
-          : String(
-              error
-            )
-      );
-
-    } finally {
-
-      setSalesLoading(
-        false
-      );
-
-    }
-
-  }
-
-
-  const anyLoading =
-    stockLoading
-    ||
-    salesLoading;
+  const hasError =
+    status ===
+    "error";
 
 
   return (
-
     <div
-      className=
-        "yandex-sync-actions"
+      className="card"
+
+      style={{
+        padding:
+          "10px 14px",
+
+        marginTop:
+          "18px",
+
+        overflow:
+          "hidden",
+      }}
     >
 
-      {/* ===================================
-          STOCKS
-          =================================== */}
+      <style>
+        {`
+          @keyframes yandex-sync-spin {
+            from {
+              transform: rotate(0deg);
+            }
 
-      <div
-        className=
-          "yandex-sync-card"
-      >
+            to {
+              transform: rotate(360deg);
+            }
+          }
 
-        <div
-          className=
-            "yandex-sync-card-top"
-        >
+          .yandex-sync-strip {
+            display: grid;
+            grid-template-columns:
+              minmax(330px, 1.15fr)
+              minmax(250px, 1fr)
+              minmax(300px, 1fr)
+              minmax(250px, 0.95fr);
+            align-items: stretch;
+          }
 
-          <span
-            className=
-              "yandex-sync-card-icon"
-          >
-            <StocksIcon />
-          </span>
+          .yandex-sync-strip__cell {
+            min-width: 0;
+            padding: 8px 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-left:
+              1px solid var(--table-divider, rgba(128, 148, 170, 0.18));
+          }
 
+          .yandex-sync-strip__cell:first-child {
+            border-left: none;
+            padding-left: 0;
+          }
+
+          .yandex-sync-strip__cell:last-child {
+            padding-right: 0;
+          }
+
+          @media (max-width: 1100px) {
+            .yandex-sync-strip {
+              grid-template-columns: 1fr 1fr;
+            }
+
+            .yandex-sync-strip__cell {
+              border-left: none;
+              border-top:
+                1px solid var(--table-divider, rgba(128, 148, 170, 0.18));
+            }
+
+            .yandex-sync-strip__cell:nth-child(-n + 2) {
+              border-top: none;
+            }
+          }
+
+          @media (max-width: 680px) {
+            .yandex-sync-strip {
+              grid-template-columns: 1fr;
+            }
+
+            .yandex-sync-strip__cell,
+            .yandex-sync-strip__cell:nth-child(-n + 2) {
+              border-top:
+                1px solid var(--table-divider, rgba(128, 148, 170, 0.18));
+              border-left: none;
+              padding: 14px 0;
+            }
+
+            .yandex-sync-strip__cell:first-child {
+              border-top: none;
+            }
+          }
+        `}
+      </style>
+
+
+      <div className="yandex-sync-strip">
+
+        {/* ===================================
+            STATUS
+            =================================== */}
+
+        <div className="yandex-sync-strip__cell">
 
           <div
-            className=
-              "yandex-sync-card-copy"
+            style={{
+              width:
+                "100%",
+
+              display:
+                "flex",
+
+              alignItems:
+                "center",
+
+              gap:
+                "12px",
+
+              padding:
+                "10px 14px",
+
+              borderRadius:
+                "8px",
+
+              background:
+                hasError
+                  ? "rgba(244, 63, 94, 0.10)"
+                  : isLoading
+                    ? "rgba(249, 115, 22, 0.10)"
+                    : "rgba(16, 185, 129, 0.10)",
+
+              border:
+                hasError
+                  ? "1px solid rgba(244, 63, 94, 0.28)"
+                  : isLoading
+                    ? "1px solid rgba(249, 115, 22, 0.28)"
+                    : "1px solid rgba(16, 185, 129, 0.25)",
+            }}
           >
 
             <div
-              className=
-                "yandex-sync-card-title"
-            >
-              Остатки
-            </div>
+              style={{
+                width:
+                  "32px",
 
+                height:
+                  "32px",
 
-            <div
-              className=
-                "yandex-sync-date"
+                borderRadius:
+                  "999px",
+
+                display:
+                  "grid",
+
+                placeItems:
+                  "center",
+
+                flex:
+                  "0 0 auto",
+
+                background:
+                  hasError
+                    ? "#fb7185"
+                    : isLoading
+                      ? "#f97316"
+                      : "#34d399",
+
+                color:
+                  "#07251e",
+              }}
             >
               {
-                formatDateTimeKrasnoyarsk(
-                  stockUpdatedAt
-                )
+                isLoading
+                  ? (
+                    <RefreshIcon
+                      spinning
+                    />
+                  )
+                  : (
+                    <CheckIcon />
+                  )
               }
             </div>
 
 
             <div
-              className=
-                "yandex-sync-hint"
+              style={{
+                minWidth:
+                  0,
+              }}
             >
-              Последнее успешное обновление,
-              красноярское время
+
+              <div
+                style={{
+                  fontSize:
+                    "13px",
+
+                  fontWeight:
+                    800,
+
+                  color:
+                    hasError
+                      ? "#fb7185"
+                      : isLoading
+                        ? "#fb923c"
+                        : "#34d399",
+                }}
+              >
+                {
+                  hasError
+                    ? "Ошибка синхронизации"
+                    : isLoading
+                      ? "Синхронизация выполняется"
+                      : "Синхронизация завершена"
+                }
+              </div>
+
+
+              <div
+                className="muted"
+
+                style={{
+                  marginTop:
+                    "3px",
+
+                  fontSize:
+                    "10px",
+
+                  lineHeight:
+                    1.35,
+                }}
+              >
+                {
+                  hasError
+                    ? errorMessage
+                    : isLoading
+                      ? "Обновляем остатки, продажи и дневные данные"
+                      : "Данные Яндекс Маркета успешно обновлены"
+                }
+              </div>
+
             </div>
 
           </div>
@@ -617,111 +704,83 @@ export default function YandexSyncActionsClient({
         </div>
 
 
-        <button
-          type="button"
+        {/* ===================================
+            LAST SYNC
+            =================================== */}
 
-          className=
-            "secondary-button yandex-sync-button"
+        <div className="yandex-sync-strip__cell">
 
-          disabled={
-            anyLoading
-          }
+          <div
+            style={{
+              display:
+                "flex",
 
-          onClick={
-            () =>
-              void updateStocks()
-          }
-        >
-          {
-            stockLoading
+              alignItems:
+                "center",
 
-              ? "Обновляем..."
+              gap:
+                "10px",
+            }}
+          >
 
-              : "Обновить остатки"
-          }
-        </button>
+            <div
+              style={{
+                color:
+                  "#f97316",
+              }}
+            >
+              <ClockIcon />
+            </div>
 
 
-        {
-          stockMessage
-
-            ? (
+            <div>
 
               <div
-                className={
-                  stockError
+                className="muted"
 
-                    ? "yandex-sync-message yandex-sync-message--error"
+                style={{
+                  fontSize:
+                    "9px",
+                }}
+              >
+                Последняя синхронизация
+              </div>
 
-                    : "yandex-sync-message"
-                }
+
+              <div
+                style={{
+                  marginTop:
+                    "2px",
+
+                  fontSize:
+                    "13px",
+
+                  fontWeight:
+                    800,
+                }}
               >
                 {
-                  stockMessage
+                  formatDateTimeKrasnoyarsk(
+                    syncUpdatedAt
+                  )
                 }
               </div>
 
-            )
 
-            : null
-        }
+              <div
+                className="muted"
 
-      </div>
+                style={{
+                  marginTop:
+                    "2px",
 
+                  fontSize:
+                    "9px",
+                }}
+              >
+                Красноярское время
+              </div>
 
-      {/* ===================================
-          SALES
-          =================================== */}
-
-      <div
-        className=
-          "yandex-sync-card"
-      >
-
-        <div
-          className=
-            "yandex-sync-card-top"
-        >
-
-          <span
-            className=
-              "yandex-sync-card-icon"
-          >
-            <SalesIcon />
-          </span>
-
-
-          <div
-            className=
-              "yandex-sync-card-copy"
-          >
-
-            <div
-              className=
-                "yandex-sync-card-title"
-            >
-              Продажи
-            </div>
-
-
-            <div
-              className=
-                "yandex-sync-date"
-            >
-              {
-                formatDateTimeKrasnoyarsk(
-                  salesUpdatedAt
-                )
-              }
-            </div>
-
-
-            <div
-              className=
-                "yandex-sync-hint"
-            >
-              Последний успешный пересчёт
-              yandex_sales_daily
             </div>
 
           </div>
@@ -729,59 +788,189 @@ export default function YandexSyncActionsClient({
         </div>
 
 
-        <button
-          type="button"
+        {/* ===================================
+            PERIOD
+            =================================== */}
 
-          className=
-            "secondary-button yandex-sync-button"
+        <div className="yandex-sync-strip__cell">
 
-          disabled={
-            anyLoading
-          }
+          <div
+            style={{
+              display:
+                "flex",
 
-          onClick={
-            () =>
-              void updateSales()
-          }
-        >
-          {
-            salesLoading
+              alignItems:
+                "center",
 
-              ? "Обновляем..."
+              gap:
+                "10px",
+            }}
+          >
 
-              : "Обновить продажи"
-          }
-        </button>
+            <div
+              style={{
+                color:
+                  "#f97316",
+              }}
+            >
+              <CalendarIcon />
+            </div>
 
 
-        {
-          salesMessage
-
-            ? (
+            <div>
 
               <div
-                className={
-                  salesError
+                className="muted"
 
-                    ? "yandex-sync-message yandex-sync-message--error"
+                style={{
+                  fontSize:
+                    "9px",
+                }}
+              >
+                Период продаж
+              </div>
 
-                    : "yandex-sync-message"
-                }
+
+              <div
+                style={{
+                  marginTop:
+                    "2px",
+
+                  fontSize:
+                    "13px",
+
+                  fontWeight:
+                    800,
+                }}
               >
                 {
-                  salesMessage
+                  formatPeriodDate(
+                    periodDateFrom
+                  )
+                }
+                {" – "}
+                {
+                  formatPeriodDate(
+                    periodDateTo
+                  )
                 }
               </div>
 
-            )
 
-            : null
-        }
+              <div
+                className="muted"
+
+                style={{
+                  marginTop:
+                    "2px",
+
+                  fontSize:
+                    "9px",
+                }}
+              >
+                Скользящие 28 дней
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        {/* ===================================
+            BUTTON
+            =================================== */}
+
+        <div className="yandex-sync-strip__cell">
+
+          <button
+            type="button"
+
+            onClick={
+              handleSync
+            }
+
+            disabled={
+              isLoading
+            }
+
+            style={{
+              width:
+                "100%",
+
+              minHeight:
+                "42px",
+
+              border:
+                "1px solid rgba(249, 115, 22, 0.55)",
+
+              borderRadius:
+                "7px",
+
+              background:
+                isLoading
+                  ? "rgba(249, 115, 22, 0.45)"
+                  : "linear-gradient(180deg, #fb923c 0%, #f97316 100%)",
+
+              color:
+                "#ffffff",
+
+              display:
+                "inline-flex",
+
+              alignItems:
+                "center",
+
+              justifyContent:
+                "center",
+
+              gap:
+                "8px",
+
+              fontSize:
+                "12px",
+
+              fontWeight:
+                800,
+
+              cursor:
+                isLoading
+                  ? "wait"
+                  : "pointer",
+
+              boxShadow:
+                isLoading
+                  ? "none"
+                  : "0 6px 20px rgba(249, 115, 22, 0.18)",
+
+              opacity:
+                isLoading
+                  ? 0.8
+                  : 1,
+            }}
+          >
+
+            <RefreshIcon
+              spinning={
+                isLoading
+              }
+            />
+
+
+            {
+              isLoading
+                ? "Обновление..."
+                : "Обновить данные"
+            }
+
+          </button>
+
+        </div>
 
       </div>
 
     </div>
-
   );
 
 }
