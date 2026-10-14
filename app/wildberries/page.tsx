@@ -14,9 +14,6 @@ from "../WbSyncClient";
 import WbUnmappedProductsTable
 from "../WbUnmappedProductsTable";
 
-import WorkspaceDecoration
-from "../WorkspaceDecoration";
-
 import "./wb-reference.css";
 import "./wb-reference-top.css";
 import "./wb-page-header.css";
@@ -1053,16 +1050,6 @@ export default async function WildberriesPage() {
 
         {/* =====================================================
             ЗАКРЕПЛЁННАЯ ШАПКА WB
-
-            Только:
-            - Wildberries
-            - подпись
-            - кнопки
-            - полосы
-
-            Никакого квадратного WB-логотипа.
-            Никакого "СИСТЕМА ЗАКУПА".
-            Никакого "— синхронизация".
             ===================================================== */}
 
         <header
@@ -1114,16 +1101,6 @@ export default async function WildberriesPage() {
             >
               ← Главная
             </Link>
-
-          </div>
-
-
-          <div
-            className="wb-page-header-decoration"
-            aria-hidden="true"
-          >
-
-            <WorkspaceDecoration />
 
           </div>
 
@@ -1182,10 +1159,6 @@ export default async function WildberriesPage() {
                   className="card wb-sync-hero"
                   aria-label="Состояние синхронизации Wildberries"
                 >
-
-                  {/* ===============================================
-                      1 / 4 — СТАТУС
-                      =============================================== */}
 
                   <div
                     className="wb-sync-hero__quarter"
@@ -1249,10 +1222,6 @@ export default async function WildberriesPage() {
                   </div>
 
 
-                  {/* ===============================================
-                      2 / 4 — ПОСЛЕДНЯЯ СИНХРОНИЗАЦИЯ
-                      =============================================== */}
-
                   <div
                     className="wb-sync-hero__quarter wb-sync-hero__quarter--border"
                   >
@@ -1309,10 +1278,6 @@ export default async function WildberriesPage() {
 
                   </div>
 
-
-                  {/* ===============================================
-                      3 / 4 — ПЕРИОД ПРОДАЖ
-                      =============================================== */}
 
                   <div
                     className="wb-sync-hero__quarter wb-sync-hero__quarter--border"
@@ -1378,10 +1343,6 @@ export default async function WildberriesPage() {
 
                   </div>
 
-
-                  {/* ===============================================
-                      4 / 4 — КНОПКА
-                      =============================================== */}
 
                   <div
                     className="wb-sync-hero__quarter wb-sync-hero__quarter--border"
