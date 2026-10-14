@@ -9,7 +9,7 @@ export const maxDuration =
 
 
 // ============================================================
-// НАСТРОЙКИ
+// SETTINGS
 // ============================================================
 
 const INTERNAL_MAX_RETRIES =
@@ -50,6 +50,18 @@ type StepResult = {
 
   body:
     JsonObject;
+};
+
+
+type Config = {
+  cronSecret:
+    string;
+
+  supabaseUrl:
+    string;
+
+  supabaseSecretKey:
+    string;
 };
 
 
@@ -200,11 +212,32 @@ value is JsonObject {
 // CONFIG
 // ============================================================
 
-function getConfig() {
+function getConfig():
+Config {
 
   const cronSecret =
     process.env
       .CRON_SECRET
+      ?.trim();
+
+
+  const supabaseUrl =
+    process.env
+      .NEXT_PUBLIC_SUPABASE_URL
+      ?.trim()
+    ||
+    process.env
+      .SUPABASE_URL
+      ?.trim();
+
+
+  const supabaseSecretKey =
+    process.env
+      .SUPABASE_SECRET_KEY
+      ?.trim()
+    ||
+    process.env
+      .SUPABASE_SERVICE_ROLE_KEY
       ?.trim();
 
 
@@ -217,8 +250,28 @@ function getConfig() {
   }
 
 
+  if (!supabaseUrl) {
+
+    throw new Error(
+      "Не найдена NEXT_PUBLIC_SUPABASE_URL или SUPABASE_URL"
+    );
+
+  }
+
+
+  if (!supabaseSecretKey) {
+
+    throw new Error(
+      "Не найдена SUPABASE_SECRET_KEY или SUPABASE_SERVICE_ROLE_KEY"
+    );
+
+  }
+
+
   return {
     cronSecret,
+    supabaseUrl,
+    supabaseSecretKey,
   };
 
 }
@@ -244,6 +297,276 @@ boolean {
     ===
     `Bearer ${cronSecret}`
   );
+
+}
+
+
+// ============================================================
+// SUPABASE HEADERS
+// ============================================================
+
+function getSupabaseHeaders(
+  secretKey:
+    string
+) {
+
+  return {
+    apikey:
+      secretKey,
+
+    Authorization:
+      `Bearer ${secretKey}`,
+
+    "Content-Type":
+      "application/json",
+
+    Accept:
+      "application/json",
+  };
+
+}
+
+
+// ============================================================
+// JOURNAL: CREATE RUN
+// ============================================================
+
+async function createJournalRun({
+  config,
+  request,
+}: {
+  config:
+    Config;
+
+  request:
+    Request;
+}):
+Promise<string> {
+
+  const url =
+    new URL(
+      `${config.supabaseUrl}/rest/v1/marketplace_daily_sync_runs`
+    );
+
+
+  url.searchParams.set(
+    "select",
+    "id"
+  );
+
+
+  const requestUrl =
+    new URL(
+      request.url
+    );
+
+
+  const response =
+    await fetch(
+      url.toString(),
+      {
+        method:
+          "POST",
+
+        headers: {
+          ...getSupabaseHeaders(
+            config.supabaseSecretKey
+          ),
+
+          Prefer:
+            "return=representation",
+        },
+
+        body:
+          JSON.stringify({
+            marketplace:
+              "yandex_market",
+
+            status:
+              "running",
+
+            details: {
+              request_method:
+                request.method,
+
+              request_path:
+                requestUrl.pathname,
+
+              user_agent:
+                request.headers.get(
+                  "user-agent"
+                ),
+
+              vercel_id:
+                request.headers.get(
+                  "x-vercel-id"
+                ),
+            },
+          }),
+
+        cache:
+          "no-store",
+      }
+    );
+
+
+  const text =
+    await response.text();
+
+
+  if (!response.ok) {
+
+    throw new Error(
+      `Не удалось создать marketplace_daily_sync_runs: HTTP ${response.status}: ${text}`
+    );
+
+  }
+
+
+  const rows =
+    JSON.parse(
+      text
+    ) as Array<{
+      id?: string;
+    }>;
+
+
+  const id =
+    rows[0]
+      ?.id;
+
+
+  if (!id) {
+
+    throw new Error(
+      "Supabase не вернул id marketplace_daily_sync_runs"
+    );
+
+  }
+
+
+  return id;
+
+}
+
+
+// ============================================================
+// JOURNAL: FINISH RUN
+// ============================================================
+
+async function finishJournalRun({
+  config,
+  journalRunId,
+  status,
+  startedAtMs,
+  failedStep,
+  errorMessage,
+  details,
+}: {
+  config:
+    Config;
+
+  journalRunId:
+    string;
+
+  status:
+    "success"
+    | "failed";
+
+  startedAtMs:
+    number;
+
+  failedStep?:
+    string | null;
+
+  errorMessage?:
+    string | null;
+
+  details:
+    JsonObject;
+}) {
+
+  const url =
+    new URL(
+      `${config.supabaseUrl}/rest/v1/marketplace_daily_sync_runs`
+    );
+
+
+  url.searchParams.set(
+    "id",
+    `eq.${journalRunId}`
+  );
+
+
+  const finishedAt =
+    new Date();
+
+
+  const durationMs =
+    Math.max(
+      0,
+      finishedAt.getTime()
+      -
+      startedAtMs
+    );
+
+
+  const response =
+    await fetch(
+      url.toString(),
+      {
+        method:
+          "PATCH",
+
+        headers: {
+          ...getSupabaseHeaders(
+            config.supabaseSecretKey
+          ),
+
+          Prefer:
+            "return=minimal",
+        },
+
+        body:
+          JSON.stringify({
+            status,
+
+            finished_at:
+              finishedAt.toISOString(),
+
+            failed_step:
+              failedStep
+              ??
+              null,
+
+            error_message:
+              errorMessage
+              ??
+              null,
+
+            duration_ms:
+              durationMs,
+
+            details,
+          }),
+
+        cache:
+          "no-store",
+      }
+    );
+
+
+  const text =
+    await response.text();
+
+
+  if (!response.ok) {
+
+    throw new Error(
+      `Не удалось завершить marketplace_daily_sync_runs: HTTP ${response.status}: ${text}`
+    );
+
+  }
 
 }
 
@@ -372,15 +695,11 @@ Promise<StepResult> {
         );
 
 
-      const bodyOk =
-        body.ok ===
-        true;
-
-
       if (
         response.ok
         &&
-        bodyOk
+        body.ok ===
+          true
       ) {
 
         return {
@@ -401,11 +720,8 @@ Promise<StepResult> {
 
 
       // ======================================================
-      // 5xx можно один раз повторить.
-      //
-      // 4xx не повторяем:
-      // mapping / preflight / validation
-      // сами по себе не исправятся.
+      // Только временные 5xx повторяем.
+      // 4xx сами себя не починят.
       // ======================================================
 
       if (
@@ -415,18 +731,6 @@ Promise<StepResult> {
         attempt <
           INTERNAL_MAX_RETRIES
       ) {
-
-        console.warn(
-          [
-            "YANDEX DAILY SYNC RETRY",
-            `step=${step}`,
-            `HTTP ${response.status}`,
-            `attempt=${attempt}/${INTERNAL_MAX_RETRIES}`,
-          ].join(
-            " | "
-          )
-        );
-
 
         await sleep(
           RETRY_DELAY_MS
@@ -477,18 +781,6 @@ Promise<StepResult> {
         INTERNAL_MAX_RETRIES
       ) {
 
-        console.warn(
-          [
-            "YANDEX DAILY SYNC NETWORK RETRY",
-            `step=${step}`,
-            `attempt=${attempt}/${INTERNAL_MAX_RETRIES}`,
-            `error=${lastNetworkError}`,
-          ].join(
-            " | "
-          )
-        );
-
-
         await sleep(
           RETRY_DELAY_MS
         );
@@ -526,6 +818,37 @@ Promise<StepResult> {
 
 
 // ============================================================
+// SERIALIZE STEPS FOR JOURNAL
+// ============================================================
+
+function serializeCompletedSteps(
+  steps:
+    StepResult[]
+) {
+
+  return steps.map(
+    step => ({
+      step:
+        step.step,
+
+      path:
+        step.path,
+
+      status:
+        step.status,
+
+      attempts:
+        step.attempts,
+
+      body:
+        step.body,
+    })
+  );
+
+}
+
+
+// ============================================================
 // DAILY SYNC
 // ============================================================
 
@@ -534,13 +857,14 @@ async function runDailySync(
     Request
 ) {
 
-  const startedAt =
+  const startedAtMs =
     Date.now();
 
 
   const startedAtIso =
-    new Date()
-      .toISOString();
+    new Date(
+      startedAtMs
+    ).toISOString();
 
 
   const completedSteps:
@@ -548,44 +872,96 @@ async function runDailySync(
     [];
 
 
+  let journalRunId:
+    string | null =
+    null;
+
+
+  let config:
+    Config;
+
+
+  // ==========================================================
+  // CONFIG
+  // ==========================================================
+
+  try {
+
+    config =
+      getConfig();
+
+  } catch (error) {
+
+    return Response.json(
+      {
+        ok:
+          false,
+
+        source:
+          "yandex_daily_sync",
+
+        error:
+          error instanceof Error
+            ? error.message
+            : String(
+                error
+              ),
+      },
+      {
+        status:
+          500,
+      }
+    );
+
+  }
+
+
+  // ==========================================================
+  // AUTH
+  //
+  // Не пишем неавторизованные попытки в журнал,
+  // чтобы таблица не превратилась в мусорку.
+  // ==========================================================
+
+  if (
+    !isAuthorized(
+      request,
+      config.cronSecret
+    )
+  ) {
+
+    return Response.json(
+      {
+        ok:
+          false,
+
+        error:
+          "Unauthorized",
+      },
+      {
+        status:
+          401,
+      }
+    );
+
+  }
+
+
   try {
 
     // ========================================================
-    // 1. CONFIG + AUTH
+    // JOURNAL START
     // ========================================================
 
-    const {
-      cronSecret,
-    } =
-      getConfig();
-
-
-    if (
-      !isAuthorized(
+    journalRunId =
+      await createJournalRun({
+        config,
         request,
-        cronSecret
-      )
-    ) {
-
-      return Response.json(
-        {
-          ok:
-            false,
-
-          error:
-            "Unauthorized",
-        },
-        {
-          status:
-            401,
-        }
-      );
-
-    }
+      });
 
 
     // ========================================================
-    // 2. ORIGIN
+    // ORIGIN
     // ========================================================
 
     const requestUrl =
@@ -598,26 +974,16 @@ async function runDailySync(
       requestUrl.origin;
 
 
-    console.log(
-      "YANDEX DAILY SYNC START",
-      {
-        started_at:
-          startedAtIso,
-
-        origin,
-      }
-    );
-
-
     // ========================================================
-    // 3. STOCKS
+    // 1. STOCKS
     // ========================================================
 
     const stocksResult =
       await runInternalPost({
         origin,
 
-        cronSecret,
+        cronSecret:
+          config.cronSecret,
 
         step:
           "stocks",
@@ -632,20 +998,16 @@ async function runDailySync(
     );
 
 
-    console.log(
-      "YANDEX DAILY SYNC STOCKS OK"
-    );
-
-
     // ========================================================
-    // 4. SALES
+    // 2. SALES
     // ========================================================
 
     const salesResult =
       await runInternalPost({
         origin,
 
-        cronSecret,
+        cronSecret:
+          config.cronSecret,
 
         step:
           "sales",
@@ -657,11 +1019,6 @@ async function runDailySync(
 
     completedSteps.push(
       salesResult
-    );
-
-
-    console.log(
-      "YANDEX DAILY SYNC SALES OK"
     );
 
 
@@ -686,8 +1043,7 @@ async function runDailySync(
           500,
 
         attempts:
-          salesResult
-            .attempts,
+          salesResult.attempts,
 
         body: {
           error:
@@ -702,14 +1058,15 @@ async function runDailySync(
 
 
     // ========================================================
-    // 5. SALES DAILY
+    // 3. SALES DAILY
     // ========================================================
 
     const dailyResult =
       await runInternalPost({
         origin,
 
-        cronSecret,
+        cronSecret:
+          config.cronSecret,
 
         step:
           "sales_daily",
@@ -724,11 +1081,6 @@ async function runDailySync(
     );
 
 
-    console.log(
-      "YANDEX DAILY SYNC SALES DAILY OK"
-    );
-
-
     const dailySyncRunId =
       normalizeKey(
         dailyResult
@@ -736,11 +1088,6 @@ async function runDailySync(
           .sync_run_id
       );
 
-
-    // ========================================================
-    // 6. ПРОВЕРЯЕМ, ЧТО DAILY ПЕРЕСЧИТАЛ
-    // ТОТ ЖЕ САМЫЙ SALES RUN
-    // ========================================================
 
     if (
       dailySyncRunId
@@ -760,8 +1107,7 @@ async function runDailySync(
           500,
 
         attempts:
-          dailyResult
-            .attempts,
+          dailyResult.attempts,
 
         body: {
           error:
@@ -782,30 +1128,48 @@ async function runDailySync(
 
 
     // ========================================================
-    // 7. SUCCESS
+    // SUCCESS JOURNAL
     // ========================================================
 
-    const finishedAt =
-      new Date()
-        .toISOString();
+    await finishJournalRun({
+      config,
 
+      journalRunId,
 
-    const durationMs =
-      Date.now()
-      -
-      startedAt;
+      status:
+        "success",
 
+      startedAtMs,
 
-    console.log(
-      "YANDEX DAILY SYNC SUCCESS",
-      {
+      failedStep:
+        null,
+
+      errorMessage:
+        null,
+
+      details: {
+        started_at:
+          startedAtIso,
+
         sales_sync_run_id:
           salesSyncRunId,
 
-        duration_ms:
-          durationMs,
-      }
-    );
+        completed_steps:
+          serializeCompletedSteps(
+            completedSteps
+          ),
+      },
+    });
+
+
+    const finishedAt =
+      new Date();
+
+
+    const durationMs =
+      finishedAt.getTime()
+      -
+      startedAtMs;
 
 
     return Response.json(
@@ -825,6 +1189,9 @@ async function runDailySync(
         writes_to_database:
           true,
 
+        journal_run_id:
+          journalRunId,
+
         sales_sync_run_id:
           salesSyncRunId,
 
@@ -834,16 +1201,13 @@ async function runDailySync(
               true,
 
             status:
-              stocksResult
-                .status,
+              stocksResult.status,
 
             attempts:
-              stocksResult
-                .attempts,
+              stocksResult.attempts,
 
             body:
-              stocksResult
-                .body,
+              stocksResult.body,
           },
 
           sales: {
@@ -851,16 +1215,13 @@ async function runDailySync(
               true,
 
             status:
-              salesResult
-                .status,
+              salesResult.status,
 
             attempts:
-              salesResult
-                .attempts,
+              salesResult.attempts,
 
             body:
-              salesResult
-                .body,
+              salesResult.body,
           },
 
           sales_daily: {
@@ -868,16 +1229,13 @@ async function runDailySync(
               true,
 
             status:
-              dailyResult
-                .status,
+              dailyResult.status,
 
             attempts:
-              dailyResult
-                .attempts,
+              dailyResult.attempts,
 
             body:
-              dailyResult
-                .body,
+              dailyResult.body,
           },
         },
 
@@ -885,7 +1243,7 @@ async function runDailySync(
           startedAtIso,
 
         finished_at:
-          finishedAt,
+          finishedAt.toISOString(),
 
         duration_ms:
           durationMs,
@@ -898,17 +1256,123 @@ async function runDailySync(
 
   } catch (error) {
 
-    console.error(
-      "YANDEX DAILY SYNC ERROR",
-      error
-    );
+    // ========================================================
+    // DETERMINE FAILURE
+    // ========================================================
+
+    let failedStep:
+      string | null =
+      null;
 
 
-    const durationMs =
-      Date.now()
-      -
-      startedAt;
+    let errorMessage:
+      string;
 
+
+    let errorDetails:
+      unknown;
+
+
+    if (
+      error instanceof
+      YandexDailySyncStepError
+    ) {
+
+      failedStep =
+        error.step;
+
+
+      errorMessage =
+        error.message;
+
+
+      errorDetails = {
+        path:
+          error.path,
+
+        status:
+          error.status,
+
+        attempts:
+          error.attempts,
+
+        body:
+          error.body,
+      };
+
+    } else {
+
+      errorMessage =
+        error instanceof Error
+          ? error.message
+          : String(
+              error
+            );
+
+
+      errorDetails = {
+        raw_error:
+          errorMessage,
+      };
+
+    }
+
+
+    // ========================================================
+    // FAILED JOURNAL
+    // ========================================================
+
+    if (
+      journalRunId
+    ) {
+
+      try {
+
+        await finishJournalRun({
+          config,
+
+          journalRunId,
+
+          status:
+            "failed",
+
+          startedAtMs,
+
+          failedStep,
+
+          errorMessage,
+
+          details: {
+            started_at:
+              startedAtIso,
+
+            failed:
+              errorDetails,
+
+            completed_steps:
+              serializeCompletedSteps(
+                completedSteps
+              ),
+          },
+        });
+
+      } catch (
+        journalError
+      ) {
+
+        console.error(
+          "YANDEX DAILY SYNC JOURNAL ERROR:",
+          journalError
+        );
+
+      }
+
+    }
+
+
+    // ========================================================
+    // RESPONSE
+    // ========================================================
 
     if (
       error instanceof
@@ -929,6 +1393,9 @@ async function runDailySync(
           writes_to_yandex:
             false,
 
+          journal_run_id:
+            journalRunId,
+
           failed_step:
             error.step,
 
@@ -945,27 +1412,14 @@ async function runDailySync(
             error.body,
 
           completed_steps:
-            completedSteps.map(
-              step => ({
-                step:
-                  step.step,
-
-                path:
-                  step.path,
-
-                status:
-                  step.status,
-
-                attempts:
-                  step.attempts,
-              })
+            serializeCompletedSteps(
+              completedSteps
             ),
 
-          note:
-            "Следующие этапы после ошибки не запускались.",
-
           duration_ms:
-            durationMs,
+            Date.now()
+            -
+            startedAtMs,
         },
         {
           status:
@@ -987,35 +1441,21 @@ async function runDailySync(
         source:
           "yandex_daily_sync",
 
-        writes_to_yandex:
-          false,
+        journal_run_id:
+          journalRunId,
 
         error:
-          error instanceof Error
-            ? error.message
-            : String(
-                error
-              ),
+          errorMessage,
 
         completed_steps:
-          completedSteps.map(
-            step => ({
-              step:
-                step.step,
-
-              path:
-                step.path,
-
-              status:
-                step.status,
-
-              attempts:
-                step.attempts,
-            })
+          serializeCompletedSteps(
+            completedSteps
           ),
 
         duration_ms:
-          durationMs,
+          Date.now()
+          -
+          startedAtMs,
       },
       {
         status:
