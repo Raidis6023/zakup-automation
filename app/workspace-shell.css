@@ -9,6 +9,39 @@
 
 .workspace-content--module {
   position: relative;
+
+  --workspace-module-header-height:
+    98px;
+
+  --workspace-decoration-height:
+    64px;
+}
+
+
+/* ============================================================
+   ВАЖНО:
+   УБИРАЕМ ВЕРХНИЙ PADDING ТОЛЬКО У РАБОЧИХ МОДУЛЕЙ
+
+   Обычный .home-content получает сверху 24px
+   из workspace-reference-shell.css.
+
+   Раньше мы пытались компенсировать их
+   отрицательным margin у sticky-header.
+
+   Теперь делаем нормально:
+   - рабочий модуль начинается сразу под topbar;
+   - шапка сама имеет постоянные 98px;
+   - никаких разных геометрий
+     до и после прокрутки больше нет.
+
+   Главная страница НЕ затрагивается,
+   потому что на ней нет класса
+   workspace-content--module.
+   ============================================================ */
+
+.home-content.workspace-content--module {
+  padding-top:
+    0;
 }
 
 
@@ -16,21 +49,31 @@
    СТАРЫЕ СТРАНИЦЫ ВНУТРИ НОВОЙ ОБОЛОЧКИ
    ============================================================ */
 
-.workspace-content--module .page {
-  min-height: 0;
+.workspace-content--module
+.page {
+  min-height:
+    0;
 
-  padding: 0;
+  padding:
+    0;
 
-  background: transparent;
+  background:
+    transparent;
 }
 
 
-.workspace-content--module .page > .container {
-  width: 100%;
+.workspace-content--module
+.page
+>
+.container {
+  width:
+    100%;
 
-  max-width: none;
+  max-width:
+    none;
 
-  margin: 0;
+  margin:
+    0;
 }
 
 
@@ -41,51 +84,39 @@
 .workspace-content--module
 .page
 .header-actions
-> .theme-toggle {
-  display: none;
-}
-
-
-/* ============================================================
-   ОБЩИЕ ПАРАМЕТРЫ ЗАКРЕПЛЁННОЙ ШАПКИ
-
-   Эти значения используются всеми рабочими страницами.
-
-   Главная страница сюда НЕ попадает,
-   потому что у неё нет workspace-content--module.
-   ============================================================ */
-
-.workspace-content--module {
-  --workspace-module-header-height:
-    98px;
-
-  --workspace-decoration-height:
-    64px;
+>
+.theme-toggle {
+  display:
+    none;
 }
 
 
 /* ============================================================
    ДЕКОРАТИВНЫЕ ПОЛОСЫ
 
-   На всех рабочих страницах они теперь закреплены
-   вместе с заголовком раздела.
+   Общая верхняя панель имеет высоту:
+   --home-topbar-height = 72px.
 
-   Общая верхняя панель Workspace:
-   var(--home-topbar-height) = 72px.
+   Высота шапки модуля:
+   98px.
 
-   Высота шапки раздела = 98px.
-   Высота полос = 64px.
+   Высота полос:
+   64px.
 
    (98 - 64) / 2 = 17px.
 
-   Поэтому полосы всегда стоят по центру
-   относительно закреплённой шапки раздела.
+   Поэтому полосы всегда находятся
+   строго по центру высоты шапки.
    ============================================================ */
 
+.workspace-content--module
+>
 .workspace-corner-decoration {
-  position: fixed;
+  position:
+    fixed;
 
-  z-index: 41;
+  z-index:
+    41;
 
   top:
     calc(
@@ -97,9 +128,11 @@
       17px
     );
 
-  right: 30px;
+  right:
+    30px;
 
-  display: block;
+  display:
+    block;
 
   width:
     min(
@@ -113,22 +146,26 @@
       64px
     );
 
-  pointer-events: none;
+  pointer-events:
+    none;
 
-  visibility: visible;
+  visibility:
+    visible;
 
-  opacity: 1;
+  opacity:
+    1;
 }
 
 
-.workspace-corner-decoration .home-decoration {
-  display: flex;
+.workspace-content--module
+>
+.workspace-corner-decoration
+.home-decoration {
+  display:
+    flex;
 
-  align-items: center;
-
-  justify-content: flex-end;
-
-  width: 100%;
+  width:
+    100%;
 
   height:
     var(
@@ -136,43 +173,56 @@
       64px
     );
 
-  overflow: visible;
+  align-items:
+    center;
+
+  justify-content:
+    flex-end;
+
+  overflow:
+    visible;
 }
 
 
+.workspace-content--module
+>
 .workspace-corner-decoration
 .home-decoration
 svg {
-  display: block;
+  display:
+    block;
 
-  width: 100%;
+  width:
+    100%;
 
-  height: 100%;
+  height:
+    100%;
 
-  overflow: visible;
+  overflow:
+    visible;
 }
 
 
 /* ============================================================
-   ШАПКА КАЖДОГО РАБОЧЕГО РАЗДЕЛА
+   ОБЩАЯ STICKY-ШАПКА РАБОЧЕГО РАЗДЕЛА
 
-   Закрепляется под общей верхней панелью.
+   ВАЖНО:
+   Раньше было:
+   .workspace-content--module .page .header
 
-   .home-content имеет 24px верхнего padding.
-   margin-top: -24px переносит этот воздух
-   внутрь общей геометрии страницы.
+   Из-за этого страницы с другой обёрткой,
+   в частности "Закуп", не попадали под правило.
 
-   Поэтому положение элементов:
-   - наверху страницы;
-   - после прилипания sticky
+   Теперь .page больше НЕ требуется.
 
-   остаётся одинаковым.
+   Любая основная .header внутри рабочего модуля
+   получает общее закрепление.
    ============================================================ */
 
 .workspace-content--module
-.page
 .header {
-  position: sticky;
+  position:
+    sticky;
 
   top:
     var(
@@ -180,13 +230,17 @@ svg {
       72px
     );
 
-  z-index: 40;
+  z-index:
+    40;
 
-  display: flex;
+  display:
+    flex;
 
-  box-sizing: border-box;
+  box-sizing:
+    border-box;
 
-  width: 100%;
+  width:
+    100%;
 
   height:
     var(
@@ -200,13 +254,21 @@ svg {
       98px
     );
 
-  margin-top: -24px;
+  /*
+   * Больше никакой компенсации -24px.
+   * У module-контейнера padding-top теперь 0.
+   */
+  margin-top:
+    0 !important;
 
-  margin-bottom: 0;
+  margin-bottom:
+    0 !important;
 
-  padding-top: 0;
+  padding-top:
+    0;
 
-  padding-bottom: 0;
+  padding-bottom:
+    0;
 
   padding-right:
     min(
@@ -214,50 +276,86 @@ svg {
       42%
     );
 
-  align-items: center;
+  align-items:
+    center;
 
-  overflow: visible;
+  overflow:
+    visible;
 
   background:
     var(--ws-page);
 
-  border: 0;
+  border:
+    0;
 
-  box-shadow: none;
+  box-shadow:
+    none;
 }
 
 
 /* ============================================================
-   ЛЕВАЯ И ПРАВАЯ ЧАСТИ ШАПКИ
+   ЦЕНТРИРОВАНИЕ СОДЕРЖИМОГО ШАПКИ
 
-   Содержимое центрируется по высоте
-   одинаково до и после прокрутки.
+   Неважно, какая конкретно страница:
+   Ozon, WB, Яндекс, ВЭД, Закуп и т.д.
+
+   Левая часть и кнопки получают одну
+   вертикальную центральную ось.
    ============================================================ */
 
 .workspace-content--module
-.page
 .header
-.header-actions {
-  align-self: center;
+>
+:first-child {
+  align-self:
+    center;
 }
 
 
 .workspace-content--module
-.page
 .header
->
-:first-child {
-  align-self: center;
+.header-actions {
+  align-self:
+    center;
+
+  align-items:
+    center;
 }
 
 
 /* ============================================================
-   DARK
+   УБИРАЕМ ВНЕШНИЙ ВЕРТИКАЛЬНЫЙ ЗАЗОР
+   СРАЗУ ПОСЛЕ ШАПКИ
+
+   На ряде страниц первый section/grid имел
+   собственный margin-top.
+
+   Пока страница была наверху, этот пустой участок
+   визуально воспринимался как часть голубой шапки,
+   поэтому её содержимое казалось поднятым вверх.
+
+   После прокрутки этот участок уезжал,
+   и всё внезапно выглядело правильно.
+
+   Теперь первая область начинается сразу после
+   настоящей границы 98px-шапки.
+   ============================================================ */
+
+.workspace-content--module
+.header
++
+* {
+  margin-top:
+    0 !important;
+}
+
+
+/* ============================================================
+   ТЁМНАЯ ТЕМА
    ============================================================ */
 
 html[data-theme="dark"]
 .workspace-content--module
-.page
 .header {
   background:
     var(--ws-page);
@@ -265,15 +363,18 @@ html[data-theme="dark"]
 
 
 /* ============================================================
-   АДАПТАЦИЯ <= 1100 PX
+   <= 1100 PX
    ============================================================ */
 
 @media (
   max-width: 1100px
 ) {
 
+  .workspace-content--module
+  >
   .workspace-corner-decoration {
-    right: 20px;
+    right:
+      20px;
 
     width:
       min(
@@ -284,7 +385,6 @@ html[data-theme="dark"]
 
 
   .workspace-content--module
-  .page
   .header {
     padding-right:
       min(
@@ -297,13 +397,15 @@ html[data-theme="dark"]
 
 
 /* ============================================================
-   АДАПТАЦИЯ <= 900 PX
+   <= 900 PX
    ============================================================ */
 
 @media (
   max-width: 900px
 ) {
 
+  .workspace-content--module
+  >
   .workspace-corner-decoration {
     width:
       min(
@@ -314,9 +416,9 @@ html[data-theme="dark"]
 
 
   .workspace-content--module
-  .page
   .header {
-    padding-top: 0;
+    padding-top:
+      0;
 
     padding-right:
       min(
@@ -324,51 +426,66 @@ html[data-theme="dark"]
         62%
       );
 
-    align-items: center;
+    align-items:
+      center;
   }
 
 }
 
 
 /* ============================================================
-   АДАПТАЦИЯ <= 800 PX
+   <= 800 PX
 
-   Здесь общий topbar Workspace уже не sticky.
+   На этой ширине:
+   - общий topbar уже не sticky;
+   - полосы скрываем;
+   - модульная шапка остаётся компактной.
 
-   У .home-content верхний padding равен 20px,
-   поэтому компенсация становится -20px.
-
-   Декоративные полосы на такой ширине скрываем,
-   иначе они начнут воевать за место с кнопками.
+   Верхний padding рабочего контента также
+   оставляем нулевым.
    ============================================================ */
 
 @media (
   max-width: 800px
 ) {
 
-  .workspace-corner-decoration {
-    display: none;
+  .home-content.workspace-content--module {
+    padding-top:
+      0;
   }
 
 
   .workspace-content--module
-  .page
+  >
+  .workspace-corner-decoration {
+    display:
+      none;
+  }
+
+
+  .workspace-content--module
   .header {
-    top: 0;
+    top:
+      0;
 
-    height: auto;
+    height:
+      auto;
 
-    min-height: 94px;
+    min-height:
+      94px;
 
-    margin-top: -20px;
+    margin-top:
+      0 !important;
 
-    margin-bottom: 0;
+    margin-bottom:
+      0 !important;
 
     padding:
       10px
       0;
 
-    align-items: center;
+    align-items:
+      center;
   }
 
 }
