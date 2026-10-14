@@ -4,6 +4,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  type ReactNode,
 } from "react";
 
 
@@ -240,6 +241,10 @@ function compareRows(
       : -1;
 
 
+  // ==========================================================
+  // TEXT
+  // ==========================================================
+
   if (
     TEXT_SORT_KEYS.has(
       key
@@ -300,7 +305,10 @@ function compareRows(
     return (
       firstValue.localeCompare(
         secondValue,
-        "ru",
+        [
+          "ru",
+          "en",
+        ],
         {
           numeric:
             true,
@@ -315,6 +323,10 @@ function compareRows(
 
   }
 
+
+  // ==========================================================
+  // NUMBERS
+  // ==========================================================
 
   const firstRaw =
     first[key] as
@@ -407,6 +419,10 @@ export default function WbProductsTableClient({
   items,
 }: Props) {
 
+  // ==========================================================
+  // COLLAPSE
+  // ==========================================================
+
   const [
     expanded,
     setExpanded,
@@ -424,6 +440,13 @@ export default function WbProductsTableClient({
       false
     );
 
+
+  // ==========================================================
+  // SORT
+  //
+  // По умолчанию:
+  // Продажи 28 дней -> от большего к меньшему.
+  // ==========================================================
 
   const [
     sortKey,
@@ -595,7 +618,8 @@ export default function WbProductsTableClient({
         } catch {
 
           /*
-           * Таблица всё равно продолжит работать.
+           * Сама таблица продолжит работать
+           * даже без localStorage.
            */
 
         }
@@ -747,7 +771,7 @@ export default function WbProductsTableClient({
       SortKey;
 
     children:
-      React.ReactNode;
+      ReactNode;
   }) {
 
     return (
@@ -801,6 +825,10 @@ export default function WbProductsTableClient({
     <section
       className="section wb-products-section wb-products-collapsible"
     >
+
+      {/* ======================================================
+          COLLAPSE HEADER
+          ====================================================== */}
 
       <button
         type="button"
@@ -861,6 +889,10 @@ export default function WbProductsTableClient({
 
       </button>
 
+
+      {/* ======================================================
+          TABLE
+          ====================================================== */}
 
       {
         storageLoaded
@@ -927,6 +959,16 @@ export default function WbProductsTableClient({
 
                     <tr>
 
+                      {/* ======================================
+                          ЕНОТ
+
+                          В коде и данных это по-прежнему
+                          masterCode.
+
+                          Меняется только название
+                          для пользователя.
+                          ====================================== */}
+
                       <th
                         aria-sort={
                           ariaSort(
@@ -938,7 +980,7 @@ export default function WbProductsTableClient({
                         <SortButton
                           column="masterCode"
                         >
-                          master_code
+                          ЕНОТ
                         </SortButton>
 
                       </th>
@@ -1106,6 +1148,8 @@ export default function WbProductsTableClient({
                             }
                           >
 
+                            {/* ЕНОТ */}
+
                             <td
                               className="wb-products-master-cell"
                             >
@@ -1131,6 +1175,8 @@ export default function WbProductsTableClient({
                             </td>
 
 
+                            {/* Артикул WB */}
+
                             <td
                               className="wb-products-wb-cell"
                             >
@@ -1143,6 +1189,8 @@ export default function WbProductsTableClient({
 
                             </td>
 
+
+                            {/* Артикул продавца */}
 
                             <td
                               className="wb-products-seller-cell"
@@ -1161,6 +1209,8 @@ export default function WbProductsTableClient({
 
                             </td>
 
+
+                            {/* Товар */}
 
                             <td
                               className="wb-products-product-cell"
@@ -1202,6 +1252,8 @@ export default function WbProductsTableClient({
                             </td>
 
 
+                            {/* Продажи */}
+
                             <td
                               className="wb-products-number-cell wb-products-sales-cell"
                             >
@@ -1217,6 +1269,8 @@ export default function WbProductsTableClient({
                             </td>
 
 
+                            {/* Среднее */}
+
                             <td
                               className="wb-products-number-cell"
                             >
@@ -1230,6 +1284,8 @@ export default function WbProductsTableClient({
                             </td>
 
 
+                            {/* Отмены */}
+
                             <td
                               className="wb-products-number-cell"
                             >
@@ -1242,6 +1298,8 @@ export default function WbProductsTableClient({
 
                             </td>
 
+
+                            {/* Остаток */}
 
                             <td
                               className="wb-products-number-cell"
@@ -1257,6 +1315,8 @@ export default function WbProductsTableClient({
 
                             </td>
 
+
+                            {/* Дней запаса */}
 
                             <td
                               className="wb-products-number-cell"
