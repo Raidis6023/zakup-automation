@@ -1318,7 +1318,7 @@ export default async function WildberriesPage() {
                         dashboard.summary.sales28Days
                       )
                     }
-                    caption="buyoutCount, шт."
+                    caption="Продано товаров, шт."
                   />
 
 
@@ -1331,7 +1331,7 @@ export default async function WildberriesPage() {
                         dashboard.summary.cancelled28Days
                       )
                     }
-                    caption="cancelCount Воронки продаж"
+                    caption="Отмены, шт."
                   />
 
 
@@ -1344,20 +1344,20 @@ export default async function WildberriesPage() {
                         dashboard.summary.fbwStock
                       )
                     }
-                    caption="stockCount на складах WB"
+                    caption="Доступно на складах WB, шт."
                   />
 
 
                   <SummaryCard
                     icon="products"
                     tone="blue"
-                    label="Связанных master_code"
+                    label="Связанных ЕНОТ"
                     value={
                       formatInteger(
                         dashboard.summary.physicalProducts
                       )
                     }
-                    caption="только справочная связь"
+                    caption="Карточек, связанных с ЕНОТ"
                   />
 
 
@@ -1370,7 +1370,7 @@ export default async function WildberriesPage() {
                         dashboard.summary.listings
                       )
                     }
-                    caption="текущих карточек Wildberries"
+                    caption="Активных карточек Wildberries"
                   />
 
                 </section>
@@ -1434,7 +1434,7 @@ export default async function WildberriesPage() {
 
 
                       <InfoLine>
-                        master_code используется для связи карточки с физическим товаром и дальнейшего расчёта закупки.
+                        ЕНОТ используется для связи карточки с физическим товаром и дальнейшего расчёта закупки.
                       </InfoLine>
 
 
@@ -1531,7 +1531,7 @@ export default async function WildberriesPage() {
 
 
                       <InfoLine>
-                        Карточки без master_code показываются отдельно и не участвуют в закупке до ручной привязки.
+                        Карточки без ЕНОТ показываются отдельно и не участвуют в закупке до ручной привязки.
                       </InfoLine>
 
                     </div>
