@@ -90,9 +90,6 @@
    64px.
 
    (98 - 64) / 2 = 17px.
-
-   Поэтому центр полос всегда совпадает
-   с центром шапки раздела.
    ============================================================ */
 
 .workspace-content--module
@@ -190,26 +187,14 @@ svg {
 
 
 /* ============================================================
-   ОБЩАЯ STICKY-ШАПКА РАБОЧИХ РАЗДЕЛОВ
+   ОБЩАЯ STICKY-ШАПКА
 
-   В проекте сейчас используются ДВА варианта:
-
-   1. .header
-      WB, Ozon, Яндекс Маркет и другие новые страницы.
-
-   2. .home-title-row
-      страница "Закуп" и старые страницы,
-      построенные по старому шаблону.
-
-   Теперь оба варианта получают абсолютно
-   одинаковую геометрию и sticky-поведение.
+   Это стандартная структура страниц:
+   WB, Ozon, Яндекс Маркет и т.д.
    ============================================================ */
 
 .workspace-content--module
-.header,
-
-.workspace-content--module
-.home-title-row {
+.header {
   position:
     sticky;
 
@@ -278,32 +263,6 @@ svg {
 }
 
 
-/* ============================================================
-   HOME-TITLE-ROW
-
-   У старого шаблона уже был:
-   justify-content: space-between.
-
-   Явно оставляем его, чтобы:
-   - заголовок был слева;
-   - управляющая кнопка оставалась справа;
-   - оба элемента были по центру высоты 98px.
-   ============================================================ */
-
-.workspace-content--module
-.home-title-row {
-  justify-content:
-    space-between;
-
-  gap:
-    28px;
-}
-
-
-/* ============================================================
-   ЛЕВАЯ ЧАСТЬ СТАНДАРТНОЙ HEADER
-   ============================================================ */
-
 .workspace-content--module
 .header
 >
@@ -312,10 +271,6 @@ svg {
     center;
 }
 
-
-/* ============================================================
-   ПРАВАЯ ЧАСТЬ СТАНДАРТНОЙ HEADER
-   ============================================================ */
 
 .workspace-content--module
 .header
@@ -329,98 +284,232 @@ svg {
 
 
 /* ============================================================
-   СОДЕРЖИМОЕ HOME-TITLE-ROW
+   ЗАКУП
 
-   Для страницы "Закуп":
-   каждый непосредственный дочерний элемент
-   центрируется относительно всей высоты шапки.
+   ВАЖНО:
+   Страница /zakup использует СВОЮ структуру:
 
-   Поэтому:
-   - "Китай — расчёт потребности";
-   - описание;
-   - кнопки справа
+   .zakup-v2-header
+   .zakup-v2-title
+   .zakup-v2-header-actions
 
-   больше не сидят у верхней границы.
+   Поэтому она получает отдельное правило,
+   но геометрия абсолютно та же:
+   98px + sticky под общим topbar.
    ============================================================ */
 
 .workspace-content--module
-.home-title-row
->
-* {
+.page.zakup-reference-page
+.zakup-v2-header {
+  position:
+    sticky !important;
+
+  top:
+    var(
+      --home-topbar-height,
+      72px
+    ) !important;
+
+  z-index:
+    40 !important;
+
+  display:
+    flex !important;
+
+  box-sizing:
+    border-box;
+
+  width:
+    100%;
+
+  height:
+    var(
+      --workspace-module-header-height,
+      98px
+    ) !important;
+
+  min-height:
+    var(
+      --workspace-module-header-height,
+      98px
+    ) !important;
+
+  margin-top:
+    0 !important;
+
+  margin-bottom:
+    0 !important;
+
+  padding-top:
+    0 !important;
+
+  padding-bottom:
+    0 !important;
+
+  padding-left:
+    0;
+
+  padding-right:
+    min(
+      500px,
+      42%
+    ) !important;
+
+  align-items:
+    center !important;
+
+  justify-content:
+    space-between;
+
+  gap:
+    24px;
+
+  overflow:
+    visible;
+
+  background:
+    var(--ws-page) !important;
+
+  border:
+    0;
+
+  box-shadow:
+    none;
+}
+
+
+/* ============================================================
+   ЗАКУП — ЛЕВЫЙ ТЕКСТОВЫЙ БЛОК
+
+   small-label + заголовок + описание
+   центрируются как ОДНА группа относительно 98px.
+   ============================================================ */
+
+.workspace-content--module
+.page.zakup-reference-page
+.zakup-v2-header
+.zakup-v2-title {
+  display:
+    flex !important;
+
+  min-width:
+    0;
+
+  flex-direction:
+    column;
+
+  justify-content:
+    center !important;
+
+  align-self:
+    center !important;
+
+  margin:
+    0 !important;
+
+  padding:
+    0 !important;
+
+  transform:
+    none !important;
+}
+
+
+/* ============================================================
+   ЗАКУП — УБИРАЕМ ВНЕШНИЕ MARGIN,
+   КОТОРЫЕ МОГЛИ СДВИГАТЬ ГРУППУ ВВЕРХ
+   ============================================================ */
+
+.workspace-content--module
+.page.zakup-reference-page
+.zakup-v2-title
+.small-label {
+  margin-top:
+    0 !important;
+}
+
+
+.workspace-content--module
+.page.zakup-reference-page
+.zakup-v2-title
+.title {
+  margin-top:
+    0 !important;
+
+  margin-bottom:
+    0 !important;
+}
+
+
+.workspace-content--module
+.page.zakup-reference-page
+.zakup-v2-title
+.subtitle {
+  margin-top:
+    5px !important;
+
+  margin-bottom:
+    0 !important;
+}
+
+
+/* ============================================================
+   ЗАКУП — КНОПКА "ГЛАВНАЯ"
+
+   Центрируется по той же оси,
+   что текст и декоративные полосы.
+   ============================================================ */
+
+.workspace-content--module
+.page.zakup-reference-page
+.zakup-v2-header
+.zakup-v2-header-actions {
+  position:
+    relative;
+
+  z-index:
+    42;
+
+  display:
+    flex !important;
+
+  align-items:
+    center !important;
+
+  justify-content:
+    flex-end;
+
+  align-self:
+    center !important;
+
+  margin:
+    0 !important;
+
+  padding:
+    0 !important;
+
+  transform:
+    none !important;
+}
+
+
+.workspace-content--module
+.page.zakup-reference-page
+.zakup-v2-header
+.zakup-v2-home-button {
+  margin:
+    0 !important;
+
   align-self:
     center;
 }
 
 
 /* ============================================================
-   ТЕКСТОВЫЙ БЛОК HOME-TITLE-ROW
+   ПЕРВЫЙ БЛОК ПОСЛЕ ШАПКИ
 
-   Если слева находится div с h1 + p,
-   центрируем их как одну группу.
-
-   Внутреннюю геометрию текста не меняем.
-   ============================================================ */
-
-.workspace-content--module
-.home-title-row
->
-div:first-child {
-  display:
-    flex;
-
-  flex-direction:
-    column;
-
-  justify-content:
-    center;
-}
-
-
-/* ============================================================
-   ЗАГОЛОВОК СТАРОГО ШАБЛОНА
-
-   Не даём браузерным margin h1 вмешиваться
-   в вертикальный центр всей конструкции.
-   ============================================================ */
-
-.workspace-content--module
-.home-title-row
-h1 {
-  margin-top:
-    0;
-
-  margin-bottom:
-    0;
-}
-
-
-/* ============================================================
-   ПОДПИСЬ СТАРОГО ШАБЛОНА
-
-   Сохраняем небольшой отступ именно между
-   заголовком и подписью.
-
-   Внешнего отступа сверху/снизу у всей группы нет.
-   ============================================================ */
-
-.workspace-content--module
-.home-title-row
-h1
-+
-p {
-  margin-top:
-    6px;
-
-  margin-bottom:
-    0;
-}
-
-
-/* ============================================================
-   ЭЛЕМЕНТ СРАЗУ ПОСЛЕ ШАПКИ
-
-   Не позволяем дополнительному margin-top
-   визуально увеличивать высоту верхнего блока.
+   Не даём внешнему margin визуально менять
+   высоту верхней зоны.
    ============================================================ */
 
 .workspace-content--module
@@ -429,7 +518,8 @@ p {
 *,
 
 .workspace-content--module
-.home-title-row
+.page.zakup-reference-page
+.zakup-v2-header
 +
 * {
   margin-top:
@@ -438,7 +528,7 @@ p {
 
 
 /* ============================================================
-   ТЁМНАЯ ТЕМА
+   DARK
    ============================================================ */
 
 html[data-theme="dark"]
@@ -447,9 +537,10 @@ html[data-theme="dark"]
 
 html[data-theme="dark"]
 .workspace-content--module
-.home-title-row {
+.page.zakup-reference-page
+.zakup-v2-header {
   background:
-    var(--ws-page);
+    var(--ws-page) !important;
 }
 
 
@@ -479,12 +570,13 @@ html[data-theme="dark"]
   .header,
 
   .workspace-content--module
-  .home-title-row {
+  .page.zakup-reference-page
+  .zakup-v2-header {
     padding-right:
       min(
         350px,
         40%
-      );
+      ) !important;
   }
 
 }
@@ -513,18 +605,19 @@ html[data-theme="dark"]
   .header,
 
   .workspace-content--module
-  .home-title-row {
+  .page.zakup-reference-page
+  .zakup-v2-header {
     padding-top:
-      0;
+      0 !important;
 
     padding-right:
       min(
         300px,
         62%
-      );
+      ) !important;
 
     align-items:
-      center;
+      center !important;
   }
 
 }
@@ -532,11 +625,6 @@ html[data-theme="dark"]
 
 /* ============================================================
    <= 800 PX
-
-   На этой ширине:
-   - общий topbar уже не sticky;
-   - полосы скрываем;
-   - шапки остаются компактными.
    ============================================================ */
 
 @media (
@@ -561,15 +649,16 @@ html[data-theme="dark"]
   .header,
 
   .workspace-content--module
-  .home-title-row {
+  .page.zakup-reference-page
+  .zakup-v2-header {
     top:
-      0;
+      0 !important;
 
     height:
-      auto;
+      auto !important;
 
     min-height:
-      94px;
+      94px !important;
 
     margin-top:
       0 !important;
@@ -579,32 +668,41 @@ html[data-theme="dark"]
 
     padding:
       10px
-      0;
+      0 !important;
 
     align-items:
-      center;
+      center !important;
   }
 
 
   .workspace-content--module
-  .home-title-row {
+  .page.zakup-reference-page
+  .zakup-v2-header {
     flex-direction:
       column;
 
     align-items:
-      flex-start;
+      stretch !important;
 
     justify-content:
       center;
+
+    gap:
+      10px;
   }
 
 
   .workspace-content--module
-  .home-title-row
-  >
-  * {
+  .page.zakup-reference-page
+  .zakup-v2-header
+  .zakup-v2-title,
+
+  .workspace-content--module
+  .page.zakup-reference-page
+  .zakup-v2-header
+  .zakup-v2-header-actions {
     align-self:
-      stretch;
+      stretch !important;
   }
 
 }
