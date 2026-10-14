@@ -260,11 +260,8 @@ svg {
 /* ============================================================
    GRID
 
-   Свободное пространство теперь забирают
-   Товар и Артикул.
-
-   Числовые столбцы остаются компактными,
-   поэтому значения не уезжают к краю экрана.
+   Артикул стал компактнее.
+   Все числовые столбцы увеличены на одинаковые 12 px.
    ============================================================ */
 
 .yandex-reference-page
@@ -279,14 +276,14 @@ svg {
       1.55fr
     )
     minmax(
-      280px,
-      1fr
+      220px,
+      0.80fr
     )
-    130px
-    135px
-    95px
-    95px
-    110px;
+    142px
+    147px
+    107px
+    107px
+    122px;
 
   width:
     100%;
@@ -414,11 +411,17 @@ svg {
   min-width:
     0;
 
+  flex:
+    1 1 auto;
+
   overflow:
     hidden;
 
   white-space:
     nowrap;
+
+  text-overflow:
+    ellipsis;
 }
 
 
@@ -433,10 +436,26 @@ svg {
 
 
 .yandex-reference-page
+.ym-products-sort-button--left
+> span:first-child {
+  text-align:
+    left;
+}
+
+
+.yandex-reference-page
 .ym-products-sort-button--right {
   justify-content:
     flex-end;
 
+  text-align:
+    right;
+}
+
+
+.yandex-reference-page
+.ym-products-sort-button--right
+> span:first-child {
   text-align:
     right;
 }
