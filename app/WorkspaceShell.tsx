@@ -143,6 +143,12 @@ type WorkspaceNavKey =
   | "yandex-market";
 
 
+type VedOrderSource =
+  | "zakup"
+  | "ved"
+  | null;
+
+
 // ============================================================
 // ОБОЛОЧКА WORKSPACE
 // ============================================================
@@ -167,6 +173,15 @@ export default function WorkspaceShell({
     );
 
 
+  const [
+    vedOrderSource,
+    setVedOrderSource,
+  ] =
+    useState<VedOrderSource>(
+      null
+    );
+
+
   const adminMode =
     pathname ===
       "/admin"
@@ -182,24 +197,72 @@ export default function WorkspaceShell({
       : "/";
 
 
-  // ==========================================================
-  // ДЕТАЛЬНАЯ СТРАНИЦА ЗАКАЗА
-  //
-  // /ved-orders/[id]
-  //
-  // Несмотря на техническое имя ved-orders,
-  // эта детальная страница создаётся из раздела "Закуп"
-  // после формирования заказа.
-  //
-  // Поэтому в боковом меню она относится к "Закуп".
-  //
-  // Сам список /ved-orders без ID оставляем за ВЭД.
-  // ==========================================================
-
-  const isProcurementOrderDetail =
+  const isVedOrderDetail =
     pathname.startsWith(
       "/ved-orders/"
     );
+
+
+  // ==========================================================
+  // ИСТОЧНИК ОТКРЫТИЯ ДЕТАЛЬНОЙ СТРАНИЦЫ ЗАКАЗА
+  //
+  // ?from=zakup -> заказ открыт из Закупа
+  // ?from=ved   -> заказ открыт из ВЭД
+  //
+  // Если параметра нет, считаем страницу частью ВЭД.
+  // Это безопасное поведение для старых ссылок.
+  // ==========================================================
+
+  useEffect(
+    () => {
+
+      if (
+        !isVedOrderDetail
+      ) {
+
+        setVedOrderSource(
+          null
+        );
+
+        return;
+
+      }
+
+
+      try {
+
+        const params =
+          new URLSearchParams(
+            window.location.search
+          );
+
+
+        const source =
+          params.get(
+            "from"
+          );
+
+
+        setVedOrderSource(
+          source === "zakup"
+            ? "zakup"
+            : "ved"
+        );
+
+      } catch {
+
+        setVedOrderSource(
+          "ved"
+        );
+
+      }
+
+    },
+    [
+      pathname,
+      isVedOrderDetail,
+    ]
+  );
 
 
   // ==========================================================
@@ -249,7 +312,12 @@ export default function WorkspaceShell({
             "/stock-import/"
           )
           ||
-          isProcurementOrderDetail
+          (
+            isVedOrderDetail
+            &&
+            vedOrderSource ===
+              "zakup"
+          )
         );
 
 
@@ -265,6 +333,13 @@ export default function WorkspaceShell({
           ||
           pathname ===
             "/ved-orders"
+          ||
+          (
+            isVedOrderDetail
+            &&
+            vedOrderSource ===
+              "ved"
+          )
         );
 
 
@@ -427,10 +502,6 @@ export default function WorkspaceShell({
           "home-sidebar"
       >
 
-        {/* ========================================
-            ЛОГОТИП
-            ======================================== */}
-
         <Link
           href={
             homeHref
@@ -452,10 +523,6 @@ export default function WorkspaceShell({
 
         </Link>
 
-
-        {/* ========================================
-            КНОПКА СВОРАЧИВАНИЯ
-            ======================================== */}
 
         <button
           type="button"
@@ -489,10 +556,6 @@ export default function WorkspaceShell({
         </button>
 
 
-        {/* ========================================
-            РЕЖИМ АДМИНИСТРАТОРА
-            ======================================== */}
-
         {
           adminMode
 
@@ -525,20 +588,15 @@ export default function WorkspaceShell({
                       : undefined
                   }
 
-                  aria-label=
-                    "Главная"
-
-                  title=
-                    "Главная"
+                  aria-label="Главная"
+                  title="Главная"
                 >
 
                   <span
                     className=
                       "home-workspace-icon"
                   >
-
                     <AdminHomeIcon />
-
                   </span>
 
 
@@ -571,20 +629,15 @@ export default function WorkspaceShell({
                       : undefined
                   }
 
-                  aria-label=
-                    "Сотрудники"
-
-                  title=
-                    "Сотрудники"
+                  aria-label="Сотрудники"
+                  title="Сотрудники"
                 >
 
                   <span
                     className=
                       "home-brand-icon"
                   >
-
                     <EmployeesIcon />
-
                   </span>
 
 
@@ -602,10 +655,6 @@ export default function WorkspaceShell({
             )
 
             : (
-
-              /* ==================================
-                 РАБОЧИЙ РЕЖИМ
-                 ================================== */
 
               <nav
                 className=
@@ -634,20 +683,15 @@ export default function WorkspaceShell({
                       : undefined
                   }
 
-                  aria-label=
-                    "Закуп"
-
-                  title=
-                    "Закуп"
+                  aria-label="Закуп"
+                  title="Закуп"
                 >
 
                   <span
                     className=
                       "home-brand-icon"
                   >
-
                     <ProcurementIcon />
-
                   </span>
 
 
@@ -680,20 +724,15 @@ export default function WorkspaceShell({
                       : undefined
                   }
 
-                  aria-label=
-                    "ВЭД"
-
-                  title=
-                    "ВЭД"
+                  aria-label="ВЭД"
+                  title="ВЭД"
                 >
 
                   <span
                     className=
                       "home-brand-icon"
                   >
-
                     <VedIcon />
-
                   </span>
 
 
@@ -726,20 +765,17 @@ export default function WorkspaceShell({
                       : undefined
                   }
 
-                  aria-label=
-                    "Ozon"
-
-                  title=
-                    "Ozon"
+                  aria-label="Ozon"
+                  title="Ozon"
                 >
 
                   <span
                     className=
                       "home-brand-icon"
                   >
-
-                    <WorkspaceMarketplaceLogo kind="ozon" />
-
+                    <WorkspaceMarketplaceLogo
+                      kind="ozon"
+                    />
                   </span>
 
 
@@ -772,20 +808,17 @@ export default function WorkspaceShell({
                       : undefined
                   }
 
-                  aria-label=
-                    "Wildberries"
-
-                  title=
-                    "Wildberries"
+                  aria-label="Wildberries"
+                  title="Wildberries"
                 >
 
                   <span
                     className=
                       "home-brand-icon"
                   >
-
-                    <WorkspaceMarketplaceLogo kind="wildberries" />
-
+                    <WorkspaceMarketplaceLogo
+                      kind="wildberries"
+                    />
                   </span>
 
 
@@ -818,20 +851,17 @@ export default function WorkspaceShell({
                       : undefined
                   }
 
-                  aria-label=
-                    "Яндекс Маркет"
-
-                  title=
-                    "Яндекс Маркет"
+                  aria-label="Яндекс Маркет"
+                  title="Яндекс Маркет"
                 >
 
                   <span
                     className=
                       "home-brand-icon"
                   >
-
-                    <WorkspaceMarketplaceLogo kind="yandex-market" />
-
+                    <WorkspaceMarketplaceLogo
+                      kind="yandex-market"
+                    />
                   </span>
 
 
@@ -875,9 +905,7 @@ export default function WorkspaceShell({
               className=
                 "home-search-icon"
             >
-
               <SearchIcon />
-
             </span>
 
 
@@ -892,8 +920,7 @@ export default function WorkspaceShell({
                   : "Поиск по товарам, SKU, документам, разделам..."
               }
 
-              aria-label=
-                "Поиск"
+              aria-label="Поиск"
             />
 
 
@@ -931,9 +958,7 @@ export default function WorkspaceShell({
                   className=
                     "workspace-corner-decoration"
                 >
-
                   <WorkspaceDecoration />
-
                 </div>
 
               )
