@@ -1,0 +1,1369 @@
+/* ============================================================
+   ЯНДЕКС МАРКЕТ
+   ВЕРХНЯЯ ЧАСТЬ В РАЗМЕРАХ WILDBERRIES
+
+   Таблицы этот файл НЕ переоформляет.
+   ============================================================ */
+
+.yandex-reference-page {
+  --ym-accent:
+    #f97316;
+
+  --ym-accent-soft:
+    rgba(
+      249,
+      115,
+      22,
+      0.12
+    );
+
+  --ym-green:
+    #24b67a;
+
+  --ym-red:
+    #df5a70;
+
+  --ym-blue:
+    #4f8fd8;
+
+  --ym-orange:
+    #dd963f;
+
+  color:
+    var(--ws-text);
+}
+
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.yandex-reference-page
+.ym-header {
+  align-items:
+    center;
+
+  margin-bottom:
+    18px;
+}
+
+
+.yandex-reference-page
+.ym-header-actions {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    10px;
+}
+
+
+.yandex-reference-page
+.ym-navigation-button {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  text-decoration:
+    none;
+
+  white-space:
+    nowrap;
+}
+
+
+/* ============================================================
+   ERROR
+   ============================================================ */
+
+.yandex-reference-page
+.ym-load-error {
+  margin-bottom:
+    14px;
+
+  padding:
+    15px
+    17px;
+
+  color:
+    var(--ym-red);
+
+  border-color:
+    rgba(
+      223,
+      90,
+      112,
+      0.32
+    );
+}
+
+
+/* ============================================================
+   SYNC HERO
+   ============================================================ */
+
+.yandex-reference-page
+.ym-sync-hero {
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  width:
+    100%;
+
+  min-height:
+    92px;
+
+  margin-bottom:
+    14px;
+
+  padding:
+    5px
+    8px;
+
+  overflow:
+    hidden;
+
+  background:
+    var(--ws-surface);
+}
+
+
+.yandex-reference-page
+.ym-sync-hero__quarter {
+  display:
+    flex;
+
+  min-width:
+    0;
+
+  min-height:
+    80px;
+
+  align-items:
+    center;
+
+  justify-content:
+    flex-start;
+
+  padding:
+    3px
+    18px;
+}
+
+
+.yandex-reference-page
+.ym-sync-hero__quarter--border {
+  border-left:
+    1px solid
+    var(
+      --border,
+      var(--ws-border)
+    );
+}
+
+
+/* ============================================================
+   STATUS CARD
+   ============================================================ */
+
+.yandex-reference-page
+.ym-sync-status-card {
+  display:
+    flex;
+
+  width:
+    100%;
+
+  min-width:
+    0;
+
+  min-height:
+    64px;
+
+  align-items:
+    center;
+
+  gap:
+    14px;
+
+  padding:
+    8px
+    14px;
+
+  border:
+    1px solid
+    transparent;
+
+  border-radius:
+    11px;
+}
+
+
+.yandex-reference-page
+.ym-sync-status-card--success {
+  border-color:
+    rgba(
+      16,
+      185,
+      129,
+      0.20
+    );
+
+  background:
+    rgba(
+      16,
+      185,
+      129,
+      0.08
+    );
+}
+
+
+.yandex-reference-page
+.ym-sync-status-card--loading {
+  border-color:
+    rgba(
+      249,
+      115,
+      22,
+      0.24
+    );
+
+  background:
+    rgba(
+      249,
+      115,
+      22,
+      0.09
+    );
+}
+
+
+.yandex-reference-page
+.ym-sync-status-card--error {
+  border-color:
+    rgba(
+      223,
+      90,
+      112,
+      0.24
+    );
+
+  background:
+    rgba(
+      223,
+      90,
+      112,
+      0.09
+    );
+}
+
+
+.yandex-reference-page
+.ym-sync-status-card__icon {
+  display:
+    inline-flex;
+
+  width:
+    40px;
+
+  height:
+    40px;
+
+  flex:
+    0 0
+    40px;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  border-radius:
+    50%;
+
+  font-size:
+    23px;
+
+  font-weight:
+    800;
+
+  line-height:
+    1;
+}
+
+
+.yandex-reference-page
+.ym-sync-status-card__icon
+svg {
+  width:
+    22px;
+
+  height:
+    22px;
+}
+
+
+.yandex-reference-page
+.ym-sync-status-card--success
+.ym-sync-status-card__icon {
+  color:
+    #064e3b;
+
+  background:
+    #34d399;
+}
+
+
+.yandex-reference-page
+.ym-sync-status-card--loading
+.ym-sync-status-card__icon {
+  color:
+    #7c2d12;
+
+  background:
+    #fb923c;
+}
+
+
+.yandex-reference-page
+.ym-sync-status-card--error
+.ym-sync-status-card__icon {
+  color:
+    #7f1d1d;
+
+  background:
+    #fb7185;
+}
+
+
+.yandex-reference-page
+.ym-sync-status-card__content {
+  min-width:
+    0;
+
+  text-align:
+    left;
+}
+
+
+.yandex-reference-page
+.ym-sync-status-card__title {
+  color:
+    #059669;
+
+  font-size:
+    14px;
+
+  font-weight:
+    800;
+
+  line-height:
+    1.3;
+}
+
+
+.yandex-reference-page
+.ym-sync-status-card--loading
+.ym-sync-status-card__title {
+  color:
+    #ea580c;
+}
+
+
+.yandex-reference-page
+.ym-sync-status-card--error
+.ym-sync-status-card__title {
+  color:
+    #dc2626;
+}
+
+
+.yandex-reference-page
+.ym-sync-status-card__hint {
+  margin-top:
+    4px;
+
+  color:
+    var(
+      --muted,
+      var(--ws-text-muted)
+    );
+
+  font-size:
+    12px;
+
+  font-weight:
+    500;
+
+  line-height:
+    1.25;
+}
+
+
+/* ============================================================
+   SYNC FACT
+   ============================================================ */
+
+.yandex-reference-page
+.ym-sync-fact {
+  display:
+    flex;
+
+  width:
+    100%;
+
+  min-width:
+    0;
+
+  align-items:
+    center;
+
+  justify-content:
+    flex-start;
+
+  gap:
+    14px;
+}
+
+
+.yandex-reference-page
+.ym-sync-fact__icon {
+  display:
+    inline-flex;
+
+  width:
+    28px;
+
+  height:
+    28px;
+
+  flex:
+    0 0
+    28px;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  color:
+    var(--ym-accent);
+}
+
+
+.yandex-reference-page
+.ym-sync-fact__icon
+svg {
+  width:
+    100%;
+
+  height:
+    100%;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.8;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+.yandex-reference-page
+.ym-sync-fact__content {
+  min-width:
+    0;
+
+  text-align:
+    left;
+}
+
+
+.yandex-reference-page
+.ym-sync-fact__label {
+  margin-bottom:
+    4px;
+
+  color:
+    var(
+      --muted,
+      var(--ws-text-muted)
+    );
+
+  font-size:
+    13px;
+
+  font-weight:
+    600;
+
+  line-height:
+    1.25;
+}
+
+
+.yandex-reference-page
+.ym-sync-fact__value {
+  color:
+    var(
+      --text,
+      var(--ws-text)
+    );
+
+  font-size:
+    15px;
+
+  font-weight:
+    800;
+
+  line-height:
+    1.25;
+
+  white-space:
+    nowrap;
+}
+
+
+.yandex-reference-page
+.ym-sync-fact__hint {
+  margin-top:
+    4px;
+
+  color:
+    var(
+      --muted,
+      var(--ws-text-muted)
+    );
+
+  font-size:
+    12px;
+
+  font-weight:
+    500;
+
+  line-height:
+    1.25;
+}
+
+
+/* ============================================================
+   ACTION
+   ============================================================ */
+
+.yandex-reference-page
+.ym-sync-hero__action {
+  display:
+    flex;
+
+  width:
+    100%;
+
+  min-width:
+    0;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+}
+
+
+.yandex-reference-page
+.ym-sync-client--hero {
+  display:
+    grid;
+
+  grid-template-rows:
+    16px
+    44px
+    16px;
+
+  row-gap:
+    4px;
+
+  width:
+    100%;
+
+  min-width:
+    0;
+
+  align-items:
+    center;
+
+  text-align:
+    center;
+}
+
+
+.yandex-reference-page
+.ym-sync-message-slot,
+.yandex-reference-page
+.ym-sync-note-slot {
+  display:
+    block;
+
+  width:
+    100%;
+
+  height:
+    16px;
+
+  overflow:
+    hidden;
+
+  color:
+    var(--ws-text-muted);
+
+  font-size:
+    10px;
+
+  font-weight:
+    600;
+
+  line-height:
+    16px;
+
+  text-align:
+    center;
+
+  white-space:
+    nowrap;
+
+  text-overflow:
+    ellipsis;
+}
+
+
+.yandex-reference-page
+.ym-sync-message-slot--error {
+  color:
+    var(--ym-red);
+}
+
+
+.yandex-reference-page
+.ym-sync-message-slot--loading {
+  color:
+    var(--ym-accent);
+}
+
+
+/* ============================================================
+   BUTTON
+   ============================================================ */
+
+.yandex-reference-page
+.ym-sync-hero-button {
+  display:
+    inline-flex;
+
+  width:
+    100%;
+
+  height:
+    44px;
+
+  min-height:
+    44px;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  gap:
+    9px;
+
+  padding:
+    10px
+    18px;
+
+  border:
+    1px solid
+    rgba(
+      249,
+      115,
+      22,
+      0.30
+    );
+
+  border-radius:
+    10px;
+
+  color:
+    #ffffff;
+
+  background:
+    linear-gradient(
+      135deg,
+      #fb923c
+      0%,
+      #f97316
+      52%,
+      #ea580c
+      100%
+    );
+
+  box-shadow:
+    0
+    7px
+    18px
+    rgba(
+      249,
+      115,
+      22,
+      0.22
+    );
+
+  font:
+    inherit;
+
+  font-size:
+    13px;
+
+  font-weight:
+    700;
+
+  line-height:
+    1;
+
+  cursor:
+    pointer;
+
+  transition:
+    transform
+      120ms
+      ease,
+    filter
+      120ms
+      ease,
+    box-shadow
+      120ms
+      ease;
+}
+
+
+.yandex-reference-page
+.ym-sync-hero-button:hover:not(:disabled) {
+  filter:
+    brightness(
+      1.06
+    );
+
+  box-shadow:
+    0
+    9px
+    22px
+    rgba(
+      249,
+      115,
+      22,
+      0.30
+    );
+
+  transform:
+    translateY(
+      -1px
+    );
+}
+
+
+.yandex-reference-page
+.ym-sync-hero-button:active:not(:disabled) {
+  transform:
+    translateY(
+      0
+    );
+}
+
+
+.yandex-reference-page
+.ym-sync-hero-button:disabled {
+  color:
+    #c56d35;
+
+  border-color:
+    rgba(
+      249,
+      115,
+      22,
+      0.16
+    );
+
+  background:
+    rgba(
+      249,
+      115,
+      22,
+      0.13
+    );
+
+  box-shadow:
+    none;
+
+  cursor:
+    not-allowed;
+
+  opacity:
+    1;
+}
+
+
+.yandex-reference-page
+.ym-sync-hero-button__icon {
+  display:
+    inline-flex;
+
+  width:
+    18px;
+
+  height:
+    18px;
+
+  flex:
+    0 0
+    18px;
+}
+
+
+.yandex-reference-page
+.ym-sync-hero-button__icon
+svg {
+  width:
+    100%;
+
+  height:
+    100%;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    2;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+.yandex-reference-page
+.ym-sync-hero-button__icon--spinning {
+  animation:
+    ym-sync-spin
+    0.9s
+    linear
+    infinite;
+}
+
+
+@keyframes ym-sync-spin {
+
+  to {
+    transform:
+      rotate(
+        360deg
+      );
+  }
+
+}
+
+
+/* ============================================================
+   KPI
+   ============================================================ */
+
+.yandex-reference-page
+.ym-summary-grid {
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(
+      5,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap:
+    12px;
+
+  margin-bottom:
+    14px;
+}
+
+
+.yandex-reference-page
+.ym-summary-card {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    12px;
+
+  min-height:
+    88px;
+}
+
+
+.yandex-reference-page
+.ym-summary-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    42px;
+
+  height:
+    42px;
+
+  flex:
+    0 0
+    42px;
+
+  border-radius:
+    10px;
+}
+
+
+.yandex-reference-page
+.ym-summary-icon
+svg {
+  width:
+    22px;
+
+  height:
+    22px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+.yandex-reference-page
+.ym-summary-icon--green {
+  color:
+    var(--ym-green);
+
+  background:
+    rgba(
+      36,
+      182,
+      122,
+      0.12
+    );
+}
+
+
+.yandex-reference-page
+.ym-summary-icon--red {
+  color:
+    var(--ym-red);
+
+  background:
+    rgba(
+      223,
+      90,
+      112,
+      0.12
+    );
+}
+
+
+.yandex-reference-page
+.ym-summary-icon--orange {
+  color:
+    var(--ym-orange);
+
+  background:
+    rgba(
+      221,
+      150,
+      63,
+      0.13
+    );
+}
+
+
+.yandex-reference-page
+.ym-summary-icon--blue {
+  color:
+    var(--ym-blue);
+
+  background:
+    rgba(
+      79,
+      143,
+      216,
+      0.12
+    );
+}
+
+
+.yandex-reference-page
+.ym-summary-copy {
+  min-width:
+    0;
+}
+
+
+/* ============================================================
+   INFO PANEL
+   ============================================================ */
+
+.yandex-reference-page
+.ym-info-panel {
+  display:
+    flex;
+
+  align-items:
+    flex-start;
+
+  gap:
+    14px;
+
+  margin-bottom:
+    14px;
+
+  background:
+    rgba(
+      249,
+      115,
+      22,
+      0.045
+    );
+
+  border-color:
+    rgba(
+      249,
+      115,
+      22,
+      0.17
+    );
+}
+
+
+.yandex-reference-page
+.ym-panel-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    40px;
+
+  height:
+    40px;
+
+  flex:
+    0 0
+    40px;
+
+  border-radius:
+    10px;
+
+  color:
+    var(--ym-accent);
+
+  background:
+    var(--ym-accent-soft);
+}
+
+
+.yandex-reference-page
+.ym-panel-icon
+svg {
+  width:
+    21px;
+
+  height:
+    21px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+.yandex-reference-page
+.ym-info-list {
+  display:
+    grid;
+
+  gap:
+    4px;
+
+  margin-top:
+    7px;
+}
+
+
+/* ============================================================
+   DARK
+   ============================================================ */
+
+html[data-theme="dark"]
+.yandex-reference-page {
+  --ym-accent:
+    #fb923c;
+
+  --ym-green:
+    #68ca9b;
+
+  --ym-red:
+    #ec8799;
+
+  --ym-blue:
+    #80afe1;
+
+  --ym-orange:
+    #e4ae6b;
+}
+
+
+html[data-theme="dark"]
+.yandex-reference-page
+.ym-sync-status-card--success {
+  border-color:
+    rgba(
+      52,
+      211,
+      153,
+      0.18
+    );
+
+  background:
+    rgba(
+      16,
+      185,
+      129,
+      0.11
+    );
+}
+
+
+html[data-theme="dark"]
+.yandex-reference-page
+.ym-sync-status-card--success
+.ym-sync-status-card__title {
+  color:
+    #34d399;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (
+  max-width:
+    1350px
+) {
+
+  .yandex-reference-page
+  .ym-summary-grid {
+    grid-template-columns:
+      repeat(
+        3,
+        minmax(
+          0,
+          1fr
+        )
+      );
+  }
+
+}
+
+
+@media (
+  max-width:
+    1050px
+) {
+
+  .yandex-reference-page
+  .ym-sync-hero {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(
+          0,
+          1fr
+        )
+      );
+  }
+
+
+  .yandex-reference-page
+  .ym-sync-hero__quarter:nth-child(3) {
+    border-left:
+      0;
+
+    border-top:
+      1px solid
+      var(
+        --border,
+        var(--ws-border)
+      );
+  }
+
+
+  .yandex-reference-page
+  .ym-sync-hero__quarter:nth-child(4) {
+    border-top:
+      1px solid
+      var(
+        --border,
+        var(--ws-border)
+      );
+  }
+
+}
+
+
+@media (
+  max-width:
+    800px
+) {
+
+  .yandex-reference-page
+  .ym-header {
+    align-items:
+      flex-start;
+  }
+
+
+  .yandex-reference-page
+  .ym-header-actions {
+    flex-wrap:
+      wrap;
+  }
+
+
+  .yandex-reference-page
+  .ym-summary-grid {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(
+          0,
+          1fr
+        )
+      );
+  }
+
+}
+
+
+@media (
+  max-width:
+    650px
+) {
+
+  .yandex-reference-page
+  .ym-sync-hero {
+    grid-template-columns:
+      1fr;
+  }
+
+
+  .yandex-reference-page
+  .ym-sync-hero__quarter--border {
+    border-left:
+      0;
+
+    border-top:
+      1px solid
+      var(
+        --border,
+        var(--ws-border)
+      );
+  }
+
+}
+
+
+@media (
+  max-width:
+    560px
+) {
+
+  .yandex-reference-page
+  .ym-summary-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+}
