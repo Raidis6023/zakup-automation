@@ -2,12 +2,11 @@
    WILDBERRIES
    ТАБЛИЦА "ДАННЫЕ ПО ТОВАРАМ"
 
-   ВАЖНО:
-   Общая ширина таблицы НЕ меняется.
-   Она остаётся 1650px.
+   Общая ширина таблицы НЕ меняется:
+   1650px.
 
-   Меняем только распределение ширины
-   между отдельными столбцами.
+   Размеры числовых колонок взяты
+   напрямую из таблицы Яндекс Маркета.
    ============================================================ */
 
 
@@ -17,9 +16,7 @@
 
 .wb-reference-page {
   --wb-products-purple:
-    var(
-      --wb-accent
-    );
+    var(--wb-accent);
 
   --wb-products-border:
     rgba(
@@ -60,9 +57,7 @@
     hidden;
 
   border-color:
-    var(
-      --wb-products-border-strong
-    );
+    var(--wb-products-border-strong);
 }
 
 
@@ -91,8 +86,7 @@
     border-box;
 
   padding:
-    12px
-    14px;
+    12px 14px;
 
   border:
     none;
@@ -122,9 +116,7 @@
 .wb-reference-page
 .wb-products-toggle:hover {
   background:
-    var(
-      --ws-surface-hover
-    );
+    var(--ws-surface-hover);
 }
 
 
@@ -132,9 +124,7 @@
 .wb-products-toggle:focus-visible {
   outline:
     2px solid
-    var(
-      --wb-products-purple
-    );
+    var(--wb-products-purple);
 
   outline-offset:
     -2px;
@@ -163,21 +153,16 @@
     42px;
 
   flex:
-    0 0
-    42px;
+    0 0 42px;
 
   border-radius:
     10px;
 
   color:
-    var(
-      --wb-products-purple
-    );
+    var(--wb-products-purple);
 
   background:
-    var(
-      --wb-accent-soft
-    );
+    var(--wb-accent-soft);
 }
 
 
@@ -230,9 +215,7 @@ svg {
 .wb-reference-page
 .wb-products-toggle-title {
   color:
-    var(
-      --ws-text
-    );
+    var(--ws-text);
 
   font-size:
     15px;
@@ -254,9 +237,7 @@ svg {
     hidden;
 
   color:
-    var(
-      --ws-text-muted
-    );
+    var(--ws-text-muted);
 
   font-size:
     11px;
@@ -294,13 +275,10 @@ svg {
     28px;
 
   flex:
-    0 0
-    28px;
+    0 0 28px;
 
   color:
-    var(
-      --ws-text-muted
-    );
+    var(--ws-text-muted);
 }
 
 
@@ -337,9 +315,7 @@ svg {
 .wb-reference-page
 .wb-products-chevron--expanded {
   transform:
-    rotate(
-      180deg
-    );
+    rotate(180deg);
 }
 
 
@@ -351,9 +327,7 @@ svg {
 .wb-products-table-content {
   border-top:
     1px solid
-    var(
-      --wb-products-border-strong
-    );
+    var(--wb-products-border-strong);
 }
 
 
@@ -385,17 +359,15 @@ svg {
     stable;
 
   background:
-    var(
-      --ws-surface
-    );
+    var(--ws-surface);
 }
 
 
 /* ============================================================
    TABLE
 
-   ОБЩАЯ ШИРИНА НЕ МЕНЯЕТСЯ:
-   1650px
+   ОБЩАЯ ШИРИНА СОХРАНЕНА:
+   1650px.
    ============================================================ */
 
 .wb-reference-page
@@ -416,60 +388,71 @@ svg {
     fixed;
 
   background:
-    var(
-      --ws-surface
-    );
+    var(--ws-surface);
 }
 
 
 /* ============================================================
    COLUMN WIDTHS
 
-   Итог:
+   95
+   + 115
+   + 440
+   + 250
+   + 150 * 5
 
-   master_code        110px
-   Артикул WB         130px
-   Артикул продавца   410px
-   Товар              250px
-   Продажи            150px
-   Среднее / день     150px
-   Отмены             150px
-   Остаток            150px
-   Дней запаса        150px
-
-   ИТОГО:
-   110 + 130 + 410 + 250 + 750 = 1650px
+   = 1650 px
    ============================================================ */
 
 
-/* master_code */
+/* ============================================================
+   MASTER_CODE
+
+   Точно как первый столбец ЕНОТ
+   в таблице Яндекс Маркета.
+   ============================================================ */
 
 .wb-reference-page
 .wb-products-col-master {
   width:
-    110px;
+    95px;
 }
 
 
-/* Артикул WB */
+/* ============================================================
+   АРТИКУЛ WB
+
+   Достаточно для числового nmId,
+   без бессмысленного пустого пространства.
+   ============================================================ */
 
 .wb-reference-page
 .wb-products-col-wb {
   width:
-    130px;
+    115px;
 }
 
 
-/* Артикул продавца */
+/* ============================================================
+   АРТИКУЛ ПРОДАВЦА
+
+   Отдаём ему всё освободившееся место,
+   сохраняя общую ширину 1650px.
+   ============================================================ */
 
 .wb-reference-page
 .wb-products-col-seller {
   width:
-    410px;
+    440px;
 }
 
 
-/* Товар */
+/* ============================================================
+   ТОВАР
+
+   Берём минимальную ширину столбца
+   "Артикул" Яндекс Маркета.
+   ============================================================ */
 
 .wb-reference-page
 .wb-products-col-product {
@@ -478,7 +461,12 @@ svg {
 }
 
 
-/* Последние пять колонок как у Яндекс Маркета */
+/* ============================================================
+   ПОСЛЕДНИЕ 5 КОЛОНОК
+
+   Ровно как на Яндекс Маркете:
+   150px каждая.
+   ============================================================ */
 
 .wb-reference-page
 .wb-products-col-sales {
@@ -516,7 +504,7 @@ svg {
 
 
 /* ============================================================
-   WB GRID
+   CELL GRID
    ============================================================ */
 
 .wb-reference-page
@@ -528,15 +516,11 @@ th,
 td {
   border-right:
     1px solid
-    var(
-      --wb-products-border
-    );
+    var(--wb-products-border);
 
   border-bottom:
     1px solid
-    var(
-      --wb-products-border
-    );
+    var(--wb-products-border);
 }
 
 
@@ -585,23 +569,17 @@ th {
     );
 
   color:
-    var(
-      --ws-text-muted
-    );
+    var(--ws-text-muted);
 
   border-bottom:
     1px solid
-    var(
-      --wb-products-border-strong
-    );
+    var(--wb-products-border-strong);
 
   box-shadow:
     0
     1px
     0
-    var(
-      --wb-products-border-strong
-    );
+    var(--wb-products-border-strong);
 
   text-align:
     left;
@@ -639,8 +617,7 @@ th {
     border-box;
 
   padding:
-    12px
-    10px;
+    12px 10px;
 
   overflow:
     hidden;
@@ -652,9 +629,7 @@ th {
     transparent;
 
   color:
-    var(
-      --ws-text-muted
-    );
+    var(--ws-text-muted);
 
   font:
     inherit;
@@ -676,11 +651,11 @@ th {
 
   transition:
     color
-    0.12s
-    ease,
+      0.12s
+      ease,
     background-color
-    0.12s
-    ease;
+      0.12s
+      ease;
 }
 
 
@@ -692,9 +667,7 @@ span:first-child {
     0;
 
   flex:
-    1
-    1
-    auto;
+    1 1 auto;
 
   overflow:
     hidden;
@@ -710,23 +683,17 @@ span:first-child {
 .wb-reference-page
 .wb-products-sort-button:hover {
   color:
-    var(
-      --ws-text
-    );
+    var(--ws-text);
 
   background:
-    var(
-      --wb-products-hover
-    );
+    var(--wb-products-hover);
 }
 
 
 .wb-reference-page
 .wb-products-sort-button--active {
   color:
-    var(
-      --wb-products-purple
-    );
+    var(--wb-products-purple);
 }
 
 
@@ -764,6 +731,42 @@ span:first-child {
 
 
 /* ============================================================
+   MASTER_CODE HEADER
+
+   Теперь не только значения,
+   но и сам заголовок первого столбца
+   находится по центру.
+   ============================================================ */
+
+.wb-reference-page
+.wb-products-sort-table
+thead
+th:first-child
+.wb-products-sort-button {
+  justify-content:
+    center;
+
+  text-align:
+    center;
+}
+
+
+.wb-reference-page
+.wb-products-sort-table
+thead
+th:first-child
+.wb-products-sort-button
+>
+span:first-child {
+  flex:
+    0 1 auto;
+
+  text-align:
+    center;
+}
+
+
+/* ============================================================
    NUMERIC HEADERS
    ============================================================ */
 
@@ -784,9 +787,7 @@ span:first-child {
 >
 span:first-child {
   flex:
-    0
-    1
-    auto;
+    0 1 auto;
 
   text-align:
     center;
@@ -818,16 +819,13 @@ span:first-child {
     16px;
 
   flex:
-    0 0
-    13px;
+    0 0 13px;
 
   overflow:
     hidden;
 
   color:
-    var(
-      --wb-products-purple
-    );
+    var(--wb-products-purple);
 
   font-size:
     13px;
@@ -842,6 +840,9 @@ span:first-child {
 
 /* ============================================================
    CELLS
+
+   Те же размеры текста и строк,
+   что на Яндекс Маркете.
    ============================================================ */
 
 .wb-reference-page
@@ -855,18 +856,13 @@ td {
     0;
 
   padding:
-    12px
-    10px;
+    12px 10px;
 
   color:
-    var(
-      --ws-text
-    );
+    var(--ws-text);
 
   background:
-    var(
-      --ws-surface
-    );
+    var(--ws-surface);
 
   font-size:
     13px;
@@ -888,16 +884,12 @@ tbody
 tr:hover
 td {
   background:
-    var(
-      --wb-products-hover
-    );
+    var(--wb-products-hover);
 }
 
 
 /* ============================================================
    MASTER CODE
-
-   По центру своей ячейки.
    ============================================================ */
 
 .wb-reference-page
@@ -916,9 +908,7 @@ td {
     inline-block;
 
   color:
-    var(
-      --wb-products-purple
-    );
+    var(--wb-products-purple);
 
   font-family:
     ui-monospace,
@@ -1020,9 +1010,7 @@ strong {
     3px;
 
   color:
-    var(
-      --ws-text-muted
-    );
+    var(--ws-text-muted);
 
   font-size:
     11px;
@@ -1087,9 +1075,7 @@ strong {
 .wb-reference-page
 .wb-products-scroll::-webkit-scrollbar-track {
   background:
-    var(
-      --ws-surface-soft
-    );
+    var(--ws-surface-soft);
 }
 
 
@@ -1097,9 +1083,7 @@ strong {
 .wb-products-scroll::-webkit-scrollbar-thumb {
   border:
     2px solid
-    var(
-      --ws-surface-soft
-    );
+    var(--ws-surface-soft);
 
   border-radius:
     999px;
@@ -1185,8 +1169,7 @@ html[data-theme="dark"]
       72px;
 
     padding:
-      12px
-      14px;
+      12px 14px;
   }
 
 
