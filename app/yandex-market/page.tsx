@@ -14,7 +14,15 @@ import YandexUnlinkedProductsClient
 import YandexSyncActionsClient
   from "./YandexSyncActionsClient";
 
+import YandexProductsSectionClient
+  from "./YandexProductsSectionClient";
+
+import YandexProductsTableClient, {
+  type YandexProductsTableItem,
+} from "./YandexProductsTableClient";
+
 import "./yandex-reference-top.css";
+import "./yandex-products-table.css";
 
 
 export const dynamic =
@@ -656,48 +664,6 @@ function formatInteger(
 }
 
 
-function formatAverage(
-  value:
-    number
-) {
-
-  return new Intl.NumberFormat(
-    "ru-RU",
-    {
-      minimumFractionDigits:
-        2,
-
-      maximumFractionDigits:
-        2,
-    }
-  ).format(
-    value
-  );
-
-}
-
-
-function formatStockDays(
-  value:
-    number
-) {
-
-  return new Intl.NumberFormat(
-    "ru-RU",
-    {
-      minimumFractionDigits:
-        1,
-
-      maximumFractionDigits:
-        1,
-    }
-  ).format(
-    value
-  );
-
-}
-
-
 function getPeriodDays(
   dateFrom:
     string,
@@ -763,17 +729,17 @@ function getProductName(
 
 function getWarehouseKey(
   warehouseId:
-    number
-    | null,
+    number | null,
 
   warehouseName:
-    string
-    | null
+    string | null
 ) {
 
   return warehouseId !==
     null
+
     ? `id:${warehouseId}`
+
     : `name:${warehouseName?.trim() || "—"}`;
 
 }
@@ -802,12 +768,10 @@ function buildWarehouseMetricsByOffer(
       string,
 
     warehouseId:
-      number
-      | null,
+      number | null,
 
     warehouseName:
-      string
-      | null
+      string | null
   ) {
 
     let offerMap =
@@ -1285,46 +1249,97 @@ export default async function YandexMarketPage() {
     );
 
 
-  const sortedProducts =
-    [
-      ...products,
-    ].sort(
-      (
-        a,
-        b
-      ) => {
+  // ==========================================================
+  // SERIALIZABLE TABLE ITEMS
+  // ==========================================================
 
-        const masterCompare =
-          (
-            a.master_code
+  const productTableItems:
+    YandexProductsTableItem[] =
+
+      products.map(
+        product => {
+
+          const metrics =
+            metricsByOffer.get(
+              product.offer_id
+            )
             ??
-            ""
-          ).localeCompare(
-            b.master_code
-            ??
-            "",
-            "ru"
-          );
+            {
+              sales:
+                0,
+
+              cancellations:
+                0,
+
+              stock:
+                0,
+            };
 
 
-        if (
-          masterCompare !==
-          0
-        ) {
+          const warehouses =
+            (
+              warehouseMetricsByOffer.get(
+                product.offer_id
+              )
+              ??
+              []
+            ).filter(
+              row =>
+                row.sales > 0
+                ||
+                row.cancellations > 0
+                ||
+                row.stock > 0
+            );
 
-          return masterCompare;
+
+          return {
+            id:
+              product.id,
+
+            master_code:
+              product.master_code,
+
+            name:
+              getProductName(
+                product
+              ),
+
+            offer_id:
+              product.offer_id,
+
+            sales:
+              metrics.sales,
+
+            cancellations:
+              metrics.cancellations,
+
+            stock:
+              metrics.stock,
+
+            warehouses:
+              warehouses.map(
+                row => ({
+                  warehouseId:
+                    row.warehouseId,
+
+                  warehouseName:
+                    row.warehouseName,
+
+                  sales:
+                    row.sales,
+
+                  cancellations:
+                    row.cancellations,
+
+                  stock:
+                    row.stock,
+                })
+              ),
+          };
 
         }
-
-
-        return a.offer_id
-          .localeCompare(
-            b.offer_id,
-            "ru"
-          );
-
-      }
-    );
+      );
 
 
   return (
@@ -1332,34 +1347,6 @@ export default async function YandexMarketPage() {
       className=
         "page yandex-reference-page"
     >
-
-      <style>
-        {`
-          .yandex-product-details > summary {
-            list-style: none;
-          }
-
-          .yandex-product-details > summary::-webkit-details-marker {
-            display: none;
-          }
-
-          .yandex-product-chevron {
-            display: inline-block;
-            transform-origin: center;
-            transition: transform 0.15s ease;
-          }
-
-          .yandex-product-details[open]
-          .yandex-product-chevron {
-            transform: rotate(90deg);
-          }
-
-          .yandex-product-details > summary:hover {
-            background: rgba(255,255,255,0.025);
-          }
-        `}
-      </style>
-
 
       <div className="container">
 
@@ -1426,14 +1413,12 @@ export default async function YandexMarketPage() {
         {
           loadError
             ? (
-
               <div
                 className=
                   "card ym-load-error"
               >
                 {loadError}
               </div>
-
             )
             : null
         }
@@ -1665,16 +1650,13 @@ export default async function YandexMarketPage() {
           {
             unlinkedProducts.length
               ? (
-
                 <YandexUnlinkedProductsClient
                   products={
                     unlinkedProducts
                   }
                 />
-
               )
               : (
-
                 <div
                   className="reason-text"
 
@@ -1685,7 +1667,6 @@ export default async function YandexMarketPage() {
                 >
                   Непривязанных товаров нет.
                 </div>
-
               )
           }
 
@@ -1696,32 +1677,11 @@ export default async function YandexMarketPage() {
             PRODUCTS
             =================================== */}
 
-        <section className="section">
+        <YandexProductsSectionClient>
 
-          <h2 className="section-title">
-            Данные по товарам
-          </h2>
-
-
-          <div className="reason-text">
-            Основная строка показывает
-            общие показатели артикула.
-            При раскрытии — показатели
-            по конкретным складам.
-          </div>
-
-
-          <ProductsTable
-            products={
-              sortedProducts
-            }
-
-            metricsByOffer={
-              metricsByOffer
-            }
-
-            warehouseMetricsByOffer={
-              warehouseMetricsByOffer
+          <YandexProductsTableClient
+            items={
+              productTableItems
             }
 
             periodDays={
@@ -1729,7 +1689,7 @@ export default async function YandexMarketPage() {
             }
           />
 
-        </section>
+        </YandexProductsSectionClient>
 
       </div>
 
@@ -1839,14 +1799,12 @@ function BarChartIcon() {
 
   return (
     <IconBase>
-
       <path
         d="M5 19V11M12 19V5M19 19V8"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
       />
-
     </IconBase>
   );
 
@@ -1991,956 +1949,6 @@ function InfoIcon() {
       />
 
     </IconBase>
-  );
-
-}
-
-
-// ============================================================
-// PRODUCTS TABLE
-// ============================================================
-
-function ProductsTable({
-  products,
-  metricsByOffer,
-  warehouseMetricsByOffer,
-  periodDays,
-}: {
-  products:
-    YandexProductRow[];
-
-  metricsByOffer:
-    Map<
-      string,
-      ProductMetrics
-    >;
-
-  warehouseMetricsByOffer:
-    Map<
-      string,
-      WarehouseMetrics[]
-    >;
-
-  periodDays:
-    number;
-}) {
-
-  return (
-    <div
-      style={{
-        overflowX:
-          "auto",
-
-        marginTop:
-          "18px",
-
-        border:
-          "none",
-
-        borderRadius:
-          "10px",
-      }}
-    >
-
-      <div
-        style={{
-          minWidth:
-            "1220px",
-        }}
-      >
-
-        <div
-          style={{
-            display:
-              "grid",
-
-            gridTemplateColumns:
-              "130px minmax(330px, 2.1fr) minmax(230px, 1.4fr) 135px 135px 110px 110px 115px",
-
-            background:
-              "var(--table-header-bg, #1b2028)",
-
-            borderBottom:
-              "1px solid var(--table-divider, #282e38)",
-          }}
-        >
-
-          <MainHeader>
-            ЕНОТ
-          </MainHeader>
-
-
-          <MainHeader>
-            Товар
-          </MainHeader>
-
-
-          <MainHeader>
-            Offer ID
-          </MainHeader>
-
-
-          <MainHeader numeric>
-            Продажи {periodDays} дн.
-          </MainHeader>
-
-
-          <MainHeader numeric>
-            Среднее / день
-          </MainHeader>
-
-
-          <MainHeader numeric>
-            Отмены
-          </MainHeader>
-
-
-          <MainHeader numeric>
-            Остаток
-          </MainHeader>
-
-
-          <MainHeader numeric>
-            Дней запаса
-          </MainHeader>
-
-        </div>
-
-
-        {
-          products.map(
-            product => {
-
-              const metrics =
-                metricsByOffer.get(
-                  product.offer_id
-                )
-                ??
-                {
-                  sales:
-                    0,
-
-                  cancellations:
-                    0,
-
-                  stock:
-                    0,
-                };
-
-
-              const average =
-                periodDays > 0
-                  ? metrics.sales
-                    /
-                    periodDays
-                  : 0;
-
-
-              const stockDays =
-                average > 0
-                  ? metrics.stock
-                    /
-                    average
-                  : null;
-
-
-              const warehouses =
-                (
-                  warehouseMetricsByOffer.get(
-                    product.offer_id
-                  )
-                  ??
-                  []
-                ).filter(
-                  row =>
-                    row.sales > 0
-                    ||
-                    row.cancellations > 0
-                    ||
-                    row.stock > 0
-                );
-
-
-              return (
-                <details
-                  key={
-                    product.id
-                  }
-
-                  className=
-                    "yandex-product-details"
-
-                  style={{
-                    borderBottom:
-                      "1px solid var(--table-divider, #282e38)",
-                  }}
-                >
-
-                  <summary
-                    style={{
-                      display:
-                        "grid",
-
-                      gridTemplateColumns:
-                        "130px minmax(330px, 2.1fr) minmax(230px, 1.4fr) 135px 135px 110px 110px 115px",
-
-                      alignItems:
-                        "center",
-
-                      cursor:
-                        "pointer",
-
-                      userSelect:
-                        "none",
-                    }}
-                  >
-
-                    <MainCell strong>
-
-                      <span
-                        style={{
-                          display:
-                            "inline-flex",
-
-                          alignItems:
-                            "center",
-
-                          gap:
-                            "8px",
-                        }}
-                      >
-
-                        <span
-                          className=
-                            "yandex-product-chevron"
-                        >
-                          ▶
-                        </span>
-
-
-                        <span>
-                          {
-                            product.master_code
-                            ??
-                            "—"
-                          }
-                        </span>
-
-                      </span>
-
-                    </MainCell>
-
-
-                    <MainCell strong>
-                      {
-                        getProductName(
-                          product
-                        )
-                      }
-                    </MainCell>
-
-
-                    <MainCell strong>
-                      {
-                        product.offer_id
-                      }
-                    </MainCell>
-
-
-                    <MainCell
-                      numeric
-                      strong
-                    >
-                      {
-                        formatInteger(
-                          metrics.sales
-                        )
-                      }
-                    </MainCell>
-
-
-                    <MainCell numeric>
-                      {
-                        formatAverage(
-                          average
-                        )
-                      }
-                    </MainCell>
-
-
-                    <MainCell numeric>
-                      {
-                        formatInteger(
-                          metrics.cancellations
-                        )
-                      }
-                    </MainCell>
-
-
-                    <MainCell
-                      numeric
-                      strong
-                    >
-                      {
-                        formatInteger(
-                          metrics.stock
-                        )
-                      }
-                    </MainCell>
-
-
-                    <MainCell
-                      numeric
-                      strong
-                    >
-                      {
-                        stockDays ===
-                        null
-                          ? "—"
-                          : formatStockDays(
-                              stockDays
-                            )
-                      }
-                    </MainCell>
-
-                  </summary>
-
-
-                  <div
-                    style={{
-                      padding:
-                        "16px 18px 18px 38px",
-
-                      borderTop:
-                        "1px solid var(--table-divider, #282e38)",
-                    }}
-                  >
-
-                    <div
-                      style={{
-                        display:
-                          "flex",
-
-                        justifyContent:
-                          "space-between",
-
-                        gap:
-                          "16px",
-
-                        marginBottom:
-                          "14px",
-                      }}
-                    >
-
-                      <div>
-
-                        <div
-                          style={{
-                            fontSize:
-                              "14px",
-
-                            fontWeight:
-                              700,
-                          }}
-                        >
-                          Продажи и остатки по складам
-                        </div>
-
-
-                        <div
-                          className="muted"
-
-                          style={{
-                            marginTop:
-                              "4px",
-
-                            fontSize:
-                              "11px",
-                          }}
-                        >
-                          По конкретным складам
-                          Яндекс Маркета.
-                        </div>
-
-                      </div>
-
-
-                      <div
-                        style={{
-                          display:
-                            "flex",
-
-                          gap:
-                            "18px",
-
-                          fontSize:
-                            "12px",
-
-                          fontWeight:
-                            700,
-                        }}
-                      >
-
-                        <span>
-                          Строк:{" "}
-                          {
-                            formatInteger(
-                              warehouses.length
-                            )
-                          }
-                        </span>
-
-
-                        <span>
-                          Продажи:{" "}
-                          {
-                            formatInteger(
-                              metrics.sales
-                            )
-                          }
-                        </span>
-
-
-                        <span>
-                          Отмены:{" "}
-                          {
-                            formatInteger(
-                              metrics.cancellations
-                            )
-                          }
-                        </span>
-
-
-                        <span>
-                          Остаток:{" "}
-                          {
-                            formatInteger(
-                              metrics.stock
-                            )
-                          }
-                        </span>
-
-                      </div>
-
-                    </div>
-
-
-                    {
-                      warehouses.length >
-                      0
-                        ? (
-
-                          <WarehouseTable
-                            offerId={
-                              product.offer_id
-                            }
-
-                            productId={
-                              product.market_sku
-                              ??
-                              "—"
-                            }
-
-                            rows={
-                              warehouses
-                            }
-
-                            periodDays={
-                              periodDays
-                            }
-                          />
-
-                        )
-                        : (
-
-                          <div className="reason-text">
-                            Нет данных по складам.
-                          </div>
-
-                        )
-                    }
-
-                  </div>
-
-                </details>
-              );
-
-            }
-          )
-        }
-
-      </div>
-
-    </div>
-  );
-
-}
-
-
-// ============================================================
-// WAREHOUSE TABLE
-// ============================================================
-
-function WarehouseTable({
-  offerId,
-  productId,
-  rows,
-  periodDays,
-}: {
-  offerId:
-    string;
-
-  productId:
-    string;
-
-  rows:
-    WarehouseMetrics[];
-
-  periodDays:
-    number;
-}) {
-
-  return (
-    <div
-      style={{
-        overflowX:
-          "auto",
-      }}
-    >
-
-      <table
-        style={{
-          width:
-            "100%",
-
-          minWidth:
-            "1000px",
-
-          borderCollapse:
-            "separate",
-
-          borderSpacing:
-            0,
-
-          border:
-            "none",
-        }}
-      >
-
-        <thead>
-
-          <tr>
-
-            <WarehouseHeader>
-              Offer ID
-            </WarehouseHeader>
-
-
-            <WarehouseHeader>
-              Product ID
-            </WarehouseHeader>
-
-
-            <WarehouseHeader>
-              Склад
-            </WarehouseHeader>
-
-
-            <WarehouseHeader numeric>
-              Продажи {periodDays} дн.
-            </WarehouseHeader>
-
-
-            <WarehouseHeader numeric>
-              Среднее / день
-            </WarehouseHeader>
-
-
-            <WarehouseHeader numeric>
-              Отмены
-            </WarehouseHeader>
-
-
-            <WarehouseHeader numeric>
-              Остаток
-            </WarehouseHeader>
-
-
-            <WarehouseHeader numeric>
-              Дней запаса
-            </WarehouseHeader>
-
-          </tr>
-
-        </thead>
-
-
-        <tbody>
-
-          {
-            rows.map(
-              (
-                row,
-                index
-              ) => {
-
-                const average =
-                  periodDays > 0
-                    ? row.sales
-                      /
-                      periodDays
-                    : 0;
-
-
-                const stockDays =
-                  average > 0
-                    ? row.stock
-                      /
-                      average
-                    : null;
-
-
-                const divider =
-                  index ===
-                  rows.length - 1
-                    ? "none"
-                    : "1px solid var(--table-divider, #282e38)";
-
-
-                return (
-                  <tr
-                    key={
-                      [
-                        offerId,
-                        row.warehouseId
-                        ??
-                        "null",
-                        row.warehouseName,
-                      ].join("|")
-                    }
-                  >
-
-                    <WarehouseCell
-                      divider={
-                        divider
-                      }
-
-                      strong
-                    >
-                      {offerId}
-                    </WarehouseCell>
-
-
-                    <WarehouseCell
-                      divider={
-                        divider
-                      }
-                    >
-                      {productId}
-                    </WarehouseCell>
-
-
-                    <WarehouseCell
-                      divider={
-                        divider
-                      }
-                    >
-                      {row.warehouseName}
-                    </WarehouseCell>
-
-
-                    <WarehouseCell
-                      divider={
-                        divider
-                      }
-
-                      numeric
-                      strong
-                    >
-                      {
-                        formatInteger(
-                          row.sales
-                        )
-                      }
-                    </WarehouseCell>
-
-
-                    <WarehouseCell
-                      divider={
-                        divider
-                      }
-
-                      numeric
-                    >
-                      {
-                        formatAverage(
-                          average
-                        )
-                      }
-                    </WarehouseCell>
-
-
-                    <WarehouseCell
-                      divider={
-                        divider
-                      }
-
-                      numeric
-                    >
-                      {
-                        formatInteger(
-                          row.cancellations
-                        )
-                      }
-                    </WarehouseCell>
-
-
-                    <WarehouseCell
-                      divider={
-                        divider
-                      }
-
-                      numeric
-                      strong
-                    >
-                      {
-                        formatInteger(
-                          row.stock
-                        )
-                      }
-                    </WarehouseCell>
-
-
-                    <WarehouseCell
-                      divider={
-                        divider
-                      }
-
-                      numeric
-                      strong
-                    >
-                      {
-                        stockDays ===
-                        null
-                          ? "—"
-                          : formatStockDays(
-                              stockDays
-                            )
-                      }
-                    </WarehouseCell>
-
-                  </tr>
-                );
-
-              }
-            )
-          }
-
-        </tbody>
-
-      </table>
-
-    </div>
-  );
-
-}
-
-
-// ============================================================
-// CELLS
-// ============================================================
-
-function MainHeader({
-  children,
-  numeric = false,
-}: {
-  children:
-    ReactNode;
-
-  numeric?:
-    boolean;
-}) {
-
-  return (
-    <div
-      style={{
-        padding:
-          "12px 14px",
-
-        textAlign:
-          numeric
-            ? "right"
-            : "left",
-
-        fontSize:
-          "12px",
-
-        fontWeight:
-          700,
-
-        color:
-          "var(--text-secondary, #b8c0cc)",
-
-        whiteSpace:
-          "nowrap",
-      }}
-    >
-      {children}
-    </div>
-  );
-
-}
-
-
-function MainCell({
-  children,
-  numeric = false,
-  strong = false,
-}: {
-  children:
-    ReactNode;
-
-  numeric?:
-    boolean;
-
-  strong?:
-    boolean;
-}) {
-
-  return (
-    <div
-      style={{
-        padding:
-          "12px 14px",
-
-        textAlign:
-          numeric
-            ? "right"
-            : "left",
-
-        fontSize:
-          "13px",
-
-        lineHeight:
-          1.35,
-
-        fontWeight:
-          strong
-            ? 700
-            : 500,
-
-        minWidth:
-          0,
-      }}
-    >
-      {children}
-    </div>
-  );
-
-}
-
-
-function WarehouseHeader({
-  children,
-  numeric = false,
-}: {
-  children:
-    ReactNode;
-
-  numeric?:
-    boolean;
-}) {
-
-  return (
-    <th
-      style={{
-        padding:
-          "12px 14px",
-
-        textAlign:
-          numeric
-            ? "right"
-            : "left",
-
-        fontSize:
-          "12px",
-
-        fontWeight:
-          700,
-
-        color:
-          "var(--text-secondary, #b8c0cc)",
-
-        border:
-          "none",
-
-        borderBottom:
-          "1px solid var(--table-divider, #282e38)",
-
-        whiteSpace:
-          "nowrap",
-      }}
-    >
-      {children}
-    </th>
-  );
-
-}
-
-
-function WarehouseCell({
-  children,
-  divider,
-  numeric = false,
-  strong = false,
-}: {
-  children:
-    ReactNode;
-
-  divider:
-    string;
-
-  numeric?:
-    boolean;
-
-  strong?:
-    boolean;
-}) {
-
-  return (
-    <td
-      style={{
-        padding:
-          "12px 14px",
-
-        textAlign:
-          numeric
-            ? "right"
-            : "left",
-
-        fontSize:
-          "13px",
-
-        lineHeight:
-          1.35,
-
-        fontWeight:
-          strong
-            ? 700
-            : 500,
-
-        border:
-          "none",
-
-        borderBottom:
-          divider,
-
-        whiteSpace:
-          "nowrap",
-      }}
-    >
-      {children}
-    </td>
   );
 
 }
