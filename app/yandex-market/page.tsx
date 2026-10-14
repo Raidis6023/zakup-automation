@@ -2,19 +2,15 @@ import {
   type ReactNode,
 } from "react";
 
-import Link
-from "next/link";
+import Link from "next/link";
 
-import ThemeToggle
-from "../ThemeToggle";
+import ThemeToggle from "../ThemeToggle";
 
 import YandexUnlinkedProductsClient
-from "./YandexUnlinkedProductsClient";
+  from "./YandexUnlinkedProductsClient";
 
 import YandexSyncActionsClient
-from "./YandexSyncActionsClient";
-
-import "./yandex-reference.css";
+  from "./YandexSyncActionsClient";
 
 
 export const dynamic =
@@ -45,11 +41,9 @@ type RawYandexProduct = {
 
 
 type YandexProductRow = {
-  id:
-    number;
+  id: number;
 
-  offer_id:
-    string;
+  offer_id: string;
 
   market_sku:
     | string
@@ -63,414 +57,109 @@ type YandexProductRow = {
     | string
     | null;
 
-  first_seen_at:
-    string;
+  first_seen_at: string;
 
-  last_seen_at:
-    string;
+  last_seen_at: string;
 
-  is_active:
-    boolean;
+  is_active: boolean;
 
   raw_data:
     | RawYandexProduct
     | null;
 
-  created_at:
-    string;
+  created_at: string;
 
-  updated_at:
-    string;
+  updated_at: string;
 };
 
 
 type StockSyncRunRow = {
-  id:
-    string;
-
-  created_at:
-    string;
+  id: string;
+  created_at: string;
 };
 
 
 type StockSnapshotRow = {
-  offer_id:
-    string;
+  offer_id: string;
 
   warehouse_id:
-    number
-    |
-    null;
+    number | null;
 
   warehouse_name:
-    string
-    |
-    null;
+    string | null;
 
-  available:
-    number;
+  available: number;
 };
 
 
 type SalesSyncRunRow = {
-  id:
-    string;
+  id: string;
 
-  date_from:
-    string;
+  date_from: string;
 
-  date_to:
-    string;
+  date_to: string;
 
-  created_at:
-    string;
+  created_at: string;
 
   finished_at:
-    string
-    |
-    null;
+    | string
+    | null;
 };
 
 
 type SalesDailyRow = {
-  shop_sku:
-    string;
+  shop_sku: string;
 
   warehouse_id:
-    number
-    |
-    null;
+    number | null;
 
   warehouse_name:
-    string
-    |
-    null;
+    string | null;
 
-  sales_quantity:
-    number;
+  sales_quantity: number;
 
-  cancelled_quantity:
-    number;
+  cancelled_quantity: number;
 
-  unredeemed_quantity:
-    number;
+  unredeemed_quantity: number;
 
-  updated_at:
-    string;
+  updated_at: string;
+};
+
+
+type MarketplaceDailySyncRunRow = {
+  id: string;
+
+  marketplace: string;
+
+  status: string;
+
+  started_at: string;
+
+  finished_at:
+    | string
+    | null;
 };
 
 
 type ProductMetrics = {
-  sales:
-    number;
-
-  cancellations:
-    number;
-
-  stock:
-    number;
+  sales: number;
+  cancellations: number;
+  stock: number;
 };
 
 
 type WarehouseMetrics = {
   warehouseId:
-    number
-    |
-    null;
+    number | null;
 
-  warehouseName:
-    string;
+  warehouseName: string;
 
-  sales:
-    number;
+  sales: number;
 
-  cancellations:
-    number;
+  cancellations: number;
 
-  stock:
-    number;
+  stock: number;
 };
-
-
-type YandexReferenceIconName =
-  | "clock"
-  | "products"
-  | "active"
-  | "id"
-  | "unlinked"
-  | "category"
-  | "linked";
-
-
-// ============================================================
-// ICONS
-// ============================================================
-
-function YandexReferenceIcon({
-  name,
-}: {
-  name:
-    YandexReferenceIconName;
-}) {
-
-  if (
-    name ===
-    "clock"
-  ) {
-
-    return (
-
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-
-        <circle
-          cx="12"
-          cy="12"
-          r="9"
-        />
-
-        <path
-          d="M12 7v5l3 2"
-        />
-
-      </svg>
-
-    );
-
-  }
-
-
-  if (
-    name ===
-    "active"
-  ) {
-
-    return (
-
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-
-        <circle
-          cx="12"
-          cy="12"
-          r="9"
-        />
-
-        <path
-          d="m8.5 12 2.3 2.3 4.7-5"
-        />
-
-      </svg>
-
-    );
-
-  }
-
-
-  if (
-    name ===
-    "id"
-  ) {
-
-    return (
-
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-
-        <rect
-          x="3"
-          y="5"
-          width="18"
-          height="14"
-          rx="2"
-        />
-
-        <circle
-          cx="8"
-          cy="11"
-          r="2"
-        />
-
-        <path
-          d="M13 10h5M13 14h4"
-        />
-
-      </svg>
-
-    );
-
-  }
-
-
-  if (
-    name ===
-    "category"
-  ) {
-
-    return (
-
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-
-        <rect
-          x="4"
-          y="4"
-          width="6"
-          height="6"
-          rx="1"
-        />
-
-        <rect
-          x="14"
-          y="4"
-          width="6"
-          height="6"
-          rx="1"
-        />
-
-        <rect
-          x="4"
-          y="14"
-          width="6"
-          height="6"
-          rx="1"
-        />
-
-        <rect
-          x="14"
-          y="14"
-          width="6"
-          height="6"
-          rx="1"
-        />
-
-      </svg>
-
-    );
-
-  }
-
-
-  if (
-    name ===
-    "linked"
-  ) {
-
-    return (
-
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-
-        <path
-          d="
-            M9 15
-            7.5 16.5
-            a4 4 0 0 1-5.7-5.7
-            l3-3
-            a4 4 0 0 1 5.7 0
-          "
-        />
-
-        <path
-          d="
-            M15 9
-            16.5 7.5
-            a4 4 0 0 1 5.7 5.7
-            l-3 3
-            a4 4 0 0 1-5.7 0
-          "
-        />
-
-        <path
-          d="m8 16 8-8"
-        />
-
-      </svg>
-
-    );
-
-  }
-
-
-  if (
-    name ===
-    "unlinked"
-  ) {
-
-    return (
-
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-
-        <circle
-          cx="12"
-          cy="12"
-          r="9"
-        />
-
-        <path
-          d="M12 8v5"
-        />
-
-        <path
-          d="M12 16h.01"
-        />
-
-      </svg>
-
-    );
-
-  }
-
-
-  return (
-
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-
-      <path
-        d="
-          M12 3
-          20 7
-          12 11
-          4 7
-          Z
-        "
-      />
-
-      <path
-        d="
-          M4 7
-          v10
-          l8 4
-          8-4
-          V7
-        "
-      />
-
-      <path
-        d="M12 11v10"
-      />
-
-    </svg>
-
-  );
-
-}
 
 
 // ============================================================
@@ -499,9 +188,7 @@ function getSupabaseConfig() {
       ?.trim();
 
 
-  if (
-    !supabaseUrl
-  ) {
+  if (!supabaseUrl) {
 
     throw new Error(
       "Не найдена NEXT_PUBLIC_SUPABASE_URL или SUPABASE_URL"
@@ -510,9 +197,7 @@ function getSupabaseConfig() {
   }
 
 
-  if (
-    !supabaseSecretKey
-  ) {
+  if (!supabaseSecretKey) {
 
     throw new Error(
       "Не найдена SUPABASE_SECRET_KEY или SUPABASE_SERVICE_ROLE_KEY"
@@ -534,8 +219,7 @@ function getSupabaseConfig() {
 // ============================================================
 
 function getSupabaseHeaders(
-  secretKey:
-    string
+  secretKey: string
 ) {
 
   return {
@@ -557,12 +241,8 @@ function getSupabaseHeaders(
 // ============================================================
 
 async function fetchAllRows<T>(
-  table:
-    string,
-
-  select:
-    string,
-
+  table: string,
+  select: string,
   params:
     Record<
       string,
@@ -580,7 +260,7 @@ Promise<T[]> {
 
   const result:
     T[] =
-      [];
+    [];
 
 
   const pageSize =
@@ -591,9 +271,7 @@ Promise<T[]> {
     0;
 
 
-  while (
-    true
-  ) {
+  while (true) {
 
     const url =
       new URL(
@@ -663,9 +341,7 @@ Promise<T[]> {
       await response.text();
 
 
-    if (
-      !response.ok
-    ) {
+    if (!response.ok) {
 
       throw new Error(
         `Supabase ${table}: HTTP ${response.status}: ${text}`
@@ -677,8 +353,7 @@ Promise<T[]> {
     const rows =
       JSON.parse(
         text
-      ) as
-        T[];
+      ) as T[];
 
 
     result.push(
@@ -708,12 +383,8 @@ Promise<T[]> {
 
 
 async function fetchRows<T>(
-  table:
-    string,
-
-  select:
-    string,
-
+  table: string,
+  select: string,
   params:
     Record<
       string,
@@ -781,9 +452,7 @@ Promise<T[]> {
     await response.text();
 
 
-  if (
-    !response.ok
-  ) {
+  if (!response.ok) {
 
     throw new Error(
       `Supabase ${table}: HTTP ${response.status}: ${text}`
@@ -794,8 +463,7 @@ Promise<T[]> {
 
   return JSON.parse(
     text
-  ) as
-    T[];
+  ) as T[];
 
 }
 
@@ -824,15 +492,60 @@ Promise<YandexProductRow[]> {
       "raw_data",
       "created_at",
       "updated_at",
-    ].join(
-      ","
-    ),
+    ].join(","),
 
     {
       order:
         "offer_id.asc",
     }
   );
+
+}
+
+
+// ============================================================
+// LATEST FULL DAILY SYNC
+// ============================================================
+
+async function getLatestFullSync():
+Promise<MarketplaceDailySyncRunRow | null> {
+
+  const rows =
+    await fetchRows<
+      MarketplaceDailySyncRunRow
+    >(
+      "marketplace_daily_sync_runs",
+
+      [
+        "id",
+        "marketplace",
+        "status",
+        "started_at",
+        "finished_at",
+      ].join(","),
+
+      {
+        marketplace:
+          "eq.yandex_market",
+
+        status:
+          "eq.success",
+
+        finished_at:
+          "not.is.null",
+
+        order:
+          "finished_at.desc",
+
+        limit:
+          "1",
+      }
+    );
+
+
+  return rows[0]
+    ??
+    null;
 
 }
 
@@ -865,18 +578,15 @@ Promise<StockSyncRunRow | null> {
     );
 
 
-  return rows[
-    0
-  ]
-  ??
-  null;
+  return rows[0]
+    ??
+    null;
 
 }
 
 
 async function getStockSnapshots(
-  syncRunId:
-    string
+  syncRunId: string
 ):
 Promise<StockSnapshotRow[]> {
 
@@ -890,9 +600,7 @@ Promise<StockSnapshotRow[]> {
       "warehouse_id",
       "warehouse_name",
       "available",
-    ].join(
-      ","
-    ),
+    ].join(","),
 
     {
       sync_run_id:
@@ -922,9 +630,7 @@ Promise<SalesSyncRunRow | null> {
         "date_to",
         "created_at",
         "finished_at",
-      ].join(
-        ","
-      ),
+      ].join(","),
 
       {
         status:
@@ -939,18 +645,15 @@ Promise<SalesSyncRunRow | null> {
     );
 
 
-  return rows[
-    0
-  ]
-  ??
-  null;
+  return rows[0]
+    ??
+    null;
 
 }
 
 
 async function getSalesDaily(
-  syncRunId:
-    string
+  syncRunId: string
 ):
 Promise<SalesDailyRow[]> {
 
@@ -967,9 +670,7 @@ Promise<SalesDailyRow[]> {
       "cancelled_quantity",
       "unredeemed_quantity",
       "updated_at",
-    ].join(
-      ","
-    ),
+    ].join(","),
 
     {
       last_sync_run_id:
@@ -987,19 +688,13 @@ Promise<SalesDailyRow[]> {
 function formatDateTimeKrasnoyarsk(
   value:
     string
-    |
-    null
-    |
-    undefined
+    | null
+    | undefined
 ):
 string {
 
-  if (
-    !value
-  ) {
-
+  if (!value) {
     return "—";
-
   }
 
 
@@ -1052,8 +747,7 @@ string {
 
 
 function formatInteger(
-  value:
-    number
+  value: number
 ):
 string {
 
@@ -1071,8 +765,7 @@ string {
 
 
 function formatAverage(
-  value:
-    number
+  value: number
 ):
 string {
 
@@ -1093,8 +786,7 @@ string {
 
 
 function formatStockDays(
-  value:
-    number
+  value: number
 ):
 string {
 
@@ -1132,12 +824,8 @@ string {
       ?.trim();
 
 
-  if (
-    offerName
-  ) {
-
+  if (offerName) {
     return offerName;
-
   }
 
 
@@ -1149,12 +837,8 @@ string {
       ?.trim();
 
 
-  if (
-    marketName
-  ) {
-
+  if (marketName) {
     return marketName;
-
   }
 
 
@@ -1171,7 +855,7 @@ string | null {
 
   let latest:
     string | null =
-      null;
+    null;
 
 
   let latestTime =
@@ -1222,7 +906,7 @@ string | null {
 
   let latest:
     string | null =
-      null;
+    null;
 
 
   let latestTime =
@@ -1266,11 +950,8 @@ string | null {
 
 
 function getPeriodDays(
-  dateFrom:
-    string,
-
-  dateTo:
-    string
+  dateFrom: string,
+  dateTo: string
 ):
 number {
 
@@ -1300,11 +981,8 @@ number {
     1;
 
 
-  return days >
-    0
-
+  return days > 0
     ? days
-
     : 28;
 
 }
@@ -1316,14 +994,10 @@ number {
 
 function getWarehouseKey(
   warehouseId:
-    number
-    |
-    null,
+    number | null,
 
   warehouseName:
-    string
-    |
-    null
+    string | null
 ):
 string {
 
@@ -1365,18 +1039,13 @@ Map<
 
 
   function getOrCreate(
-    offerId:
-      string,
+    offerId: string,
 
     warehouseId:
-      number
-      |
-      null,
+      number | null,
 
     warehouseName:
-      string
-      |
-      null
+      string | null
   ):
   WarehouseMetrics {
 
@@ -1386,9 +1055,7 @@ Map<
       );
 
 
-    if (
-      !offerMap
-    ) {
+    if (!offerMap) {
 
       offerMap =
         new Map();
@@ -1415,9 +1082,7 @@ Map<
       );
 
 
-    if (
-      !metric
-    ) {
+    if (!metric) {
 
       metric = {
         warehouseId,
@@ -1566,37 +1231,42 @@ export default async function YandexMarketPage() {
 
   let products:
     YandexProductRow[] =
-      [];
+    [];
 
 
   let stockRows:
     StockSnapshotRow[] =
-      [];
+    [];
 
 
   let salesRows:
     SalesDailyRow[] =
-      [];
+    [];
 
 
   let loadError:
     string | null =
-      null;
+    null;
 
 
   let syncStateError:
     string | null =
-      null;
+    null;
 
 
   let stockUpdatedAt:
     string | null =
-      null;
+    null;
 
 
   let salesUpdatedAt:
     string | null =
-      null;
+    null;
+
+
+  let fullSyncUpdatedAt:
+    string | null =
+    null;
 
 
   let salesPeriodDays =
@@ -1612,18 +1282,42 @@ export default async function YandexMarketPage() {
     products =
       await getYandexProducts();
 
-  } catch (
-    error
-  ) {
+  } catch (error) {
 
     loadError =
       error instanceof Error
-
         ? error.message
+        : String(error);
 
-        : String(
-            error
-          );
+  }
+
+
+  // ==========================================================
+  // FULL DAILY SYNC
+  // ==========================================================
+
+  try {
+
+    const fullSync =
+      await getLatestFullSync();
+
+
+    fullSyncUpdatedAt =
+      fullSync
+        ?.finished_at
+      ??
+      null;
+
+  } catch (error) {
+
+    const message =
+      error instanceof Error
+        ? error.message
+        : String(error);
+
+
+    syncStateError =
+      message;
 
   }
 
@@ -1638,9 +1332,7 @@ export default async function YandexMarketPage() {
       await getLatestStockRun();
 
 
-    if (
-      stockRun
-    ) {
+    if (stockRun) {
 
       stockUpdatedAt =
         stockRun.created_at;
@@ -1653,18 +1345,18 @@ export default async function YandexMarketPage() {
 
     }
 
-  } catch (
-    error
-  ) {
+  } catch (error) {
+
+    const message =
+      error instanceof Error
+        ? error.message
+        : String(error);
+
 
     syncStateError =
-      error instanceof Error
-
-        ? error.message
-
-        : String(
-            error
-          );
+      syncStateError
+        ? `${syncStateError}; ${message}`
+        : message;
 
   }
 
@@ -1679,9 +1371,7 @@ export default async function YandexMarketPage() {
       await getLatestSalesRun();
 
 
-    if (
-      salesRun
-    ) {
+    if (salesRun) {
 
       salesPeriodDays =
         getPeriodDays(
@@ -1707,25 +1397,17 @@ export default async function YandexMarketPage() {
 
     }
 
-  } catch (
-    error
-  ) {
+  } catch (error) {
 
     const message =
       error instanceof Error
-
         ? error.message
-
-        : String(
-            error
-          );
+        : String(error);
 
 
     syncStateError =
       syncStateError
-
         ? `${syncStateError}; ${message}`
-
         : message;
 
   }
@@ -1849,6 +1531,12 @@ export default async function YandexMarketPage() {
     );
 
 
+  const displayedFullSync =
+    fullSyncUpdatedAt
+    ??
+    latestCatalogSync;
+
+
   const activeProducts =
     products.filter(
       product =>
@@ -1949,92 +1637,75 @@ export default async function YandexMarketPage() {
 
 
   return (
+    <main className="page">
 
-    <main
-      className=
-        "page yandex-reference-page"
-    >
+      <style>
+        {`
+          .yandex-product-details > summary {
+            list-style: none;
+          }
 
-      <div
-        className=
-          "container"
-      >
+          .yandex-product-details > summary::-webkit-details-marker {
+            display: none;
+          }
+
+          .yandex-product-chevron {
+            display: inline-block;
+            transform-origin: center;
+            transition: transform 0.15s ease;
+          }
+
+          .yandex-product-details[open]
+          .yandex-product-chevron {
+            transform: rotate(90deg);
+          }
+
+          .yandex-product-details > summary:hover {
+            background: rgba(255, 255, 255, 0.025);
+          }
+        `}
+      </style>
+
+
+      <div className="container">
 
         {/* ===================================
             HEADER
             =================================== */}
 
-        <header
-          className=
-            "header yandex-header"
-        >
+        <header className="header">
 
-          <div
-            className=
-              "yandex-title-wrap"
-          >
+          <div>
 
-            <span
-              className=
-                "yandex-title-icon"
-            >
-
-              <img
-                src=
-                  "/logos/yandex-market.png"
-
-                alt=""
-              />
-
-            </span>
-
-
-            <div>
-
-              <div
-                className=
-                  "small-label"
-              >
-                СИСТЕМА ЗАКУПА
-              </div>
-
-
-              <h1
-                className=
-                  "title"
-              >
-                Яндекс Маркет — синхронизация
-              </h1>
-
-
-              <p
-                className=
-                  "subtitle"
-              >
-                FBY продажи, отмены
-                и доступные остатки
-                Яндекс Маркета.
-              </p>
-
+            <div className="small-label">
+              СИСТЕМА ЗАКУПА
             </div>
+
+
+            <h1 className="title">
+              Яндекс Маркет — синхронизация
+            </h1>
+
+
+            <p className="subtitle">
+              FBY продажи, отмены
+              и доступные остатки
+              Яндекс Маркета.
+            </p>
 
           </div>
 
 
-          <div
-            className=
-              "header-actions yandex-header-actions"
-          >
+          <div className="header-actions">
 
             <ThemeToggle />
 
 
             <Link
-              href=
-                "/stock-import"
+              href="/stock-import"
 
               className=
-                "secondary-button yandex-navigation-button"
+                "secondary-button navigation-button"
             >
               Остатки склада
             </Link>
@@ -2044,7 +1715,7 @@ export default async function YandexMarketPage() {
               href="/"
 
               className=
-                "secondary-button yandex-navigation-button"
+                "secondary-button navigation-button"
             >
               ← Главная
             </Link>
@@ -2060,36 +1731,30 @@ export default async function YandexMarketPage() {
 
         {
           loadError
-
             ? (
 
-              <section
-                className=
-                  "section yandex-error-section"
-              >
+              <section className="section">
 
-                <div
-                  className=
-                    "yandex-error-title"
-                >
+                <h2 className="section-title">
                   Ошибка загрузки данных
                   Яндекс Маркета
-                </div>
+                </h2>
 
 
                 <div
-                  className=
-                    "reason-text yandex-error-text"
+                  className="reason-text"
+
+                  style={{
+                    color:
+                      "#b42318",
+                  }}
                 >
-                  {
-                    loadError
-                  }
+                  {loadError}
                 </div>
 
               </section>
 
             )
-
             : null
         }
 
@@ -2098,85 +1763,46 @@ export default async function YandexMarketPage() {
             CATALOG STATUS
             =================================== */}
 
-        <section
-          className=
-            "section yandex-catalog-section"
-        >
+        <section className="section">
 
-          <div
-            className=
-              "yandex-section-top"
-          >
-
-            <div
-              className=
-                "yandex-section-heading"
-            >
-
-              <h2
-                className=
-                  "section-title"
-              >
-                Состояние каталога
-              </h2>
+          <h2 className="section-title">
+            Состояние каталога
+          </h2>
 
 
-              <div
-                className=
-                  "reason-text"
-              >
-                Последняя успешная загрузка
-                каталога Яндекс Маркета.
-              </div>
-
-            </div>
-
-
-            <span
-              className={
-                latestCatalogSync
-
-                  ? "yandex-status-badge yandex-status-badge--success"
-
-                  : "yandex-status-badge yandex-status-badge--warning"
-              }
-            >
-
-              <span
-                className=
-                  "yandex-status-dot"
-              />
-
-
-              {
-                latestCatalogSync
-
-                  ? "Каталог загружен"
-
-                  : "Нет успешной загрузки"
-              }
-
-            </span>
-
+          <div className="reason-text">
+            Текущее состояние каталога
+            и последнее успешное полное
+            обновление Яндекс Маркета.
           </div>
 
 
           <div
-            className=
-              "yandex-status-grid"
+            style={{
+              display:
+                "grid",
+
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(190px, 1fr))",
+
+              gap:
+                "16px",
+
+              marginTop:
+                "20px",
+            }}
           >
 
             <InfoCard
-              icon="clock"
-
               label=
-                "Последняя синхронизация"
+                "Последнее полное обновление"
 
-              value={
-                formatDateTimeKrasnoyarsk(
-                  latestCatalogSync
-                )
-              }
+              value=
+                {
+                  formatDateTimeKrasnoyarsk(
+                    displayedFullSync
+                  )
+                }
 
               hint=
                 "Красноярское время"
@@ -2184,16 +1810,15 @@ export default async function YandexMarketPage() {
 
 
             <InfoCard
-              icon="products"
-
               label=
                 "Товаров каталога"
 
-              value={
-                formatInteger(
-                  products.length
-                )
-              }
+              value=
+                {
+                  formatInteger(
+                    products.length
+                  )
+                }
 
               hint=
                 "строк yandex_products"
@@ -2201,16 +1826,15 @@ export default async function YandexMarketPage() {
 
 
             <InfoCard
-              icon="active"
-
               label=
                 "Активных товаров"
 
-              value={
-                formatInteger(
-                  activeProducts.length
-                )
-              }
+              value=
+                {
+                  formatInteger(
+                    activeProducts.length
+                  )
+                }
 
               hint=
                 "is_active = true"
@@ -2218,17 +1842,16 @@ export default async function YandexMarketPage() {
 
 
             <InfoCard
-              icon="id"
-
               label=
                 "Product ID"
 
-              value={
-                formatInteger(
-                  productsWithMarketSku
-                    .length
-                )
-              }
+              value=
+                {
+                  formatInteger(
+                    productsWithMarketSku
+                      .length
+                  )
+                }
 
               hint=
                 "есть marketSku"
@@ -2236,16 +1859,15 @@ export default async function YandexMarketPage() {
 
 
             <InfoCard
-              icon="unlinked"
-
               label=
                 "Без master_code"
 
-              value={
-                formatInteger(
-                  unlinkedProducts.length
-                )
-              }
+              value=
+                {
+                  formatInteger(
+                    unlinkedProducts.length
+                  )
+                }
 
               hint=
                 "требуют привязки"
@@ -2260,23 +1882,14 @@ export default async function YandexMarketPage() {
             UPDATE
             =================================== */}
 
-        <section
-          className=
-            "section yandex-update-section"
-        >
+        <section className="section">
 
-          <h2
-            className=
-              "section-title"
-          >
+          <h2 className="section-title">
             Обновление данных
           </h2>
 
 
-          <div
-            className=
-              "reason-text"
-          >
+          <div className="reason-text">
             Остатки и продажи обновляются
             независимо друг от друга.
           </div>
@@ -2284,32 +1897,37 @@ export default async function YandexMarketPage() {
 
           {
             syncStateError
-
               ? (
 
                 <div
-                  className=
-                    "reason-text yandex-update-error"
+                  className="reason-text"
+
+                  style={{
+                    color:
+                      "#b42318",
+
+                    marginTop:
+                      "12px",
+                  }}
                 >
-                  {
-                    syncStateError
-                  }
+                  {syncStateError}
                 </div>
 
               )
-
               : null
           }
 
 
           <YandexSyncActionsClient
-            initialStockUpdatedAt={
-              stockUpdatedAt
-            }
+            initialStockUpdatedAt=
+              {
+                stockUpdatedAt
+              }
 
-            initialSalesUpdatedAt={
-              salesUpdatedAt
-            }
+            initialSalesUpdatedAt=
+              {
+                salesUpdatedAt
+              }
           />
 
         </section>
@@ -2319,93 +1937,72 @@ export default async function YandexMarketPage() {
             CATALOG SUMMARY
             =================================== */}
 
-        <section
-          className=
-            "section yandex-summary-section"
-        >
+        <section className="section">
 
-          <div
-            className=
-              "yandex-summary-header"
-          >
-
-            <h2
-              className=
-                "section-title"
-            >
-              Каталог
-            </h2>
-
-
-            <div
-              className=
-                "reason-text"
-            >
-              Состояние привязки каталога
-              к единой номенклатуре WorkSpace.
-            </div>
-
-          </div>
+          <h2 className="section-title">
+            Каталог
+          </h2>
 
 
           <div
-            className=
-              "yandex-summary-grid"
+            style={{
+              display:
+                "grid",
+
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(220px, 1fr))",
+
+              gap:
+                "16px",
+
+              marginTop:
+                "16px",
+            }}
           >
 
-            <SummaryCard
-              icon="category"
+            <InfoCard
+              label="Категорий"
 
-              tone="yellow"
-
-              label=
-                "Категорий"
-
-              value={
-                formatInteger(
-                  categories.size
-                )
-              }
+              value=
+                {
+                  formatInteger(
+                    categories.size
+                  )
+                }
 
               hint=
                 "уникальных категорий Маркета"
             />
 
 
-            <SummaryCard
-              icon="linked"
-
-              tone="green"
-
+            <InfoCard
               label=
                 "Привязано к master_code"
 
-              value={
-                formatInteger(
-                  products.length
-                  -
-                  unlinkedProducts.length
-                )
-              }
+              value=
+                {
+                  formatInteger(
+                    products.length
+                    -
+                    unlinkedProducts.length
+                  )
+                }
 
               hint=
                 "размещений"
             />
 
 
-            <SummaryCard
-              icon="unlinked"
-
-              tone="orange"
-
+            <InfoCard
               label=
                 "Требуют привязки"
 
-              value={
-                formatInteger(
-                  unlinkedProducts.length
-                )
-              }
+              value=
+                {
+                  formatInteger(
+                    unlinkedProducts.length
+                  )
+                }
 
               hint=
                 "без master_code"
@@ -2420,81 +2017,47 @@ export default async function YandexMarketPage() {
             UNLINKED
             =================================== */}
 
-        <section
-          className=
-            "section yandex-unlinked-section"
-        >
+        <section className="section">
 
-          <div
-            className=
-              "yandex-unlinked-header"
-          >
-
-            <div>
-
-              <h2
-                className=
-                  "section-title"
-              >
-                Товары без master_code
-              </h2>
+          <h2 className="section-title">
+            Товары без master_code
+          </h2>
 
 
-              <div
-                className=
-                  "reason-text"
-              >
-                Новые товары Яндекс Маркета,
-                которые пока не связаны
-                с физическим товаром.
-              </div>
-
-            </div>
-
-
-            <span
-              className={
-                unlinkedProducts.length >
-                0
-
-                  ? "yandex-unlinked-badge yandex-unlinked-badge--warning"
-
-                  : "yandex-unlinked-badge yandex-unlinked-badge--success"
-              }
-            >
-
-              <span
-                className=
-                  "yandex-status-dot"
-              />
-
-
-              {
-                unlinkedProducts.length >
-                0
-
-                  ? `Требуют привязки: ${unlinkedProducts.length}`
-
-                  : "Все товары привязаны"
-              }
-
-            </span>
-
+          <div className="reason-text">
+            Новые товары Яндекс Маркета,
+            которые пока не связаны
+            с физическим товаром.
           </div>
 
 
-          <div
-            className=
-              "yandex-unlinked-content"
-          >
+          {
+            unlinkedProducts.length
+              ? (
 
-            <YandexUnlinkedProductsClient
-              products={
-                unlinkedProducts
-              }
-            />
+                <YandexUnlinkedProductsClient
+                  products=
+                    {
+                      unlinkedProducts
+                    }
+                />
 
-          </div>
+              )
+              : (
+
+                <div
+                  className="reason-text"
+
+                  style={{
+                    marginTop:
+                      "14px",
+                  }}
+                >
+                  Непривязанных товаров нет.
+                </div>
+
+              )
+          }
 
         </section>
 
@@ -2503,64 +2066,49 @@ export default async function YandexMarketPage() {
             PRODUCTS
             =================================== */}
 
-        <section
-          className=
-            "section yandex-products-section"
-        >
+        <section className="section">
 
-          <div
-            className=
-              "yandex-products-header"
-          >
-
-            <h2
-              className=
-                "section-title"
-            >
-              Данные по товарам
-            </h2>
+          <h2 className="section-title">
+            Данные по товарам
+          </h2>
 
 
-            <div
-              className=
-                "reason-text"
-            >
-              Основная строка показывает
-              общие показатели артикула.
-            </div>
+          <div className="reason-text">
+            Основная строка показывает
+            общие показатели артикула.
+          </div>
 
 
-            <div
-              className=
-                "reason-text"
-            >
-              Раскрытие:
-              продажи, отмены,
-              средние продажи,
-              остаток и дни запаса
-              отдельно по складам
-              Яндекс Маркета.
-            </div>
-
+          <div className="reason-text">
+            Раскрытие:
+            продажи, отмены,
+            средние продажи,
+            остаток и дни запаса
+            отдельно по складам
+            Яндекс Маркета.
           </div>
 
 
           <ProductsTable
-            products={
-              sortedProducts
-            }
+            products=
+              {
+                sortedProducts
+              }
 
-            metricsByOffer={
-              metricsByOffer
-            }
+            metricsByOffer=
+              {
+                metricsByOffer
+              }
 
-            warehouseMetricsByOffer={
-              warehouseMetricsByOffer
-            }
+            warehouseMetricsByOffer=
+              {
+                warehouseMetricsByOffer
+              }
 
-            periodDays={
-              salesPeriodDays
-            }
+            periodDays=
+              {
+                salesPeriodDays
+              }
           />
 
         </section>
@@ -2568,7 +2116,6 @@ export default async function YandexMarketPage() {
       </div>
 
     </main>
-
   );
 
 }
@@ -2579,14 +2126,10 @@ export default async function YandexMarketPage() {
 // ============================================================
 
 function InfoCard({
-  icon,
   label,
   value,
   hint,
 }: {
-  icon:
-    YandexReferenceIconName;
-
   label:
     string;
 
@@ -2598,167 +2141,49 @@ function InfoCard({
 }) {
 
   return (
+    <div className="card">
 
-    <div
-      className=
-        "yandex-info-card"
-    >
-
-      <span
-        className=
-          "yandex-info-icon"
-      >
-
-        <YandexReferenceIcon
-          name={
-            icon
-          }
-        />
-
-      </span>
+      <div className="card-label">
+        {label}
+      </div>
 
 
       <div
-        className=
-          "yandex-info-copy"
+        style={{
+          fontSize:
+            "18px",
+
+          fontWeight:
+            700,
+
+          marginTop:
+            "6px",
+        }}
       >
-
-        <div
-          className=
-            "card-label"
-        >
-          {
-            label
-          }
-        </div>
-
-
-        <div
-          className=
-            "yandex-info-value"
-        >
-          {
-            value
-          }
-        </div>
-
-
-        {
-          hint
-
-            ? (
-
-              <div
-                className=
-                  "muted"
-              >
-                {
-                  hint
-                }
-              </div>
-
-            )
-
-            : null
-        }
-
+        {value}
       </div>
 
-    </div>
 
-  );
+      {
+        hint
+          ? (
 
-}
+            <div
+              className="muted"
 
+              style={{
+                marginTop:
+                  "5px",
+              }}
+            >
+              {hint}
+            </div>
 
-// ============================================================
-// SUMMARY CARD
-// ============================================================
-
-function SummaryCard({
-  icon,
-  tone,
-  label,
-  value,
-  hint,
-}: {
-  icon:
-    YandexReferenceIconName;
-
-  tone:
-    "yellow"
-    |
-    "green"
-    |
-    "orange";
-
-  label:
-    string;
-
-  value:
-    string;
-
-  hint:
-    string;
-}) {
-
-  return (
-
-    <div
-      className=
-        "yandex-summary-card"
-    >
-
-      <span
-        className={
-          `yandex-summary-icon yandex-summary-icon--${tone}`
-        }
-      >
-
-        <YandexReferenceIcon
-          name={
-            icon
-          }
-        />
-
-      </span>
-
-
-      <div>
-
-        <div
-          className=
-            "card-label"
-        >
-          {
-            label
-          }
-        </div>
-
-
-        <div
-          className=
-            "big-number"
-        >
-          {
-            value
-          }
-        </div>
-
-
-        <div
-          className=
-            "muted"
-        >
-          {
-            hint
-          }
-        </div>
-
-      </div>
+          )
+          : null
+      }
 
     </div>
-
   );
 
 }
@@ -2794,24 +2219,43 @@ function ProductsTable({
 }) {
 
   return (
-
     <div
-      className=
-        "yandex-products-table-shell"
+      style={{
+        overflowX:
+          "auto",
+
+        marginTop:
+          "18px",
+
+        border:
+          "none",
+
+        borderRadius:
+          "10px",
+      }}
     >
 
       <div
-        className=
-          "yandex-products-table"
+        style={{
+          minWidth:
+            "1220px",
+        }}
       >
 
-        {/* ===================================
-            TABLE HEADER
-            =================================== */}
-
         <div
-          className=
-            "yandex-products-grid yandex-products-table-header"
+          style={{
+            display:
+              "grid",
+
+            gridTemplateColumns:
+              "130px minmax(330px, 2.1fr) minmax(230px, 1.4fr) 135px 135px 110px 110px 115px",
+
+            background:
+              "var(--table-header-bg, #1b2028)",
+
+            borderBottom:
+              "1px solid var(--table-divider, #282e38)",
+          }}
         >
 
           <MainHeader>
@@ -2829,46 +2273,32 @@ function ProductsTable({
           </MainHeader>
 
 
-          <MainHeader
-            numeric
-          >
+          <MainHeader numeric>
             Продажи {periodDays} дн.
           </MainHeader>
 
 
-          <MainHeader
-            numeric
-          >
+          <MainHeader numeric>
             Среднее / день
           </MainHeader>
 
 
-          <MainHeader
-            numeric
-          >
+          <MainHeader numeric>
             Отмены
           </MainHeader>
 
 
-          <MainHeader
-            numeric
-          >
+          <MainHeader numeric>
             Остаток
           </MainHeader>
 
 
-          <MainHeader
-            numeric
-          >
+          <MainHeader numeric>
             Дней запаса
           </MainHeader>
 
         </div>
 
-
-        {/* ===================================
-            PRODUCT ROWS
-            =================================== */}
 
         {
           products.map(
@@ -2892,24 +2322,18 @@ function ProductsTable({
 
 
               const average =
-                periodDays >
-                0
-
+                periodDays > 0
                   ? metrics.sales
                     /
                     periodDays
-
                   : 0;
 
 
               const stockDays =
-                average >
-                0
-
+                average > 0
                   ? metrics.stock
                     /
                     average
-
                   : null;
 
 
@@ -2923,68 +2347,88 @@ function ProductsTable({
                 )
                 .filter(
                   row =>
-                    row.sales >
-                      0
+                    row.sales > 0
                     ||
-                    row.cancellations >
-                      0
+                    row.cancellations > 0
                     ||
-                    row.stock >
-                      0
+                    row.stock > 0
                 );
 
 
               return (
-
                 <details
-                  key={
-                    product.id
-                  }
+                  key=
+                    {
+                      product.id
+                    }
 
                   className=
                     "yandex-product-details"
+
+                  style={{
+                    borderBottom:
+                      "1px solid var(--table-divider, #282e38)",
+                  }}
                 >
 
                   <summary
-                    className=
-                      "yandex-products-grid"
+                    style={{
+                      display:
+                        "grid",
+
+                      gridTemplateColumns:
+                        "130px minmax(330px, 2.1fr) minmax(230px, 1.4fr) 135px 135px 110px 110px 115px",
+
+                      alignItems:
+                        "center",
+
+                      cursor:
+                        "pointer",
+
+                      userSelect:
+                        "none",
+                    }}
                   >
 
-                    <MainCell
-                      strong
-                    >
+                    <MainCell strong>
 
                       <span
-                        className=
-                          "yandex-product-chevron"
-                        aria-hidden="true"
+                        style={{
+                          display:
+                            "inline-flex",
+
+                          alignItems:
+                            "center",
+
+                          gap:
+                            "8px",
+                        }}
                       >
-                        ▶
-                      </span>
+
+                        <span
+                          className=
+                            "yandex-product-chevron"
+
+                          aria-hidden="true"
+                        >
+                          ▶
+                        </span>
 
 
-                      <span
-                        className={
-                          product.master_code
+                        <span>
+                          {
+                            product.master_code
+                            ??
+                            "—"
+                          }
+                        </span>
 
-                            ? "yandex-master-code"
-
-                            : undefined
-                        }
-                      >
-                        {
-                          product.master_code
-                          ??
-                          "—"
-                        }
                       </span>
 
                     </MainCell>
 
 
-                    <MainCell
-                      strong
-                    >
+                    <MainCell strong>
                       {
                         getProductName(
                           product
@@ -2993,9 +2437,7 @@ function ProductsTable({
                     </MainCell>
 
 
-                    <MainCell
-                      strong
-                    >
+                    <MainCell strong>
                       {
                         product.offer_id
                       }
@@ -3014,9 +2456,7 @@ function ProductsTable({
                     </MainCell>
 
 
-                    <MainCell
-                      numeric
-                    >
+                    <MainCell numeric>
                       {
                         formatAverage(
                           average
@@ -3025,9 +2465,7 @@ function ProductsTable({
                     </MainCell>
 
 
-                    <MainCell
-                      numeric
-                    >
+                    <MainCell numeric>
                       {
                         formatInteger(
                           metrics.cancellations
@@ -3055,9 +2493,7 @@ function ProductsTable({
                       {
                         stockDays ===
                         null
-
                           ? "—"
-
                           : formatStockDays(
                               stockDays
                             )
@@ -3068,28 +2504,62 @@ function ProductsTable({
 
 
                   <div
-                    className=
-                      "yandex-warehouse-panel"
+                    style={{
+                      padding:
+                        "16px 18px 18px 38px",
+
+                      borderTop:
+                        "1px solid var(--table-divider, #282e38)",
+                    }}
                   >
 
                     <div
-                      className=
-                        "yandex-warehouse-heading"
+                      style={{
+                        display:
+                          "flex",
+
+                        justifyContent:
+                          "space-between",
+
+                        alignItems:
+                          "flex-start",
+
+                        gap:
+                          "16px",
+
+                        flexWrap:
+                          "wrap",
+
+                        marginBottom:
+                          "14px",
+                      }}
                     >
 
                       <div>
 
                         <div
-                          className=
-                            "yandex-warehouse-title"
+                          style={{
+                            fontSize:
+                              "14px",
+
+                            fontWeight:
+                              700,
+                          }}
                         >
                           Продажи и остатки по складам
                         </div>
 
 
                         <div
-                          className=
-                            "muted"
+                          className="muted"
+
+                          style={{
+                            marginTop:
+                              "4px",
+
+                            fontSize:
+                              "11px",
+                          }}
                         >
                           По конкретным складам
                           Яндекс Маркета.
@@ -3099,59 +2569,61 @@ function ProductsTable({
 
 
                       <div
-                        className=
-                          "yandex-warehouse-summary"
+                        style={{
+                          display:
+                            "flex",
+
+                          gap:
+                            "18px",
+
+                          flexWrap:
+                            "wrap",
+
+                          fontSize:
+                            "12px",
+
+                          fontWeight:
+                            700,
+                        }}
                       >
 
                         <span>
                           Строк:{" "}
-
-                          <strong>
-                            {
-                              formatInteger(
-                                warehouses.length
-                              )
-                            }
-                          </strong>
+                          {
+                            formatInteger(
+                              warehouses.length
+                            )
+                          }
                         </span>
 
 
                         <span>
                           Продажи:{" "}
-
-                          <strong>
-                            {
-                              formatInteger(
-                                metrics.sales
-                              )
-                            }
-                          </strong>
+                          {
+                            formatInteger(
+                              metrics.sales
+                            )
+                          }
                         </span>
 
 
                         <span>
                           Отмены:{" "}
-
-                          <strong>
-                            {
-                              formatInteger(
-                                metrics.cancellations
-                              )
-                            }
-                          </strong>
+                          {
+                            formatInteger(
+                              metrics.cancellations
+                            )
+                          }
                         </span>
 
 
                         <span>
                           Остаток:{" "}
-
-                          <strong>
-                            {
-                              formatInteger(
-                                metrics.stock
-                              )
-                            }
-                          </strong>
+                          {
+                            formatInteger(
+                              metrics.stock
+                            )
+                          }
                         </span>
 
                       </div>
@@ -3162,37 +2634,36 @@ function ProductsTable({
                     {
                       warehouses.length >
                       0
-
                         ? (
 
                           <WarehouseTable
-                            offerId={
-                              product.offer_id
-                            }
+                            offerId=
+                              {
+                                product.offer_id
+                              }
 
-                            productId={
-                              product.market_sku
-                              ??
-                              "—"
-                            }
+                            productId=
+                              {
+                                product.market_sku
+                                ??
+                                "—"
+                              }
 
-                            rows={
-                              warehouses
-                            }
+                            rows=
+                              {
+                                warehouses
+                              }
 
-                            periodDays={
-                              periodDays
-                            }
+                            periodDays=
+                              {
+                                periodDays
+                              }
                           />
 
                         )
-
                         : (
 
-                          <div
-                            className=
-                              "yandex-warehouse-empty"
-                          >
+                          <div className="reason-text">
                             Нет данных по складам.
                           </div>
 
@@ -3202,7 +2673,6 @@ function ProductsTable({
                   </div>
 
                 </details>
-
               );
 
             }
@@ -3212,7 +2682,6 @@ function ProductsTable({
       </div>
 
     </div>
-
   );
 
 }
@@ -3242,20 +2711,46 @@ function WarehouseTable({
 }) {
 
   return (
-
     <div
-      className=
-        "yandex-warehouse-table-shell"
+      style={{
+        overflowX:
+          "auto",
+
+        border:
+          "none",
+
+        borderRadius:
+          "10px",
+      }}
     >
 
       <table
-        className=
-          "yandex-warehouse-table"
+        style={{
+          width:
+            "100%",
+
+          minWidth:
+            "1000px",
+
+          borderCollapse:
+            "separate",
+
+          borderSpacing:
+            0,
+
+          border:
+            "none",
+        }}
       >
 
         <thead>
 
-          <tr>
+          <tr
+            style={{
+              background:
+                "var(--table-header-bg, #1b2028)",
+            }}
+          >
 
             <WarehouseHeader>
               Offer ID
@@ -3272,37 +2767,27 @@ function WarehouseTable({
             </WarehouseHeader>
 
 
-            <WarehouseHeader
-              numeric
-            >
+            <WarehouseHeader numeric>
               Продажи {periodDays} дн.
             </WarehouseHeader>
 
 
-            <WarehouseHeader
-              numeric
-            >
+            <WarehouseHeader numeric>
               Среднее / день
             </WarehouseHeader>
 
 
-            <WarehouseHeader
-              numeric
-            >
+            <WarehouseHeader numeric>
               Отмены
             </WarehouseHeader>
 
 
-            <WarehouseHeader
-              numeric
-            >
+            <WarehouseHeader numeric>
               Остаток
             </WarehouseHeader>
 
 
-            <WarehouseHeader
-              numeric
-            >
+            <WarehouseHeader numeric>
               Дней запаса
             </WarehouseHeader>
 
@@ -3315,32 +2800,35 @@ function WarehouseTable({
 
           {
             rows.map(
-              row => {
+              (
+                row,
+                index
+              ) => {
 
                 const average =
-                  periodDays >
-                  0
-
+                  periodDays > 0
                     ? row.sales
                       /
                       periodDays
-
                     : 0;
 
 
                 const stockDays =
-                  average >
-                  0
-
+                  average > 0
                     ? row.stock
                       /
                       average
-
                     : null;
 
 
-                return (
+                const divider =
+                  index ===
+                  rows.length - 1
+                    ? "none"
+                    : "1px solid var(--table-divider, #282e38)";
 
+
+                return (
                   <tr
                     key={
                       [
@@ -3349,29 +2837,32 @@ function WarehouseTable({
                         ??
                         "null",
                         row.warehouseName,
-                      ].join(
-                        "|"
-                      )
+                      ].join("|")
                     }
                   >
 
                     <WarehouseCell
+                      divider=
+                        {divider}
+
                       strong
                     >
-                      {
-                        offerId
-                      }
+                      {offerId}
                     </WarehouseCell>
 
 
-                    <WarehouseCell>
-                      {
-                        productId
-                      }
+                    <WarehouseCell
+                      divider=
+                        {divider}
+                    >
+                      {productId}
                     </WarehouseCell>
 
 
-                    <WarehouseCell>
+                    <WarehouseCell
+                      divider=
+                        {divider}
+                    >
                       {
                         row.warehouseName
                       }
@@ -3379,7 +2870,11 @@ function WarehouseTable({
 
 
                     <WarehouseCell
+                      divider=
+                        {divider}
+
                       numeric
+
                       strong
                     >
                       {
@@ -3391,6 +2886,9 @@ function WarehouseTable({
 
 
                     <WarehouseCell
+                      divider=
+                        {divider}
+
                       numeric
                     >
                       {
@@ -3402,6 +2900,9 @@ function WarehouseTable({
 
 
                     <WarehouseCell
+                      divider=
+                        {divider}
+
                       numeric
                     >
                       {
@@ -3413,7 +2914,11 @@ function WarehouseTable({
 
 
                     <WarehouseCell
+                      divider=
+                        {divider}
+
                       numeric
+
                       strong
                     >
                       {
@@ -3425,15 +2930,17 @@ function WarehouseTable({
 
 
                     <WarehouseCell
+                      divider=
+                        {divider}
+
                       numeric
+
                       strong
                     >
                       {
                         stockDays ===
                         null
-
                           ? "—"
-
                           : formatStockDays(
                               stockDays
                             )
@@ -3441,7 +2948,6 @@ function WarehouseTable({
                     </WarehouseCell>
 
                   </tr>
-
                 );
 
               }
@@ -3453,7 +2959,6 @@ function WarehouseTable({
       </table>
 
     </div>
-
   );
 
 }
@@ -3475,21 +2980,31 @@ function MainHeader({
 }) {
 
   return (
-
     <div
-      className={
-        numeric
+      style={{
+        padding:
+          "12px 14px",
 
-          ? "yandex-main-header yandex-main-header--right"
+        textAlign:
+          numeric
+            ? "right"
+            : "left",
 
-          : "yandex-main-header"
-      }
+        fontSize:
+          "12px",
+
+        fontWeight:
+          700,
+
+        color:
+          "var(--text-secondary, #b8c0cc)",
+
+        whiteSpace:
+          "nowrap",
+      }}
     >
-      {
-        children
-      }
+      {children}
     </div>
-
   );
 
 }
@@ -3514,37 +3029,34 @@ function MainCell({
     boolean;
 }) {
 
-  const classes = [
-    "yandex-main-cell",
-
-    numeric
-      ? "yandex-main-cell--right"
-      : "",
-
-    strong
-      ? "yandex-main-cell--strong"
-      : "",
-  ]
-    .filter(
-      Boolean
-    )
-    .join(
-      " "
-    );
-
-
   return (
-
     <div
-      className={
-        classes
-      }
-    >
-      {
-        children
-      }
-    </div>
+      style={{
+        padding:
+          "12px 14px",
 
+        textAlign:
+          numeric
+            ? "right"
+            : "left",
+
+        fontSize:
+          "13px",
+
+        lineHeight:
+          1.35,
+
+        fontWeight:
+          strong
+            ? 700
+            : 500,
+
+        minWidth:
+          0,
+      }}
+    >
+      {children}
+    </div>
   );
 
 }
@@ -3566,21 +3078,37 @@ function WarehouseHeader({
 }) {
 
   return (
-
     <th
-      className={
-        numeric
+      style={{
+        padding:
+          "12px 14px",
 
-          ? "yandex-table-right"
+        textAlign:
+          numeric
+            ? "right"
+            : "left",
 
-          : undefined
-      }
+        fontSize:
+          "12px",
+
+        fontWeight:
+          700,
+
+        color:
+          "var(--text-secondary, #b8c0cc)",
+
+        border:
+          "none",
+
+        borderBottom:
+          "1px solid var(--table-divider, #282e38)",
+
+        whiteSpace:
+          "nowrap",
+      }}
     >
-      {
-        children
-      }
+      {children}
     </th>
-
   );
 
 }
@@ -3592,11 +3120,15 @@ function WarehouseHeader({
 
 function WarehouseCell({
   children,
+  divider,
   numeric = false,
   strong = false,
 }: {
   children:
     ReactNode;
+
+  divider:
+    string;
 
   numeric?:
     boolean;
@@ -3606,35 +3138,42 @@ function WarehouseCell({
 }) {
 
   return (
-
     <td
-      className={
-        numeric
+      style={{
+        padding:
+          "12px 14px",
 
-          ? "yandex-table-right"
+        textAlign:
+          numeric
+            ? "right"
+            : "left",
 
-          : undefined
-      }
+        fontSize:
+          "13px",
+
+        lineHeight:
+          1.35,
+
+        fontWeight:
+          strong
+            ? 700
+            : 500,
+
+        border:
+          "none",
+
+        borderBottom:
+          divider,
+
+        whiteSpace:
+          "nowrap",
+
+        verticalAlign:
+          "top",
+      }}
     >
-
-      {
-        strong
-
-          ? (
-
-            <strong>
-              {
-                children
-              }
-            </strong>
-
-          )
-
-          : children
-      }
-
+      {children}
     </td>
-
   );
 
 }
