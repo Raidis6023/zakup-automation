@@ -1,0 +1,1008 @@
+/* ============================================================
+   WILDBERRIES
+   ТАБЛИЦА ТОВАРОВ
+
+   Отдельный файл намеренно:
+   не вмешиваемся в остальные WB-блоки.
+   ============================================================ */
+
+
+/* ============================================================
+   SECTION
+   ============================================================ */
+
+.wb-reference-page
+.wb-products-collapsible {
+  padding:
+    0;
+
+  overflow:
+    hidden;
+
+  border-color:
+    rgba(
+      201,
+      30,
+      216,
+      0.15
+    );
+}
+
+
+/* ============================================================
+   COLLAPSE BUTTON
+   ============================================================ */
+
+.wb-reference-page
+.wb-products-toggle {
+  display:
+    flex;
+
+  box-sizing:
+    border-box;
+
+  width:
+    100%;
+
+  min-height:
+    64px;
+
+  align-items:
+    center;
+
+  gap:
+    12px;
+
+  padding:
+    11px
+    16px;
+
+  border:
+    0;
+
+  background:
+    transparent;
+
+  color:
+    var(--ws-text);
+
+  font:
+    inherit;
+
+  text-align:
+    left;
+
+  cursor:
+    pointer;
+
+  transition:
+    background
+    120ms
+    ease;
+}
+
+
+.wb-reference-page
+.wb-products-toggle:hover {
+  background:
+    rgba(
+      201,
+      30,
+      216,
+      0.035
+    );
+}
+
+
+/* ============================================================
+   ICON
+   ============================================================ */
+
+.wb-reference-page
+.wb-products-toggle-icon {
+  display:
+    inline-flex;
+
+  width:
+    36px;
+
+  height:
+    36px;
+
+  flex:
+    0 0
+    36px;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  border-radius:
+    9px;
+
+  color:
+    var(--wb-accent);
+
+  background:
+    var(--wb-accent-soft);
+}
+
+
+.wb-reference-page
+.wb-products-toggle-icon
+svg {
+  width:
+    19px;
+
+  height:
+    19px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.7;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+/* ============================================================
+   COPY
+   ============================================================ */
+
+.wb-reference-page
+.wb-products-toggle-copy {
+  display:
+    flex;
+
+  min-width:
+    0;
+
+  flex:
+    1;
+
+  flex-direction:
+    column;
+
+  gap:
+    3px;
+}
+
+
+.wb-reference-page
+.wb-products-toggle-title {
+  color:
+    var(--ws-text);
+
+  font-size:
+    14px;
+
+  font-weight:
+    750;
+
+  line-height:
+    1.25;
+}
+
+
+.wb-reference-page
+.wb-products-toggle-subtitle {
+  overflow:
+    hidden;
+
+  font-size:
+    11px;
+
+  line-height:
+    1.3;
+
+  white-space:
+    nowrap;
+
+  text-overflow:
+    ellipsis;
+}
+
+
+/* ============================================================
+   CHEVRON
+   ============================================================ */
+
+.wb-reference-page
+.wb-products-toggle-chevron {
+  display:
+    inline-flex;
+
+  width:
+    28px;
+
+  height:
+    28px;
+
+  flex:
+    0 0
+    28px;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  color:
+    var(--ws-text-muted);
+}
+
+
+.wb-reference-page
+.wb-products-chevron {
+  width:
+    18px;
+
+  height:
+    18px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    2;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+
+  transition:
+    transform
+    150ms
+    ease;
+}
+
+
+.wb-reference-page
+.wb-products-chevron--expanded {
+  transform:
+    rotate(
+      180deg
+    );
+}
+
+
+/* ============================================================
+   TABLE CONTENT
+   ============================================================ */
+
+.wb-reference-page
+.wb-products-table-content {
+  border-top:
+    1px solid
+    rgba(
+      201,
+      30,
+      216,
+      0.12
+    );
+}
+
+
+/* ============================================================
+   OWN SCROLL
+
+   Таблица прокручивается внутри себя.
+   Страница при этом не обязана уезжать вниз
+   вместе с сотнями товаров.
+   ============================================================ */
+
+.wb-reference-page
+.wb-products-scroll {
+  width:
+    100%;
+
+  max-height:
+    64vh;
+
+  overflow:
+    auto;
+
+  overscroll-behavior:
+    contain;
+
+  scrollbar-gutter:
+    stable;
+
+  background:
+    var(--ws-surface);
+}
+
+
+/* ============================================================
+   TABLE
+   ============================================================ */
+
+.wb-reference-page
+.wb-products-sort-table {
+  width:
+    100%;
+
+  min-width:
+    1180px;
+
+  border-spacing:
+    0;
+
+  border-collapse:
+    separate;
+
+  table-layout:
+    fixed;
+
+  background:
+    var(--ws-surface);
+}
+
+
+/* ============================================================
+   COLUMN WIDTHS
+   ============================================================ */
+
+.wb-reference-page
+.wb-products-col-master {
+  width:
+    105px;
+}
+
+
+.wb-reference-page
+.wb-products-col-wb {
+  width:
+    115px;
+}
+
+
+.wb-reference-page
+.wb-products-col-seller {
+  width:
+    220px;
+}
+
+
+.wb-reference-page
+.wb-products-col-product {
+  width:
+    auto;
+}
+
+
+.wb-reference-page
+.wb-products-col-sales {
+  width:
+    105px;
+}
+
+
+.wb-reference-page
+.wb-products-col-average {
+  width:
+    110px;
+}
+
+
+.wb-reference-page
+.wb-products-col-cancel {
+  width:
+    86px;
+}
+
+
+.wb-reference-page
+.wb-products-col-stock {
+  width:
+    90px;
+}
+
+
+.wb-reference-page
+.wb-products-col-days {
+  width:
+    105px;
+}
+
+
+/* ============================================================
+   VERY SOFT WB GRID
+   ============================================================ */
+
+.wb-reference-page
+.wb-products-sort-table
+th,
+
+.wb-reference-page
+.wb-products-sort-table
+td {
+  border-right:
+    1px solid
+    rgba(
+      201,
+      30,
+      216,
+      0.09
+    );
+
+  border-bottom:
+    1px solid
+    rgba(
+      201,
+      30,
+      216,
+      0.085
+    );
+}
+
+
+.wb-reference-page
+.wb-products-sort-table
+th:last-child,
+
+.wb-reference-page
+.wb-products-sort-table
+td:last-child {
+  border-right:
+    0;
+}
+
+
+/* ============================================================
+   HEADER
+
+   Sticky внутри собственного scroll-контейнера.
+   ============================================================ */
+
+.wb-reference-page
+.wb-products-sort-table
+thead
+th {
+  position:
+    sticky;
+
+  z-index:
+    3;
+
+  top:
+    0;
+
+  box-sizing:
+    border-box;
+
+  height:
+    40px;
+
+  padding:
+    0;
+
+  background:
+    var(--ws-surface-soft);
+
+  color:
+    var(--ws-text-muted);
+
+  font-size:
+    10px;
+
+  font-weight:
+    650;
+
+  text-align:
+    left;
+
+  vertical-align:
+    middle;
+}
+
+
+/* ============================================================
+   SORT BUTTON
+   ============================================================ */
+
+.wb-reference-page
+.wb-products-sort-button {
+  display:
+    flex;
+
+  box-sizing:
+    border-box;
+
+  width:
+    100%;
+
+  height:
+    40px;
+
+  align-items:
+    center;
+
+  justify-content:
+    flex-start;
+
+  gap:
+    5px;
+
+  padding:
+    0
+    10px;
+
+  border:
+    0;
+
+  background:
+    transparent;
+
+  color:
+    inherit;
+
+  font:
+    inherit;
+
+  font-weight:
+    650;
+
+  line-height:
+    1.15;
+
+  text-align:
+    left;
+
+  white-space:
+    nowrap;
+
+  cursor:
+    pointer;
+
+  transition:
+    color
+      120ms
+      ease,
+    background
+      120ms
+      ease;
+}
+
+
+.wb-reference-page
+.wb-products-sort-button:hover {
+  color:
+    var(--wb-accent);
+
+  background:
+    rgba(
+      201,
+      30,
+      216,
+      0.045
+    );
+}
+
+
+.wb-reference-page
+.wb-products-sort-button--active {
+  color:
+    var(--wb-accent);
+
+  font-weight:
+    750;
+}
+
+
+.wb-reference-page
+.wb-products-sort-indicator {
+  display:
+    inline-flex;
+
+  flex:
+    0 0
+    auto;
+
+  color:
+    var(--wb-accent);
+
+  font-size:
+    12px;
+
+  font-weight:
+    800;
+}
+
+
+/* ============================================================
+   NUMERIC HEADERS
+   ============================================================ */
+
+.wb-reference-page
+.wb-products-numeric-head
+.wb-products-sort-button {
+  justify-content:
+    center;
+
+  padding-left:
+    5px;
+
+  padding-right:
+    5px;
+
+  text-align:
+    center;
+}
+
+
+/* ============================================================
+   CELLS
+   ============================================================ */
+
+.wb-reference-page
+.wb-products-sort-table
+tbody
+td {
+  box-sizing:
+    border-box;
+
+  padding:
+    9px
+    10px;
+
+  color:
+    var(--ws-text);
+
+  background:
+    var(--ws-surface);
+
+  font-size:
+    11px;
+
+  line-height:
+    1.3;
+
+  vertical-align:
+    middle;
+}
+
+
+.wb-reference-page
+.wb-products-sort-table
+tbody
+tr:hover
+td {
+  background:
+    rgba(
+      201,
+      30,
+      216,
+      0.035
+    );
+}
+
+
+/* ============================================================
+   MASTER CODE
+   ============================================================ */
+
+.wb-reference-page
+.wb-products-master-cell {
+  white-space:
+    nowrap;
+}
+
+
+.wb-reference-page
+.wb-products-master-code {
+  color:
+    var(--wb-accent);
+
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    "Liberation Mono",
+    monospace;
+
+  font-size:
+    11px;
+
+  font-weight:
+    750;
+}
+
+
+/* ============================================================
+   WB ARTICLE
+   ============================================================ */
+
+.wb-reference-page
+.wb-products-wb-cell {
+  white-space:
+    nowrap;
+}
+
+
+/* ============================================================
+   SELLER ARTICLE
+   ============================================================ */
+
+.wb-reference-page
+.wb-products-seller-cell {
+  overflow:
+    hidden;
+
+  white-space:
+    nowrap;
+
+  text-overflow:
+    ellipsis;
+}
+
+
+/* ============================================================
+   PRODUCT
+   ============================================================ */
+
+.wb-reference-page
+.wb-products-product-cell {
+  min-width:
+    0;
+}
+
+
+.wb-reference-page
+.wb-products-product-name {
+  overflow:
+    hidden;
+
+  display:
+    -webkit-box;
+
+  -webkit-box-orient:
+    vertical;
+
+  -webkit-line-clamp:
+    2;
+
+  line-clamp:
+    2;
+}
+
+
+.wb-reference-page
+.wb-products-brand {
+  margin-top:
+    3px;
+
+  overflow:
+    hidden;
+
+  font-size:
+    10px;
+
+  white-space:
+    nowrap;
+
+  text-overflow:
+    ellipsis;
+}
+
+
+/* ============================================================
+   NUMBERS
+
+   Не прижимаем к далёкому правому краю.
+   Все числа стоят ближе к центру своей колонки.
+   ============================================================ */
+
+.wb-reference-page
+.wb-products-number-cell {
+  padding-left:
+    5px !important;
+
+  padding-right:
+    5px !important;
+
+  text-align:
+    center;
+
+  white-space:
+    nowrap;
+}
+
+
+.wb-reference-page
+.wb-products-sales-cell {
+  color:
+    var(--ws-text);
+}
+
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+
+.wb-reference-page
+.wb-products-scroll::-webkit-scrollbar {
+  width:
+    10px;
+
+  height:
+    10px;
+}
+
+
+.wb-reference-page
+.wb-products-scroll::-webkit-scrollbar-track {
+  background:
+    var(--ws-surface-soft);
+}
+
+
+.wb-reference-page
+.wb-products-scroll::-webkit-scrollbar-thumb {
+  border:
+    2px solid
+    var(--ws-surface-soft);
+
+  border-radius:
+    999px;
+
+  background:
+    rgba(
+      201,
+      30,
+      216,
+      0.28
+    );
+}
+
+
+.wb-reference-page
+.wb-products-scroll::-webkit-scrollbar-thumb:hover {
+  background:
+    rgba(
+      201,
+      30,
+      216,
+      0.42
+    );
+}
+
+
+/* ============================================================
+   DARK
+   ============================================================ */
+
+html[data-theme="dark"]
+.wb-reference-page
+.wb-products-collapsible {
+  border-color:
+    rgba(
+      223,
+      114,
+      232,
+      0.16
+    );
+}
+
+
+html[data-theme="dark"]
+.wb-reference-page
+.wb-products-table-content {
+  border-top-color:
+    rgba(
+      223,
+      114,
+      232,
+      0.13
+    );
+}
+
+
+html[data-theme="dark"]
+.wb-reference-page
+.wb-products-sort-table
+th,
+
+html[data-theme="dark"]
+.wb-reference-page
+.wb-products-sort-table
+td {
+  border-right-color:
+    rgba(
+      223,
+      114,
+      232,
+      0.075
+    );
+
+  border-bottom-color:
+    rgba(
+      223,
+      114,
+      232,
+      0.07
+    );
+}
+
+
+html[data-theme="dark"]
+.wb-reference-page
+.wb-products-sort-table
+tbody
+tr:hover
+td {
+  background:
+    rgba(
+      223,
+      114,
+      232,
+      0.05
+    );
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (
+  max-width: 1100px
+) {
+
+  .wb-reference-page
+  .wb-products-scroll {
+    max-height:
+      58vh;
+  }
+
+}
+
+
+@media (
+  max-width: 800px
+) {
+
+  .wb-reference-page
+  .wb-products-toggle {
+    min-height:
+      60px;
+
+    padding:
+      10px
+      12px;
+  }
+
+
+  .wb-reference-page
+  .wb-products-toggle-subtitle {
+    white-space:
+      normal;
+  }
+
+
+  .wb-reference-page
+  .wb-products-scroll {
+    max-height:
+      54vh;
+  }
+
+}
