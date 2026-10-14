@@ -2,7 +2,8 @@ import {
   type ReactNode,
 } from "react";
 
-import Link from "next/link";
+import Link
+  from "next/link";
 
 import ThemeToggle
   from "../ThemeToggle";
@@ -12,6 +13,8 @@ import YandexUnlinkedProductsClient
 
 import YandexSyncActionsClient
   from "./YandexSyncActionsClient";
+
+import "./yandex-reference-top.css";
 
 
 export const dynamic =
@@ -121,7 +124,9 @@ type MarketplaceDailySyncRunRow = {
 
 type ProductMetrics = {
   sales: number;
+
   cancellations: number;
+
   stock: number;
 };
 
@@ -130,17 +135,13 @@ type WarehouseMetrics = {
   warehouseId:
     number | null;
 
-  warehouseName:
-    string;
+  warehouseName: string;
 
-  sales:
-    number;
+  sales: number;
 
-  cancellations:
-    number;
+  cancellations: number;
 
-  stock:
-    number;
+  stock: number;
 };
 
 
@@ -216,10 +217,17 @@ function getSupabaseHeaders(
 
 
 async function fetchAllRows<T>(
-  table: string,
-  select: string,
+  table:
+    string,
+
+  select:
+    string,
+
   params:
-    Record<string, string> = {}
+    Record<
+      string,
+      string
+    > = {}
 ):
 Promise<T[]> {
 
@@ -352,10 +360,17 @@ Promise<T[]> {
 
 
 async function fetchRows<T>(
-  table: string,
-  select: string,
+  table:
+    string,
+
+  select:
+    string,
+
   params:
-    Record<string, string> = {}
+    Record<
+      string,
+      string
+    > = {}
 ):
 Promise<T[]> {
 
@@ -701,6 +716,7 @@ function getPeriodDays(
 
   return Math.max(
     1,
+
     Math.floor(
       (
         end.getTime()
@@ -743,10 +759,12 @@ function getProductName(
 
 function getWarehouseKey(
   warehouseId:
-    number | null,
+    number
+    | null,
 
   warehouseName:
-    string | null
+    string
+    | null
 ) {
 
   return warehouseId !==
@@ -780,10 +798,12 @@ function buildWarehouseMetricsByOffer(
       string,
 
     warehouseId:
-      number | null,
+      number
+      | null,
 
     warehouseName:
-      string | null
+      string
+      | null
   ) {
 
     let offerMap =
@@ -973,17 +993,20 @@ export default async function YandexMarketPage() {
 
 
   let fullSyncUpdatedAt:
-    string | null =
+    string
+    | null =
     null;
 
 
   let salesPeriodDateFrom:
-    string | null =
+    string
+    | null =
     null;
 
 
   let salesPeriodDateTo:
-    string | null =
+    string
+    | null =
     null;
 
 
@@ -992,7 +1015,8 @@ export default async function YandexMarketPage() {
 
 
   let loadError:
-    string | null =
+    string
+    | null =
     null;
 
 
@@ -1300,7 +1324,10 @@ export default async function YandexMarketPage() {
 
 
   return (
-    <main className="page">
+    <main
+      className=
+        "page yandex-reference-page"
+    >
 
       <style>
         {`
@@ -1336,7 +1363,10 @@ export default async function YandexMarketPage() {
             HEADER
             =================================== */}
 
-        <header className="header">
+        <header
+          className=
+            "header ym-header"
+        >
 
           <div>
 
@@ -1353,7 +1383,10 @@ export default async function YandexMarketPage() {
           </div>
 
 
-          <div className="header-actions">
+          <div
+            className=
+              "header-actions ym-header-actions"
+          >
 
             <ThemeToggle />
 
@@ -1362,7 +1395,7 @@ export default async function YandexMarketPage() {
               href="/stock-import"
 
               className=
-                "secondary-button navigation-button"
+                "secondary-button navigation-button ym-navigation-button"
             >
               Остатки склада
             </Link>
@@ -1372,7 +1405,7 @@ export default async function YandexMarketPage() {
               href="/"
 
               className=
-                "secondary-button navigation-button"
+                "secondary-button navigation-button ym-navigation-button"
             >
               ← Главная
             </Link>
@@ -1382,46 +1415,42 @@ export default async function YandexMarketPage() {
         </header>
 
 
+        {/* ===================================
+            ERROR
+            =================================== */}
+
         {
           loadError
             ? (
+
               <div
-                className="card"
-
-                style={{
-                  marginTop:
-                    "18px",
-
-                  color:
-                    "#fb7185",
-                }}
+                className=
+                  "card ym-load-error"
               >
                 {loadError}
               </div>
+
             )
             : null
         }
 
 
         {/* ===================================
-            SYNC STRIP
+            SYNC
             =================================== */}
 
         <YandexSyncActionsClient
-          initialSyncUpdatedAt=
-            {
-              fullSyncUpdatedAt
-            }
+          initialSyncUpdatedAt={
+            fullSyncUpdatedAt
+          }
 
-          periodDateFrom=
-            {
-              salesPeriodDateFrom
-            }
+          periodDateFrom={
+            salesPeriodDateFrom
+          }
 
-          periodDateTo=
-            {
-              salesPeriodDateTo
-            }
+          periodDateTo={
+            salesPeriodDateTo
+          }
         />
 
 
@@ -1430,19 +1459,8 @@ export default async function YandexMarketPage() {
             =================================== */}
 
         <div
-          style={{
-            display:
-              "grid",
-
-            gridTemplateColumns:
-              "repeat(5, minmax(0, 1fr))",
-
-            gap:
-              "10px",
-
-            marginTop:
-              "10px",
-          }}
+          className=
+            "ym-summary-grid"
         >
 
           <MetricCard
@@ -1455,12 +1473,11 @@ export default async function YandexMarketPage() {
             label=
               "Продажи за 28 дней"
 
-            value=
-              {
-                formatInteger(
-                  salesTotal
-                )
-              }
+            value={
+              formatInteger(
+                salesTotal
+              )
+            }
 
             hint=
               "Σ sales_quantity, шт."
@@ -1468,7 +1485,7 @@ export default async function YandexMarketPage() {
 
 
           <MetricCard
-            tone="pink"
+            tone="red"
 
             icon={
               <CancelIcon />
@@ -1477,12 +1494,11 @@ export default async function YandexMarketPage() {
             label=
               "Отмены"
 
-            value=
-              {
-                formatInteger(
-                  cancellationsTotal
-                )
-              }
+            value={
+              formatInteger(
+                cancellationsTotal
+              )
+            }
 
             hint=
               "cancelled + unredeemed, шт."
@@ -1499,12 +1515,11 @@ export default async function YandexMarketPage() {
             label=
               "Остаток FBY"
 
-            value=
-              {
-                formatInteger(
-                  stockTotal
-                )
-              }
+            value={
+              formatInteger(
+                stockTotal
+              )
+            }
 
             hint=
               "Σ available на складах ЯМ"
@@ -1521,12 +1536,11 @@ export default async function YandexMarketPage() {
             label=
               "Связанных master_code"
 
-            value=
-              {
-                formatInteger(
-                  linkedProductsCount
-                )
-              }
+            value={
+              formatInteger(
+                linkedProductsCount
+              )
+            }
 
             hint=
               "только справочные связи"
@@ -1534,7 +1548,7 @@ export default async function YandexMarketPage() {
 
 
           <MetricCard
-            tone="amber"
+            tone="orange"
 
             icon={
               <ArticleIcon />
@@ -1543,12 +1557,11 @@ export default async function YandexMarketPage() {
             label=
               "Артикулов ЯМ"
 
-            value=
-              {
-                formatInteger(
-                  activeProducts.length
-                )
-              }
+            value={
+              formatInteger(
+                activeProducts.length
+              )
+            }
 
             hint=
               "текущих активных карточек"
@@ -1561,59 +1574,14 @@ export default async function YandexMarketPage() {
             INFO
             =================================== */}
 
-        <div
-          className="card"
-
-          style={{
-            marginTop:
-              "10px",
-
-            display:
-              "flex",
-
-            alignItems:
-              "flex-start",
-
-            gap:
-              "14px",
-
-            padding:
-              "15px 16px",
-
-            background:
-              "linear-gradient(90deg, rgba(249,115,22,0.08), rgba(124,58,237,0.05))",
-
-            borderColor:
-              "rgba(249,115,22,0.22)",
-          }}
+        <section
+          className=
+            "section ym-info-panel"
         >
 
           <div
-            style={{
-              width:
-                "34px",
-
-              height:
-                "34px",
-
-              borderRadius:
-                "8px",
-
-              flex:
-                "0 0 auto",
-
-              display:
-                "grid",
-
-              placeItems:
-                "center",
-
-              color:
-                "#fb923c",
-
-              background:
-                "rgba(249,115,22,0.15)",
-            }}
+            className=
+              "ym-panel-icon"
           >
             <InfoIcon />
           </div>
@@ -1621,43 +1589,32 @@ export default async function YandexMarketPage() {
 
           <div>
 
-            <div
-              style={{
-                fontSize:
-                  "14px",
-
-                fontWeight:
-                  800,
-
-                marginBottom:
-                  "8px",
-              }}
+            <h2
+              className=
+                "section-title"
             >
               Как теперь считаются данные Яндекс Маркета
-            </div>
+            </h2>
 
 
             <div
-              className="muted"
-
-              style={{
-                fontSize:
-                  "11px",
-
-                lineHeight:
-                  1.7,
-              }}
+              className=
+                "ym-info-list"
             >
-              <div>
+
+              <div className="reason-text">
                 Продажи за 28 дней — сумма
                 {" "}
-                <strong>sales_quantity</strong>
+                <strong>
+                  sales_quantity
+                </strong>
                 {" "}
                 по последнему рассчитанному
                 28-дневному периоду.
               </div>
 
-              <div>
+
+              <div className="reason-text">
                 Отмены — сумма
                 {" "}
                 <strong>
@@ -1667,22 +1624,27 @@ export default async function YandexMarketPage() {
                 за тот же период.
               </div>
 
-              <div>
+
+              <div className="reason-text">
                 Остаток FBY — сумма текущего
                 {" "}
-                <strong>available</strong>
+                <strong>
+                  available
+                </strong>
                 {" "}
                 по последнему снимку складов
                 Яндекс Маркета.
               </div>
 
-              <div>
+
+              <div className="reason-text">
                 Связанных master_code —
                 количество карточек Яндекс Маркета,
                 у которых уже указан master_code.
               </div>
 
-              <div>
+
+              <div className="reason-text">
                 Артикулов ЯМ —
                 количество текущих активных
                 карточек Яндекс Маркета.
@@ -1692,7 +1654,7 @@ export default async function YandexMarketPage() {
 
           </div>
 
-        </div>
+        </section>
 
 
         {/* ===================================
@@ -1716,14 +1678,16 @@ export default async function YandexMarketPage() {
           {
             unlinkedProducts.length
               ? (
+
                 <YandexUnlinkedProductsClient
-                  products=
-                    {
-                      unlinkedProducts
-                    }
+                  products={
+                    unlinkedProducts
+                  }
                 />
+
               )
               : (
+
                 <div
                   className="reason-text"
 
@@ -1734,6 +1698,7 @@ export default async function YandexMarketPage() {
                 >
                   Непривязанных товаров нет.
                 </div>
+
               )
           }
 
@@ -1760,25 +1725,21 @@ export default async function YandexMarketPage() {
 
 
           <ProductsTable
-            products=
-              {
-                sortedProducts
-              }
+            products={
+              sortedProducts
+            }
 
-            metricsByOffer=
-              {
-                metricsByOffer
-              }
+            metricsByOffer={
+              metricsByOffer
+            }
 
-            warehouseMetricsByOffer=
-              {
-                warehouseMetricsByOffer
-              }
+            warehouseMetricsByOffer={
+              warehouseMetricsByOffer
+            }
 
-            periodDays=
-              {
-                salesPeriodDays
-              }
+            periodDays={
+              salesPeriodDays
+            }
           />
 
         </section>
@@ -1804,10 +1765,9 @@ function MetricCard({
 }: {
   tone:
     "green"
-    | "pink"
+    | "red"
     | "orange"
-    | "blue"
-    | "amber";
+    | "blue";
 
   icon:
     ReactNode;
@@ -1822,154 +1782,37 @@ function MetricCard({
     string;
 }) {
 
-  const tones = {
-    green: {
-      color:
-        "#34d399",
-
-      background:
-        "rgba(16,185,129,0.15)",
-    },
-
-    pink: {
-      color:
-        "#fb7185",
-
-      background:
-        "rgba(244,63,94,0.15)",
-    },
-
-    orange: {
-      color:
-        "#fb923c",
-
-      background:
-        "rgba(249,115,22,0.16)",
-    },
-
-    blue: {
-      color:
-        "#60a5fa",
-
-      background:
-        "rgba(59,130,246,0.15)",
-    },
-
-    amber: {
-      color:
-        "#fbbf24",
-
-      background:
-        "rgba(245,158,11,0.15)",
-    },
-  };
-
-
-  const selected =
-    tones[
-      tone
-    ];
-
-
   return (
     <div
-      className="card"
-
-      style={{
-        display:
-          "flex",
-
-        alignItems:
-          "center",
-
-        gap:
-          "12px",
-
-        minHeight:
-          "72px",
-
-        padding:
-          "12px 14px",
-      }}
+      className=
+        "card ym-summary-card"
     >
 
       <div
-        style={{
-          width:
-            "38px",
-
-          height:
-            "38px",
-
-          borderRadius:
-            "8px",
-
-          display:
-            "grid",
-
-          placeItems:
-            "center",
-
-          flex:
-            "0 0 auto",
-
-          color:
-            selected.color,
-
-          background:
-            selected.background,
-        }}
+        className={
+          `ym-summary-icon ym-summary-icon--${tone}`
+        }
       >
         {icon}
       </div>
 
 
       <div
-        style={{
-          minWidth:
-            0,
-        }}
+        className=
+          "ym-summary-copy"
       >
 
-        <div
-          className="muted"
-
-          style={{
-            fontSize:
-              "10px",
-          }}
-        >
+        <div className="card-label">
           {label}
         </div>
 
 
-        <div
-          style={{
-            marginTop:
-              "2px",
-
-            fontSize:
-              "18px",
-
-            fontWeight:
-              800,
-          }}
-        >
+        <div className="big-number">
           {value}
         </div>
 
 
-        <div
-          className="muted"
-
-          style={{
-            marginTop:
-              "2px",
-
-            fontSize:
-              "9px",
-          }}
-        >
+        <div className="muted">
           {hint}
         </div>
 
@@ -1995,8 +1838,6 @@ function IconBase({
   return (
     <svg
       viewBox="0 0 24 24"
-      width="20"
-      height="20"
       fill="none"
       aria-hidden="true"
     >
@@ -2011,12 +1852,14 @@ function BarChartIcon() {
 
   return (
     <IconBase>
+
       <path
         d="M5 19V11M12 19V5M19 19V8"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
       />
+
     </IconBase>
   );
 
@@ -2027,6 +1870,7 @@ function CancelIcon() {
 
   return (
     <IconBase>
+
       <circle
         cx="12"
         cy="12"
@@ -2035,12 +1879,14 @@ function CancelIcon() {
         strokeWidth="2"
       />
 
+
       <path
         d="m9 9 6 6M15 9l-6 6"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
       />
+
     </IconBase>
   );
 
@@ -2051,6 +1897,7 @@ function CubeIcon() {
 
   return (
     <IconBase>
+
       <path
         d="m12 3 7 4-7 4-7-4 7-4Z"
         stroke="currentColor"
@@ -2058,12 +1905,14 @@ function CubeIcon() {
         strokeLinejoin="round"
       />
 
+
       <path
         d="M5 7v8l7 4 7-4V7M12 11v8"
         stroke="currentColor"
         strokeWidth="1.8"
         strokeLinejoin="round"
       />
+
     </IconBase>
   );
 
@@ -2074,12 +1923,14 @@ function LinkIcon() {
 
   return (
     <IconBase>
+
       <path
         d="m9.5 14.5-1.8 1.8a3 3 0 0 1-4.2-4.2l3.2-3.2a3 3 0 0 1 4.2 0"
         stroke="currentColor"
         strokeWidth="1.9"
         strokeLinecap="round"
       />
+
 
       <path
         d="m14.5 9.5 1.8-1.8a3 3 0 1 1 4.2 4.2l-3.2 3.2a3 3 0 0 1-4.2 0"
@@ -2088,12 +1939,14 @@ function LinkIcon() {
         strokeLinecap="round"
       />
 
+
       <path
         d="m9 15 6-6"
         stroke="currentColor"
         strokeWidth="1.9"
         strokeLinecap="round"
       />
+
     </IconBase>
   );
 
@@ -2104,6 +1957,7 @@ function ArticleIcon() {
 
   return (
     <IconBase>
+
       <rect
         x="6"
         y="3"
@@ -2114,12 +1968,14 @@ function ArticleIcon() {
         strokeWidth="1.8"
       />
 
+
       <path
         d="M9 8h6M9 12h6M9 16h4"
         stroke="currentColor"
         strokeWidth="1.8"
         strokeLinecap="round"
       />
+
     </IconBase>
   );
 
@@ -2130,6 +1986,7 @@ function InfoIcon() {
 
   return (
     <IconBase>
+
       <circle
         cx="12"
         cy="12"
@@ -2138,12 +1995,14 @@ function InfoIcon() {
         strokeWidth="1.8"
       />
 
+
       <path
         d="M12 11v5M12 8h.01"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
       />
+
     </IconBase>
   );
 
@@ -2152,6 +2011,7 @@ function InfoIcon() {
 
 // ============================================================
 // PRODUCTS TABLE
+// НИЖЕ ЛОГИКА И РАЗМЕРЫ ТАБЛИЦЫ НЕ МЕНЯЛИСЬ
 // ============================================================
 
 function ProductsTable({
@@ -2394,7 +2254,10 @@ function ProductsTable({
                     </MainCell>
 
 
-                    <MainCell numeric strong>
+                    <MainCell
+                      numeric
+                      strong
+                    >
                       {
                         formatInteger(
                           metrics.sales
@@ -2421,7 +2284,10 @@ function ProductsTable({
                     </MainCell>
 
 
-                    <MainCell numeric strong>
+                    <MainCell
+                      numeric
+                      strong
+                    >
                       {
                         formatInteger(
                           metrics.stock
@@ -2430,7 +2296,10 @@ function ProductsTable({
                     </MainCell>
 
 
-                    <MainCell numeric strong>
+                    <MainCell
+                      numeric
+                      strong
+                    >
                       {
                         stockDays ===
                         null
@@ -2564,34 +2433,34 @@ function ProductsTable({
                       warehouses.length >
                       0
                         ? (
+
                           <WarehouseTable
-                            offerId=
-                              {
-                                product.offer_id
-                              }
+                            offerId={
+                              product.offer_id
+                            }
 
-                            productId=
-                              {
-                                product.market_sku
-                                ??
-                                "—"
-                              }
+                            productId={
+                              product.market_sku
+                              ??
+                              "—"
+                            }
 
-                            rows=
-                              {
-                                warehouses
-                              }
+                            rows={
+                              warehouses
+                            }
 
-                            periodDays=
-                              {
-                                periodDays
-                              }
+                            periodDays={
+                              periodDays
+                            }
                           />
+
                         )
                         : (
+
                           <div className="reason-text">
                             Нет данных по складам.
                           </div>
+
                         )
                     }
 
@@ -2749,7 +2618,10 @@ function WarehouseTable({
                   >
 
                     <WarehouseCell
-                      divider={divider}
+                      divider={
+                        divider
+                      }
+
                       strong
                     >
                       {offerId}
@@ -2757,21 +2629,28 @@ function WarehouseTable({
 
 
                     <WarehouseCell
-                      divider={divider}
+                      divider={
+                        divider
+                      }
                     >
                       {productId}
                     </WarehouseCell>
 
 
                     <WarehouseCell
-                      divider={divider}
+                      divider={
+                        divider
+                      }
                     >
                       {row.warehouseName}
                     </WarehouseCell>
 
 
                     <WarehouseCell
-                      divider={divider}
+                      divider={
+                        divider
+                      }
+
                       numeric
                       strong
                     >
@@ -2784,7 +2663,10 @@ function WarehouseTable({
 
 
                     <WarehouseCell
-                      divider={divider}
+                      divider={
+                        divider
+                      }
+
                       numeric
                     >
                       {
@@ -2796,7 +2678,10 @@ function WarehouseTable({
 
 
                     <WarehouseCell
-                      divider={divider}
+                      divider={
+                        divider
+                      }
+
                       numeric
                     >
                       {
@@ -2808,7 +2693,10 @@ function WarehouseTable({
 
 
                     <WarehouseCell
-                      divider={divider}
+                      divider={
+                        divider
+                      }
+
                       numeric
                       strong
                     >
@@ -2821,7 +2709,10 @@ function WarehouseTable({
 
 
                     <WarehouseCell
-                      divider={divider}
+                      divider={
+                        divider
+                      }
+
                       numeric
                       strong
                     >
