@@ -1,13 +1,11 @@
+
 "use client";
 
-import {
-  useMemo,
-  useState,
-} from "react";
-
+import { useMemo, useState, type ReactNode } from "react";
 
 // ============================================================
 // ТИП ТОВАРА
+// Новые поля v9 необязательны для совместимости с v8.
 // ============================================================
 
 export type ZakupTableItem = {
@@ -15,12 +13,18 @@ export type ZakupTableItem = {
   offer_id: string;
   name: string | null;
 
+  sales_28_days?: number | null;
+  ozon_sales_28_days?: number | null;
+  wb_sales_28_days?: number | null;
+  yandex_sales_28_days?: number | null;
   avg_sales_per_day: number;
 
   own_stock_quantity: number;
+  responsible_storage_quantity?: number | null;
   ozon_stock_quantity: number;
+  wb_stock_quantity?: number | null;
+  yandex_stock_quantity?: number | null;
   physical_stock: number;
-
   active_ved_quantity: number;
   effective_stock: number;
   coverage_days: number | null;
@@ -29,12 +33,10 @@ export type ZakupTableItem = {
   container_cartons: number;
   container_final_units: number;
   container_order_volume_m3: number;
-
   container_manual_quantity: number | null;
   container_manual_final_units: number | null;
   container_manual_volume_m3: number | null;
   container_manual_comment: string | null;
-
   container_effective_final_units: number;
   container_effective_volume_m3: number;
 
@@ -42,27 +44,31 @@ export type ZakupTableItem = {
   truck_cartons: number;
   truck_final_units: number;
   truck_order_volume_m3: number;
-
   truck_manual_quantity: number | null;
   truck_manual_final_units: number | null;
   truck_manual_volume_m3: number | null;
   truck_manual_comment: string | null;
-
   truck_effective_final_units: number;
   truck_effective_volume_m3: number;
 };
 
-
 // ============================================================
-// СОРТИРОВКА
+// КОЛОНКИ И СОРТИРОВКА
 // ============================================================
 
 type SortKey =
   | "offer_id"
   | "name"
+  | "sales_28_days"
+  | "ozon_sales_28_days"
+  | "wb_sales_28_days"
+  | "yandex_sales_28_days"
   | "avg_sales_per_day"
   | "own_stock_quantity"
+  | "responsible_storage_quantity"
   | "ozon_stock_quantity"
+  | "wb_stock_quantity"
+  | "yandex_stock_quantity"
   | "active_ved_quantity"
   | "effective_stock"
   | "coverage_days"
@@ -71,1283 +77,551 @@ type SortKey =
   | "truck_effective_final_units"
   | "truck_effective_volume_m3";
 
+type SortDirection = "asc" | "desc";
+type SortValue = string | number | null;
 
-type SortDirection =
-  | "asc"
-  | "desc";
+type Column = {
+  key: SortKey;
+  label: string;
+  align: "left" | "center";
+  detail?: boolean;
+  hint?: string;
+};
 
+const DEFAULT_SORT_KEY: SortKey = "avg_sales_per_day";
+const DEFAULT_SORT_DIRECTION: SortDirection = "desc";
 
-type SortValue =
-  | string
-  | number
-  | null;
+// detail: true = показывать в подробном режиме.
+// Остальные колонки видны всегда.
 
-
-const DEFAULT_SORT_KEY:
-  SortKey =
-    "avg_sales_per_day";
-
-
-const DEFAULT_SORT_DIRECTION:
-  SortDirection =
-    "desc";
-
+const COLUMNS: readonly Column[] = [
+  {
+    key: "offer_id",
+    label: "Артикул",
+    align: "left",
+  },
+  {
+    key: "name",
+    label: "Товар",
+    align: "left",
+  },
+  {
+    key: "sales_28_days",
+    label: "Всего, 28 дн.",
+    align: "center",
+    detail: true,
+    hint: "Сумма продаж Ozon, WB и Яндекс Маркета за 28 дней",
+  },
+  {
+    key: "ozon_sales_28_days",
+    label: "Ozon, прод.",
+    align: "center",
+    detail: true,
+    hint: "Неотменённые FBO-отправления за 28 дней",
+  },
+  {
+    key: "wb_sales_28_days",
+    label: "WB, прод.",
+    align: "center",
+    detail: true,
+    hint: "Фактические FBW-продажи за вычетом возвратов за 28 дней",
+  },
+  {
+    key: "yandex_sales_28_days",
+    label: "ЯМ, прод.",
+    align: "center",
+    detail: true,
+    hint: "Чистые продажи FBY за 28 дней",
+  },
+  {
+    key: "avg_sales_per_day",
+    label: "Продажи/сутки",
+    align: "center",
+  },
+  {
+    key: "own_stock_quantity",
+    label: "Наш склад",
+    align: "center",
+  },
+  {
+    key: "responsible_storage_quantity",
+    label: "Отв. хранение",
+    align: "center",
+    detail: true,
+  },
+  {
+    key: "ozon_stock_quantity",
+    label: "Ozon, остаток",
+    align: "center",
+  },
+  {
+    key: "wb_stock_quantity",
+    label: "WB, остаток",
+    align: "center",
+    detail: true,
+  },
+  {
+    key: "yandex_stock_quantity",
+    label: "ЯМ, остаток",
+    align: "center",
+    detail: true,
+  },
+  {
+    key: "active_ved_quantity",
+    label: "ВЭД",
+    align: "center",
+  },
+  {
+    key: "effective_stock",
+    label: "Общий остаток",
+    align: "center",
+    hint: "Наш склад + ответственное хранение + Ozon + WB + Яндекс + активный ВЭД",
+  },
+  {
+    key: "coverage_days",
+    label: "Покрытие",
+    align: "center",
+  },
+  {
+    key: "container_effective_final_units",
+    label: "Контейнер, шт.",
+    align: "center",
+  },
+  {
+    key: "container_effective_volume_m3",
+    label: "Контейнер, м³",
+    align: "center",
+  },
+  {
+    key: "truck_effective_final_units",
+    label: "Фура, шт.",
+    align: "center",
+  },
+  {
+    key: "truck_effective_volume_m3",
+    label: "Фура, м³",
+    align: "center",
+  },
+];
 
 // ============================================================
 // НАПРАВЛЕНИЕ ПЕРВОГО КЛИКА
 // ============================================================
 
-function getInitialDirection(
-  key:
-    SortKey
-):
-SortDirection {
-
-  /*
-   * Текстовые колонки:
-   * первый клик = А → Я / A → Z.
-   */
-
-  if (
-    key ===
-      "offer_id"
-    ||
-    key ===
-      "name"
-  ) {
-
-    return "asc";
-
-  }
-
-
-  /*
-   * Числовые колонки:
-   * первый клик = от большего к меньшему.
-   */
-
-  return "desc";
-
+function getInitialDirection(key: SortKey): SortDirection {
+  // Артикул и Товар: от А до Я.
+  // Числовые показатели: от большего к меньшему.
+  return key === "offer_id" || key === "name"
+    ? "asc"
+    : "desc";
 }
-
 
 // ============================================================
 // ФОРМАТИРОВАНИЕ
 // ============================================================
 
 function formatRoundedInteger(
-  value:
-    number
-    |
-    null
-    |
-    undefined
-) {
-
-  if (
-    value === null
-    ||
-    value === undefined
-  ) {
-
+  value: number | null | undefined
+): string {
+  if (value == null || !Number.isFinite(Number(value))) {
     return "—";
-
   }
 
-
-  const number =
-    Number(
-      value
-    );
-
-
-  if (
-    !Number.isFinite(
-      number
-    )
-  ) {
-
-    return "—";
-
-  }
-
-
-  return Math.round(
-    number
-  ).toLocaleString(
-    "ru-RU"
-  );
-
+  return Math.round(Number(value)).toLocaleString("ru-RU");
 }
-
 
 function formatOneDecimal(
-  value:
-    number
-    |
-    null
-    |
-    undefined
-) {
-
-  if (
-    value === null
-    ||
-    value === undefined
-  ) {
-
+  value: number | null | undefined
+): string {
+  if (value == null || !Number.isFinite(Number(value))) {
     return "—";
-
   }
 
-
-  const number =
-    Number(
-      value
-    );
-
-
-  if (
-    !Number.isFinite(
-      number
-    )
-  ) {
-
-    return "—";
-
-  }
-
-
-  return number.toLocaleString(
-    "ru-RU",
-    {
-      minimumFractionDigits:
-        1,
-
-      maximumFractionDigits:
-        1,
-    }
-  );
-
+  return Number(value).toLocaleString("ru-RU", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
 }
-
 
 // ============================================================
 // ЗНАЧЕНИЕ ДЛЯ СОРТИРОВКИ
 // ============================================================
 
 function getSortValue(
-  item:
-    ZakupTableItem,
+  item: ZakupTableItem,
+  key: SortKey
+): SortValue {
+  const value = item[key];
 
-  key:
-    SortKey
-):
-SortValue {
-
-  switch (
-    key
-  ) {
-
-    case "offer_id":
-
-      return item.offer_id;
-
-
-    case "name":
-
-      return item.name;
-
-
-    case "avg_sales_per_day":
-
-      return item.avg_sales_per_day;
-
-
-    case "own_stock_quantity":
-
-      return item.own_stock_quantity;
-
-
-    case "ozon_stock_quantity":
-
-      return item.ozon_stock_quantity;
-
-
-    case "active_ved_quantity":
-
-      return item.active_ved_quantity;
-
-
-    case "effective_stock":
-
-      return item.effective_stock;
-
-
-    case "coverage_days":
-
-      return item.coverage_days;
-
-
-    case "container_effective_final_units":
-
-      return item
-        .container_effective_final_units;
-
-
-    case "container_effective_volume_m3":
-
-      return item
-        .container_effective_volume_m3;
-
-
-    case "truck_effective_final_units":
-
-      return item
-        .truck_effective_final_units;
-
-
-    case "truck_effective_volume_m3":
-
-      return item
-        .truck_effective_volume_m3;
-
-  }
-
+  return typeof value === "number" || typeof value === "string"
+    ? value
+    : null;
 }
-
 
 // ============================================================
 // СРАВНЕНИЕ
 // ============================================================
 
 function compareValues(
-  left:
-    SortValue,
-
-  right:
-    SortValue,
-
-  direction:
-    SortDirection
-) {
-
-  /*
-   * Пустые значения всегда держим внизу.
-   */
-
-  if (
-    left === null
-    &&
-    right === null
-  ) {
-
+  left: SortValue,
+  right: SortValue,
+  direction: SortDirection
+): number {
+  // Пустые значения всегда внизу.
+  if (left === null && right === null) {
     return 0;
-
   }
 
-
-  if (
-    left === null
-  ) {
-
+  if (left === null) {
     return 1;
-
   }
 
-
-  if (
-    right === null
-  ) {
-
+  if (right === null) {
     return -1;
-
   }
 
+  const comparison =
+    typeof left === "number" && typeof right === "number"
+      ? left - right
+      : String(left).localeCompare(String(right), ["ru", "en"], {
+          numeric: true,
+          sensitivity: "base",
+        });
 
-  let result =
-    0;
-
-
-  if (
-    typeof left ===
-      "number"
-    &&
-    typeof right ===
-      "number"
-  ) {
-
-    result =
-      left
-      -
-      right;
-
-  } else {
-
-    /*
-     * Для Артикула и Товара:
-     * естественная алфавитно-цифровая сортировка.
-     *
-     * numeric: true нужен, чтобы условный
-     * AV-2 шёл раньше AV-10, а не наоборот.
-     */
-
-    result =
-      String(
-        left
-      ).localeCompare(
-        String(
-          right
-        ),
-        [
-          "ru",
-          "en",
-        ],
-        {
-          numeric:
-            true,
-
-          sensitivity:
-            "base",
-        }
-      );
-
-  }
-
-
-  return direction ===
-    "asc"
-
-    ? result
-
-    : -result;
-
+  return direction === "asc"
+    ? comparison
+    : -comparison;
 }
 
+// ============================================================
+// ОТОБРАЖЕНИЕ ЯЧЕЙКИ
+// ============================================================
+
+function renderCell(
+  item: ZakupTableItem,
+  key: SortKey
+): ReactNode {
+  switch (key) {
+    case "offer_id":
+      return <strong>{item.offer_id}</strong>;
+
+    case "name":
+      return item.name ?? "—";
+
+    case "coverage_days":
+      return item.coverage_days == null ? (
+        "—"
+      ) : (
+        <>
+          <strong>
+            {formatRoundedInteger(item.coverage_days)}
+          </strong>{" "}
+          дн.
+        </>
+      );
+
+    case "container_effective_final_units":
+      return (
+        <>
+          <strong>
+            {formatRoundedInteger(
+              item.container_effective_final_units
+            )}
+          </strong>
+
+          {item.container_manual_quantity != null && (
+            <div className="muted">вручную</div>
+          )}
+        </>
+      );
+
+    case "truck_effective_final_units":
+      return (
+        <>
+          <strong>
+            {formatRoundedInteger(
+              item.truck_effective_final_units
+            )}
+          </strong>
+
+          {item.truck_manual_quantity != null && (
+            <div className="muted">вручную</div>
+          )}
+        </>
+      );
+
+    case "container_effective_volume_m3":
+      return formatOneDecimal(
+        item.container_effective_volume_m3
+      );
+
+    case "truck_effective_volume_m3":
+      return formatOneDecimal(
+        item.truck_effective_volume_m3
+      );
+
+    default:
+      return formatRoundedInteger(item[key]);
+  }
+}
 
 // ============================================================
-// COMPONENT
+// ТАБЛИЦА
 // ============================================================
 
 export default function ZakupProductsTableClient({
   items,
 }: {
-  items:
-    ZakupTableItem[];
+  items: ZakupTableItem[];
 }) {
+  const [sortKey, setSortKey] =
+    useState<SortKey>(DEFAULT_SORT_KEY);
 
-  const [
-    sortKey,
-    setSortKey,
-  ] =
-    useState<SortKey>(
-      DEFAULT_SORT_KEY
-    );
+  const [sortDirection, setSortDirection] =
+    useState<SortDirection>(DEFAULT_SORT_DIRECTION);
 
+  // При первом открытии показываем все маркетплейсы.
+  const [showBreakdown, setShowBreakdown] =
+    useState(true);
 
-  const [
-    sortDirection,
-    setSortDirection,
-  ] =
-    useState<SortDirection>(
-      DEFAULT_SORT_DIRECTION
-    );
+  // ==========================================================
+  // ВИДИМЫЕ КОЛОНКИ
+  // ==========================================================
 
+  const visibleColumns = useMemo(
+    () =>
+      COLUMNS.filter(
+        (column) => showBreakdown || !column.detail
+      ),
+    [showBreakdown]
+  );
 
   // ==========================================================
   // СОРТИРОВАННЫЕ ДАННЫЕ
   // ==========================================================
 
-  const sortedItems =
-    useMemo(
-      () => {
+  const sortedItems = useMemo(() => {
+    const nextItems = [...items];
 
-        const nextItems =
-          [
-            ...items,
-          ];
+    nextItems.sort((left, right) => {
+      const result = compareValues(
+        getSortValue(left, sortKey),
+        getSortValue(right, sortKey),
+        sortDirection
+      );
 
+      if (result !== 0) {
+        return result;
+      }
 
-        nextItems.sort(
-          (
-            left,
-            right
-          ) => {
+      // Вторичная сортировка по артикулу.
+      return left.offer_id.localeCompare(
+        right.offer_id,
+        ["ru", "en"],
+        {
+          numeric: true,
+          sensitivity: "base",
+        }
+      );
+    });
 
-            const result =
-              compareValues(
-                getSortValue(
-                  left,
-                  sortKey
-                ),
-
-                getSortValue(
-                  right,
-                  sortKey
-                ),
-
-                sortDirection
-              );
-
-
-            if (
-              result !==
-              0
-            ) {
-
-              return result;
-
-            }
-
-
-            /*
-             * Если значения выбранного столбца
-             * одинаковые, используем Артикул
-             * как стабильную вторичную сортировку.
-             */
-
-            return left
-              .offer_id
-              .localeCompare(
-                right.offer_id,
-                [
-                  "ru",
-                  "en",
-                ],
-                {
-                  numeric:
-                    true,
-
-                  sensitivity:
-                    "base",
-                }
-              );
-
-          }
-        );
-
-
-        return nextItems;
-
-      },
-      [
-        items,
-        sortKey,
-        sortDirection,
-      ]
-    );
-
+    return nextItems;
+  }, [items, sortKey, sortDirection]);
 
   // ==========================================================
   // НАЖАТИЕ НА ЗАГОЛОВОК
   // ==========================================================
 
-  function changeSort(
-    key:
-      SortKey
-  ) {
-
-    /*
-     * Если нажали на уже активный столбец,
-     * просто разворачиваем направление.
-     */
-
-    if (
-      key ===
-      sortKey
-    ) {
-
-      setSortDirection(
-        current =>
-          current ===
-            "desc"
-
-            ? "asc"
-
-            : "desc"
+  function changeSort(key: SortKey) {
+    if (key === sortKey) {
+      setSortDirection((current) =>
+        current === "desc" ? "asc" : "desc"
       );
 
-
       return;
-
     }
 
-
-    /*
-     * Если выбран новый столбец:
-     *
-     * Артикул / Товар:
-     * первый клик = А → Я / A → Z.
-     *
-     * Остальные:
-     * первый клик = от большего к меньшему.
-     */
-
-    setSortKey(
-      key
-    );
-
-
-    setSortDirection(
-      getInitialDirection(
-        key
-      )
-    );
-
+    setSortKey(key);
+    setSortDirection(getInitialDirection(key));
   }
 
+  // ==========================================================
+  // ПЕРЕКЛЮЧЕНИЕ РЕЖИМА ТАБЛИЦЫ
+  // ==========================================================
+
+  function toggleBreakdown() {
+    // Если скрываем колонку, по которой сортировали,
+    // возвращаем сортировку по средним продажам.
+    if (
+      showBreakdown &&
+      COLUMNS.some(
+        (column) => column.key === sortKey && column.detail
+      )
+    ) {
+      setSortKey(DEFAULT_SORT_KEY);
+      setSortDirection(DEFAULT_SORT_DIRECTION);
+    }
+
+    setShowBreakdown(!showBreakdown);
+  }
+
+  // ==========================================================
+  // JSX
+  // ==========================================================
 
   return (
-
-    <div
-      className=
-        "table-wrapper"
-    >
-
-      <table
-        className=
-          "table zakup-sortable-table"
+    <>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "12px",
+          flexWrap: "wrap",
+          marginBottom: "12px",
+        }}
       >
-
-        <colgroup>
-
-          <col
-            className=
-              "zakup-col-article"
-          />
-
-          <col
-            className=
-              "zakup-col-product"
-          />
-
-          <col
-            className=
-              "zakup-col-number"
-          />
-
-          <col
-            className=
-              "zakup-col-number"
-          />
-
-          <col
-            className=
-              "zakup-col-number"
-          />
-
-          <col
-            className=
-              "zakup-col-number"
-          />
-
-          <col
-            className=
-              "zakup-col-number"
-          />
-
-          <col
-            className=
-              "zakup-col-number"
-          />
-
-          <col
-            className=
-              "zakup-col-number"
-          />
-
-          <col
-            className=
-              "zakup-col-number"
-          />
-
-          <col
-            className=
-              "zakup-col-number"
-          />
-
-          <col
-            className=
-              "zakup-col-number"
-          />
-
-        </colgroup>
-
-
-        <thead>
-
-          <tr>
-
-            <SortableHeader
-              label="Артикул"
-
-              sortKey=
-                "offer_id"
-
-              currentKey={
-                sortKey
-              }
-
-              direction={
-                sortDirection
-              }
-
-              onSort={
-                changeSort
-              }
-
-              align="left"
-            />
-
-
-            <SortableHeader
-              label="Товар"
-
-              sortKey=
-                "name"
-
-              currentKey={
-                sortKey
-              }
-
-              direction={
-                sortDirection
-              }
-
-              onSort={
-                changeSort
-              }
-
-              align="left"
-            />
-
-
-            <SortableHeader
-              label=
-                "Продажи/сутки"
-
-              sortKey=
-                "avg_sales_per_day"
-
-              currentKey={
-                sortKey
-              }
-
-              direction={
-                sortDirection
-              }
-
-              onSort={
-                changeSort
-              }
-
-              align="center"
-            />
-
-
-            <SortableHeader
-              label=
-                "Наш склад"
-
-              sortKey=
-                "own_stock_quantity"
-
-              currentKey={
-                sortKey
-              }
-
-              direction={
-                sortDirection
-              }
-
-              onSort={
-                changeSort
-              }
-
-              align="center"
-            />
-
-
-            <SortableHeader
-              label=
-                "Ozon"
-
-              sortKey=
-                "ozon_stock_quantity"
-
-              currentKey={
-                sortKey
-              }
-
-              direction={
-                sortDirection
-              }
-
-              onSort={
-                changeSort
-              }
-
-              align="center"
-            />
-
-
-            <SortableHeader
-              label=
-                "ВЭД"
-
-              sortKey=
-                "active_ved_quantity"
-
-              currentKey={
-                sortKey
-              }
-
-              direction={
-                sortDirection
-              }
-
-              onSort={
-                changeSort
-              }
-
-              align="center"
-            />
-
-
-            <SortableHeader
-              label=
-                "Общий остаток"
-
-              sortKey=
-                "effective_stock"
-
-              currentKey={
-                sortKey
-              }
-
-              direction={
-                sortDirection
-              }
-
-              onSort={
-                changeSort
-              }
-
-              align="center"
-            />
-
-
-            <SortableHeader
-              label=
-                "Покрытие"
-
-              sortKey=
-                "coverage_days"
-
-              currentKey={
-                sortKey
-              }
-
-              direction={
-                sortDirection
-              }
-
-              onSort={
-                changeSort
-              }
-
-              align="center"
-            />
-
-
-            <SortableHeader
-              label=
-                "Контейнер, шт."
-
-              sortKey=
-                "container_effective_final_units"
-
-              currentKey={
-                sortKey
-              }
-
-              direction={
-                sortDirection
-              }
-
-              onSort={
-                changeSort
-              }
-
-              align="center"
-            />
-
-
-            <SortableHeader
-              label=
-                "Контейнер, м³"
-
-              sortKey=
-                "container_effective_volume_m3"
-
-              currentKey={
-                sortKey
-              }
-
-              direction={
-                sortDirection
-              }
-
-              onSort={
-                changeSort
-              }
-
-              align="center"
-            />
-
-
-            <SortableHeader
-              label=
-                "Фура, шт."
-
-              sortKey=
-                "truck_effective_final_units"
-
-              currentKey={
-                sortKey
-              }
-
-              direction={
-                sortDirection
-              }
-
-              onSort={
-                changeSort
-              }
-
-              align="center"
-            />
-
-
-            <SortableHeader
-              label=
-                "Фура, м³"
-
-              sortKey=
-                "truck_effective_volume_m3"
-
-              currentKey={
-                sortKey
-              }
-
-              direction={
-                sortDirection
-              }
-
-              onSort={
-                changeSort
-              }
-
-              align="center"
-            />
-
-          </tr>
-
-        </thead>
-
-
-        <tbody>
-
-          {
-            sortedItems.map(
-              item => (
-
-                <tr
-                  key={
-                    item
-                      .calculation_item_id
-                  }
-                >
-
-                  <td
-                    className=
-                      "left"
-                  >
-
-                    <strong>
-                      {
-                        item.offer_id
-                      }
-                    </strong>
-
-                  </td>
-
-
-                  <td
-                    className=
-                      "left"
-                  >
-                    {
-                      item.name
-                      ??
-                      "—"
-                    }
-                  </td>
-
-
-                  <td
-                    className=
-                      "center"
-                  >
-                    {
-                      formatRoundedInteger(
-                        item
-                          .avg_sales_per_day
-                      )
-                    }
-                  </td>
-
-
-                  <td
-                    className=
-                      "center"
-                  >
-                    {
-                      formatRoundedInteger(
-                        item
-                          .own_stock_quantity
-                      )
-                    }
-                  </td>
-
-
-                  <td
-                    className=
-                      "center"
-                  >
-                    {
-                      formatRoundedInteger(
-                        item
-                          .ozon_stock_quantity
-                      )
-                    }
-                  </td>
-
-
-                  <td
-                    className=
-                      "center"
-                  >
-                    {
-                      formatRoundedInteger(
-                        item
-                          .active_ved_quantity
-                      )
-                    }
-                  </td>
-
-
-                  <td
-                    className=
-                      "center"
-                  >
-                    {
-                      formatRoundedInteger(
-                        item
-                          .effective_stock
-                      )
-                    }
-                  </td>
-
-
-                  <td
-                    className=
-                      "center"
-                  >
-
-                    {
-                      item
-                        .coverage_days ===
-                        null
-
-                        ? "—"
-
-                        : (
-                          <>
-
-                            <strong>
-                              {
-                                formatRoundedInteger(
-                                  item
-                                    .coverage_days
-                                )
-                              }
-                            </strong>
-
-                            {" "}дн.
-
-                          </>
-                        )
-                    }
-
-                  </td>
-
-
-                  <td
-                    className=
-                      "center"
-                  >
-
-                    <strong>
-                      {
-                        formatRoundedInteger(
-                          item
-                            .container_effective_final_units
-                        )
-                      }
-                    </strong>
-
-
-                    {
-                      item
-                        .container_manual_quantity !==
-                        null
-
-                        ? (
-
-                          <div
-                            className=
-                              "muted"
-                          >
-                            вручную
-                          </div>
-
-                        )
-
-                        : null
-                    }
-
-                  </td>
-
-
-                  <td
-                    className=
-                      "center"
-                  >
-                    {
-                      formatOneDecimal(
-                        item
-                          .container_effective_volume_m3
-                      )
-                    }
-                  </td>
-
-
-                  <td
-                    className=
-                      "center"
-                  >
-
-                    <strong>
-                      {
-                        formatRoundedInteger(
-                          item
-                            .truck_effective_final_units
-                        )
-                      }
-                    </strong>
-
-
-                    {
-                      item
-                        .truck_manual_quantity !==
-                        null
-
-                        ? (
-
-                          <div
-                            className=
-                              "muted"
-                          >
-                            вручную
-                          </div>
-
-                        )
-
-                        : null
-                    }
-
-                  </td>
-
-
-                  <td
-                    className=
-                      "center"
-                  >
-                    {
-                      formatOneDecimal(
-                        item
-                          .truck_effective_volume_m3
-                      )
-                    }
-                  </td>
-
-                </tr>
-
-              )
-            )
+        <span className="muted">
+          Продажи за 28 дней, остатки в штуках
+        </span>
+
+        <button
+          type="button"
+          className="secondary-button"
+          aria-expanded={showBreakdown}
+          onClick={toggleBreakdown}
+        >
+          {showBreakdown
+            ? "Скрыть разбивку по маркетплейсам"
+            : "Показать разбивку по маркетплейсам"}
+        </button>
+      </div>
+
+      <div
+        className="table-wrapper"
+        style={{ overflowX: "auto" }}
+      >
+        <table
+          className="table zakup-sortable-table"
+          style={
+            showBreakdown
+              ? { minWidth: "2250px" }
+              : undefined
           }
+        >
+          <colgroup>
+            {visibleColumns.map((column) => (
+              <col
+                key={column.key}
+                className={
+                  column.key === "offer_id"
+                    ? "zakup-col-article"
+                    : column.key === "name"
+                      ? "zakup-col-product"
+                      : "zakup-col-number"
+                }
+              />
+            ))}
+          </colgroup>
 
-        </tbody>
+          <thead>
+            <tr>
+              {visibleColumns.map((column) => (
+                <SortableHeader
+                  key={column.key}
+                  label={column.label}
+                  hint={column.hint}
+                  sortKey={column.key}
+                  currentKey={sortKey}
+                  direction={sortDirection}
+                  onSort={changeSort}
+                  align={column.align}
+                />
+              ))}
+            </tr>
+          </thead>
 
-      </table>
-
-    </div>
-
+          <tbody>
+            {sortedItems.map((item) => (
+              <tr key={item.calculation_item_id}>
+                {visibleColumns.map((column) => (
+                  <td
+                    key={column.key}
+                    className={column.align}
+                  >
+                    {renderCell(item, column.key)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
-
 }
 
-
 // ============================================================
-// SORTABLE HEADER
+// КЛИКАБЕЛЬНЫЙ ЗАГОЛОВОК
 // ============================================================
 
 function SortableHeader({
   label,
+  hint,
   sortKey,
   currentKey,
   direction,
   onSort,
   align,
 }: {
-  label:
-    string;
-
-  sortKey:
-    SortKey;
-
-  currentKey:
-    SortKey;
-
-  direction:
-    SortDirection;
-
-  onSort:
-    (
-      key:
-        SortKey
-    ) => void;
-
-  align:
-    "left"
-    |
-    "center";
+  label: string;
+  hint?: string;
+  sortKey: SortKey;
+  currentKey: SortKey;
+  direction: SortDirection;
+  onSort: (key: SortKey) => void;
+  align: "left" | "center";
 }) {
+  const active = sortKey === currentKey;
 
-  const active =
-    sortKey ===
-    currentKey;
-
-
-  const ariaSort =
-    active
-
-      ? direction ===
-        "desc"
-
-        ? "descending"
-
-        : "ascending"
-
-      : "none";
-
+  const ariaSort = active
+    ? direction === "desc"
+      ? "descending"
+      : "ascending"
+    : "none";
 
   return (
-
     <th
-      className={
-        align
-      }
-
-      aria-sort={
-        ariaSort
-      }
+      className={align}
+      aria-sort={ariaSort}
     >
-
       <button
         type="button"
-
-        className={
-          [
-            "zakup-sort-button",
-
-            align ===
-              "center"
-
-              ? "zakup-sort-button--center"
-
-              : "zakup-sort-button--left",
-
-            active
-
-              ? "zakup-sort-button--active"
-
-              : "",
-          ]
-            .filter(
-              Boolean
-            )
-            .join(
-              " "
-            )
-        }
-
-        onClick={
-          () =>
-            onSort(
-              sortKey
-            )
-        }
-      >
-
-        <span>
-          {
-            label
-          }
-        </span>
-
-
-        {
+        title={hint}
+        className={[
+          "zakup-sort-button",
+          align === "center"
+            ? "zakup-sort-button--center"
+            : "zakup-sort-button--left",
           active
+            ? "zakup-sort-button--active"
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        onClick={() => onSort(sortKey)}
+      >
+        <span>{label}</span>
 
-            ? (
-
-              <span
-                className=
-                  "zakup-sort-indicator"
-
-                aria-hidden="true"
-              >
-                {
-                  direction ===
-                    "desc"
-
-                    ? "↓"
-
-                    : "↑"
-                }
-              </span>
-
-            )
-
-            : null
-        }
-
+        {active && (
+          <span
+            className="zakup-sort-indicator"
+            aria-hidden="true"
+          >
+            {direction === "desc" ? "↓" : "↑"}
+          </span>
+        )}
       </button>
-
     </th>
-
   );
-
 }
