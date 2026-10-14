@@ -98,6 +98,51 @@ const DEFAULT_SORT_DIRECTION:
 // FORMAT
 // ============================================================
 
+function formatWholeNumber(
+  value:
+    number
+    | null
+    | undefined
+) {
+
+  if (
+    value === null
+    ||
+    value === undefined
+    ||
+    Number.isNaN(
+      value
+    )
+  ) {
+
+    return "—";
+
+  }
+
+
+  return new Intl.NumberFormat(
+    "ru-RU",
+    {
+      maximumFractionDigits:
+        0,
+
+      minimumFractionDigits:
+        0,
+    }
+  ).format(
+    Math.round(
+      value
+    )
+  );
+
+}
+
+
+// ============================================================
+// ФОРМАТЫ ДЛЯ РАСКРЫТИЯ ПО СКЛАДАМ
+// ПОКА ОСТАВЛЯЕМ КАК БЫЛО
+// ============================================================
+
 function formatInteger(
   value:
     number
@@ -337,8 +382,7 @@ function compareValues(
 ) {
 
   /*
-   * Пустые значения всегда остаются внизу,
-   * независимо от направления сортировки.
+   * Пустые значения всегда внизу.
    */
 
   if (
@@ -506,11 +550,6 @@ export default function YandexProductsTableClient({
 
             }
 
-
-            /*
-             * При одинаковом значении
-             * вторичная сортировка идёт по Артикулу.
-             */
 
             return left.offer_id
               .localeCompare(
@@ -690,7 +729,7 @@ export default function YandexProductsTableClient({
               changeSort
             }
 
-            align="right"
+            align="center"
           />
 
 
@@ -711,7 +750,7 @@ export default function YandexProductsTableClient({
               changeSort
             }
 
-            align="right"
+            align="center"
           />
 
 
@@ -733,7 +772,7 @@ export default function YandexProductsTableClient({
               changeSort
             }
 
-            align="right"
+            align="center"
           />
 
 
@@ -754,7 +793,7 @@ export default function YandexProductsTableClient({
               changeSort
             }
 
-            align="right"
+            align="center"
           />
 
 
@@ -776,7 +815,7 @@ export default function YandexProductsTableClient({
               changeSort
             }
 
-            align="right"
+            align="center"
           />
 
         </div>
@@ -875,29 +914,25 @@ export default function YandexProductsTableClient({
                       strong
                     >
                       {
-                        formatInteger(
+                        formatWholeNumber(
                           item.sales
                         )
                       }
                     </MainCell>
 
 
-                    <MainCell
-                      numeric
-                    >
+                    <MainCell numeric>
                       {
-                        formatAverage(
+                        formatWholeNumber(
                           average
                         )
                       }
                     </MainCell>
 
 
-                    <MainCell
-                      numeric
-                    >
+                    <MainCell numeric>
                       {
-                        formatInteger(
+                        formatWholeNumber(
                           item.cancellations
                         )
                       }
@@ -909,7 +944,7 @@ export default function YandexProductsTableClient({
                       strong
                     >
                       {
-                        formatInteger(
+                        formatWholeNumber(
                           item.stock
                         )
                       }
@@ -926,7 +961,7 @@ export default function YandexProductsTableClient({
 
                           ? "—"
 
-                          : formatStockDays(
+                          : formatWholeNumber(
                               stockDays
                             )
                       }
@@ -937,7 +972,7 @@ export default function YandexProductsTableClient({
 
                   {/* =================================
                       WAREHOUSE EXPANSION
-                      НЕ ПЕРЕОФОРМЛЯЕМ НА ЭТОМ ЭТАПЕ
+                      ПОКА НЕ ПЕРЕОФОРМЛЯЕМ
                       ================================= */}
 
                   <div
@@ -1137,7 +1172,7 @@ function SortableHeader({
 
   align:
     "left"
-    | "right";
+    | "center";
 }) {
 
   const active =
@@ -1182,9 +1217,9 @@ function SortableHeader({
             "ym-products-sort-button",
 
             align ===
-              "right"
+              "center"
 
-              ? "ym-products-sort-button--right"
+              ? "ym-products-sort-button--center"
 
               : "ym-products-sort-button--left",
 
@@ -1277,7 +1312,7 @@ function MainCell({
           "ym-products-main-cell",
 
           numeric
-            ? "ym-products-main-cell--right"
+            ? "ym-products-main-cell--numeric"
             : "",
 
           strong
