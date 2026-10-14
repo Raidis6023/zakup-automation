@@ -14,8 +14,12 @@ from "../WbSyncClient";
 import WbUnmappedProductsTable
 from "../WbUnmappedProductsTable";
 
+import WorkspaceDecoration
+from "../WorkspaceDecoration";
+
 import "./wb-reference.css";
 import "./wb-reference-top.css";
+import "./wb-page-header.css";
 
 
 export const dynamic =
@@ -1048,22 +1052,21 @@ export default async function WildberriesPage() {
       >
 
         {/* =====================================================
-            STICKY HEADER
+            ЗАКРЕПЛЁННАЯ ШАПКА WB
 
-            Больше нет:
-            - СИСТЕМА ЗАКУПА
-            - логотипа WB слева
-            - "— синхронизация"
-
-            Остаётся:
+            Только:
             - Wildberries
             - подпись
-            - кнопки справа
-            - полосы справа
+            - кнопки
+            - полосы
+
+            Никакого квадратного WB-логотипа.
+            Никакого "СИСТЕМА ЗАКУПА".
+            Никакого "— синхронизация".
             ===================================================== */}
 
         <header
-          className="header wb-header wb-page-sticky-header"
+          className="header wb-header wb-page-header-sticky"
         >
 
           <div
@@ -1111,6 +1114,16 @@ export default async function WildberriesPage() {
             >
               ← Главная
             </Link>
+
+          </div>
+
+
+          <div
+            className="wb-page-header-decoration"
+            aria-hidden="true"
+          >
+
+            <WorkspaceDecoration />
 
           </div>
 
