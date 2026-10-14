@@ -1174,7 +1174,7 @@ export default async function WildberriesPage() {
                     ================================================= */}
 
                 <section
-                  className="wb-sync-hero"
+                  className="card wb-sync-hero"
                   aria-label="Состояние синхронизации Wildberries"
                 >
 
