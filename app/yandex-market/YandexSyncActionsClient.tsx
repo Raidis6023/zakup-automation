@@ -149,8 +149,6 @@ function CheckIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
-      width="20"
-      height="20"
       fill="none"
       aria-hidden="true"
     >
@@ -167,13 +165,31 @@ function CheckIcon() {
 }
 
 
+function ErrorIcon() {
+
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M7 7l10 10M17 7 7 17"
+        stroke="currentColor"
+        strokeWidth="2.3"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+
+}
+
+
 function ClockIcon() {
 
   return (
     <svg
       viewBox="0 0 24 24"
-      width="18"
-      height="18"
       fill="none"
       aria-hidden="true"
     >
@@ -203,8 +219,6 @@ function CalendarIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
-      width="18"
-      height="18"
       fill="none"
       aria-hidden="true"
     >
@@ -230,25 +244,13 @@ function CalendarIcon() {
 }
 
 
-function RefreshIcon({
-  spinning = false,
-}: {
-  spinning?: boolean;
-}) {
+function RefreshIcon() {
 
   return (
     <svg
       viewBox="0 0 24 24"
-      width="17"
-      height="17"
       fill="none"
       aria-hidden="true"
-      style={{
-        animation:
-          spinning
-            ? "yandex-sync-spin 0.9s linear infinite"
-            : undefined,
-      }}
     >
       <path
         d="M20 7v5h-5"
@@ -288,7 +290,10 @@ export default function YandexSyncActionsClient({
     syncUpdatedAt,
     setSyncUpdatedAt,
   ] =
-    useState<string | null>(
+    useState<
+      string
+      | null
+    >(
       initialSyncUpdatedAt
     );
 
@@ -311,7 +316,10 @@ export default function YandexSyncActionsClient({
     errorMessage,
     setErrorMessage,
   ] =
-    useState<string | null>(
+    useState<
+      string
+      | null
+    >(
       null
     );
 
@@ -458,513 +466,312 @@ export default function YandexSyncActionsClient({
     "error";
 
 
+  const statusClass =
+    hasError
+      ? "ym-sync-status-card--error"
+      : isLoading
+        ? "ym-sync-status-card--loading"
+        : "ym-sync-status-card--success";
+
+
   return (
     <div
-      className="card"
-
-      style={{
-        padding:
-          "10px 14px",
-
-        marginTop:
-          "18px",
-
-        overflow:
-          "hidden",
-      }}
+      className=
+        "card ym-sync-hero"
     >
 
-      <style>
-        {`
-          @keyframes yandex-sync-spin {
-            from {
-              transform: rotate(0deg);
-            }
+      {/* ===================================
+          1 / 4 STATUS
+          =================================== */}
 
-            to {
-              transform: rotate(360deg);
-            }
+      <div
+        className=
+          "ym-sync-hero__quarter"
+      >
+
+        <div
+          className={
+            `ym-sync-status-card ${statusClass}`
           }
-
-          .yandex-sync-strip {
-            display: grid;
-            grid-template-columns:
-              minmax(330px, 1.15fr)
-              minmax(250px, 1fr)
-              minmax(300px, 1fr)
-              minmax(250px, 0.95fr);
-            align-items: stretch;
-          }
-
-          .yandex-sync-strip__cell {
-            min-width: 0;
-            padding: 8px 22px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-left:
-              1px solid var(--table-divider, rgba(128, 148, 170, 0.18));
-          }
-
-          .yandex-sync-strip__cell:first-child {
-            border-left: none;
-            padding-left: 0;
-          }
-
-          .yandex-sync-strip__cell:last-child {
-            padding-right: 0;
-          }
-
-          @media (max-width: 1100px) {
-            .yandex-sync-strip {
-              grid-template-columns: 1fr 1fr;
-            }
-
-            .yandex-sync-strip__cell {
-              border-left: none;
-              border-top:
-                1px solid var(--table-divider, rgba(128, 148, 170, 0.18));
-            }
-
-            .yandex-sync-strip__cell:nth-child(-n + 2) {
-              border-top: none;
-            }
-          }
-
-          @media (max-width: 680px) {
-            .yandex-sync-strip {
-              grid-template-columns: 1fr;
-            }
-
-            .yandex-sync-strip__cell,
-            .yandex-sync-strip__cell:nth-child(-n + 2) {
-              border-top:
-                1px solid var(--table-divider, rgba(128, 148, 170, 0.18));
-              border-left: none;
-              padding: 14px 0;
-            }
-
-            .yandex-sync-strip__cell:first-child {
-              border-top: none;
-            }
-          }
-        `}
-      </style>
-
-
-      <div className="yandex-sync-strip">
-
-        {/* ===================================
-            STATUS
-            =================================== */}
-
-        <div className="yandex-sync-strip__cell">
+        >
 
           <div
-            style={{
-              width:
-                "100%",
-
-              display:
-                "flex",
-
-              alignItems:
-                "center",
-
-              gap:
-                "12px",
-
-              padding:
-                "10px 14px",
-
-              borderRadius:
-                "8px",
-
-              background:
-                hasError
-                  ? "rgba(244, 63, 94, 0.10)"
-                  : isLoading
-                    ? "rgba(249, 115, 22, 0.10)"
-                    : "rgba(16, 185, 129, 0.10)",
-
-              border:
-                hasError
-                  ? "1px solid rgba(244, 63, 94, 0.28)"
-                  : isLoading
-                    ? "1px solid rgba(249, 115, 22, 0.28)"
-                    : "1px solid rgba(16, 185, 129, 0.25)",
-            }}
+            className=
+              "ym-sync-status-card__icon"
           >
 
-            <div
-              style={{
-                width:
-                  "32px",
-
-                height:
-                  "32px",
-
-                borderRadius:
-                  "999px",
-
-                display:
-                  "grid",
-
-                placeItems:
-                  "center",
-
-                flex:
-                  "0 0 auto",
-
-                background:
-                  hasError
-                    ? "#fb7185"
-                    : isLoading
-                      ? "#f97316"
-                      : "#34d399",
-
-                color:
-                  "#07251e",
-              }}
-            >
-              {
-                isLoading
+            {
+              hasError
+                ? (
+                  <ErrorIcon />
+                )
+                : isLoading
                   ? (
-                    <RefreshIcon
-                      spinning
-                    />
+                    <span
+                      className=
+                        "ym-sync-hero-button__icon ym-sync-hero-button__icon--spinning"
+                    >
+                      <RefreshIcon />
+                    </span>
                   )
                   : (
                     <CheckIcon />
                   )
+            }
+
+          </div>
+
+
+          <div
+            className=
+              "ym-sync-status-card__content"
+          >
+
+            <div
+              className=
+                "ym-sync-status-card__title"
+            >
+              {
+                hasError
+                  ? "Ошибка синхронизации"
+                  : isLoading
+                    ? "Синхронизация выполняется"
+                    : "Синхронизация завершена"
               }
             </div>
 
 
             <div
-              style={{
-                minWidth:
-                  0,
-              }}
+              className=
+                "ym-sync-status-card__hint"
             >
-
-              <div
-                style={{
-                  fontSize:
-                    "13px",
-
-                  fontWeight:
-                    800,
-
-                  color:
-                    hasError
-                      ? "#fb7185"
-                      : isLoading
-                        ? "#fb923c"
-                        : "#34d399",
-                }}
-              >
-                {
-                  hasError
-                    ? "Ошибка синхронизации"
-                    : isLoading
-                      ? "Синхронизация выполняется"
-                      : "Синхронизация завершена"
-                }
-              </div>
-
-
-              <div
-                className="muted"
-
-                style={{
-                  marginTop:
-                    "3px",
-
-                  fontSize:
-                    "10px",
-
-                  lineHeight:
-                    1.35,
-                }}
-              >
-                {
-                  hasError
-                    ? errorMessage
-                    : isLoading
-                      ? "Обновляем остатки, продажи и дневные данные"
-                      : "Данные Яндекс Маркета успешно обновлены"
-                }
-              </div>
-
+              {
+                hasError
+                  ? (
+                    errorMessage
+                    ??
+                    "Не удалось обновить данные"
+                  )
+                  : isLoading
+                    ? "Обновляем данные Яндекс Маркета"
+                    : "Данные Яндекс Маркета успешно обновлены"
+              }
             </div>
 
           </div>
 
         </div>
 
+      </div>
 
-        {/* ===================================
-            LAST SYNC
-            =================================== */}
 
-        <div className="yandex-sync-strip__cell">
+      {/* ===================================
+          2 / 4 LAST SYNC
+          =================================== */}
+
+      <div
+        className=
+          "ym-sync-hero__quarter ym-sync-hero__quarter--border"
+      >
+
+        <div
+          className=
+            "ym-sync-fact"
+        >
 
           <div
-            style={{
-              display:
-                "flex",
+            className=
+              "ym-sync-fact__icon"
+          >
+            <ClockIcon />
+          </div>
 
-              alignItems:
-                "center",
 
-              gap:
-                "10px",
-            }}
+          <div
+            className=
+              "ym-sync-fact__content"
           >
 
             <div
-              style={{
-                color:
-                  "#f97316",
-              }}
+              className=
+                "ym-sync-fact__label"
             >
-              <ClockIcon />
+              Последняя синхронизация
             </div>
 
 
-            <div>
-
-              <div
-                className="muted"
-
-                style={{
-                  fontSize:
-                    "9px",
-                }}
-              >
-                Последняя синхронизация
-              </div>
+            <div
+              className=
+                "ym-sync-fact__value"
+            >
+              {
+                formatDateTimeKrasnoyarsk(
+                  syncUpdatedAt
+                )
+              }
+            </div>
 
 
-              <div
-                style={{
-                  marginTop:
-                    "2px",
-
-                  fontSize:
-                    "13px",
-
-                  fontWeight:
-                    800,
-                }}
-              >
-                {
-                  formatDateTimeKrasnoyarsk(
-                    syncUpdatedAt
-                  )
-                }
-              </div>
-
-
-              <div
-                className="muted"
-
-                style={{
-                  marginTop:
-                    "2px",
-
-                  fontSize:
-                    "9px",
-                }}
-              >
-                Красноярское время
-              </div>
-
+            <div
+              className=
+                "ym-sync-fact__hint"
+            >
+              Красноярское время
             </div>
 
           </div>
 
         </div>
 
+      </div>
 
-        {/* ===================================
-            PERIOD
-            =================================== */}
 
-        <div className="yandex-sync-strip__cell">
+      {/* ===================================
+          3 / 4 PERIOD
+          =================================== */}
+
+      <div
+        className=
+          "ym-sync-hero__quarter ym-sync-hero__quarter--border"
+      >
+
+        <div
+          className=
+            "ym-sync-fact"
+        >
 
           <div
-            style={{
-              display:
-                "flex",
+            className=
+              "ym-sync-fact__icon"
+          >
+            <CalendarIcon />
+          </div>
 
-              alignItems:
-                "center",
 
-              gap:
-                "10px",
-            }}
+          <div
+            className=
+              "ym-sync-fact__content"
           >
 
             <div
-              style={{
-                color:
-                  "#f97316",
-              }}
+              className=
+                "ym-sync-fact__label"
             >
-              <CalendarIcon />
+              Период продаж
             </div>
 
 
-            <div>
-
-              <div
-                className="muted"
-
-                style={{
-                  fontSize:
-                    "9px",
-                }}
-              >
-                Период продаж
-              </div>
-
-
-              <div
-                style={{
-                  marginTop:
-                    "2px",
-
-                  fontSize:
-                    "13px",
-
-                  fontWeight:
-                    800,
-                }}
-              >
-                {
-                  formatPeriodDate(
-                    periodDateFrom
-                  )
-                }
-                {" – "}
-                {
-                  formatPeriodDate(
-                    periodDateTo
-                  )
-                }
-              </div>
+            <div
+              className=
+                "ym-sync-fact__value"
+            >
+              {
+                formatPeriodDate(
+                  periodDateFrom
+                )
+              }
+              {" – "}
+              {
+                formatPeriodDate(
+                  periodDateTo
+                )
+              }
+            </div>
 
 
-              <div
-                className="muted"
-
-                style={{
-                  marginTop:
-                    "2px",
-
-                  fontSize:
-                    "9px",
-                }}
-              >
-                Скользящие 28 дней
-              </div>
-
+            <div
+              className=
+                "ym-sync-fact__hint"
+            >
+              Скользящие 28 дней
             </div>
 
           </div>
 
         </div>
 
+      </div>
 
-        {/* ===================================
-            BUTTON
-            =================================== */}
 
-        <div className="yandex-sync-strip__cell">
+      {/* ===================================
+          4 / 4 BUTTON
+          =================================== */}
 
-          <button
-            type="button"
+      <div
+        className=
+          "ym-sync-hero__quarter ym-sync-hero__quarter--border"
+      >
 
-            onClick={
-              handleSync
-            }
+        <div
+          className=
+            "ym-sync-hero__action"
+        >
 
-            disabled={
-              isLoading
-            }
-
-            style={{
-              width:
-                "100%",
-
-              minHeight:
-                "42px",
-
-              border:
-                "1px solid rgba(249, 115, 22, 0.55)",
-
-              borderRadius:
-                "7px",
-
-              background:
-                isLoading
-                  ? "rgba(249, 115, 22, 0.45)"
-                  : "linear-gradient(180deg, #fb923c 0%, #f97316 100%)",
-
-              color:
-                "#ffffff",
-
-              display:
-                "inline-flex",
-
-              alignItems:
-                "center",
-
-              justifyContent:
-                "center",
-
-              gap:
-                "8px",
-
-              fontSize:
-                "12px",
-
-              fontWeight:
-                800,
-
-              cursor:
-                isLoading
-                  ? "wait"
-                  : "pointer",
-
-              boxShadow:
-                isLoading
-                  ? "none"
-                  : "0 6px 20px rgba(249, 115, 22, 0.18)",
-
-              opacity:
-                isLoading
-                  ? 0.8
-                  : 1,
-            }}
+          <div
+            className=
+              "ym-sync-client--hero"
           >
 
-            <RefreshIcon
-              spinning={
+            <div
+              className={
+                hasError
+                  ? "ym-sync-message-slot ym-sync-message-slot--error"
+                  : isLoading
+                    ? "ym-sync-message-slot ym-sync-message-slot--loading"
+                    : "ym-sync-message-slot"
+              }
+            >
+              {
+                hasError
+                  ? "Ошибка обновления"
+                  : isLoading
+                    ? "Обновление данных"
+                    : ""
+              }
+            </div>
+
+
+            <button
+              type="button"
+
+              className=
+                "ym-sync-hero-button"
+
+              onClick={
+                handleSync
+              }
+
+              disabled={
                 isLoading
               }
+            >
+
+              <span
+                className={
+                  isLoading
+                    ? "ym-sync-hero-button__icon ym-sync-hero-button__icon--spinning"
+                    : "ym-sync-hero-button__icon"
+                }
+              >
+                <RefreshIcon />
+              </span>
+
+
+              {
+                isLoading
+                  ? "Обновление..."
+                  : "Обновить данные"
+              }
+
+            </button>
+
+
+            <div
+              className=
+                "ym-sync-note-slot"
             />
 
-
-            {
-              isLoading
-                ? "Обновление..."
-                : "Обновить данные"
-            }
-
-          </button>
+          </div>
 
         </div>
 
