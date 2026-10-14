@@ -1,7 +1,51 @@
 /* ============================================================
    WILDBERRIES
-   ТАБЛИЦА ТОВАРОВ
+   ТАБЛИЦА "ДАННЫЕ ПО ТОВАРАМ"
+
+   Размеры текста, строк и основных элементов
+   приведены к таблице Яндекс Маркета.
+
+   Отличается только:
+   - состав колонок;
+   - WB-цвет;
+   - собственные данные.
    ============================================================ */
+
+
+/* ============================================================
+   WB TABLE COLORS
+   ============================================================ */
+
+.wb-reference-page {
+  --wb-products-purple:
+    var(
+      --wb-accent
+    );
+
+  --wb-products-border:
+    rgba(
+      201,
+      30,
+      216,
+      0.09
+    );
+
+  --wb-products-border-strong:
+    rgba(
+      201,
+      30,
+      216,
+      0.15
+    );
+
+  --wb-products-hover:
+    rgba(
+      201,
+      30,
+      216,
+      0.035
+    );
+}
 
 
 /* ============================================================
@@ -17,17 +61,18 @@
     hidden;
 
   border-color:
-    rgba(
-      201,
-      30,
-      216,
-      0.15
+    var(
+      --wb-products-border-strong
     );
 }
 
 
 /* ============================================================
    COLLAPSE BUTTON
+
+   Как у Яндекс Маркета:
+   min-height 72px
+   padding 12px 14px
    ============================================================ */
 
 .wb-reference-page
@@ -35,33 +80,33 @@
   display:
     flex;
 
-  box-sizing:
-    border-box;
-
-  width:
-    100%;
-
-  min-height:
-    64px;
-
   align-items:
     center;
 
   gap:
     12px;
 
+  width:
+    100%;
+
+  min-height:
+    72px;
+
+  box-sizing:
+    border-box;
+
   padding:
-    11px
-    16px;
+    12px
+    14px;
 
   border:
-    0;
+    none;
 
   background:
     transparent;
 
   color:
-    var(--ws-text);
+    inherit;
 
   font:
     inherit;
@@ -73,8 +118,8 @@
     pointer;
 
   transition:
-    background
-    120ms
+    background-color
+    0.12s
     ease;
 }
 
@@ -82,17 +127,31 @@
 .wb-reference-page
 .wb-products-toggle:hover {
   background:
-    rgba(
-      201,
-      30,
-      216,
-      0.035
+    var(
+      --ws-surface-hover
     );
 }
 
 
+.wb-reference-page
+.wb-products-toggle:focus-visible {
+  outline:
+    2px solid
+    var(
+      --wb-products-purple
+    );
+
+  outline-offset:
+    -2px;
+}
+
+
 /* ============================================================
-   ICON
+   SECTION ICON
+
+   Как у Яндекс Маркета:
+   42x42
+   SVG 23x23
    ============================================================ */
 
 .wb-reference-page
@@ -100,30 +159,34 @@
   display:
     inline-flex;
 
-  width:
-    36px;
-
-  height:
-    36px;
-
-  flex:
-    0 0
-    36px;
-
   align-items:
     center;
 
   justify-content:
     center;
 
+  width:
+    42px;
+
+  height:
+    42px;
+
+  flex:
+    0 0
+    42px;
+
   border-radius:
-    9px;
+    10px;
 
   color:
-    var(--wb-accent);
+    var(
+      --wb-products-purple
+    );
 
   background:
-    var(--wb-accent-soft);
+    var(
+      --wb-accent-soft
+    );
 }
 
 
@@ -131,10 +194,10 @@
 .wb-products-toggle-icon
 svg {
   width:
-    19px;
+    23px;
 
   height:
-    19px;
+    23px;
 
   fill:
     none;
@@ -143,7 +206,7 @@ svg {
     currentColor;
 
   stroke-width:
-    1.7;
+    1.9;
 
   stroke-linecap:
     round;
@@ -154,7 +217,11 @@ svg {
 
 
 /* ============================================================
-   COPY
+   SECTION COPY
+
+   Как у Яндекс Маркета:
+   title    15px
+   subtitle 11px
    ============================================================ */
 
 .wb-reference-page
@@ -162,27 +229,26 @@ svg {
   display:
     flex;
 
+  flex-direction:
+    column;
+
   min-width:
     0;
 
   flex:
     1;
-
-  flex-direction:
-    column;
-
-  gap:
-    3px;
 }
 
 
 .wb-reference-page
 .wb-products-toggle-title {
   color:
-    var(--ws-text);
+    var(
+      --ws-text
+    );
 
   font-size:
-    14px;
+    15px;
 
   font-weight:
     750;
@@ -194,8 +260,16 @@ svg {
 
 .wb-reference-page
 .wb-products-toggle-subtitle {
+  margin-top:
+    3px;
+
   overflow:
     hidden;
+
+  color:
+    var(
+      --ws-text-muted
+    );
 
   font-size:
     11px;
@@ -220,6 +294,12 @@ svg {
   display:
     inline-flex;
 
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
   width:
     28px;
 
@@ -230,14 +310,10 @@ svg {
     0 0
     28px;
 
-  align-items:
-    center;
-
-  justify-content:
-    center;
-
   color:
-    var(--ws-text-muted);
+    var(
+      --ws-text-muted
+    );
 }
 
 
@@ -266,7 +342,7 @@ svg {
 
   transition:
     transform
-    150ms
+    0.15s
     ease;
 }
 
@@ -288,28 +364,34 @@ svg {
 .wb-products-table-content {
   border-top:
     1px solid
-    rgba(
-      201,
-      30,
-      216,
-      0.12
+    var(
+      --wb-products-border-strong
     );
 }
 
 
 /* ============================================================
-   OWN SCROLL
+   SCROLL AREA
+
+   У Яндекс Маркета 68vh.
+   Ставим столько же.
    ============================================================ */
 
 .wb-reference-page
 .wb-products-scroll {
+  position:
+    relative;
+
   width:
     100%;
 
   max-height:
-    64vh;
+    68vh;
 
-  overflow:
+  overflow-x:
+    auto;
+
+  overflow-y:
     auto;
 
   overscroll-behavior:
@@ -319,12 +401,21 @@ svg {
     stable;
 
   background:
-    var(--ws-surface);
+    var(
+      --ws-surface
+    );
 }
 
 
 /* ============================================================
    TABLE
+
+   Яндекс имеет min-width 1515px и 8 колонок.
+   У WB колонок 9, поэтому даём немного больше:
+   1650px.
+
+   На широком экране таблица использует всю ширину.
+   На более узком появляется внутренний горизонтальный скролл.
    ============================================================ */
 
 .wb-reference-page
@@ -333,7 +424,7 @@ svg {
     100%;
 
   min-width:
-    1180px;
+    1650px;
 
   border-spacing:
     0;
@@ -345,32 +436,37 @@ svg {
     fixed;
 
   background:
-    var(--ws-surface);
+    var(
+      --ws-surface
+    );
 }
 
 
 /* ============================================================
    COLUMN WIDTHS
+
+   Числовые колонки:
+   ровно по 150px, как на Яндекс Маркете.
    ============================================================ */
 
 .wb-reference-page
 .wb-products-col-master {
   width:
-    105px;
+    110px;
 }
 
 
 .wb-reference-page
 .wb-products-col-wb {
   width:
-    115px;
+    130px;
 }
 
 
 .wb-reference-page
 .wb-products-col-seller {
   width:
-    220px;
+    240px;
 }
 
 
@@ -384,40 +480,40 @@ svg {
 .wb-reference-page
 .wb-products-col-sales {
   width:
-    105px;
+    150px;
 }
 
 
 .wb-reference-page
 .wb-products-col-average {
   width:
-    110px;
+    150px;
 }
 
 
 .wb-reference-page
 .wb-products-col-cancel {
   width:
-    86px;
+    150px;
 }
 
 
 .wb-reference-page
 .wb-products-col-stock {
   width:
-    90px;
+    150px;
 }
 
 
 .wb-reference-page
 .wb-products-col-days {
   width:
-    105px;
+    150px;
 }
 
 
 /* ============================================================
-   VERY SOFT WB GRID
+   WB GRID
    ============================================================ */
 
 .wb-reference-page
@@ -429,20 +525,14 @@ th,
 td {
   border-right:
     1px solid
-    rgba(
-      201,
-      30,
-      216,
-      0.09
+    var(
+      --wb-products-border
     );
 
   border-bottom:
     1px solid
-    rgba(
-      201,
-      30,
-      216,
-      0.085
+    var(
+      --wb-products-border
     );
 }
 
@@ -455,7 +545,7 @@ th:last-child,
 .wb-products-sort-table
 td:last-child {
   border-right:
-    0;
+    none;
 }
 
 
@@ -470,41 +560,45 @@ th {
   position:
     sticky;
 
-  z-index:
-    3;
-
   top:
     0;
 
-  box-sizing:
-    border-box;
+  z-index:
+    20;
 
-  height:
-    40px;
+  min-width:
+    0;
+
+  overflow:
+    hidden;
 
   padding:
     0;
 
   background:
-    var(--ws-surface-soft);
+    var(
+      --table-header-bg,
+      var(--ws-surface-soft)
+    );
 
   color:
-    var(--ws-text-muted);
+    var(
+      --ws-text-muted
+    );
 
   border-bottom:
     1px solid
-    rgba(
-      201,
-      30,
-      216,
-      0.12
+    var(
+      --wb-products-border-strong
     );
 
-  font-size:
-    11px;
-
-  font-weight:
-    650;
+  box-shadow:
+    0
+    1px
+    0
+    var(
+      --wb-products-border-strong
+    );
 
   text-align:
     left;
@@ -515,7 +609,15 @@ th {
 
 
 /* ============================================================
-   SORT BUTTON
+   SORT BUTTONS
+
+   ПОЛНОСТЬЮ ПО РАЗМЕРАМ ЯНДЕКСА:
+
+   min-height 40px
+   padding 12px 10px
+   font-size 12px
+   font-weight 700
+   line-height 1.2
    ============================================================ */
 
 .wb-reference-page
@@ -523,51 +625,53 @@ th {
   display:
     flex;
 
-  box-sizing:
-    border-box;
-
-  width:
-    100%;
-
-  height:
-    40px;
-
   align-items:
     center;
-
-  justify-content:
-    flex-start;
 
   gap:
     5px;
 
+  width:
+    100%;
+
+  min-width:
+    0;
+
+  min-height:
+    40px;
+
+  box-sizing:
+    border-box;
+
   padding:
-    0
+    12px
     10px;
 
+  overflow:
+    hidden;
+
   border:
-    0;
+    none;
 
   background:
     transparent;
 
   color:
-    inherit;
+    var(
+      --ws-text-muted
+    );
 
   font:
     inherit;
 
   font-size:
-    11px;
+    12px;
 
   font-weight:
-    650;
+    700;
 
   line-height:
-    1.15;
-
-  text-align:
-    left;
+    1.2;
 
   white-space:
     nowrap;
@@ -577,25 +681,47 @@ th {
 
   transition:
     color
-      120ms
-      ease,
-    background
-      120ms
-      ease;
+    0.12s
+    ease,
+    background-color
+    0.12s
+    ease;
+}
+
+
+.wb-reference-page
+.wb-products-sort-button
+>
+span:first-child {
+  min-width:
+    0;
+
+  flex:
+    1
+    1
+    auto;
+
+  overflow:
+    hidden;
+
+  white-space:
+    nowrap;
+
+  text-overflow:
+    ellipsis;
 }
 
 
 .wb-reference-page
 .wb-products-sort-button:hover {
   color:
-    var(--wb-accent);
+    var(
+      --ws-text
+    );
 
   background:
-    rgba(
-      201,
-      30,
-      216,
-      0.045
+    var(
+      --wb-products-hover
     );
 }
 
@@ -603,30 +729,42 @@ th {
 .wb-reference-page
 .wb-products-sort-button--active {
   color:
-    var(--wb-accent);
+    var(
+      --wb-products-purple
+    );
+}
 
-  font-weight:
-    750;
+
+/* ============================================================
+   LEFT HEADERS
+   ============================================================ */
+
+.wb-reference-page
+.wb-products-sort-table
+thead
+th:not(
+  .wb-products-numeric-head
+)
+.wb-products-sort-button {
+  justify-content:
+    flex-start;
+
+  text-align:
+    left;
 }
 
 
 .wb-reference-page
-.wb-products-sort-indicator {
-  display:
-    inline-flex;
-
-  flex:
-    0 0
-    auto;
-
-  color:
-    var(--wb-accent);
-
-  font-size:
-    13px;
-
-  font-weight:
-    800;
+.wb-products-sort-table
+thead
+th:not(
+  .wb-products-numeric-head
+)
+.wb-products-sort-button
+>
+span:first-child {
+  text-align:
+    left;
 }
 
 
@@ -640,11 +778,20 @@ th {
   justify-content:
     center;
 
-  padding-left:
-    5px;
+  text-align:
+    center;
+}
 
-  padding-right:
-    5px;
+
+.wb-reference-page
+.wb-products-numeric-head
+.wb-products-sort-button
+>
+span:first-child {
+  flex:
+    0
+    1
+    auto;
 
   text-align:
     center;
@@ -652,7 +799,64 @@ th {
 
 
 /* ============================================================
+   SORT INDICATOR
+
+   Как Яндекс:
+   13px
+   ============================================================ */
+
+.wb-reference-page
+.wb-products-sort-indicator {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    13px;
+
+  min-width:
+    13px;
+
+  height:
+    16px;
+
+  flex:
+    0 0
+    13px;
+
+  overflow:
+    hidden;
+
+  color:
+    var(
+      --wb-products-purple
+    );
+
+  font-size:
+    13px;
+
+  font-weight:
+    800;
+
+  line-height:
+    16px;
+}
+
+
+/* ============================================================
    CELLS
+
+   КЛЮЧЕВОЕ ИЗМЕНЕНИЕ.
+
+   Как на Яндекс Маркете:
+   padding   12px 10px
+   font-size 13px
+   line-height 1.35
    ============================================================ */
 
 .wb-reference-page
@@ -662,21 +866,28 @@ td {
   box-sizing:
     border-box;
 
+  min-width:
+    0;
+
   padding:
-    9px
+    12px
     10px;
 
   color:
-    var(--ws-text);
+    var(
+      --ws-text
+    );
 
   background:
-    var(--ws-surface);
+    var(
+      --ws-surface
+    );
 
   font-size:
-    12px;
+    13px;
 
   font-weight:
-    500;
+    400;
 
   line-height:
     1.35;
@@ -692,11 +903,8 @@ tbody
 tr:hover
 td {
   background:
-    rgba(
-      201,
-      30,
-      216,
-      0.035
+    var(
+      --wb-products-hover
     );
 }
 
@@ -715,7 +923,9 @@ td {
 .wb-reference-page
 .wb-products-master-code {
   color:
-    var(--wb-accent);
+    var(
+      --wb-products-purple
+    );
 
   font-family:
     ui-monospace,
@@ -724,13 +934,17 @@ td {
     Monaco,
     Consolas,
     "Liberation Mono",
+    "Courier New",
     monospace;
 
   font-size:
-    12px;
+    13px;
 
   font-weight:
-    750;
+    700;
+
+  white-space:
+    nowrap;
 }
 
 
@@ -745,20 +959,25 @@ td {
 }
 
 
+.wb-reference-page
+.wb-products-wb-cell
+strong {
+  font-weight:
+    700;
+}
+
+
 /* ============================================================
    SELLER ARTICLE
    ============================================================ */
 
 .wb-reference-page
 .wb-products-seller-cell {
-  overflow:
-    hidden;
-
   white-space:
-    nowrap;
+    normal;
 
-  text-overflow:
-    ellipsis;
+  overflow-wrap:
+    anywhere;
 }
 
 
@@ -770,83 +989,100 @@ td {
 .wb-products-product-cell {
   min-width:
     0;
+
+  white-space:
+    normal;
+
+  overflow-wrap:
+    anywhere;
 }
 
 
 .wb-reference-page
 .wb-products-product-name {
-  overflow:
-    hidden;
-
-  display:
-    -webkit-box;
-
-  -webkit-box-orient:
-    vertical;
-
-  -webkit-line-clamp:
-    2;
-
-  line-clamp:
-    2;
-
   font-size:
-    12px;
+    13px;
 
   line-height:
     1.35;
+
+  white-space:
+    normal;
+
+  overflow-wrap:
+    anywhere;
 }
 
+
+/* ============================================================
+   BRAND
+
+   Чуть меньше основного текста,
+   потому что на Яндексе отдельной второй строки бренда нет.
+
+   Оставляем 11px как вторичную подпись.
+   ============================================================ */
 
 .wb-reference-page
 .wb-products-brand {
   margin-top:
     3px;
 
-  overflow:
-    hidden;
+  color:
+    var(
+      --ws-text-muted
+    );
 
   font-size:
     11px;
 
   line-height:
-    1.25;
+    1.3;
 
   white-space:
-    nowrap;
+    normal;
 
-  text-overflow:
-    ellipsis;
+  overflow-wrap:
+    anywhere;
 }
 
 
 /* ============================================================
    NUMBERS
+
+   Размер основного текста тот же 13px.
+   Располагаются по центру колонок,
+   как числовые ячейки Яндекс Маркета.
    ============================================================ */
 
 .wb-reference-page
 .wb-products-number-cell {
-  padding-left:
-    5px !important;
+  justify-content:
+    center;
 
-  padding-right:
-    5px !important;
+  padding:
+    12px
+    10px !important;
+
+  font-size:
+    13px;
+
+  line-height:
+    1.35;
 
   text-align:
     center;
 
   white-space:
     nowrap;
-
-  font-size:
-    12px;
 }
 
 
 .wb-reference-page
-.wb-products-sales-cell {
-  color:
-    var(--ws-text);
+.wb-products-number-cell
+strong {
+  font-weight:
+    700;
 }
 
 
@@ -867,7 +1103,9 @@ td {
 .wb-reference-page
 .wb-products-scroll::-webkit-scrollbar-track {
   background:
-    var(--ws-surface-soft);
+    var(
+      --ws-surface-soft
+    );
 }
 
 
@@ -875,7 +1113,9 @@ td {
 .wb-products-scroll::-webkit-scrollbar-thumb {
   border:
     2px solid
-    var(--ws-surface-soft);
+    var(
+      --ws-surface-soft
+    );
 
   border-radius:
     999px;
@@ -907,70 +1147,29 @@ td {
    ============================================================ */
 
 html[data-theme="dark"]
-.wb-reference-page
-.wb-products-collapsible {
-  border-color:
+.wb-reference-page {
+  --wb-products-border:
+    rgba(
+      223,
+      114,
+      232,
+      0.10
+    );
+
+  --wb-products-border-strong:
     rgba(
       223,
       114,
       232,
       0.16
     );
-}
 
-
-html[data-theme="dark"]
-.wb-reference-page
-.wb-products-table-content {
-  border-top-color:
+  --wb-products-hover:
     rgba(
       223,
       114,
       232,
-      0.13
-    );
-}
-
-
-html[data-theme="dark"]
-.wb-reference-page
-.wb-products-sort-table
-th,
-
-html[data-theme="dark"]
-.wb-reference-page
-.wb-products-sort-table
-td {
-  border-right-color:
-    rgba(
-      223,
-      114,
-      232,
-      0.075
-    );
-
-  border-bottom-color:
-    rgba(
-      223,
-      114,
-      232,
-      0.07
-    );
-}
-
-
-html[data-theme="dark"]
-.wb-reference-page
-.wb-products-sort-table
-tbody
-tr:hover
-td {
-  background:
-    rgba(
-      223,
-      114,
-      232,
-      0.05
+      0.045
     );
 }
 
@@ -986,7 +1185,7 @@ td {
   .wb-reference-page
   .wb-products-scroll {
     max-height:
-      58vh;
+      62vh;
   }
 
 }
@@ -999,11 +1198,11 @@ td {
   .wb-reference-page
   .wb-products-toggle {
     min-height:
-      60px;
+      72px;
 
     padding:
-      10px
-      12px;
+      12px
+      14px;
   }
 
 
@@ -1017,7 +1216,7 @@ td {
   .wb-reference-page
   .wb-products-scroll {
     max-height:
-      54vh;
+      56vh;
   }
 
 }
