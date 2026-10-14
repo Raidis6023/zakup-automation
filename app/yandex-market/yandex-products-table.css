@@ -3,7 +3,7 @@
    ТАБЛИЦА "ДАННЫЕ ПО ТОВАРАМ"
 
    Основная таблица.
-   Раскрытие по складам отдельно не переоформляем.
+   Раскрытие по складам отдельно пока не переоформляем.
    ============================================================ */
 
 .yandex-reference-page {
@@ -253,15 +253,19 @@ svg {
     100%;
 
   min-width:
-    1385px;
+    1515px;
 }
 
 
 /* ============================================================
    GRID
 
-   Артикул стал компактнее.
-   Все числовые столбцы увеличены на одинаковые 12 px.
+   ЕНОТ       95 px
+   Товар      гибкий, но заметно уже прежнего
+   Артикул    гибкий, ещё уже
+   5 числовых колонок по 150 px
+
+   Теперь числовой блок визуально ровный.
    ============================================================ */
 
 .yandex-reference-page
@@ -270,26 +274,26 @@ svg {
     grid;
 
   grid-template-columns:
-    120px
+    95px
     minmax(
       420px,
-      1.55fr
+      1.10fr
     )
     minmax(
-      220px,
-      0.80fr
+      250px,
+      0.70fr
     )
-    142px
-    147px
-    107px
-    107px
-    122px;
+    150px
+    150px
+    150px
+    150px
+    150px;
 
   width:
     100%;
 
   min-width:
-    1385px;
+    1515px;
 }
 
 
@@ -360,7 +364,7 @@ svg {
     border-box;
 
   padding:
-    12px 14px;
+    12px 10px;
 
   overflow:
     hidden;
@@ -425,6 +429,10 @@ svg {
 }
 
 
+/* ============================================================
+   LEFT HEADERS
+   ============================================================ */
+
 .yandex-reference-page
 .ym-products-sort-button--left {
   justify-content:
@@ -443,21 +451,28 @@ svg {
 }
 
 
+/* ============================================================
+   NUMERIC HEADERS
+   ============================================================ */
+
 .yandex-reference-page
-.ym-products-sort-button--right {
+.ym-products-sort-button--center {
   justify-content:
-    flex-end;
+    center;
 
   text-align:
-    right;
+    center;
 }
 
 
 .yandex-reference-page
-.ym-products-sort-button--right
+.ym-products-sort-button--center
 > span:first-child {
+  flex:
+    0 1 auto;
+
   text-align:
-    right;
+    center;
 }
 
 
@@ -477,6 +492,10 @@ svg {
     var(--ym-products-orange);
 }
 
+
+/* ============================================================
+   SORT INDICATOR
+   ============================================================ */
 
 .yandex-reference-page
 .ym-products-sort-indicator {
@@ -591,7 +610,7 @@ svg {
     border-box;
 
   padding:
-    12px 14px;
+    12px 10px;
 
   color:
     var(--ws-text);
@@ -616,12 +635,12 @@ svg {
 
 
 .yandex-reference-page
-.ym-products-main-cell--right {
+.ym-products-main-cell--numeric {
   justify-content:
-    flex-end;
+    center;
 
   text-align:
-    right;
+    center;
 
   white-space:
     nowrap;
