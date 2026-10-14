@@ -1,254 +1,32 @@
 /* ============================================================
    WILDBERRIES
-   ЗАКРЕПЛЁННАЯ ШАПКА СТРАНИЦЫ
+   ОСОБЕННОСТИ ЗАГОЛОВКА СТРАНИЦЫ
 
-   Здесь только:
-   - Wildberries
-   - поясняющий текст
-   - кнопки
-   - штатные декоративные полосы Workspace
+   Общее sticky-поведение теперь находится
+   в workspace-shell.css.
 
-   Плашку синхронизации этот файл НЕ трогает.
+   Здесь только специфическое оформление Wildberries.
    ============================================================ */
 
 
 /* ============================================================
-   ОСНОВНЫЕ РАЗМЕРЫ
+   ЛЕВАЯ ЧАСТЬ
 
-   Высота WB-шапки абсолютно одинаковая:
-   - до прокрутки;
-   - во время прокрутки;
-   - после срабатывания sticky.
-
-   Полосы имеют высоту 64px.
-
-   98px - 64px = 34px
-   34px / 2 = 17px
-
-   Поэтому полосы располагаются
-   на 17px ниже верхней границы WB-шапки.
-   ============================================================ */
-
-.wb-reference-page {
-  --wb-page-header-height:
-    98px;
-
-  --wb-page-decoration-height:
-    64px;
-}
-
-
-/* ============================================================
-   ШТАТНЫЕ ДЕКОРАТИВНЫЕ ПОЛОСЫ WORKSPACE
-   ============================================================ */
-
-.workspace-content--module:has(> .wb-reference-page)
->
-.workspace-corner-decoration {
-  position:
-    fixed;
-
-  top:
-    calc(
-      var(
-        --home-topbar-height,
-        72px
-      )
-      +
-      17px
-    );
-
-  right:
-    30px;
-
-  z-index:
-    41;
-
-  display:
-    block;
-
-  width:
-    min(
-      500px,
-      42%
-    );
-
-  height:
-    var(
-      --wb-page-decoration-height,
-      64px
-    );
-
-  pointer-events:
-    none;
-
-  visibility:
-    visible;
-
-  opacity:
-    1;
-}
-
-
-.workspace-content--module:has(> .wb-reference-page)
->
-.workspace-corner-decoration
-.home-decoration {
-  display:
-    flex;
-
-  width:
-    100%;
-
-  height:
-    var(
-      --wb-page-decoration-height,
-      64px
-    );
-
-  align-items:
-    center;
-
-  justify-content:
-    flex-end;
-
-  overflow:
-    visible;
-}
-
-
-.workspace-content--module:has(> .wb-reference-page)
->
-.workspace-corner-decoration
-.home-decoration
-svg {
-  display:
-    block;
-
-  width:
-    100%;
-
-  height:
-    100%;
-
-  overflow:
-    visible;
-}
-
-
-/* ============================================================
-   STICKY HEADER
-
-   У .home-content сверху есть 24px padding.
-
-   margin-top: -24px переносит эти 24px
-   внутрь общей геометрии шапки.
-
-   ВАЖНО:
-   нижний внешний margin теперь равен 0.
-
-   Благодаря этому в исходном состоянии
-   визуальный голубой блок заканчивается
-   вместе с самой 98px-шапкой.
-
-   Поэтому центр до прокрутки совпадает
-   с центром после прилипания.
-   ============================================================ */
-
-.workspace-content--module
-.page.wb-reference-page
-.wb-page-header-sticky {
-  position:
-    sticky;
-
-  top:
-    var(
-      --home-topbar-height,
-      72px
-    );
-
-  z-index:
-    40;
-
-  display:
-    flex;
-
-  box-sizing:
-    border-box;
-
-  width:
-    100%;
-
-  height:
-    var(
-      --wb-page-header-height,
-      98px
-    );
-
-  min-height:
-    var(
-      --wb-page-header-height,
-      98px
-    );
-
-  margin-top:
-    -24px;
-
-  margin-bottom:
-    0;
-
-  padding-top:
-    0;
-
-  padding-bottom:
-    0;
-
-  padding-left:
-    0;
-
-  padding-right:
-    min(
-      500px,
-      42%
-    );
-
-  align-items:
-    center;
-
-  overflow:
-    visible;
-
-  background:
-    var(--ws-page);
-
-  border:
-    0;
-
-  box-shadow:
-    none;
-}
-
-
-/* ============================================================
-   ЛЕВАЯ ЧАСТЬ — WILDBERRIES
+   Квадратного WB-логотипа здесь больше нет.
+   Заголовок состоит только из текста.
    ============================================================ */
 
 .wb-reference-page
 .wb-title-wrap--text-only {
-  display:
-    flex;
+  display: flex;
 
-  min-width:
-    0;
+  min-width: 0;
 
-  align-items:
-    center;
+  align-items: center;
 
-  align-self:
-    center;
+  align-self: center;
 
-  gap:
-    0;
+  gap: 0;
 }
 
 
@@ -256,29 +34,32 @@ svg {
 .wb-title-wrap--text-only
 >
 div {
-  display:
-    flex;
+  display: flex;
 
-  flex-direction:
-    column;
+  flex-direction: column;
 
-  justify-content:
-    center;
+  justify-content: center;
 }
 
 
+/* ============================================================
+   WILDBERRIES
+   ============================================================ */
+
 .wb-reference-page
 .wb-page-title {
-  margin:
-    0;
+  margin: 0;
 
   color:
     var(--ws-text);
 
-  line-height:
-    1.15;
+  line-height: 1.15;
 }
 
+
+/* ============================================================
+   ПОДПИСЬ
+   ============================================================ */
 
 .wb-reference-page
 .wb-page-subtitle {
@@ -290,178 +71,43 @@ div {
   color:
     var(--ws-text-muted);
 
-  line-height:
-    1.3;
+  line-height: 1.3;
 }
 
 
 /* ============================================================
-   КНОПКИ
-
-   Центрируются по той же вертикальной оси,
-   что Wildberries и декоративные полосы.
+   КНОПКИ WB
    ============================================================ */
 
 .wb-reference-page
-.wb-page-header-sticky
 .wb-header-actions {
-  position:
-    relative;
+  display: flex;
 
-  z-index:
-    42;
+  align-items: center;
 
-  display:
-    flex;
-
-  align-items:
-    center;
-
-  align-self:
-    center;
-}
-
-
-.wb-reference-page
-.wb-page-header-sticky
-.wb-title-wrap {
-  position:
-    relative;
-
-  z-index:
-    42;
-
-  align-self:
-    center;
+  align-self: center;
 }
 
 
 /* ============================================================
-   ТЁМНАЯ ТЕМА
-   ============================================================ */
-
-html[data-theme="dark"]
-.workspace-content--module
-.page.wb-reference-page
-.wb-page-header-sticky {
-  background:
-    var(--ws-page);
-}
-
-
-/* ============================================================
-   <= 1100 PX
-   ============================================================ */
-
-@media (
-  max-width: 1100px
-) {
-
-  .workspace-content--module:has(> .wb-reference-page)
-  >
-  .workspace-corner-decoration {
-    right:
-      20px;
-
-    width:
-      min(
-        350px,
-        40%
-      );
-  }
-
-
-  .workspace-content--module
-  .page.wb-reference-page
-  .wb-page-header-sticky {
-    padding-right:
-      min(
-        350px,
-        40%
-      );
-  }
-
-}
-
-
-/* ============================================================
-   <= 900 PX
-   ============================================================ */
-
-@media (
-  max-width: 900px
-) {
-
-  .workspace-content--module:has(> .wb-reference-page)
-  >
-  .workspace-corner-decoration {
-    width:
-      min(
-        300px,
-        62%
-      );
-  }
-
-
-  .workspace-content--module
-  .page.wb-reference-page
-  .wb-page-header-sticky {
-    padding-top:
-      0;
-
-    padding-right:
-      min(
-        300px,
-        62%
-      );
-
-    align-items:
-      center;
-  }
-
-}
-
-
-/* ============================================================
-   <= 800 PX
+   MOBILE
    ============================================================ */
 
 @media (
   max-width: 800px
 ) {
 
-  .workspace-content--module:has(> .wb-reference-page)
-  >
-  .workspace-corner-decoration {
-    display:
-      none;
+  .wb-reference-page
+  .wb-title-wrap--text-only {
+    align-self: center;
   }
 
 
-  .workspace-content--module
-  .page.wb-reference-page
-  .wb-page-header-sticky {
-    top:
-      0;
+  .wb-reference-page
+  .wb-header-actions {
+    align-self: center;
 
-    height:
-      auto;
-
-    min-height:
-      94px;
-
-    margin-top:
-      -20px;
-
-    margin-bottom:
-      0;
-
-    padding:
-      10px
-      0;
-
-    align-items:
-      center;
+    flex-wrap: wrap;
   }
 
 }
