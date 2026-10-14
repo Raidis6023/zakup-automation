@@ -341,11 +341,6 @@ export async function saveChinaManualAdjustment(
       p_comment:
         comment || null,
 
-      /*
-       * Пока оставляем старую заглушку.
-       * Реального пользователя подключим
-       * отдельным следующим этапом.
-       */
       p_adjusted_by:
         "test-user",
     }
@@ -468,9 +463,6 @@ export async function createVedOrderDraft(
         p_preparation_department:
           "procurement",
 
-        /*
-         * Эти две заглушки пока сохраняем.
-         */
         p_created_by_name:
           "Тест Сайта",
 
@@ -502,14 +494,6 @@ export async function createVedOrderDraft(
 
   // ==========================================
   // АВТОМАТИЧЕСКИ ПОЛУЧАЕМ ФОТО
-  //
-  // Здесь больше НЕТ HTTP-запроса
-  // сайта к самому себе.
-  //
-  // Вызываем серверную функцию напрямую.
-  //
-  // Если Ozon временно не ответит,
-  // сам заказ всё равно остаётся созданным.
   // ==========================================
 
   try {
@@ -555,11 +539,11 @@ export async function createVedOrderDraft(
 
 
   // ==========================================
-  // ОТКРЫВАЕМ ГОТОВЫЙ ЗАКАЗ
+  // ОТКРЫВАЕМ ЗАКАЗ ИЗ РАЗДЕЛА "ЗАКУП"
   // ==========================================
 
   redirect(
-    `/ved-orders/${result.order_id}`
+    `/ved-orders/${result.order_id}?from=zakup`
   );
 
 }
