@@ -183,6 +183,26 @@ export default function WorkspaceShell({
 
 
   // ==========================================================
+  // ДЕТАЛЬНАЯ СТРАНИЦА ЗАКАЗА
+  //
+  // /ved-orders/[id]
+  //
+  // Несмотря на техническое имя ved-orders,
+  // эта детальная страница создаётся из раздела "Закуп"
+  // после формирования заказа.
+  //
+  // Поэтому в боковом меню она относится к "Закуп".
+  //
+  // Сам список /ved-orders без ID оставляем за ВЭД.
+  // ==========================================================
+
+  const isProcurementOrderDetail =
+    pathname.startsWith(
+      "/ved-orders/"
+    );
+
+
+  // ==========================================================
   // АКТИВНЫЙ ПУНКТ МЕНЮ
   // ==========================================================
 
@@ -228,6 +248,8 @@ export default function WorkspaceShell({
           pathname.startsWith(
             "/stock-import/"
           )
+          ||
+          isProcurementOrderDetail
         );
 
 
@@ -243,10 +265,6 @@ export default function WorkspaceShell({
           ||
           pathname ===
             "/ved-orders"
-          ||
-          pathname.startsWith(
-            "/ved-orders/"
-          )
         );
 
 
