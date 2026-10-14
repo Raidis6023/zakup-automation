@@ -200,7 +200,7 @@ export default function WbUnmappedProductsTable({
           ...current,
 
           [nmId]:
-            "Введите master_code из 6 символов",
+            "Введите ЕНОТ из 6 символов",
         })
       );
 
@@ -261,7 +261,7 @@ export default function WbUnmappedProductsTable({
         throw new Error(
           data?.message
           ??
-          "Не удалось привязать master_code"
+          "Не удалось привязать ЕНОТ"
         );
 
       }
@@ -315,7 +315,7 @@ export default function WbUnmappedProductsTable({
             className=
               "section-title"
           >
-            Товары без master_code
+            Товары без ЕНОТ
           </h2>
 
 
@@ -394,7 +394,7 @@ export default function WbUnmappedProductsTable({
               </th>
 
               <th>
-                master_code
+                ЕНОТ
               </th>
 
               <th>
@@ -675,7 +675,7 @@ export default function WbUnmappedProductsTable({
         className=
           "wb-unmapped-hint"
       >
-        Можно ввести существующий master_code
+        Можно ввести существующий ЕНОТ
         или новый. После привязки товар исчезнет
         из этого списка и появится в обычной
         таблице товаров.
