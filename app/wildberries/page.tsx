@@ -64,8 +64,8 @@ type DashboardData = {
     lastSuccessfulSyncAt: string | null;
     ordersLastSuccessAt: string | null;
     stocksLastSuccessAt: string | null;
-    cancellationsLastSuccessAt: string | null;
-    stocksAndSalesLastSuccessAt: string | null;
+    cancellationsLastSuccessAt?: string | null;
+    stocksAndSalesLastSuccessAt?: string | null;
     ordersLastHttpStatus: number | null;
     stocksLastHttpStatus: number | null;
     stockSnapshotId: string | null;
@@ -91,6 +91,7 @@ type DashboardData = {
     listings: number;
   };
 
+  dailySales: unknown[];
   products: ProductRow[];
   unmappedProducts: UnmappedProductRow[];
 
@@ -101,6 +102,7 @@ type DashboardData = {
     duplicateSrid: number;
     nullIsCancel: number;
     ordersOutsideCurrentSnapshot: number;
+    missingFunnelRows?: number;
   };
 };
 
@@ -161,24 +163,10 @@ function WbReferenceIcon({
   ) {
 
     return (
-
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-
-        <circle
-          cx="12"
-          cy="12"
-          r="9"
-        />
-
-        <path
-          d="M12 7v5l3 2"
-        />
-
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
       </svg>
-
     );
 
   }
@@ -189,26 +177,10 @@ function WbReferenceIcon({
   ) {
 
     return (
-
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-
-        <rect
-          x="3"
-          y="5"
-          width="18"
-          height="16"
-          rx="2"
-        />
-
-        <path
-          d="M8 3v4M16 3v4M3 10h18"
-        />
-
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3" y="5" width="18" height="16" rx="2" />
+        <path d="M8 3v4M16 3v4M3 10h18" />
       </svg>
-
     );
 
   }
@@ -219,22 +191,10 @@ function WbReferenceIcon({
   ) {
 
     return (
-
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-
-        <path
-          d="M3 10 12 4l9 6v10H3Z"
-        />
-
-        <path
-          d="M8 20v-6h8v6"
-        />
-
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 10 12 4l9 6v10H3Z" />
+        <path d="M8 20v-6h8v6" />
       </svg>
-
     );
 
   }
@@ -247,22 +207,10 @@ function WbReferenceIcon({
   ) {
 
     return (
-
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-
-        <path
-          d="M5 4h14v16H5Z"
-        />
-
-        <path
-          d="M8 8h8M8 12h8M8 16h5"
-        />
-
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M5 4h14v16H5Z" />
+        <path d="M8 8h8M8 12h8M8 16h5" />
       </svg>
-
     );
 
   }
@@ -273,18 +221,9 @@ function WbReferenceIcon({
   ) {
 
     return (
-
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-
-        <path
-          d="M4 19V11M10 19V5M16 19V8M22 19V3"
-        />
-
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 19V11M10 19V5M16 19V8M22 19V3" />
       </svg>
-
     );
 
   }
@@ -295,24 +234,10 @@ function WbReferenceIcon({
   ) {
 
     return (
-
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-
-        <circle
-          cx="12"
-          cy="12"
-          r="9"
-        />
-
-        <path
-          d="m9 9 6 6M15 9l-6 6"
-        />
-
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" />
+        <path d="m9 9 6 6M15 9l-6 6" />
       </svg>
-
     );
 
   }
@@ -325,38 +250,11 @@ function WbReferenceIcon({
   ) {
 
     return (
-
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-
-        <path
-          d="
-            M12 3
-            20 7
-            12 11
-            4 7
-            Z
-          "
-        />
-
-        <path
-          d="
-            M4 7
-            v10
-            l8 4
-            8-4
-            V7
-          "
-        />
-
-        <path
-          d="M12 11v10"
-        />
-
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 3 20 7 12 11 4 7Z" />
+        <path d="M4 7v10l8 4 8-4V7" />
+        <path d="M12 11v10" />
       </svg>
-
     );
 
   }
@@ -367,52 +265,20 @@ function WbReferenceIcon({
   ) {
 
     return (
-
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-
-        <path
-          d="
-            M12 3
-            20 6
-            v6
-            c0 4.5-2.8 7.5-8 9
-            -5.2-1.5-8-4.5-8-9V6Z
-          "
-        />
-
-        <path
-          d="m9 12 2 2 4-4"
-        />
-
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 3 20 6v6c0 4.5-2.8 7.5-8 9-5.2-1.5-8-4.5-8-9V6Z" />
+        <path d="m9 12 2 2 4-4" />
       </svg>
-
     );
 
   }
 
 
   return (
-
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-
-      <circle
-        cx="12"
-        cy="12"
-        r="9"
-      />
-
-      <path
-        d="M12 10v6M12 7h.01"
-      />
-
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 10v6M12 7h.01" />
     </svg>
-
   );
 
 }
@@ -437,20 +303,16 @@ function getSupabaseConfig() {
 
 
   if (!supabaseUrl) {
-
     throw new Error(
       "Не найдена SUPABASE_URL или NEXT_PUBLIC_SUPABASE_URL"
     );
-
   }
 
 
   if (!supabaseKey) {
-
     throw new Error(
       "Не найдена SUPABASE_SERVICE_ROLE_KEY или SUPABASE_SECRET_KEY"
     );
-
   }
 
 
@@ -462,12 +324,8 @@ function getSupabaseConfig() {
 }
 
 
-// ============================================================
-// DASHBOARD
-// ============================================================
-
 async function getDashboard():
-  Promise<DashboardData> {
+Promise<DashboardData> {
 
   const {
     supabaseUrl,
@@ -486,13 +344,10 @@ async function getDashboard():
         headers: {
           apikey:
             supabaseKey,
-
           Authorization:
             `Bearer ${supabaseKey}`,
-
           "Content-Type":
             "application/json",
-
           Accept:
             "application/json",
         },
@@ -511,11 +366,9 @@ async function getDashboard():
 
 
   if (!response.ok) {
-
     throw new Error(
       `Не удалось загрузить WB dashboard. HTTP ${response.status}: ${text}`
     );
-
   }
 
 
@@ -524,32 +377,14 @@ async function getDashboard():
 
 
   try {
-
     data =
       JSON.parse(
         text
       );
-
   } catch {
-
     throw new Error(
       "Supabase вернул некорректный JSON для WB dashboard"
     );
-
-  }
-
-
-  if (
-    !data
-    ||
-    typeof data !==
-      "object"
-  ) {
-
-    throw new Error(
-      "WB dashboard вернул пустой ответ"
-    );
-
   }
 
 
@@ -558,12 +393,8 @@ async function getDashboard():
 }
 
 
-// ============================================================
-// SYNC STATES
-// ============================================================
-
 async function getWbSyncStates():
-  Promise<WbSyncStateRow[]> {
+Promise<WbSyncStateRow[]> {
 
   const {
     supabaseUrl,
@@ -582,10 +413,8 @@ async function getWbSyncStates():
         headers: {
           apikey:
             supabaseKey,
-
           Authorization:
             `Bearer ${supabaseKey}`,
-
           Accept:
             "application/json",
         },
@@ -597,24 +426,16 @@ async function getWbSyncStates():
 
 
   if (!response.ok) {
-
     const text =
       await response.text();
-
 
     throw new Error(
       `Не удалось получить wb_sync_state. HTTP ${response.status}: ${text}`
     );
-
   }
 
 
-  const rows:
-    WbSyncStateRow[] =
-      await response.json();
-
-
-  return rows;
+  return await response.json();
 
 }
 
@@ -626,28 +447,21 @@ function toClientSyncState(
 ClientSyncState | null {
 
   if (!row) {
-
     return null;
-
   }
 
 
   return {
     lastHttpStatus:
       row.last_http_status,
-
     lastAttemptAt:
       row.last_attempt_at,
-
     lastSuccessAt:
       row.last_success_at,
-
     nextAllowedAt:
       row.next_allowed_at,
-
     retryAfterSeconds:
       row.retry_after_seconds,
-
     lastMessage:
       row.last_message,
   };
@@ -661,11 +475,7 @@ ClientSyncState | null {
 
 function formatInteger(
   value:
-    number
-    |
-    null
-    |
-    undefined
+    number | null | undefined
 ) {
 
   const number =
@@ -676,14 +486,8 @@ function formatInteger(
     );
 
 
-  if (
-    !Number.isFinite(
-      number
-    )
-  ) {
-
+  if (!Number.isFinite(number)) {
     return "0";
-
   }
 
 
@@ -702,12 +506,7 @@ function formatInteger(
 
 function formatDecimal(
   value:
-    number
-    |
-    null
-    |
-    undefined,
-
+    number | null | undefined,
   digits =
     2
 ) {
@@ -717,9 +516,7 @@ function formatDecimal(
     ||
     value === undefined
   ) {
-
     return "—";
-
   }
 
 
@@ -729,14 +526,8 @@ function formatDecimal(
     );
 
 
-  if (
-    !Number.isFinite(
-      number
-    )
-  ) {
-
+  if (!Number.isFinite(number)) {
     return "—";
-
   }
 
 
@@ -745,7 +536,6 @@ function formatDecimal(
     {
       minimumFractionDigits:
         digits,
-
       maximumFractionDigits:
         digits,
     }
@@ -758,73 +548,43 @@ function formatDecimal(
 
 function formatDate(
   value:
-    string
-    |
-    null
-    |
-    undefined
+    string | null | undefined
 ) {
 
   if (!value) {
-
     return "—";
-
   }
 
 
-  const datePart =
-    value.slice(
-      0,
-      10
-    );
-
-
   const parts =
-    datePart.split(
-      "-"
-    );
+    value
+      .slice(0, 10)
+      .split("-");
 
 
   if (
-    parts.length !==
-    3
+    parts.length !== 3
   ) {
-
     return value;
-
   }
 
 
   return [
-    parts[
-      2
-    ],
-    parts[
-      1
-    ],
-    parts[
-      0
-    ],
-  ].join(
-    "."
-  );
+    parts[2],
+    parts[1],
+    parts[0],
+  ].join(".");
 
 }
 
 
 function formatKrasnoyarskDateTime(
   value:
-    string
-    |
-    null
-    |
-    undefined
+    string | null | undefined
 ) {
 
   if (!value) {
-
     return "—";
-
   }
 
 
@@ -834,14 +594,8 @@ function formatKrasnoyarskDateTime(
     );
 
 
-  if (
-    !Number.isFinite(
-      date.getTime()
-    )
-  ) {
-
+  if (!Number.isFinite(date.getTime())) {
     return "—";
-
   }
 
 
@@ -850,22 +604,16 @@ function formatKrasnoyarskDateTime(
     {
       timeZone:
         "Asia/Krasnoyarsk",
-
       day:
         "2-digit",
-
       month:
         "2-digit",
-
       year:
         "numeric",
-
       hour:
         "2-digit",
-
       minute:
         "2-digit",
-
       second:
         "2-digit",
     }
@@ -878,17 +626,11 @@ function formatKrasnoyarskDateTime(
 
 function formatKrasnoyarskDate(
   value:
-    string
-    |
-    null
-    |
-    undefined
+    string | null | undefined
 ) {
 
   if (!value) {
-
     return "—";
-
   }
 
 
@@ -898,14 +640,8 @@ function formatKrasnoyarskDate(
     );
 
 
-  if (
-    !Number.isFinite(
-      date.getTime()
-    )
-  ) {
-
+  if (!Number.isFinite(date.getTime())) {
     return "—";
-
   }
 
 
@@ -914,13 +650,10 @@ function formatKrasnoyarskDate(
     {
       timeZone:
         "Asia/Krasnoyarsk",
-
       day:
         "2-digit",
-
       month:
         "2-digit",
-
       year:
         "numeric",
     }
@@ -941,10 +674,8 @@ export default async function WildberriesPage() {
     DashboardData | null =
       null;
 
-
   let loadError =
     "";
-
 
   let syncStates:
     WbSyncStateRow[] =
@@ -952,1077 +683,469 @@ export default async function WildberriesPage() {
 
 
   try {
-
     dashboard =
       await getDashboard();
-
   } catch (
     error
   ) {
-
     loadError =
       error instanceof Error
-
         ? error.message
-
         : "Не удалось загрузить страницу Wildberries";
-
   }
 
 
   try {
-
     syncStates =
       await getWbSyncStates();
-
   } catch {
-
     syncStates =
       [];
-
   }
 
 
-  const ordersStateRow =
+  const unifiedStateRow =
     syncStates.find(
       row =>
-        row.sync_key ===
-        "orders"
+        row.sync_key === "stocks"
     )
     ??
     null;
 
 
-  const stocksStateRow =
-    syncStates.find(
-      row =>
-        row.sync_key ===
-        "stocks"
-    )
-    ??
-    null;
-
-
-  const ordersState =
+  const unifiedState =
     toClientSyncState(
-      ordersStateRow
-    );
-
-
-  const stocksState =
-    toClientSyncState(
-      stocksStateRow
+      unifiedStateRow
     );
 
 
   return (
+    <main className="page wb-reference-page">
+      <div className="container">
 
-    <main
-      className=
-        "page wb-reference-page"
-    >
-
-      <div
-        className=
-          "container"
-      >
-
-        {/* ===================================
-            HEADER
-            =================================== */}
-
-        <header
-          className=
-            "header wb-header"
-        >
-
-          <div
-            className=
-              "wb-title-wrap"
-          >
-
-            <span
-              className=
-                "wb-title-icon"
-            >
-
-              <img
-                src=
-                  "/logos/wildberries.png"
-
-                alt=""
-              />
-
+        <header className="header wb-header">
+          <div className="wb-title-wrap">
+            <span className="wb-title-icon">
+              <img src="/logos/wildberries.png" alt="" />
             </span>
 
-
             <div>
-
-              <div
-                className=
-                  "small-label"
-              >
+              <div className="small-label">
                 СИСТЕМА ЗАКУПА
               </div>
 
-
-              <h1
-                className=
-                  "title"
-              >
+              <h1 className="title">
                 Wildberries — синхронизация
               </h1>
 
-
-              <p
-                className=
-                  "subtitle"
-              >
-                FBW-выкупы, отмены
-                и доступные остатки Wildberries.
+              <p className="subtitle">
+                Продажи, аналитические отмены и доступные FBW-остатки Wildberries.
               </p>
-
             </div>
-
           </div>
 
-
-          <div
-            className=
-              "header-actions wb-header-actions"
-          >
-
+          <div className="header-actions wb-header-actions">
             <ThemeToggle />
 
-
             <Link
-              href=
-                "/stock-import"
-
-              className=
-                "secondary-button wb-navigation-button"
+              href="/stock-import"
+              className="secondary-button wb-navigation-button"
             >
               Остатки склада
             </Link>
 
-
             <Link
               href="/"
-
-              className=
-                "secondary-button wb-navigation-button"
+              className="secondary-button wb-navigation-button"
             >
               ← Главная
             </Link>
-
           </div>
-
         </header>
 
 
-        {/* ===================================
-            ERROR
-            =================================== */}
-
         {
           loadError
-
             ? (
-
-              <section
-                className=
-                  "section wb-error-section"
-              >
-
-                <div
-                  className=
-                    "wb-error-title"
-                >
+              <section className="section wb-error-section">
+                <div className="wb-error-title">
                   Ошибка загрузки Wildberries
                 </div>
 
-
-                <div
-                  className=
-                    "reason-text wb-error-text"
-                >
-                  {
-                    loadError
-                  }
+                <div className="reason-text wb-error-text">
+                  {loadError}
                 </div>
-
               </section>
-
             )
-
             : null
         }
 
 
         {
           dashboard
-
             ? (
-
               <>
 
-                {/* ===================================
-                    SYNC STATE
-                    =================================== */}
-
-                <section
-                  className=
-                    "section wb-sync-state-section"
-                >
-
-                  <div
-                    className=
-                      "wb-section-top"
-                  >
-
-                    <div
-                      className=
-                        "wb-section-heading"
-                    >
-
-                      <h2
-                        className=
-                          "section-title"
-                      >
+                <section className="section wb-sync-state-section">
+                  <div className="wb-section-top">
+                    <div className="wb-section-heading">
+                      <h2 className="section-title">
                         Состояние синхронизации
                       </h2>
 
-
-                      <div
-                        className=
-                          "reason-text"
-                      >
-                        Отдельно контролируем свежесть
-                        остатков с продажами и отмен.
+                      <div className="reason-text">
+                        Остатки, продажи и отмены теперь обновляются одним общим циклом.
                       </div>
-
                     </div>
-
 
                     <span
                       className={
-                        dashboard
-                          .status
-                          .ok
-
+                        dashboard.status.ok
                           ? "wb-status-badge wb-status-badge--success"
-
                           : "wb-status-badge wb-status-badge--warning"
                       }
                     >
-
-                      <span
-                        className=
-                          "wb-status-dot"
-                      />
-
-
-                      {
-                        dashboard
-                          .status
-                          .label
-                      }
-
+                      <span className="wb-status-dot" />
+                      {dashboard.status.label}
                     </span>
-
                   </div>
 
-
-                  <div
-                    className=
-                      "wb-sync-info-grid"
-                  >
-
+                  <div className="wb-sync-info-grid">
                     <InfoCard
                       icon="clock"
-
-                      label=
-                        "Полный комплект данных"
-
+                      label="Последняя синхронизация"
                       value={
                         formatKrasnoyarskDateTime(
-                          dashboard
-                            .status
-                            .lastSuccessfulSyncAt
+                          dashboard.status.lastSuccessfulSyncAt
                         )
                       }
-
-                      hint=
-                        "По самому старому из двух источников"
+                      hint="Все три показателя, Красноярское время"
                     />
-
 
                     <InfoCard
                       icon="calendar"
-
-                      label=
-                        "Период расчёта"
-
+                      label="Период"
                       value={
-                        `${formatDate(
-                          dashboard
-                            .period
-                            .dateFrom
-                        )} – ${formatDate(
-                          dashboard
-                            .period
-                            .dateTo
-                        )}`
+                        `${formatDate(dashboard.period.dateFrom)} – ${formatDate(dashboard.period.dateTo)}`
                       }
-
-                      hint=
-                        "Скользящие 28 дней"
+                      hint="Скользящие 28 дней"
                     />
-
 
                     <InfoCard
                       icon="warehouse"
-
-                      label=
-                        "Остатки и продажи обновлены"
-
+                      label="Снимок данных"
                       value={
-                        formatKrasnoyarskDateTime(
-                          dashboard
-                            .status
-                            .stocksAndSalesLastSuccessAt
-                          ??
-                          dashboard
-                            .status
-                            .stocksLastSuccessAt
+                        formatKrasnoyarskDate(
+                          dashboard.status.stockSnapshotAt
                         )
                       }
-
-                      hint=
-                        "История остатков WB"
+                      hint="Единый snapshot WB"
                     />
-
 
                     <InfoCard
-                      icon="cancel"
-
-                      label=
-                        "Отмены обновлены"
-
+                      icon="orders"
+                      label="Заказов"
                       value={
-                        formatKrasnoyarskDateTime(
-                          dashboard
-                            .status
-                            .cancellationsLastSuccessAt
-                          ??
-                          dashboard
-                            .status
-                            .ordersLastSuccessAt
+                        formatInteger(
+                          dashboard.summary.orderRows
                         )
                       }
-
-                      hint=
-                        "Только FBW"
+                      hint="ordersCount из отчёта WB"
                     />
-
                   </div>
-
                 </section>
 
 
-                {/* ===================================
-                    KPI
-                    =================================== */}
-
-                <section
-                  className=
-                    "summary-grid wb-summary-grid"
-                >
-
+                <section className="summary-grid wb-summary-grid">
                   <SummaryCard
                     icon="sales"
                     tone="green"
                     label="Продажи за 28 дней"
-
                     value={
                       formatInteger(
-                        dashboard
-                          .summary
-                          .sales28Days
+                        dashboard.summary.sales28Days
                       )
                     }
-
-                    caption=
-                      "Выкупили, шт. по данным WB"
+                    caption="buyoutCount, шт."
                   />
-
 
                   <SummaryCard
                     icon="cancel"
                     tone="red"
                     label="Отмены"
-
                     value={
                       formatInteger(
-                        dashboard
-                          .summary
-                          .cancelled28Days
+                        dashboard.summary.cancelled28Days
                       )
                     }
-
-                    caption=
-                      "FBW, считаются отдельно"
+                    caption="cancelCount Воронки продаж"
                   />
-
 
                   <SummaryCard
                     icon="stock"
                     tone="purple"
                     label="Остаток FBW"
-
                     value={
                       formatInteger(
-                        dashboard
-                          .summary
-                          .fbwStock
+                        dashboard.summary.fbwStock
                       )
                     }
-
-                    caption=
-                      "доступно на складах WB"
+                    caption="stockCount на складах WB"
                   />
-
 
                   <SummaryCard
                     icon="products"
                     tone="blue"
                     label="Связанных master_code"
-
                     value={
                       formatInteger(
-                        dashboard
-                          .summary
-                          .physicalProducts
+                        dashboard.summary.physicalProducts
                       )
                     }
-
-                    caption=
-                      "только справочная связь"
+                    caption="только справочная связь"
                   />
-
 
                   <SummaryCard
                     icon="listings"
                     tone="orange"
                     label="Артикулов WB"
-
                     value={
                       formatInteger(
-                        dashboard
-                          .summary
-                          .listings
+                        dashboard.summary.listings
                       )
                     }
-
-                    caption=
-                      "текущих карточек Wildberries"
+                    caption="текущих карточек Wildberries"
                   />
-
                 </section>
 
 
-                {/* ===================================
-                    HOW TO COMPARE
-                    =================================== */}
-
-                <section
-                  className=
-                    "section wb-info-panel"
-                >
-
-                  <span
-                    className=
-                      "wb-panel-icon"
-                  >
-
-                    <WbReferenceIcon
-                      name="info"
-                    />
-
+                <section className="section wb-info-panel">
+                  <span className="wb-panel-icon">
+                    <WbReferenceIcon name="info" />
                   </span>
 
-
                   <div>
-
-                    <h2
-                      className=
-                        "section-title"
-                    >
-                      Как сверять с кабинетом Wildberries
+                    <h2 className="section-title">
+                      Как теперь считаются данные Wildberries
                     </h2>
 
-
-                    <div
-                      className=
-                        "wb-info-list"
-                    >
-
+                    <div className="wb-info-list">
                       <InfoLine>
-                        «Продажи за 28 дней» — это показатель «Выкупили, шт.» из API отчёта «История остатков».
+                        Продажи за 28 дней берутся из buyoutCount отчёта «История остатков» Wildberries.
                       </InfoLine>
 
                       <InfoLine>
-                        Продажи и остатки загружаются одним запросом и относятся только к складам WB.
+                        Остаток берётся из stockCount того же отчёта с фильтром stockType = «wb», то есть по складам Wildberries.
                       </InfoLine>
 
                       <InfoLine>
-                        Выкуп в аналитике WB относится к дате первоначального заказа, поэтому последние дни могут дозревать позже.
+                        Отмены берутся из cancelCount «Воронки продаж» за тот же 28-дневный период.
                       </InfoLine>
 
                       <InfoLine>
-                        Отмены загружаются отдельно и считаются только для FBW-заказов с типом склада «Склад WB».
+                        cancelCount — аналитический показатель Воронки продаж. Это уже не старый FBW-флаг isCancel из supplier/orders.
                       </InfoLine>
 
                       <InfoLine>
-                        Остаток каждого Артикула WB берётся из текущего FBW-остатка Wildberries.
+                        Все три показателя сохраняются одним общим snapshot, поэтому время синхронизации у них теперь одно.
                       </InfoLine>
 
                       <InfoLine>
-                        Остатки Ozon здесь не используются и к остаткам Wildberries не прибавляются.
+                        master_code используется для связи карточки с физическим товаром и дальнейшего расчёта закупки.
                       </InfoLine>
 
                       <InfoLine>
-                        toClient и fromClient в доступный FBW-остаток не входят.
+                        Период Wildberries берётся тот же, что и последний успешный 28-дневный период Ozon.
                       </InfoLine>
-
-                      <InfoLine>
-                        master_code используется только для связи карточки с физическим товаром и дальнейшего расчёта закупки в Китай.
-                      </InfoLine>
-
-                      <InfoLine>
-                        Период расчёта совпадает с периодом Ozon, но данные двух площадок остаются раздельными.
-                      </InfoLine>
-
                     </div>
-
                   </div>
-
                 </section>
 
-
-                {/* ===================================
-                    UNMAPPED
-                    =================================== */}
 
                 <WbUnmappedProductsTable
                   rows={
-                    dashboard
-                      .unmappedProducts
+                    dashboard.unmappedProducts
                     ??
                     []
                   }
                 />
 
 
-                {/* ===================================
-                    PRODUCTS
-                    =================================== */}
-
-                <section
-                  className=
-                    "section wb-products-section"
-                >
-
-                  <div
-                    className=
-                      "wb-products-header"
-                  >
-
-                    <h2
-                      className=
-                        "section-title"
-                    >
+                <section className="section wb-products-section">
+                  <div className="wb-products-header">
+                    <h2 className="section-title">
                       Данные по товарам
                     </h2>
 
-
-                    <div
-                      className=
-                        "reason-text"
-                    >
-                      Одна строка соответствует
-                      одному Артикулу WB.
+                    <div className="reason-text">
+                      Одна строка соответствует одному Артикулу WB.
                     </div>
-
                   </div>
 
-
-                  <div
-                    className=
-                      "wb-products-table-shell"
-                  >
-
-                    <table
-                      className=
-                        "wb-products-table"
-                    >
-
+                  <div className="wb-products-table-shell">
+                    <table className="wb-products-table">
                       <thead>
-
                         <tr>
-
-                          <th>
-                            Артикул WB
-                          </th>
-
-                          <th>
-                            Артикул продавца
-                          </th>
-
-                          <th>
-                            Товар
-                          </th>
-
-                          <th>
-                            master_code
-                          </th>
-
-                          <th
-                            style={{
-                              textAlign:
-                                "right",
-                            }}
-                          >
-                            Продажи 28 дн.
-                          </th>
-
-                          <th
-                            style={{
-                              textAlign:
-                                "right",
-                            }}
-                          >
-                            Среднее / день
-                          </th>
-
-                          <th
-                            style={{
-                              textAlign:
-                                "right",
-                            }}
-                          >
-                            Отмены
-                          </th>
-
-                          <th
-                            style={{
-                              textAlign:
-                                "right",
-                            }}
-                          >
-                            Остаток
-                          </th>
-
-                          <th
-                            style={{
-                              textAlign:
-                                "right",
-                            }}
-                          >
-                            Дней запаса
-                          </th>
-
+                          <th>Артикул WB</th>
+                          <th>Артикул продавца</th>
+                          <th>Товар</th>
+                          <th>master_code</th>
+                          <th style={{ textAlign: "right" }}>Продажи 28 дн.</th>
+                          <th style={{ textAlign: "right" }}>Среднее / день</th>
+                          <th style={{ textAlign: "right" }}>Отмены</th>
+                          <th style={{ textAlign: "right" }}>Остаток</th>
+                          <th style={{ textAlign: "right" }}>Дней запаса</th>
                         </tr>
-
                       </thead>
 
-
                       <tbody>
-
                         {
-                          dashboard
-                            .products
-                            .map(
-                              row => (
+                          dashboard.products.map(
+                            row => (
+                              <tr key={row.nmId}>
+                                <td>
+                                  <strong>{row.nmId}</strong>
+                                </td>
 
-                                <tr
-                                  key={
-                                    row.nmId
+                                <td className="wb-seller-article-cell">
+                                  {row.sellerArticle || "—"}
+                                </td>
+
+                                <td className="wb-product-name-cell">
+                                  {row.productName || "—"}
+
+                                  {
+                                    row.brandName
+                                    &&
+                                    row.brandName.trim()
+                                      ? (
+                                        <div className="muted">
+                                          {row.brandName}
+                                        </div>
+                                      )
+                                      : null
                                   }
-                                >
+                                </td>
 
-                                  <td>
-
-                                    <strong>
-                                      {
-                                        row.nmId
-                                      }
-                                    </strong>
-
-                                  </td>
-
-
-                                  <td
-                                    className=
-                                      "wb-seller-article-cell"
-                                  >
-                                    {
-                                      row.sellerArticle
-                                      ||
-                                      "—"
-                                    }
-                                  </td>
-
-
-                                  <td
-                                    className=
-                                      "wb-product-name-cell"
-                                  >
-
-                                    {
-                                      row.productName
-                                      ||
-                                      "—"
-                                    }
-
-
-                                    {
-                                      row.brandName
-                                      &&
-                                      row.brandName.trim()
-
-                                        ? (
-
-                                          <div
-                                            className=
-                                              "muted"
-                                          >
-                                            {
-                                              row.brandName
-                                            }
-                                          </div>
-
-                                        )
-
-                                        : null
-                                    }
-
-                                  </td>
-
-
-                                  <td>
-
-                                    {
-                                      row.masterCode
-
-                                        ? (
-
-                                          <span
-                                            className=
-                                              "wb-master-code"
-                                          >
-                                            {
-                                              row.masterCode
-                                            }
-                                          </span>
-
-                                        )
-
-                                        : "—"
-                                    }
-
-                                  </td>
-
-
-                                  <td
-                                    style={{
-                                      textAlign:
-                                        "right",
-                                    }}
-                                  >
-
-                                    <strong>
-                                      {
-                                        formatInteger(
-                                          row.sales28Days
-                                        )
-                                      }
-                                    </strong>
-
-                                  </td>
-
-
-                                  <td
-                                    style={{
-                                      textAlign:
-                                        "right",
-                                    }}
-                                  >
-                                    {
-                                      formatDecimal(
-                                        row.avgSalesPerDay,
-                                        2
+                                <td>
+                                  {
+                                    row.masterCode
+                                      ? (
+                                        <span className="wb-master-code">
+                                          {row.masterCode}
+                                        </span>
                                       )
-                                    }
-                                  </td>
+                                      : "—"
+                                  }
+                                </td>
 
+                                <td style={{ textAlign: "right" }}>
+                                  <strong>
+                                    {formatInteger(row.sales28Days)}
+                                  </strong>
+                                </td>
 
-                                  <td
-                                    style={{
-                                      textAlign:
-                                        "right",
-                                    }}
-                                  >
-                                    {
-                                      formatInteger(
-                                        row.cancelled28Days
-                                      )
-                                    }
-                                  </td>
+                                <td style={{ textAlign: "right" }}>
+                                  {formatDecimal(row.avgSalesPerDay, 2)}
+                                </td>
 
+                                <td style={{ textAlign: "right" }}>
+                                  {formatInteger(row.cancelled28Days)}
+                                </td>
 
-                                  <td
-                                    style={{
-                                      textAlign:
-                                        "right",
-                                    }}
-                                  >
+                                <td style={{ textAlign: "right" }}>
+                                  <strong>
+                                    {formatInteger(row.fbwStock)}
+                                  </strong>
+                                </td>
 
-                                    <strong>
-                                      {
-                                        formatInteger(
-                                          row.fbwStock
-                                        )
-                                      }
-                                    </strong>
-
-                                  </td>
-
-
-                                  <td
-                                    style={{
-                                      textAlign:
-                                        "right",
-                                    }}
-                                  >
-                                    {
-                                      row.daysOfStock ===
-                                      null
-
-                                        ? "—"
-
-                                        : formatDecimal(
-                                            row.daysOfStock,
-                                            1
-                                          )
-                                    }
-                                  </td>
-
-                                </tr>
-
-                              )
+                                <td style={{ textAlign: "right" }}>
+                                  {
+                                    row.daysOfStock === null
+                                      ? "—"
+                                      : formatDecimal(row.daysOfStock, 1)
+                                  }
+                                </td>
+                              </tr>
                             )
+                          )
                         }
-
                       </tbody>
-
                     </table>
-
                   </div>
-
                 </section>
 
 
-                {/* ===================================
-                    SAFE MODE
-                    =================================== */}
-
-                <section
-                  className=
-                    "section wb-safe-section"
-                >
-
-                  <span
-                    className=
-                      "wb-safe-icon"
-                  >
-
-                    <WbReferenceIcon
-                      name="shield"
-                    />
-
+                <section className="section wb-safe-section">
+                  <span className="wb-safe-icon">
+                    <WbReferenceIcon name="shield" />
                   </span>
 
-
                   <div>
-
-                    <h2
-                      className=
-                        "section-title"
-                    >
+                    <h2 className="section-title">
                       Безопасный режим
                     </h2>
 
-
-                    <div
-                      className=
-                        "wb-info-list"
-                    >
-
+                    <div className="wb-info-list">
                       <InfoLine>
-                        Система использует только успешно сохранённые данные Wildberries.
+                        Новый snapshot сохраняется только если успешно получены и «История остатков», и «Воронка продаж».
                       </InfoLine>
 
                       <InfoLine>
-                        Ошибка API Wildberries не считается нулевым остатком.
+                        Если один из двух запросов WB завершился ошибкой, сайт продолжит показывать предыдущий успешно сохранённый snapshot.
                       </InfoLine>
 
                       <InfoLine>
-                        Для страницы используется последний успешно сохранённый snapshot остатков.
+                        Ручное обновление доступно не чаще одного раза в 30 минут.
                       </InfoLine>
 
                       <InfoLine>
-                        Каждая карточка Wildberries рассчитывается отдельно по Артикулу WB.
+                        Перед утренним cron ручная кнопка временно блокируется, чтобы не занять его лимит.
                       </InfoLine>
 
                       <InfoLine>
-                        Ручные обновления блокируются до следующего безопасного времени, чтобы не тратить лимит WB впустую.
-                      </InfoLine>
-
-                      <InfoLine>
-                        Перед утренним cron система резервирует лимит, чтобы автоматическое обновление не сорвалось.
-                      </InfoLine>
-
-                      <InfoLine>
-                        Если Wildberries сам вернёт дополнительный лимит запросов, система покажет его отдельно.
-                      </InfoLine>
-
-                      <InfoLine>
-                        FBS, то есть «Склад продавца», в текущий расчёт пополнения WB не входит.
+                        FBS не входит в stockCount, потому что отчёт остатков запрашивается с stockType = «wb».
                       </InfoLine>
 
                       <InfoLine>
                         Карточки без master_code показываются отдельно и не участвуют в закупке до ручной привязки.
                       </InfoLine>
-
                     </div>
-
                   </div>
-
                 </section>
 
 
-                {/* ===================================
-                    MANUAL SYNC
-                    =================================== */}
-
-                <div
-                  className=
-                    "wb-manual-sync-grid"
-                >
-
+                <div className="wb-manual-sync-grid">
                   <section
-                    className=
-                      "section wb-sync-section"
+                    className="section wb-sync-section"
+                    style={{ gridColumn: "1 / -1" }}
                   >
-
                     <div>
-
-                      <h2
-                        className=
-                          "section-title"
-                      >
-                        Остатки и продажи Wildberries
+                      <h2 className="section-title">
+                        Данные Wildberries
                       </h2>
 
-
-                      <div
-                        className=
-                          "reason-text"
-                      >
-                        Одним запросом обновляются
-                        текущий FBW-остаток и
-                        продажи за 28 дней.
+                      <div className="reason-text">
+                        Одна кнопка обновляет остатки, продажи за 28 дней и cancelCount Воронки продаж.
                       </div>
-
                     </div>
 
-
                     <WbSyncClient
-                      endpoint=
-                        "/api/wb/sync-stocks?force=1"
-
-                      label=
-                        "Обновить остатки и продажи WB"
-
-                      loadingLabel=
-                        "Обновляем остатки и продажи..."
-
-                      initialState={
-                        stocksState
-                      }
+                      endpoint="/api/wb/sync-stocks?force=1"
+                      label="Обновить данные Wildberries"
+                      loadingLabel="Обновляем данные WB..."
+                      initialState={unifiedState}
                     />
-
                   </section>
-
-
-                  <section
-                    className=
-                      "section wb-sync-section"
-                  >
-
-                    <div>
-
-                      <h2
-                        className=
-                          "section-title"
-                      >
-                        Отмены Wildberries
-                      </h2>
-
-
-                      <div
-                        className=
-                          "reason-text"
-                      >
-                        Только FBW-отмены.
-                        Продажи этой кнопкой
-                        больше не загружаются.
-                      </div>
-
-                    </div>
-
-
-                    <WbSyncClient
-                      endpoint=
-                        "/api/wb/sync-orders"
-
-                      label=
-                        "Обновить отмены WB"
-
-                      loadingLabel=
-                        "Обновляем отмены..."
-
-                      initialState={
-                        ordersState
-                      }
-                    />
-
-                  </section>
-
                 </div>
 
               </>
-
             )
-
             : null
         }
 
       </div>
-
     </main>
-
   );
 
 }
@@ -2038,78 +1161,32 @@ function InfoCard({
   value,
   hint,
 }: {
-  icon:
-    WbReferenceIconName;
-
-  label:
-    string;
-
-  value:
-    string;
-
-  hint:
-    string;
+  icon: WbReferenceIconName;
+  label: string;
+  value: string;
+  hint: string;
 }) {
 
   return (
-
-    <div
-      className=
-        "wb-info-card"
-    >
-
-      <span
-        className=
-          "wb-info-icon"
-      >
-
-        <WbReferenceIcon
-          name={
-            icon
-          }
-        />
-
+    <div className="wb-info-card">
+      <span className="wb-info-icon">
+        <WbReferenceIcon name={icon} />
       </span>
 
-
-      <div
-        className=
-          "wb-info-copy"
-      >
-
-        <div
-          className=
-            "card-label"
-        >
-          {
-            label
-          }
+      <div className="wb-info-copy">
+        <div className="card-label">
+          {label}
         </div>
 
-
-        <div
-          className=
-            "wb-info-value"
-        >
-          {
-            value
-          }
+        <div className="wb-info-value">
+          {value}
         </div>
 
-
-        <div
-          className=
-            "muted"
-        >
-          {
-            hint
-          }
+        <div className="muted">
+          {hint}
         </div>
-
       </div>
-
     </div>
-
   );
 
 }
@@ -2126,90 +1203,38 @@ function SummaryCard({
   value,
   caption,
 }: {
-  icon:
-    WbReferenceIconName;
-
+  icon: WbReferenceIconName;
   tone:
     "green"
-    |
-    "red"
-    |
-    "purple"
-    |
-    "blue"
-    |
-    "orange";
-
-  label:
-    string;
-
-  value:
-    ReactNode;
-
-  caption:
-    ReactNode;
+    | "red"
+    | "purple"
+    | "blue"
+    | "orange";
+  label: string;
+  value: ReactNode;
+  caption: ReactNode;
 }) {
 
   return (
-
-    <div
-      className=
-        "card wb-summary-card"
-    >
-
-      <span
-        className={
-          `wb-summary-icon wb-summary-icon--${tone}`
-        }
-      >
-
-        <WbReferenceIcon
-          name={
-            icon
-          }
-        />
-
+    <div className="card wb-summary-card">
+      <span className={`wb-summary-icon wb-summary-icon--${tone}`}>
+        <WbReferenceIcon name={icon} />
       </span>
 
-
-      <div
-        className=
-          "wb-summary-copy"
-      >
-
-        <div
-          className=
-            "card-label"
-        >
-          {
-            label
-          }
+      <div className="wb-summary-copy">
+        <div className="card-label">
+          {label}
         </div>
 
-
-        <div
-          className=
-            "big-number"
-        >
-          {
-            value
-          }
+        <div className="big-number">
+          {value}
         </div>
 
-
-        <div
-          className=
-            "muted"
-        >
-          {
-            caption
-          }
+        <div className="muted">
+          {caption}
         </div>
-
       </div>
-
     </div>
-
   );
 
 }
@@ -2222,21 +1247,13 @@ function SummaryCard({
 function InfoLine({
   children,
 }: {
-  children:
-    ReactNode;
+  children: ReactNode;
 }) {
 
   return (
-
-    <div
-      className=
-        "reason-text"
-    >
-      {
-        children
-      }
+    <div className="reason-text">
+      {children}
     </div>
-
   );
 
 }
