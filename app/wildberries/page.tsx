@@ -14,7 +14,12 @@ from "../WbSyncClient";
 import WbUnmappedProductsTable
 from "../WbUnmappedProductsTable";
 
+import WbProductsTableClient, {
+  type WbProductRow,
+} from "./WbProductsTableClient";
+
 import "./wb-reference.css";
+import "./wb-products-table.css";
 import "./wb-reference-top.css";
 import "./wb-page-header.css";
 
@@ -26,22 +31,6 @@ export const dynamic =
 // ============================================================
 // TYPES
 // ============================================================
-
-type ProductRow = {
-  nmId: number;
-  sellerArticle: string | null;
-  productName: string | null;
-  brandName: string | null;
-  masterCode: string | null;
-  sales28Days: number;
-  avgSalesPerDay: number;
-  cancelled28Days: number;
-  fbwStock: number;
-  daysOfStock: number | null;
-  toClient: number;
-  fromClient: number;
-};
-
 
 type UnmappedProductRow = {
   nmId: number;
@@ -159,7 +148,7 @@ type DashboardData = {
 
 
   products:
-    ProductRow[];
+    WbProductRow[];
 
 
   unmappedProducts:
@@ -804,60 +793,6 @@ function formatInteger(
 }
 
 
-function formatDecimal(
-  value:
-    number | null | undefined,
-
-  digits =
-    2
-) {
-
-  if (
-    value === null
-    ||
-    value === undefined
-  ) {
-
-    return "—";
-
-  }
-
-
-  const number =
-    Number(
-      value
-    );
-
-
-  if (
-    !Number.isFinite(
-      number
-    )
-  ) {
-
-    return "—";
-
-  }
-
-
-  return new Intl.NumberFormat(
-    "ru-RU",
-    {
-
-      minimumFractionDigits:
-        digits,
-
-      maximumFractionDigits:
-        digits,
-
-    }
-  ).format(
-    number
-  );
-
-}
-
-
 function formatDate(
   value:
     string | null | undefined
@@ -1152,7 +1087,7 @@ export default async function WildberriesPage() {
               <>
 
                 {/* =================================================
-                    ВЕРХНЯЯ ПЛАШКА — 4 РАВНЫЕ ЧАСТИ
+                    ВЕРХНЯЯ ПЛАШКА
                     ================================================= */}
 
                 <section
@@ -1378,13 +1313,11 @@ export default async function WildberriesPage() {
                     icon="sales"
                     tone="green"
                     label="Продажи за 28 дней"
-
                     value={
                       formatInteger(
                         dashboard.summary.sales28Days
                       )
                     }
-
                     caption="buyoutCount, шт."
                   />
 
@@ -1393,13 +1326,11 @@ export default async function WildberriesPage() {
                     icon="cancel"
                     tone="red"
                     label="Отмены"
-
                     value={
                       formatInteger(
                         dashboard.summary.cancelled28Days
                       )
                     }
-
                     caption="cancelCount Воронки продаж"
                   />
 
@@ -1408,13 +1339,11 @@ export default async function WildberriesPage() {
                     icon="stock"
                     tone="purple"
                     label="Остаток FBW"
-
                     value={
                       formatInteger(
                         dashboard.summary.fbwStock
                       )
                     }
-
                     caption="stockCount на складах WB"
                   />
 
@@ -1423,13 +1352,11 @@ export default async function WildberriesPage() {
                     icon="products"
                     tone="blue"
                     label="Связанных master_code"
-
                     value={
                       formatInteger(
                         dashboard.summary.physicalProducts
                       )
                     }
-
                     caption="только справочная связь"
                   />
 
@@ -1438,13 +1365,11 @@ export default async function WildberriesPage() {
                     icon="listings"
                     tone="orange"
                     label="Артикулов WB"
-
                     value={
                       formatInteger(
                         dashboard.summary.listings
                       )
                     }
-
                     caption="текущих карточек Wildberries"
                   />
 
@@ -1541,318 +1466,11 @@ export default async function WildberriesPage() {
                     PRODUCTS
                     ================================================= */}
 
-                <section
-                  className="section wb-products-section"
-                >
-
-                  <div
-                    className="wb-products-header"
-                  >
-
-                    <h2
-                      className="section-title"
-                    >
-                      Данные по товарам
-                    </h2>
-
-
-                    <div
-                      className="reason-text"
-                    >
-                      Одна строка соответствует одному Артикулу WB.
-                    </div>
-
-                  </div>
-
-
-                  <div
-                    className="wb-products-table-shell"
-                  >
-
-                    <table
-                      className="wb-products-table"
-                    >
-
-                      <thead>
-
-                        <tr>
-
-                          <th>
-                            Артикул WB
-                          </th>
-
-
-                          <th>
-                            Артикул продавца
-                          </th>
-
-
-                          <th>
-                            Товар
-                          </th>
-
-
-                          <th>
-                            master_code
-                          </th>
-
-
-                          <th
-                            style={{
-                              textAlign:
-                                "right",
-                            }}
-                          >
-                            Продажи 28 дн.
-                          </th>
-
-
-                          <th
-                            style={{
-                              textAlign:
-                                "right",
-                            }}
-                          >
-                            Среднее / день
-                          </th>
-
-
-                          <th
-                            style={{
-                              textAlign:
-                                "right",
-                            }}
-                          >
-                            Отмены
-                          </th>
-
-
-                          <th
-                            style={{
-                              textAlign:
-                                "right",
-                            }}
-                          >
-                            Остаток
-                          </th>
-
-
-                          <th
-                            style={{
-                              textAlign:
-                                "right",
-                            }}
-                          >
-                            Дней запаса
-                          </th>
-
-                        </tr>
-
-                      </thead>
-
-
-                      <tbody>
-
-                        {
-                          dashboard.products.map(
-                            row => (
-
-                              <tr
-                                key={
-                                  row.nmId
-                                }
-                              >
-
-                                <td>
-
-                                  <strong>
-                                    {
-                                      row.nmId
-                                    }
-                                  </strong>
-
-                                </td>
-
-
-                                <td
-                                  className="wb-seller-article-cell"
-                                >
-                                  {
-                                    row.sellerArticle
-                                    ||
-                                    "—"
-                                  }
-                                </td>
-
-
-                                <td
-                                  className="wb-product-name-cell"
-                                >
-
-                                  {
-                                    row.productName
-                                    ||
-                                    "—"
-                                  }
-
-
-                                  {
-                                    row.brandName
-                                    &&
-                                    row.brandName.trim()
-
-                                      ? (
-
-                                        <div
-                                          className="muted"
-                                        >
-                                          {
-                                            row.brandName
-                                          }
-                                        </div>
-
-                                      )
-
-                                      :
-                                      null
-                                  }
-
-                                </td>
-
-
-                                <td>
-
-                                  {
-                                    row.masterCode
-
-                                      ? (
-
-                                        <span
-                                          className="wb-master-code"
-                                        >
-                                          {
-                                            row.masterCode
-                                          }
-                                        </span>
-
-                                      )
-
-                                      :
-                                      "—"
-                                  }
-
-                                </td>
-
-
-                                <td
-                                  style={{
-                                    textAlign:
-                                      "right",
-                                  }}
-                                >
-
-                                  <strong>
-
-                                    {
-                                      formatInteger(
-                                        row.sales28Days
-                                      )
-                                    }
-
-                                  </strong>
-
-                                </td>
-
-
-                                <td
-                                  style={{
-                                    textAlign:
-                                      "right",
-                                  }}
-                                >
-
-                                  {
-                                    formatDecimal(
-                                      row.avgSalesPerDay,
-                                      2
-                                    )
-                                  }
-
-                                </td>
-
-
-                                <td
-                                  style={{
-                                    textAlign:
-                                      "right",
-                                  }}
-                                >
-
-                                  {
-                                    formatInteger(
-                                      row.cancelled28Days
-                                    )
-                                  }
-
-                                </td>
-
-
-                                <td
-                                  style={{
-                                    textAlign:
-                                      "right",
-                                  }}
-                                >
-
-                                  <strong>
-
-                                    {
-                                      formatInteger(
-                                        row.fbwStock
-                                      )
-                                    }
-
-                                  </strong>
-
-                                </td>
-
-
-                                <td
-                                  style={{
-                                    textAlign:
-                                      "right",
-                                  }}
-                                >
-
-                                  {
-                                    row.daysOfStock ===
-                                    null
-
-                                      ?
-                                      "—"
-
-                                      :
-                                      formatDecimal(
-                                        row.daysOfStock,
-                                        1
-                                      )
-                                  }
-
-                                </td>
-
-                              </tr>
-
-                            )
-                          )
-                        }
-
-                      </tbody>
-
-                    </table>
-
-                  </div>
-
-                </section>
+                <WbProductsTableClient
+                  items={
+                    dashboard.products
+                  }
+                />
 
 
                 {/* =================================================
