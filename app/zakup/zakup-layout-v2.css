@@ -1464,12 +1464,33 @@ svg {
 
 
 /* ============================================================
-   ТАБЛИЦА
+   ТАБЛИЦА — СОБСТВЕННАЯ ПРОКРУТКА
    ============================================================ */
 
 .zakup-reference-page
 .zakup-products-table-content
 .table-wrapper {
+  position:
+    relative;
+
+  width:
+    100%;
+
+  max-height:
+    68vh;
+
+  overflow-x:
+    auto;
+
+  overflow-y:
+    auto;
+
+  overscroll-behavior:
+    contain;
+
+  scrollbar-gutter:
+    stable;
+
   border:
     none;
 
@@ -1481,10 +1502,58 @@ svg {
 .zakup-reference-page
 .zakup-products-table-content
 .table {
+  width:
+    100%;
+
+  min-width:
+    1880px;
+
+  table-layout:
+    fixed;
+
   border-collapse:
-    collapse;
+    separate;
+
+  border-spacing:
+    0;
 }
 
+
+/* ============================================================
+   ШИРИНЫ СТОЛБЦОВ
+
+   Артикул = 7%
+   Товар   = 25%
+   Остальные 10 числовых колонок = по 6.8%
+   ============================================================ */
+
+.zakup-reference-page
+.zakup-sortable-table
+.zakup-col-article {
+  width:
+    7%;
+}
+
+
+.zakup-reference-page
+.zakup-sortable-table
+.zakup-col-product {
+  width:
+    25%;
+}
+
+
+.zakup-reference-page
+.zakup-sortable-table
+.zakup-col-number {
+  width:
+    6.8%;
+}
+
+
+/* ============================================================
+   ЯЧЕЙКИ
+   ============================================================ */
 
 .zakup-reference-page
 .zakup-products-table-content
@@ -1494,6 +1563,9 @@ th,
 .zakup-products-table-content
 .table
 td {
+  box-sizing:
+    border-box;
+
   border-right:
     1px solid
     var(--ws-border-soft);
@@ -1501,6 +1573,52 @@ td {
   border-bottom:
     1px solid
     var(--ws-border-soft);
+}
+
+
+.zakup-reference-page
+.zakup-products-table-content
+.table
+th {
+  position:
+    sticky;
+
+  top:
+    0;
+
+  z-index:
+    20;
+
+  padding:
+    0;
+
+  background:
+    var(--ws-surface-soft);
+
+  font-size:
+    12px;
+}
+
+
+.zakup-reference-page
+.zakup-products-table-content
+.table
+td {
+  padding:
+    12px
+    10px;
+
+  color:
+    var(--ws-text);
+
+  font-size:
+    13px;
+
+  line-height:
+    1.35;
+
+  vertical-align:
+    middle;
 }
 
 
@@ -1528,18 +1646,67 @@ td {
 }
 
 
-/* ============================================================
-   СОРТИРУЕМЫЕ ЗАГОЛОВКИ ТАБЛИЦЫ
-   ============================================================ */
+.zakup-reference-page
+.zakup-products-table-content
+.table
+tbody
+tr:hover
+td {
+  background:
+    var(--ws-surface-hover);
+}
+
 
 .zakup-reference-page
 .zakup-products-table-content
-.zakup-sortable-table
-th {
-  padding:
-    0;
+.table
+th.left,
+.zakup-reference-page
+.zakup-products-table-content
+.table
+td.left {
+  text-align:
+    left;
 }
 
+
+.zakup-reference-page
+.zakup-products-table-content
+.table
+th.center,
+.zakup-reference-page
+.zakup-products-table-content
+.table
+td.center {
+  text-align:
+    center;
+}
+
+
+.zakup-reference-page
+.zakup-products-table-content
+.table
+td:first-child {
+  white-space:
+    nowrap;
+}
+
+
+.zakup-reference-page
+.zakup-products-table-content
+.table
+td:nth-child(2) {
+  white-space:
+    normal;
+
+  overflow-wrap:
+    anywhere;
+}
+
+
+/* ============================================================
+   СОРТИРУЕМЫЕ ЗАГОЛОВКИ ТАБЛИЦЫ
+   ============================================================ */
 
 .zakup-reference-page
 .zakup-sort-button {
@@ -1555,15 +1722,21 @@ th {
   width:
     100%;
 
+  min-width:
+    0;
+
   min-height:
-    34px;
+    40px;
 
   box-sizing:
     border-box;
 
   padding:
-    9px
+    12px
     10px;
+
+  overflow:
+    hidden;
 
   border:
     none;
@@ -1578,10 +1751,10 @@ th {
     inherit;
 
   font-size:
-    10px;
+    12px;
 
   font-weight:
-    650;
+    700;
 
   line-height:
     1.2;
@@ -1603,6 +1776,27 @@ th {
 
 
 .zakup-reference-page
+.zakup-sort-button
+> span:first-child {
+  min-width:
+    0;
+
+  flex:
+    1 1
+    auto;
+
+  overflow:
+    hidden;
+
+  white-space:
+    nowrap;
+
+  text-overflow:
+    ellipsis;
+}
+
+
+.zakup-reference-page
 .zakup-sort-button--left {
   justify-content:
     flex-start;
@@ -1613,12 +1807,32 @@ th {
 
 
 .zakup-reference-page
-.zakup-sort-button--right {
+.zakup-sort-button--left
+> span:first-child {
+  text-align:
+    left;
+}
+
+
+.zakup-reference-page
+.zakup-sort-button--center {
   justify-content:
-    flex-end;
+    center;
 
   text-align:
-    right;
+    center;
+}
+
+
+.zakup-reference-page
+.zakup-sort-button--center
+> span:first-child {
+  flex:
+    0 1
+    auto;
+
+  text-align:
+    center;
 }
 
 
@@ -1651,20 +1865,29 @@ th {
     center;
 
   width:
-    12px;
+    13px;
+
+  min-width:
+    13px;
+
+  height:
+    16px;
 
   flex:
     0 0
-    12px;
+    13px;
+
+  overflow:
+    hidden;
 
   font-size:
-    12px;
+    13px;
 
   font-weight:
     800;
 
   line-height:
-    1;
+    16px;
 }
 
 
