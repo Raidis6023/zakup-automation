@@ -363,7 +363,7 @@ function getSupabaseConfig() {
 // ============================================================
 
 async function getVedOrders():
-  Promise<VedOrder[]> {
+Promise<VedOrder[]> {
 
   const {
     supabaseUrl,
@@ -471,7 +471,7 @@ async function getVedOrders():
 async function getVedOrderItems(
   orderIds: string[]
 ):
-  Promise<VedOrderItem[]> {
+Promise<VedOrderItem[]> {
 
   if (
     orderIds.length === 0
@@ -708,7 +708,7 @@ async function takeOrderInWork(
 
 
   redirect(
-    `/ved-orders/${orderId}`
+    `/ved-orders/${orderId}?from=ved`
   );
 
 }
@@ -732,57 +732,34 @@ function workflowStatusName(
   ) {
 
     case "sent_to_ved":
-
       return "Передан в ВЭД";
 
-
     case "ved_in_work":
-
       return "В работе ВЭД";
 
-
     case "returned_for_edit":
-
       return "Возвращён на доработку";
 
-
     case "production_confirmed":
-
       return "В производстве";
 
-
     case "in_transit":
-
       return "В пути";
 
-
     case "arrived":
-
       return "Прибыл";
 
-
     case "rejected":
-
       return "Отклонён";
 
-
     case "cancelled":
-
       return "Отменён";
 
-
     case "draft":
-
       return "Черновик";
 
-
     default:
-
-      return (
-        status
-        ??
-        "—"
-      );
+      return status ?? "—";
 
   }
 
@@ -803,43 +780,28 @@ function workflowStatusClass(
   ) {
 
     case "sent_to_ved":
-
       return "ved-status--waiting";
 
-
     case "ved_in_work":
-
       return "ved-status--work";
 
-
     case "returned_for_edit":
-
       return "ved-status--returned";
 
-
     case "production_confirmed":
-
       return "ved-status--production";
 
-
     case "in_transit":
-
       return "ved-status--transit";
 
-
     case "arrived":
-
       return "ved-status--arrived";
-
 
     case "rejected":
     case "cancelled":
-
       return "ved-status--rejected";
 
-
     default:
-
       return "ved-status--default";
 
   }
@@ -992,10 +954,10 @@ function buildTotals(
   items:
     VedOrderItem[]
 ):
-  Map<
-    string,
-    OrderTotals
-  > {
+Map<
+  string,
+  OrderTotals
+> {
 
   const totals =
     new Map<
@@ -1032,23 +994,12 @@ function buildTotals(
       )
       ??
       {
-        items:
-          0,
-
-        cartons:
-          0,
-
-        quantity:
-          0,
-
-        priceCny:
-          0,
-
-        volumeM3:
-          0,
-
-        weightTons:
-          0,
+        items: 0,
+        cartons: 0,
+        quantity: 0,
+        priceCny: 0,
+        volumeM3: 0,
+        weightTons: 0,
       };
 
 
@@ -1134,9 +1085,7 @@ export default async function VedPage() {
     items =
       await getVedOrderItems(
         orders.map(
-          (
-            order
-          ) =>
+          order =>
             order.id
         )
       );
@@ -1148,44 +1097,37 @@ export default async function VedPage() {
     return (
 
       <main
-        className=
-          "page ved-reference-page"
+        className="page ved-reference-page"
       >
 
         <div
-          className=
-            "container"
+          className="container"
         >
 
           <header
-            className=
-              "header ved-header"
+            className="header ved-header"
           >
 
             <div
-              className=
-                "ved-title-wrap"
+              className="ved-title-wrap"
             >
 
               <div
-                className=
-                  "small-label"
+                className="small-label"
               >
                 РАБОЧЕЕ ПРОСТРАНСТВО
               </div>
 
 
               <h1
-                className=
-                  "title"
+                className="title"
               >
                 ВЭД
               </h1>
 
 
               <p
-                className=
-                  "subtitle"
+                className="subtitle"
               >
                 Заказы в Китай и работа отдела ВЭД.
               </p>
@@ -1194,8 +1136,7 @@ export default async function VedPage() {
 
 
             <div
-              className=
-                "header-actions ved-header-actions"
+              className="header-actions ved-header-actions"
             >
 
               <ThemeToggle />
@@ -1203,9 +1144,7 @@ export default async function VedPage() {
 
               <Link
                 href="/"
-
-                className=
-                  "secondary-button ved-back-link"
+                className="secondary-button ved-back-link"
               >
                 ← Главная
               </Link>
@@ -1216,13 +1155,11 @@ export default async function VedPage() {
 
 
           <section
-            className=
-              "section ved-error-section"
+            className="section ved-error-section"
           >
 
             <div
-              className=
-                "error-box"
+              className="error-box"
             >
 
               <strong>
@@ -1231,6 +1168,7 @@ export default async function VedPage() {
 
 
               <div>
+
                 {
                   error instanceof Error
 
@@ -1238,6 +1176,7 @@ export default async function VedPage() {
 
                     : "Неизвестная ошибка"
                 }
+
               </div>
 
             </div>
@@ -1261,9 +1200,7 @@ export default async function VedPage() {
 
   const waitingCount =
     orders.filter(
-      (
-        order
-      ) =>
+      order =>
         order.workflow_status ===
         "sent_to_ved"
     ).length;
@@ -1271,9 +1208,7 @@ export default async function VedPage() {
 
   const inWorkCount =
     orders.filter(
-      (
-        order
-      ) =>
+      order =>
         order.workflow_status ===
         "ved_in_work"
     ).length;
@@ -1281,9 +1216,7 @@ export default async function VedPage() {
 
   const productionCount =
     orders.filter(
-      (
-        order
-      ) =>
+      order =>
         order.workflow_status ===
         "production_confirmed"
     ).length;
@@ -1291,9 +1224,7 @@ export default async function VedPage() {
 
   const transitCount =
     orders.filter(
-      (
-        order
-      ) =>
+      order =>
         order.workflow_status ===
         "in_transit"
     ).length;
@@ -1302,13 +1233,11 @@ export default async function VedPage() {
   return (
 
     <main
-      className=
-        "page ved-reference-page"
+      className="page ved-reference-page"
     >
 
       <div
-        className=
-          "container"
+        className="container"
       >
 
         {/* ===================================
@@ -1316,34 +1245,29 @@ export default async function VedPage() {
             =================================== */}
 
         <header
-          className=
-            "header ved-header"
+          className="header ved-header"
         >
 
           <div
-            className=
-              "ved-title-wrap"
+            className="ved-title-wrap"
           >
 
             <div
-              className=
-                "small-label"
+              className="small-label"
             >
               РАБОЧЕЕ ПРОСТРАНСТВО
             </div>
 
 
             <h1
-              className=
-                "title"
+              className="title"
             >
               ВЭД
             </h1>
 
 
             <p
-              className=
-                "subtitle"
+              className="subtitle"
             >
               Заказы в Китай, переданные в работу отдела ВЭД.
             </p>
@@ -1352,8 +1276,7 @@ export default async function VedPage() {
 
 
           <div
-            className=
-              "header-actions ved-header-actions"
+            className="header-actions ved-header-actions"
           >
 
             <ThemeToggle />
@@ -1361,9 +1284,7 @@ export default async function VedPage() {
 
             <Link
               href="/"
-
-              className=
-                "secondary-button ved-back-link"
+              className="secondary-button ved-back-link"
             >
               ← Главная
             </Link>
@@ -1378,18 +1299,15 @@ export default async function VedPage() {
             =================================== */}
 
         <section
-          className=
-            "summary-grid ved-summary-grid"
+          className="summary-grid ved-summary-grid"
         >
 
           <div
-            className=
-              "card ved-summary-card"
+            className="card ved-summary-card"
           >
 
             <span
-              className=
-                "ved-summary-icon ved-summary-icon--blue"
+              className="ved-summary-icon ved-summary-icon--blue"
             >
 
               <VedReferenceIcon
@@ -1400,21 +1318,18 @@ export default async function VedPage() {
 
 
             <div
-              className=
-                "ved-summary-copy"
+              className="ved-summary-copy"
             >
 
               <div
-                className=
-                  "card-label"
+                className="card-label"
               >
                 Ждут ВЭД
               </div>
 
 
               <div
-                className=
-                  "big-number"
+                className="big-number"
               >
                 {
                   waitingCount
@@ -1423,8 +1338,7 @@ export default async function VedPage() {
 
 
               <div
-                className=
-                  "muted"
+                className="muted"
               >
                 Ещё не взяты в работу
               </div>
@@ -1435,13 +1349,11 @@ export default async function VedPage() {
 
 
           <div
-            className=
-              "card ved-summary-card"
+            className="card ved-summary-card"
           >
 
             <span
-              className=
-                "ved-summary-icon ved-summary-icon--green"
+              className="ved-summary-icon ved-summary-icon--green"
             >
 
               <VedReferenceIcon
@@ -1452,21 +1364,18 @@ export default async function VedPage() {
 
 
             <div
-              className=
-                "ved-summary-copy"
+              className="ved-summary-copy"
             >
 
               <div
-                className=
-                  "card-label"
+                className="card-label"
               >
                 В работе
               </div>
 
 
               <div
-                className=
-                  "big-number"
+                className="big-number"
               >
                 {
                   inWorkCount
@@ -1475,8 +1384,7 @@ export default async function VedPage() {
 
 
               <div
-                className=
-                  "muted"
+                className="muted"
               >
                 Ответственный назначен
               </div>
@@ -1487,13 +1395,11 @@ export default async function VedPage() {
 
 
           <div
-            className=
-              "card ved-summary-card"
+            className="card ved-summary-card"
           >
 
             <span
-              className=
-                "ved-summary-icon ved-summary-icon--purple"
+              className="ved-summary-icon ved-summary-icon--purple"
             >
 
               <VedReferenceIcon
@@ -1504,21 +1410,18 @@ export default async function VedPage() {
 
 
             <div
-              className=
-                "ved-summary-copy"
+              className="ved-summary-copy"
             >
 
               <div
-                className=
-                  "card-label"
+                className="card-label"
               >
                 Производство
               </div>
 
 
               <div
-                className=
-                  "big-number"
+                className="big-number"
               >
                 {
                   productionCount
@@ -1527,8 +1430,7 @@ export default async function VedPage() {
 
 
               <div
-                className=
-                  "muted"
+                className="muted"
               >
                 Подтверждённые заказы
               </div>
@@ -1539,13 +1441,11 @@ export default async function VedPage() {
 
 
           <div
-            className=
-              "card ved-summary-card"
+            className="card ved-summary-card"
           >
 
             <span
-              className=
-                "ved-summary-icon ved-summary-icon--orange"
+              className="ved-summary-icon ved-summary-icon--orange"
             >
 
               <VedReferenceIcon
@@ -1556,21 +1456,18 @@ export default async function VedPage() {
 
 
             <div
-              className=
-                "ved-summary-copy"
+              className="ved-summary-copy"
             >
 
               <div
-                className=
-                  "card-label"
+                className="card-label"
               >
                 В пути
               </div>
 
 
               <div
-                className=
-                  "big-number"
+                className="big-number"
               >
                 {
                   transitCount
@@ -1579,8 +1476,7 @@ export default async function VedPage() {
 
 
               <div
-                className=
-                  "muted"
+                className="muted"
               >
                 Едут в Россию
               </div>
@@ -1597,31 +1493,26 @@ export default async function VedPage() {
             =================================== */}
 
         <section
-          className=
-            "section ved-orders-section"
+          className="section ved-orders-section"
         >
 
           <div
-            className=
-              "section-header ved-orders-header"
+            className="section-header ved-orders-header"
           >
 
             <div
-              className=
-                "ved-orders-heading"
+              className="ved-orders-heading"
             >
 
               <h2
-                className=
-                  "section-title"
+                className="section-title"
               >
                 Заказы ВЭД
               </h2>
 
 
               <div
-                className=
-                  "muted"
+                className="muted"
               >
                 Переданные, активные и завершённые заказы.
               </div>
@@ -1630,8 +1521,7 @@ export default async function VedPage() {
 
 
             <div
-              className=
-                "ved-orders-count"
+              className="ved-orders-count"
             >
               Всего:{" "}
 
@@ -1652,8 +1542,7 @@ export default async function VedPage() {
               ? (
 
                 <div
-                  className=
-                    "reason-box ved-empty"
+                  className="reason-box ved-empty"
                 >
 
                   <strong>
@@ -1662,8 +1551,7 @@ export default async function VedPage() {
 
 
                   <div
-                    className=
-                      "reason-text"
+                    className="reason-text"
                   >
                     После передачи заказа из Закупа он появится здесь.
                   </div>
@@ -1675,93 +1563,58 @@ export default async function VedPage() {
               : (
 
                 <div
-                  className=
-                    "table-wrapper"
+                  className="table-wrapper"
                 >
 
                   <table
-                    className=
-                      "table ved-orders-table"
+                    className="table ved-orders-table"
                   >
 
                     <thead>
 
                       <tr>
 
-                        <th
-                          className=
-                            "left"
-                        >
+                        <th className="left">
                           Заказ
                         </th>
 
-                        <th
-                          className=
-                            "left"
-                        >
+                        <th className="left">
                           Статус
                         </th>
 
-                        <th
-                          className=
-                            "left"
-                        >
+                        <th className="left">
                           Транспорт
                         </th>
 
-                        <th
-                          className=
-                            "left"
-                        >
+                        <th className="left">
                           Передан
                         </th>
 
-                        <th
-                          className=
-                            "left"
-                        >
+                        <th className="left">
                           Ответственный ВЭД
                         </th>
 
-                        <th
-                          className=
-                            "right"
-                        >
+                        <th className="right">
                           Товаров
                         </th>
 
-                        <th
-                          className=
-                            "right"
-                        >
+                        <th className="right">
                           Коробов
                         </th>
 
-                        <th
-                          className=
-                            "right"
-                        >
+                        <th className="right">
                           Шт.
                         </th>
 
-                        <th
-                          className=
-                            "right"
-                        >
+                        <th className="right">
                           CNY
                         </th>
 
-                        <th
-                          className=
-                            "right"
-                        >
+                        <th className="right">
                           м³
                         </th>
 
-                        <th
-                          className=
-                            "right"
-                        >
+                        <th className="right">
                           Действие
                         </th>
 
@@ -1774,9 +1627,7 @@ export default async function VedPage() {
 
                       {
                         orders.map(
-                          (
-                            order
-                          ) => {
+                          order => {
 
                             const orderTotals =
                               totals.get(
@@ -1784,23 +1635,12 @@ export default async function VedPage() {
                               )
                               ??
                               {
-                                items:
-                                  0,
-
-                                cartons:
-                                  0,
-
-                                quantity:
-                                  0,
-
-                                priceCny:
-                                  0,
-
-                                volumeM3:
-                                  0,
-
-                                weightTons:
-                                  0,
+                                items: 0,
+                                cartons: 0,
+                                quantity: 0,
+                                priceCny: 0,
+                                volumeM3: 0,
+                                weightTons: 0,
                               };
 
 
@@ -1818,18 +1658,13 @@ export default async function VedPage() {
                                 }
                               >
 
-                                <td
-                                  className=
-                                    "left"
-                                >
+                                <td className="left">
 
                                   <Link
                                     href={
-                                      `/ved-orders/${order.id}`
+                                      `/ved-orders/${order.id}?from=ved`
                                     }
-
-                                    className=
-                                      "ved-order-link"
+                                    className="ved-order-link"
                                   >
 
                                     <strong>
@@ -1842,8 +1677,7 @@ export default async function VedPage() {
 
 
                                   <div
-                                    className=
-                                      "muted ved-order-created"
+                                    className="muted ved-order-created"
                                   >
                                     Создан:{" "}
 
@@ -1857,10 +1691,7 @@ export default async function VedPage() {
                                 </td>
 
 
-                                <td
-                                  className=
-                                    "left"
-                                >
+                                <td className="left">
 
                                   <span
                                     className={
@@ -1871,8 +1702,7 @@ export default async function VedPage() {
                                   >
 
                                     <span
-                                      className=
-                                        "ved-status-dot"
+                                      className="ved-status-dot"
                                     />
 
 
@@ -1887,10 +1717,7 @@ export default async function VedPage() {
                                 </td>
 
 
-                                <td
-                                  className=
-                                    "left"
-                                >
+                                <td className="left">
                                   {
                                     transportName(
                                       order
@@ -1899,10 +1726,7 @@ export default async function VedPage() {
                                 </td>
 
 
-                                <td
-                                  className=
-                                    "left"
-                                >
+                                <td className="left">
                                   {
                                     formatDate(
                                       order.first_sent_to_ved_at
@@ -1911,22 +1735,18 @@ export default async function VedPage() {
                                 </td>
 
 
-                                <td
-                                  className=
-                                    "left"
-                                >
+                                <td className="left">
+
                                   {
                                     order.ved_responsible_name
                                     ??
                                     "Не назначен"
                                   }
+
                                 </td>
 
 
-                                <td
-                                  className=
-                                    "right"
-                                >
+                                <td className="right">
                                   {
                                     formatNumber(
                                       orderTotals.items
@@ -1935,10 +1755,7 @@ export default async function VedPage() {
                                 </td>
 
 
-                                <td
-                                  className=
-                                    "right"
-                                >
+                                <td className="right">
                                   {
                                     formatNumber(
                                       orderTotals.cartons
@@ -1947,14 +1764,10 @@ export default async function VedPage() {
                                 </td>
 
 
-                                <td
-                                  className=
-                                    "right"
-                                >
+                                <td className="right">
 
                                   <strong
-                                    className=
-                                      "ved-number-strong"
+                                    className="ved-number-strong"
                                   >
                                     {
                                       formatNumber(
@@ -1966,10 +1779,7 @@ export default async function VedPage() {
                                 </td>
 
 
-                                <td
-                                  className=
-                                    "right"
-                                >
+                                <td className="right">
                                   {
                                     formatNumber(
                                       orderTotals.priceCny,
@@ -1979,10 +1789,7 @@ export default async function VedPage() {
                                 </td>
 
 
-                                <td
-                                  className=
-                                    "right"
-                                >
+                                <td className="right">
                                   {
                                     formatNumber(
                                       orderTotals.volumeM3,
@@ -1993,8 +1800,7 @@ export default async function VedPage() {
 
 
                                 <td
-                                  className=
-                                    "right ved-action-cell"
+                                  className="right ved-action-cell"
                                 >
 
                                   {
@@ -2011,10 +1817,7 @@ export default async function VedPage() {
 
                                           <input
                                             type="hidden"
-
-                                            name=
-                                              "orderId"
-
+                                            name="orderId"
                                             value={
                                               order.id
                                             }
@@ -2023,9 +1826,7 @@ export default async function VedPage() {
 
                                           <button
                                             type="submit"
-
-                                            className=
-                                              "primary-button ved-action-button"
+                                            className="primary-button ved-action-button"
                                           >
                                             Взять в работу
                                           </button>
@@ -2038,11 +1839,9 @@ export default async function VedPage() {
 
                                         <Link
                                           href={
-                                            `/ved-orders/${order.id}`
+                                            `/ved-orders/${order.id}?from=ved`
                                           }
-
-                                          className=
-                                            "secondary-button ved-action-button"
+                                          className="secondary-button ved-action-button"
                                         >
                                           Открыть
                                         </Link>
@@ -2077,30 +1876,24 @@ export default async function VedPage() {
             =================================== */}
 
         <section
-          className=
-            "section ved-logic-section"
+          className="section ved-logic-section"
         >
 
           <div
-            className=
-              "reason-box ved-logic-box"
+            className="reason-box ved-logic-box"
           >
 
             <span
-              className=
-                "ved-logic-icon"
+              className="ved-logic-icon"
             >
-
               <VedReferenceIcon
                 name="info"
               />
-
             </span>
 
 
             <div
-              className=
-                "ved-logic-copy"
+              className="ved-logic-copy"
             >
 
               <strong>
@@ -2109,8 +1902,7 @@ export default async function VedPage() {
 
 
               <div
-                className=
-                  "reason-text"
+                className="reason-text"
               >
                 Заказ сначала появляется со статусом{" "}
                 «Передан в ВЭД». После нажатия{" "}
