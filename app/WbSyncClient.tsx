@@ -1,51 +1,118 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
+  useRouter,
+} from "next/navigation";
+
 
 type SyncState = {
-  lastHttpStatus: number | null;
-  lastAttemptAt: string | null;
-  lastSuccessAt: string | null;
-  nextAllowedAt: string | null;
-  retryAfterSeconds: number | null;
-  lastMessage: string | null;
+
+  lastHttpStatus:
+    number | null;
+
+  lastAttemptAt:
+    string | null;
+
+  lastSuccessAt:
+    string | null;
+
+  nextAllowedAt:
+    string | null;
+
+  retryAfterSeconds:
+    number | null;
+
+  lastMessage:
+    string | null;
+
 };
+
 
 type Props = {
-  endpoint: string;
-  label: string;
-  loadingLabel: string;
-  initialState?: SyncState | null;
+
+  endpoint:
+    string;
+
+  label:
+    string;
+
+  loadingLabel:
+    string;
+
+  initialState?:
+    SyncState | null;
+
 };
 
+
 type ApiResult = {
-  ok?: boolean;
-  skipped?: boolean;
-  blockedByRateLimit?: boolean;
-  message?: string;
-  error?: unknown;
 
-  wbStatus?: number;
-  lastHttpStatus?: number;
+  ok?:
+    boolean;
 
-  nextAllowedAt?: string | null;
-  secondsRemaining?: number;
+  skipped?:
+    boolean;
 
-  retryAfterSeconds?: number | null;
-  retryAfterSecondsOriginally?: number | null;
+  blockedByRateLimit?:
+    boolean;
+
+  message?:
+    string;
+
+  error?:
+    unknown;
+
+
+  wbStatus?:
+    number;
+
+  lastHttpStatus?:
+    number;
+
+
+  nextAllowedAt?:
+    string | null;
+
+  secondsRemaining?:
+    number;
+
+
+  retryAfterSeconds?:
+    number | null;
+
+  retryAfterSecondsOriginally?:
+    number | null;
+
 
   saved?: {
-    syncedAt?: string;
+
+    syncedAt?:
+      string;
+
   };
+
 
   newSnapshot?: {
-    snapshotAt?: string;
+
+    snapshotAt?:
+      string;
+
   };
 
+
   wildberries?: {
-    status?: number;
+
+    status?:
+      number;
+
   };
+
 };
 
 
@@ -59,15 +126,6 @@ const WB_COOLDOWN_SECONDS =
 
 // ============================================================
 // УТРЕННИЙ CRON
-//
-// vercel.json:
-// 22:00 UTC
-//
-// Красноярск:
-// 05:00 следующего дня
-//
-// На Hobby запуск может произойти
-// в течение примерно часа.
 // ============================================================
 
 const DAILY_SYNC_UTC_HOUR =
@@ -91,7 +149,9 @@ function getTimestamp(
 number | null {
 
   if (!value) {
+
     return null;
+
   }
 
 
@@ -104,8 +164,10 @@ number | null {
   return Number.isFinite(
     timestamp
   )
-    ? timestamp
-    : null;
+    ?
+    timestamp
+    :
+    null;
 
 }
 
@@ -130,9 +192,11 @@ string | null {
 
 
   if (
-    timestamp === null
+    timestamp ===
+      null
     ||
-    seconds <= 0
+    seconds <=
+      0
   ) {
 
     return null;
@@ -143,7 +207,9 @@ string | null {
   return new Date(
     timestamp
     +
-    seconds * 1000
+    seconds
+    *
+    1000
   ).toISOString();
 
 }
@@ -175,9 +241,11 @@ string | null {
 
 
   if (
-    firstTime === null
+    firstTime ===
+      null
     &&
-    secondTime === null
+    secondTime ===
+      null
   ) {
 
     return null;
@@ -186,26 +254,41 @@ string | null {
 
 
   if (
-    firstTime === null
+    firstTime ===
+    null
   ) {
 
-    return second ?? null;
+    return second
+    ??
+    null;
 
   }
 
 
   if (
-    secondTime === null
+    secondTime ===
+    null
   ) {
 
-    return first ?? null;
+    return first
+    ??
+    null;
 
   }
 
 
-  return firstTime >= secondTime
-    ? first ?? null
-    : second ?? null;
+  return firstTime >=
+    secondTime
+
+    ?
+    first
+    ??
+    null
+
+    :
+    second
+    ??
+    null;
 
 }
 
@@ -222,10 +305,12 @@ string | null {
 
   return laterDate(
 
-    state?.nextAllowedAt,
+    state
+      ?.nextAllowedAt,
 
     addSeconds(
-      state?.lastSuccessAt,
+      state
+        ?.lastSuccessAt,
       WB_COOLDOWN_SECONDS
     )
 
@@ -271,7 +356,8 @@ number {
 
 
   if (
-    result <= now
+    result <=
+    now
   ) {
 
     result +=
@@ -339,14 +425,18 @@ string {
 
   const hours =
     Math.floor(
-      safe / 3600
+      safe
+      /
+      3600
     );
 
 
   const minutes =
     Math.floor(
       (
-        safe % 3600
+        safe
+        %
+        3600
       )
       /
       60
@@ -354,7 +444,9 @@ string {
 
 
   const seconds =
-    safe % 60;
+    safe
+    %
+    60;
 
 
   return [
@@ -389,7 +481,9 @@ function formatKrasnoyarskTime(
 string {
 
   if (!value) {
+
     return "—";
+
   }
 
 
@@ -413,6 +507,7 @@ string {
   return new Intl.DateTimeFormat(
     "ru-RU",
     {
+
       timeZone:
         "Asia/Krasnoyarsk",
 
@@ -424,6 +519,7 @@ string {
 
       second:
         "2-digit",
+
     }
   ).format(
     date
@@ -623,6 +719,7 @@ export default function WbSyncClient({
 
     },
     [
+
       initialState
         ?.lastHttpStatus,
 
@@ -640,6 +737,7 @@ export default function WbSyncClient({
 
       initialState
         ?.lastMessage,
+
     ]
   );
 
@@ -691,7 +789,9 @@ export default function WbSyncClient({
             router.refresh();
 
           },
-          60 * 1000
+          60
+          *
+          1000
         );
 
 
@@ -857,6 +957,92 @@ export default function WbSyncClient({
 
 
   // ==========================================================
+  // ТЕКСТ НАД КНОПКОЙ
+  // ==========================================================
+
+  let topMessage =
+    message;
+
+
+  let topMessageClass =
+    "wb-sync-hero-message-slot";
+
+
+  if (
+    error
+  ) {
+
+    topMessageClass +=
+      " wb-sync-hero-message-slot--error";
+
+  } else if (
+    activeKnownRateLimit
+    ||
+    unknownRateLimit
+  ) {
+
+    topMessageClass +=
+      " wb-sync-hero-message-slot--neutral";
+
+  } else if (
+    message
+  ) {
+
+    topMessageClass +=
+      " wb-sync-hero-message-slot--success";
+
+  }
+
+
+  // ==========================================================
+  // ТЕКСТ ПОД КНОПКОЙ
+  // ==========================================================
+
+  let bottomNote =
+    "";
+
+
+  if (
+    loading
+  ) {
+
+    bottomNote =
+      "Получаем свежие данные Wildberries…";
+
+  } else if (
+    activeKnownRateLimit
+  ) {
+
+    bottomNote =
+      `Доступно с ${formatKrasnoyarskTime(
+        rateState.nextAllowedAt
+      )}`;
+
+  } else if (
+    beforeDailySyncReservation
+  ) {
+
+    bottomNote =
+      "Ручное обновление временно недоступно";
+
+  } else if (
+    dailySyncWindowActive
+  ) {
+
+    bottomNote =
+      "Идёт утреннее автообновление WB";
+
+  } else if (
+    unknownRateLimit
+  ) {
+
+    bottomNote =
+      "Время сброса лимита WB не получено";
+
+  }
+
+
+  // ==========================================================
   // RUN
   // ==========================================================
 
@@ -892,11 +1078,13 @@ export default function WbSyncClient({
         await fetch(
           endpoint,
           {
+
             method:
               "GET",
 
             cache:
               "no-store",
+
           }
         );
 
@@ -936,13 +1124,16 @@ export default function WbSyncClient({
         response.status ===
           429
         ||
-        data?.wbStatus ===
+        data
+          ?.wbStatus ===
           429
         ||
-        data?.lastHttpStatus ===
+        data
+          ?.lastHttpStatus ===
           429
         ||
-        data?.blockedByRateLimit ===
+        data
+          ?.blockedByRateLimit ===
           true;
 
 
@@ -956,9 +1147,8 @@ export default function WbSyncClient({
 
         const serverNextAllowedAt =
           typeof data
-            ?.nextAllowedAt
-          ===
-          "string"
+            ?.nextAllowedAt ===
+            "string"
 
             ?
             data.nextAllowedAt
@@ -973,10 +1163,12 @@ export default function WbSyncClient({
             serverNextAllowedAt,
 
             addSeconds(
+
               rateState
                 .lastSuccessAt,
 
               WB_COOLDOWN_SECONDS
+
             )
 
           );
@@ -999,18 +1191,16 @@ export default function WbSyncClient({
 
             retryAfterSeconds:
               typeof data
-                ?.retryAfterSeconds
-              ===
-              "number"
+                ?.retryAfterSeconds ===
+                "number"
 
                 ?
                 data.retryAfterSeconds
 
                 :
                 typeof data
-                  ?.retryAfterSecondsOriginally
-                ===
-                "number"
+                  ?.retryAfterSecondsOriginally ===
+                  "number"
 
                   ?
                   data
@@ -1057,7 +1247,8 @@ export default function WbSyncClient({
       if (
         !response.ok
         ||
-        data?.ok ===
+        data
+          ?.ok ===
           false
       ) {
 
@@ -1087,10 +1278,12 @@ export default function WbSyncClient({
       // ======================================================
 
       const successAt =
-        data?.saved
+        data
+          ?.saved
           ?.syncedAt
         ??
-        data?.newSnapshot
+        data
+          ?.newSnapshot
           ?.snapshotAt
         ??
         new Date()
@@ -1099,9 +1292,8 @@ export default function WbSyncClient({
 
       const serverNextAllowedAt =
         typeof data
-          ?.nextAllowedAt
-        ===
-        "string"
+          ?.nextAllowedAt ===
+          "string"
 
           ?
           data.nextAllowedAt
@@ -1129,7 +1321,8 @@ export default function WbSyncClient({
           ...current,
 
           lastHttpStatus:
-            data?.wildberries
+            data
+              ?.wildberries
               ?.status
             ??
             200,
@@ -1203,15 +1396,45 @@ export default function WbSyncClient({
   return (
 
     <div
-      className=
-        "wb-sync-client wb-sync-client--hero"
+      className="wb-sync-client wb-sync-client--hero"
     >
+
+      {/* ======================================================
+          ВЕРХНЯЯ СТРОКА
+          Всегда занимает одно и то же место.
+          Поэтому кнопка больше не прыгает.
+          ====================================================== */}
+
+      <div
+        className={
+          topMessageClass
+        }
+
+        title={
+          topMessage
+          ||
+          undefined
+        }
+      >
+
+        {
+          topMessage
+          ||
+          "\u00A0"
+        }
+
+      </div>
+
+
+      {/* ======================================================
+          КНОПКА
+          Всегда стоит в средней строке.
+          ====================================================== */}
 
       <button
         type="button"
 
-        className=
-          "wb-sync-hero-button"
+        className="wb-sync-hero-button"
 
         onClick={
           runSync
@@ -1237,13 +1460,11 @@ export default function WbSyncClient({
               "wb-sync-hero-button__icon"
           }
 
-          aria-hidden=
-            "true"
+          aria-hidden="true"
         >
 
           <svg
-            viewBox=
-              "0 0 24 24"
+            viewBox="0 0 24 24"
           >
 
             <path
@@ -1304,116 +1525,36 @@ export default function WbSyncClient({
       </button>
 
 
-      {
-        loading
+      {/* ======================================================
+          НИЖНЯЯ СТРОКА
+          Всегда зарезервирована под "Доступно с..."
+          ====================================================== */}
 
-          ? (
-
-            <div
-              className=
-                "wb-sync-hero-note wb-sync-hero-note--active"
-            >
-              Получаем свежие данные Wildberries…
-            </div>
-
-          )
-
-          :
+      <div
+        className={
           activeKnownRateLimit
 
-            ? (
-
-              <div
-                className=
-                  "wb-sync-hero-note wb-sync-hero-note--limit"
-              >
-                Доступно с{" "}
-
-                {
-                  formatKrasnoyarskTime(
-                    rateState
-                      .nextAllowedAt
-                  )
-                }
-              </div>
-
-            )
+            ?
+            "wb-sync-hero-note-slot wb-sync-hero-note-slot--limit"
 
             :
-            beforeDailySyncReservation
+            loading
 
-              ? (
-
-                <div
-                  className=
-                    "wb-sync-hero-note"
-                >
-                  Ручное обновление временно недоступно
-                </div>
-
-              )
+              ?
+              "wb-sync-hero-note-slot wb-sync-hero-note-slot--active"
 
               :
-              dailySyncWindowActive
+              "wb-sync-hero-note-slot"
+        }
+      >
 
-                ? (
+        {
+          bottomNote
+          ||
+          "\u00A0"
+        }
 
-                  <div
-                    className=
-                      "wb-sync-hero-note"
-                  >
-                    Идёт утреннее автообновление WB
-                  </div>
-
-                )
-
-                :
-                unknownRateLimit
-
-                  ? (
-
-                    <div
-                      className=
-                        "wb-sync-hero-note wb-sync-hero-note--limit"
-                    >
-                      Время сброса лимита WB не получено
-                    </div>
-
-                  )
-
-                  :
-                  null
-      }
-
-
-      {
-        message
-
-          ? (
-
-            <div
-              className={
-                error
-
-                  ?
-                  "wb-sync-hero-message wb-sync-hero-message--error"
-
-                  :
-                  "wb-sync-hero-message"
-              }
-            >
-
-              {
-                message
-              }
-
-            </div>
-
-          )
-
-          :
-          null
-      }
+      </div>
 
     </div>
 
