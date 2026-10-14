@@ -1,122 +1,14 @@
 /* ============================================================
    WILDBERRIES
-   ВЕРХ СТРАНИЦЫ + ПЛАШКА СИНХРОНИЗАЦИИ
+   ВЕРХНЯЯ ПЛАШКА СИНХРОНИЗАЦИИ
 
-   KPI и таблицы этот файл не переоформляет.
+   Здесь ТОЛЬКО плашка синхронизации.
+   Шапка страницы оформляется отдельно.
    ============================================================ */
 
 
 /* ============================================================
-   STICKY HEADER СТРАНИЦЫ
-
-   Закрепляем:
-   - заголовок Wildberries
-   - подпись
-   - кнопки справа
-   - существующие полосы справа
-
-   Визуально отдельную липкую панель не рисуем.
-   Фон совпадает с фоном страницы.
-   ============================================================ */
-
-.wb-page-sticky-header {
-  position: sticky;
-
-  /*
-    Сверху уже живёт общая панель Workspace.
-    Поэтому WB-header закрепляем сразу под ней.
-  */
-  top: 42px;
-
-  z-index: 40;
-
-  margin-left: -8px;
-  margin-right: -8px;
-
-  padding:
-    9px 8px 10px;
-
-  background:
-    rgba(
-      246,
-      250,
-      254,
-      0.96
-    );
-
-  backdrop-filter:
-    blur(12px);
-
-  -webkit-backdrop-filter:
-    blur(12px);
-
-  /*
-    Специально без видимой рамки и без тени.
-    При прокрутке блок просто остаётся на месте,
-    а не выглядит как ещё одна карточка.
-  */
-  border: 0;
-
-  box-shadow: none;
-}
-
-
-/* ============================================================
-   ЗАГОЛОВОК
-
-   Слева больше нет квадратного WB-логотипа.
-   Текст начинается сразу от обычной левой границы контента.
-   ============================================================ */
-
-.wb-title-wrap--text-only {
-  display: flex;
-
-  align-items: center;
-
-  min-width: 0;
-}
-
-
-.wb-page-title {
-  margin-top: 0;
-  margin-bottom: 2px;
-}
-
-
-.wb-page-subtitle {
-  margin-top: 0;
-  margin-bottom: 0;
-}
-
-
-/* ============================================================
-   DARK THEME ДЛЯ STICKY HEADER
-   ============================================================ */
-
-html[data-theme="dark"]
-.wb-page-sticky-header,
-
-html.dark
-.wb-page-sticky-header,
-
-body.dark
-.wb-page-sticky-header {
-  background:
-    rgba(
-      7,
-      22,
-      37,
-      0.96
-    );
-
-  box-shadow: none;
-}
-
-
-/* ============================================================
-   ВСЯ ПЛАШКА СИНХРОНИЗАЦИИ
-
-   4 равные четверти.
+   ВСЯ ПЛАШКА
    ============================================================ */
 
 .wb-sync-hero {
@@ -162,7 +54,7 @@ body.dark
 .wb-sync-hero__quarter--border {
   border-left:
     1px solid
-    var(--border, #e2e8f0);
+    var(--ws-border);
 }
 
 
@@ -300,7 +192,7 @@ body.dark
   margin-top: 4px;
 
   color:
-    var(--muted, #64748b);
+    var(--ws-text-muted);
 
   font-size: 12px;
   font-weight: 500;
@@ -342,7 +234,7 @@ body.dark
   justify-content: center;
 
   color:
-    #1683ff;
+    var(--ws-blue);
 }
 
 
@@ -373,7 +265,7 @@ body.dark
   margin-bottom: 4px;
 
   color:
-    var(--muted, #64748b);
+    var(--ws-text-muted);
 
   font-size: 13px;
   font-weight: 600;
@@ -386,7 +278,7 @@ body.dark
 
 .wb-sync-fact__value {
   color:
-    var(--text, #0f172a);
+    var(--ws-text);
 
   font-size: 15px;
   font-weight: 800;
@@ -403,7 +295,7 @@ body.dark
   margin-top: 4px;
 
   color:
-    var(--muted, #64748b);
+    var(--ws-text-muted);
 
   font-size: 12px;
   font-weight: 500;
@@ -416,7 +308,7 @@ body.dark
 
 /* ============================================================
    4 / 4
-   ОБЁРТКА КНОПКИ
+   КНОПКА
    ============================================================ */
 
 .wb-sync-hero__action {
@@ -465,7 +357,7 @@ body.dark
   overflow: hidden;
 
   color:
-    var(--muted, #64748b);
+    var(--ws-text-muted);
 
   font-size: 10px;
   font-weight: 600;
@@ -494,7 +386,7 @@ body.dark
 
 .wb-sync-hero-message-slot--neutral {
   color:
-    var(--muted, #64748b);
+    var(--ws-text-muted);
 }
 
 
@@ -598,8 +490,7 @@ body.dark
 
 
 /* ============================================================
-   DISABLED / ЛИМИТ
-   БЛЕДНО-РОЗОВАЯ ВЕРСИЯ WB
+   DISABLED
    ============================================================ */
 
 .wb-sync-hero-button:disabled {
@@ -660,8 +551,7 @@ body.dark
   stroke:
     currentColor;
 
-  stroke-width:
-    2;
+  stroke-width: 2;
 
   stroke-linecap: round;
 
@@ -706,7 +596,7 @@ body.dark
   overflow: hidden;
 
   color:
-    var(--muted, #64748b);
+    var(--ws-text-muted);
 
   font-size: 10px;
   font-weight: 600;
@@ -723,27 +613,21 @@ body.dark
 
 .wb-sync-hero-note-slot--limit {
   color:
-    var(--muted, #64748b);
+    var(--ws-text-muted);
 }
 
 
 .wb-sync-hero-note-slot--active {
   color:
-    #cb11ab;
+    var(--wb-accent);
 }
 
 
 /* ============================================================
-   DARK THEME
+   DARK
    ============================================================ */
 
 html[data-theme="dark"]
-.wb-sync-status-card--success,
-
-html.dark
-.wb-sync-status-card--success,
-
-body.dark
 .wb-sync-status-card--success {
   border-color:
     rgba(
@@ -765,14 +649,6 @@ body.dark
 
 html[data-theme="dark"]
 .wb-sync-status-card--success
-.wb-sync-status-card__title,
-
-html.dark
-.wb-sync-status-card--success
-.wb-sync-status-card__title,
-
-body.dark
-.wb-sync-status-card--success
 .wb-sync-status-card__title {
   color:
     #34d399;
@@ -780,12 +656,6 @@ body.dark
 
 
 html[data-theme="dark"]
-.wb-sync-hero-button,
-
-html.dark
-.wb-sync-hero-button,
-
-body.dark
 .wb-sync-hero-button {
   border-color:
     rgba(
@@ -815,12 +685,6 @@ body.dark
 
 
 html[data-theme="dark"]
-.wb-sync-hero-button:disabled,
-
-html.dark
-.wb-sync-hero-button:disabled,
-
-body.dark
 .wb-sync-hero-button:disabled {
   color:
     #d7a8cf;
@@ -862,8 +726,7 @@ body.dark
    ============================================================ */
 
 @media (
-  max-width:
-    1050px
+  max-width: 1050px
 ) {
 
   .wb-sync-hero {
@@ -884,36 +747,22 @@ body.dark
 
     border-top:
       1px solid
-      var(--border, #e2e8f0);
+      var(--ws-border);
   }
 
 
   .wb-sync-hero__quarter:nth-child(4) {
     border-top:
       1px solid
-      var(--border, #e2e8f0);
+      var(--ws-border);
   }
 
 }
 
 
 @media (
-  max-width:
-    650px
+  max-width: 650px
 ) {
-
-  .wb-page-sticky-header {
-    top: 0;
-
-    padding-top: 7px;
-    padding-bottom: 7px;
-  }
-
-
-  .wb-page-subtitle {
-    display: none;
-  }
-
 
   .wb-sync-hero {
     grid-template-columns:
@@ -933,7 +782,7 @@ body.dark
 
     border-top:
       1px solid
-      var(--border, #e2e8f0);
+      var(--ws-border);
   }
 
 
