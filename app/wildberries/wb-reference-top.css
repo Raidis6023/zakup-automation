@@ -87,17 +87,17 @@
 /* ============================================================
    ЧЕТВЁРТАЯ ЧЕТВЕРТЬ
 
-   Уменьшаем внутренние поля только здесь,
-   чтобы кнопка занимала почти всю ширину блока,
-   как на странице Яндекс Маркета.
+   Те же горизонтальные поля, что у Яндекс Маркета.
+   Дополнительно принудительно разрешаем дочернему
+   блоку занять всю доступную ширину.
    ============================================================ */
 
 .wb-sync-hero__quarter:nth-child(4) {
   padding-left:
-    10px;
+    18px;
 
   padding-right:
-    10px;
+    18px;
 }
 
 
@@ -200,7 +200,8 @@
     40px;
 
   flex:
-    0 0
+    0
+    0
     40px;
 
   align-items:
@@ -245,20 +246,6 @@
 
 /* ============================================================
    АНИМАЦИЯ СТАТУСА ВО ВРЕМЯ СИНХРОНИЗАЦИИ
-
-   WbSyncClient уже добавляет класс
-   .wb-sync-hero-button__icon--spinning,
-   когда loading = true.
-
-   Поэтому верхняя плашка сама видит,
-   что сейчас идёт синхронизация.
-
-   В этот момент:
-   ✓ скрывается
-   ↻ появляется и вращается
-
-   После завершения loading = false,
-   класс исчезает и снова появляется ✓.
    ============================================================ */
 
 .wb-sync-hero:has(
@@ -409,7 +396,8 @@
     28px;
 
   flex:
-    0 0
+    0
+    0
     28px;
 
   align-items:
@@ -522,9 +510,13 @@ svg {
 
 /* ============================================================
    4 / 4
-   КНОПКА
+   ОБЁРТКА КНОПКИ
+
+   Здесь важное исправление:
+   снимаем возможные старые ограничения ширины.
    ============================================================ */
 
+.wb-reference-page
 .wb-sync-hero__action {
   display:
     flex;
@@ -532,18 +524,37 @@ svg {
   width:
     100%;
 
+  max-width:
+    none;
+
   min-width:
     0;
+
+  flex:
+    1
+    1
+    100%;
 
   align-items:
     center;
 
   justify-content:
-    center;
+    stretch;
 }
 
 
-.wb-sync-client--hero {
+/* ============================================================
+   CLIENT
+
+   Сам WbSyncClient должен занимать ВСЮ четверть.
+
+   !important для max-width нужен специально:
+   если в старом WB CSS остался max-width,
+   он больше не сможет сжать кнопку.
+   ============================================================ */
+
+.wb-reference-page
+.wb-sync-client.wb-sync-client--hero {
   display:
     grid;
 
@@ -558,8 +569,22 @@ svg {
   width:
     100%;
 
+  max-width:
+    none !important;
+
   min-width:
     0;
+
+  flex:
+    1
+    1
+    100%;
+
+  justify-self:
+    stretch;
+
+  align-self:
+    stretch;
 
   align-items:
     center;
@@ -579,6 +604,9 @@ svg {
 
   width:
     100%;
+
+  max-width:
+    none;
 
   height:
     12px;
@@ -630,15 +658,19 @@ svg {
 /* ============================================================
    КНОПКА WILDBERRIES
 
-   width: 100% сохраняем.
-   Теперь за счёт уменьшенных полей
-   четвёртой четверти она почти полностью
-   заполняет свой сегмент.
+   Ключевое:
+   width: 100%
+   max-width: none !important
+
+   Теперь кнопка физически обязана растянуться
+   на всю доступную ширину четвёртой четверти,
+   как кнопка Яндекс Маркета.
    ============================================================ */
 
+.wb-reference-page
 .wb-sync-hero-button {
   display:
-    inline-flex;
+    flex;
 
   box-sizing:
     border-box;
@@ -646,11 +678,25 @@ svg {
   width:
     100%;
 
+  max-width:
+    none !important;
+
+  min-width:
+    0;
+
   height:
     40px;
 
   min-height:
     40px;
+
+  flex:
+    1
+    1
+    100%;
+
+  align-self:
+    stretch;
 
   align-items:
     center;
@@ -683,13 +729,18 @@ svg {
   background:
     linear-gradient(
       135deg,
-      #cb11ab 0%,
-      #b20dc8 52%,
-      #8d16db 100%
+      #cb11ab
+      0%,
+      #b20dc8
+      52%,
+      #8d16db
+      100%
     );
 
   box-shadow:
-    0 6px 16px
+    0
+    6px
+    16px
     rgba(
       180,
       16,
@@ -728,6 +779,7 @@ svg {
 }
 
 
+.wb-reference-page
 .wb-sync-hero-button:hover:not(:disabled) {
   filter:
     brightness(
@@ -735,7 +787,9 @@ svg {
     );
 
   box-shadow:
-    0 8px 20px
+    0
+    8px
+    20px
     rgba(
       180,
       16,
@@ -750,6 +804,7 @@ svg {
 }
 
 
+.wb-reference-page
 .wb-sync-hero-button:active:not(:disabled) {
   transform:
     translateY(
@@ -762,6 +817,7 @@ svg {
    DISABLED
    ============================================================ */
 
+.wb-reference-page
 .wb-sync-hero-button:disabled {
   color:
     #9f4e8d;
@@ -814,7 +870,8 @@ svg {
     16px;
 
   flex:
-    0 0
+    0
+    0
     16px;
 }
 
@@ -875,6 +932,9 @@ svg {
 
   width:
     100%;
+
+  max-width:
+    none;
 
   height:
     12px;
@@ -950,6 +1010,7 @@ html[data-theme="dark"]
 
 
 html[data-theme="dark"]
+.wb-reference-page
 .wb-sync-hero-button {
   border-color:
     rgba(
@@ -971,7 +1032,9 @@ html[data-theme="dark"]
     );
 
   box-shadow:
-    0 6px 18px
+    0
+    6px
+    18px
     rgba(
       203,
       17,
@@ -982,6 +1045,7 @@ html[data-theme="dark"]
 
 
 html[data-theme="dark"]
+.wb-reference-page
 .wb-sync-hero-button:disabled {
   color:
     #d7a8cf;
@@ -1054,10 +1118,10 @@ html[data-theme="dark"]
       var(--ws-border);
 
     padding-left:
-      10px;
+      18px;
 
     padding-right:
-      10px;
+      18px;
   }
 
 }
@@ -1097,10 +1161,10 @@ html[data-theme="dark"]
 
   .wb-sync-hero__quarter:nth-child(4) {
     padding-left:
-      10px;
+      18px;
 
     padding-right:
-      10px;
+      18px;
   }
 
 
