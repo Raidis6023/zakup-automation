@@ -11,55 +11,12 @@ import {
 import ZakupProductsSectionClient
 from "./ZakupProductsSectionClient";
 
+import ZakupProductsTableClient, {
+  type ZakupTableItem,
+} from "./ZakupProductsTableClient";
+
 import "./zakup-reference.css";
 import "./zakup-layout-v2.css";
-
-
-// ============================================================
-// ТИП ТОВАРА
-// ============================================================
-
-type ChinaItem = {
-  calculation_item_id: string;
-  offer_id: string;
-  name: string | null;
-
-  avg_sales_per_day: number;
-
-  own_stock_quantity: number;
-  ozon_stock_quantity: number;
-  physical_stock: number;
-
-  active_ved_quantity: number;
-  effective_stock: number;
-  coverage_days: number | null;
-
-  container_order_units: number;
-  container_cartons: number;
-  container_final_units: number;
-  container_order_volume_m3: number;
-
-  container_manual_quantity: number | null;
-  container_manual_final_units: number | null;
-  container_manual_volume_m3: number | null;
-  container_manual_comment: string | null;
-
-  container_effective_final_units: number;
-  container_effective_volume_m3: number;
-
-  truck_order_units: number;
-  truck_cartons: number;
-  truck_final_units: number;
-  truck_order_volume_m3: number;
-
-  truck_manual_quantity: number | null;
-  truck_manual_final_units: number | null;
-  truck_manual_volume_m3: number | null;
-  truck_manual_comment: string | null;
-
-  truck_effective_final_units: number;
-  truck_effective_volume_m3: number;
-};
 
 
 // ============================================================
@@ -93,7 +50,8 @@ type ChinaDashboard = {
     created_at: string;
   } | null;
 
-  items: ChinaItem[];
+  items:
+    ZakupTableItem[];
 };
 
 
@@ -113,7 +71,8 @@ type ReferenceIconName =
 function ReferenceIcon({
   name,
 }: {
-  name: ReferenceIconName;
+  name:
+    ReferenceIconName;
 }) {
 
   if (
@@ -562,7 +521,7 @@ function formatNumber(
 
 function getSelectedSkuCount(
   items:
-    ChinaItem[],
+    ZakupTableItem[],
 
   scenario:
     string
@@ -679,10 +638,6 @@ export default async function Home() {
     dashboard.simulation;
 
 
-  // ==========================================================
-  // СЦЕНАРИЙ ФОРМИРОВАНИЯ ЗАКАЗА
-  // ==========================================================
-
   const orderScenario:
     "container"
     |
@@ -744,10 +699,6 @@ export default async function Home() {
     );
 
 
-  // ==========================================================
-  // ДАННЫЕ ТРАНСПОРТА
-  // ==========================================================
-
   const newProductsVolume =
     simulation
       ?.new_products_volume_m3
@@ -784,15 +735,9 @@ export default async function Home() {
     );
 
 
-  // Системы новых артикулов пока нет.
-  // В будущем здесь появится реальное значение.
   const newProductsCount =
     0;
 
-
-  // ==========================================================
-  // ТЕКСТ ФОРМИРОВАНИЯ ЗАКАЗА
-  // ==========================================================
 
   let orderDescription =
     "Сначала выполните расчёт транспорта.";
@@ -834,10 +779,6 @@ export default async function Home() {
 
   }
 
-
-  // ==========================================================
-  // РЕШЕНИЕ
-  // ==========================================================
 
   const decisionTitle =
     simulation
@@ -949,10 +890,6 @@ export default async function Home() {
               "zakup-v2-column"
           >
 
-            {/* ===============================
-                УПРАВЛЕНИЕ РАСЧЁТОМ
-                =============================== */}
-
             <section
               className=
                 "zakup-v2-action-strip"
@@ -1021,16 +958,10 @@ export default async function Home() {
             </section>
 
 
-            {/* ===============================
-                ЛЕВЫЕ 4 КАРТОЧКИ
-                =============================== */}
-
             <section
               className=
                 "zakup-v2-left-metrics"
             >
-
-              {/* ПРОДАЖИ */}
 
               <div
                 className=
@@ -1087,8 +1018,6 @@ export default async function Home() {
               </div>
 
 
-              {/* ТРАНСПОРТ */}
-
               <div
                 className=
                   "zakup-v2-metric-card zakup-v2-metric-card--transport"
@@ -1134,8 +1063,6 @@ export default async function Home() {
 
               </div>
 
-
-              {/* ФУРА */}
 
               <div
                 className=
@@ -1191,8 +1118,6 @@ export default async function Home() {
 
               </div>
 
-
-              {/* КОНТЕЙНЕР */}
 
               <div
                 className=
@@ -1261,10 +1186,6 @@ export default async function Home() {
             className=
               "zakup-v2-column"
           >
-
-            {/* ===============================
-                СИМУЛЯЦИЯ ТРАНСПОРТА
-                =============================== */}
 
             <section
               className=
@@ -1388,16 +1309,10 @@ export default async function Home() {
             </section>
 
 
-            {/* ===============================
-                ПРАВЫЕ 4 КАРТОЧКИ
-                =============================== */}
-
             <section
               className=
                 "zakup-v2-result-grid"
             >
-
-              {/* НОВЫЕ ТОВАРЫ */}
 
               <div
                 className=
@@ -1457,8 +1372,6 @@ export default async function Home() {
               </div>
 
 
-              {/* КОНТЕЙНЕРНЫЙ ОБЪЁМ */}
-
               <div
                 className=
                   "zakup-v2-result-card"
@@ -1506,8 +1419,6 @@ export default async function Home() {
               </div>
 
 
-              {/* ПОСЛЕ ПЕРЕВОЗА ПОД ФУРУ */}
-
               <div
                 className=
                   "zakup-v2-result-card"
@@ -1554,8 +1465,6 @@ export default async function Home() {
 
               </div>
 
-
-              {/* ВЫБРАННЫЙ ОБЪЁМ */}
 
               <div
                 className=
@@ -1629,10 +1538,6 @@ export default async function Home() {
           className=
             "zakup-v2-bottom-grid"
         >
-
-          {/* =================================
-              ФОРМИРОВАНИЕ ЗАКАЗА
-              ================================= */}
 
           <section
             className=
@@ -1755,10 +1660,6 @@ export default async function Home() {
           </section>
 
 
-          {/* =================================
-              РЕШЕНИЕ
-              ================================= */}
-
           <section
             className=
               "zakup-v2-decision-strip"
@@ -1826,339 +1727,11 @@ export default async function Home() {
           }
         >
 
-          <div
-            className=
-              "table-wrapper"
-          >
-
-            <table
-              className=
-                "table"
-            >
-
-              <thead>
-
-                <tr>
-
-                  <th
-                    className=
-                      "left"
-                  >
-                    Артикул
-                  </th>
-
-                  <th
-                    className=
-                      "left"
-                  >
-                    Товар
-                  </th>
-
-                  <th
-                    className=
-                      "right"
-                  >
-                    Продажи/сутки
-                  </th>
-
-                  <th
-                    className=
-                      "right"
-                  >
-                    Наш склад
-                  </th>
-
-                  <th
-                    className=
-                      "right"
-                  >
-                    Ozon
-                  </th>
-
-                  <th
-                    className=
-                      "right"
-                  >
-                    ВЭД
-                  </th>
-
-                  <th
-                    className=
-                      "right"
-                  >
-                    Общий остаток
-                  </th>
-
-                  <th
-                    className=
-                      "right"
-                  >
-                    Покрытие
-                  </th>
-
-                  <th
-                    className=
-                      "right"
-                  >
-                    Контейнер, шт.
-                  </th>
-
-                  <th
-                    className=
-                      "right"
-                  >
-                    Контейнер, м³
-                  </th>
-
-                  <th
-                    className=
-                      "right"
-                  >
-                    Фура, шт.
-                  </th>
-
-                  <th
-                    className=
-                      "right"
-                  >
-                    Фура, м³
-                  </th>
-
-                </tr>
-
-              </thead>
-
-
-              <tbody>
-
-                {
-                  dashboard.items.map(
-                    item => (
-
-                      <tr
-                        key={
-                          item
-                            .calculation_item_id
-                        }
-                      >
-
-                        <td
-                          className=
-                            "left"
-                        >
-                          <strong>
-                            {
-                              item.offer_id
-                            }
-                          </strong>
-                        </td>
-
-
-                        <td
-                          className=
-                            "left"
-                        >
-                          {
-                            item.name
-                            ??
-                            "—"
-                          }
-                        </td>
-
-
-                        <td
-                          className=
-                            "right"
-                        >
-                          {
-                            formatNumber(
-                              item
-                                .avg_sales_per_day,
-                              2
-                            )
-                          }
-                        </td>
-
-
-                        <td
-                          className=
-                            "right"
-                        >
-                          {
-                            formatNumber(
-                              item
-                                .own_stock_quantity
-                            )
-                          }
-                        </td>
-
-
-                        <td
-                          className=
-                            "right"
-                        >
-                          {
-                            formatNumber(
-                              item
-                                .ozon_stock_quantity
-                            )
-                          }
-                        </td>
-
-
-                        <td
-                          className=
-                            "right"
-                        >
-                          {
-                            formatNumber(
-                              item
-                                .active_ved_quantity
-                            )
-                          }
-                        </td>
-
-
-                        <td
-                          className=
-                            "right"
-                        >
-                          {
-                            formatNumber(
-                              item
-                                .effective_stock
-                            )
-                          }
-                        </td>
-
-
-                        <td
-                          className=
-                            "right"
-                        >
-
-                          <strong>
-                            {
-                              formatNumber(
-                                item
-                                  .coverage_days,
-                                1
-                              )
-                            }
-                          </strong>{" "}
-                          дн.
-
-                        </td>
-
-
-                        <td
-                          className=
-                            "right"
-                        >
-
-                          <strong>
-                            {
-                              formatNumber(
-                                item
-                                  .container_effective_final_units
-                              )
-                            }
-                          </strong>
-
-
-                          {
-                            item
-                              .container_manual_quantity !==
-                              null
-                            &&
-                            (
-
-                              <div
-                                className=
-                                  "muted"
-                              >
-                                вручную
-                              </div>
-
-                            )
-                          }
-
-                        </td>
-
-
-                        <td
-                          className=
-                            "right"
-                        >
-                          {
-                            formatNumber(
-                              item
-                                .container_effective_volume_m3,
-                              3
-                            )
-                          }
-                        </td>
-
-
-                        <td
-                          className=
-                            "right"
-                        >
-
-                          <strong>
-                            {
-                              formatNumber(
-                                item
-                                  .truck_effective_final_units
-                              )
-                            }
-                          </strong>
-
-
-                          {
-                            item
-                              .truck_manual_quantity !==
-                              null
-                            &&
-                            (
-
-                              <div
-                                className=
-                                  "muted"
-                              >
-                                вручную
-                              </div>
-
-                            )
-                          }
-
-                        </td>
-
-
-                        <td
-                          className=
-                            "right"
-                        >
-                          {
-                            formatNumber(
-                              item
-                                .truck_effective_volume_m3,
-                              3
-                            )
-                          }
-                        </td>
-
-                      </tr>
-
-                    )
-                  )
-                }
-
-              </tbody>
-
-            </table>
-
-          </div>
+          <ZakupProductsTableClient
+            items={
+              dashboard.items
+            }
+          />
 
         </ZakupProductsSectionClient>
 
@@ -2290,10 +1863,6 @@ export default async function Home() {
 
                     </div>
 
-
-                    {/* ===========================
-                        КОНТЕЙНЕР
-                        =========================== */}
 
                     <form
                       action={
@@ -2475,52 +2044,50 @@ export default async function Home() {
                       item
                         .container_manual_quantity !==
                         null
-                      &&
-                      (
 
-                        <div
-                          className=
-                            "reason-text"
-                        >
-                          Текущая ручная
-                          корректировка контейнера:{" "}
+                        ? (
 
-                          <strong>
+                          <div
+                            className=
+                              "reason-text"
+                          >
+                            Текущая ручная
+                            корректировка контейнера:{" "}
+
+                            <strong>
+                              {
+                                formatNumber(
+                                  item
+                                    .container_manual_quantity
+                                )
+                              } шт.
+                            </strong>
+
+                            {" → "}
+
                             {
                               formatNumber(
                                 item
-                                  .container_manual_quantity
+                                  .container_manual_final_units
                               )
-                            } шт.
-                          </strong>
+                            } шт. после коробок
 
-                          {" → "}
+                            {" / "}
 
-                          {
-                            formatNumber(
-                              item
-                                .container_manual_final_units
-                            )
-                          } шт. после коробок
+                            {
+                              formatNumber(
+                                item
+                                  .container_manual_volume_m3,
+                                3
+                              )
+                            } м³
+                          </div>
 
-                          {" / "}
+                        )
 
-                          {
-                            formatNumber(
-                              item
-                                .container_manual_volume_m3,
-                              3
-                            )
-                          } м³
-                        </div>
-
-                      )
+                        : null
                     }
 
-
-                    {/* ===========================
-                        ФУРА
-                        =========================== */}
 
                     <form
                       action={
@@ -2702,46 +2269,48 @@ export default async function Home() {
                       item
                         .truck_manual_quantity !==
                         null
-                      &&
-                      (
 
-                        <div
-                          className=
-                            "reason-text"
-                        >
-                          Текущая ручная
-                          корректировка фуры:{" "}
+                        ? (
 
-                          <strong>
+                          <div
+                            className=
+                              "reason-text"
+                          >
+                            Текущая ручная
+                            корректировка фуры:{" "}
+
+                            <strong>
+                              {
+                                formatNumber(
+                                  item
+                                    .truck_manual_quantity
+                                )
+                              } шт.
+                            </strong>
+
+                            {" → "}
+
                             {
                               formatNumber(
                                 item
-                                  .truck_manual_quantity
+                                  .truck_manual_final_units
                               )
-                            } шт.
-                          </strong>
+                            } шт. после коробок
 
-                          {" → "}
+                            {" / "}
 
-                          {
-                            formatNumber(
-                              item
-                                .truck_manual_final_units
-                            )
-                          } шт. после коробок
+                            {
+                              formatNumber(
+                                item
+                                  .truck_manual_volume_m3,
+                                3
+                              )
+                            } м³
+                          </div>
 
-                          {" / "}
+                        )
 
-                          {
-                            formatNumber(
-                              item
-                                .truck_manual_volume_m3,
-                              3
-                            )
-                          } м³
-                        </div>
-
-                      )
+                        : null
                     }
 
                   </div>
@@ -2754,10 +2323,6 @@ export default async function Home() {
 
         </section>
 
-
-        {/* ===================================
-            FOOTER
-            =================================== */}
 
         <footer
           className=
