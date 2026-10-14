@@ -1,4 +1,3 @@
-
 import Link from "next/link";
 
 import VedTakeInWorkPanel
@@ -166,9 +165,21 @@ export default async function VedOrderPage({
   return (
     <main className="page">
       <div className="container">
-        {/* ШАПКА С НАВИГАЦИЕЙ */}
+
+        {/* ====================================================
+            ШАПКА С НАВИГАЦИЕЙ
+
+            Эта детальная страница заказа открывается
+            после формирования заказа из раздела "Закуп".
+
+            Поэтому навигация:
+            Главная -> Закуп
+            ==================================================== */}
+
         <header className="header">
+
           <div>
+
             <div className="small-label">
               СИСТЕМА ЗАКУПА
             </div>
@@ -180,9 +191,12 @@ export default async function VedOrderPage({
             <div className="subtitle">
               Формирование и контроль заказа ВЭД.
             </div>
+
           </div>
 
+
           <div className="header-actions">
+
             <Link
               href="/"
               className="secondary-button"
@@ -192,29 +206,49 @@ export default async function VedOrderPage({
               Главная
             </Link>
 
+
             <Link
-              href="/ved"
+              href="/zakup"
               className="secondary-button"
               style={headerButtonStyle}
-              title="Вернуться в раздел ВЭД"
+              title="Вернуться в раздел Закуп"
             >
-              ВЭД
+              Закуп
             </Link>
+
           </div>
+
         </header>
 
-        {/* ВЗЯТЬ В РАБОТУ */}
-        <VedTakeInWorkPanel orderId={id} />
 
-        {/* ПРОИЗВОДСТВО */}
-        <VedProductionPanel orderId={id} />
+        {/* ====================================================
+            ВЗЯТЬ В РАБОТУ
+            ==================================================== */}
 
-        {/* ДЕТАЛИЗАЦИЯ ЗАКАЗА И ЭКСПОРТ EXCEL */}
+        <VedTakeInWorkPanel
+          orderId={id}
+        />
+
+
+        {/* ====================================================
+            ПРОИЗВОДСТВО
+            ==================================================== */}
+
+        <VedProductionPanel
+          orderId={id}
+        />
+
+
+        {/* ====================================================
+            ДЕТАЛИЗАЦИЯ ЗАКАЗА И ЭКСПОРТ EXCEL
+            ==================================================== */}
+
         <VedOrderDetailClient
           orderId={id}
           excelExportUrl={excelExportUrl}
           excelExportAvailable={excelExportAvailable}
         />
+
       </div>
     </main>
   );
