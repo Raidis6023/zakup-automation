@@ -282,11 +282,8 @@ function WbReferenceIcon({
     return (
 
       <svg
-        viewBox=
-          "0 0 24 24"
-
-        aria-hidden=
-          "true"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
       >
 
         <circle
@@ -314,11 +311,8 @@ function WbReferenceIcon({
     return (
 
       <svg
-        viewBox=
-          "0 0 24 24"
-
-        aria-hidden=
-          "true"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
       >
 
         <rect
@@ -348,11 +342,8 @@ function WbReferenceIcon({
     return (
 
       <svg
-        viewBox=
-          "0 0 24 24"
-
-        aria-hidden=
-          "true"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
       >
 
         <path
@@ -381,11 +372,8 @@ function WbReferenceIcon({
     return (
 
       <svg
-        viewBox=
-          "0 0 24 24"
-
-        aria-hidden=
-          "true"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
       >
 
         <path
@@ -411,11 +399,8 @@ function WbReferenceIcon({
     return (
 
       <svg
-        viewBox=
-          "0 0 24 24"
-
-        aria-hidden=
-          "true"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
       >
 
         <path
@@ -437,11 +422,8 @@ function WbReferenceIcon({
     return (
 
       <svg
-        viewBox=
-          "0 0 24 24"
-
-        aria-hidden=
-          "true"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
       >
 
         <circle
@@ -472,11 +454,8 @@ function WbReferenceIcon({
     return (
 
       <svg
-        viewBox=
-          "0 0 24 24"
-
-        aria-hidden=
-          "true"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
       >
 
         <path
@@ -506,11 +485,8 @@ function WbReferenceIcon({
     return (
 
       <svg
-        viewBox=
-          "0 0 24 24"
-
-        aria-hidden=
-          "true"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
       >
 
         <path
@@ -531,11 +507,8 @@ function WbReferenceIcon({
   return (
 
     <svg
-      viewBox=
-        "0 0 24 24"
-
-      aria-hidden=
-        "true"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
     >
 
       <circle
@@ -1067,13 +1040,11 @@ export default async function WildberriesPage() {
   return (
 
     <main
-      className=
-        "page wb-reference-page"
+      className="page wb-reference-page"
     >
 
       <div
-        className=
-          "container"
+        className="container"
       >
 
         {/* =====================================================
@@ -1081,24 +1052,19 @@ export default async function WildberriesPage() {
             ===================================================== */}
 
         <header
-          className=
-            "header wb-header"
+          className="header wb-header"
         >
 
           <div
-            className=
-              "wb-title-wrap"
+            className="wb-title-wrap"
           >
 
             <span
-              className=
-                "wb-title-icon"
+              className="wb-title-icon"
             >
 
               <img
-                src=
-                  "/logos/wildberries.png"
-
+                src="/logos/wildberries.png"
                 alt=""
               />
 
@@ -1108,24 +1074,21 @@ export default async function WildberriesPage() {
             <div>
 
               <div
-                className=
-                  "small-label"
+                className="small-label"
               >
                 СИСТЕМА ЗАКУПА
               </div>
 
 
               <h1
-                className=
-                  "title"
+                className="title"
               >
                 Wildberries — синхронизация
               </h1>
 
 
               <p
-                className=
-                  "subtitle"
+                className="subtitle"
               >
                 Продажи, аналитические отмены и доступные FBW-остатки Wildberries.
               </p>
@@ -1136,19 +1099,15 @@ export default async function WildberriesPage() {
 
 
           <div
-            className=
-              "header-actions wb-header-actions"
+            className="header-actions wb-header-actions"
           >
 
             <ThemeToggle />
 
 
             <Link
-              href=
-                "/stock-import"
-
-              className=
-                "secondary-button wb-navigation-button"
+              href="/stock-import"
+              className="secondary-button wb-navigation-button"
             >
               Остатки склада
             </Link>
@@ -1156,9 +1115,7 @@ export default async function WildberriesPage() {
 
             <Link
               href="/"
-
-              className=
-                "secondary-button wb-navigation-button"
+              className="secondary-button wb-navigation-button"
             >
               ← Главная
             </Link>
@@ -1178,21 +1135,18 @@ export default async function WildberriesPage() {
             ? (
 
               <section
-                className=
-                  "section wb-error-section"
+                className="section wb-error-section"
               >
 
                 <div
-                  className=
-                    "wb-error-title"
+                  className="wb-error-title"
                 >
                   Ошибка загрузки Wildberries
                 </div>
 
 
                 <div
-                  className=
-                    "reason-text wb-error-text"
+                  className="reason-text wb-error-text"
                 >
                   {
                     loadError
@@ -1216,125 +1170,72 @@ export default async function WildberriesPage() {
               <>
 
                 {/* =================================================
-                    НОВАЯ ВЕРХНЯЯ ПЛАШКА
+                    ВЕРХНЯЯ ПЛАШКА — 4 РАВНЫЕ ЧАСТИ
                     ================================================= */}
 
                 <section
-                  className=
-                    "wb-sync-hero"
-
-                  aria-label=
-                    "Состояние синхронизации Wildberries"
+                  className="wb-sync-hero"
+                  aria-label="Состояние синхронизации Wildberries"
                 >
 
                   {/* ===============================================
-                      ЛЕВАЯ ЗЕЛЁНАЯ ЧАСТЬ
+                      1 / 4 — СТАТУС
                       =============================================== */}
 
                   <div
-                    className={
-                      dashboard
-                        .status
-                        .ok
-
-                        ?
-                        "wb-sync-hero__status wb-sync-hero__status--success"
-
-                        :
-                        "wb-sync-hero__status wb-sync-hero__status--warning"
-                    }
+                    className="wb-sync-hero__quarter"
                   >
-
-                    <span
-                      className=
-                        "wb-sync-hero__status-icon"
-
-                      aria-hidden=
-                        "true"
-                    >
-
-                      {
-                        dashboard
-                          .status
-                          .ok
-
-                          ?
-                          "✓"
-
-                          :
-                          "!"
-                      }
-
-                    </span>
-
 
                     <div
-                      className=
-                        "wb-sync-hero__status-copy"
+                      className={
+                        dashboard.status.ok
+                          ? "wb-sync-status-card wb-sync-status-card--success"
+                          : "wb-sync-status-card wb-sync-status-card--warning"
+                      }
                     >
 
-                      <div
-                        className=
-                          "wb-sync-hero__status-title"
+                      <span
+                        className="wb-sync-status-card__icon"
+                        aria-hidden="true"
                       >
 
                         {
-                          dashboard
-                            .status
-                            .ok
-
-                            ?
-                            "Синхронизация завершена"
-
-                            :
-                            "Синхронизация требует проверки"
+                          dashboard.status.ok
+                            ? "✓"
+                            : "!"
                         }
 
-                      </div>
+                      </span>
 
 
                       <div
-                        className=
-                          "wb-sync-hero__last-sync-row"
+                        className="wb-sync-status-card__content"
                       >
 
-                        <span
-                          className=
-                            "wb-sync-hero__last-sync-label"
-                        >
-                          Последняя синхронизация:
-                        </span>
-
-
-                        <span
-                          className=
-                            "wb-sync-hero__last-sync-value-wrap"
+                        <div
+                          className="wb-sync-status-card__title"
                         >
 
-                          <strong
-                            className=
-                              "wb-sync-hero__last-sync-value"
-                          >
+                          {
+                            dashboard.status.ok
+                              ? "Синхронизация завершена"
+                              : "Требует проверки"
+                          }
 
-                            {
-                              formatKrasnoyarskDateTime(
-                                dashboard
-                                  .status
-                                  .lastSuccessfulSyncAt
-                              )
-                            }
-
-                          </strong>
+                        </div>
 
 
-                          <span
-                            className=
-                              "wb-sync-hero__last-sync-timezone"
-                          >
-                            Красноярское время
-                          </span>
+                        <div
+                          className="wb-sync-status-card__hint"
+                        >
 
-                        </span>
+                          {
+                            dashboard.status.ok
+                              ? "Данные Wildberries успешно обновлены"
+                              : "Проверьте последнее обновление данных"
+                          }
+
+                        </div>
 
                       </div>
 
@@ -1344,100 +1245,155 @@ export default async function WildberriesPage() {
 
 
                   {/* ===============================================
-                      ПЕРИОД
+                      2 / 4 — ПОСЛЕДНЯЯ СИНХРОНИЗАЦИЯ
                       =============================================== */}
 
                   <div
-                    className=
-                      "wb-sync-hero__fact wb-sync-hero__fact--period"
+                    className="wb-sync-hero__quarter wb-sync-hero__quarter--border"
                   >
 
-                    <span
-                      className=
-                        "wb-sync-hero__fact-icon"
+                    <div
+                      className="wb-sync-fact"
                     >
 
-                      <WbReferenceIcon
-                        name=
-                          "calendar"
+                      <span
+                        className="wb-sync-fact__icon"
+                        aria-hidden="true"
+                      >
+
+                        <WbReferenceIcon
+                          name="clock"
+                        />
+
+                      </span>
+
+
+                      <div
+                        className="wb-sync-fact__content"
+                      >
+
+                        <div
+                          className="wb-sync-fact__label"
+                        >
+                          Последняя синхронизация
+                        </div>
+
+
+                        <div
+                          className="wb-sync-fact__value"
+                        >
+
+                          {
+                            formatKrasnoyarskDateTime(
+                              dashboard.status.lastSuccessfulSyncAt
+                            )
+                          }
+
+                        </div>
+
+
+                        <div
+                          className="wb-sync-fact__hint"
+                        >
+                          Красноярское время
+                        </div>
+
+                      </div>
+
+                    </div>
+
+                  </div>
+
+
+                  {/* ===============================================
+                      3 / 4 — ПЕРИОД ПРОДАЖ
+                      =============================================== */}
+
+                  <div
+                    className="wb-sync-hero__quarter wb-sync-hero__quarter--border"
+                  >
+
+                    <div
+                      className="wb-sync-fact"
+                    >
+
+                      <span
+                        className="wb-sync-fact__icon"
+                        aria-hidden="true"
+                      >
+
+                        <WbReferenceIcon
+                          name="calendar"
+                        />
+
+                      </span>
+
+
+                      <div
+                        className="wb-sync-fact__content"
+                      >
+
+                        <div
+                          className="wb-sync-fact__label"
+                        >
+                          Период продаж
+                        </div>
+
+
+                        <div
+                          className="wb-sync-fact__value"
+                        >
+
+                          {
+                            formatDate(
+                              dashboard.period.dateFrom
+                            )
+                          }
+
+                          {" – "}
+
+                          {
+                            formatDate(
+                              dashboard.period.dateTo
+                            )
+                          }
+
+                        </div>
+
+
+                        <div
+                          className="wb-sync-fact__hint"
+                        >
+                          Скользящие 28 дней
+                        </div>
+
+                      </div>
+
+                    </div>
+
+                  </div>
+
+
+                  {/* ===============================================
+                      4 / 4 — КНОПКА
+                      =============================================== */}
+
+                  <div
+                    className="wb-sync-hero__quarter wb-sync-hero__quarter--border"
+                  >
+
+                    <div
+                      className="wb-sync-hero__action"
+                    >
+
+                      <WbSyncClient
+                        endpoint="/api/wb/sync-stocks?force=1"
+                        label="Обновить данные"
+                        loadingLabel="Обновляем данные..."
+                        initialState={unifiedState}
                       />
 
-                    </span>
-
-
-                    <div>
-
-                      <div
-                        className=
-                          "wb-sync-hero__label"
-                      >
-                        Период продаж
-                      </div>
-
-
-                      <div
-                        className=
-                          "wb-sync-hero__value"
-                      >
-
-                        {
-                          formatDate(
-                            dashboard
-                              .period
-                              .dateFrom
-                          )
-                        }
-
-                        {" – "}
-
-                        {
-                          formatDate(
-                            dashboard
-                              .period
-                              .dateTo
-                          )
-                        }
-
-                      </div>
-
-
-                      <div
-                        className=
-                          "wb-sync-hero__hint"
-                      >
-                        Скользящие 28 дней
-                      </div>
-
                     </div>
-
-                  </div>
-
-
-                  {/* ===============================================
-                      КНОПКА
-                      =============================================== */}
-
-                  <div
-                    className=
-                      "wb-sync-hero__action"
-                  >
-
-                    <WbSyncClient
-
-                      endpoint=
-                        "/api/wb/sync-stocks?force=1"
-
-                      label=
-                        "Обновить данные"
-
-                      loadingLabel=
-                        "Обновляем данные..."
-
-                      initialState={
-                        unifiedState
-                      }
-
-                    />
 
                   </div>
 
@@ -1446,12 +1402,10 @@ export default async function WildberriesPage() {
 
                 {/* =================================================
                     KPI
-                    НЕ МЕНЯЕМ
                     ================================================= */}
 
                 <section
-                  className=
-                    "summary-grid wb-summary-grid"
+                  className="summary-grid wb-summary-grid"
                 >
 
                   <SummaryCard
@@ -1461,14 +1415,11 @@ export default async function WildberriesPage() {
 
                     value={
                       formatInteger(
-                        dashboard
-                          .summary
-                          .sales28Days
+                        dashboard.summary.sales28Days
                       )
                     }
 
-                    caption=
-                      "buyoutCount, шт."
+                    caption="buyoutCount, шт."
                   />
 
 
@@ -1479,14 +1430,11 @@ export default async function WildberriesPage() {
 
                     value={
                       formatInteger(
-                        dashboard
-                          .summary
-                          .cancelled28Days
+                        dashboard.summary.cancelled28Days
                       )
                     }
 
-                    caption=
-                      "cancelCount Воронки продаж"
+                    caption="cancelCount Воронки продаж"
                   />
 
 
@@ -1497,14 +1445,11 @@ export default async function WildberriesPage() {
 
                     value={
                       formatInteger(
-                        dashboard
-                          .summary
-                          .fbwStock
+                        dashboard.summary.fbwStock
                       )
                     }
 
-                    caption=
-                      "stockCount на складах WB"
+                    caption="stockCount на складах WB"
                   />
 
 
@@ -1515,14 +1460,11 @@ export default async function WildberriesPage() {
 
                     value={
                       formatInteger(
-                        dashboard
-                          .summary
-                          .physicalProducts
+                        dashboard.summary.physicalProducts
                       )
                     }
 
-                    caption=
-                      "только справочная связь"
+                    caption="только справочная связь"
                   />
 
 
@@ -1533,14 +1475,11 @@ export default async function WildberriesPage() {
 
                     value={
                       formatInteger(
-                        dashboard
-                          .summary
-                          .listings
+                        dashboard.summary.listings
                       )
                     }
 
-                    caption=
-                      "текущих карточек Wildberries"
+                    caption="текущих карточек Wildberries"
                   />
 
                 </section>
@@ -1551,18 +1490,15 @@ export default async function WildberriesPage() {
                     ================================================= */}
 
                 <section
-                  className=
-                    "section wb-info-panel"
+                  className="section wb-info-panel"
                 >
 
                   <span
-                    className=
-                      "wb-panel-icon"
+                    className="wb-panel-icon"
                   >
 
                     <WbReferenceIcon
-                      name=
-                        "info"
+                      name="info"
                     />
 
                   </span>
@@ -1571,16 +1507,14 @@ export default async function WildberriesPage() {
                   <div>
 
                     <h2
-                      className=
-                        "section-title"
+                      className="section-title"
                     >
                       Как теперь считаются данные Wildberries
                     </h2>
 
 
                     <div
-                      className=
-                        "wb-info-list"
+                      className="wb-info-list"
                     >
 
                       <InfoLine>
@@ -1629,14 +1563,11 @@ export default async function WildberriesPage() {
                     ================================================= */}
 
                 <WbUnmappedProductsTable
-
                   rows={
-                    dashboard
-                      .unmappedProducts
+                    dashboard.unmappedProducts
                     ??
                     []
                   }
-
                 />
 
 
@@ -1645,26 +1576,22 @@ export default async function WildberriesPage() {
                     ================================================= */}
 
                 <section
-                  className=
-                    "section wb-products-section"
+                  className="section wb-products-section"
                 >
 
                   <div
-                    className=
-                      "wb-products-header"
+                    className="wb-products-header"
                   >
 
                     <h2
-                      className=
-                        "section-title"
+                      className="section-title"
                     >
                       Данные по товарам
                     </h2>
 
 
                     <div
-                      className=
-                        "reason-text"
+                      className="reason-text"
                     >
                       Одна строка соответствует одному Артикулу WB.
                     </div>
@@ -1673,13 +1600,11 @@ export default async function WildberriesPage() {
 
 
                   <div
-                    className=
-                      "wb-products-table-shell"
+                    className="wb-products-table-shell"
                   >
 
                     <table
-                      className=
-                        "wb-products-table"
+                      className="wb-products-table"
                     >
 
                       <thead>
@@ -1763,202 +1688,196 @@ export default async function WildberriesPage() {
                       <tbody>
 
                         {
-                          dashboard
-                            .products
-                            .map(
-                              row => (
+                          dashboard.products.map(
+                            row => (
 
-                                <tr
-                                  key={
-                                    row.nmId
+                              <tr
+                                key={
+                                  row.nmId
+                                }
+                              >
+
+                                <td>
+
+                                  <strong>
+                                    {
+                                      row.nmId
+                                    }
+                                  </strong>
+
+                                </td>
+
+
+                                <td
+                                  className="wb-seller-article-cell"
+                                >
+                                  {
+                                    row.sellerArticle
+                                    ||
+                                    "—"
                                   }
+                                </td>
+
+
+                                <td
+                                  className="wb-product-name-cell"
                                 >
 
-                                  <td>
-
-                                    <strong>
-                                      {
-                                        row.nmId
-                                      }
-                                    </strong>
-
-                                  </td>
+                                  {
+                                    row.productName
+                                    ||
+                                    "—"
+                                  }
 
 
-                                  <td
-                                    className=
-                                      "wb-seller-article-cell"
-                                  >
-                                    {
-                                      row.sellerArticle
-                                      ||
-                                      "—"
-                                    }
-                                  </td>
+                                  {
+                                    row.brandName
+                                    &&
+                                    row.brandName.trim()
 
+                                      ? (
 
-                                  <td
-                                    className=
-                                      "wb-product-name-cell"
-                                  >
+                                        <div
+                                          className="muted"
+                                        >
+                                          {
+                                            row.brandName
+                                          }
+                                        </div>
 
-                                    {
-                                      row.productName
-                                      ||
-                                      "—"
-                                    }
-
-
-                                    {
-                                      row.brandName
-                                      &&
-                                      row.brandName.trim()
-
-                                        ? (
-
-                                          <div
-                                            className=
-                                              "muted"
-                                          >
-                                            {
-                                              row.brandName
-                                            }
-                                          </div>
-
-                                        )
-
-                                        :
-                                        null
-                                    }
-
-                                  </td>
-
-
-                                  <td>
-
-                                    {
-                                      row.masterCode
-
-                                        ? (
-
-                                          <span
-                                            className=
-                                              "wb-master-code"
-                                          >
-                                            {
-                                              row.masterCode
-                                            }
-                                          </span>
-
-                                        )
-
-                                        :
-                                        "—"
-                                    }
-
-                                  </td>
-
-
-                                  <td
-                                    style={{
-                                      textAlign:
-                                        "right",
-                                    }}
-                                  >
-
-                                    <strong>
-
-                                      {
-                                        formatInteger(
-                                          row.sales28Days
-                                        )
-                                      }
-
-                                    </strong>
-
-                                  </td>
-
-
-                                  <td
-                                    style={{
-                                      textAlign:
-                                        "right",
-                                    }}
-                                  >
-
-                                    {
-                                      formatDecimal(
-                                        row.avgSalesPerDay,
-                                        2
                                       )
-                                    }
 
-                                  </td>
+                                      :
+                                      null
+                                  }
+
+                                </td>
 
 
-                                  <td
-                                    style={{
-                                      textAlign:
-                                        "right",
-                                    }}
-                                  >
+                                <td>
+
+                                  {
+                                    row.masterCode
+
+                                      ? (
+
+                                        <span
+                                          className="wb-master-code"
+                                        >
+                                          {
+                                            row.masterCode
+                                          }
+                                        </span>
+
+                                      )
+
+                                      :
+                                      "—"
+                                  }
+
+                                </td>
+
+
+                                <td
+                                  style={{
+                                    textAlign:
+                                      "right",
+                                  }}
+                                >
+
+                                  <strong>
 
                                     {
                                       formatInteger(
-                                        row.cancelled28Days
+                                        row.sales28Days
                                       )
                                     }
 
-                                  </td>
+                                  </strong>
+
+                                </td>
 
 
-                                  <td
-                                    style={{
-                                      textAlign:
-                                        "right",
-                                    }}
-                                  >
+                                <td
+                                  style={{
+                                    textAlign:
+                                      "right",
+                                  }}
+                                >
 
-                                    <strong>
+                                  {
+                                    formatDecimal(
+                                      row.avgSalesPerDay,
+                                      2
+                                    )
+                                  }
 
-                                      {
-                                        formatInteger(
-                                          row.fbwStock
-                                        )
-                                      }
-
-                                    </strong>
-
-                                  </td>
+                                </td>
 
 
-                                  <td
-                                    style={{
-                                      textAlign:
-                                        "right",
-                                    }}
-                                  >
+                                <td
+                                  style={{
+                                    textAlign:
+                                      "right",
+                                  }}
+                                >
+
+                                  {
+                                    formatInteger(
+                                      row.cancelled28Days
+                                    )
+                                  }
+
+                                </td>
+
+
+                                <td
+                                  style={{
+                                    textAlign:
+                                      "right",
+                                  }}
+                                >
+
+                                  <strong>
 
                                     {
-                                      row.daysOfStock ===
-                                      null
-
-                                        ?
-                                        "—"
-
-                                        :
-                                        formatDecimal(
-                                          row.daysOfStock,
-                                          1
-                                        )
+                                      formatInteger(
+                                        row.fbwStock
+                                      )
                                     }
 
-                                  </td>
+                                  </strong>
 
-                                </tr>
+                                </td>
 
-                              )
+
+                                <td
+                                  style={{
+                                    textAlign:
+                                      "right",
+                                  }}
+                                >
+
+                                  {
+                                    row.daysOfStock ===
+                                    null
+
+                                      ?
+                                      "—"
+
+                                      :
+                                      formatDecimal(
+                                        row.daysOfStock,
+                                        1
+                                      )
+                                  }
+
+                                </td>
+
+                              </tr>
+
                             )
+                          )
                         }
 
                       </tbody>
@@ -1975,18 +1894,15 @@ export default async function WildberriesPage() {
                     ================================================= */}
 
                 <section
-                  className=
-                    "section wb-safe-section"
+                  className="section wb-safe-section"
                 >
 
                   <span
-                    className=
-                      "wb-safe-icon"
+                    className="wb-safe-icon"
                   >
 
                     <WbReferenceIcon
-                      name=
-                        "shield"
+                      name="shield"
                     />
 
                   </span>
@@ -1995,16 +1911,14 @@ export default async function WildberriesPage() {
                   <div>
 
                     <h2
-                      className=
-                        "section-title"
+                      className="section-title"
                     >
                       Безопасный режим
                     </h2>
 
 
                     <div
-                      className=
-                        "wb-info-list"
+                      className="wb-info-list"
                     >
 
                       <InfoLine>
@@ -2099,8 +2013,7 @@ function SummaryCard({
   return (
 
     <div
-      className=
-        "card wb-summary-card"
+      className="card wb-summary-card"
     >
 
       <span
@@ -2119,13 +2032,11 @@ function SummaryCard({
 
 
       <div
-        className=
-          "wb-summary-copy"
+        className="wb-summary-copy"
       >
 
         <div
-          className=
-            "card-label"
+          className="card-label"
         >
           {
             label
@@ -2134,8 +2045,7 @@ function SummaryCard({
 
 
         <div
-          className=
-            "big-number"
+          className="big-number"
         >
           {
             value
@@ -2144,8 +2054,7 @@ function SummaryCard({
 
 
         <div
-          className=
-            "muted"
+          className="muted"
         >
           {
             caption
@@ -2175,8 +2084,7 @@ function InfoLine({
   return (
 
     <div
-      className=
-        "reason-text"
+      className="reason-text"
     >
       {
         children
