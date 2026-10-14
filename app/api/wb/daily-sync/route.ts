@@ -93,10 +93,6 @@ function getCronSecret() {
 }
 
 
-// ============================================================
-// ПРОВЕРКА VERCEL CRON
-// ============================================================
-
 function isAuthorized(
   request:
     NextRequest
@@ -125,17 +121,14 @@ function isAuthorized(
 
 
 // ============================================================
-// ВНУТРЕННИЙ ВЫЗОВ WB ROUTE
+// ВНУТРЕННИЙ ВЫЗОВ ЕДИНОГО WB SYNC
 // ============================================================
 
-async function callRoute(
+async function callUnifiedSync(
   url:
     string,
 
   cronSecret:
-    string,
-
-  name:
     string
 ):
 Promise<InternalResult> {
@@ -185,14 +178,8 @@ Promise<InternalResult> {
       );
 
 
-    // ========================================================
-    // ПИШЕМ ДИАГНОСТИКУ В VERCEL LOGS
-    //
-    // Секреты сюда НЕ выводятся.
-    // ========================================================
-
     console.log(
-      `[WB DAILY] ${name}`,
+      "[WB DAILY] unified-sync",
       {
         status:
           response.status,
@@ -227,11 +214,9 @@ Promise<InternalResult> {
     const logicalOk =
       response.ok
       &&
-      data?.ok !==
-        false
+      data?.ok !== false
       &&
-      data?.blockedByRateLimit !==
-        true;
+      data?.blockedByRateLimit !== true;
 
 
     return {
@@ -256,7 +241,7 @@ Promise<InternalResult> {
   ) {
 
     console.error(
-      `[WB DAILY] ${name} exception`,
+      "[WB DAILY] unified-sync exception",
       error
     );
 
@@ -281,12 +266,10 @@ Promise<InternalResult> {
 
         error:
           error instanceof Error
-            ?
-            error.message
-            :
-            String(
-              error
-            ),
+            ? error.message
+            : String(
+                error
+              ),
 
       },
 
@@ -338,70 +321,35 @@ async function runDailySync(
 
 
   // ==========================================================
-  // 2. SECRET
+  // 2. SECRET + DOMAIN
   // ==========================================================
 
   const cronSecret =
     getCronSecret();
 
 
-  // ==========================================================
-  // 3. DOMAIN
-  //
-  // Используем основной production domain,
-  // а не случайный deployment hostname.
-  // ==========================================================
-
   const origin =
     "https://zakup-automation.vercel.app";
 
 
   // ==========================================================
-  // 4. ROUTES
+  // 3. ОДИН МАРШРУТ НА ВСЕ ДАННЫЕ WB
   // ==========================================================
 
-  const salesUrl =
-    `${origin}/api/wb/sync-orders?force=1&source=daily-cron`;
-
-
-  const stocksUrl =
+  const syncUrl =
     `${origin}/api/wb/sync-stocks?force=1&source=daily-cron`;
 
 
-  // ==========================================================
-  // 5. ЗАПУСКАЕМ ПАРАЛЛЕЛЬНО
-  // ==========================================================
-
-  const [
-    salesResult,
-    stocksResult,
-  ] =
-    await Promise.all([
-
-      callRoute(
-        salesUrl,
-        cronSecret,
-        "sales-and-cancellations"
-      ),
-
-      callRoute(
-        stocksUrl,
-        cronSecret,
-        "stocks"
-      ),
-
-    ]);
+  const syncResult =
+    await callUnifiedSync(
+      syncUrl,
+      cronSecret
+    );
 
 
   // ==========================================================
-  // 6. ОБЩИЙ РЕЗУЛЬТАТ
+  // 4. РЕЗУЛЬТАТ
   // ==========================================================
-
-  const allOk =
-    salesResult.ok
-    &&
-    stocksResult.ok;
-
 
   const completedAt =
     new Date()
@@ -411,7 +359,7 @@ async function runDailySync(
   const result = {
 
     ok:
-      allOk,
+      syncResult.ok,
 
     mode:
       "wb_daily_sync",
@@ -428,46 +376,27 @@ async function runDailySync(
         "Asia/Krasnoyarsk",
 
       note:
-        "На Vercel Hobby cron имеет гибкое окно до 1 часа. Запуск сделан заранее, чтобы к 07:00 данные были свежими.",
+        "Один утренний sync обновляет остатки, продажи и cancelCount. На Vercel Hobby cron имеет гибкое окно до 1 часа, поэтому запуск запланирован заранее, чтобы к 07:00 данные были свежими.",
 
     },
 
     completedAt,
 
-
-    salesAndCancellations: {
-
-      ok:
-        salesResult.ok,
-
-      httpStatus:
-        salesResult.httpStatus,
-
-      durationMs:
-        salesResult.durationMs,
-
-      result:
-        salesResult.data,
-
-    },
-
-
-    stocks: {
+    dataSync: {
 
       ok:
-        stocksResult.ok,
+        syncResult.ok,
 
       httpStatus:
-        stocksResult.httpStatus,
+        syncResult.httpStatus,
 
       durationMs:
-        stocksResult.durationMs,
+        syncResult.durationMs,
 
       result:
-        stocksResult.data,
+        syncResult.data,
 
     },
-
 
     durationMs:
       Date.now()
@@ -481,19 +410,10 @@ async function runDailySync(
     "[WB DAILY] finished",
     {
       ok:
-        allOk,
+        syncResult.ok,
 
-      salesStatus:
-        salesResult.httpStatus,
-
-      salesOk:
-        salesResult.ok,
-
-      stocksStatus:
-        stocksResult.httpStatus,
-
-      stocksOk:
-        stocksResult.ok,
+      status:
+        syncResult.httpStatus,
 
       durationMs:
         Date.now()
@@ -507,11 +427,9 @@ async function runDailySync(
     result,
     {
       status:
-        allOk
-          ?
-          200
-          :
-          502,
+        syncResult.ok
+          ? 200
+          : 502,
     }
   );
 
