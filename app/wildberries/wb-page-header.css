@@ -13,19 +13,38 @@
 
 
 /* ============================================================
+   ОСНОВНЫЕ РАЗМЕРЫ
+
+   Высота WB-шапки должна быть абсолютно одинаковой:
+   - до прокрутки;
+   - во время прокрутки;
+   - после срабатывания sticky.
+
+   Полосы имеют высоту 64px.
+
+   98px - 64px = 34px
+   34px / 2 = 17px
+
+   Значит полосы ставим на 17px ниже верхней границы
+   WB-шапки и получаем точное вертикальное центрирование.
+   ============================================================ */
+
+.wb-reference-page {
+  --wb-page-header-height:
+    98px;
+
+  --wb-page-decoration-height:
+    64px;
+}
+
+
+/* ============================================================
    ШТАТНЫЕ ДЕКОРАТИВНЫЕ ПОЛОСЫ WORKSPACE
 
-   Ничего больше не скрываем и не дублируем.
+   Используем существующий WorkspaceDecoration.
 
-   На странице Wildberries существующий
-   .workspace-corner-decoration становится fixed.
-
-   Исходное положение было:
-   top: 19px внутри .home-content.
-
-   Общий topbar имеет высоту 72px,
-   поэтому во viewport это:
-   72px + 19px.
+   Полосы фиксируются вместе с WB-шапкой
+   и располагаются строго по её вертикальному центру.
    ============================================================ */
 
 .workspace-content--module:has(> .wb-reference-page)
@@ -41,7 +60,7 @@
         72px
       )
       +
-      19px
+      17px
     );
 
   right:
@@ -57,6 +76,12 @@
     min(
       500px,
       42%
+    );
+
+  height:
+    var(
+      --wb-page-decoration-height,
+      64px
     );
 
   pointer-events:
@@ -81,7 +106,10 @@
     100%;
 
   height:
-    64px;
+    var(
+      --wb-page-decoration-height,
+      64px
+    );
 
   align-items:
     center;
@@ -116,23 +144,16 @@ svg {
 /* ============================================================
    STICKY HEADER
 
-   В .home-content сверху есть 24px padding.
+   У .home-content есть 24px верхнего padding.
 
-   Раньше:
-   - до прокрутки эти 24px находились НАД header;
-   - после прилипания sticky они исчезали;
-   - из-за этого шапка визуально становилась ниже.
+   Поэтому:
+   - margin-top: -24px забирает эти 24px;
+   - сама шапка получает постоянные 98px;
+   - внутри НЕ используем отдельный padding-top;
+   - весь контент центрируется по высоте самих 98px.
 
-   Теперь:
-   - забираем эти 24px внутрь самой шапки;
-   - компенсируем их отрицательным margin-top;
-   - итоговая геометрия до и после sticky одинаковая.
-
-   Было:
-   24px внешнего воздуха + 74px header = 98px.
-
-   Теперь:
-   всегда 98px самой sticky-шапки.
+   Благодаря этому геометрия абсолютно одинаковая
+   до и после прилипания.
    ============================================================ */
 
 .workspace-content--module
@@ -150,11 +171,26 @@ svg {
   z-index:
     40;
 
+  display:
+    flex;
+
   box-sizing:
     border-box;
 
+  width:
+    100%;
+
+  height:
+    var(
+      --wb-page-header-height,
+      98px
+    );
+
   min-height:
-    98px;
+    var(
+      --wb-page-header-height,
+      98px
+    );
 
   margin-top:
     -24px;
@@ -163,9 +199,12 @@ svg {
     18px;
 
   padding-top:
-    24px;
+    0;
 
   padding-bottom:
+    0;
+
+  padding-left:
     0;
 
   padding-right:
@@ -173,6 +212,9 @@ svg {
       500px,
       42%
     );
+
+  align-items:
+    center;
 
   overflow:
     visible;
@@ -189,10 +231,13 @@ svg {
 
 
 /* ============================================================
-   ЗАГОЛОВОК
+   ЛЕВАЯ ЧАСТЬ — WILDBERRIES
 
-   Никакого отдельного WB-логотипа.
-   Только текст Wildberries.
+   Весь блок из:
+   - жирного Wildberries;
+   - маленького описания
+
+   центрируется внутри высоты шапки как единое целое.
    ============================================================ */
 
 .wb-reference-page
@@ -206,8 +251,26 @@ svg {
   align-items:
     center;
 
+  align-self:
+    center;
+
   gap:
     0;
+}
+
+
+.wb-reference-page
+.wb-title-wrap--text-only
+>
+div {
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  justify-content:
+    center;
 }
 
 
@@ -218,6 +281,9 @@ svg {
 
   color:
     var(--ws-text);
+
+  line-height:
+    1.15;
 }
 
 
@@ -230,22 +296,19 @@ svg {
 
   color:
     var(--ws-text-muted);
+
+  line-height:
+    1.3;
 }
 
 
 /* ============================================================
-   ТЕКСТ И КНОПКИ
+   КНОПКИ
 
-   Полосы имеют z-index 41.
-   Они занимают зарезервированную правую область.
-
-   Контент самой шапки физически не заходит
-   в эту область благодаря padding-right.
+   Центрируются по ТОЙ ЖЕ вертикальной оси,
+   что и Wildberries и декоративные полосы.
    ============================================================ */
 
-.wb-reference-page
-.wb-page-header-sticky
-.wb-title-wrap,
 .wb-reference-page
 .wb-page-header-sticky
 .wb-header-actions {
@@ -254,11 +317,34 @@ svg {
 
   z-index:
     42;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  align-self:
+    center;
+}
+
+
+.wb-reference-page
+.wb-page-header-sticky
+.wb-title-wrap {
+  position:
+    relative;
+
+  z-index:
+    42;
+
+  align-self:
+    center;
 }
 
 
 /* ============================================================
-   DARK
+   ТЁМНАЯ ТЕМА
    ============================================================ */
 
 html[data-theme="dark"]
@@ -273,7 +359,8 @@ html[data-theme="dark"]
 /* ============================================================
    <= 1100 PX
 
-   Повторяем размеры штатных полос Workspace.
+   Полосы становятся уже,
+   но их вертикальный центр остаётся тем же.
    ============================================================ */
 
 @media (
@@ -329,11 +416,17 @@ html[data-theme="dark"]
   .workspace-content--module
   .page.wb-reference-page
   .wb-page-header-sticky {
+    padding-top:
+      0;
+
     padding-right:
       min(
         300px,
         62%
       );
+
+    align-items:
+      center;
   }
 
 }
@@ -342,12 +435,12 @@ html[data-theme="dark"]
 /* ============================================================
    <= 800 PX
 
-   На мобильной версии:
-   - home-topbar уже не sticky;
-   - .home-content имеет 20px padding сверху.
+   На мобильной версии общий topbar уже не sticky.
 
-   Используем ту же логику:
-   20px + 74px = 94px.
+   У .home-content сверху 20px вместо 24px,
+   поэтому компенсация становится -20px.
+
+   Сам WB-header остаётся одинаковым до и после прокрутки.
    ============================================================ */
 
 @media (
@@ -368,17 +461,21 @@ html[data-theme="dark"]
     top:
       0;
 
+    height:
+      auto;
+
     min-height:
       94px;
 
     margin-top:
       -20px;
 
-    padding-top:
-      20px;
-
-    padding-right:
+    padding:
+      10px
       0;
+
+    align-items:
+      center;
   }
 
 }
