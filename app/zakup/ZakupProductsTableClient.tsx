@@ -609,6 +609,71 @@ export default function ZakupProductsTableClient({
           "table zakup-sortable-table"
       >
 
+        <colgroup>
+
+          <col
+            className=
+              "zakup-col-article"
+          />
+
+          <col
+            className=
+              "zakup-col-product"
+          />
+
+          <col
+            className=
+              "zakup-col-number"
+          />
+
+          <col
+            className=
+              "zakup-col-number"
+          />
+
+          <col
+            className=
+              "zakup-col-number"
+          />
+
+          <col
+            className=
+              "zakup-col-number"
+          />
+
+          <col
+            className=
+              "zakup-col-number"
+          />
+
+          <col
+            className=
+              "zakup-col-number"
+          />
+
+          <col
+            className=
+              "zakup-col-number"
+          />
+
+          <col
+            className=
+              "zakup-col-number"
+          />
+
+          <col
+            className=
+              "zakup-col-number"
+          />
+
+          <col
+            className=
+              "zakup-col-number"
+          />
+
+        </colgroup>
+
+
         <thead>
 
           <tr>
@@ -616,7 +681,8 @@ export default function ZakupProductsTableClient({
             <SortableHeader
               label="Артикул"
 
-              sortKey="offer_id"
+              sortKey=
+                "offer_id"
 
               currentKey={
                 sortKey
@@ -637,7 +703,8 @@ export default function ZakupProductsTableClient({
             <SortableHeader
               label="Товар"
 
-              sortKey="name"
+              sortKey=
+                "name"
 
               currentKey={
                 sortKey
@@ -656,7 +723,8 @@ export default function ZakupProductsTableClient({
 
 
             <SortableHeader
-              label="Продажи/сутки"
+              label=
+                "Продажи/сутки"
 
               sortKey=
                 "avg_sales_per_day"
@@ -673,12 +741,13 @@ export default function ZakupProductsTableClient({
                 changeSort
               }
 
-              align="right"
+              align="center"
             />
 
 
             <SortableHeader
-              label="Наш склад"
+              label=
+                "Наш склад"
 
               sortKey=
                 "own_stock_quantity"
@@ -695,12 +764,13 @@ export default function ZakupProductsTableClient({
                 changeSort
               }
 
-              align="right"
+              align="center"
             />
 
 
             <SortableHeader
-              label="Ozon"
+              label=
+                "Ozon"
 
               sortKey=
                 "ozon_stock_quantity"
@@ -717,12 +787,13 @@ export default function ZakupProductsTableClient({
                 changeSort
               }
 
-              align="right"
+              align="center"
             />
 
 
             <SortableHeader
-              label="ВЭД"
+              label=
+                "ВЭД"
 
               sortKey=
                 "active_ved_quantity"
@@ -739,12 +810,13 @@ export default function ZakupProductsTableClient({
                 changeSort
               }
 
-              align="right"
+              align="center"
             />
 
 
             <SortableHeader
-              label="Общий остаток"
+              label=
+                "Общий остаток"
 
               sortKey=
                 "effective_stock"
@@ -761,12 +833,13 @@ export default function ZakupProductsTableClient({
                 changeSort
               }
 
-              align="right"
+              align="center"
             />
 
 
             <SortableHeader
-              label="Покрытие"
+              label=
+                "Покрытие"
 
               sortKey=
                 "coverage_days"
@@ -783,12 +856,13 @@ export default function ZakupProductsTableClient({
                 changeSort
               }
 
-              align="right"
+              align="center"
             />
 
 
             <SortableHeader
-              label="Контейнер, шт."
+              label=
+                "Контейнер, шт."
 
               sortKey=
                 "container_effective_final_units"
@@ -805,12 +879,13 @@ export default function ZakupProductsTableClient({
                 changeSort
               }
 
-              align="right"
+              align="center"
             />
 
 
             <SortableHeader
-              label="Контейнер, м³"
+              label=
+                "Контейнер, м³"
 
               sortKey=
                 "container_effective_volume_m3"
@@ -827,12 +902,13 @@ export default function ZakupProductsTableClient({
                 changeSort
               }
 
-              align="right"
+              align="center"
             />
 
 
             <SortableHeader
-              label="Фура, шт."
+              label=
+                "Фура, шт."
 
               sortKey=
                 "truck_effective_final_units"
@@ -849,12 +925,13 @@ export default function ZakupProductsTableClient({
                 changeSort
               }
 
-              align="right"
+              align="center"
             />
 
 
             <SortableHeader
-              label="Фура, м³"
+              label=
+                "Фура, м³"
 
               sortKey=
                 "truck_effective_volume_m3"
@@ -871,7 +948,7 @@ export default function ZakupProductsTableClient({
                 changeSort
               }
 
-              align="right"
+              align="center"
             />
 
           </tr>
@@ -920,7 +997,7 @@ export default function ZakupProductsTableClient({
 
                   <td
                     className=
-                      "right"
+                      "center"
                   >
                     {
                       formatRoundedInteger(
@@ -933,7 +1010,7 @@ export default function ZakupProductsTableClient({
 
                   <td
                     className=
-                      "right"
+                      "center"
                   >
                     {
                       formatRoundedInteger(
@@ -946,7 +1023,7 @@ export default function ZakupProductsTableClient({
 
                   <td
                     className=
-                      "right"
+                      "center"
                   >
                     {
                       formatRoundedInteger(
@@ -959,7 +1036,7 @@ export default function ZakupProductsTableClient({
 
                   <td
                     className=
-                      "right"
+                      "center"
                   >
                     {
                       formatRoundedInteger(
@@ -972,7 +1049,7 @@ export default function ZakupProductsTableClient({
 
                   <td
                     className=
-                      "right"
+                      "center"
                   >
                     {
                       formatRoundedInteger(
@@ -985,7 +1062,7 @@ export default function ZakupProductsTableClient({
 
                   <td
                     className=
-                      "right"
+                      "center"
                   >
 
                     {
@@ -997,6 +1074,7 @@ export default function ZakupProductsTableClient({
 
                         : (
                           <>
+
                             <strong>
                               {
                                 formatRoundedInteger(
@@ -1004,8 +1082,10 @@ export default function ZakupProductsTableClient({
                                     .coverage_days
                                 )
                               }
-                            </strong>{" "}
-                            дн.
+                            </strong>
+
+                            {" "}дн.
+
                           </>
                         )
                     }
@@ -1015,7 +1095,7 @@ export default function ZakupProductsTableClient({
 
                   <td
                     className=
-                      "right"
+                      "center"
                   >
 
                     <strong>
@@ -1052,7 +1132,7 @@ export default function ZakupProductsTableClient({
 
                   <td
                     className=
-                      "right"
+                      "center"
                   >
                     {
                       formatOneDecimal(
@@ -1065,7 +1145,7 @@ export default function ZakupProductsTableClient({
 
                   <td
                     className=
-                      "right"
+                      "center"
                   >
 
                     <strong>
@@ -1102,7 +1182,7 @@ export default function ZakupProductsTableClient({
 
                   <td
                     className=
-                      "right"
+                      "center"
                   >
                     {
                       formatOneDecimal(
@@ -1162,7 +1242,7 @@ function SortableHeader({
   align:
     "left"
     |
-    "right";
+    "center";
 }) {
 
   const active =
@@ -1203,9 +1283,9 @@ function SortableHeader({
             "zakup-sort-button",
 
             align ===
-              "right"
+              "center"
 
-              ? "zakup-sort-button--right"
+              ? "zakup-sort-button--center"
 
               : "zakup-sort-button--left",
 
