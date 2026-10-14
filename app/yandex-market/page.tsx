@@ -135,13 +135,17 @@ type WarehouseMetrics = {
   warehouseId:
     number | null;
 
-  warehouseName: string;
+  warehouseName:
+    string;
 
-  sales: number;
+  sales:
+    number;
 
-  cancellations: number;
+  cancellations:
+    number;
 
-  stock: number;
+  stock:
+    number;
 };
 
 
@@ -1480,7 +1484,7 @@ export default async function YandexMarketPage() {
             }
 
             hint=
-              "Σ sales_quantity, шт."
+              "Продано товаров, шт."
           />
 
 
@@ -1501,7 +1505,7 @@ export default async function YandexMarketPage() {
             }
 
             hint=
-              "cancelled + unredeemed, шт."
+              "Отмены и невыкупы, шт."
           />
 
 
@@ -1522,7 +1526,7 @@ export default async function YandexMarketPage() {
             }
 
             hint=
-              "Σ available на складах ЯМ"
+              "Доступно на складах ЯМ, шт."
           />
 
 
@@ -1534,7 +1538,7 @@ export default async function YandexMarketPage() {
             }
 
             label=
-              "Связанных master_code"
+              "Связанных ЕНОТ"
 
             value={
               formatInteger(
@@ -1543,7 +1547,7 @@ export default async function YandexMarketPage() {
             }
 
             hint=
-              "только справочные связи"
+              "Карточек, связанных с ЕНОТ"
           />
 
 
@@ -1564,7 +1568,7 @@ export default async function YandexMarketPage() {
             }
 
             hint=
-              "текущих активных карточек"
+              "Активных карточек Яндекс Маркета"
           />
 
         </div>
@@ -1593,7 +1597,7 @@ export default async function YandexMarketPage() {
               className=
                 "section-title"
             >
-              Как теперь считаются данные Яндекс Маркета
+              Как считаются данные Яндекс Маркета
             </h2>
 
 
@@ -1603,50 +1607,34 @@ export default async function YandexMarketPage() {
             >
 
               <div className="reason-text">
-                Продажи за 28 дней — сумма
-                {" "}
-                <strong>
-                  sales_quantity
-                </strong>
-                {" "}
-                по последнему рассчитанному
-                28-дневному периоду.
+                Продажи за 28 дней — количество
+                проданных товаров за последние
+                28 дней.
               </div>
 
 
               <div className="reason-text">
-                Отмены — сумма
-                {" "}
-                <strong>
-                  cancelled_quantity + unredeemed_quantity
-                </strong>
-                {" "}
-                за тот же период.
+                Отмены — количество товаров,
+                которые были отменены или
+                не выкуплены за тот же период.
               </div>
 
 
               <div className="reason-text">
-                Остаток FBY — сумма текущего
-                {" "}
-                <strong>
-                  available
-                </strong>
-                {" "}
-                по последнему снимку складов
-                Яндекс Маркета.
+                Остаток FBY — доступное количество
+                товаров на складах Яндекс Маркета
+                на момент последнего обновления.
               </div>
 
 
               <div className="reason-text">
-                Связанных master_code —
-                количество карточек Яндекс Маркета,
-                у которых уже указан master_code.
+                Связанных ЕНОТ — количество карточек
+                Яндекс Маркета, для которых указан ЕНОТ.
               </div>
 
 
               <div className="reason-text">
-                Артикулов ЯМ —
-                количество текущих активных
+                Артикулов ЯМ — количество активных
                 карточек Яндекс Маркета.
               </div>
 
@@ -1664,14 +1652,13 @@ export default async function YandexMarketPage() {
         <section className="section">
 
           <h2 className="section-title">
-            Товары без master_code
+            Товары без ЕНОТ
           </h2>
 
 
           <div className="reason-text">
             Новые товары Яндекс Маркета,
-            которые пока не связаны
-            с физическим товаром.
+            для которых пока не указан ЕНОТ.
           </div>
 
 
@@ -2011,7 +1998,6 @@ function InfoIcon() {
 
 // ============================================================
 // PRODUCTS TABLE
-// НИЖЕ ЛОГИКА И РАЗМЕРЫ ТАБЛИЦЫ НЕ МЕНЯЛИСЬ
 // ============================================================
 
 function ProductsTable({
@@ -2080,32 +2066,39 @@ function ProductsTable({
         >
 
           <MainHeader>
-            master_code
+            ЕНОТ
           </MainHeader>
+
 
           <MainHeader>
             Товар
           </MainHeader>
 
+
           <MainHeader>
             Offer ID
           </MainHeader>
+
 
           <MainHeader numeric>
             Продажи {periodDays} дн.
           </MainHeader>
 
+
           <MainHeader numeric>
             Среднее / день
           </MainHeader>
+
 
           <MainHeader numeric>
             Отмены
           </MainHeader>
 
+
           <MainHeader numeric>
             Остаток
           </MainHeader>
+
 
           <MainHeader numeric>
             Дней запаса
@@ -2397,6 +2390,7 @@ function ProductsTable({
                           }
                         </span>
 
+
                         <span>
                           Продажи:{" "}
                           {
@@ -2406,6 +2400,7 @@ function ProductsTable({
                           }
                         </span>
 
+
                         <span>
                           Отмены:{" "}
                           {
@@ -2414,6 +2409,7 @@ function ProductsTable({
                             )
                           }
                         </span>
+
 
                         <span>
                           Остаток:{" "}
@@ -2539,29 +2535,36 @@ function WarehouseTable({
               Offer ID
             </WarehouseHeader>
 
+
             <WarehouseHeader>
               Product ID
             </WarehouseHeader>
+
 
             <WarehouseHeader>
               Склад
             </WarehouseHeader>
 
+
             <WarehouseHeader numeric>
               Продажи {periodDays} дн.
             </WarehouseHeader>
+
 
             <WarehouseHeader numeric>
               Среднее / день
             </WarehouseHeader>
 
+
             <WarehouseHeader numeric>
               Отмены
             </WarehouseHeader>
 
+
             <WarehouseHeader numeric>
               Остаток
             </WarehouseHeader>
+
 
             <WarehouseHeader numeric>
               Дней запаса
