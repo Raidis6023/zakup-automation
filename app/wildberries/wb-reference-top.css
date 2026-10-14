@@ -9,27 +9,47 @@
 
 /* ============================================================
    ВСЯ ПЛАШКА
+
+   Теперь значительно компактнее.
+
+   Внутреннее содержимое занимает около 68px,
+   а сверху и снизу остаётся примерно по 4px.
    ============================================================ */
 
 .wb-sync-hero {
-  display: grid;
+  display:
+    grid;
 
   grid-template-columns:
     repeat(
       4,
-      minmax(0, 1fr)
+      minmax(
+        0,
+        1fr
+      )
     );
 
-  width: 100%;
+  box-sizing:
+    border-box;
 
-  min-height: 92px;
+  width:
+    100%;
 
-  margin-bottom: 14px;
+  min-height:
+    76px;
+
+  margin-top:
+    0;
+
+  margin-bottom:
+    14px;
 
   padding:
-    5px 8px;
+    4px
+    8px;
 
-  overflow: hidden;
+  overflow:
+    hidden;
 }
 
 
@@ -38,16 +58,27 @@
    ============================================================ */
 
 .wb-sync-hero__quarter {
-  display: flex;
+  display:
+    flex;
 
-  min-width: 0;
-  min-height: 80px;
+  box-sizing:
+    border-box;
 
-  align-items: center;
-  justify-content: flex-start;
+  min-width:
+    0;
+
+  min-height:
+    64px;
+
+  align-items:
+    center;
+
+  justify-content:
+    flex-start;
 
   padding:
-    3px 18px;
+    0
+    18px;
 }
 
 
@@ -61,26 +92,49 @@
 /* ============================================================
    1 / 4
    ЗЕЛЁНЫЙ СТАТУС
+
+   Фиксируем реальную высоту 64px
+   через border-box.
+
+   Внешняя плашка получается
+   лишь немного выше этого блока.
    ============================================================ */
 
 .wb-sync-status-card {
-  display: flex;
+  display:
+    flex;
 
-  width: 100%;
-  min-width: 0;
-  min-height: 64px;
+  box-sizing:
+    border-box;
 
-  align-items: center;
+  width:
+    100%;
 
-  gap: 14px;
+  min-width:
+    0;
+
+  height:
+    64px;
+
+  min-height:
+    64px;
+
+  align-items:
+    center;
+
+  gap:
+    13px;
 
   padding:
-    8px 14px;
+    7px
+    14px;
 
   border:
-    1px solid transparent;
+    1px solid
+    transparent;
 
-  border-radius: 11px;
+  border-radius:
+    11px;
 }
 
 
@@ -123,23 +177,36 @@
 
 
 .wb-sync-status-card__icon {
-  display: inline-flex;
+  display:
+    inline-flex;
 
-  width: 40px;
-  height: 40px;
+  width:
+    40px;
+
+  height:
+    40px;
 
   flex:
-    0 0 40px;
+    0 0
+    40px;
 
-  align-items: center;
-  justify-content: center;
+  align-items:
+    center;
 
-  border-radius: 50%;
+  justify-content:
+    center;
 
-  font-size: 23px;
-  font-weight: 800;
+  border-radius:
+    50%;
 
-  line-height: 1;
+  font-size:
+    23px;
+
+  font-weight:
+    800;
+
+  line-height:
+    1;
 }
 
 
@@ -164,9 +231,11 @@
 
 
 .wb-sync-status-card__content {
-  min-width: 0;
+  min-width:
+    0;
 
-  text-align: left;
+  text-align:
+    left;
 }
 
 
@@ -174,10 +243,14 @@
   color:
     #059669;
 
-  font-size: 14px;
-  font-weight: 800;
+  font-size:
+    14px;
 
-  line-height: 1.3;
+  font-weight:
+    800;
+
+  line-height:
+    1.25;
 }
 
 
@@ -189,15 +262,20 @@
 
 
 .wb-sync-status-card__hint {
-  margin-top: 4px;
+  margin-top:
+    3px;
 
   color:
     var(--ws-text-muted);
 
-  font-size: 12px;
-  font-weight: 500;
+  font-size:
+    12px;
 
-  line-height: 1.25;
+  font-weight:
+    500;
+
+  line-height:
+    1.2;
 }
 
 
@@ -207,72 +285,103 @@
    ============================================================ */
 
 .wb-sync-fact {
-  display: flex;
+  display:
+    flex;
 
-  width: 100%;
+  width:
+    100%;
 
-  min-width: 0;
+  min-width:
+    0;
 
-  align-items: center;
+  align-items:
+    center;
 
-  justify-content: flex-start;
+  justify-content:
+    flex-start;
 
-  gap: 14px;
+  gap:
+    14px;
 }
 
 
 .wb-sync-fact__icon {
-  display: inline-flex;
+  display:
+    inline-flex;
 
-  width: 28px;
-  height: 28px;
+  width:
+    28px;
+
+  height:
+    28px;
 
   flex:
-    0 0 28px;
+    0 0
+    28px;
 
-  align-items: center;
-  justify-content: center;
+  align-items:
+    center;
+
+  justify-content:
+    center;
 
   color:
     var(--ws-blue);
 }
 
 
-.wb-sync-fact__icon svg {
-  width: 100%;
-  height: 100%;
+.wb-sync-fact__icon
+svg {
+  width:
+    100%;
 
-  fill: none;
+  height:
+    100%;
+
+  fill:
+    none;
 
   stroke:
     currentColor;
 
-  stroke-width: 1.8;
+  stroke-width:
+    1.8;
 
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
 }
 
 
 .wb-sync-fact__content {
-  min-width: 0;
+  min-width:
+    0;
 
-  text-align: left;
+  text-align:
+    left;
 }
 
 
 .wb-sync-fact__label {
-  margin-bottom: 4px;
+  margin-bottom:
+    3px;
 
   color:
     var(--ws-text-muted);
 
-  font-size: 13px;
-  font-weight: 600;
+  font-size:
+    13px;
 
-  line-height: 1.25;
+  font-weight:
+    600;
 
-  text-align: left;
+  line-height:
+    1.2;
+
+  text-align:
+    left;
 }
 
 
@@ -280,66 +389,99 @@
   color:
     var(--ws-text);
 
-  font-size: 15px;
-  font-weight: 800;
+  font-size:
+    15px;
 
-  line-height: 1.25;
+  font-weight:
+    800;
 
-  white-space: nowrap;
+  line-height:
+    1.2;
 
-  text-align: left;
+  white-space:
+    nowrap;
+
+  text-align:
+    left;
 }
 
 
 .wb-sync-fact__hint {
-  margin-top: 4px;
+  margin-top:
+    3px;
 
   color:
     var(--ws-text-muted);
 
-  font-size: 12px;
-  font-weight: 500;
+  font-size:
+    12px;
 
-  line-height: 1.25;
+  font-weight:
+    500;
 
-  text-align: left;
+  line-height:
+    1.2;
+
+  text-align:
+    left;
 }
 
 
 /* ============================================================
    4 / 4
    КНОПКА
+
+   Раньше:
+   16 + 44 + 16 + промежутки = около 84px.
+
+   Теперь:
+   12 + 40 + 12 + промежутки = 68px.
+
+   Поэтому именно кнопочный блок больше
+   не растягивает всю плашку обратно.
    ============================================================ */
 
 .wb-sync-hero__action {
-  display: flex;
+  display:
+    flex;
 
-  width: 100%;
+  width:
+    100%;
 
-  min-width: 0;
+  min-width:
+    0;
 
-  align-items: center;
-  justify-content: center;
+  align-items:
+    center;
+
+  justify-content:
+    center;
 }
 
 
 .wb-sync-client--hero {
-  display: grid;
+  display:
+    grid;
 
   grid-template-rows:
-    16px
-    44px
-    16px;
+    12px
+    40px
+    12px;
 
-  row-gap: 4px;
+  row-gap:
+    2px;
 
-  width: 100%;
+  width:
+    100%;
 
-  min-width: 0;
+  min-width:
+    0;
 
-  align-items: center;
+  align-items:
+    center;
 
-  text-align: center;
+  text-align:
+    center;
 }
 
 
@@ -348,27 +490,38 @@
    ============================================================ */
 
 .wb-sync-hero-message-slot {
-  display: block;
+  display:
+    block;
 
-  width: 100%;
+  width:
+    100%;
 
-  height: 16px;
+  height:
+    12px;
 
-  overflow: hidden;
+  overflow:
+    hidden;
 
   color:
     var(--ws-text-muted);
 
-  font-size: 10px;
-  font-weight: 600;
+  font-size:
+    10px;
 
-  line-height: 16px;
+  font-weight:
+    600;
 
-  text-align: center;
+  line-height:
+    12px;
 
-  white-space: nowrap;
+  text-align:
+    center;
 
-  text-overflow: ellipsis;
+  white-space:
+    nowrap;
+
+  text-overflow:
+    ellipsis;
 }
 
 
@@ -395,20 +548,33 @@
    ============================================================ */
 
 .wb-sync-hero-button {
-  display: inline-flex;
+  display:
+    inline-flex;
 
-  width: 100%;
-  height: 44px;
+  box-sizing:
+    border-box;
 
-  min-height: 44px;
+  width:
+    100%;
 
-  align-items: center;
-  justify-content: center;
+  height:
+    40px;
 
-  gap: 9px;
+  min-height:
+    40px;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  gap:
+    8px;
 
   padding:
-    10px 18px;
+    8px
+    18px;
 
   border:
     1px solid
@@ -419,7 +585,8 @@
       0.22
     );
 
-  border-radius: 10px;
+  border-radius:
+    9px;
 
   color:
     #ffffff;
@@ -433,29 +600,42 @@
     );
 
   box-shadow:
-    0 7px 18px
+    0 6px 16px
     rgba(
       180,
       16,
       190,
-      0.24
+      0.22
     );
 
   font:
     inherit;
 
-  font-size: 13px;
-  font-weight: 700;
+  font-size:
+    13px;
 
-  line-height: 1;
+  font-weight:
+    700;
 
-  cursor: pointer;
+  line-height:
+    1;
+
+  cursor:
+    pointer;
 
   transition:
-    transform 120ms ease,
-    filter 120ms ease,
-    box-shadow 120ms ease,
-    background 120ms ease;
+    transform
+      120ms
+      ease,
+    filter
+      120ms
+      ease,
+    box-shadow
+      120ms
+      ease,
+    background
+      120ms
+      ease;
 }
 
 
@@ -466,12 +646,12 @@
     );
 
   box-shadow:
-    0 9px 22px
+    0 8px 20px
     rgba(
       180,
       16,
       190,
-      0.31
+      0.29
     );
 
   transform:
@@ -532,30 +712,43 @@
    ============================================================ */
 
 .wb-sync-hero-button__icon {
-  display: inline-flex;
+  display:
+    inline-flex;
 
-  width: 18px;
-  height: 18px;
+  width:
+    16px;
+
+  height:
+    16px;
 
   flex:
-    0 0 18px;
+    0 0
+    16px;
 }
 
 
-.wb-sync-hero-button__icon svg {
-  width: 100%;
-  height: 100%;
+.wb-sync-hero-button__icon
+svg {
+  width:
+    100%;
 
-  fill: none;
+  height:
+    100%;
+
+  fill:
+    none;
 
   stroke:
     currentColor;
 
-  stroke-width: 2;
+  stroke-width:
+    2;
 
-  stroke-linecap: round;
+  stroke-linecap:
+    round;
 
-  stroke-linejoin: round;
+  stroke-linejoin:
+    round;
 }
 
 
@@ -587,27 +780,38 @@
    ============================================================ */
 
 .wb-sync-hero-note-slot {
-  display: block;
+  display:
+    block;
 
-  width: 100%;
+  width:
+    100%;
 
-  height: 16px;
+  height:
+    12px;
 
-  overflow: hidden;
+  overflow:
+    hidden;
 
   color:
     var(--ws-text-muted);
 
-  font-size: 10px;
-  font-weight: 600;
+  font-size:
+    10px;
 
-  line-height: 16px;
+  font-weight:
+    600;
 
-  text-align: center;
+  line-height:
+    12px;
 
-  white-space: nowrap;
+  text-align:
+    center;
 
-  text-overflow: ellipsis;
+  white-space:
+    nowrap;
+
+  text-overflow:
+    ellipsis;
 }
 
 
@@ -674,12 +878,12 @@ html[data-theme="dark"]
     );
 
   box-shadow:
-    0 7px 20px
+    0 6px 18px
     rgba(
       203,
       17,
       171,
-      0.25
+      0.24
     );
 }
 
@@ -767,10 +971,16 @@ html[data-theme="dark"]
   .wb-sync-hero {
     grid-template-columns:
       1fr;
+
+    min-height:
+      0;
   }
 
 
   .wb-sync-hero__quarter {
+    min-height:
+      68px;
+
     justify-content:
       flex-start;
   }
