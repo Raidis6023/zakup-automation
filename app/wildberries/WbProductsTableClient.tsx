@@ -240,10 +240,6 @@ function compareRows(
       : -1;
 
 
-  // ==========================================================
-  // TEXT
-  // ==========================================================
-
   if (
     TEXT_SORT_KEYS.has(
       key
@@ -319,10 +315,6 @@ function compareRows(
 
   }
 
-
-  // ==========================================================
-  // NUMBERS
-  // ==========================================================
 
   const firstRaw =
     first[key] as
@@ -415,10 +407,6 @@ export default function WbProductsTableClient({
   items,
 }: Props) {
 
-  // ==========================================================
-  // COLLAPSE
-  // ==========================================================
-
   const [
     expanded,
     setExpanded,
@@ -436,13 +424,6 @@ export default function WbProductsTableClient({
       false
     );
 
-
-  // ==========================================================
-  // SORT
-  //
-  // Всегда начинаем:
-  // Продажи 28 дней -> от большего к меньшему.
-  // ==========================================================
 
   const [
     sortKey,
@@ -614,8 +595,7 @@ export default function WbProductsTableClient({
         } catch {
 
           /*
-           * Сама таблица продолжит работать
-           * даже без localStorage.
+           * Таблица всё равно продолжит работать.
            */
 
         }
@@ -822,10 +802,6 @@ export default function WbProductsTableClient({
       className="section wb-products-section wb-products-collapsible"
     >
 
-      {/* ======================================================
-          COLLAPSE HEADER
-          ====================================================== */}
-
       <button
         type="button"
 
@@ -858,9 +834,7 @@ export default function WbProductsTableClient({
           <strong
             className="wb-products-toggle-title"
           >
-            Данные по товарам ({
-              items.length
-            })
+            Данные по товарам
           </strong>
 
 
@@ -887,10 +861,6 @@ export default function WbProductsTableClient({
 
       </button>
 
-
-      {/* ======================================================
-          TABLE
-          ====================================================== */}
 
       {
         storageLoaded
@@ -1136,8 +1106,6 @@ export default function WbProductsTableClient({
                             }
                           >
 
-                            {/* master_code */}
-
                             <td
                               className="wb-products-master-cell"
                             >
@@ -1163,8 +1131,6 @@ export default function WbProductsTableClient({
                             </td>
 
 
-                            {/* Артикул WB */}
-
                             <td
                               className="wb-products-wb-cell"
                             >
@@ -1177,8 +1143,6 @@ export default function WbProductsTableClient({
 
                             </td>
 
-
-                            {/* Артикул продавца */}
 
                             <td
                               className="wb-products-seller-cell"
@@ -1197,8 +1161,6 @@ export default function WbProductsTableClient({
 
                             </td>
 
-
-                            {/* Товар */}
 
                             <td
                               className="wb-products-product-cell"
@@ -1240,8 +1202,6 @@ export default function WbProductsTableClient({
                             </td>
 
 
-                            {/* Продажи */}
-
                             <td
                               className="wb-products-number-cell wb-products-sales-cell"
                             >
@@ -1257,8 +1217,6 @@ export default function WbProductsTableClient({
                             </td>
 
 
-                            {/* Среднее */}
-
                             <td
                               className="wb-products-number-cell"
                             >
@@ -1272,8 +1230,6 @@ export default function WbProductsTableClient({
                             </td>
 
 
-                            {/* Отмены */}
-
                             <td
                               className="wb-products-number-cell"
                             >
@@ -1286,8 +1242,6 @@ export default function WbProductsTableClient({
 
                             </td>
 
-
-                            {/* Остаток */}
 
                             <td
                               className="wb-products-number-cell"
@@ -1303,8 +1257,6 @@ export default function WbProductsTableClient({
 
                             </td>
 
-
-                            {/* Дней запаса */}
 
                             <td
                               className="wb-products-number-cell"
