@@ -6,36 +6,133 @@
    - Wildberries
    - поясняющий текст
    - кнопки
-   - декоративные полосы
+   - штатные декоративные полосы Workspace
 
-   Плашка синхронизации здесь НЕ оформляется.
+   Плашку синхронизации этот файл НЕ трогает.
    ============================================================ */
 
 
 /* ============================================================
-   НА СТРАНИЦЕ WB СКРЫВАЕМ СТАНДАРТНЫЕ ПОЛОСЫ WORKSPACE
+   ШТАТНЫЕ ДЕКОРАТИВНЫЕ ПОЛОСЫ WORKSPACE
 
-   Вместо них рисуем ТОТ ЖЕ WorkspaceDecoration
-   внутри закреплённой WB-шапки.
+   Ничего больше не скрываем и не дублируем.
 
-   Остальные страницы Workspace это правило не затрагивает.
+   На странице Wildberries существующий
+   .workspace-corner-decoration становится fixed.
+
+   Исходное положение было:
+   top: 19px внутри .home-content.
+
+   Общий topbar имеет высоту 72px,
+   поэтому во viewport это:
+   72px + 19px.
    ============================================================ */
 
 .workspace-content--module:has(> .wb-reference-page)
 >
 .workspace-corner-decoration {
+  position:
+    fixed;
+
+  top:
+    calc(
+      var(
+        --home-topbar-height,
+        72px
+      )
+      +
+      19px
+    );
+
+  right:
+    30px;
+
+  z-index:
+    41;
+
   display:
+    block;
+
+  width:
+    min(
+      500px,
+      42%
+    );
+
+  pointer-events:
     none;
+
+  visibility:
+    visible;
+
+  opacity:
+    1;
+}
+
+
+.workspace-content--module:has(> .wb-reference-page)
+>
+.workspace-corner-decoration
+.home-decoration {
+  display:
+    flex;
+
+  width:
+    100%;
+
+  height:
+    64px;
+
+  align-items:
+    center;
+
+  justify-content:
+    flex-end;
+
+  overflow:
+    visible;
+}
+
+
+.workspace-content--module:has(> .wb-reference-page)
+>
+.workspace-corner-decoration
+.home-decoration
+svg {
+  display:
+    block;
+
+  width:
+    100%;
+
+  height:
+    100%;
+
+  overflow:
+    visible;
 }
 
 
 /* ============================================================
    STICKY HEADER
 
-   Общий topbar Workspace имеет высоту
-   var(--home-topbar-height) = 72px.
+   В .home-content сверху есть 24px padding.
 
-   Поэтому WB-шапка прилипает непосредственно под ним.
+   Раньше:
+   - до прокрутки эти 24px находились НАД header;
+   - после прилипания sticky они исчезали;
+   - из-за этого шапка визуально становилась ниже.
+
+   Теперь:
+   - забираем эти 24px внутрь самой шапки;
+   - компенсируем их отрицательным margin-top;
+   - итоговая геометрия до и после sticky одинаковая.
+
+   Было:
+   24px внешнего воздуха + 74px header = 98px.
+
+   Теперь:
+   всегда 98px самой sticky-шапки.
    ============================================================ */
 
 .workspace-content--module
@@ -53,28 +150,33 @@
   z-index:
     40;
 
+  box-sizing:
+    border-box;
+
   min-height:
-    74px;
+    98px;
+
+  margin-top:
+    -24px;
 
   margin-bottom:
     18px;
 
-  /*
-   * Оставляем ровно тот же резерв справа,
-   * который раньше создавал workspace-shell.css
-   * для декоративных полос.
-   */
+  padding-top:
+    24px;
+
+  padding-bottom:
+    0;
+
   padding-right:
     min(
       500px,
       42%
     );
 
-  /*
-   * Фон совпадает с фоном рабочей страницы.
-   * Поэтому при закреплении не появляется
-   * новая заметная "панель".
-   */
+  overflow:
+    visible;
+
   background:
     var(--ws-page);
 
@@ -89,9 +191,8 @@
 /* ============================================================
    ЗАГОЛОВОК
 
-   Квадратного WB-логотипа больше нет,
-   поэтому текст начинается сразу
-   с обычной левой границы заголовка.
+   Никакого отдельного WB-логотипа.
+   Только текст Wildberries.
    ============================================================ */
 
 .wb-reference-page
@@ -133,7 +234,13 @@
 
 
 /* ============================================================
-   ЗАГОЛОВОК И КНОПКИ ДОЛЖНЫ БЫТЬ ВЫШЕ ПОЛОС
+   ТЕКСТ И КНОПКИ
+
+   Полосы имеют z-index 41.
+   Они занимают зарезервированную правую область.
+
+   Контент самой шапки физически не заходит
+   в эту область благодаря padding-right.
    ============================================================ */
 
 .wb-reference-page
@@ -146,89 +253,12 @@
     relative;
 
   z-index:
-    2;
+    42;
 }
 
 
 /* ============================================================
-   ПОЛОСЫ
-
-   Повторяем геометрию исходного
-   .workspace-corner-decoration:
-
-   top: 19px
-   right: 30px
-   width: min(500px, 42%)
-   ============================================================ */
-
-.wb-page-header-decoration {
-  position:
-    absolute;
-
-  z-index:
-    1;
-
-  top:
-    19px;
-
-  right:
-    30px;
-
-  width:
-    min(
-      500px,
-      42%
-    );
-
-  pointer-events:
-    none;
-}
-
-
-.wb-page-header-decoration
-.home-decoration {
-  display:
-    flex;
-
-  width:
-    100%;
-
-  height:
-    64px;
-
-  align-items:
-    center;
-
-  justify-content:
-    flex-end;
-
-  overflow:
-    visible;
-}
-
-
-.wb-page-header-decoration
-.home-decoration
-svg {
-  display:
-    block;
-
-  width:
-    100%;
-
-  height:
-    100%;
-
-  overflow:
-    visible;
-}
-
-
-/* ============================================================
-   ТЁМНАЯ ТЕМА
-
-   Фон sticky-блока остаётся тем же,
-   что и рабочая страница.
+   DARK
    ============================================================ */
 
 html[data-theme="dark"]
@@ -243,18 +273,20 @@ html[data-theme="dark"]
 /* ============================================================
    <= 1100 PX
 
-   Повторяем существующую геометрию Workspace:
-   полосы становятся уже.
+   Повторяем размеры штатных полос Workspace.
    ============================================================ */
 
 @media (
   max-width: 1100px
 ) {
 
-  .workspace-content--module
-  .page.wb-reference-page
-  .wb-page-header-sticky {
-    padding-right:
+  .workspace-content--module:has(> .wb-reference-page)
+  >
+  .workspace-corner-decoration {
+    right:
+      20px;
+
+    width:
       min(
         350px,
         40%
@@ -262,8 +294,10 @@ html[data-theme="dark"]
   }
 
 
-  .wb-page-header-decoration {
-    width:
+  .workspace-content--module
+  .page.wb-reference-page
+  .wb-page-header-sticky {
+    padding-right:
       min(
         350px,
         40%
@@ -275,31 +309,31 @@ html[data-theme="dark"]
 
 /* ============================================================
    <= 900 PX
-
-   На узком экране полосы убираем,
-   чтобы они не наезжали на кнопки и заголовок.
-
-   При этом закрепление шапки остаётся.
    ============================================================ */
 
 @media (
   max-width: 900px
 ) {
 
-  .workspace-content--module
-  .page.wb-reference-page
-  .wb-page-header-sticky {
-    padding-top:
-      8px;
-
-    padding-right:
-      0;
+  .workspace-content--module:has(> .wb-reference-page)
+  >
+  .workspace-corner-decoration {
+    width:
+      min(
+        300px,
+        62%
+      );
   }
 
 
-  .wb-page-header-decoration {
-    display:
-      none;
+  .workspace-content--module
+  .page.wb-reference-page
+  .wb-page-header-sticky {
+    padding-right:
+      min(
+        300px,
+        62%
+      );
   }
 
 }
@@ -308,20 +342,42 @@ html[data-theme="dark"]
 /* ============================================================
    <= 800 PX
 
-   На мобильной версии общий topbar Workspace
-   уже перестаёт быть sticky.
+   На мобильной версии:
+   - home-topbar уже не sticky;
+   - .home-content имеет 20px padding сверху.
 
-   Поэтому WB-шапка закрепляется к самому верху.
+   Используем ту же логику:
+   20px + 74px = 94px.
    ============================================================ */
 
 @media (
   max-width: 800px
 ) {
 
+  .workspace-content--module:has(> .wb-reference-page)
+  >
+  .workspace-corner-decoration {
+    display:
+      none;
+  }
+
+
   .workspace-content--module
   .page.wb-reference-page
   .wb-page-header-sticky {
     top:
+      0;
+
+    min-height:
+      94px;
+
+    margin-top:
+      -20px;
+
+    padding-top:
+      20px;
+
+    padding-right:
       0;
   }
 
