@@ -1,0 +1,724 @@
+/* ============================================================
+   YANDEX MARKET
+   ТАБЛИЦА "ДАННЫЕ ПО ТОВАРАМ"
+
+   Основная таблица.
+   Раскрытие по складам специально не переоформляем.
+   ============================================================ */
+
+.yandex-reference-page {
+  --ym-products-orange:
+    #e6983e;
+
+  --ym-products-orange-readable:
+    #d98a35;
+
+  --ym-products-border:
+    rgba(
+      249,
+      115,
+      22,
+      0.09
+    );
+
+  --ym-products-border-strong:
+    rgba(
+      249,
+      115,
+      22,
+      0.15
+    );
+
+  --ym-products-hover:
+    rgba(
+      249,
+      115,
+      22,
+      0.035
+    );
+}
+
+
+/* ============================================================
+   SECTION
+   ============================================================ */
+
+.yandex-reference-page
+.ym-products-collapsible {
+  padding:
+    0;
+
+  overflow:
+    hidden;
+}
+
+
+.yandex-reference-page
+.ym-products-toggle {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    12px;
+
+  width:
+    100%;
+
+  min-height:
+    72px;
+
+  box-sizing:
+    border-box;
+
+  padding:
+    12px
+    14px;
+
+  border:
+    none;
+
+  background:
+    transparent;
+
+  color:
+    inherit;
+
+  font:
+    inherit;
+
+  text-align:
+    left;
+
+  cursor:
+    pointer;
+
+  transition:
+    background-color
+      0.12s
+      ease;
+}
+
+
+.yandex-reference-page
+.ym-products-toggle:hover {
+  background:
+    var(--ws-surface-hover);
+}
+
+
+.yandex-reference-page
+.ym-products-toggle:focus-visible {
+  outline:
+    2px solid
+    var(--ym-products-orange);
+
+  outline-offset:
+    -2px;
+}
+
+
+/* ============================================================
+   SECTION ICON
+   ============================================================ */
+
+.yandex-reference-page
+.ym-products-section-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    42px;
+
+  height:
+    42px;
+
+  flex:
+    0 0
+    42px;
+
+  border-radius:
+    10px;
+
+  color:
+    var(--ym-products-orange);
+
+  background:
+    rgba(
+      230,
+      152,
+      62,
+      0.13
+    );
+}
+
+
+.yandex-reference-page
+.ym-products-section-icon
+svg {
+  width:
+    23px;
+
+  height:
+    23px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+/* ============================================================
+   SECTION COPY
+   ============================================================ */
+
+.yandex-reference-page
+.ym-products-toggle-copy {
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  min-width:
+    0;
+}
+
+
+.yandex-reference-page
+.ym-products-toggle-title {
+  color:
+    var(--ws-text);
+
+  font-size:
+    15px;
+
+  font-weight:
+    750;
+}
+
+
+.yandex-reference-page
+.ym-products-toggle-subtitle {
+  margin-top:
+    3px;
+
+  font-size:
+    11px;
+}
+
+
+/* ============================================================
+   TABLE CONTENT
+   ============================================================ */
+
+.yandex-reference-page
+.ym-products-table-content {
+  border-top:
+    1px solid
+    var(--ym-products-border-strong);
+}
+
+
+.yandex-reference-page
+.ym-products-table-shell {
+  width:
+    100%;
+
+  overflow-x:
+    auto;
+}
+
+
+.yandex-reference-page
+.ym-products-table {
+  width:
+    100%;
+
+  min-width:
+    1368px;
+}
+
+
+/* ============================================================
+   GRID
+   ============================================================ */
+
+.yandex-reference-page
+.ym-products-grid {
+  display:
+    grid;
+
+  grid-template-columns:
+    120px
+    minmax(
+      420px,
+      560px
+    )
+    minmax(
+      300px,
+      420px
+    )
+    120px
+    120px
+    92px
+    92px
+    104px;
+
+  justify-content:
+    start;
+
+  width:
+    100%;
+
+  min-width:
+    1368px;
+}
+
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.yandex-reference-page
+.ym-products-table-header {
+  background:
+    var(
+      --table-header-bg,
+      var(--ws-surface-soft)
+    );
+
+  border-bottom:
+    1px solid
+    var(--ym-products-border-strong);
+}
+
+
+.yandex-reference-page
+.ym-products-header-cell {
+  min-width:
+    0;
+
+  border-right:
+    1px solid
+    var(--ym-products-border);
+}
+
+
+.yandex-reference-page
+.ym-products-header-cell:last-child {
+  border-right:
+    none;
+}
+
+
+/* ============================================================
+   SORT BUTTONS
+   ============================================================ */
+
+.yandex-reference-page
+.ym-products-sort-button {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    5px;
+
+  width:
+    100%;
+
+  min-height:
+    40px;
+
+  box-sizing:
+    border-box;
+
+  padding:
+    12px
+    14px;
+
+  border:
+    none;
+
+  background:
+    transparent;
+
+  color:
+    var(
+      --text-secondary,
+      #b8c0cc
+    );
+
+  font:
+    inherit;
+
+  font-size:
+    12px;
+
+  font-weight:
+    700;
+
+  line-height:
+    1.2;
+
+  white-space:
+    nowrap;
+
+  cursor:
+    pointer;
+
+  transition:
+    color
+      0.12s
+      ease,
+    background-color
+      0.12s
+      ease;
+}
+
+
+.yandex-reference-page
+.ym-products-sort-button--left {
+  justify-content:
+    flex-start;
+
+  text-align:
+    left;
+}
+
+
+.yandex-reference-page
+.ym-products-sort-button--right {
+  justify-content:
+    flex-end;
+
+  text-align:
+    right;
+}
+
+
+.yandex-reference-page
+.ym-products-sort-button:hover {
+  color:
+    var(--ws-text);
+
+  background:
+    var(--ym-products-hover);
+}
+
+
+.yandex-reference-page
+.ym-products-sort-button--active {
+  color:
+    var(--ym-products-orange);
+}
+
+
+.yandex-reference-page
+.ym-products-sort-indicator {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    13px;
+
+  flex:
+    0 0
+    13px;
+
+  font-size:
+    13px;
+
+  font-weight:
+    800;
+
+  line-height:
+    1;
+}
+
+
+/* ============================================================
+   PRODUCT ROW
+   ============================================================ */
+
+.yandex-reference-page
+.ym-product-details {
+  display:
+    block;
+
+  border-bottom:
+    1px solid
+    var(--ym-products-border);
+}
+
+
+.yandex-reference-page
+.ym-product-details:last-child {
+  border-bottom:
+    none;
+}
+
+
+.yandex-reference-page
+.ym-product-details
+> summary {
+  list-style:
+    none;
+
+  cursor:
+    pointer;
+
+  user-select:
+    none;
+
+  transition:
+    background-color
+      0.1s
+      ease;
+}
+
+
+.yandex-reference-page
+.ym-product-details
+> summary::-webkit-details-marker {
+  display:
+    none;
+}
+
+
+.yandex-reference-page
+.ym-product-details
+> summary:hover {
+  background:
+    var(--ym-products-hover);
+}
+
+
+/* ============================================================
+   CELLS
+   ============================================================ */
+
+.yandex-reference-page
+.ym-products-main-cell {
+  display:
+    flex;
+
+  min-width:
+    0;
+
+  align-items:
+    center;
+
+  box-sizing:
+    border-box;
+
+  padding:
+    12px
+    14px;
+
+  color:
+    var(--ws-text);
+
+  border-right:
+    1px solid
+    var(--ym-products-border);
+
+  font-size:
+    13px;
+
+  line-height:
+    1.35;
+}
+
+
+.yandex-reference-page
+.ym-products-main-cell:last-child {
+  border-right:
+    none;
+}
+
+
+.yandex-reference-page
+.ym-products-main-cell--right {
+  justify-content:
+    flex-end;
+
+  text-align:
+    right;
+
+  white-space:
+    nowrap;
+}
+
+
+.yandex-reference-page
+.ym-products-main-cell--strong {
+  font-weight:
+    700;
+}
+
+
+.yandex-reference-page
+.ym-products-main-cell--text {
+  white-space:
+    normal;
+
+  overflow-wrap:
+    anywhere;
+}
+
+
+/* ============================================================
+   ЕНОТ
+   ============================================================ */
+
+.yandex-reference-page
+.ym-enot-wrap {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  min-width:
+    0;
+}
+
+
+.yandex-reference-page
+.ym-product-chevron {
+  display:
+    inline-flex;
+
+  width:
+    15px;
+
+  height:
+    15px;
+
+  flex:
+    0 0
+    15px;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  margin-right:
+    7px;
+
+  color:
+    var(--ym-products-orange);
+
+  font-size:
+    9px;
+
+  transform-origin:
+    center;
+
+  transition:
+    transform
+      0.15s
+      ease;
+}
+
+
+.yandex-reference-page
+.ym-product-details[open]
+.ym-product-chevron {
+  transform:
+    rotate(
+      90deg
+    );
+}
+
+
+.yandex-reference-page
+.ym-enot-code {
+  color:
+    var(--ym-products-orange-readable);
+
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    "Liberation Mono",
+    "Courier New",
+    monospace;
+
+  font-weight:
+    700;
+
+  white-space:
+    nowrap;
+}
+
+
+/* ============================================================
+   DARK
+   ============================================================ */
+
+html[data-theme="dark"]
+.yandex-reference-page {
+  --ym-products-orange:
+    #e4ae6b;
+
+  --ym-products-orange-readable:
+    #f0a05a;
+
+  --ym-products-border:
+    rgba(
+      249,
+      115,
+      22,
+      0.10
+    );
+
+  --ym-products-border-strong:
+    rgba(
+      249,
+      115,
+      22,
+      0.16
+    );
+
+  --ym-products-hover:
+    rgba(
+      249,
+      115,
+      22,
+      0.045
+    );
+}
