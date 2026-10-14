@@ -453,11 +453,6 @@ svg {
 }
 
 
-/*
- * Форма остаётся единой,
- * но её дочерние элементы участвуют
- * в сетке родительского блока.
- */
 .zakup-reference-page
 .zakup-v2-simulation-controls {
   display:
@@ -535,10 +530,6 @@ svg {
     nowrap;
 }
 
-
-/* ============================================================
-   КНОПКИ И INPUT НА ОДНОМ УРОВНЕ
-   ============================================================ */
 
 .zakup-reference-page
 .zakup-v2-action-strip,
@@ -779,9 +770,6 @@ svg {
 
 /* ============================================================
    КАРТОЧКА ТРАНСПОРТА
-
-   Заголовка "Транспорт" больше нет.
-   Три варианта сделаны заметно крупнее.
    ============================================================ */
 
 .zakup-reference-page
@@ -1175,10 +1163,6 @@ svg {
 }
 
 
-/* ============================================================
-   ИКОНКА ФОРМИРОВАНИЯ ЗАКАЗА
-   ============================================================ */
-
 .zakup-reference-page
 .zakup-v2-order-icon {
   color:
@@ -1193,10 +1177,6 @@ svg {
     );
 }
 
-
-/* ============================================================
-   ИКОНКА РЕШЕНИЯ
-   ============================================================ */
 
 .zakup-reference-page
 .zakup-v2-decision-icon {
@@ -1549,6 +1529,146 @@ td {
 
 
 /* ============================================================
+   СОРТИРУЕМЫЕ ЗАГОЛОВКИ ТАБЛИЦЫ
+   ============================================================ */
+
+.zakup-reference-page
+.zakup-products-table-content
+.zakup-sortable-table
+th {
+  padding:
+    0;
+}
+
+
+.zakup-reference-page
+.zakup-sort-button {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    5px;
+
+  width:
+    100%;
+
+  min-height:
+    34px;
+
+  box-sizing:
+    border-box;
+
+  padding:
+    9px
+    10px;
+
+  border:
+    none;
+
+  background:
+    transparent;
+
+  color:
+    var(--ws-text-muted);
+
+  font:
+    inherit;
+
+  font-size:
+    10px;
+
+  font-weight:
+    650;
+
+  line-height:
+    1.2;
+
+  white-space:
+    nowrap;
+
+  cursor:
+    pointer;
+
+  transition:
+    color
+      0.12s
+      ease,
+    background-color
+      0.12s
+      ease;
+}
+
+
+.zakup-reference-page
+.zakup-sort-button--left {
+  justify-content:
+    flex-start;
+
+  text-align:
+    left;
+}
+
+
+.zakup-reference-page
+.zakup-sort-button--right {
+  justify-content:
+    flex-end;
+
+  text-align:
+    right;
+}
+
+
+.zakup-reference-page
+.zakup-sort-button:hover {
+  color:
+    var(--ws-text);
+
+  background:
+    var(--ws-surface-hover);
+}
+
+
+.zakup-reference-page
+.zakup-sort-button--active {
+  color:
+    var(--ws-blue);
+}
+
+
+.zakup-reference-page
+.zakup-sort-indicator {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    12px;
+
+  flex:
+    0 0
+    12px;
+
+  font-size:
+    12px;
+
+  font-weight:
+    800;
+
+  line-height:
+    1;
+}
+
+
+/* ============================================================
    РУЧНЫЕ КОРРЕКТИРОВКИ
    ============================================================ */
 
@@ -1683,6 +1803,13 @@ html[data-theme="dark"]
   .zakup-v2-simulation-strip {
     grid-template-columns:
       1fr;
+  }
+
+
+  .zakup-reference-page
+  .zakup-v2-simulation-controls {
+    display:
+      contents;
   }
 
 
