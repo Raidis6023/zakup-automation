@@ -1045,7 +1045,7 @@ export default async function WildberriesPage() {
 
             <Link
               href="/"
-              className="secondary-button wb-navigation-button"
+              className="secondary-button workspace-home-button wb-navigation-button"
             >
               Главная
             </Link>
