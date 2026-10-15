@@ -519,6 +519,239 @@ html[data-theme="dark"] .home-shell[data-accent-area="general"]
 
 
 /* ============================================================
+   ТЁМНЫЕ ГРАФИТОВЫЕ ТЕМЫ МАРКЕТПЛЕЙСОВ
+   Принцип как в немаркетплейсных разделах: очень тёмный фон,
+   панели, таблицы, спокойные бордеры, фирменный акцент.
+   Только тёмная тема, только соответствующий маршрут.
+   Светлые темы, смысловые статусы и механика страниц не меняются.
+   ============================================================ */
+
+html[data-theme="dark"] .home-shell[data-accent-area="ozon"] {
+  --ws-page: #090f15;
+  --ws-sidebar: #070d13;
+  --ws-topbar: rgba(7, 13, 19, 0.97);
+
+  --ws-surface: #101e2b;
+  --ws-surface-soft: #16293a;
+  --ws-surface-hover: #1a344b;
+  --ws-border: #264259;
+  --ws-border-soft: #1d364a;
+
+  --ws-text: #f0f6fc;
+  --ws-text-secondary: #b4c9d7;
+  --ws-text-muted: #91aabd;
+  --ws-nav-text: #f0f6fc;
+
+  --ws-blue: #167db8;
+  --ws-blue-hover: #116ca2;
+  --ws-active: #167db8;
+  --ws-icon: #42b4ec;
+  --ws-nav-hover-text: #42b4ec;
+  --ws-blue-soft: #16293a;
+
+  --background: var(--ws-page);
+  --surface: var(--ws-surface);
+  --surface-soft: var(--ws-surface-soft);
+  --surface-strong: #152b3e;
+  --input: #0c1720;
+  --secondary-button: #16293a;
+  --secondary-button-hover: #1a344b;
+  --border: var(--ws-border);
+  --border-soft: var(--ws-border-soft);
+  --border-strong: #264259;
+  --text: var(--ws-text);
+  --text-secondary: var(--ws-text-secondary);
+  --text-muted: var(--ws-text-muted);
+  --button: #167db8;
+  --button-hover: #116ca2;
+  --button-text: #ffffff;
+  --accent: #42b4ec;
+
+  --ws-table-row-odd: #101b26;
+  --ws-table-row-even: #132230;
+}
+
+html[data-theme="dark"] .home-shell[data-accent-area="wildberries"] {
+  --ws-page: #100d17;
+  --ws-sidebar: #0c0a12;
+  --ws-topbar: rgba(12, 10, 18, 0.97);
+
+  --ws-surface: #1c1629;
+  --ws-surface-soft: #251d35;
+  --ws-surface-hover: #352648;
+  --ws-border: #3c3052;
+  --ws-border-soft: #302640;
+
+  --ws-text: #f4f0f8;
+  --ws-text-secondary: #c6bbd2;
+  --ws-text-muted: #aea4bb;
+  --ws-nav-text: #f4f0f8;
+
+  --ws-blue: #8038b0;
+  --ws-blue-hover: #712c9f;
+  --ws-active: #8038b0;
+  --ws-icon: #c17ae6;
+  --ws-nav-hover-text: #c17ae6;
+  --ws-blue-soft: #251d35;
+
+  --background: var(--ws-page);
+  --surface: var(--ws-surface);
+  --surface-soft: var(--ws-surface-soft);
+  --surface-strong: #241b34;
+  --input: #15111e;
+  --secondary-button: #251d35;
+  --secondary-button-hover: #352648;
+  --border: var(--ws-border);
+  --border-soft: var(--ws-border-soft);
+  --border-strong: #3c3052;
+  --text: var(--ws-text);
+  --text-secondary: var(--ws-text-secondary);
+  --text-muted: var(--ws-text-muted);
+  --button: #8038b0;
+  --button-hover: #712c9f;
+  --button-text: #ffffff;
+  --accent: #c17ae6;
+
+  --ws-table-row-odd: #191525;
+  --ws-table-row-even: #20192d;
+}
+
+html[data-theme="dark"] .home-shell[data-accent-area="yandex-market"] {
+  --ws-page: #0e0d0c;
+  --ws-sidebar: #0b0a09;
+  --ws-topbar: rgba(11, 10, 9, 0.97);
+
+  --ws-surface: #191613;
+  --ws-surface-soft: #241c17;
+  --ws-surface-hover: #33261c;
+  --ws-border: #3a3028;
+  --ws-border-soft: #2d251e;
+
+  --ws-text: #f2eee9;
+  --ws-text-secondary: #c8bcb0;
+  --ws-text-muted: #a99d91;
+  --ws-nav-text: #f2eee9;
+
+  --ws-blue: #a95723;
+  --ws-blue-hover: #94491b;
+  --ws-active: #a95723;
+  --ws-icon: #e99a58;
+  --ws-nav-hover-text: #e99a58;
+  --ws-blue-soft: #241c17;
+
+  --background: var(--ws-page);
+  --surface: var(--ws-surface);
+  --surface-soft: var(--ws-surface-soft);
+  --surface-strong: #211a15;
+  --input: #11100e;
+  --secondary-button: #241c17;
+  --secondary-button-hover: #33261c;
+  --border: var(--ws-border);
+  --border-soft: var(--ws-border-soft);
+  --border-strong: #3a3028;
+  --text: var(--ws-text);
+  --text-secondary: var(--ws-text-secondary);
+  --text-muted: var(--ws-text-muted);
+  --button: #a95723;
+  --button-hover: #94491b;
+  --button-text: #ffffff;
+  --accent: #e99a58;
+
+  --ws-table-row-odd: #151310;
+  --ws-table-row-even: #191613;
+}
+
+/* Стандартные таблицы каждого маркетплейса. */
+html[data-theme="dark"] .home-shell:is(
+  [data-accent-area="ozon"],
+  [data-accent-area="wildberries"],
+  [data-accent-area="yandex-market"]
+) .workspace-content--module .table tbody tr:nth-child(odd) {
+  background: var(--ws-table-row-odd);
+}
+
+html[data-theme="dark"] .home-shell:is(
+  [data-accent-area="ozon"],
+  [data-accent-area="wildberries"],
+  [data-accent-area="yandex-market"]
+) .workspace-content--module .table tbody tr:nth-child(even) {
+  background: var(--ws-table-row-even);
+}
+
+html[data-theme="dark"] .home-shell:is(
+  [data-accent-area="ozon"],
+  [data-accent-area="wildberries"],
+  [data-accent-area="yandex-market"]
+) .workspace-content--module .table tbody tr:hover {
+  background: var(--ws-surface-hover);
+}
+
+/* Ozon: таблицы продаж, остатков и карточек. */
+html[data-theme="dark"] .home-shell[data-accent-area="ozon"]
+.ozon-reference-page :is(.ozon-products-table, .ozon-daily-table, .ozon-unlinked-table) tbody tr:nth-child(odd) {
+  background: var(--ws-table-row-odd);
+}
+
+html[data-theme="dark"] .home-shell[data-accent-area="ozon"]
+.ozon-reference-page :is(.ozon-products-table, .ozon-daily-table, .ozon-unlinked-table) tbody tr:nth-child(even) {
+  background: var(--ws-table-row-even);
+}
+
+html[data-theme="dark"] .home-shell[data-accent-area="ozon"]
+.ozon-reference-page :is(.ozon-products-table, .ozon-daily-table, .ozon-unlinked-table) tbody tr:hover {
+  background: var(--ws-surface-hover);
+}
+
+/* WB: заливку задаём ячейкам, поскольку таблица уже использует td background. */
+html[data-theme="dark"] .home-shell[data-accent-area="wildberries"]
+.wb-reference-page .wb-products-sort-table tbody tr:nth-child(odd) td {
+  background: var(--ws-table-row-odd);
+}
+
+html[data-theme="dark"] .home-shell[data-accent-area="wildberries"]
+.wb-reference-page .wb-products-sort-table tbody tr:nth-child(even) td {
+  background: var(--ws-table-row-even);
+}
+
+html[data-theme="dark"] .home-shell[data-accent-area="wildberries"]
+.wb-reference-page .wb-products-sort-table tbody tr:hover td {
+  background: var(--ws-surface-hover);
+}
+
+/* Товарные строки Яндекс Маркета строятся через details/summary, а не tr. */
+html[data-theme="dark"] .home-shell[data-accent-area="yandex-market"]
+.yandex-reference-page .ym-product-details:nth-of-type(odd) > summary {
+  background: var(--ws-table-row-odd);
+}
+
+html[data-theme="dark"] .home-shell[data-accent-area="yandex-market"]
+.yandex-reference-page .ym-product-details:nth-of-type(even) > summary {
+  background: var(--ws-table-row-even);
+}
+
+html[data-theme="dark"] .home-shell[data-accent-area="yandex-market"]
+.yandex-reference-page .ym-product-details > summary:hover {
+  background: var(--ws-surface-hover);
+}
+
+/* Фирменные акценты и бордеры кастомных товарных таблиц. */
+html[data-theme="dark"] .home-shell[data-accent-area="wildberries"]
+.wb-reference-page {
+  --wb-products-border: color-mix(in srgb, var(--ws-border) 65%, transparent);
+  --wb-products-border-strong: var(--ws-border);
+  --wb-products-hover: var(--ws-surface-hover);
+}
+html[data-theme="dark"] .home-shell[data-accent-area="yandex-market"]
+.yandex-reference-page {
+  --ym-products-orange: var(--ws-icon);
+  --ym-products-orange-readable: var(--ws-icon);
+  --ym-products-border: color-mix(in srgb, var(--ws-border) 65%, transparent);
+  --ym-products-border-strong: var(--ws-border);
+  --ym-products-hover: var(--ws-surface-hover);
+}
+
+
+/* ============================================================
    КОНТРАСТ: светло-изумрудный для надписей и иконок,
    тёмный изумруд для кнопок с белым текстом в тёмной теме.
    ============================================================ */
