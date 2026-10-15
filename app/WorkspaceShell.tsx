@@ -860,6 +860,7 @@ export default function WorkspaceShell({
 
                 <Link
                   href="/ozon"
+                  data-marketplace="ozon"
 
                   onClick={
                     event =>
@@ -911,6 +912,7 @@ export default function WorkspaceShell({
 
                 <Link
                   href="/wildberries"
+                  data-marketplace="wildberries"
 
                   onClick={
                     event =>
@@ -962,6 +964,7 @@ export default function WorkspaceShell({
 
                 <Link
                   href="/yandex-market"
+                  data-marketplace="yandex-market"
 
                   onClick={
                     event =>
