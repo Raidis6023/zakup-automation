@@ -1432,7 +1432,7 @@ export default async function YandexMarketPage() {
               href="/"
 
               className=
-                "secondary-button navigation-button ym-navigation-button"
+                "secondary-button workspace-home-button navigation-button ym-navigation-button"
             >
               Главная
             </Link>
