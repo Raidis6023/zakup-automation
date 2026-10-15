@@ -221,7 +221,7 @@ Promise<boolean> {
 
 // ============================================================
 // CHECK FOR MISSING OZON PHOTOS
-// Only draft order items without saved photos need API requests.
+// Only existing-product order items without saved photos need API requests.
 // ============================================================
 
 async function hasMissingVedOrderPhotos(orderId: string): Promise<boolean> {
