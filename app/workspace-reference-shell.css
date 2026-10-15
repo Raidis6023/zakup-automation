@@ -458,6 +458,50 @@ html[data-theme="dark"] .home-shell[data-accent-area="yandex-market"] {
 /* Маркетплейсы используют свои цвета не только на боковой панели,
    но и внутри страниц. Это не меняет фон, геометрию и смысловые статусы. */
 /* ============================================================
+   ТЁМНО-ИЗУМРУДНАЯ ОСНОВА ДЛЯ ОБЩИХ РАЗДЕЛОВ
+   Пробное оформление. Только dark + general.
+   Ozon, WB, ЯМ и вся светлая тема используют прежние поверхности.
+   ============================================================ */
+
+html[data-theme="dark"] .home-shell[data-accent-area="general"] {
+  /* Оболочка: основной фон, меню и верхняя панель. */
+  --ws-page: #091711;
+  --ws-sidebar: #07130f;
+  --ws-topbar: rgba(7, 19, 15, 0.97);
+
+  /* Карточки, таблицы, поля и внутренние панели. */
+  --ws-surface: #11251d;
+  --ws-surface-soft: #183027;
+  --ws-surface-hover: #1d3b30;
+
+  /* Спокойные изумрудно-графитовые границы. */
+  --ws-border: #29463a;
+  --ws-border-soft: #21392f;
+
+  /* Читаемый текст с лёгким тёплым оттенком. */
+  --ws-text: #eef6f0;
+  --ws-text-secondary: #bbcec1;
+  --ws-text-muted: #8ca698;
+  --ws-nav-text: #dcebe0;
+
+  /* Тот же фон для старых страниц с базовыми CSS-переменными. */
+  --background: var(--ws-page);
+  --surface: var(--ws-surface);
+  --surface-soft: var(--ws-surface-soft);
+  --surface-strong: #203b30;
+  --input: #0c1c15;
+  --secondary-button: #1b392d;
+  --secondary-button-hover: #25493a;
+  --border: var(--ws-border);
+  --border-soft: var(--ws-border-soft);
+  --border-strong: #3a5b4b;
+  --text: var(--ws-text);
+  --text-secondary: var(--ws-text-secondary);
+  --text-muted: var(--ws-text-muted);
+}
+
+
+/* ============================================================
    КОНТРАСТ: светло-изумрудный для надписей и иконок,
    тёмный изумруд для кнопок с белым текстом в тёмной теме.
    ============================================================ */
