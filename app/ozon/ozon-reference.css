@@ -2419,19 +2419,21 @@ html[data-theme="dark"]
 }
 
 .ozon-reference-page .ozon-unified-sync {
-  display: flex;
+  display: grid;
+  grid-template-rows: 12px 40px 12px;
+  row-gap: 2px;
   box-sizing: border-box;
   flex: 1 1 100%;
   width: 100%;
   min-width: 0;
   max-width: none;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: center;
-  gap: 5px;
+  align-items: center;
+  align-self: stretch;
+  text-align: center;
 }
 
 .ozon-reference-page .ozon-sync-hero-action {
+  grid-row: 2;
   display: flex;
   box-sizing: border-box;
   width: 100%;
@@ -2478,11 +2480,18 @@ html[data-theme="dark"]
 }
 
 .ozon-reference-page .ozon-unified-sync-note {
+  grid-row: 3;
+  display: block;
   width: 100%;
+  height: 12px;
+  min-width: 0;
+  overflow: hidden;
   color: var(--ws-text-muted);
   font-size: 10px;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
+  font-weight: 600;
+  line-height: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   text-align: center;
 }
 
