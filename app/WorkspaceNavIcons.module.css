@@ -13,12 +13,12 @@
    ============================================================ */
 
 .procurement {
-  --icon-bg-start: #139cff;
-  --icon-bg-end: #0953f5;
+  --icon-bg-start: #37c98e;
+  --icon-bg-end: #11865d;
 
   --icon-main: #ffffff;
-  --icon-side: #dbeaff;
-  --icon-accent: #168cf5;
+  --icon-side: #dcf8e9;
+  --icon-accent: #11865d;
 }
 
 
@@ -27,10 +27,10 @@
 :global(html.dark)
 .procurement {
   --icon-bg-start: #ffffff;
-  --icon-bg-end: #eaf3ff;
+  --icon-bg-end: #e0f2e8;
 
-  --icon-main: #0966ef;
-  --icon-side: #58b7ff;
+  --icon-main: #11865d;
+  --icon-side: #37c98e;
   --icon-accent: #ffffff;
 }
 
@@ -40,9 +40,9 @@
    ============================================================ */
 
 .ved {
-  --ved-bg-start: #16dedb;
-  --ved-bg-middle: #10bcd9;
-  --ved-bg-end: #087df0;
+  --ved-bg-start: #55d8a2;
+  --ved-bg-middle: #27be84;
+  --ved-bg-end: #11865d;
 
   --ved-symbol: #ffffff;
   --ved-highlight: rgba(255, 255, 255, 0.22);
@@ -62,11 +62,11 @@
 :global(html.dark)
 .ved {
   --ved-bg-start: #ffffff;
-  --ved-bg-middle: #f6fbff;
-  --ved-bg-end: #eaf4ff;
+  --ved-bg-middle: #f6fdfa;
+  --ved-bg-end: #e0f2e8;
 
-  --ved-symbol: #079bdc;
-  --ved-highlight: rgba(0, 174, 223, 0.08);
+  --ved-symbol: #11865d;
+  --ved-highlight: rgba(17, 134, 93, 0.08);
 }
 
 
@@ -75,11 +75,11 @@
    ============================================================ */
 
 .employees {
-  --icon-bg-start: #8a45ff;
-  --icon-bg-end: #2638f5;
+  --icon-bg-start: #37c98e;
+  --icon-bg-end: #11865d;
 
   --icon-card: #ffffff;
-  --icon-detail: #5d38f5;
+  --icon-detail: #0b6c4b;
 }
 
 
@@ -88,8 +88,8 @@
 :global(html.dark)
 .employees {
   --icon-bg-start: #ffffff;
-  --icon-bg-end: #edf2ff;
+  --icon-bg-end: #e0f2e8;
 
-  --icon-card: #5734ee;
+  --icon-card: #11865d;
   --icon-detail: #ffffff;
 }

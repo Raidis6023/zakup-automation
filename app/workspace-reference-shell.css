@@ -36,7 +36,7 @@
     #f3f8fd;
 
   --ws-surface-hover:
-    #edf6ff;
+    #edf6f1;
 
   --ws-border:
     #d8e7f4;
@@ -54,16 +54,16 @@
     #7f98ae;
 
   --ws-blue:
-    #0b82f4;
+    #11865d;
 
   --ws-blue-hover:
-    #0874dc;
+    #0b6c4b;
 
   --ws-blue-soft:
-    #eaf5ff;
+    #e0f2e8;
 
   --ws-active:
-    #0c82f4;
+    #11865d;
 
   --ws-active-text:
     #ffffff;
@@ -72,10 +72,10 @@
     #18354f;
 
   --ws-nav-hover-text:
-    #076fcf;
+    #11865d;
 
   --ws-icon:
-    #1769ad;
+    #11865d;
 
   --ws-shadow-soft:
     0 3px 14px
@@ -173,7 +173,7 @@ html[data-theme="dark"]
    * а не насыщенно синий.
    */
   --ws-surface-hover:
-    #1b2a38;
+    #1b3029;
 
   /*
    * Основные границы.
@@ -209,21 +209,20 @@ html[data-theme="dark"]
     #778695;
 
   /*
-   * Синий остаётся акцентом,
-   * но стал спокойнее и чуть серее.
+   * Изумрудный акцент рабочих разделов.
    */
   --ws-blue:
-    #3f8fd6;
+    #37c98e;
 
   --ws-blue-hover:
-    #519ce0;
+    #5cdaa8;
 
   /*
    * Очень приглушённый фон
    * для hover и активных элементов.
    */
   --ws-blue-soft:
-    #172c3e;
+    #15392d;
 
   /*
    * Активный раздел sidebar.
@@ -231,7 +230,7 @@ html[data-theme="dark"]
    * Намеренно темнее прежнего.
    */
   --ws-active:
-    #246da8;
+    #177c5e;
 
   --ws-active-text:
     #ffffff;
@@ -243,13 +242,13 @@ html[data-theme="dark"]
     #d6dee6;
 
   --ws-nav-hover-text:
-    #ffffff;
+    #37c98e;
 
   /*
    * Цвет существующих системных иконок.
    */
   --ws-icon:
-    #78a9d3;
+    #37c98e;
 
   --ws-shadow-soft:
     none;
@@ -264,6 +263,62 @@ html[data-theme="dark"]
     );
 }
 
+
+
+/* ============================================================
+   МАРКЕТПЛЕЙСЫ: НЕ НАСЛЕДУЮТ ОБЩИЙ ИЗУМРУДНЫЙ АКЦЕНТ.
+   Их собственные стили Ozon / Wildberries / ЯМ не меняем.
+   ============================================================ */
+
+.home-shell[data-accent-area="marketplace"] {
+  --ws-surface-hover: #edf6ff;
+  --ws-blue: #0b82f4;
+  --ws-blue-hover: #0874dc;
+  --ws-blue-soft: #eaf5ff;
+  --ws-active: #0c82f4;
+  --ws-nav-hover-text: #076fcf;
+  --ws-icon: #1769ad;
+}
+
+html[data-theme="dark"] .home-shell[data-accent-area="marketplace"] {
+  --ws-surface-hover: #1b2a38;
+  --ws-blue: #3f8fd6;
+  --ws-blue-hover: #519ce0;
+  --ws-blue-soft: #172c3e;
+  --ws-active: #246da8;
+  --ws-nav-hover-text: #ffffff;
+  --ws-icon: #78a9d3;
+}
+
+/* ============================================================
+   КОНТРАСТ: светло-изумрудный для надписей и иконок,
+   тёмный изумруд для кнопок с белым текстом в тёмной теме.
+   ============================================================ */
+
+.home-shell[data-accent-area="general"] {
+  --button: #11865d;
+  --button-hover: #0b6c4b;
+  --button-text: #ffffff;
+}
+
+html[data-theme="dark"] .home-shell[data-accent-area="general"]
+.workspace-content--module .primary-button {
+  background: var(--ws-active);
+  border-color: var(--ws-active);
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .home-shell[data-accent-area="general"]
+.workspace-content--module .primary-button:hover:not(:disabled) {
+  background: #0b6c4b;
+  border-color: #0b6c4b;
+}
+
+html[data-theme="dark"] .home-shell[data-accent-area="general"]
+.home-calendar-day.today {
+  background: var(--ws-active);
+  color: #ffffff;
+}
 
 /* ============================================================
    ОБЩАЯ ОБОЛОЧКА
@@ -454,14 +509,7 @@ html[data-theme="dark"]
   color:
     var(--ws-active-text);
 
-  box-shadow:
-    0 4px 12px
-    rgba(
-      20,
-      80,
-      130,
-      0.18
-    );
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--ws-active) 18%, transparent);
 }
 
 
@@ -637,33 +685,15 @@ html[data-theme="dark"]
 
 
 .home-search:focus-within {
-  border-color:
-    #8ac6f8;
-
-  box-shadow:
-    0 0 0 3px
-    rgba(
-      22,
-      140,
-      255,
-      0.08
-    );
+  border-color: var(--ws-blue);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ws-blue) 14%, transparent);
 }
 
 
 html[data-theme="dark"]
 .home-search:focus-within {
-  border-color:
-    #496b88;
-
-  box-shadow:
-    0 0 0 3px
-    rgba(
-      63,
-      143,
-      214,
-      0.08
-    );
+  border-color: var(--ws-blue);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ws-blue) 14%, transparent);
 }
 
 
