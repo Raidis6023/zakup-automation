@@ -18,12 +18,12 @@ export default function SkuListPage() {
 
     <main
       className=
-        "sku-list-page"
+        "page sku-list-page"
     >
 
       <div
         className=
-          "sku-list-container"
+          "container sku-list-container"
       >
 
         <header
