@@ -8,8 +8,7 @@ from "next/link";
 import ThemeToggle
 from "../ThemeToggle";
 
-import OzonStockSyncClient
-from "../OzonStockSyncClient";
+import OzonUnifiedSyncClient from "./OzonUnifiedSyncClient";
 
 import OzonProductsTableClient, {
   type OzonClusterDetailRow,
@@ -25,6 +24,9 @@ import "./ozon-reference.css";
 
 export const dynamic =
   "force-dynamic";
+
+// Long-running atomic Ozon synchronization uses the existing 300s cron limit.
+export const maxDuration = 300;
 
 
 // ============================================================
@@ -1494,9 +1496,7 @@ export default async function OzonPage() {
             </div>
           </div>
           <div className="ozon-sync-hero-quarter ozon-sync-hero-quarter--border">
-            <a className="primary-button ozon-sync-hero-action" href="#ozon-sync-controls">
-              Управление обновлением данных ↓
-            </a>
+            <OzonUnifiedSyncClient />
           </div>
         </section>
 
@@ -2052,17 +2052,6 @@ export default async function OzonPage() {
         </section>
 
 
-        {/* ===================================
-            MANUAL SYNC
-            =================================== */}
-
-        <div id="ozon-sync-controls"
-          className="ozon-sync-module"
-        >
-
-          <OzonStockSyncClient />
-
-        </div>
 
       </div>
 
