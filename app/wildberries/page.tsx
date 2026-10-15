@@ -923,33 +923,46 @@ export default async function WildberriesPage() {
       [];
 
 
-  try {
+  const [
+    dashboardResult,
+    syncStatesResult,
+  ] =
+    await Promise.allSettled([
+      getDashboard(),
+      getWbSyncStates(),
+    ]);
 
-    dashboard =
-      await getDashboard();
 
-  } catch (
-    error
+  if (
+    dashboardResult.status ===
+      "fulfilled"
   ) {
 
+    dashboard =
+      dashboardResult.value;
+
+  } else {
+
     loadError =
-      error instanceof Error
+      dashboardResult.reason
+        instanceof Error
 
-        ?
-        error.message
+        ? dashboardResult.reason.message
 
-        :
-        "Не удалось загрузить страницу Wildberries";
+        : "Не удалось загрузить страницу Wildberries";
 
   }
 
 
-  try {
+  if (
+    syncStatesResult.status ===
+      "fulfilled"
+  ) {
 
     syncStates =
-      await getWbSyncStates();
+      syncStatesResult.value;
 
-  } catch {
+  } else {
 
     syncStates =
       [];
