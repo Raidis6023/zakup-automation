@@ -466,7 +466,7 @@ export default function OzonProductsTableClient({
 
           {
             sortedProducts.map(
-              product => {
+              (product, index) => {
 
                 const masterCode =
                   product.master_code;
@@ -520,8 +520,11 @@ export default function OzonProductsTableClient({
                   >
 
                     <tr
-                      className=
-                        "ozon-products-master-row"
+                      className={
+                        index % 2 === 0
+                          ? "ozon-products-master-row ozon-products-row-odd"
+                          : "ozon-products-master-row ozon-products-row-even"
+                      }
                     >
 
                       <TableCell>
