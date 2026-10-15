@@ -866,7 +866,7 @@ export default async function Home() {
               className=
                 "secondary-button zakup-v2-home-button"
             >
-              ← Главная
+              Главная
             </Link>
 
           </div>
