@@ -2,6 +2,7 @@
 
 import {
   Fragment,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -104,6 +105,29 @@ type Props = {
 };
 
 
+type OzonSortKey = "master_code" | "product_name" | "offer_id" | "sales_28_days"
+  | "average_sales_per_day" | "cancelled_28_days" | "stock_quantity" | "stock_days";
+type SortDirection = "asc" | "desc";
+const TEXT_SORT: ReadonlySet<OzonSortKey> = new Set(["master_code", "product_name", "offer_id"]);
+const OZON_EXPANDED_KEY = "ozon-products-expanded";
+
+function sortValue(product: OzonProductRow, column: OzonSortKey): string | number | null {
+  return column === "offer_id"
+    ? (product.listings ?? []).map(listing => listing.offer_id ?? "").join(", ")
+    : product[column];
+}
+
+function compareOzon(a: OzonProductRow, b: OzonProductRow, column: OzonSortKey, dir: SortDirection) {
+  const av = sortValue(a, column);
+  const bv = sortValue(b, column);
+  if (av == null || av === "") return bv == null || bv === "" ? 0 : 1;
+  if (bv == null || bv === "") return -1;
+  const sign = dir === "asc" ? 1 : -1;
+  return TEXT_SORT.has(column)
+    ? String(av).localeCompare(String(bv), ["ru", "en"], { numeric: true, sensitivity: "base" }) * sign
+    : (Number(av) - Number(bv)) * sign;
+}
+
 // ============================================================
 // ФОРМАТИРОВАНИЕ
 // ============================================================
@@ -192,6 +216,61 @@ export default function OzonProductsTableClient({
       new Set()
     );
 
+
+  const [expanded, setExpanded] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [sortKey, setSortKey] = useState<OzonSortKey>("sales_28_days");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
+  useEffect(() => {
+    try {
+      setExpanded(window.localStorage.getItem(OZON_EXPANDED_KEY) === "1");
+    } catch {
+      // Storage may be disabled.
+    } finally {
+      setReady(true);
+    }
+  }, []);
+
+  const sortedProducts = useMemo(
+    () => products.map((item, index) => ({ item, index }))
+      .sort((a, b) => compareOzon(a.item, b.item, sortKey, sortDirection) || a.index - b.index)
+      .map(row => row.item),
+    [products, sortKey, sortDirection]
+  );
+
+  function toggleTable() {
+    setExpanded(previous => {
+      const next = !previous;
+      try { window.localStorage.setItem(OZON_EXPANDED_KEY, next ? "1" : "0"); } catch {}
+      return next;
+    });
+  }
+
+  function SortHeading({ column, label, numeric = false }: {
+    column: OzonSortKey;
+    label: string;
+    numeric?: boolean;
+  }) {
+    const active = sortKey === column;
+    return (
+      <th className={numeric ? "ozon-products-numeric-head" : undefined}
+        aria-sort={!active ? "none" : sortDirection === "asc" ? "ascending" : "descending"}>
+        <button type="button"
+          className={active ? "ozon-products-sort-button ozon-products-sort-button--active" : "ozon-products-sort-button"}
+          onClick={() => {
+            if (active) setSortDirection(previous => previous === "asc" ? "desc" : "asc");
+            else {
+              setSortKey(column);
+              setSortDirection(TEXT_SORT.has(column) ? "asc" : "desc");
+            }
+          }}>
+          <span>{label}</span>
+          {active && <span aria-hidden="true">{sortDirection === "asc" ? "↑" : "↓"}</span>}
+        </button>
+      </th>
+    );
+  }
 
   function toggleMasterCode(
     masterCode:
@@ -337,72 +416,56 @@ export default function OzonProductsTableClient({
 
 
   return (
-
-    <div
-      className=
-        "ozon-products-table-shell"
-    >
+    <div className="ozon-products-collapsible">
+      <button type="button" className="ozon-products-toggle"
+        onClick={toggleTable} aria-expanded={expanded} aria-controls="ozon-products-table">
+        <span className="ozon-products-toggle-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+            <rect x="3" y="4" width="18" height="16" rx="2" />
+            <path d="M3 10h18M3 15h18M9 4v16M16 4v16" />
+          </svg>
+        </span>
+        <span className="ozon-products-toggle-copy">
+          <strong>Данные по товарам</strong>
+          <span>Одна строка соответствует одному ЕНОТ. Раскрытие показывает размещения и кластеры.</span>
+        </span>
+        <span className={expanded ? "ozon-products-toggle-chevron ozon-products-toggle-chevron--expanded" : "ozon-products-toggle-chevron"} aria-hidden="true">⌄</span>
+      </button>
+      {ready && expanded ? (
+      <div id="ozon-products-table" className="ozon-products-table-content">
+    <div className="ozon-products-table-shell ozon-products-scroll">
 
       <table
         className=
-          "ozon-products-table"
+          "ozon-products-table ozon-products-sort-table"
       >
 
-        <thead>
-
-          <tr>
-
-            <TableHeader>
-              master_code
-            </TableHeader>
-
-            <TableHeader>
-              Товар
-            </TableHeader>
-
-            <TableHeader>
-              Offer ID
-            </TableHeader>
-
-            <TableHeader
-              align="right"
-            >
-              Продажи 28 дн.
-            </TableHeader>
-
-            <TableHeader
-              align="right"
-            >
-              Среднее / день
-            </TableHeader>
-
-            <TableHeader
-              align="right"
-            >
-              Отмены
-            </TableHeader>
-
-            <TableHeader
-              align="right"
-            >
-              Остаток
-            </TableHeader>
-
-            <TableHeader
-              align="right"
-            >
-              Дней запаса
-            </TableHeader>
-
-          </tr>
-
-        </thead>
+        <colgroup>
+          <col className="ozon-products-col-master" />
+          <col className="ozon-products-col-name" />
+          <col className="ozon-products-col-offer" />
+          <col className="ozon-products-col-number" />
+          <col className="ozon-products-col-number" />
+          <col className="ozon-products-col-number" />
+          <col className="ozon-products-col-number" />
+          <col className="ozon-products-col-number" />
+        </colgroup>
+        <thead><tr>
+          <SortHeading column="master_code" label="ЕНОТ" />
+          <SortHeading column="product_name" label="Товар" />
+          <SortHeading column="offer_id" label="Offer ID" />
+          <SortHeading column="sales_28_days" label="Продажи 28 дн." numeric />
+          <SortHeading column="average_sales_per_day" label="Среднее / день" numeric />
+          <SortHeading column="cancelled_28_days" label="Отмены" numeric />
+          <SortHeading column="stock_quantity" label="Остаток" numeric />
+          <SortHeading column="stock_days" label="Дней запаса" numeric />
+        </tr></thead>
 
 
         <tbody>
 
           {
-            products.map(
+            sortedProducts.map(
               product => {
 
                 const masterCode =
@@ -926,11 +989,11 @@ export default function OzonProductsTableClient({
         </tbody>
 
       </table>
-
     </div>
-
+    </div>
+    ) : null}
+    </div>
   );
-
 }
 
 
