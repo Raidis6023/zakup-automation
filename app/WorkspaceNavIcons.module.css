@@ -15,36 +15,36 @@
 
 /*
  * Светлая тема:
- * цветной фиолетовый фон + белые карточки.
+ * та же изумрудная гамма, что у Закупа и ВЭД.
  */
 .articleList {
-  --article-bg-start: #8b5cf6;
-  --article-bg-end: #4338ca;
+  --article-bg-start: #37c98e;
+  --article-bg-end: #11865d;
 
   --article-card-start: #ffffff;
-  --article-card-end: #f5f2ff;
+  --article-card-end: #f4fbf7;
 
-  --article-detail: #6d4aff;
-  --article-detail-soft: #cfc5ff;
+  --article-detail: #11865d;
+  --article-detail-soft: #dcf8e9;
 }
 
 
 /*
  * Тёмная тема:
- * светлый фон + цветная внутренняя графика.
+ * светлый фон + изумрудная внутренняя графика.
  */
 :global(html[data-theme="dark"])
 .articleList,
 :global(html.dark)
 .articleList {
   --article-bg-start: #ffffff;
-  --article-bg-end: #f5f2ff;
+  --article-bg-end: #e0f2e8;
 
-  --article-card-start: #8b5cf6;
-  --article-card-end: #4338ca;
+  --article-card-start: #11865d;
+  --article-card-end: #37c98e;
 
-  --article-detail: #ddd6ff;
-  --article-detail-soft: #cfc5ff;
+  --article-detail: #ffffff;
+  --article-detail-soft: #dcf8e9;
 }
 
 
