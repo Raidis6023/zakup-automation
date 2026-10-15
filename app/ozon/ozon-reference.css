@@ -4,7 +4,7 @@
 
 .ozon-reference-page {
   --ozon-blue:
-    #2165f5;
+    var(--ws-icon);
 
   --ozon-green:
     #24b67a;
@@ -402,12 +402,7 @@ img {
     var(--ozon-blue);
 
   background:
-    rgba(
-      33,
-      101,
-      245,
-      0.11
-    );
+    color-mix(in srgb, var(--ozon-blue) 11%, transparent);
 }
 
 
@@ -557,12 +552,7 @@ svg {
     var(--ozon-blue);
 
   background:
-    rgba(
-      33,
-      101,
-      245,
-      0.11
-    );
+    color-mix(in srgb, var(--ozon-blue) 11%, transparent);
 }
 
 
@@ -694,12 +684,7 @@ svg {
     var(--ozon-blue);
 
   background:
-    rgba(
-      33,
-      101,
-      245,
-      0.12
-    );
+    color-mix(in srgb, var(--ozon-blue) 12%, transparent);
 }
 
 
@@ -1848,7 +1833,7 @@ td {
 html[data-theme="dark"]
 .ozon-reference-page {
   --ozon-blue:
-    #6c9cff;
+    var(--ws-icon);
 
   --ozon-green:
     #68ca9b;
