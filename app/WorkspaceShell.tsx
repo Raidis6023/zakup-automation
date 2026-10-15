@@ -13,6 +13,7 @@ import {
 } from "react";
 
 import type {
+  MouseEvent,
   ReactNode,
 } from "react";
 
@@ -174,6 +175,15 @@ export default function WorkspaceShell({
 
 
   const [
+    pendingNavKey,
+    setPendingNavKey,
+  ] =
+    useState<WorkspaceNavKey | null>(
+      null
+    );
+
+
+  const [
     vedOrderSource,
     setVedOrderSource,
   ] =
@@ -266,12 +276,72 @@ export default function WorkspaceShell({
 
 
   // ==========================================================
+  // МГНОВЕННЫЙ ВИЗУАЛЬНЫЙ ОТКЛИК НА ПЕРЕХОД
+  // ==========================================================
+
+  useEffect(
+    () => {
+
+      setPendingNavKey(
+        null
+      );
+
+    },
+    [
+      pathname,
+    ]
+  );
+
+
+  function handleNavClick(
+    event: MouseEvent<HTMLAnchorElement>,
+    key: WorkspaceNavKey
+  ) {
+
+    if (
+      event.defaultPrevented
+      ||
+      event.button !== 0
+      ||
+      event.metaKey
+      ||
+      event.ctrlKey
+      ||
+      event.shiftKey
+      ||
+      event.altKey
+    ) {
+
+      return;
+
+    }
+
+
+    setPendingNavKey(
+      key
+    );
+
+  }
+
+
+  // ==========================================================
   // АКТИВНЫЙ ПУНКТ МЕНЮ
   // ==========================================================
 
   function isNavActive(
     key: WorkspaceNavKey
   ) {
+
+    if (
+      pendingNavKey !== null
+    ) {
+
+      return (
+        key === pendingNavKey
+      );
+
+    }
+
 
     switch (key) {
 
@@ -572,6 +642,14 @@ export default function WorkspaceShell({
                 <Link
                   href="/admin"
 
+                  onClick={
+                    event =>
+                      handleNavClick(
+                        event,
+                        "admin-home"
+                      )
+                  }
+
                   className={
                     navClass(
                       "admin-home"
@@ -612,6 +690,14 @@ export default function WorkspaceShell({
 
                 <Link
                   href="/admin/users"
+
+                  onClick={
+                    event =>
+                      handleNavClick(
+                        event,
+                        "admin-users"
+                      )
+                  }
 
                   className={
                     navClass(
@@ -667,6 +753,14 @@ export default function WorkspaceShell({
                 <Link
                   href="/zakup"
 
+                  onClick={
+                    event =>
+                      handleNavClick(
+                        event,
+                        "procurement"
+                      )
+                  }
+
                   className={
                     navClass(
                       "procurement"
@@ -708,6 +802,14 @@ export default function WorkspaceShell({
                 <Link
                   href="/ved"
 
+                  onClick={
+                    event =>
+                      handleNavClick(
+                        event,
+                        "ved"
+                      )
+                  }
+
                   className={
                     navClass(
                       "ved"
@@ -748,6 +850,14 @@ export default function WorkspaceShell({
 
                 <Link
                   href="/ozon"
+
+                  onClick={
+                    event =>
+                      handleNavClick(
+                        event,
+                        "ozon"
+                      )
+                  }
 
                   className={
                     navClass(
@@ -792,6 +902,14 @@ export default function WorkspaceShell({
                 <Link
                   href="/wildberries"
 
+                  onClick={
+                    event =>
+                      handleNavClick(
+                        event,
+                        "wildberries"
+                      )
+                  }
+
                   className={
                     navClass(
                       "wildberries"
@@ -834,6 +952,14 @@ export default function WorkspaceShell({
 
                 <Link
                   href="/yandex-market"
+
+                  onClick={
+                    event =>
+                      handleNavClick(
+                        event,
+                        "yandex-market"
+                      )
+                  }
 
                   className={
                     navClass(
