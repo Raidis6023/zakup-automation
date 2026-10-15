@@ -3,10 +3,9 @@
 import {
   useEffect,
   useState,
+  Fragment,
 } from "react";
 
-
-import VedPreparationQuickEntry from "./VedPreparationQuickEntry";
 
 // ============================================================
 // TYPES: ORDER
@@ -1351,10 +1350,7 @@ export default function VedOrderDetailClient(
           }
 
 
-          return loadedItems[0]
-            ?.id
-            ??
-            null;
+          return null;
 
         }
       );
@@ -3125,8 +3121,6 @@ export default function VedOrderDetailClient(
         selectedItemId
     )
     ??
-    items[0]
-    ??
     null;
 
 
@@ -3250,883 +3244,16 @@ export default function VedOrderDetailClient(
     0;
 
 
-  // ==========================================================
-  // UI
-  // ==========================================================
-
-  return (
-
-    <>
-
-
-      {/* ======================================================
-          ORDER HEADER
-          ====================================================== */}
-
-      <section
-        className="section"
-
-        style={{
-          padding:
-            "18px 20px",
-        }}
-      >
-
-        {/* Данные заказа слева, экспорт справа */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "20px",
-            flexWrap: "wrap",
-          }}
-        >
-          <div
-            style={{
-              flex: "1 1 880px",
-              minWidth: 0,
-            }}
-          >
-
-        <div className="small-label">
-          ЗАКАЗ В КИТАЙ
-        </div>
-
-
-        <div
-          style={{
-            display:
-              "flex",
-
-            alignItems:
-              "center",
-
-            gap:
-              "12px",
-
-            flexWrap:
-              "wrap",
-
-            marginTop:
-              "5px",
-          }}
-        >
-
-          <h2
-            style={{
-              margin:
-                0,
-
-              fontSize:
-                "25px",
-
-              lineHeight:
-                1.15,
-            }}
-          >
-
-            {order.order_number
-
-              ? `Заказ ${order.order_number}`
-
-              : "Черновик заказа"}
-
-          </h2>
-
-
-          <div
-            style={{
-              padding:
-                "5px 9px",
-
-              border:
-                "1px solid var(--border)",
-
-              borderRadius:
-                "999px",
-
-              fontSize:
-                "12px",
-
-              fontWeight:
-                700,
-            }}
-          >
-
-            {getWorkflowLabel(
-              order.workflow_status
-            )}
-
-          </div>
-
-        </div>
-
-
-        <div
-          style={{
-            display:
-              "grid",
-
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(170px, 1fr))",
-
-            gap:
-              "8px 22px",
-
-            marginTop:
-              "16px",
-
-            fontSize:
-              "13px",
-          }}
-        >
-
-          <div>
-
-            <span className="muted">
-              Ответственный:{" "}
-            </span>
-
-            <strong>
-              {order
-                .preparation_responsible_name
-                ??
-                "—"}
-            </strong>
-
-          </div>
-
-
-          <div>
-
-            <span className="muted">
-              Отдел:{" "}
-            </span>
-
-            <strong>
-
-              {order
-                .preparation_department ===
-                "analytics"
-
-                ? "Аналитика"
-
-                : order
-                    .preparation_department ===
-                    "procurement"
-
-                  ? "Закуп"
-
-                  : "—"}
-
-            </strong>
-
-          </div>
-
-
-          <div>
-
-            <span className="muted">
-              Транспорт:{" "}
-            </span>
-
-            <strong>
-
-              {order
-                .calculation_scenario ===
-                "container"
-
-                ? "Контейнер"
-
-                : order
-                    .calculation_scenario ===
-                    "truck"
-
-                  ? "Фура"
-
-                  : "—"}
-
-            </strong>
-
-            <span className="muted">
-              {" "}· {targetDays} дней
-            </span>
-
-          </div>
-
-
-          <div>
-
-            <span className="muted">
-              Создан:{" "}
-            </span>
-
-            <strong>
-              {formatDate(
-                order.created_at
-              )}
-            </strong>
-
-          </div>
-
-
-          <div>
-
-            <span className="muted">
-              Ответственный ВЭД:{" "}
-            </span>
-
-            <strong>
-              {order
-                .ved_responsible_name
-                ??
-                "не назначен"}
-            </strong>
-
-          </div>
-
-        </div>
-
-          </div>
-
-          {excelExportAvailable && excelExportUrl && (
-            <a
-              href={excelExportUrl}
-              className="secondary-button"
-              title="Экспортировать актуальный заказ в Excel"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                textAlign: "center",
-                textDecoration: "none",
-                whiteSpace: "nowrap",
-                flexShrink: 0,
-                minHeight: "40px",
-                marginLeft: "auto",
-              }}
-            >
-              Экспорт Excel
-            </a>
-          )}
-        </div>
-
-      </section>
-
-
-      {/* ======================================================
-          READINESS
-          ====================================================== */}
-
-      {statistics && (
-
-        <section
-          style={{
-            marginTop:
-              "14px",
-          }}
-        >
-
-          <div
-            style={{
-              marginBottom:
-                "7px",
-            }}
-          >
-            <strong>
-              Готовность
-            </strong>
-          </div>
-
-
-          <div
-            style={{
-              display:
-                "grid",
-
-              gridTemplateColumns:
-                "repeat(auto-fit, minmax(115px, 1fr))",
-
-              gap:
-                "8px",
-            }}
-          >
-
-            <CompactMetric
-              label="Товаров"
-              value={
-                formatNumber(
-                  statistics.items_count
-                )
-              }
-            />
-
-
-            <CompactMetric
-              label="MOQ + цена"
-              value={
-                formatNumber(
-                  statistics.terms_confirmed
-                )
-              }
-            />
-
-
-            <CompactMetric
-              label="Ждут"
-              value={
-                formatNumber(
-                  statistics.terms_pending
-                )
-              }
-            />
-
-
-            <CompactMetric
-              label="Готовы"
-              value={
-                formatNumber(
-                  statistics.ready_for_transport
-                )
-              }
-            />
-
-
-            <CompactMetric
-              label="Нет кит. артикула"
-              value={
-                formatNumber(
-                  statistics
-                    .missing_chinese_article
-                )
-              }
-            />
-
-
-            <CompactMetric
-              label="Нет веса"
-              value={
-                formatNumber(
-                  statistics.missing_weight
-                )
-              }
-            />
-
-
-            <CompactMetric
-              label="Проверка MOQ"
-              value={
-                formatNumber(
-                  statistics
-                    .moq_review_pending
-                )
-              }
-            />
-
-          </div>
-
-        </section>
-
-      )}
-
-
-      {/* ======================================================
-          TOTALS
-          ====================================================== */}
-
-      {totals && (
-
-        <section
-          style={{
-            marginTop:
-              "14px",
-          }}
-        >
-
-          <div
-            style={{
-              marginBottom:
-                "7px",
-            }}
-          >
-            <strong>
-              Итоги
-            </strong>
-          </div>
-
-
-          <div
-            style={{
-              display:
-                "grid",
-
-              gridTemplateColumns:
-                "repeat(auto-fit, minmax(130px, 1fr))",
-
-              gap:
-                "8px",
-            }}
-          >
-
-            <CompactMetric
-              label="Коробов"
-              value={
-                formatNumber(
-                  totals.total_cartons
-                )
-              }
-            />
-
-
-            <CompactMetric
-              label="Единиц"
-              value={
-                formatNumber(
-                  totals.total_units
-                )
-              }
-            />
-
-
-            <CompactMetric
-              label="Стоимость"
-              value={
-                `${formatNumber(
-                  totals.total_price_cny,
-                  2
-                )} CNY`
-              }
-            />
-
-
-            <CompactMetric
-              label="Объём"
-              value={
-                `${formatNumber(
-                  totals.total_volume_m3,
-                  3
-                )} м³`
-              }
-            />
-
-
-            <CompactMetric
-              label="Вес"
-              value={
-                `${formatNumber(
-                  totals.total_weight_tons,
-                  3
-                )} т`
-              }
-            />
-
-          </div>
-
-        </section>
-
-      )}
-
-
-      {/* Быстрое заполнение реквизитов перед отправкой в ВЭД. */}
-      {preparationEditable && items.length > 0 && (
-        <VedPreparationQuickEntry
-          items={items}
-          actorName={order.preparation_responsible_name ?? ""}
-          actorRole={
-            order.preparation_department === "procurement"
-              ? "procurement"
-              : "analytics"
-          }
-          onSaved={refreshAll}
-          onOpenItem={(id) => {
-            setSelectedItemId(id);
-            document.getElementById("ved-order-item-detail")
-              ?.scrollIntoView({ behavior: "smooth", block: "start" });
-          }}
-        />
-      )}
-
-      {/* ======================================================
-          ITEMS
-          ====================================================== */}
-
-      <section
-        className="section"
-
-        style={{
-          marginTop:
-            "18px",
-        }}
-      >
-
-        <div
-          style={{
-            display:
-              "flex",
-
-            justifyContent:
-              "space-between",
-
-            alignItems:
-              "center",
-
-            gap:
-              "12px",
-
-            flexWrap:
-              "wrap",
-          }}
-        >
-
-          <h2
-            className="section-title"
-
-            style={{
-              margin:
-                0,
-            }}
-          >
-            Состав заказа
-          </h2>
-
-
-          <div className="muted">
-            {formatNumber(
-              items.length
-            )} товаров
-          </div>
-
-        </div>
-
-
-        <div
-          className="muted"
-
-          style={{
-            marginTop:
-              "5px",
-          }}
-        >
-          Нажмите на товар, чтобы открыть его карточку.
-        </div>
-
-
-        <div
-          style={{
-            overflowX:
-              "auto",
-
-            marginTop:
-              "14px",
-          }}
-        >
-
-          <table
-            style={{
-              width:
-                "100%",
-
-              minWidth:
-                "920px",
-
-              borderCollapse:
-                "separate",
-
-              borderSpacing:
-                "0 6px",
-
-              fontSize:
-                "13px",
-            }}
-          >
-
-            <thead>
-
-              <tr>
-
-                {[
-                  "Фото",
-                  "Китайский арт.",
-                  "Наш артикул",
-                  "Товар",
-                  "Коробов",
-                  "Шт.",
-                  "Сумма",
-                  "Статус",
-                ].map(
-                  (
-                    title
-                  ) => (
-
-                    <th
-                      key={
-                        title
-                      }
-
-                      style={{
-                        textAlign:
-                          "left",
-
-                        padding:
-                          "5px 10px",
-
-                        whiteSpace:
-                          "nowrap",
-
-                        fontWeight:
-                          600,
-
-                        opacity:
-                          0.7,
-                      }}
-                    >
-                      {title}
-                    </th>
-
-                  )
-                )}
-
-              </tr>
-
-            </thead>
-
-
-            <tbody>
-
-              {items.map(
-                (
-                  item
-                ) => {
-
-                  const selected =
-                    selectedItem
-                      ?.id ===
-                    item.id;
-
-
-                  return (
-
-                    <tr
-                      key={
-                        item.id
-                      }
-
-                      onClick={
-                        () => {
-
-                          setSelectedItemId(
-                            item.id
-                          );
-
-                          setVedSaveMessage(
-                            ""
-                          );
-
-                        }
-                      }
-
-                      style={{
-                        cursor:
-                          "pointer",
-
-                        background:
-                          selected
-                            ? "var(--card)"
-                            : "transparent",
-
-                        outline:
-                          selected
-                            ? "1px solid var(--border)"
-                            : "1px solid transparent",
-                      }}
-                    >
-
-                      <td
-                        style={{
-                          padding:
-                            "8px 10px",
-
-                          borderRadius:
-                            "10px 0 0 10px",
-                        }}
-                      >
-
-                        <ProductPhoto
-                          url={
-                            item.photo_url
-                          }
-
-                          article={
-                            item
-                              .our_article_snapshot
-                          }
-
-                          size={
-                            48
-                          }
-                        />
-
-                      </td>
-
-
-                      <td
-                        style={{
-                          padding:
-                            "8px 10px",
-
-                          whiteSpace:
-                            "nowrap",
-                        }}
-                      >
-                        {item
-                          .chinese_article_snapshot
-                          ??
-                          "—"}
-                      </td>
-
-
-                      <td
-                        style={{
-                          padding:
-                            "8px 10px",
-
-                          whiteSpace:
-                            "nowrap",
-
-                          fontWeight:
-                            700,
-                        }}
-                      >
-                        {item
-                          .our_article_snapshot
-                          ??
-                          "—"}
-                      </td>
-
-
-                      <td
-                        style={{
-                          padding:
-                            "8px 10px",
-
-                          minWidth:
-                            "260px",
-                        }}
-                      >
-                        {item
-                          .product_name_snapshot
-                          ??
-                          "—"}
-                      </td>
-
-
-                      <td
-                        style={{
-                          padding:
-                            "8px 10px",
-
-                          whiteSpace:
-                            "nowrap",
-                        }}
-                      >
-                        {formatNumber(
-                          item.cartons
-                        )}
-                      </td>
-
-
-                      <td
-                        style={{
-                          padding:
-                            "8px 10px",
-
-                          whiteSpace:
-                            "nowrap",
-
-                          fontWeight:
-                            700,
-                        }}
-                      >
-                        {formatNumber(
-                          item.order_quantity
-                        )}
-                      </td>
-
-
-                      <td
-                        style={{
-                          padding:
-                            "8px 10px",
-
-                          whiteSpace:
-                            "nowrap",
-                        }}
-                      >
-
-                        {item
-                          .total_price_cny ===
-                        null
-
-                          ? "—"
-
-                          : `${formatNumber(
-                              item
-                                .total_price_cny,
-                              2
-                            )} CNY`}
-
-                      </td>
-
-
-                      <td
-                        style={{
-                          padding:
-                            "8px 10px",
-
-                          whiteSpace:
-                            "nowrap",
-
-                          borderRadius:
-                            "0 10px 10px 0",
-
-                          fontWeight:
-                            600,
-                        }}
-                      >
-                        {getItemListStatus(
-                          item
-                        )}
-                      </td>
-
-                    </tr>
-
-                  );
-
-                }
-              )}
-
-            </tbody>
-
-          </table>
-
-        </div>
-
-      </section>
-
-
-      {/* ======================================================
-          ITEM CARD
-          ====================================================== */}
-
-      {selectedItem && (
-
-        <section
+  // Original item editor with MOQ, price, calculations and VED controls.
+  // Mount only once, inside the currently expanded table row.
+  const expandedItemDetail = selectedItem ? (
+<section
           id="ved-order-item-detail"
-          className="section"
 
           style={{
-            marginTop:
-              "18px",
+            padding: "14px 18px",
+            margin: 0,
+            background: "transparent",
           }}
         >
 
@@ -6460,8 +5587,889 @@ export default function VedOrderDetailClient(
           </div>
 
         </section>
+  ) : null;
+
+
+  // ==========================================================
+  // UI
+  // ==========================================================
+
+  return (
+
+    <>
+
+
+      {/* ======================================================
+          ORDER HEADER
+          ====================================================== */}
+
+      <section
+        className="section"
+
+        style={{
+          padding:
+            "18px 20px",
+        }}
+      >
+
+        {/* Данные заказа слева, экспорт справа */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "20px",
+            flexWrap: "wrap",
+          }}
+        >
+          <div
+            style={{
+              flex: "1 1 880px",
+              minWidth: 0,
+            }}
+          >
+
+        <div className="small-label">
+          ЗАКАЗ В КИТАЙ
+        </div>
+
+
+        <div
+          style={{
+            display:
+              "flex",
+
+            alignItems:
+              "center",
+
+            gap:
+              "12px",
+
+            flexWrap:
+              "wrap",
+
+            marginTop:
+              "5px",
+          }}
+        >
+
+          <h2
+            style={{
+              margin:
+                0,
+
+              fontSize:
+                "25px",
+
+              lineHeight:
+                1.15,
+            }}
+          >
+
+            {order.order_number
+
+              ? `Заказ ${order.order_number}`
+
+              : "Черновик заказа"}
+
+          </h2>
+
+
+          <div
+            style={{
+              padding:
+                "5px 9px",
+
+              border:
+                "1px solid var(--border)",
+
+              borderRadius:
+                "999px",
+
+              fontSize:
+                "12px",
+
+              fontWeight:
+                700,
+            }}
+          >
+
+            {getWorkflowLabel(
+              order.workflow_status
+            )}
+
+          </div>
+
+        </div>
+
+
+        <div
+          style={{
+            display:
+              "grid",
+
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(170px, 1fr))",
+
+            gap:
+              "8px 22px",
+
+            marginTop:
+              "16px",
+
+            fontSize:
+              "13px",
+          }}
+        >
+
+          <div>
+
+            <span className="muted">
+              Ответственный:{" "}
+            </span>
+
+            <strong>
+              {order
+                .preparation_responsible_name
+                ??
+                "—"}
+            </strong>
+
+          </div>
+
+
+          <div>
+
+            <span className="muted">
+              Отдел:{" "}
+            </span>
+
+            <strong>
+
+              {order
+                .preparation_department ===
+                "analytics"
+
+                ? "Аналитика"
+
+                : order
+                    .preparation_department ===
+                    "procurement"
+
+                  ? "Закуп"
+
+                  : "—"}
+
+            </strong>
+
+          </div>
+
+
+          <div>
+
+            <span className="muted">
+              Транспорт:{" "}
+            </span>
+
+            <strong>
+
+              {order
+                .calculation_scenario ===
+                "container"
+
+                ? "Контейнер"
+
+                : order
+                    .calculation_scenario ===
+                    "truck"
+
+                  ? "Фура"
+
+                  : "—"}
+
+            </strong>
+
+            <span className="muted">
+              {" "}· {targetDays} дней
+            </span>
+
+          </div>
+
+
+          <div>
+
+            <span className="muted">
+              Создан:{" "}
+            </span>
+
+            <strong>
+              {formatDate(
+                order.created_at
+              )}
+            </strong>
+
+          </div>
+
+
+          <div>
+
+            <span className="muted">
+              Ответственный ВЭД:{" "}
+            </span>
+
+            <strong>
+              {order
+                .ved_responsible_name
+                ??
+                "не назначен"}
+            </strong>
+
+          </div>
+
+        </div>
+
+          </div>
+
+          {excelExportAvailable && excelExportUrl && (
+            <a
+              href={excelExportUrl}
+              className="secondary-button"
+              title="Экспортировать актуальный заказ в Excel"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                textAlign: "center",
+                textDecoration: "none",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+                minHeight: "40px",
+                marginLeft: "auto",
+              }}
+            >
+              Экспорт Excel
+            </a>
+          )}
+        </div>
+
+      </section>
+
+
+      {/* ======================================================
+          READINESS
+          ====================================================== */}
+
+      {statistics && (
+
+        <section
+          style={{
+            marginTop:
+              "14px",
+          }}
+        >
+
+          <div
+            style={{
+              marginBottom:
+                "7px",
+            }}
+          >
+            <strong>
+              Готовность
+            </strong>
+          </div>
+
+
+          <div
+            style={{
+              display:
+                "grid",
+
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(115px, 1fr))",
+
+              gap:
+                "8px",
+            }}
+          >
+
+            <CompactMetric
+              label="Товаров"
+              value={
+                formatNumber(
+                  statistics.items_count
+                )
+              }
+            />
+
+
+            <CompactMetric
+              label="MOQ + цена"
+              value={
+                formatNumber(
+                  statistics.terms_confirmed
+                )
+              }
+            />
+
+
+            <CompactMetric
+              label="Ждут"
+              value={
+                formatNumber(
+                  statistics.terms_pending
+                )
+              }
+            />
+
+
+            <CompactMetric
+              label="Готовы"
+              value={
+                formatNumber(
+                  statistics.ready_for_transport
+                )
+              }
+            />
+
+
+            <CompactMetric
+              label="Нет кит. артикула"
+              value={
+                formatNumber(
+                  statistics
+                    .missing_chinese_article
+                )
+              }
+            />
+
+
+            <CompactMetric
+              label="Нет веса"
+              value={
+                formatNumber(
+                  statistics.missing_weight
+                )
+              }
+            />
+
+
+            <CompactMetric
+              label="Проверка MOQ"
+              value={
+                formatNumber(
+                  statistics
+                    .moq_review_pending
+                )
+              }
+            />
+
+          </div>
+
+        </section>
 
       )}
+
+
+      {/* ======================================================
+          TOTALS
+          ====================================================== */}
+
+      {totals && (
+
+        <section
+          style={{
+            marginTop:
+              "14px",
+          }}
+        >
+
+          <div
+            style={{
+              marginBottom:
+                "7px",
+            }}
+          >
+            <strong>
+              Итоги
+            </strong>
+          </div>
+
+
+          <div
+            style={{
+              display:
+                "grid",
+
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(130px, 1fr))",
+
+              gap:
+                "8px",
+            }}
+          >
+
+            <CompactMetric
+              label="Коробов"
+              value={
+                formatNumber(
+                  totals.total_cartons
+                )
+              }
+            />
+
+
+            <CompactMetric
+              label="Единиц"
+              value={
+                formatNumber(
+                  totals.total_units
+                )
+              }
+            />
+
+
+            <CompactMetric
+              label="Стоимость"
+              value={
+                `${formatNumber(
+                  totals.total_price_cny,
+                  2
+                )} CNY`
+              }
+            />
+
+
+            <CompactMetric
+              label="Объём"
+              value={
+                `${formatNumber(
+                  totals.total_volume_m3,
+                  3
+                )} м³`
+              }
+            />
+
+
+            <CompactMetric
+              label="Вес"
+              value={
+                `${formatNumber(
+                  totals.total_weight_tons,
+                  3
+                )} т`
+              }
+            />
+
+          </div>
+
+        </section>
+
+      )}
+
+
+      {/* ======================================================
+          ITEMS
+          ====================================================== */}
+
+      <section
+        className="section"
+
+        style={{
+          marginTop:
+            "18px",
+        }}
+      >
+
+        <div
+          style={{
+            display:
+              "flex",
+
+            justifyContent:
+              "space-between",
+
+            alignItems:
+              "center",
+
+            gap:
+              "12px",
+
+            flexWrap:
+              "wrap",
+          }}
+        >
+
+          <h2
+            className="section-title"
+
+            style={{
+              margin:
+                0,
+            }}
+          >
+            Состав заказа
+          </h2>
+
+
+          <div className="muted">
+            {formatNumber(
+              items.length
+            )} товаров
+          </div>
+
+        </div>
+
+
+        <div
+          className="muted"
+
+          style={{
+            marginTop:
+              "5px",
+          }}
+        >
+          Нажмите на товар, чтобы раскрыть данные прямо под строкой. Повторное нажатие свернёт карточку.
+        </div>
+
+
+        <div
+          style={{
+            overflowX:
+              "auto",
+
+            marginTop:
+              "14px",
+          }}
+        >
+
+          <table
+            style={{
+              width:
+                "100%",
+
+              minWidth:
+                "920px",
+
+              borderCollapse:
+                "separate",
+
+              borderSpacing:
+                "0 6px",
+
+              fontSize:
+                "13px",
+            }}
+          >
+
+            <thead>
+
+              <tr>
+
+                {[
+                  "Фото",
+                  "Китайский арт.",
+                  "Наш артикул",
+                  "Товар",
+                  "Коробов",
+                  "Шт.",
+                  "Сумма",
+                  "Статус",
+                ].map(
+                  (
+                    title
+                  ) => (
+
+                    <th
+                      key={
+                        title
+                      }
+
+                      style={{
+                        textAlign:
+                          "left",
+
+                        padding:
+                          "5px 10px",
+
+                        whiteSpace:
+                          "nowrap",
+
+                        fontWeight:
+                          600,
+
+                        opacity:
+                          0.7,
+                      }}
+                    >
+                      {title}
+                    </th>
+
+                  )
+                )}
+
+              </tr>
+
+            </thead>
+
+
+            <tbody>
+
+              {items.map(
+                (
+                  item
+                ) => {
+
+                  const selected =
+                    selectedItem
+                      ?.id ===
+                    item.id;
+
+
+                  return (
+
+                    <Fragment key={item.id}>
+
+                    <tr
+                      key={item.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-expanded={selected}
+                      aria-label={`Товар ${item.our_article_snapshot ?? "без артикула"}: ${selected ? "свернуть" : "раскрыть"}`}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setSelectedItemId((current) =>
+                            current === item.id ? null : item.id
+                          );
+                          setVedSaveMessage("");
+                        }
+                      }}
+                      onClick={
+                        () => {
+
+                          setSelectedItemId((current) =>
+                            current === item.id ? null : item.id
+                          );
+
+                          setVedSaveMessage(
+                            ""
+                          );
+
+                        }
+                      }
+
+                      style={{
+                        cursor:
+                          "pointer",
+
+                        background:
+                          selected
+                            ? "var(--card)"
+                            : "transparent",
+
+                        outline:
+                          selected
+                            ? "1px solid var(--border)"
+                            : "1px solid transparent",
+                      }}
+                    >
+
+                      <td
+                        style={{
+                          padding:
+                            "8px 10px",
+
+                          borderRadius:
+                            "10px 0 0 10px",
+                        }}
+                      >
+
+                        <ProductPhoto
+                          url={
+                            item.photo_url
+                          }
+
+                          article={
+                            item
+                              .our_article_snapshot
+                          }
+
+                          size={
+                            48
+                          }
+                        />
+
+                      </td>
+
+
+                      <td
+                        style={{
+                          padding:
+                            "8px 10px",
+
+                          whiteSpace:
+                            "nowrap",
+                        }}
+                      >
+                        {item
+                          .chinese_article_snapshot
+                          ??
+                          "—"}
+                      </td>
+
+
+                      <td
+                        style={{
+                          padding:
+                            "8px 10px",
+
+                          whiteSpace:
+                            "nowrap",
+
+                          fontWeight:
+                            700,
+                        }}
+                      >
+                        <span
+                          aria-hidden="true"
+                          style={{
+                            display: "inline-block",
+                            width: "18px",
+                            fontSize: "17px",
+                            color: selected ? "var(--text)" : "var(--muted)",
+                          }}
+                        >
+                          {selected ? "▾" : "▸"}
+                        </span>
+                        {item.our_article_snapshot ?? "—"}
+                      </td>
+
+
+                      <td
+                        style={{
+                          padding:
+                            "8px 10px",
+
+                          minWidth:
+                            "260px",
+                        }}
+                      >
+                        {item
+                          .product_name_snapshot
+                          ??
+                          "—"}
+                      </td>
+
+
+                      <td
+                        style={{
+                          padding:
+                            "8px 10px",
+
+                          whiteSpace:
+                            "nowrap",
+                        }}
+                      >
+                        {formatNumber(
+                          item.cartons
+                        )}
+                      </td>
+
+
+                      <td
+                        style={{
+                          padding:
+                            "8px 10px",
+
+                          whiteSpace:
+                            "nowrap",
+
+                          fontWeight:
+                            700,
+                        }}
+                      >
+                        {formatNumber(
+                          item.order_quantity
+                        )}
+                      </td>
+
+
+                      <td
+                        style={{
+                          padding:
+                            "8px 10px",
+
+                          whiteSpace:
+                            "nowrap",
+                        }}
+                      >
+
+                        {item
+                          .total_price_cny ===
+                        null
+
+                          ? "—"
+
+                          : `${formatNumber(
+                              item
+                                .total_price_cny,
+                              2
+                            )} CNY`}
+
+                      </td>
+
+
+                      <td
+                        style={{
+                          padding:
+                            "8px 10px",
+
+                          whiteSpace:
+                            "nowrap",
+
+                          borderRadius:
+                            "0 10px 10px 0",
+
+                          fontWeight:
+                            600,
+                        }}
+                      >
+                        {getItemListStatus(
+                          item
+                        )}
+                      </td>
+
+                    </tr>
+
+                    {selected && (
+                      <tr>
+                        <td
+                          colSpan={8}
+                          style={{
+                            padding: "8px 14px 18px",
+                            background: "var(--card)",
+                            borderBottom: "1px solid var(--border)",
+                          }}
+                        >
+                          {expandedItemDetail}
+                        </td>
+                      </tr>
+                    )}
+
+                    </Fragment>
+
+                  );
+
+                }
+              )}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </section>
 
 
       {/* ======================================================
