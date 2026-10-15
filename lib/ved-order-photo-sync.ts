@@ -14,7 +14,13 @@ type VedOrderItemRow = {
 type ProductRow = {
   id: string;
   offer_id: string;
+  master_code: string | null;
   main_photo_url: string | null;
+};
+
+type OzonListingRow = {
+  master_code: string | null;
+  seller_article: string | null;
 };
 
 
@@ -640,7 +646,7 @@ export async function syncVedOrderPhotos(
       +
       `?id=in.(${encodeURIComponent(productFilter)})`
       +
-      "&select=id,offer_id,main_photo_url"
+      "&select=id,offer_id,master_code,main_photo_url"
     );
 
 
@@ -812,35 +818,92 @@ export async function syncVedOrderPhotos(
 
 
   // ==========================================================
-  // 6. OFFER IDS ДЛЯ OZON
+  // 6. СОПОСТАВЛЕНИЕ ARTICUL ЗАКУПКИ И РЕАЛЬНОГО OFFER_ID OZON
+  //
+  // products.offer_id (например AVD-BCS500) является внутренним
+  // артикулом закупки. В Ozon тот же физический товар может
+  // называться "ватные палочки 500шт AVD-BCS500".
+  // Связываем только активные Ozon listings одной учётной записи,
+  // с тем же master_code. На другие master_code фото не переносим.
   // ==========================================================
 
-  const offerIds =
-    Array.from(
-      new Set(
-        needsOzon
-          .map(
-            (
-              row
-            ) =>
-              row
-                .product
-                .offer_id
-                .trim()
-          )
-          .filter(
-            Boolean
-          )
-      )
-    );
+  const masterCodes = Array.from(
+    new Set(
+      needsOzon
+        .map(({ product }) => product.master_code?.trim())
+        .filter((code): code is string => Boolean(code))
+    )
+  );
 
+  const listings: OzonListingRow[] =
+    masterCodes.length === 0
+      ? []
+      : await supabaseRequest<OzonListingRow[]>(
+          "marketplace_listings" +
+            "?marketplace=eq.ozon" +
+            "&account_key=eq.main" +
+            "&is_active=eq.true" +
+            `&master_code=in.(${encodeURIComponent(
+              masterCodes.map((code) => `"${code}"`).join(",")
+            )})` +
+            "&select=master_code,seller_article"
+        );
+
+  const offersByMaster = new Map<string, string[]>();
+
+  for (const listing of listings ?? []) {
+    const code = listing.master_code?.trim();
+    const sellerOffer = listing.seller_article?.trim();
+
+    if (!code || !sellerOffer) continue;
+
+    const existing = offersByMaster.get(code) ?? [];
+
+    if (!existing.includes(sellerOffer)) {
+      existing.push(sellerOffer);
+      offersByMaster.set(code, existing);
+    }
+  }
+
+  function candidateOzonOffers(product: ProductRow): string[] {
+    const canonical = product.offer_id.trim();
+    const aliases = product.master_code
+      ? (offersByMaster.get(product.master_code.trim()) ?? [])
+      : [];
+
+    // Longer seller articles are typically the real Ozon SKU while the
+    // canonical short article is a local procurement identifier.
+    const alternateOffers = aliases
+      .filter((offer) => offer !== canonical)
+      .sort((a, b) => b.length - a.length);
+
+    return Array.from(new Set([...alternateOffers, canonical]));
+  }
+
+  const offerIds = Array.from(
+    new Set(
+      needsOzon.flatMap(({ product }) => candidateOzonOffers(product))
+    )
+  );
 
   // ==========================================================
-  // 7. ПОЛУЧАЕМ ФОТО ИЗ OZON
+  // 7. ПОЛУЧАЕМ ФОТО ИЗ OZON ПО РЕАЛЬНЫМ SELLER OFFER IDS
   // ==========================================================
 
   const ozonLookup = await getOzonPhotos(offerIds);
   const ozonPhotos = ozonLookup.photos;
+
+  const matchedPhotos = new Map<string, { image: string; ozonOffer: string }>();
+
+  for (const { product } of needsOzon) {
+    const candidate = candidateOzonOffers(product).find(
+      (offer) => ozonPhotos.has(offer)
+    );
+
+    if (!candidate) continue;
+    const image = ozonPhotos.get(candidate);
+    if (image) matchedPhotos.set(product.id, { image, ozonOffer: candidate });
+  }
 
   // ==========================================================
   // 8. СОХРАНЯЕМ ФОТО
@@ -858,10 +921,8 @@ export async function syncVedOrderPhotos(
         .trim();
 
 
-    const photoUrl =
-      ozonPhotos.get(
-        offerId
-      );
+    const matchingPhoto = matchedPhotos.get(row.product.id);
+    const photoUrl = matchingPhoto?.image;
 
 
     if (!photoUrl) {
@@ -937,7 +998,7 @@ export async function syncVedOrderPhotos(
     await saveAudit(
       normalizedOrderId,
       row.item.id,
-      offerId,
+      matchingPhoto!.ozonOffer,
       photoUrl,
       "ozon"
     );
@@ -979,13 +1040,19 @@ export async function syncVedOrderPhotos(
       missingOfferId,
 
     requested_from_ozon:
-      offerIds.length,
+      needsOzon.length,
 
     recognized_in_ozon:
-      ozonLookup.recognized.size,
+      needsOzon.filter(({ product }) =>
+        candidateOzonOffers(product).some((offer) =>
+          ozonLookup.recognized.has(offer)
+        )
+      ).length,
 
     missing_articles:
-      offerIds.filter((article) => !ozonPhotos.has(article)),
+      needsOzon
+        .filter(({ product }) => !matchedPhotos.has(product.id))
+        .map(({ product }) => product.offer_id),
 
     ozon_fallback_error:
       ozonLookup.fallbackError,
