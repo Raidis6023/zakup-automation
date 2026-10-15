@@ -11,8 +11,8 @@ export default function WorkspaceDecoration() {
             x2="100%"
             y2="0%"
           >
-            <stop offset="0%" stopColor="#078bf2" />
-            <stop offset="100%" stopColor="#159bf0" />
+            <stop offset="0%" style={{ stopColor: "var(--ws-decor-1-from)" }} />
+            <stop offset="100%" style={{ stopColor: "var(--ws-decor-1-to)" }} />
           </linearGradient>
 
           <linearGradient
@@ -22,8 +22,8 @@ export default function WorkspaceDecoration() {
             x2="100%"
             y2="0%"
           >
-            <stop offset="0%" stopColor="#4cb2ef" />
-            <stop offset="100%" stopColor="#82c9f3" />
+            <stop offset="0%" style={{ stopColor: "var(--ws-decor-2-from)" }} />
+            <stop offset="100%" style={{ stopColor: "var(--ws-decor-2-to)" }} />
           </linearGradient>
 
           <linearGradient
@@ -33,8 +33,8 @@ export default function WorkspaceDecoration() {
             x2="100%"
             y2="0%"
           >
-            <stop offset="0%" stopColor="#92d2f4" />
-            <stop offset="100%" stopColor="#c7e7f8" />
+            <stop offset="0%" style={{ stopColor: "var(--ws-decor-3-from)" }} />
+            <stop offset="100%" style={{ stopColor: "var(--ws-decor-3-to)" }} />
           </linearGradient>
 
           <linearGradient
@@ -44,9 +44,9 @@ export default function WorkspaceDecoration() {
             x2="100%"
             y2="0%"
           >
-            <stop offset="0%" stopColor="#9cb8cc" />
-            <stop offset="55%" stopColor="#8099ad" />
-            <stop offset="100%" stopColor="#657b8d" />
+            <stop offset="0%" style={{ stopColor: "var(--ws-decor-4-from)" }} />
+            <stop offset="55%" style={{ stopColor: "var(--ws-decor-4-mid)" }} />
+            <stop offset="100%" style={{ stopColor: "var(--ws-decor-4-to)" }} />
           </linearGradient>
         </defs>
 
