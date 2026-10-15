@@ -6,6 +6,8 @@ import {
 } from "react";
 
 
+import VedPreparationQuickEntry from "./VedPreparationQuickEntry";
+
 // ============================================================
 // TYPES: ORDER
 // ============================================================
@@ -3725,6 +3727,25 @@ export default function VedOrderDetailClient(
       )}
 
 
+      {/* Быстрое заполнение реквизитов перед отправкой в ВЭД. */}
+      {preparationEditable && items.length > 0 && (
+        <VedPreparationQuickEntry
+          items={items}
+          actorName={order.preparation_responsible_name ?? ""}
+          actorRole={
+            order.preparation_department === "procurement"
+              ? "procurement"
+              : "analytics"
+          }
+          onSaved={refreshAll}
+          onOpenItem={(id) => {
+            setSelectedItemId(id);
+            document.getElementById("ved-order-item-detail")
+              ?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
+        />
+      )}
+
       {/* ======================================================
           ITEMS
           ====================================================== */}
@@ -4100,6 +4121,7 @@ export default function VedOrderDetailClient(
       {selectedItem && (
 
         <section
+          id="ved-order-item-detail"
           className="section"
 
           style={{
