@@ -94,16 +94,23 @@ export default function OzonUnifiedSyncClient() {
         <span aria-hidden="true" className={running ? "ozon-unified-sync-icon ozon-unified-sync-icon--loading" : "ozon-unified-sync-icon"}>⟳</span>
         {running ? "Обновляем продажи и остатки..." : "Обновить данные"}
       </button>
-      {blockedReason && !running && (
-        <div className="ozon-unified-sync-note" role="status">{blockedReason}</div>
-      )}
-      {result && (
-        <div className={result.ok ? "ozon-unified-sync-note ozon-unified-sync-note--success" : "ozon-unified-sync-note ozon-unified-sync-note--error"}
-          role="status">
-          {result.message}
-          {result.warning && <div>{result.warning}</div>}
-        </div>
-      )}
+      <div
+        className={result
+          ? result.ok
+            ? "ozon-unified-sync-note ozon-unified-sync-note--success"
+            : "ozon-unified-sync-note ozon-unified-sync-note--error"
+          : "ozon-unified-sync-note"
+        }
+        title={result
+          ? [result.message, result.warning].filter(Boolean).join(" ")
+          : blockedReason
+        }
+        role="status"
+      >
+        {result
+          ? [result.message, result.warning].filter(Boolean).join(" ")
+          : !running ? blockedReason : ""}
+      </div>
     </div>
   );
 }
