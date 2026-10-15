@@ -1,3 +1,6 @@
+import Link
+  from "next/link";
+
 import {
   ArticleListIcon,
 } from "../WorkspaceNavIcons";
@@ -25,7 +28,7 @@ export default function SkuListPage() {
 
         <header
           className=
-            "sku-list-header"
+            "header sku-list-header"
         >
 
           <div>
@@ -48,6 +51,23 @@ export default function SkuListPage() {
               Содержимое и рабочую логику
               добавим следующим этапом.
             </p>
+
+          </div>
+
+
+          <div
+            className=
+              "header-actions sku-list-header-actions"
+          >
+
+            <Link
+              href="/"
+
+              className=
+                "secondary-button sku-list-home-button"
+            >
+              Главная
+            </Link>
 
           </div>
 
