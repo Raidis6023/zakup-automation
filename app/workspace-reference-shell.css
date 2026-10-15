@@ -283,15 +283,15 @@ html[data-theme="dark"]
   --button-hover: #0b6c4b;
   --button-text: #ffffff;
   --accent: #11865d;
-  --ws-decor-1-from: #0f9b70;
-  --ws-decor-1-to: #1eb581;
-  --ws-decor-2-from: #3bc996;
-  --ws-decor-2-to: #7bd9b1;
-  --ws-decor-3-from: #9fe6c6;
-  --ws-decor-3-to: #cef4df;
-  --ws-decor-4-from: #5caa86;
-  --ws-decor-4-mid: #419b76;
-  --ws-decor-4-to: #247c59;
+  --ws-decor-1-from: color-mix(in srgb, #169968 94%, #000000);
+  --ws-decor-1-to: color-mix(in srgb, color-mix(in srgb, #169968 94%, #000000) 77%, color-mix(in srgb, #45BD93 94%, #000000));
+  --ws-decor-2-from: color-mix(in srgb, color-mix(in srgb, #169968 94%, #000000) 30%, color-mix(in srgb, #45BD93 94%, #000000));
+  --ws-decor-2-to: color-mix(in srgb, #45BD93 94%, #000000);
+  --ws-decor-3-from: color-mix(in srgb, color-mix(in srgb, #45BD93 94%, #000000) 35%, color-mix(in srgb, #489C80 94%, #000000));
+  --ws-decor-3-to: color-mix(in srgb, #489C80 94%, #000000);
+  --ws-decor-4-from: color-mix(in srgb, color-mix(in srgb, #489C80 94%, #000000) 70%, color-mix(in srgb, #326A56 94%, #000000));
+  --ws-decor-4-mid: color-mix(in srgb, color-mix(in srgb, #489C80 94%, #000000) 35%, color-mix(in srgb, #326A56 94%, #000000));
+  --ws-decor-4-to: color-mix(in srgb, #326A56 94%, #000000);
 }
 
 html[data-theme="dark"] .home-shell[data-accent-area="general"] {
@@ -306,15 +306,15 @@ html[data-theme="dark"] .home-shell[data-accent-area="general"] {
   --button-hover: #0b6c4b;
   --button-text: #ffffff;
   --accent: #177c5e;
-  --ws-decor-1-from: #0b8b61;
-  --ws-decor-1-to: #15a675;
-  --ws-decor-2-from: #27b886;
-  --ws-decor-2-to: #58c99e;
-  --ws-decor-3-from: #7ddbb7;
-  --ws-decor-3-to: #b2eed1;
-  --ws-decor-4-from: #419676;
-  --ws-decor-4-mid: #338a69;
-  --ws-decor-4-to: #20684d;
+  --ws-decor-1-from: #169968;
+  --ws-decor-1-to: color-mix(in srgb, #169968 77%, #45BD93);
+  --ws-decor-2-from: color-mix(in srgb, #169968 30%, #45BD93);
+  --ws-decor-2-to: #45BD93;
+  --ws-decor-3-from: color-mix(in srgb, #45BD93 35%, #489C80);
+  --ws-decor-3-to: #489C80;
+  --ws-decor-4-from: color-mix(in srgb, #489C80 70%, #326A56);
+  --ws-decor-4-mid: color-mix(in srgb, #489C80 35%, #326A56);
+  --ws-decor-4-to: #326A56;
 }
 
 .home-shell[data-accent-area="ozon"] {
@@ -329,15 +329,15 @@ html[data-theme="dark"] .home-shell[data-accent-area="general"] {
   --button-hover: #0b6295;
   --button-text: #ffffff;
   --accent: #157dbc;
-  --ws-decor-1-from: #0685d7;
-  --ws-decor-1-to: #209cdd;
-  --ws-decor-2-from: #43afe8;
-  --ws-decor-2-to: #80c9ed;
-  --ws-decor-3-from: #a3dbf2;
-  --ws-decor-3-to: #d2eefb;
-  --ws-decor-4-from: #6da6c7;
-  --ws-decor-4-mid: #80bad8;
-  --ws-decor-4-to: #5794b7;
+  --ws-decor-1-from: color-mix(in srgb, #168ACB 94%, #000000);
+  --ws-decor-1-to: color-mix(in srgb, color-mix(in srgb, #168ACB 94%, #000000) 77%, color-mix(in srgb, #58B3DD 94%, #000000));
+  --ws-decor-2-from: color-mix(in srgb, color-mix(in srgb, #168ACB 94%, #000000) 30%, color-mix(in srgb, #58B3DD 94%, #000000));
+  --ws-decor-2-to: color-mix(in srgb, #58B3DD 94%, #000000);
+  --ws-decor-3-from: color-mix(in srgb, color-mix(in srgb, #58B3DD 94%, #000000) 35%, color-mix(in srgb, #6098B5 94%, #000000));
+  --ws-decor-3-to: color-mix(in srgb, #6098B5 94%, #000000);
+  --ws-decor-4-from: color-mix(in srgb, color-mix(in srgb, #6098B5 94%, #000000) 70%, color-mix(in srgb, #466B85 94%, #000000));
+  --ws-decor-4-mid: color-mix(in srgb, color-mix(in srgb, #6098B5 94%, #000000) 35%, color-mix(in srgb, #466B85 94%, #000000));
+  --ws-decor-4-to: color-mix(in srgb, #466B85 94%, #000000);
 }
 
 html[data-theme="dark"] .home-shell[data-accent-area="ozon"] {
@@ -352,15 +352,15 @@ html[data-theme="dark"] .home-shell[data-accent-area="ozon"] {
   --button-hover: #1c5f90;
   --button-text: #ffffff;
   --accent: #266fa7;
-  --ws-decor-1-from: #0b79cb;
-  --ws-decor-1-to: #1690df;
-  --ws-decor-2-from: #329fdb;
-  --ws-decor-2-to: #6dbbe7;
-  --ws-decor-3-from: #94d3f1;
-  --ws-decor-3-to: #c5e9f8;
-  --ws-decor-4-from: #508aae;
-  --ws-decor-4-mid: #659bbd;
-  --ws-decor-4-to: #397393;
+  --ws-decor-1-from: #168ACB;
+  --ws-decor-1-to: color-mix(in srgb, #168ACB 77%, #58B3DD);
+  --ws-decor-2-from: color-mix(in srgb, #168ACB 30%, #58B3DD);
+  --ws-decor-2-to: #58B3DD;
+  --ws-decor-3-from: color-mix(in srgb, #58B3DD 35%, #6098B5);
+  --ws-decor-3-to: #6098B5;
+  --ws-decor-4-from: color-mix(in srgb, #6098B5 70%, #466B85);
+  --ws-decor-4-mid: color-mix(in srgb, #6098B5 35%, #466B85);
+  --ws-decor-4-to: #466B85;
 }
 
 .home-shell[data-accent-area="wildberries"] {
@@ -375,15 +375,15 @@ html[data-theme="dark"] .home-shell[data-accent-area="ozon"] {
   --button-hover: #692398;
   --button-text: #ffffff;
   --accent: #8231b4;
-  --ws-decor-1-from: #812bb7;
-  --ws-decor-1-to: #a34bcb;
-  --ws-decor-2-from: #b872da;
-  --ws-decor-2-to: #d3a3e8;
-  --ws-decor-3-from: #dfc2f0;
-  --ws-decor-3-to: #f1e2f9;
-  --ws-decor-4-from: #9e75ba;
-  --ws-decor-4-mid: #9365b0;
-  --ws-decor-4-to: #75508f;
+  --ws-decor-1-from: color-mix(in srgb, #8A32B4 94%, #000000);
+  --ws-decor-1-to: color-mix(in srgb, color-mix(in srgb, #8A32B4 94%, #000000) 77%, color-mix(in srgb, #B170D0 94%, #000000));
+  --ws-decor-2-from: color-mix(in srgb, color-mix(in srgb, #8A32B4 94%, #000000) 30%, color-mix(in srgb, #B170D0 94%, #000000));
+  --ws-decor-2-to: color-mix(in srgb, #B170D0 94%, #000000);
+  --ws-decor-3-from: color-mix(in srgb, color-mix(in srgb, #B170D0 94%, #000000) 35%, color-mix(in srgb, #956FAE 94%, #000000));
+  --ws-decor-3-to: color-mix(in srgb, #956FAE 94%, #000000);
+  --ws-decor-4-from: color-mix(in srgb, color-mix(in srgb, #956FAE 94%, #000000) 70%, color-mix(in srgb, #654C7D 94%, #000000));
+  --ws-decor-4-mid: color-mix(in srgb, color-mix(in srgb, #956FAE 94%, #000000) 35%, color-mix(in srgb, #654C7D 94%, #000000));
+  --ws-decor-4-to: color-mix(in srgb, #654C7D 94%, #000000);
 }
 
 html[data-theme="dark"] .home-shell[data-accent-area="wildberries"] {
@@ -398,15 +398,15 @@ html[data-theme="dark"] .home-shell[data-accent-area="wildberries"] {
   --button-hover: #69228f;
   --button-text: #ffffff;
   --accent: #792ba4;
-  --ws-decor-1-from: #7724a9;
-  --ws-decor-1-to: #9239be;
-  --ws-decor-2-from: #ae62cd;
-  --ws-decor-2-to: #c98bdf;
-  --ws-decor-3-from: #d8b1ea;
-  --ws-decor-3-to: #ead5f4;
-  --ws-decor-4-from: #8e58b3;
-  --ws-decor-4-mid: #7643a0;
-  --ws-decor-4-to: #59337c;
+  --ws-decor-1-from: #8A32B4;
+  --ws-decor-1-to: color-mix(in srgb, #8A32B4 77%, #B170D0);
+  --ws-decor-2-from: color-mix(in srgb, #8A32B4 30%, #B170D0);
+  --ws-decor-2-to: #B170D0;
+  --ws-decor-3-from: color-mix(in srgb, #B170D0 35%, #956FAE);
+  --ws-decor-3-to: #956FAE;
+  --ws-decor-4-from: color-mix(in srgb, #956FAE 70%, #654C7D);
+  --ws-decor-4-mid: color-mix(in srgb, #956FAE 35%, #654C7D);
+  --ws-decor-4-to: #654C7D;
 }
 
 .home-shell[data-accent-area="yandex-market"] {
@@ -421,15 +421,15 @@ html[data-theme="dark"] .home-shell[data-accent-area="wildberries"] {
   --button-hover: #97420d;
   --button-text: #ffffff;
   --accent: #b65a15;
-  --ws-decor-1-from: #c75d11;
-  --ws-decor-1-to: #e27b2a;
-  --ws-decor-2-from: #ed9848;
-  --ws-decor-2-to: #f7b773;
-  --ws-decor-3-from: #f9cea2;
-  --ws-decor-3-to: #ffe7cb;
-  --ws-decor-4-from: #bb8758;
-  --ws-decor-4-mid: #c79a70;
-  --ws-decor-4-to: #ac754a;
+  --ws-decor-1-from: color-mix(in srgb, #CA6320 94%, #000000);
+  --ws-decor-1-to: color-mix(in srgb, color-mix(in srgb, #CA6320 94%, #000000) 77%, color-mix(in srgb, #E18E4C 94%, #000000));
+  --ws-decor-2-from: color-mix(in srgb, color-mix(in srgb, #CA6320 94%, #000000) 30%, color-mix(in srgb, #E18E4C 94%, #000000));
+  --ws-decor-2-to: color-mix(in srgb, #E18E4C 94%, #000000);
+  --ws-decor-3-from: color-mix(in srgb, color-mix(in srgb, #E18E4C 94%, #000000) 35%, color-mix(in srgb, #C78D60 94%, #000000));
+  --ws-decor-3-to: color-mix(in srgb, #C78D60 94%, #000000);
+  --ws-decor-4-from: color-mix(in srgb, color-mix(in srgb, #C78D60 94%, #000000) 70%, color-mix(in srgb, #8B5C40 94%, #000000));
+  --ws-decor-4-mid: color-mix(in srgb, color-mix(in srgb, #C78D60 94%, #000000) 35%, color-mix(in srgb, #8B5C40 94%, #000000));
+  --ws-decor-4-to: color-mix(in srgb, #8B5C40 94%, #000000);
 }
 
 html[data-theme="dark"] .home-shell[data-accent-area="yandex-market"] {
@@ -444,15 +444,15 @@ html[data-theme="dark"] .home-shell[data-accent-area="yandex-market"] {
   --button-hover: #8b4315;
   --button-text: #ffffff;
   --accent: #a7541d;
-  --ws-decor-1-from: #b65315;
-  --ws-decor-1-to: #d66a22;
-  --ws-decor-2-from: #e8893b;
-  --ws-decor-2-to: #f5aa66;
-  --ws-decor-3-from: #f7c28c;
-  --ws-decor-3-to: #ffdfb5;
-  --ws-decor-4-from: #ac744b;
-  --ws-decor-4-mid: #b78a60;
-  --ws-decor-4-to: #855636;
+  --ws-decor-1-from: #CA6320;
+  --ws-decor-1-to: color-mix(in srgb, #CA6320 77%, #E18E4C);
+  --ws-decor-2-from: color-mix(in srgb, #CA6320 30%, #E18E4C);
+  --ws-decor-2-to: #E18E4C;
+  --ws-decor-3-from: color-mix(in srgb, #E18E4C 35%, #C78D60);
+  --ws-decor-3-to: #C78D60;
+  --ws-decor-4-from: color-mix(in srgb, #C78D60 70%, #8B5C40);
+  --ws-decor-4-mid: color-mix(in srgb, #C78D60 35%, #8B5C40);
+  --ws-decor-4-to: #8B5C40;
 }
 
 /* Маркетплейсы используют свои цвета не только на боковой панели,
