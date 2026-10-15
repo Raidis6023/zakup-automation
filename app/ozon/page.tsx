@@ -1460,7 +1460,7 @@ export default async function OzonPage() {
                   ? "Синхронизация завершена"
                   : "Нужно проверить данные"}</strong>
                 <span>{latestSync?.status === "success"
-                  ? `Продажи загружены · отправлений: ${formatNumber(latestSync?.postings_received)}`
+                  ? "Данные Ozon успешно обновлены"
                   : "Нет подтверждённой успешной загрузки продаж"}</span>
               </div>
             </div>
