@@ -64,7 +64,7 @@ export default function SkuListPage() {
               href="/"
 
               className=
-                "secondary-button sku-list-home-button"
+                "secondary-button workspace-home-button sku-list-home-button"
             >
               Главная
             </Link>
