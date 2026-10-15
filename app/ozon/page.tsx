@@ -1361,7 +1361,7 @@ export default async function OzonPage() {
               href="/"
 
               className=
-                "secondary-button ozon-navigation-button"
+                "secondary-button workspace-home-button ozon-navigation-button"
             >
               Главная
             </Link>
