@@ -1434,7 +1434,7 @@ export default async function YandexMarketPage() {
               className=
                 "secondary-button navigation-button ym-navigation-button"
             >
-              ← Главная
+              Главная
             </Link>
 
           </div>
