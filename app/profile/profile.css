@@ -51,7 +51,7 @@
 
 .profile-back:hover {
   color:
-    #126fe5;
+    var(--ws-blue);
 }
 
 
@@ -165,12 +165,12 @@
   background:
     linear-gradient(
       145deg,
-      #d9ecfb,
-      #9ec7e8
+      #e0f2e8,
+      #9ee6be
     );
 
   color:
-    #285b8b;
+    #137652;
 
   font-size: 22px;
 
@@ -195,7 +195,7 @@
 
 .profile-avatar-button:hover:not(:disabled) {
   border-color:
-    #126fe5;
+    var(--ws-blue);
 }
 
 
@@ -298,13 +298,13 @@
 
 .profile-avatar-change {
   color:
-    #126fe5;
+    var(--ws-blue);
 }
 
 
 .profile-avatar-change:hover:not(:disabled) {
   color:
-    #0d61cb;
+    var(--ws-blue-hover);
 }
 
 
@@ -583,16 +583,11 @@
 
 .profile-input:focus {
   border-color:
-    #126fe5;
+    var(--ws-blue);
 
   box-shadow:
     0 0 0 3px
-    rgba(
-      18,
-      111,
-      229,
-      0.12
-    );
+    color-mix(in srgb, var(--ws-blue) 12%, transparent);
 }
 
 
@@ -668,12 +663,12 @@
 
   border:
     1px solid
-    #126fe5;
+    var(--ws-blue);
 
   border-radius: 9px;
 
   background:
-    #126fe5;
+    var(--ws-blue);
 
   color:
     #ffffff;
@@ -696,10 +691,10 @@
 
 .profile-save-button:hover:not(:disabled) {
   border-color:
-    #0d61cb;
+    var(--ws-blue-hover);
 
   background:
-    #0d61cb;
+    var(--ws-blue-hover);
 }
 
 
