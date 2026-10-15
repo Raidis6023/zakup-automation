@@ -164,6 +164,15 @@ export default function WorkspaceShell({
     ??
     "/";
 
+  // Accent palette is scoped to the current workspace.
+  // Marketplace pages preserve their existing brand styles.
+  const accentArea =
+    pathname === "/ozon" || pathname.startsWith("/ozon/") ||
+    pathname === "/wildberries" || pathname.startsWith("/wildberries/") ||
+    pathname === "/yandex-market" || pathname.startsWith("/yandex-market/")
+      ? "marketplace"
+      : "general";
+
 
   const [
     sidebarCollapsed,
@@ -554,6 +563,7 @@ export default function WorkspaceShell({
   return (
 
     <div
+      data-accent-area={accentArea}
       className={
         sidebarCollapsed
 
