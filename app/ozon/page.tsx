@@ -1191,67 +1191,85 @@ export default async function OzonPage() {
       null;
 
 
-  try {
+  const [
+    dashboardResult,
+    replenishmentResult,
+    unlinkedProductsResult,
+  ] =
+    await Promise.allSettled([
+      getOzonDashboard(),
+      getLatestReplenishment(),
+      getOzonUnlinkedProducts(),
+    ]);
+
+
+  if (
+    dashboardResult.status ===
+      "fulfilled"
+  ) {
 
     dashboard =
-      await getOzonDashboard();
+      dashboardResult.value;
 
-  } catch (
-    error
-  ) {
+  } else {
 
     dashboardError =
 
-      error instanceof Error
+      dashboardResult.reason
+        instanceof Error
 
-        ? error.message
+        ? dashboardResult.reason.message
 
         : String(
-            error
+            dashboardResult.reason
           );
 
   }
 
 
-  try {
+  if (
+    replenishmentResult.status ===
+      "fulfilled"
+  ) {
 
     replenishment =
-      await getLatestReplenishment();
+      replenishmentResult.value;
 
-  } catch (
-    error
-  ) {
+  } else {
 
     replenishmentError =
 
-      error instanceof Error
+      replenishmentResult.reason
+        instanceof Error
 
-        ? error.message
+        ? replenishmentResult.reason.message
 
         : String(
-            error
+            replenishmentResult.reason
           );
 
   }
 
 
-  try {
+  if (
+    unlinkedProductsResult.status ===
+      "fulfilled"
+  ) {
 
     unlinkedProducts =
-      await getOzonUnlinkedProducts();
+      unlinkedProductsResult.value;
 
-  } catch (
-    error
-  ) {
+  } else {
 
     unlinkedProductsError =
 
-      error instanceof Error
+      unlinkedProductsResult.reason
+        instanceof Error
 
-        ? error.message
+        ? unlinkedProductsResult.reason.message
 
         : String(
-            error
+            unlinkedProductsResult.reason
           );
 
   }
