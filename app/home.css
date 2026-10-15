@@ -232,12 +232,14 @@
   flex:
     0 0 34px;
 
+  /* SVG badges already draw their own rounded backgrounds.
+     A second dark container fill showed through their transparent
+     corners as black triangles, especially on active links. */
   overflow: hidden;
 
-  border-radius: 9px;
+  border-radius: 12px;
 
-  background:
-    var(--surface-soft);
+  background: transparent;
 }
 
 

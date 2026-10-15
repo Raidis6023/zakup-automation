@@ -496,6 +496,65 @@ html[data-theme="dark"] .home-shell[data-accent-area="general"]
 
 
 /* ============================================================
+   МАРКЕТПЛЕЙСЫ: СОБСТВЕННЫЕ ЦВЕТА ВЫДЕЛЕНИЯ
+   Вне зависимости от того, какая палитра у остального Workspace,
+   подсветка каждого МП соответствует его фирменной гамме.
+   Переменные действуют только на ссылку соответствующего МП.
+   ============================================================ */
+
+.home-workspace-link[data-marketplace="ozon"] {
+  --ws-active: #1478bb;
+  --ws-blue-hover: #0e6aa8;
+  --ws-surface-hover: #e7f4fe;
+  --ws-border-soft: #d3eafb;
+  --ws-nav-hover-text: #126eae;
+}
+
+.home-workspace-link[data-marketplace="wildberries"] {
+  --ws-active: #8834b9;
+  --ws-blue-hover: #7627a3;
+  --ws-surface-hover: #f5e9fd;
+  --ws-border-soft: #ead8f5;
+  --ws-nav-hover-text: #8834b9;
+}
+
+.home-workspace-link[data-marketplace="yandex-market"] {
+  --ws-active: #b95c13;
+  --ws-blue-hover: #a34b0b;
+  --ws-surface-hover: #fff1df;
+  --ws-border-soft: #f6dfc7;
+  --ws-nav-hover-text: #a94f10;
+}
+
+html[data-theme="dark"]
+.home-workspace-link[data-marketplace="ozon"] {
+  --ws-active: #246da8;
+  --ws-blue-hover: #307fbd;
+  --ws-surface-hover: #152d42;
+  --ws-border-soft: #27485c;
+  --ws-nav-hover-text: #8acbff;
+}
+
+html[data-theme="dark"]
+.home-workspace-link[data-marketplace="wildberries"] {
+  --ws-active: #7e2cab;
+  --ws-blue-hover: #9340c3;
+  --ws-surface-hover: #2d1b3b;
+  --ws-border-soft: #453059;
+  --ws-nav-hover-text: #e1b5fa;
+}
+
+html[data-theme="dark"]
+.home-workspace-link[data-marketplace="yandex-market"] {
+  --ws-active: #ab541b;
+  --ws-blue-hover: #c26527;
+  --ws-surface-hover: #392617;
+  --ws-border-soft: #5d3b20;
+  --ws-nav-hover-text: #ffc18c;
+}
+
+
+/* ============================================================
    АКТИВНЫЙ РАЗДЕЛ
    ============================================================ */
 
