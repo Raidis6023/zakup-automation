@@ -10,7 +10,7 @@ import VedProductionPanel
 import VedOrderDetailClient
   from "../../VedOrderDetailClient";
 
-import RefreshVedPhotosButton from "./RefreshVedPhotosButton";
+import AutoVedOrderPhotos from "./AutoVedOrderPhotos";
 
 
 // ============================================================
@@ -220,6 +220,54 @@ Promise<boolean> {
 
 
 // ============================================================
+// CHECK FOR MISSING OZON PHOTOS
+// Only existing-product order items without saved photos need API requests.
+// ============================================================
+
+async function hasMissingVedOrderPhotos(orderId: string): Promise<boolean> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
+
+  if (!supabaseUrl || !supabaseSecretKey) {
+    console.error("Supabase не настроен для проверки фотографий ВЭД");
+    return false;
+  }
+
+  try {
+    const response = await fetch(
+      `${supabaseUrl}/rest/v1/ved_order_items` +
+        `?ved_order_id=eq.${encodeURIComponent(orderId)}` +
+        "&item_kind=eq.existing" +
+        "&photo_url=is.null" +
+        "&select=id&limit=1",
+      {
+        headers: {
+          apikey: supabaseSecretKey,
+          Authorization: `Bearer ${supabaseSecretKey}`,
+          Accept: "application/json",
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (!response.ok) {
+      console.error(
+        "Ошибка проверки отсутствующих фотографий ВЭД",
+        response.status
+      );
+      return false;
+    }
+
+    const missing: Array<{ id: string }> = await response.json();
+    return missing.length > 0;
+  } catch (error) {
+    console.error("Не удалось проверить фотографии заказа ВЭД", error);
+    return false;
+  }
+}
+
+
+// ============================================================
 // СТИЛИ НАВИГАЦИОННЫХ КНОПОК
 // ============================================================
 
@@ -304,10 +352,10 @@ export default async function VedOrderPage({
       : "Вернуться в раздел ВЭД";
 
 
-  const excelExportAvailable =
-    await isExcelExportAvailable(
-      id
-    );
+  const [excelExportAvailable, needsOzonPhotos] = await Promise.all([
+    isExcelExportAvailable(id),
+    hasMissingVedOrderPhotos(id),
+  ]);
 
 
   const excelExportUrl =
@@ -363,7 +411,7 @@ export default async function VedOrderPage({
             className="header-actions"
           >
 
-            <RefreshVedPhotosButton orderId={id} />
+            {needsOzonPhotos ? <AutoVedOrderPhotos orderId={id} /> : null}
 
             <Link
               href="/"
