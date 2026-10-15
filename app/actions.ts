@@ -550,6 +550,30 @@ export async function createVedOrderDraft(
 
 
 // ============================================
+// 4A. ПОВТОРНАЯ ЗАГРУЗКА ФОТО OZON В ЧЕРНОВИК ВЭД
+// ============================================
+
+export async function refreshVedOrderPhotos(orderId: string) {
+  await requireAuthenticatedUser();
+
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      orderId
+    )
+  ) {
+    throw new Error("Некорректный ID заказа ВЭД");
+  }
+
+  const result = await syncVedOrderPhotos(orderId);
+
+  revalidatePath(`/ved-orders/${orderId}`);
+  revalidatePath("/ved");
+
+  return result;
+}
+
+
+// ============================================
 // 5. СОЗДАТЬ PREVIEW ИМПОРТА ОСТАТКОВ
 // ============================================
 
