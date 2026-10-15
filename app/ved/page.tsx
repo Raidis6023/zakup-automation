@@ -1144,7 +1144,7 @@ export default async function VedPage() {
 
               <Link
                 href="/"
-                className="secondary-button ved-back-link"
+                className="secondary-button workspace-home-button ved-back-link"
               >
                 Главная
               </Link>
@@ -1284,7 +1284,7 @@ export default async function VedPage() {
 
             <Link
               href="/"
-              className="secondary-button ved-back-link"
+              className="secondary-button workspace-home-button ved-back-link"
             >
               Главная
             </Link>
