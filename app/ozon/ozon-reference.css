@@ -2306,3 +2306,144 @@ html[data-theme="dark"]
   .ozon-reference-page .ozon-sync-hero-quarter { padding: 8px 12px; min-height: 64px; }
   .ozon-reference-page .ozon-sync-hero-quarter--border { border-left: 0; border-top: 1px solid var(--ws-border); }
 }
+
+
+/* ============================================================
+   OZON: ЕДИНЫЙ ВЕРХНИЙ БЛОК И КНОПКА КАК У WILDBERRIES
+   Фирменный голубой остаётся, логика ежедневного cron не меняется.
+   ============================================================ */
+
+.ozon-reference-page .ozon-sync-hero {
+  border-color: var(--ws-border);
+}
+
+.ozon-reference-page .ozon-sync-hero-status {
+  height: 64px;
+}
+
+.ozon-reference-page .ozon-sync-hero-status-copy strong {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.ozon-reference-page .ozon-sync-hero-status-copy span {
+  font-size: 11px;
+}
+
+.ozon-reference-page .ozon-sync-hero-fact-icon svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ozon-reference-page .ozon-sync-hero-fact-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ozon-reference-page .ozon-sync-hero-fact strong {
+  font-size: 15px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.ozon-reference-page .ozon-sync-hero-fact-hint {
+  font-size: 12px;
+}
+
+.ozon-reference-page .ozon-unified-sync {
+  display: flex;
+  box-sizing: border-box;
+  flex: 1 1 100%;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 5px;
+}
+
+.ozon-reference-page .ozon-sync-hero-action {
+  display: flex;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  min-height: 40px;
+  height: 40px;
+  flex: 1 1 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border: 1px solid color-mix(in srgb, var(--ws-blue) 26%, transparent);
+  border-radius: 9px;
+  background: linear-gradient(135deg,
+    var(--ws-blue) 0%,
+    color-mix(in srgb, var(--ws-blue) 75%, #73bee8) 52%,
+    var(--ws-blue-hover) 100%);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(22, 125, 184, .18);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: filter 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+}
+
+.ozon-reference-page .ozon-sync-hero-action:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(22, 125, 184, .26);
+}
+
+.ozon-reference-page .ozon-sync-hero-action:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.ozon-reference-page .ozon-sync-hero-action:disabled {
+  cursor: not-allowed;
+  opacity: .53;
+  filter: saturate(.7);
+  box-shadow: none;
+}
+
+.ozon-reference-page .ozon-unified-sync-note {
+  width: 100%;
+  color: var(--ws-text-muted);
+  font-size: 10px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.ozon-reference-page .ozon-unified-sync-note--success {
+  color: var(--ozon-green);
+}
+
+.ozon-reference-page .ozon-unified-sync-note--error {
+  color: var(--ozon-red);
+}
+
+.ozon-reference-page .ozon-unified-sync-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 17px;
+  line-height: .9;
+}
+
+.ozon-reference-page .ozon-unified-sync-icon--loading {
+  animation: ozon-unified-spin 1s linear infinite;
+}
+
+@keyframes ozon-unified-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ozon-reference-page .ozon-unified-sync-icon--loading { animation: none; }
+}
