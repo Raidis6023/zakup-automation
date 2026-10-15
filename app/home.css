@@ -334,7 +334,7 @@
 
   border:
     1px solid
-    #cfe4f7;
+    var(--ws-border);
 
   border-radius: 9px;
 
@@ -356,7 +356,7 @@
   height: 30px;
 
   color:
-    #1a579c;
+    var(--ws-icon);
 }
 
 
@@ -424,7 +424,7 @@
 
   border:
     1px solid
-    #d5e6f5;
+    var(--ws-border);
 
   border-radius: 7px;
 
@@ -486,7 +486,7 @@
     transparent;
 
   color:
-    #114d91;
+    var(--ws-icon);
 
   cursor: pointer;
 
@@ -972,7 +972,7 @@ html[data-theme="dark"]
     var(--home-blue);
 
   border-color:
-    #bfdcf3;
+    var(--ws-blue);
 }
 
 
@@ -1037,7 +1037,7 @@ html[data-theme="dark"]
 
   box-shadow:
     0 1px 5px
-    rgba(0, 73, 145, 0.14);
+    color-mix(in srgb, var(--ws-blue) 14%, transparent);
 }
 
 
@@ -1120,12 +1120,12 @@ html[data-theme="dark"]
   background:
     linear-gradient(
       145deg,
-      #d9ecfb,
-      #9ec7e8
+      #e0f2e8,
+      #9ee6be
     );
 
   color:
-    #285b8b;
+    #11865d;
 
   font-size: 13px;
 
@@ -1179,7 +1179,7 @@ html[data-theme="dark"]
   display: inline-flex;
 
   color:
-    #1c5b9a;
+    var(--ws-icon);
 }
 
 
@@ -1230,7 +1230,7 @@ html[data-theme="dark"]
   margin: 0;
 
   color:
-    #153f78;
+    var(--ws-text);
 
   font-size: 34px;
 
@@ -1254,7 +1254,7 @@ html[data-theme="dark"]
     0;
 
   color:
-    #728cac;
+    var(--ws-text-secondary);
 
   font-size: 14px;
 
