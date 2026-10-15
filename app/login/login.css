@@ -3,8 +3,8 @@
    ============================================================ */
 
 .login-page {
-  --login-blue: #126fe5;
-  --login-blue-hover: #0d61cb;
+  --login-blue: #11865d;
+  --login-blue-hover: #0b6c4b;
   --login-pink: #e60087;
 
   display: flex;
@@ -238,12 +238,7 @@
 
   box-shadow:
     0 0 0 3px
-    rgba(
-      18,
-      111,
-      229,
-      0.12
-    );
+    rgba(17, 134, 93, 0.12);
 }
 
 
@@ -310,7 +305,7 @@
     #1c252e;
 
   color:
-    #acd7ff;
+    #9ee6be;
 }
 
 
@@ -413,12 +408,7 @@
 
   box-shadow:
     0 8px 24px
-    rgba(
-      18,
-      111,
-      229,
-      0.22
-    );
+    rgba(17, 134, 93, 0.22);
 
   transition:
     background-color 0.15s ease,
