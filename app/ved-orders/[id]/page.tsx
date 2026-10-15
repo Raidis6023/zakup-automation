@@ -10,6 +10,8 @@ import VedProductionPanel
 import VedOrderDetailClient
   from "../../VedOrderDetailClient";
 
+import RefreshVedPhotosButton from "./RefreshVedPhotosButton";
+
 
 // ============================================================
 // TYPES
@@ -360,6 +362,8 @@ export default async function VedOrderPage({
           <div
             className="header-actions"
           >
+
+            <RefreshVedPhotosButton orderId={id} />
 
             <Link
               href="/"
