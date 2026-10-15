@@ -30,11 +30,22 @@ export default function RefreshVedPhotosButton({
         return;
       }
 
-      setMessage(
-        result.missing_in_ozon > 0
-          ? `Ozon не вернул фото для ${result.missing_in_ozon} позиций. Проверьте, есть ли изображения в карточках Ozon.`
-          : "Все доступные фотографии уже загружены."
-      );
+      const requested = result.requested_from_ozon ?? result.missing_in_ozon;
+      const recognized = result.recognized_in_ozon ?? 0;
+      const unresolved = result.missing_articles ?? [];
+      const fallback = result.ozon_fallback_error;
+
+      if (requested > 0) {
+        setMessage(
+          `Ozon: найдено карточек ${recognized} из ${requested}, получено фото 0. ` +
+          (unresolved.length
+            ? `Без фото: ${unresolved.slice(0, 5).join(", ")}.`
+            : "В ответе нет изображений.") +
+          (fallback ? ` Дополнительный запрос: ${fallback}` : "")
+        );
+      } else {
+        setMessage("Все доступные фотографии уже загружены.");
+      }
     } catch (cause) {
       setError(true);
       setMessage(
