@@ -1047,7 +1047,7 @@ export default async function WildberriesPage() {
               href="/"
               className="secondary-button wb-navigation-button"
             >
-              ← Главная
+              Главная
             </Link>
 
           </div>
