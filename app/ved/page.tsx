@@ -1146,7 +1146,7 @@ export default async function VedPage() {
                 href="/"
                 className="secondary-button ved-back-link"
               >
-                ← Главная
+                Главная
               </Link>
 
             </div>
@@ -1286,7 +1286,7 @@ export default async function VedPage() {
               href="/"
               className="secondary-button ved-back-link"
             >
-              ← Главная
+              Главная
             </Link>
 
           </div>
