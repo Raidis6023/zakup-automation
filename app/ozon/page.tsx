@@ -1331,52 +1331,11 @@ export default async function OzonPage() {
             "header ozon-header"
         >
 
-          <div
-            className=
-              "ozon-title-wrap"
-          >
-
-            <span
-              className=
-                "ozon-title-icon"
-            >
-
-              <img
-                src="/logos/ozon.png"
-                alt=""
-              />
-
-            </span>
-
-
+          <div className="ozon-title-wrap ozon-title-wrap--text-only">
             <div>
-
-              <div
-                className=
-                  "small-label"
-              >
-                СИСТЕМА ЗАКУПА
-              </div>
-
-
-              <h1
-                className=
-                  "title"
-              >
-                Ozon — синхронизация
-              </h1>
-
-
-              <p
-                className=
-                  "subtitle"
-              >
-                FBO продажи, отмены
-                и доступные остатки Ozon.
-              </p>
-
+              <h1 className="title ozon-page-title">Ozon</h1>
+              <p className="subtitle ozon-page-subtitle">FBO-продажи, отмены и доступные остатки Ozon.</p>
             </div>
-
           </div>
 
 
@@ -1486,161 +1445,60 @@ export default async function OzonPage() {
         }
 
 
-        {/* ===================================
-            SYNC STATE
-            =================================== */}
-
-        <section
-          className=
-            "section ozon-sync-state-section"
-        >
-
-          <div
-            className=
-              "ozon-section-top"
-          >
-
-            <div
-              className=
-                "ozon-section-heading"
-            >
-
-              <h2
-                className=
-                  "section-title"
-              >
-                Состояние синхронизации
-              </h2>
-
-
-              <div
-                className=
-                  "reason-text"
-              >
-                Последняя успешная загрузка
-                FBO-данных из Ozon.
-              </div>
-
-            </div>
-
-
-            <span
-              className={
-                latestSync
-                  ?.status ===
-                  "success"
-
-                  ? "ozon-status-badge ozon-status-badge--success"
-
-                  : "ozon-status-badge ozon-status-badge--warning"
-              }
-            >
-
-              <span
-                className=
-                  "ozon-status-dot"
-              />
-
-
-              {
-                latestSync
-                  ?.status ===
-                  "success"
-
+        {/* =====================================================
+            ЧЕТЫРЕ БЛОКА, ПО ВИЗУАЛЬНОМУ ОБРАЗЦУ WB.
+            Ozon сохраняет раздельные операции обновления.
+            ===================================================== */}
+        <section className="card ozon-sync-hero" aria-label="Состояние данных Ozon">
+          <div className="ozon-sync-hero-quarter">
+            <div className={latestSync?.status === "success"
+              ? "ozon-sync-hero-status ozon-sync-hero-status--success"
+              : "ozon-sync-hero-status ozon-sync-hero-status--warning"}>
+              <span className="ozon-sync-hero-status-icon" aria-hidden="true">
+                {latestSync?.status === "success" ? "✓" : "!"}
+              </span>
+              <div className="ozon-sync-hero-status-copy">
+                <strong>{latestSync?.status === "success"
                   ? "Синхронизация завершена"
-
-                  : "Нет успешной загрузки"
-              }
-
-            </span>
-
+                  : "Нужно проверить данные"}</strong>
+                <span>{latestSync?.status === "success"
+                  ? `Продажи загружены · отправлений: ${formatNumber(latestSync?.postings_received)}`
+                  : "Нет подтверждённой успешной загрузки продаж"}</span>
+              </div>
+            </div>
           </div>
-
-
-          <div
-            className=
-              "ozon-sync-info-grid"
-          >
-
-            <InfoCard
-              icon="clock"
-
-              label=
-                "Последняя синхронизация"
-
-              value={
-                formatDateTimeKrasnoyarsk(
-                  latestSync
-                    ?.created_at
-                )
-              }
-
-              hint=
-                "Красноярское время"
-            />
-
-
-            <InfoCard
-              icon="calendar"
-
-              label=
-                "Период продаж"
-
-              value={
-                latestSync
-
-                  ? `${formatDate(
-                      latestSync.date_from
-                    )} – ${formatDate(
-                      latestSync.date_to
-                    )}`
-
-                  : "—"
-              }
-
-              hint=
-                "Скользящие 28 дней"
-            />
-
-
-            <InfoCard
-              icon="warehouse"
-
-              label=
-                "Снимок остатков"
-
-              value={
-                formatDate(
-                  dashboard
-                    ?.stock_snapshot_date
-                )
-              }
-
-              hint="FBO"
-            />
-
-
-            <InfoCard
-              icon="postings"
-
-              label=
-                "Отправлений"
-
-              value={
-                formatNumber(
-                  latestSync
-                    ?.postings_received
-                )
-              }
-
-              hint=
-                "Получено из Ozon"
-            />
-
+          <div className="ozon-sync-hero-quarter ozon-sync-hero-quarter--border">
+            <div className="ozon-sync-hero-fact">
+              <span className="ozon-sync-hero-fact-icon" aria-hidden="true">
+                <OzonReferenceIcon name="clock" />
+              </span>
+              <div>
+                <span className="ozon-sync-hero-fact-label">Последняя синхронизация</span>
+                <strong>{formatDateTimeKrasnoyarsk(latestSync?.created_at)}</strong>
+                <span className="ozon-sync-hero-fact-hint">Снимок остатков: {formatDate(dashboard?.stock_snapshot_date)}</span>
+              </div>
+            </div>
           </div>
-
+          <div className="ozon-sync-hero-quarter ozon-sync-hero-quarter--border">
+            <div className="ozon-sync-hero-fact">
+              <span className="ozon-sync-hero-fact-icon" aria-hidden="true">
+                <OzonReferenceIcon name="calendar" />
+              </span>
+              <div>
+                <span className="ozon-sync-hero-fact-label">Период продаж</span>
+                <strong>{latestSync
+                  ? `${formatDate(latestSync.date_from)} – ${formatDate(latestSync.date_to)}`
+                  : "—"}</strong>
+                <span className="ozon-sync-hero-fact-hint">Скользящие 28 дней</span>
+              </div>
+            </div>
+          </div>
+          <div className="ozon-sync-hero-quarter ozon-sync-hero-quarter--border">
+            <a className="primary-button ozon-sync-hero-action" href="#ozon-sync-controls">
+              Управление обновлением данных ↓
+            </a>
+          </div>
         </section>
-
 
         {/* ===================================
             SUMMARY
@@ -2097,92 +1955,7 @@ export default async function OzonPage() {
             PRODUCTS
             =================================== */}
 
-        <section
-          className=
-            "section ozon-products-section"
-        >
-
-          <div
-            className=
-              "ozon-products-header"
-          >
-
-            <div
-              className=
-                "ozon-products-header-copy"
-            >
-
-              <h2
-                className=
-                  "section-title"
-              >
-                Данные по товарам
-              </h2>
-
-
-              <div
-                className=
-                  "reason-text"
-              >
-                Верхняя строка:
-                агрегат физического товара
-                по master_code.
-              </div>
-
-
-              <div
-                className=
-                  "reason-text"
-              >
-                Раскрытие:
-                продажи, отмены,
-                средние продажи,
-                остаток и дни запаса
-                отдельно по каждому
-                Ozon-размещению и кластеру.
-              </div>
-
-
-              {
-                replenishment.run
-
-                  ? (
-
-                    <div
-                      className=
-                        "ozon-calculation-info"
-                    >
-                      Расшифровка по расчёту{" "}
-
-                      <strong>
-                        {
-                          replenishment
-                            .run
-                            .calculation_version
-                        }
-                      </strong>
-
-                      {" "}от{" "}
-
-                      {
-                        formatDateTimeKrasnoyarsk(
-                          replenishment
-                            .run
-                            .created_at
-                        )
-                      }.
-                    </div>
-
-                  )
-
-                  : null
-              }
-
-            </div>
-
-          </div>
-
-
+        <section className="section ozon-products-section">
           <OzonProductsTableClient
             products={
               products as
@@ -2192,10 +1965,13 @@ export default async function OzonPage() {
             clusterRowsByMasterCode={
               clusterRowsByMasterCode
             }
+            calculationLabel={
+              replenishment.run
+                ? `Расшифровка по расчёту ${replenishment.run.calculation_version} от ${formatDateTimeKrasnoyarsk(replenishment.run.created_at)}`
+                : undefined
+            }
           />
-
         </section>
-
 
         {/* ===================================
             SAFE MODE
@@ -2280,9 +2056,8 @@ export default async function OzonPage() {
             MANUAL SYNC
             =================================== */}
 
-        <div
-          className=
-            "ozon-sync-module"
+        <div id="ozon-sync-controls"
+          className="ozon-sync-module"
         >
 
           <OzonStockSyncClient />

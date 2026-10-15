@@ -1968,3 +1968,341 @@ html[data-theme="dark"]
   }
 
 }
+
+
+/* ============================================================
+   OZON | ЕДИНОЕ ОФОРМЛЕНИЕ С WILDBERRIES
+   Сохранены данные и Ozon-голубая палитра.
+   ============================================================ */
+
+.ozon-reference-page .ozon-title-wrap--text-only {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  gap: 0;
+}
+.ozon-reference-page .ozon-page-title {
+  margin: 0;
+  color: var(--ws-text);
+  line-height: 1.15;
+}
+.ozon-reference-page .ozon-page-subtitle {
+  margin: 5px 0 0;
+  color: var(--ws-text-muted);
+  line-height: 1.3;
+}
+
+/* Four-quarter hero, matching the WB hierarchy. */
+.ozon-reference-page .ozon-sync-hero {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 76px;
+  margin: 0 0 14px;
+  padding: 4px 8px;
+  overflow: hidden;
+}
+.ozon-reference-page .ozon-sync-hero-quarter {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 64px;
+  padding: 0 18px;
+}
+.ozon-reference-page .ozon-sync-hero-quarter--border {
+  border-left: 1px solid var(--ws-border);
+}
+.ozon-reference-page .ozon-sync-hero-status {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  min-width: 0;
+  min-height: 64px;
+  padding: 8px 14px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+}
+.ozon-reference-page .ozon-sync-hero-status--success {
+  border-color: rgba(16, 185, 129, .20);
+  background: rgba(16, 185, 129, .08);
+}
+.ozon-reference-page .ozon-sync-hero-status--warning {
+  border-color: rgba(245, 158, 11, .25);
+  background: rgba(245, 158, 11, .08);
+}
+.ozon-reference-page .ozon-sync-hero-status-icon {
+  flex: 0 0 34px;
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #20b982;
+  color: #081611;
+  font-size: 20px;
+  font-weight: 850;
+}
+.ozon-reference-page .ozon-sync-hero-status--warning .ozon-sync-hero-status-icon {
+  background: #f5a623;
+  color: #251800;
+}
+.ozon-reference-page .ozon-sync-hero-status-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.ozon-reference-page .ozon-sync-hero-status-copy strong {
+  color: var(--ozon-green);
+  font-size: 13px;
+  line-height: 1.2;
+}
+.ozon-reference-page .ozon-sync-hero-status--warning strong {
+  color: var(--ozon-orange);
+}
+.ozon-reference-page .ozon-sync-hero-status-copy span {
+  color: var(--ws-text-secondary);
+  font-size: 11px;
+  line-height: 1.3;
+}
+.ozon-reference-page .ozon-sync-hero-fact {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+.ozon-reference-page .ozon-sync-hero-fact-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  color: var(--ws-icon);
+}
+.ozon-reference-page .ozon-sync-hero-fact-icon svg {
+  width: 100%;
+  height: 100%;
+}
+.ozon-reference-page .ozon-sync-hero-fact > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.ozon-reference-page .ozon-sync-hero-fact-label,
+.ozon-reference-page .ozon-sync-hero-fact-hint {
+  color: var(--ws-text-muted);
+  font-size: 11px;
+  line-height: 1.25;
+}
+.ozon-reference-page .ozon-sync-hero-fact strong {
+  color: var(--ws-text);
+  font-size: 14px;
+  line-height: 1.2;
+  font-weight: 800;
+}
+.ozon-reference-page .ozon-sync-hero-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 40px;
+  box-sizing: border-box;
+  padding: 9px 12px;
+  border-radius: 8px;
+  text-align: center;
+  text-decoration: none;
+  white-space: normal;
+  color: #fff;
+  background: var(--ws-blue);
+  border: 1px solid var(--ws-blue);
+  font-size: 12px;
+  font-weight: 700;
+}
+.ozon-reference-page .ozon-sync-hero-action:hover {
+  background: var(--ws-blue-hover);
+  border-color: var(--ws-blue-hover);
+  color: #fff;
+}
+.ozon-reference-page #ozon-sync-controls {
+  scroll-margin-top: 100px;
+}
+
+/* WB-like product section with a single expandable header. */
+.ozon-reference-page .ozon-products-collapsible { width: 100%; }
+.ozon-reference-page .ozon-products-toggle {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 72px;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--ws-text);
+  cursor: pointer;
+  text-align: left;
+}
+.ozon-reference-page .ozon-products-toggle:hover { background: var(--ws-surface-hover); }
+.ozon-reference-page .ozon-products-toggle:focus-visible {
+  outline: 2px solid var(--ws-blue);
+  outline-offset: -2px;
+}
+.ozon-reference-page .ozon-products-toggle-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  color: var(--ws-icon);
+  background: color-mix(in srgb, var(--ws-icon) 13%, transparent);
+}
+.ozon-reference-page .ozon-products-toggle-icon svg { width: 23px; height: 23px; }
+.ozon-reference-page .ozon-products-toggle-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+}
+.ozon-reference-page .ozon-products-toggle-copy strong {
+  color: var(--ws-text);
+  font-size: 15px;
+  font-weight: 750;
+}
+.ozon-reference-page .ozon-products-toggle-copy > span {
+  color: var(--ws-text-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+.ozon-reference-page .ozon-products-toggle-chevron {
+  flex: 0 0 22px;
+  color: var(--ws-text-muted);
+  font-size: 22px;
+  text-align: center;
+  transition: transform .15s ease;
+}
+.ozon-reference-page .ozon-products-toggle-chevron--expanded { transform: rotate(180deg); }
+.ozon-reference-page .ozon-products-table-content {
+  border-top: 1px solid var(--ws-border);
+}
+
+/* Sticky grid, stable widths, dense cell rhythm, Ozon-blue sorting. */
+.ozon-reference-page .ozon-products-scroll {
+  position: relative;
+  width: 100%;
+  max-height: 68vh;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  background: var(--ws-surface);
+}
+.ozon-reference-page .ozon-products-sort-table {
+  min-width: 1580px;
+  width: 100%;
+  table-layout: fixed;
+  border-spacing: 0;
+  border-collapse: separate;
+  background: var(--ws-surface);
+}
+.ozon-reference-page .ozon-products-col-master { width: 100px; }
+.ozon-reference-page .ozon-products-col-name { width: calc((100% - 875px) * .60); }
+.ozon-reference-page .ozon-products-col-offer { width: calc((100% - 875px) * .40); }
+.ozon-reference-page .ozon-products-col-number { width: 155px; }
+.ozon-reference-page .ozon-products-sort-table > thead > tr > th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 0;
+  height: 42px;
+  background: var(--ws-surface-soft);
+  border-right: 1px solid var(--ws-border-soft);
+  border-bottom: 1px solid var(--ws-border);
+  box-shadow: 0 1px 0 var(--ws-border);
+  vertical-align: middle;
+}
+.ozon-reference-page .ozon-products-sort-table > thead > tr > th:last-child,
+.ozon-reference-page .ozon-products-sort-table > tbody > tr > td:last-child { border-right: 0; }
+.ozon-reference-page .ozon-products-sort-button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 11px;
+  gap: 5px;
+  border: 0;
+  background: transparent;
+  color: var(--ws-text-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ozon-reference-page .ozon-products-sort-button:hover {
+  background: var(--ws-surface-hover);
+  color: var(--ws-text);
+}
+.ozon-reference-page .ozon-products-sort-button--active { color: var(--ws-icon); }
+.ozon-reference-page .ozon-products-numeric-head .ozon-products-sort-button {
+  justify-content: center;
+  text-align: center;
+}
+.ozon-reference-page .ozon-products-sort-table > tbody > tr > td {
+  box-sizing: border-box;
+  padding: 12px 10px;
+  font-size: 12px;
+  line-height: 1.35;
+  border-right: 1px solid var(--ws-border-soft);
+  border-bottom: 1px solid var(--ws-border-soft);
+}
+.ozon-reference-page .ozon-products-sort-table > tbody > tr.ozon-products-row-odd > td {
+  background: var(--ws-table-row-odd, var(--ws-surface));
+}
+.ozon-reference-page .ozon-products-sort-table > tbody > tr.ozon-products-row-even > td {
+  background: var(--ws-table-row-even, var(--ws-surface-soft));
+}
+.ozon-reference-page .ozon-products-sort-table > tbody > tr.ozon-products-master-row:hover > td {
+  background: var(--ws-surface-hover);
+}
+.ozon-reference-page .ozon-products-sort-table > tbody > tr > td.ozon-table-right {
+  text-align: center;
+}
+.ozon-reference-page .ozon-products-sort-table .ozon-products-master-code {
+  color: var(--ws-icon);
+}
+.ozon-reference-page .ozon-products-scroll {
+  scrollbar-color: color-mix(in srgb, var(--ws-icon) 65%, transparent) var(--ws-surface-soft);
+}
+.ozon-reference-page .ozon-products-scroll::-webkit-scrollbar { height: 8px; width: 8px; }
+.ozon-reference-page .ozon-products-scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--ws-icon) 55%, transparent);
+  border-radius: 12px;
+}
+
+/* Preserve independent expanded cluster breakdown and its contrast. */
+.ozon-reference-page .ozon-products-sort-table > tbody > tr > td.ozon-products-expanded-cell {
+  background: var(--ws-surface-soft);
+  padding: 0 12px 14px !important;
+}
+
+@media (max-width: 1050px) {
+  .ozon-reference-page .ozon-sync-hero { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ozon-reference-page .ozon-sync-hero-quarter:nth-child(3) { border-left: 0; border-top: 1px solid var(--ws-border); }
+  .ozon-reference-page .ozon-sync-hero-quarter:nth-child(4) { border-top: 1px solid var(--ws-border); }
+}
+@media (max-width: 650px) {
+  .ozon-reference-page .ozon-sync-hero { grid-template-columns: 1fr; }
+  .ozon-reference-page .ozon-sync-hero-quarter { padding: 8px 12px; min-height: 64px; }
+  .ozon-reference-page .ozon-sync-hero-quarter--border { border-left: 0; border-top: 1px solid var(--ws-border); }
+}
