@@ -990,12 +990,22 @@ export default async function YandexMarketPage() {
 
   try {
 
+    const [
+      productsResult,
+      fullSync,
+      stockRun,
+      salesRun,
+    ] =
+      await Promise.all([
+        getYandexProducts(),
+        getLatestFullSync(),
+        getLatestStockRun(),
+        getLatestSalesRun(),
+      ]);
+
+
     products =
-      await getYandexProducts();
-
-
-    const fullSync =
-      await getLatestFullSync();
+      productsResult;
 
 
     fullSyncUpdatedAt =
@@ -1005,25 +1015,57 @@ export default async function YandexMarketPage() {
       null;
 
 
-    const stockRun =
-      await getLatestStockRun();
+    if (
+      stockRun
+      &&
+      salesRun
+    ) {
+
+      const [
+        loadedStockRows,
+        loadedSalesRows,
+      ] =
+        await Promise.all([
+          getStockSnapshots(
+            stockRun.id
+          ),
+          getSalesDaily(
+            salesRun.id
+          ),
+        ]);
 
 
-    if (stockRun) {
+      stockRows =
+        loadedStockRows;
+
+
+      salesRows =
+        loadedSalesRows;
+
+    } else if (
+      stockRun
+    ) {
 
       stockRows =
         await getStockSnapshots(
           stockRun.id
         );
 
+    } else if (
+      salesRun
+    ) {
+
+      salesRows =
+        await getSalesDaily(
+          salesRun.id
+        );
+
     }
 
 
-    const salesRun =
-      await getLatestSalesRun();
-
-
-    if (salesRun) {
+    if (
+      salesRun
+    ) {
 
       salesPeriodDateFrom =
         salesRun.date_from;
@@ -1037,12 +1079,6 @@ export default async function YandexMarketPage() {
         getPeriodDays(
           salesRun.date_from,
           salesRun.date_to
-        );
-
-
-      salesRows =
-        await getSalesDaily(
-          salesRun.id
         );
 
     }
