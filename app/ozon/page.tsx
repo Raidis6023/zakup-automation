@@ -354,20 +354,16 @@ function OzonReferenceIcon({
       <svg
         viewBox="0 0 24 24"
         aria-hidden="true"
+        width="21"
+        height="21"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       >
-        <path
-          d="
-            M12 3
-            20 6
-            v6
-            c0 4.5-2.8 7.5-8 9
-            -5.2-1.5-8-4.5-8-9V6Z
-          "
-        />
-
-        <path
-          d="m9 12 2 2 4-4"
-        />
+        <path d="M12 3 20 6v6c0 4.5-2.8 7.5-8 9-5.2-1.5-8-4.5-8-9V6Z" />
+        <path d="m9 12 2 2 4-4" />
       </svg>
 
     );

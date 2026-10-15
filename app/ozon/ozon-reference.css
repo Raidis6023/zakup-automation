@@ -1787,6 +1787,20 @@ td {
 }
 
 
+/* Точно такие же размеры и контур SVG, как у wb-safe-icon svg.
+   Без fill:none браузер заливает щит чёрным и скрывает галочку. */
+.ozon-reference-page
+.ozon-safe-icon
+svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 /* ============================================================
    SYNC CLIENT
    ============================================================ */
@@ -1998,6 +2012,8 @@ html[data-theme="dark"]
   grid-template-columns: repeat(4, minmax(0, 1fr));
   box-sizing: border-box;
   width: 100%;
+  max-width: none;
+  min-width: 0;
   min-height: 76px;
   margin: 0 0 14px;
   padding: 4px 8px;
@@ -2005,7 +2021,9 @@ html[data-theme="dark"]
 }
 .ozon-reference-page .ozon-sync-hero-quarter {
   display: flex;
+  box-sizing: border-box;
   align-items: center;
+  justify-content: flex-start;
   min-width: 0;
   min-height: 64px;
   padding: 0 18px;
@@ -2020,8 +2038,9 @@ html[data-theme="dark"]
   gap: 13px;
   width: 100%;
   min-width: 0;
+  height: 64px;
   min-height: 64px;
-  padding: 8px 14px;
+  padding: 7px 14px;
   border: 1px solid transparent;
   border-radius: 11px;
 }
@@ -2034,17 +2053,18 @@ html[data-theme="dark"]
   background: rgba(245, 158, 11, .08);
 }
 .ozon-reference-page .ozon-sync-hero-status-icon {
-  flex: 0 0 34px;
+  flex: 0 0 40px;
   display: inline-flex;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
   background: #20b982;
   color: #081611;
-  font-size: 20px;
-  font-weight: 850;
+  font-size: 23px;
+  font-weight: 800;
+  line-height: 1;
 }
 .ozon-reference-page .ozon-sync-hero-status--warning .ozon-sync-hero-status-icon {
   background: #f5a623;
@@ -2309,6 +2329,51 @@ html[data-theme="dark"]
 
 
 /* ============================================================
+   ПАРИТЕТ ГЕОМЕТРИИ С WILDBERRIES
+
+   У общих .card есть собственный padding. Здесь задаём
+   точные параметры WB сильнее общего правила, чтобы он не мог
+   сместить четыре четверти и сделать статус/кнопку шире.
+   ============================================================ */
+
+.workspace-content--module .ozon-reference-page .ozon-sync-hero {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  min-height: 76px;
+  box-sizing: border-box;
+  margin: 0 0 14px;
+  padding: 4px 8px;
+  overflow: hidden;
+}
+
+.ozon-reference-page .ozon-sync-hero-quarter {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 64px;
+  padding: 0 18px;
+}
+
+.ozon-reference-page .ozon-sync-hero-quarter:nth-child(4) {
+  padding-left: 18px;
+  padding-right: 18px;
+}
+
+.ozon-reference-page .ozon-sync-hero-status {
+  height: 64px;
+  min-height: 64px;
+}
+
+.ozon-reference-page .ozon-sync-hero-status-icon {
+  position: relative;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+}
+
+/* ============================================================
    OZON: ЕДИНЫЙ ВЕРХНИЙ БЛОК И КНОПКА КАК У WILDBERRIES
    Фирменный голубой остаётся, логика ежедневного cron не меняется.
    ============================================================ */
@@ -2354,19 +2419,21 @@ html[data-theme="dark"]
 }
 
 .ozon-reference-page .ozon-unified-sync {
-  display: flex;
+  display: grid;
+  grid-template-rows: 12px 40px 12px;
+  row-gap: 2px;
   box-sizing: border-box;
   flex: 1 1 100%;
   width: 100%;
   min-width: 0;
   max-width: none;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: center;
-  gap: 5px;
+  align-items: center;
+  align-self: stretch;
+  text-align: center;
 }
 
 .ozon-reference-page .ozon-sync-hero-action {
+  grid-row: 2;
   display: flex;
   box-sizing: border-box;
   width: 100%;
@@ -2413,11 +2480,18 @@ html[data-theme="dark"]
 }
 
 .ozon-reference-page .ozon-unified-sync-note {
+  grid-row: 3;
+  display: block;
   width: 100%;
+  height: 12px;
+  min-width: 0;
+  overflow: hidden;
   color: var(--ws-text-muted);
   font-size: 10px;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
+  font-weight: 600;
+  line-height: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   text-align: center;
 }
 
@@ -2447,3 +2521,19 @@ html[data-theme="dark"]
 @media (prefers-reduced-motion: reduce) {
   .ozon-reference-page .ozon-unified-sync-icon--loading { animation: none; }
 }
+
+@media (max-width: 650px) {
+  .workspace-content--module .ozon-reference-page .ozon-sync-hero {
+    grid-template-columns: 1fr;
+  }
+  .ozon-reference-page .ozon-sync-hero-quarter:nth-child(4) {
+    padding: 8px 12px;
+  }
+}
+
+@media (min-width: 651px) and (max-width: 1050px) {
+  .workspace-content--module .ozon-reference-page .ozon-sync-hero {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
