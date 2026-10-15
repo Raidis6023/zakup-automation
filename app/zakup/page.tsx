@@ -864,7 +864,7 @@ export default async function Home() {
               href="/"
 
               className=
-                "secondary-button zakup-v2-home-button"
+                "secondary-button workspace-home-button zakup-v2-home-button"
             >
               Главная
             </Link>
