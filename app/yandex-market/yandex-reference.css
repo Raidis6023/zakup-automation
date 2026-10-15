@@ -4,7 +4,7 @@
 
 .yandex-reference-page {
   --ym-yellow:
-    #f3c600;
+    var(--ws-icon);
 
   --ym-yellow-soft:
     rgba(
@@ -1692,7 +1692,7 @@ td {
 html[data-theme="dark"]
 .yandex-reference-page {
   --ym-yellow:
-    #f2d24b;
+    var(--ws-icon);
 
   --ym-green:
     #68ca9b;
