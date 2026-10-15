@@ -94,6 +94,36 @@
 }
 
 
+.sku-list-header-actions {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    10px;
+}
+
+
+.sku-list-home-button {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  text-decoration:
+    none;
+
+  white-space:
+    nowrap;
+}
+
+
 .sku-list-placeholder {
   display: flex;
 
