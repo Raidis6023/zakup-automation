@@ -1462,7 +1462,7 @@ export default async function OzonPage() {
                   ? "Синхронизация завершена"
                   : "Нужно проверить данные"}</strong>
                 <span>{latestSync?.status === "success"
-                  ? "Данные продаж Ozon успешно загружены"
+                  ? `Продажи загружены · отправлений: ${formatNumber(latestSync?.postings_received)}`
                   : "Нет подтверждённой успешной загрузки продаж"}</span>
               </div>
             </div>
@@ -1964,6 +1964,11 @@ export default async function OzonPage() {
 
             clusterRowsByMasterCode={
               clusterRowsByMasterCode
+            }
+            calculationLabel={
+              replenishment.run
+                ? `Расшифровка по расчёту ${replenishment.run.calculation_version} от ${formatDateTimeKrasnoyarsk(replenishment.run.created_at)}`
+                : undefined
             }
           />
         </section>
