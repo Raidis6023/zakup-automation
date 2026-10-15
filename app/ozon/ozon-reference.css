@@ -2016,7 +2016,7 @@ html[data-theme="dark"]
   min-width: 0;
   min-height: 76px;
   margin: 0 0 14px;
-  padding: 4px 8px;
+  padding: 16px 8px;
   overflow: hidden;
 }
 .ozon-reference-page .ozon-sync-hero-quarter {
@@ -2345,7 +2345,7 @@ html[data-theme="dark"]
   min-height: 76px;
   box-sizing: border-box;
   margin: 0 0 14px;
-  padding: 4px 8px;
+  padding: 16px 8px;
   overflow: hidden;
 }
 
@@ -2529,6 +2529,15 @@ html[data-theme="dark"]
 
 @media (prefers-reduced-motion: reduce) {
   .ozon-reference-page .ozon-unified-sync-icon--loading { animation: none; }
+}
+
+/* Generic .workspace-content--module .card becomes 14px at <=700px.
+   Preserve the Ozon panel's horizontal alignment and mirror WB vertical inset. */
+@media (max-width: 700px) {
+  .workspace-content--module .ozon-reference-page .ozon-sync-hero {
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
 }
 
 @media (max-width: 650px) {
