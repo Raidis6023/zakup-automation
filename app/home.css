@@ -3,9 +3,9 @@
    ============================================================ */
 
 .home-shell {
-  --home-blue: #126fe5;
-  --home-blue-dark: #0f3f82;
-  --home-blue-soft: #eef7ff;
+  --home-blue: var(--ws-blue);
+  --home-blue-dark: var(--ws-blue-hover);
+  --home-blue-soft: var(--ws-blue-soft);
 
   /*
    * Общая высота верхней панели.
@@ -931,7 +931,7 @@ html[data-theme="dark"]
 
   box-shadow:
     0 4px 12px
-    rgba(18, 111, 229, 0.24);
+    color-mix(in srgb, var(--ws-blue) 24%, transparent);
 }
 
 
@@ -1030,7 +1030,7 @@ html[data-theme="dark"]
 
 .home-theme-toggle button.active {
   color:
-    #0879dd;
+    var(--ws-blue);
 
   background:
     var(--surface);
@@ -1150,7 +1150,7 @@ html[data-theme="dark"]
   overflow: hidden;
 
   color:
-    #123f79;
+    var(--ws-text);
 
   font-size: 13px;
 
