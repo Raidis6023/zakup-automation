@@ -30,6 +30,7 @@ import WorkspaceMarketplaceLogo
   from "./WorkspaceMarketplaceLogos";
 
 import {
+  ArticleListIcon,
   EmployeesIcon,
   ProcurementIcon,
   VedIcon,
@@ -137,6 +138,7 @@ type WorkspaceShellProps = {
 type WorkspaceNavKey =
   | "admin-home"
   | "admin-users"
+  | "sku-list"
   | "procurement"
   | "ved"
   | "ozon"
@@ -372,6 +374,18 @@ export default function WorkspaceShell({
           ||
           pathname.startsWith(
             "/admin/users/"
+          )
+        );
+
+
+      case "sku-list":
+
+        return (
+          pathname ===
+            "/sku-list"
+          ||
+          pathname.startsWith(
+            "/sku-list/"
           )
         );
 
@@ -761,6 +775,55 @@ export default function WorkspaceShell({
                 aria-label=
                   "Рабочие пространства"
               >
+
+                <Link
+                  href="/sku-list"
+
+                  onClick={
+                    event =>
+                      handleNavClick(
+                        event,
+                        "sku-list"
+                      )
+                  }
+
+                  className={
+                    navClass(
+                      "sku-list"
+                    )
+                  }
+
+                  aria-current={
+                    isNavActive(
+                      "sku-list"
+                    )
+
+                      ? "page"
+
+                      : undefined
+                  }
+
+                  aria-label="Список артикулов"
+                  title="Список артикулов"
+                >
+
+                  <span
+                    className=
+                      "home-brand-icon"
+                  >
+                    <ArticleListIcon />
+                  </span>
+
+
+                  <span
+                    className=
+                      "home-workspace-label"
+                  >
+                    Список артикулов
+                  </span>
+
+                </Link>
+
 
                 <Link
                   href="/zakup"
