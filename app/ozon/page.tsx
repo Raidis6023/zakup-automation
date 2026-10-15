@@ -1363,7 +1363,7 @@ export default async function OzonPage() {
               className=
                 "secondary-button ozon-navigation-button"
             >
-              ← Главная
+              Главная
             </Link>
 
           </div>
