@@ -102,6 +102,7 @@ type Props = {
       string,
       OzonClusterDetailRow[]
     >;
+  calculationLabel?: string;
 };
 
 
@@ -204,6 +205,7 @@ function formatDecimal(
 export default function OzonProductsTableClient({
   products,
   clusterRowsByMasterCode,
+  calculationLabel,
 }: Props) {
 
   const [
@@ -428,6 +430,7 @@ export default function OzonProductsTableClient({
         <span className="ozon-products-toggle-copy">
           <strong>Данные по товарам</strong>
           <span>Одна строка соответствует одному ЕНОТ. Раскрытие показывает размещения и кластеры.</span>
+          {calculationLabel && <span className="ozon-products-calculation-label">{calculationLabel}</span>}
         </span>
         <span className={expanded ? "ozon-products-toggle-chevron ozon-products-toggle-chevron--expanded" : "ozon-products-toggle-chevron"} aria-hidden="true">⌄</span>
       </button>
