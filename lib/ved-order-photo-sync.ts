@@ -38,6 +38,22 @@ type OzonPicturesResponse = {
 };
 
 
+type OzonCatalogResponse = {
+  result?: {
+    items?: Array<{
+      product_id?: number | string;
+      offer_id?: string;
+    }>;
+  };
+};
+
+type OzonLookupResult = {
+  photos: Map<string, string>;
+  recognized: Set<string>;
+  fallbackError: string | null;
+};
+
+
 export type VedPhotoSyncResult = {
   ok: boolean;
 
@@ -54,6 +70,10 @@ export type VedPhotoSyncResult = {
   missing_in_ozon: number;
 
   missing_offer_id: number;
+  requested_from_ozon?: number;
+  recognized_in_ozon?: number;
+  missing_articles?: string[];
+  ozon_fallback_error?: string | null;
 };
 
 
@@ -282,29 +302,31 @@ async function ozonPost<T>(
   throw lastError ?? new Error("Ozon не вернул фотографии");
 }
 
-async function getOzonPhotos(offerIds: string[]) {
+async function getOzonPhotos(offerIds: string[]): Promise<OzonLookupResult> {
   const photos = new Map<string, string>();
+  const recognized = new Set<string>();
+  let fallbackError: string | null = null;
 
-  // Use a conservative batch size to avoid heavy API requests.
+  // Ozon supports up to 1,000 IDs per call; smaller batches are gentler.
   for (let start = 0; start < offerIds.length; start += 100) {
     const batch = offerIds.slice(start, start + 100);
+    const batchSet = new Set(batch);
+    const productIds = new Map<string, string>();
 
-    // This endpoint returns { items: [...] }, not { result: [...] }.
+    // /v3/product/info/list returns { items: [...] }.
     const data = await ozonPost<OzonResponse>("/v3/product/info/list", {
       offer_id: batch,
     });
 
     if (!Array.isArray(data.items)) {
-      throw new Error(
-        "Ozon /v3/product/info/list вернул неожиданный формат: нет массива items"
-      );
+      throw new Error("Ozon /v3/product/info/list: отсутствует массив items");
     }
-
-    const unresolved = new Map<string, string>();
 
     for (const item of data.items) {
       const offerId = item.offer_id?.trim();
-      if (!offerId || !batch.includes(offerId)) continue;
+      if (!offerId || !batchSet.has(offerId)) continue;
+
+      recognized.add(offerId);
 
       const image =
         firstImageUrl(item.primary_image) ??
@@ -313,21 +335,54 @@ async function getOzonPhotos(offerIds: string[]) {
       if (image) {
         photos.set(offerId, image);
       } else if (item.id != null) {
-        unresolved.set(String(item.id), offerId);
+        productIds.set(String(item.id), offerId);
       }
     }
 
-    // Some Ozon cards expose their pictures only through this method.
-    if (unresolved.size > 0) {
+    // Catalog lookup is essential when info/list returns no matching item.
+    // Our products.ozon_product_id is empty, so we cannot rely on that column.
+    const notReturned = batch.filter((id) => !recognized.has(id));
+
+    if (notReturned.length > 0) {
       try {
-        const fallback = await ozonPost<OzonPicturesResponse>(
+        const catalog = await ozonPost<OzonCatalogResponse>("/v3/product/list", {
+          filter: { offer_id: notReturned },
+          last_id: "",
+          limit: Math.min(notReturned.length, 1000),
+        });
+
+        if (!Array.isArray(catalog.result?.items)) {
+          throw new Error("Ozon /v3/product/list: отсутствует result.items");
+        }
+
+        for (const item of catalog.result.items) {
+          const offerId = item.offer_id?.trim();
+          if (!offerId || !batchSet.has(offerId)) continue;
+          recognized.add(offerId);
+          if (item.product_id != null && !photos.has(offerId)) {
+            productIds.set(String(item.product_id), offerId);
+          }
+        }
+      } catch (error) {
+        fallbackError = error instanceof Error ? error.message : String(error);
+        console.error("VED Ozon catalog lookup failed:", fallbackError);
+      }
+    }
+
+    if (productIds.size > 0) {
+      try {
+        const pictures = await ozonPost<OzonPicturesResponse>(
           "/v2/product/pictures/info",
-          { product_id: Array.from(unresolved.keys()) }
+          { product_id: Array.from(productIds.keys()) }
         );
 
-        for (const item of fallback.items ?? []) {
-          const offerId = unresolved.get(String(item.product_id));
-          if (!offerId) continue;
+        if (!Array.isArray(pictures.items)) {
+          throw new Error("Ozon /v2/product/pictures/info: отсутствует items");
+        }
+
+        for (const item of pictures.items) {
+          const offerId = productIds.get(String(item.product_id));
+          if (!offerId || photos.has(offerId)) continue;
 
           const image =
             firstImageUrl(item.primary_photo) ??
@@ -336,13 +391,13 @@ async function getOzonPhotos(offerIds: string[]) {
           if (image) photos.set(offerId, image);
         }
       } catch (error) {
-        // Retain usable images from /v3 even if the fallback fails.
-        console.error("VED Ozon pictures fallback failed:", error);
+        fallbackError = error instanceof Error ? error.message : String(error);
+        console.error("VED Ozon picture lookup failed:", fallbackError);
       }
     }
   }
 
-  return photos;
+  return { photos, recognized, fallbackError };
 }
 
 
@@ -784,11 +839,8 @@ export async function syncVedOrderPhotos(
   // 7. ПОЛУЧАЕМ ФОТО ИЗ OZON
   // ==========================================================
 
-  const ozonPhotos =
-    await getOzonPhotos(
-      offerIds
-    );
-
+  const ozonLookup = await getOzonPhotos(offerIds);
+  const ozonPhotos = ozonLookup.photos;
 
   // ==========================================================
   // 8. СОХРАНЯЕМ ФОТО
@@ -925,6 +977,18 @@ export async function syncVedOrderPhotos(
 
     missing_offer_id:
       missingOfferId,
+
+    requested_from_ozon:
+      offerIds.length,
+
+    recognized_in_ozon:
+      ozonLookup.recognized.size,
+
+    missing_articles:
+      offerIds.filter((article) => !ozonPhotos.has(article)),
+
+    ozon_fallback_error:
+      ozonLookup.fallbackError,
   };
 
 }
