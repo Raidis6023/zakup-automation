@@ -164,14 +164,16 @@ export default function WorkspaceShell({
     ??
     "/";
 
-  // Accent palette is scoped to the current workspace.
-  // Marketplace pages preserve their existing brand styles.
+  // One consistent accent across each marketplace's page and shell.
+  // All other routes, including China procurement and VED, use emerald.
   const accentArea =
-    pathname === "/ozon" || pathname.startsWith("/ozon/") ||
-    pathname === "/wildberries" || pathname.startsWith("/wildberries/") ||
-    pathname === "/yandex-market" || pathname.startsWith("/yandex-market/")
-      ? "marketplace"
-      : "general";
+    pathname === "/ozon" || pathname.startsWith("/ozon/")
+      ? "ozon"
+      : pathname === "/wildberries" || pathname.startsWith("/wildberries/")
+        ? "wildberries"
+        : pathname === "/yandex-market" || pathname.startsWith("/yandex-market/")
+          ? "yandex-market"
+          : "general";
 
 
   const [
