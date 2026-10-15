@@ -16,6 +16,8 @@ import ZakupProductsTableClient, {
 } from "./ZakupProductsTableClient";
 
 import "./zakup-reference.css";
+import CreateVedDraftSubmitButton from "./CreateVedDraftSubmitButton";
+
 import "./zakup-layout-v2.css";
 
 
@@ -1628,14 +1630,7 @@ export default async function Home() {
                     />
 
 
-                    <button
-                      type="submit"
-
-                      className=
-                        "primary-button"
-                    >
-                      Сформировать заказ
-                    </button>
+                    <CreateVedDraftSubmitButton />
 
                   </form>
 
