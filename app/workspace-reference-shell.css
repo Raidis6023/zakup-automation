@@ -555,6 +555,46 @@ html[data-theme="dark"]
 
 
 /* ============================================================
+   ИЗУМРУДНАЯ ПОДЛОЖКА ПРИ НАВЕДЕНИИ В ОБЩИХ РАЗДЕЛАХ
+
+   Повторяет поведение цветной подложки маркетплейсов, но
+   работает на всех остальных пунктах меню, независимо от
+   текущего открытого раздела. Цвета Ozon, WB и ЯМ не затрагивает.
+   ============================================================ */
+
+.home-workspace-link:not([data-marketplace]) {
+  --ws-surface-hover: #e5f6eb;
+  --ws-border-soft: #a8dcc0;
+  --ws-nav-hover-text: #11865d;
+  --ws-active: #11865d;
+  --ws-blue-hover: #0b6c4b;
+}
+
+html[data-theme="dark"]
+.home-workspace-link:not([data-marketplace]) {
+  --ws-surface-hover: #18372a;
+  --ws-border-soft: #355e49;
+  --ws-nav-hover-text: #56dba0;
+  --ws-active: #177c5e;
+  --ws-blue-hover: #0b6c4b;
+}
+
+/* Подложка видна при фокусе с клавиатуры так же, как при hover. */
+.home-workspace-link:not([data-marketplace]):focus-visible:not(.home-workspace-link--active) {
+  background: var(--ws-surface-hover);
+  border-color: var(--ws-border-soft);
+  color: var(--ws-nav-hover-text);
+  outline: 2px solid var(--ws-border-soft);
+  outline-offset: 2px;
+}
+
+.home-workspace-link:not([data-marketplace]):focus-visible:not(.home-workspace-link--active)
+.home-workspace-label {
+  color: var(--ws-nav-hover-text);
+}
+
+
+/* ============================================================
    АКТИВНЫЙ РАЗДЕЛ
    ============================================================ */
 
