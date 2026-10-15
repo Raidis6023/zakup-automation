@@ -1787,6 +1787,20 @@ td {
 }
 
 
+/* Точно такие же размеры и контур SVG, как у wb-safe-icon svg.
+   Без fill:none браузер заливает щит чёрным и скрывает галочку. */
+.ozon-reference-page
+.ozon-safe-icon
+svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 /* ============================================================
    SYNC CLIENT
    ============================================================ */
@@ -1998,6 +2012,8 @@ html[data-theme="dark"]
   grid-template-columns: repeat(4, minmax(0, 1fr));
   box-sizing: border-box;
   width: 100%;
+  max-width: none;
+  min-width: 0;
   min-height: 76px;
   margin: 0 0 14px;
   padding: 4px 8px;
@@ -2005,7 +2021,9 @@ html[data-theme="dark"]
 }
 .ozon-reference-page .ozon-sync-hero-quarter {
   display: flex;
+  box-sizing: border-box;
   align-items: center;
+  justify-content: flex-start;
   min-width: 0;
   min-height: 64px;
   padding: 0 18px;
