@@ -3,6 +3,165 @@ import styles
 
 
 // ============================================================
+// СПИСОК АРТИКУЛОВ
+// ДВЕ КАРТОЧКИ КАТАЛОГА
+// ============================================================
+
+export function ArticleListIcon() {
+
+  return (
+
+    <svg
+      viewBox="0 0 64 64"
+      aria-hidden="true"
+      className={`
+        ${styles.icon}
+        ${styles.articleList}
+      `}
+    >
+
+      <defs>
+
+        <linearGradient
+          id="article-list-background"
+          x1="7"
+          y1="5"
+          x2="58"
+          y2="59"
+          gradientUnits="userSpaceOnUse"
+        >
+
+          <stop
+            offset="0%"
+            stopColor=
+              "var(--article-bg-start)"
+          />
+
+          <stop
+            offset="100%"
+            stopColor=
+              "var(--article-bg-end)"
+          />
+
+        </linearGradient>
+
+
+        <linearGradient
+          id="article-list-card"
+          x1="12"
+          y1="18"
+          x2="51"
+          y2="51"
+          gradientUnits="userSpaceOnUse"
+        >
+
+          <stop
+            offset="0%"
+            stopColor=
+              "var(--article-card-start)"
+          />
+
+          <stop
+            offset="100%"
+            stopColor=
+              "var(--article-card-end)"
+          />
+
+        </linearGradient>
+
+      </defs>
+
+
+      {/* ФОН */}
+
+      <rect
+        x="1"
+        y="1"
+        width="62"
+        height="62"
+        rx="15"
+        fill=
+          "url(#article-list-background)"
+      />
+
+
+      {/* ЗАДНЯЯ КАРТОЧКА */}
+
+      <path
+        d="
+          M23 16
+          C23 13.8 24.8 12 27 12
+          H47
+          C49.2 12 51 13.8 51 16
+          V36
+          C51 38.2 49.2 40 47 40
+          H27
+          C24.8 40 23 38.2 23 36
+          Z
+        "
+        fill=
+          "url(#article-list-card)"
+        opacity="0.94"
+        transform="rotate(8 37 26)"
+      />
+
+
+      {/* ПЕРЕДНЯЯ КАРТОЧКА */}
+
+      <rect
+        x="10"
+        y="23"
+        width="40"
+        height="28"
+        rx="7"
+        fill=
+          "url(#article-list-card)"
+      />
+
+
+      {/* ПРЕВЬЮ */}
+
+      <rect
+        x="15"
+        y="29"
+        width="11"
+        height="14"
+        rx="3"
+        fill=
+          "var(--article-detail-soft)"
+      />
+
+
+      {/* СТРОКИ */}
+
+      <rect
+        x="30"
+        y="30"
+        width="14"
+        height="4"
+        rx="2"
+        fill=
+          "var(--article-detail)"
+      />
+
+      <rect
+        x="30"
+        y="37"
+        width="16"
+        height="4"
+        rx="2"
+        fill=
+          "var(--article-detail)"
+      />
+
+    </svg>
+
+  );
+
+}
+
+
+// ============================================================
 // ЗАКУП
 // ТРИ КОРОБКИ ТРЕУГОЛЬНИКОМ
 // ============================================================
