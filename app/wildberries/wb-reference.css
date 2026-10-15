@@ -4,15 +4,10 @@
 
 .wb-reference-page {
   --wb-accent:
-    #c91ed8;
+    var(--ws-icon);
 
   --wb-accent-soft:
-    rgba(
-      201,
-      30,
-      216,
-      0.11
-    );
+    color-mix(in srgb, var(--wb-accent) 11%, transparent);
 
   --wb-green:
     #24b67a;
@@ -1683,7 +1678,7 @@ svg {
 html[data-theme="dark"]
 .wb-reference-page {
   --wb-accent:
-    #df72e8;
+    var(--ws-icon);
 
   --wb-green:
     #68ca9b;
