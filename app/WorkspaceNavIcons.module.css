@@ -10,6 +10,45 @@
 
 
 /* ============================================================
+   СПИСОК АРТИКУЛОВ
+   ============================================================ */
+
+/*
+ * Светлая тема:
+ * цветной фиолетовый фон + белые карточки.
+ */
+.articleList {
+  --article-bg-start: #8b5cf6;
+  --article-bg-end: #4338ca;
+
+  --article-card-start: #ffffff;
+  --article-card-end: #f5f2ff;
+
+  --article-detail: #6d4aff;
+  --article-detail-soft: #cfc5ff;
+}
+
+
+/*
+ * Тёмная тема:
+ * светлый фон + цветная внутренняя графика.
+ */
+:global(html[data-theme="dark"])
+.articleList,
+:global(html.dark)
+.articleList {
+  --article-bg-start: #ffffff;
+  --article-bg-end: #f5f2ff;
+
+  --article-card-start: #8b5cf6;
+  --article-card-end: #4338ca;
+
+  --article-detail: #ddd6ff;
+  --article-detail-soft: #cfc5ff;
+}
+
+
+/* ============================================================
    ЗАКУП
    ============================================================ */
 
