@@ -188,7 +188,7 @@
   margin-left: 6px;
 
   color:
-    #4b9df2;
+    var(--ws-blue);
 
   font-size: 10px;
 
@@ -272,16 +272,11 @@
 .admin-marketplace-select:focus,
 .admin-level-select:focus {
   border-color:
-    #126fe5;
+    var(--ws-blue);
 
   box-shadow:
     0 0 0 3px
-    rgba(
-      18,
-      111,
-      229,
-      0.11
-    );
+    color-mix(in srgb, var(--ws-blue) 11%, transparent);
 }
 
 
@@ -379,23 +374,13 @@
 
 .admin-level-badge-admin {
   border-color:
-    rgba(
-      18,
-      111,
-      229,
-      0.28
-    );
+    color-mix(in srgb, var(--ws-blue) 28%, transparent);
 
   background:
-    rgba(
-      18,
-      111,
-      229,
-      0.08
-    );
+    color-mix(in srgb, var(--ws-blue) 8%, transparent);
 
   color:
-    #4b9df2;
+    var(--ws-blue);
 }
 
 
