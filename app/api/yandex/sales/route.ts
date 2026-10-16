@@ -1264,8 +1264,13 @@ Promise<PreparedData> {
     getConfig();
 
 
+  // Берём 28 полных календарных дней по Красноярску.
+  // Текущий (ещё не завершённый) день в продажи не включаем.
   const dateTo =
-    getKrasnoyarskDate();
+    shiftDate(
+      getKrasnoyarskDate(),
+      -1
+    );
 
 
   const dateFrom =
