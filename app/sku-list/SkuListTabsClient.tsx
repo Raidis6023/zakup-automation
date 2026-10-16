@@ -17,7 +17,7 @@ export type ProductArticleStatus =
 
 export type SkuListFinancialRow = {
   enot: string | null;
-  status: ProductArticleStatus | null;
+  status: ProductArticleStatus;
   sku: string | null;
   sellerArticle: string;
   productName: string | null;
@@ -273,6 +273,46 @@ export default function SkuListTabsClient({
       "desc"
     );
 
+  const totals =
+    useMemo(
+      () =>
+        rows.reduce(
+          (
+            accumulator,
+            row
+          ) => ({
+            revenue:
+              accumulator.revenue
+              +
+              row.revenue,
+
+            operatingProfit:
+              accumulator.operatingProfit
+              +
+              row.operatingProfit,
+
+            purchases:
+              accumulator.purchases
+              +
+              row.purchases,
+          }),
+          {
+            revenue:
+              0,
+
+            operatingProfit:
+              0,
+
+            purchases:
+              0,
+          }
+        ),
+      [
+        rows,
+      ]
+    );
+
+
   const sortedRows =
     useMemo(
       () =>
@@ -359,7 +399,7 @@ export default function SkuListTabsClient({
           masterCode
       )?.status
       ??
-      null;
+      "Активный";
 
     setRows(
       previous =>
@@ -665,10 +705,66 @@ export default function SkuListTabsClient({
                 className=
                   "sku-list-table-scroll"
               >
-                <table
+                <div
                   className=
-                    "sku-list-table"
+                    "sku-list-table-inner"
                 >
+                  <div
+                    className=
+                      "sku-list-totals-strip"
+                    aria-label=
+                      "Итоги по Ozon"
+                  >
+                    <div
+                      className=
+                        "sku-list-totals-spacer"
+                    />
+
+                    <div
+                      className=
+                        "sku-list-total-cell sku-list-total-label"
+                    >
+                      ИТОГО
+                    </div>
+
+                    <div
+                      className=
+                        "sku-list-total-cell sku-list-total-value"
+                    >
+                      {
+                        formatRubles(
+                          totals.revenue
+                        )
+                      }
+                    </div>
+
+                    <div
+                      className=
+                        "sku-list-total-cell sku-list-total-value"
+                    >
+                      {
+                        formatRubles(
+                          totals.operatingProfit
+                        )
+                      }
+                    </div>
+
+                    <div
+                      className=
+                        "sku-list-total-cell sku-list-total-value"
+                    >
+                      {
+                        formatRubles(
+                          totals.purchases
+                        )
+                      }
+                    </div>
+                  </div>
+
+                  <table
+                    className=
+                      "sku-list-table"
+                  >
                   <colgroup>
                     <col
                       className=
@@ -804,8 +900,6 @@ export default function SkuListTabsClient({
                                     "sku-list-status-control"
                                   data-status={
                                     row.status
-                                    ??
-                                    "empty"
                                   }
                                 >
                                   <select
@@ -813,8 +907,6 @@ export default function SkuListTabsClient({
                                       "sku-list-status-select"
                                     value={
                                       row.status
-                                      ??
-                                      ""
                                     }
                                     disabled={
                                       !masterCode
@@ -848,13 +940,6 @@ export default function SkuListTabsClient({
                                       }
                                     }
                                   >
-                                    <option
-                                      value=""
-                                      disabled
-                                    >
-                                      —
-                                    </option>
-
                                     {
                                       STATUS_OPTIONS.map(
                                         option => (
@@ -960,7 +1045,8 @@ export default function SkuListTabsClient({
                       )
                     }
                   </tbody>
-                </table>
+                  </table>
+                </div>
               </div>
             </div>
           )

@@ -7,7 +7,7 @@
   --sku-ozon-grid: rgba(21, 125, 188, 0.22);
   --sku-ozon-scroll: #157dbc;
 
-  --sku-status-width: 170px;
+  --sku-status-width: 190px;
   --sku-base-flex: calc((100% - 667px) / 2);
 }
 
@@ -249,9 +249,67 @@
    TABLE
    ============================================================ */
 
-.sku-list-table {
+.sku-list-table-inner {
   width: 100%;
   min-width: 1120px;
+}
+
+
+.sku-list-totals-strip {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    72px
+    155px
+    161px
+    155px;
+  width: 100%;
+  height: 39px;
+}
+
+
+.sku-list-totals-spacer {
+  min-width: 0;
+}
+
+
+.sku-list-total-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 39px;
+  box-sizing: border-box;
+  border-top: 1px solid var(--sku-ozon-grid);
+  border-bottom: 1px solid var(--sku-ozon-grid);
+  border-left: 1px solid var(--sku-ozon-grid);
+  background: var(--ws-surface-soft);
+  color: var(--ws-text);
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+
+.sku-list-total-cell:last-child {
+  border-right: 1px solid var(--sku-ozon-grid);
+}
+
+
+.sku-list-total-label {
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+
+.sku-list-total-value {
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+
+.sku-list-table {
+  width: 100%;
+  min-width: 0;
   border-spacing: 0;
   border-collapse: separate;
   table-layout: fixed;
@@ -371,7 +429,8 @@
 
 .sku-list-table tbody td {
   box-sizing: border-box;
-  padding: 11px 10px;
+  height: 39px;
+  padding: 0 10px;
   border-right: 1px solid var(--sku-ozon-grid);
   border-bottom: 1px solid var(--sku-ozon-grid);
   background: var(--ws-surface);

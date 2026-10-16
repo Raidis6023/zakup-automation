@@ -317,10 +317,10 @@ SkuListFinancialRow[] {
                     enot
                   )
                   ??
-                  null
+                  "Активный"
                 )
 
-              : null,
+              : "Активный",
 
           sku:
             mapping?.sku
