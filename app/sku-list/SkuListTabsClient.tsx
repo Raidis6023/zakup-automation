@@ -236,8 +236,12 @@ function compareRows(
 
 export default function SkuListTabsClient({
   ozonRows,
+  wildberriesRows,
 }: {
   ozonRows:
+    SkuListFinancialRow[];
+
+  wildberriesRows:
     SkuListFinancialRow[];
 }) {
   const [
@@ -249,14 +253,41 @@ export default function SkuListTabsClient({
     );
 
   const [
-    rows,
-    setRows,
+    marketplaceRows,
+    setMarketplaceRows,
   ] =
-    useState<
-      SkuListFinancialRow[]
-    >(
-      ozonRows
-    );
+    useState<{
+      ozon:
+        SkuListFinancialRow[];
+
+      wildberries:
+        SkuListFinancialRow[];
+    }>({
+      ozon:
+        ozonRows,
+
+      wildberries:
+        wildberriesRows,
+    });
+
+
+  const tableActive =
+    activeTab ===
+      "ozon"
+    ||
+    activeTab ===
+      "wildberries";
+
+
+  const rows =
+    activeTab ===
+      "wildberries"
+
+      ? marketplaceRows
+          .wildberries
+
+      : marketplaceRows
+          .ozon;
 
   const [
     savingMasterCodes,
@@ -412,8 +443,7 @@ export default function SkuListTabsClient({
   useLayoutEffect(
     () => {
       if (
-        activeTab !==
-        "ozon"
+        !tableActive
       ) {
         return;
       }
@@ -477,6 +507,7 @@ export default function SkuListTabsClient({
     },
     [
       activeTab,
+      tableActive,
       measureTotals,
     ]
   );
@@ -610,21 +641,38 @@ export default function SkuListTabsClient({
       ??
       "Активный";
 
-    setRows(
-      previous =>
-        previous.map(
-          row =>
-            row.enot ===
-              masterCode
+    setMarketplaceRows(
+      previous => ({
+        ozon:
+          previous.ozon.map(
+            row =>
+              row.enot ===
+                masterCode
 
-              ? {
-                  ...row,
-                  status:
-                    nextStatus,
-                }
+                ? {
+                    ...row,
+                    status:
+                      nextStatus,
+                  }
 
-              : row
-        )
+                : row
+          ),
+
+        wildberries:
+          previous.wildberries.map(
+            row =>
+              row.enot ===
+                masterCode
+
+                ? {
+                    ...row,
+                    status:
+                      nextStatus,
+                  }
+
+                : row
+          ),
+      })
     );
 
     setSavingMasterCodes(
@@ -676,21 +724,38 @@ export default function SkuListTabsClient({
         error
       );
 
-      setRows(
-        previous =>
-          previous.map(
-            row =>
-              row.enot ===
-                masterCode
+      setMarketplaceRows(
+        previous => ({
+          ozon:
+            previous.ozon.map(
+              row =>
+                row.enot ===
+                  masterCode
 
-                ? {
-                    ...row,
-                    status:
-                      previousStatus,
-                  }
+                  ? {
+                      ...row,
+                      status:
+                        previousStatus,
+                    }
 
-                : row
-          )
+                  : row
+            ),
+
+          wildberries:
+            previous.wildberries.map(
+              row =>
+                row.enot ===
+                  masterCode
+
+                  ? {
+                      ...row,
+                      status:
+                        previousStatus,
+                    }
+
+                  : row
+            ),
+        })
       );
     } finally {
       setSavingMasterCodes(
@@ -793,8 +858,17 @@ export default function SkuListTabsClient({
 
   return (
     <section
-      className=
-        "sku-list-data-section"
+      className={
+        activeTab ===
+          "wildberries"
+
+          ? "sku-list-data-section sku-list-data-section--wildberries"
+
+          : "sku-list-data-section"
+      }
+      data-marketplace={
+        activeTab
+      }
     >
       <div
         className=
@@ -905,8 +979,7 @@ export default function SkuListTabsClient({
       </div>
 
       {
-        activeTab ===
-          "ozon"
+        tableActive
 
           ? (
             <div

@@ -4,6 +4,10 @@ import {
   getOzonSeptemberRows,
 } from "./ozonFinancialData";
 
+import {
+  getWbSeptemberRows,
+} from "./wbFinancialData";
+
 import SkuListTabsClient, {
   type ProductArticleStatus,
   type SkuListFinancialRow,
@@ -23,6 +27,13 @@ type ProductMappingRow = {
 type ProductStatusRow = {
   master_code: string;
   status: ProductArticleStatus;
+};
+
+
+type MarketplaceListingRow = {
+  external_id: string;
+  seller_article: string | null;
+  master_code: string;
 };
 
 
@@ -109,6 +120,24 @@ Promise<ProductMappingRow[]> {
     "&offer_id=not.is.null"
     +
     "&master_code=not.is.null"
+    +
+    "&limit=2000"
+  );
+}
+
+
+async function getWbMappings():
+Promise<MarketplaceListingRow[]> {
+  return supabaseGet<MarketplaceListingRow[]>(
+    "marketplace_listings"
+    +
+    "?select=external_id,seller_article,master_code"
+    +
+    "&marketplace=eq.wildberries"
+    +
+    "&account_key=eq.main"
+    +
+    "&is_active=eq.true"
     +
     "&limit=2000"
   );
@@ -351,6 +380,107 @@ SkuListFinancialRow[] {
 }
 
 
+
+
+function buildWbRows(
+  mappings: MarketplaceListingRow[],
+  statuses: ProductStatusRow[]
+):
+SkuListFinancialRow[] {
+  const statusByMasterCode =
+    new Map(
+      statuses.map(
+        row => [
+          row.master_code,
+          row.status,
+        ]
+      )
+    );
+
+  const mappingBySellerArticle =
+    new Map<
+      string,
+      MarketplaceListingRow
+    >();
+
+  for (
+    const mapping
+    of mappings
+  ) {
+    if (
+      !mapping.seller_article
+      ||
+      !mapping.master_code
+    ) {
+      continue;
+    }
+
+    mappingBySellerArticle.set(
+      normalizeForMatch(
+        mapping.seller_article
+      ),
+      mapping
+    );
+  }
+
+  return getWbSeptemberRows()
+    .map(
+      row => {
+        const mapping =
+          mappingBySellerArticle.get(
+            normalizeForMatch(
+              row.article
+            )
+          );
+
+        const enot =
+          mapping?.master_code
+          ??
+          null;
+
+        return {
+          enot,
+
+          status:
+            enot
+
+              ? (
+                  statusByMasterCode.get(
+                    enot
+                  )
+                  ??
+                  "Активный"
+                )
+
+              : "Активный",
+
+          sku:
+            mapping?.external_id
+            ??
+            null,
+
+          sellerArticle:
+            capitalizeArticle(
+              row.article
+            ),
+
+          productName:
+            row.name,
+
+          revenue:
+            row.revenue,
+
+          operatingProfit:
+            row.profit,
+
+          purchases:
+            row.buys,
+        };
+      }
+    );
+}
+
+
 // ============================================================
 // СТРАНИЦА
 // ============================================================
@@ -358,16 +488,24 @@ SkuListFinancialRow[] {
 export default async function SkuListPage() {
   const [
     mappings,
+    wbMappings,
     statuses,
   ] =
     await Promise.all([
       getProductMappings(),
+      getWbMappings(),
       getProductStatuses(),
     ]);
 
   const ozonRows =
     buildOzonRows(
       mappings,
+      statuses
+    );
+
+  const wildberriesRows =
+    buildWbRows(
+      wbMappings,
       statuses
     );
 
@@ -419,6 +557,9 @@ export default async function SkuListPage() {
         <SkuListTabsClient
           ozonRows={
             ozonRows
+          }
+          wildberriesRows={
+            wildberriesRows
           }
         />
       </div>

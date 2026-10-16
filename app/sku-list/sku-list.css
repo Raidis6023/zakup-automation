@@ -83,6 +83,14 @@
 }
 
 
+.sku-list-data-section--wildberries {
+  --sku-ozon-accent: #9d2fbd;
+  --sku-ozon-soft: #f4e9fb;
+  --sku-ozon-grid: rgba(157, 47, 189, 0.22);
+  --sku-ozon-scroll: #9d2fbd;
+}
+
+
 .sku-list-tabs {
   display: flex;
   align-items: center;
@@ -638,6 +646,15 @@ html[data-theme="dark"] .sku-list-page {
   --sku-ozon-soft: #162d40;
   --sku-ozon-grid: rgba(117, 196, 242, 0.28);
   --sku-ozon-scroll: #75c4f2;
+}
+
+
+html[data-theme="dark"]
+.sku-list-data-section--wildberries {
+  --sku-ozon-accent: #d7a0ef;
+  --sku-ozon-soft: #2a1b38;
+  --sku-ozon-grid: rgba(215, 160, 239, 0.28);
+  --sku-ozon-scroll: #d7a0ef;
 }
 
 
