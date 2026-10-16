@@ -87,7 +87,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 3px;
+  margin-bottom: 0;
 }
 
 
@@ -175,27 +175,19 @@
    ============================================================ */
 
 .sku-list-table-shell {
+  position: relative;
   width: 100%;
   min-width: 0;
+  margin-top: 6px;
 }
 
 
 .sku-list-totals-viewport {
-  width:
-    calc(
-      100%
-      -
-      10px
-    );
-
-  /*
-   * Верхняя таблица использует тот же colgroup,
-   * что и основная. На Windows Chrome визуальная
-   * граница рабочей области scrollport оказывается
-   * на 4 px левее из-за вертикального scrollbar.
-   */
-  margin-left: -3px;
-
+  position: absolute;
+  z-index: 4;
+  top: -38px;
+  display: grid;
+  height: 39px;
   box-sizing: border-box;
 }
 
@@ -220,10 +212,10 @@
       -
       var(--workspace-module-header-height, 98px)
       -
-      115px
+      76px
     );
   min-height: 320px;
-  max-height: calc(68vh - 39px);
+  max-height: 68vh;
   overflow-x: auto;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -281,73 +273,41 @@
 }
 
 
-.sku-list-totals-table {
-  width: 100%;
-  height: 39px;
-  border-spacing: 0;
-  border-collapse: separate;
-  table-layout: fixed;
-}
-
-
-.sku-list-totals-table td {
-  height: 39px;
-  box-sizing: border-box;
-  padding: 0;
-  vertical-align: middle;
-}
-
-
-.sku-list-total-empty,
-.sku-list-total-product-slot {
-  border: 0;
-  background: transparent;
-}
-
-
-.sku-list-total-product-slot {
-  position: relative;
-}
-
-
-.sku-list-total-label-box {
+.sku-list-total-cell {
   display: flex;
-  width: 72px;
-  height: 39px;
-  margin-left: auto;
   align-items: center;
   justify-content: center;
+  height: 39px;
   box-sizing: border-box;
   border-top: 1px solid var(--sku-ozon-grid);
   border-bottom: 1px solid var(--sku-ozon-grid);
   border-left: 1px solid var(--sku-ozon-grid);
+  background: var(--ws-surface-soft);
+  color: var(--ws-text);
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+
+.sku-list-total-cell:first-child {
   border-top-left-radius: 8px;
-  background: var(--ws-surface-soft);
-  color: var(--ws-text);
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
 }
 
 
-.sku-list-total-value-cell {
-  border-top: 1px solid var(--sku-ozon-grid);
-  border-bottom: 1px solid var(--sku-ozon-grid);
-  border-left: 1px solid var(--sku-ozon-grid);
-  background: var(--ws-surface-soft);
-  color: var(--ws-text);
-  font-size: 12px;
+.sku-list-total-value {
   font-weight: 750;
-  line-height: 1;
-  text-align: center;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 
-.sku-list-total-value-cell--last {
+.sku-list-total-label {
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+
+.sku-list-total-value--last {
   border-right: 1px solid var(--sku-ozon-grid);
   border-top-right-radius: 8px;
 }
@@ -765,7 +725,7 @@ html[data-theme="dark"]
     1100px
 ) {
   .sku-list-table-scroll {
-    max-height: calc(62vh - 39px);
+    max-height: 62vh;
   }
 }
 
@@ -788,8 +748,8 @@ html[data-theme="dark"]
   }
 
   .sku-list-table-scroll {
-    height: calc(56vh - 39px);
+    height: 56vh;
     min-height: 300px;
-    max-height: calc(56vh - 39px);
+    max-height: 56vh;
   }
 }

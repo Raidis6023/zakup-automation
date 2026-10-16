@@ -1,7 +1,10 @@
 "use client";
 
 import {
+  useCallback,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -48,6 +51,14 @@ type SortKey =
 type SortDirection =
   | "asc"
   | "desc";
+
+
+type TotalsLayout = {
+  left: number;
+  revenueWidth: number;
+  profitWidth: number;
+  purchasesWidth: number;
+};
 
 
 const STATUS_OPTIONS:
@@ -272,6 +283,182 @@ export default function SkuListTabsClient({
     useState<SortDirection>(
       "desc"
     );
+
+  const tableShellRef =
+    useRef<HTMLDivElement>(
+      null
+    );
+
+
+  const tableScrollRef =
+    useRef<HTMLDivElement>(
+      null
+    );
+
+
+  const [
+    totalsLayout,
+    setTotalsLayout,
+  ] =
+    useState<TotalsLayout | null>(
+      null
+    );
+
+
+  const measureTotals =
+    useCallback(
+      () => {
+        const shell =
+          tableShellRef.current;
+
+        const scroll =
+          tableScrollRef.current;
+
+        if (
+          !shell
+          ||
+          !scroll
+        ) {
+          return;
+        }
+
+        const revenueHeader =
+          scroll.querySelector<HTMLElement>(
+            '[data-sku-column="revenue"]'
+          );
+
+        const profitHeader =
+          scroll.querySelector<HTMLElement>(
+            '[data-sku-column="operatingProfit"]'
+          );
+
+        const purchasesHeader =
+          scroll.querySelector<HTMLElement>(
+            '[data-sku-column="purchases"]'
+          );
+
+        if (
+          !revenueHeader
+          ||
+          !profitHeader
+          ||
+          !purchasesHeader
+        ) {
+          return;
+        }
+
+        const shellRect =
+          shell.getBoundingClientRect();
+
+        const revenueRect =
+          revenueHeader.getBoundingClientRect();
+
+        const profitRect =
+          profitHeader.getBoundingClientRect();
+
+        const purchasesRect =
+          purchasesHeader.getBoundingClientRect();
+
+        setTotalsLayout({
+          left:
+            revenueRect.left
+            -
+            shellRect.left
+            -
+            72,
+
+          revenueWidth:
+            profitRect.left
+            -
+            revenueRect.left,
+
+          profitWidth:
+            purchasesRect.left
+            -
+            profitRect.left,
+
+          purchasesWidth:
+            purchasesRect.right
+            -
+            purchasesRect.left,
+        });
+      },
+      []
+    );
+
+
+  useLayoutEffect(
+    () => {
+      if (
+        activeTab !==
+        "ozon"
+      ) {
+        return;
+      }
+
+      const shell =
+        tableShellRef.current;
+
+      const scroll =
+        tableScrollRef.current;
+
+      if (
+        !shell
+        ||
+        !scroll
+      ) {
+        return;
+      }
+
+      measureTotals();
+
+      const resizeObserver =
+        new ResizeObserver(
+          measureTotals
+        );
+
+      resizeObserver.observe(
+        shell
+      );
+
+      resizeObserver.observe(
+        scroll
+      );
+
+      scroll.addEventListener(
+        "scroll",
+        measureTotals,
+        {
+          passive:
+            true,
+        }
+      );
+
+      window.addEventListener(
+        "resize",
+        measureTotals
+      );
+
+      return () => {
+        resizeObserver.disconnect();
+
+        scroll.removeEventListener(
+          "scroll",
+          measureTotals
+        );
+
+        window.removeEventListener(
+          "resize",
+          measureTotals
+        );
+      };
+    },
+    [
+      activeTab,
+      measureTotals,
+    ]
+  );
+
 
   const totals =
     useMemo(
@@ -517,6 +704,9 @@ export default function SkuListTabsClient({
 
     return (
       <th
+        data-sku-column={
+          column
+        }
         aria-sort={
           !active
 
@@ -698,120 +888,99 @@ export default function SkuListTabsClient({
 
           ? (
             <div
+              ref={
+                tableShellRef
+              }
               className=
                 "sku-list-table-shell"
             >
               <div
                 className=
                   "sku-list-totals-viewport"
-              >
-                <table
-                  className=
-                    "sku-list-totals-table"
-                  aria-label=
-                    "Итоги по Ozon"
-                >
-                  <colgroup>
-                    <col
-                      className=
-                        "sku-list-col-enot"
-                    />
+                style={
+                  totalsLayout
 
-                    <col
-                      className=
-                        "sku-list-col-status"
-                    />
+                    ? {
+                        left:
+                          totalsLayout.left,
 
-                    <col
-                      className=
-                        "sku-list-col-sku"
-                    />
-
-                    <col
-                      className=
-                        "sku-list-col-seller"
-                    />
-
-                    <col
-                      className=
-                        "sku-list-col-product"
-                    />
-
-                    <col
-                      className=
-                        "sku-list-col-number"
-                    />
-
-                    <col
-                      className=
-                        "sku-list-col-profit"
-                    />
-
-                    <col
-                      className=
-                        "sku-list-col-number"
-                    />
-                  </colgroup>
-
-                  <tbody>
-                    <tr>
-                      <td
-                        colSpan={
-                          4
-                        }
-                        className=
-                          "sku-list-total-empty"
-                      />
-
-                      <td
-                        className=
-                          "sku-list-total-product-slot"
-                      >
-                        <div
-                          className=
-                            "sku-list-total-label-box"
-                        >
-                          ИТОГО
-                        </div>
-                      </td>
-
-                      <td
-                        className=
-                          "sku-list-total-value-cell"
-                      >
-                        {
-                          formatRubles(
-                            totals.revenue
-                          )
-                        }
-                      </td>
-
-                      <td
-                        className=
-                          "sku-list-total-value-cell"
-                      >
-                        {
-                          formatRubles(
-                            totals.operatingProfit
-                          )
-                        }
-                      </td>
-
-                      <td
-                        className=
-                          "sku-list-total-value-cell sku-list-total-value-cell--last"
-                      >
-                        {
-                          formatInteger(
-                            totals.purchases
-                          )
+                        width:
+                          72
                           +
-                          " шт."
-                        }
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                          totalsLayout.revenueWidth
+                          +
+                          totalsLayout.profitWidth
+                          +
+                          totalsLayout.purchasesWidth,
+
+                        gridTemplateColumns:
+                          "72px "
+                          +
+                          totalsLayout.revenueWidth
+                          +
+                          "px "
+                          +
+                          totalsLayout.profitWidth
+                          +
+                          "px "
+                          +
+                          totalsLayout.purchasesWidth
+                          +
+                          "px",
+
+                        visibility:
+                          "visible",
+                      }
+
+                    : {
+                        visibility:
+                          "hidden",
+                      }
+                }
+                aria-label=
+                  "Итоги по Ozon"
+              >
+                <div
+                  className=
+                    "sku-list-total-cell sku-list-total-label"
+                >
+                  ИТОГО
+                </div>
+
+                <div
+                  className=
+                    "sku-list-total-cell sku-list-total-value"
+                >
+                  {
+                    formatRubles(
+                      totals.revenue
+                    )
+                  }
+                </div>
+
+                <div
+                  className=
+                    "sku-list-total-cell sku-list-total-value"
+                >
+                  {
+                    formatRubles(
+                      totals.operatingProfit
+                    )
+                  }
+                </div>
+
+                <div
+                  className=
+                    "sku-list-total-cell sku-list-total-value sku-list-total-value--last"
+                >
+                  {
+                    formatInteger(
+                      totals.purchases
+                    )
+                    +
+                    " шт."
+                  }
+                </div>
               </div>
 
               <div
@@ -819,6 +988,9 @@ export default function SkuListTabsClient({
                   "sku-list-table-card"
               >
                 <div
+                  ref={
+                    tableScrollRef
+                  }
                   className=
                     "sku-list-table-scroll"
                 >
