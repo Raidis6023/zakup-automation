@@ -586,11 +586,15 @@ export default function SkuListTabsClient({
     >
       <div
         className=
-          "sku-list-tabs"
-        role="tablist"
-        aria-label=
-          "Маркетплейс"
+          "sku-list-top-row"
       >
+        <div
+          className=
+            "sku-list-tabs"
+          role="tablist"
+          aria-label=
+            "Маркетплейс"
+        >
         <button
           type="button"
           role="tab"
@@ -689,18 +693,14 @@ export default function SkuListTabsClient({
           }
         >
           Яндекс Маркет
-        </button>
-      </div>
+          </button>
+        </div>
 
-      {
-        activeTab ===
-          "ozon"
+        {
+          activeTab ===
+            "ozon"
 
-          ? (
-            <div
-              className=
-                "sku-list-table-shell"
-            >
+            ? (
               <div
                 className=
                   "sku-list-totals-wrap"
@@ -754,7 +754,21 @@ export default function SkuListTabsClient({
                   </div>
                 </div>
               </div>
+            )
 
+            : null
+        }
+      </div>
+
+      {
+        activeTab ===
+          "ozon"
+
+          ? (
+            <div
+              className=
+                "sku-list-table-shell"
+            >
               <div
                 className=
                   "sku-list-table-card"

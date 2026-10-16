@@ -83,11 +83,22 @@
 }
 
 
+.sku-list-top-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  min-width: 0;
+  min-height: 39px;
+  margin-top: 52px;
+}
+
+
 .sku-list-tabs {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 14px;
+  margin-bottom: 0;
 }
 
 
@@ -182,9 +193,10 @@
 
 .sku-list-totals-wrap {
   display: flex;
+  flex: 0 0 auto;
   justify-content: flex-end;
-  width: 100%;
-  padding-right: 8px;
+  width: auto;
+  padding-right: 9px;
   box-sizing: border-box;
 }
 
@@ -578,6 +590,13 @@
 }
 
 
+.sku-list-status-select option {
+  background: #ffffff;
+  color: #18324a;
+  font-weight: 500;
+}
+
+
 .sku-list-status-control[data-status="Активный"] {
   background: #dff4e7;
   color: #18764c;
@@ -739,6 +758,12 @@ html[data-theme="dark"]
   .sku-list-header h1 {
     font-size: 28px;
   }
+
+  .sku-list-top-row {
+    flex-wrap: wrap;
+    margin-top: 34px;
+  }
+
 
   .sku-list-tabs {
     overflow-x: auto;
