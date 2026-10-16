@@ -8,6 +8,9 @@ import Link
 import ThemeToggle
   from "../ThemeToggle";
 
+import MarketplaceSuppliesPanel
+  from "../MarketplaceSuppliesPanel";
+
 import YandexUnlinkedProductsClient
   from "./YandexUnlinkedProductsClient";
 
@@ -1664,6 +1667,17 @@ export default async function YandexMarketPage() {
           </div>
 
         </section>
+
+
+        {/* ===================================
+            УПРАВЛЕНИЕ ПОСТАВКАМИ
+            =================================== */}
+
+        <MarketplaceSuppliesPanel
+          marketplace="yandex"
+          endpoint="/api/yandex/supplies"
+          title="Поставки Яндекс Маркета"
+        />
 
 
         {/* ===================================

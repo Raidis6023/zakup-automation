@@ -8,7 +8,13 @@ from "next/link";
 import ThemeToggle
 from "../ThemeToggle";
 
+import MarketplaceSuppliesPanel
+from "../MarketplaceSuppliesPanel";
+
 import OzonUnifiedSyncClient from "./OzonUnifiedSyncClient";
+
+import OzonFboSupplyClient
+from "./OzonFboSupplyClient";
 
 import OzonProductsTableClient, {
   type OzonClusterDetailRow,
@@ -1578,6 +1584,56 @@ export default async function OzonPage() {
 
 
         {/* ===================================
+            АВТОСОЗДАНИЕ ПОСТАВОК FBO
+            =================================== */}
+
+        <OzonFboSupplyClient
+          calculationRunId={
+            replenishment.run
+              ?.id
+            ??
+            null
+          }
+
+          calculationCreatedAt={
+            replenishment.run
+              ?.created_at
+            ??
+            null
+          }
+
+          pairsWithNeed={
+            Number(
+              replenishment.run
+                ?.pairs_with_need
+              ??
+              0
+            )
+          }
+
+          totalNeedUnits={
+            Number(
+              replenishment.run
+                ?.total_need_units
+              ??
+              0
+            )
+          }
+        />
+
+
+        {/* ===================================
+            УПРАВЛЕНИЕ ПОСТАВКАМИ
+            =================================== */}
+
+        <MarketplaceSuppliesPanel
+          marketplace="ozon"
+          endpoint="/api/ozon/supplies"
+          title="Поставки Ozon"
+        />
+
+
+        {/* ===================================
             HOW TO COMPARE
             =================================== */}
 
@@ -2030,6 +2086,20 @@ export default async function OzonPage() {
               >
                 После успешной записи автоматически
                 запускается расчёт потребности FBO.
+                Реальные заявки на поставку создаются
+                только после отдельного нажатия кнопки
+                «Создать заявки по кластерам».
+              </div>
+
+
+              <div
+                className=
+                  "reason-text"
+              >
+                Один расчёт потребности можно обработать
+                только один раз: повторное открытие страницы
+                продолжает существующую очередь и не создаёт
+                второй комплект заявок.
               </div>
 
 

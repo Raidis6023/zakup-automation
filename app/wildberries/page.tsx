@@ -8,6 +8,9 @@ from "next/link";
 import ThemeToggle
 from "../ThemeToggle";
 
+import MarketplaceSuppliesPanel
+from "../MarketplaceSuppliesPanel";
+
 import WbSyncClient
 from "../WbSyncClient";
 
@@ -1460,6 +1463,17 @@ export default async function WildberriesPage() {
                   </div>
 
                 </section>
+
+
+                {/* =================================================
+                    УПРАВЛЕНИЕ ПОСТАВКАМИ
+                    ================================================= */}
+
+                <MarketplaceSuppliesPanel
+                  marketplace="wildberries"
+                  endpoint="/api/wb/supplies"
+                  title="Поставки Wildberries"
+                />
 
 
                 {/* =================================================
