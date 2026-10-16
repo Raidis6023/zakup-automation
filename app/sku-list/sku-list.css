@@ -171,8 +171,23 @@
 
 
 /* ============================================================
-   TABLE / SCROLL AREA
+   TOTALS / TABLE / SCROLL AREA
    ============================================================ */
+
+.sku-list-table-shell {
+  width: 100%;
+  min-width: 0;
+}
+
+
+.sku-list-totals-wrap {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  padding-right: 8px;
+  box-sizing: border-box;
+}
+
 
 .sku-list-table-card {
   overflow: hidden;
@@ -194,10 +209,10 @@
       -
       var(--workspace-module-header-height, 98px)
       -
-      76px
+      115px
     );
   min-height: 320px;
-  max-height: 68vh;
+  max-height: calc(68vh - 39px);
   overflow-x: auto;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -258,18 +273,12 @@
 .sku-list-totals-strip {
   display: grid;
   grid-template-columns:
-    minmax(0, 1fr)
     72px
     155px
     161px
     155px;
-  width: 100%;
+  width: 543px;
   height: 39px;
-}
-
-
-.sku-list-totals-spacer {
-  min-width: 0;
 }
 
 
@@ -290,8 +299,14 @@
 }
 
 
+.sku-list-total-cell:first-child {
+  border-top-left-radius: 8px;
+}
+
+
 .sku-list-total-cell:last-child {
   border-right: 1px solid var(--sku-ozon-grid);
+  border-top-right-radius: 8px;
 }
 
 
@@ -712,7 +727,7 @@ html[data-theme="dark"]
     1100px
 ) {
   .sku-list-table-scroll {
-    max-height: 62vh;
+    max-height: calc(62vh - 39px);
   }
 }
 
@@ -735,8 +750,8 @@ html[data-theme="dark"]
   }
 
   .sku-list-table-scroll {
-    height: 56vh;
+    height: calc(56vh - 39px);
     min-height: 300px;
-    max-height: 56vh;
+    max-height: calc(56vh - 39px);
   }
 }

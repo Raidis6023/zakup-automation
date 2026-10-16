@@ -699,72 +699,78 @@ export default function SkuListTabsClient({
           ? (
             <div
               className=
-                "sku-list-table-card"
+                "sku-list-table-shell"
             >
               <div
                 className=
-                  "sku-list-table-scroll"
+                  "sku-list-totals-wrap"
               >
                 <div
                   className=
-                    "sku-list-table-inner"
+                    "sku-list-totals-strip"
+                  aria-label=
+                    "Итоги по Ozon"
                 >
                   <div
                     className=
-                      "sku-list-totals-strip"
-                    aria-label=
-                      "Итоги по Ozon"
+                      "sku-list-total-cell sku-list-total-label"
                   >
-                    <div
-                      className=
-                        "sku-list-totals-spacer"
-                    />
-
-                    <div
-                      className=
-                        "sku-list-total-cell sku-list-total-label"
-                    >
-                      ИТОГО
-                    </div>
-
-                    <div
-                      className=
-                        "sku-list-total-cell sku-list-total-value"
-                    >
-                      {
-                        formatRubles(
-                          totals.revenue
-                        )
-                      }
-                    </div>
-
-                    <div
-                      className=
-                        "sku-list-total-cell sku-list-total-value"
-                    >
-                      {
-                        formatRubles(
-                          totals.operatingProfit
-                        )
-                      }
-                    </div>
-
-                    <div
-                      className=
-                        "sku-list-total-cell sku-list-total-value"
-                    >
-                      {
-                        formatRubles(
-                          totals.purchases
-                        )
-                      }
-                    </div>
+                    ИТОГО
                   </div>
 
-                  <table
+                  <div
                     className=
-                      "sku-list-table"
+                      "sku-list-total-cell sku-list-total-value"
                   >
+                    {
+                      formatRubles(
+                        totals.revenue
+                      )
+                    }
+                  </div>
+
+                  <div
+                    className=
+                      "sku-list-total-cell sku-list-total-value"
+                  >
+                    {
+                      formatRubles(
+                        totals.operatingProfit
+                      )
+                    }
+                  </div>
+
+                  <div
+                    className=
+                      "sku-list-total-cell sku-list-total-value"
+                  >
+                    {
+                      formatInteger(
+                        totals.purchases
+                      )
+                      +
+                      " шт."
+                    }
+                  </div>
+                </div>
+              </div>
+
+              <div
+                className=
+                  "sku-list-table-card"
+              >
+                <div
+                  className=
+                    "sku-list-table-scroll"
+                >
+                  <div
+                    className=
+                      "sku-list-table-inner"
+                  >
+                    <table
+                      className=
+                        "sku-list-table"
+                    >
                   <colgroup>
                     <col
                       className=
@@ -1045,7 +1051,8 @@ export default function SkuListTabsClient({
                       )
                     }
                   </tbody>
-                  </table>
+                    </table>
+                  </div>
                 </div>
               </div>
             </div>
