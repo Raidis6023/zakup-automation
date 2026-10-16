@@ -171,3 +171,63 @@
 @media (max-width: 940px) {
   .previewControls { grid-column: 1 / -1; order: 2; }
 }
+
+/* Скрытая на обычной странице панда не оставляет пустую колонку. */
+.stage:not(:has(> aside)) {
+  grid-template-columns: minmax(0, 560px);
+  justify-content: center;
+}
+
+.previewPlaceholder {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  width: min(100%, 355px);
+  min-height: 245px;
+  padding: 24px;
+  border: 1px dashed #465666;
+  border-radius: 14px;
+  text-align: center;
+  color: #b0c1cf;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.previewPlaceholderIcon {
+  font-size: 38px;
+  line-height: 1;
+  color: #ff9f54;
+}
+
+.previewReplay {
+  border: 1px solid #435364;
+  background: #222c36;
+  color: #deebf6;
+  border-radius: 8px;
+  padding: 7px 13px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.previewReplay:hover {
+  border-color: #ff9f54;
+}
+
+.previewReplay:focus-visible {
+  outline: 2px solid #ff9f54;
+  outline-offset: 2px;
+}
+
+@media (max-width: 940px) {
+  .stage:not(:has(> aside)) {
+    display: block;
+    overflow-y: visible;
+  }
+  .stage:not(:has(> aside)) :global(.access-modal) {
+    max-height: calc(100dvh - 48px);
+    overflow-y: auto;
+  }
+}

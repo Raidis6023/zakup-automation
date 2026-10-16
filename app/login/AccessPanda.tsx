@@ -12,6 +12,7 @@ export default function AccessPanda({ success }: AccessPandaProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewFileName, setPreviewFileName] = useState("");
   const [fileError, setFileError] = useState<string | null>(null);
+  const [animationRun, setAnimationRun] = useState(0);
   const currentObjectUrl = useRef<string | null>(null);
 
   useEffect(() => {
@@ -41,8 +42,11 @@ export default function AccessPanda({ success }: AccessPandaProps) {
     setFileError(null);
   }
 
+  // До утверждения новой модели никакой старой панды на обычном входе.
+  if (!isPreviewMode) return null;
+
   return (
-    <aside className={styles.assistant} aria-label="Красная панда, помощник WorkSpace">
+    <aside className={styles.assistant} aria-label="Предпросмотр красной панды WorkSpace">
       <div className={styles.bubble} role="status">
         {success ? (
           <p>
@@ -58,37 +62,50 @@ export default function AccessPanda({ success }: AccessPandaProps) {
         )}
       </div>
 
-      {isPreviewMode && (
-        <div className={styles.previewControls}>
-          <label className={styles.previewPicker}>
-            <span>Проверить SVG-анимацию</span>
-            <input
-              type="file"
-              accept=".svg,image/svg+xml"
-              onChange={handlePandaFile}
-              aria-label="Загрузить SVG красной панды для предварительного просмотра"
-            />
-          </label>
-          {previewFileName && (
-            <span className={styles.previewFileName} title={previewFileName}>
-              {previewFileName}
-            </span>
-          )}
-          {fileError && <span className={styles.previewError} role="alert">{fileError}</span>}
+      <div className={styles.previewControls}>
+        <label className={styles.previewPicker}>
+          <span>{previewUrl ? "Выбрать другую SVG" : "Выбрать новую SVG-панду"}</span>
+          <input
+            type="file"
+            accept=".svg,image/svg+xml"
+            onChange={handlePandaFile}
+            aria-label="Выбрать SVG красной панды для предпросмотра"
+          />
+        </label>
+        {previewFileName && (
+          <span className={styles.previewFileName} title={previewFileName}>
+            {previewFileName}
+          </span>
+        )}
+        {fileError && <span className={styles.previewError} role="alert">{fileError}</span>}
+        {previewUrl && (
+          <button
+            type="button"
+            className={styles.previewReplay}
+            onClick={() => setAnimationRun((n) => n + 1)}
+          >
+            Повторить анимацию
+          </button>
+        )}
+      </div>
+
+      {previewUrl ? (
+        <img
+          key={`${previewUrl}-${animationRun}`}
+          className={styles.character}
+          src={previewUrl}
+          alt="Новая анимированная SVG-модель красной панды"
+          width={809}
+          height={1126}
+          draggable={false}
+        />
+      ) : (
+        <div className={styles.previewPlaceholder} role="status">
+          <span className={styles.previewPlaceholderIcon} aria-hidden="true">◎</span>
+          <span>Старая панда отключена.</span>
+          <span>Выберите файл panda_2d_suit_animated_web.svg, чтобы увидеть новую модель и её движения.</span>
         </div>
       )}
-
-      <img
-        key={previewUrl ?? "default"}
-        className={styles.character}
-        src={previewUrl ?? "/panda/red-panda-welcome.svg"}
-        alt={previewUrl
-          ? "Выбранная анимированная SVG-модель красной панды"
-          : "Красная панда в костюме-тройке приветствует нового сотрудника"}
-        width={809}
-        height={1126}
-        draggable={false}
-      />
     </aside>
   );
 }
