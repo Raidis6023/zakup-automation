@@ -25,6 +25,26 @@ type MarketplaceKind =
   >;
 
 
+type Position = {
+  x: number;
+  y: number;
+};
+
+
+type SlotMap =
+Record<
+  MetricId,
+  number
+>;
+
+
+type DragState = {
+  id: MetricId;
+  offsetX: number;
+  offsetY: number;
+};
+
+
 export type HomeMarketplaceMetric = {
   id:
     MetricId;
@@ -43,21 +63,37 @@ export type HomeMarketplaceMetric = {
 };
 
 
-type Position = {
-  x: number;
-  y: number;
-};
+const METRIC_IDS:
+MetricId[] = [
+  "all",
+  "ozon",
+  "wildberries",
+  "yandex-market",
+];
 
 
-type DragState = {
-  id: MetricId;
-  offsetX: number;
-  offsetY: number;
+const DEFAULT_SLOTS:
+SlotMap = {
+  all:
+    0,
+
+  ozon:
+    1,
+
+  wildberries:
+    2,
+
+  "yandex-market":
+    3,
 };
 
 
 const STORAGE_KEY =
-  "workspace-home-marketplace-card-positions-v2";
+  "workspace-home-marketplace-card-slots-v1";
+
+
+const COLUMN_COUNT =
+  4;
 
 
 const CARD_GAP =
@@ -65,20 +101,10 @@ const CARD_GAP =
 
 
 const CARD_HEIGHT =
-  184;
+  136;
 
 
 const moneyFormatter =
-  new Intl.NumberFormat(
-    "ru-RU",
-    {
-      maximumFractionDigits:
-        0,
-    }
-  );
-
-
-const integerFormatter =
   new Intl.NumberFormat(
     "ru-RU",
     {
@@ -101,15 +127,6 @@ function formatRubles(
 }
 
 
-function formatInteger(
-  value: number
-) {
-  return integerFormatter.format(
-    value
-  );
-}
-
-
 function clamp(
   value: number,
   min: number,
@@ -122,6 +139,120 @@ function clamp(
     ),
     max
   );
+}
+
+
+function positionForSlot(
+  slot: number,
+  cardWidth: number
+):
+Position {
+  const column =
+    slot
+    %
+    COLUMN_COUNT;
+
+  const row =
+    Math.floor(
+      slot
+      /
+      COLUMN_COUNT
+    );
+
+  return {
+    x:
+      column
+      *
+      (
+        cardWidth
+        +
+        CARD_GAP
+      ),
+
+    y:
+      row
+      *
+      (
+        CARD_HEIGHT
+        +
+        CARD_GAP
+      ),
+  };
+}
+
+
+function readSavedSlots():
+SlotMap | null {
+  try {
+    const raw =
+      window
+        .localStorage
+        .getItem(
+          STORAGE_KEY
+        );
+
+    if (!raw) {
+      return null;
+    }
+
+    const parsed =
+      JSON.parse(
+        raw
+      ) as
+        Record<
+          string,
+          unknown
+        >;
+
+    const values =
+      METRIC_IDS.map(
+        id =>
+          parsed[
+            id
+          ]
+      );
+
+    const valid =
+      values.every(
+        value =>
+          typeof value ===
+            "number"
+          &&
+          Number.isInteger(
+            value
+          )
+          &&
+          value >=
+            0
+      )
+      &&
+      new Set(
+        values
+      ).size ===
+        METRIC_IDS.length;
+
+    if (!valid) {
+      return null;
+    }
+
+    return {
+      all:
+        parsed.all as number,
+
+      ozon:
+        parsed.ozon as number,
+
+      wildberries:
+        parsed.wildberries as number,
+
+      "yandex-market":
+        parsed[
+          "yandex-market"
+        ] as number,
+    };
+  } catch {
+    return null;
+  }
 }
 
 
@@ -141,17 +272,17 @@ export default function HomeMarketplaceCards({
       null
     );
 
+  const targetSlotRef =
+    useRef<number | null>(
+      null
+    );
+
   const [
-    positions,
-    setPositions,
+    slots,
+    setSlots,
   ] =
-    useState<
-      Record<
-        string,
-        Position
-      >
-    >(
-      {}
+    useState<SlotMap>(
+      DEFAULT_SLOTS
     );
 
   const [
@@ -170,6 +301,37 @@ export default function HomeMarketplaceCards({
       null
     );
 
+  const [
+    dragPosition,
+    setDragPosition,
+  ] =
+    useState<Position | null>(
+      null
+    );
+
+  const [
+    targetSlot,
+    setTargetSlot,
+  ] =
+    useState<number | null>(
+      null
+    );
+
+
+  useEffect(
+    () => {
+      const saved =
+        readSavedSlots();
+
+      if (saved) {
+        setSlots(
+          saved
+        );
+      }
+    },
+    []
+  );
+
 
   useEffect(
     () => {
@@ -184,140 +346,84 @@ export default function HomeMarketplaceCards({
       HTMLDivElement =
         currentBoard;
 
-      function arrange() {
+      function measure() {
         const width =
           board.clientWidth;
 
         const nextCardWidth =
-          Math.max(
-            230,
+          (
+            width
+            -
+            CARD_GAP
+            *
             (
-              width
+              COLUMN_COUNT
               -
-              CARD_GAP * 3
+              1
             )
-            /
-            4
-          );
+          )
+          /
+          COLUMN_COUNT;
 
         setCardWidth(
           nextCardWidth
         );
 
-        let saved:
-        Record<
-          string,
-          Position
-        > = {};
+        const maxRow =
+          Math.max(
+            0,
+            Math.floor(
+              (
+                board.clientHeight
+                -
+                CARD_HEIGHT
+              )
+              /
+              (
+                CARD_HEIGHT
+                +
+                CARD_GAP
+              )
+            )
+          );
 
-        try {
-          const raw =
-            window
-              .localStorage
-              .getItem(
-                STORAGE_KEY
+        const maxSlot =
+          (
+            maxRow
+            +
+            1
+          )
+          *
+          COLUMN_COUNT
+          -
+          1;
+
+        setSlots(
+          current => {
+            const fits =
+              METRIC_IDS.every(
+                id =>
+                  current[
+                    id
+                  ]
+                  <=
+                  maxSlot
               );
 
-          if (raw) {
-            saved =
-              JSON.parse(
-                raw
-              ) as
-                Record<
-                  string,
-                  Position
-                >;
+            return fits
+
+              ? current
+
+              : DEFAULT_SLOTS;
           }
-        } catch {
-          saved =
-            {};
-        }
-
-        const maxX =
-          Math.max(
-            0,
-            width
-            -
-            nextCardWidth
-          );
-
-        const maxY =
-          Math.max(
-            0,
-            board.clientHeight
-            -
-            CARD_HEIGHT
-          );
-
-        const next:
-        Record<
-          string,
-          Position
-        > = {};
-
-        metrics.forEach(
-          (
-            metric,
-            index
-          ) => {
-            const stored =
-              saved[
-                metric.id
-              ];
-
-            if (stored) {
-              next[
-                metric.id
-              ] = {
-                x:
-                  clamp(
-                    stored.x,
-                    0,
-                    maxX
-                  ),
-
-                y:
-                  clamp(
-                    stored.y,
-                    0,
-                    maxY
-                  ),
-              };
-
-              return;
-            }
-
-            next[
-              metric.id
-            ] = {
-              x:
-                Math.min(
-                  index
-                  *
-                  (
-                    nextCardWidth
-                    +
-                    CARD_GAP
-                  ),
-                  maxX
-                ),
-
-              y:
-                0,
-            };
-          }
-        );
-
-        setPositions(
-          next
         );
       }
 
-      arrange();
+      measure();
 
       const observer =
         new ResizeObserver(
-          arrange
+          measure
         );
 
       observer.observe(
@@ -328,9 +434,7 @@ export default function HomeMarketplaceCards({
         observer.disconnect();
       };
     },
-    [
-      metrics,
-    ]
+    []
   );
 
 
@@ -340,6 +444,18 @@ export default function HomeMarketplaceCards({
     id:
       MetricId
   ) {
+    const board =
+      boardRef.current;
+
+    if (
+      !board
+      ||
+      cardWidth <=
+        0
+    ) {
+      return;
+    }
+
     const card =
       event.currentTarget
         .parentElement;
@@ -348,8 +464,16 @@ export default function HomeMarketplaceCards({
       return;
     }
 
-    const rect =
+    const cardRect =
       card.getBoundingClientRect();
+
+    const initialPosition =
+      positionForSlot(
+        slots[
+          id
+        ],
+        cardWidth
+      );
 
     dragRef.current = {
       id,
@@ -357,22 +481,37 @@ export default function HomeMarketplaceCards({
       offsetX:
         event.clientX
         -
-        rect.left,
+        cardRect.left,
 
       offsetY:
         event.clientY
         -
-        rect.top,
+        cardRect.top,
     };
+
+    targetSlotRef.current =
+      slots[
+        id
+      ];
+
+    setDraggingId(
+      id
+    );
+
+    setDragPosition(
+      initialPosition
+    );
+
+    setTargetSlot(
+      slots[
+        id
+      ]
+    );
 
     event.currentTarget
       .setPointerCapture(
         event.pointerId
       );
-
-    setDraggingId(
-      id
-    );
   }
 
 
@@ -390,6 +529,9 @@ export default function HomeMarketplaceCards({
       !board
       ||
       !drag
+      ||
+      cardWidth <=
+        0
     ) {
       return;
     }
@@ -437,15 +579,91 @@ export default function HomeMarketplaceCards({
         ),
     };
 
-    setPositions(
-      current => ({
-        ...current,
+    setDragPosition(
+      nextPosition
+    );
 
-        [
-          drag.id
-        ]:
-          nextPosition,
-      })
+    const column =
+      clamp(
+        Math.round(
+          nextPosition.x
+          /
+          (
+            cardWidth
+            +
+            CARD_GAP
+          )
+        ),
+        0,
+        COLUMN_COUNT
+        -
+        1
+      );
+
+    const maxRow =
+      Math.max(
+        0,
+        Math.floor(
+          (
+            board.clientHeight
+            -
+            CARD_HEIGHT
+          )
+          /
+          (
+            CARD_HEIGHT
+            +
+            CARD_GAP
+          )
+        )
+      );
+
+    const row =
+      clamp(
+        Math.round(
+          nextPosition.y
+          /
+          (
+            CARD_HEIGHT
+            +
+            CARD_GAP
+          )
+        ),
+        0,
+        maxRow
+      );
+
+    const candidate =
+      row
+      *
+      COLUMN_COUNT
+      +
+      column;
+
+    const occupied =
+      METRIC_IDS.some(
+        id =>
+          id !==
+            drag.id
+          &&
+          slots[
+            id
+          ] ===
+            candidate
+      );
+
+    const nextTarget =
+      occupied
+
+        ? null
+
+        : candidate;
+
+    targetSlotRef.current =
+      nextTarget;
+
+    setTargetSlot(
+      nextTarget
     );
   }
 
@@ -461,17 +679,40 @@ export default function HomeMarketplaceCards({
       return;
     }
 
-    try {
-      window
-        .localStorage
-        .setItem(
-          STORAGE_KEY,
-          JSON.stringify(
-            positions
-          )
-        );
-    } catch {
-      // Сохранение позиции не влияет на работу карточек.
+    const nextTarget =
+      targetSlotRef.current;
+
+    if (
+      nextTarget !==
+      null
+    ) {
+      setSlots(
+        current => {
+          const next = {
+            ...current,
+
+            [
+              drag.id
+            ]:
+              nextTarget,
+          };
+
+          try {
+            window
+              .localStorage
+              .setItem(
+                STORAGE_KEY,
+                JSON.stringify(
+                  next
+                )
+              );
+          } catch {
+            // Раскладка продолжит работать без сохранения.
+          }
+
+          return next;
+        }
+      );
     }
 
     if (
@@ -489,10 +730,36 @@ export default function HomeMarketplaceCards({
     dragRef.current =
       null;
 
+    targetSlotRef.current =
+      null;
+
     setDraggingId(
       null
     );
+
+    setDragPosition(
+      null
+    );
+
+    setTargetSlot(
+      null
+    );
   }
+
+
+  const targetPosition =
+    targetSlot !==
+      null
+    &&
+    cardWidth >
+      0
+
+      ? positionForSlot(
+          targetSlot,
+          cardWidth
+        )
+
+      : null;
 
 
   return (
@@ -506,23 +773,64 @@ export default function HomeMarketplaceCards({
         "Финансовые показатели маркетплейсов"
     >
       {
+        draggingId
+        &&
+        targetPosition
+
+          ? (
+            <div
+              className={
+                "home-marketplace-drop-slot "
+                +
+                "home-marketplace-drop-slot--"
+                +
+                draggingId
+              }
+              style={{
+                width:
+                  cardWidth,
+
+                transform:
+                  "translate3d("
+                  +
+                  targetPosition.x
+                  +
+                  "px, "
+                  +
+                  targetPosition.y
+                  +
+                  "px, 0)",
+              }}
+              aria-hidden="true"
+            />
+          )
+
+          : null
+      }
+
+      {
         cardWidth >
           0
 
           ? metrics.map(
               metric => {
-                const position =
-                  positions[
-                    metric.id
-                  ]
-                  ??
-                  {
-                    x:
-                      0,
+                const isDragging =
+                  draggingId ===
+                  metric.id;
 
-                    y:
-                      0,
-                  };
+                const position =
+                  isDragging
+                  &&
+                  dragPosition
+
+                    ? dragPosition
+
+                    : positionForSlot(
+                        slots[
+                          metric.id
+                        ],
+                        cardWidth
+                      );
 
                 const isAll =
                   metric.id ===
@@ -541,8 +849,7 @@ export default function HomeMarketplaceCards({
                       metric.id
                       +
                       (
-                        draggingId ===
-                          metric.id
+                        isDragging
 
                           ? " home-marketplace-metric-card--dragging"
 
@@ -625,7 +932,26 @@ export default function HomeMarketplaceCards({
                         className=
                           "home-marketplace-card-grip"
                         aria-hidden="true"
-                      />
+                      >
+                        {
+                          Array.from(
+                            {
+                              length:
+                                6,
+                            },
+                            (
+                              _,
+                              index
+                            ) => (
+                              <span
+                                key={
+                                  index
+                                }
+                              />
+                            )
+                          )
+                        }
+                      </span>
                     </div>
 
                     <div
@@ -661,23 +987,6 @@ export default function HomeMarketplaceCards({
                           {
                             formatRubles(
                               metric.operatingProfit
-                            )
-                          }
-                        </strong>
-                      </div>
-
-                      <div
-                        className=
-                          "home-marketplace-card-metric home-marketplace-card-metric--purchases"
-                      >
-                        <span>
-                          Выкупы, шт.
-                        </span>
-
-                        <strong>
-                          {
-                            formatInteger(
-                              metric.purchases
                             )
                           }
                         </strong>
