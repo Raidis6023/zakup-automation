@@ -87,7 +87,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 3px;
 }
 
 
@@ -187,7 +187,15 @@
       -
       10px
     );
-  margin-left: 1px;
+
+  /*
+   * Верхняя таблица использует тот же colgroup,
+   * что и основная. На Windows Chrome визуальная
+   * граница рабочей области scrollport оказывается
+   * на 4 px левее из-за вертикального scrollbar.
+   */
+  margin-left: -3px;
+
   box-sizing: border-box;
 }
 
