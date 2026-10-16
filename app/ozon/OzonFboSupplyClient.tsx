@@ -62,25 +62,56 @@ type PreviewWarehouse = {
   name: string | null;
   address: string | null;
   availability: string;
-  invalid_reason: string | null;
   total_score: number | null;
   total_rank: number | null;
-  full_quantity_units: number | null;
+};
+
+type PreviewArticle = {
+  master_code: string | null;
+  offer_id: string | null;
+  product_name: string | null;
+  sku: number | null;
+  raw_need: number;
+  units_per_carton: number | null;
+  cartons: number;
+  final_quantity: number;
+  rule:
+    | "full_cartons_down"
+    | "one_carton_over_half"
+    | "zero_half_or_less"
+    | "missing_pack"
+    | "pack_conflict"
+    | "missing_enot"
+    | "invalid_sku";
+  ozon_rejected: boolean;
+  ozon_rejection_reasons: string[];
+};
+
+type PreviewSlot = {
+  date: string;
+  from: string;
+  to: string;
 };
 
 type PreviewCluster = {
   macrolocal_cluster_id: number;
   cluster_name: string | null;
-  requested_units: number;
-  draft_accepted_units: number;
-  rejected_units: number;
-  sku_count: number;
-  rejected_skus: number[];
+  raw_need_units: number;
+  proposed_units: number;
+  ozon_accepted_units: number;
+  cartons: number;
+  article_count: number;
+  articles_to_supply: number;
+  missing_pack_count: number;
+  zero_after_rounding_count: number;
   draft_id: number | null;
-  status: "available" | "partial" | "not_available" | "error";
+  status: "available" | "partial" | "not_available" | "no_supply" | "error";
   recommended_warehouse: PreviewWarehouse | null;
   warehouses: PreviewWarehouse[];
+  timeslots: PreviewSlot[];
+  supports_common_timeslot: boolean;
   error: string | null;
+  articles: PreviewArticle[];
 };
 
 type PreviewPayload = {
@@ -93,16 +124,39 @@ type PreviewPayload = {
   target_date?: string;
   window_date_from?: string;
   window_date_to?: string;
-  draft_ids?: number[];
+  rounding_rule?: string;
   summary?: {
     clusters: number;
-    available_clusters: number;
-    partial_clusters: number;
-    blocked_clusters: number;
-    requested_units: number;
-    draft_accepted_units: number;
-    rejected_units: number;
+    clusters_with_supply: number;
+    raw_need_units: number;
+    proposed_units: number;
+    ozon_accepted_units: number;
+    cartons: number;
+    missing_pack_items: number;
+    conflicting_pack_items: number;
+    missing_enot_items: number;
+    invalid_sku_items: number;
+    zero_half_or_less_items: number;
+    technical_errors: number;
   };
+  recommended_timeslot?: {
+    date: string;
+    from: string;
+    to: string;
+    cluster_count: number;
+    cluster_ids: number[];
+    coverage_percent: number;
+  } | null;
+  timeslot_candidates?: Array<{
+    date: string;
+    from: string;
+    to: string;
+    cluster_count: number;
+    cluster_ids: number[];
+    coverage_percent: number;
+  }>;
+  can_create_real?: boolean;
+  draft_ids?: number[];
   clusters?: PreviewCluster[];
   warnings?: string[];
 };
@@ -446,6 +500,19 @@ export default function OzonFboSupplyClient({
     );
 
 
+  const [
+    expandedPreviewCluster,
+    setExpandedPreviewCluster,
+  ] =
+    useState<
+      number
+      |
+      null
+    >(
+      null
+    );
+
+
   const mountedRef =
     useRef(
       true
@@ -739,7 +806,7 @@ export default function OzonFboSupplyClient({
 
       const response =
         await fetch(
-          "/api/ozon/fbo-supply",
+          "/api/ozon/fbo-supply-preview",
           {
             method:
               "POST",
@@ -748,14 +815,6 @@ export default function OzonFboSupplyClient({
               "Content-Type":
                 "application/json",
             },
-
-            body:
-              JSON.stringify(
-                {
-                  action:
-                    "preview",
-                }
-              ),
 
             cache:
               "no-store",
@@ -1057,9 +1116,8 @@ export default function OzonFboSupplyClient({
       previewMatchesCurrentCalculation
       &&
       preview
-        ?.summary
-        ?.blocked_clusters ===
-        0
+        ?.can_create_real ===
+        true
     );
 
 
@@ -1201,8 +1259,8 @@ export default function OzonFboSupplyClient({
           >
             {
               previewLoading
-                ? "Ozon проверяет склады..."
-                : "Тест: проверить поставку"
+                ? "Ozon проверяет короба, склады и таймслоты..."
+                : "Тест: состав, склады и таймслот"
             }
           </button>
 
@@ -1411,10 +1469,10 @@ export default function OzonFboSupplyClient({
                 className=
                   "reason-text"
               >
-                Ozon проверил текущий состав
-                через технические черновики.
-                Нажатие тестовой кнопки не вызывает
-                создание заявки на поставку.
+                Расчёт количества привязан к ЕНОТ и вложимости
+                в 1 транспортную коробку. Полные короба округляются
+                вниз. Если потребность меньше одного короба,
+                больше 50% вложимости даёт 1 короб, 50% и меньше — 0.
               </div>
 
 
@@ -1423,63 +1481,146 @@ export default function OzonFboSupplyClient({
                   "ozon-fbo-supply-counters"
               >
                 <span>
-                  Кластеров:{" "}
-                  <strong>
-                    {
-                      preview.summary.clusters
-                    }
-                  </strong>
-                </span>
-
-                <span>
-                  Полностью доступны:{" "}
-                  <strong>
-                    {
-                      preview.summary.available_clusters
-                    }
-                  </strong>
-                </span>
-
-                <span>
-                  Частично:{" "}
-                  <strong>
-                    {
-                      preview.summary.partial_clusters
-                    }
-                  </strong>
-                </span>
-
-                <span>
-                  Недоступны:{" "}
-                  <strong>
-                    {
-                      preview.summary.blocked_clusters
-                    }
-                  </strong>
-                </span>
-
-                <span>
-                  По расчёту:{" "}
+                  Исходная потребность:{" "}
                   <strong>
                     {
                       formatNumber(
-                        preview.summary.requested_units
+                        preview.summary.raw_need_units
                       )
                     } шт.
                   </strong>
                 </span>
 
                 <span>
-                  После SKU-проверки:{" "}
+                  После коробов:{" "}
                   <strong>
                     {
                       formatNumber(
-                        preview.summary.draft_accepted_units
+                        preview.summary.proposed_units
                       )
                     } шт.
+                  </strong>
+                </span>
+
+                <span>
+                  Коробов:{" "}
+                  <strong>
+                    {
+                      formatNumber(
+                        preview.summary.cartons
+                      )
+                    }
+                  </strong>
+                </span>
+
+                <span>
+                  Без вложимости:{" "}
+                  <strong>
+                    {
+                      formatNumber(
+                        preview.summary.missing_pack_items
+                      )
+                    }
+                  </strong>
+                </span>
+
+                <span>
+                  ≤ 50% короба → 0:{" "}
+                  <strong>
+                    {
+                      formatNumber(
+                        preview.summary.zero_half_or_less_items
+                      )
+                    }
                   </strong>
                 </span>
               </div>
+
+
+              {
+                preview.recommended_timeslot
+                  ? (
+
+                    <div
+                      className=
+                        "reason-box"
+
+                      style={{
+                        marginTop:
+                          "14px",
+                      }}
+                    >
+                      <strong>
+                        Рекомендуемый общий таймслот
+                      </strong>
+
+                      <div
+                        className=
+                          "reason-text"
+                      >
+                        {
+                          formatDateTime(
+                            preview.recommended_timeslot.from
+                          )
+                        }
+
+                        {" → "}
+
+                        {
+                          formatDateTime(
+                            preview.recommended_timeslot.to
+                          )
+                        }
+
+                        {" · подходит для "}
+
+                        <strong>
+                          {
+                            preview.recommended_timeslot.cluster_count
+                          }
+                        </strong>
+
+                        {" кластеров ("}
+
+                        <strong>
+                          {
+                            preview.recommended_timeslot.coverage_percent
+                          }%
+                        </strong>
+
+                        {")"}
+                      </div>
+
+                      <div
+                        className=
+                          "reason-text"
+                      >
+                        Приоритет выбора: максимальное количество
+                        кластеров, затем близость к +7 дням
+                        с порядком +7, +6, +8, +5, +9.
+                      </div>
+                    </div>
+
+                  )
+                  : (
+
+                    <div
+                      className=
+                        "ozon-fbo-supply-error"
+                    >
+                      <strong>
+                        Общий таймслот пока не найден
+                      </strong>
+
+                      <div>
+                        Склады и состав показаны ниже.
+                        Ozon не вернул единый доступный слот
+                        в окне +5…+9 дней.
+                      </div>
+                    </div>
+
+                  )
+              }
 
 
               <div
@@ -1491,21 +1632,19 @@ export default function OzonFboSupplyClient({
                     "auto",
                 }}
               >
-
                 <div
                   style={{
                     minWidth:
-                      "940px",
+                      "1180px",
                   }}
                 >
-
                   <div
                     style={{
                       display:
                         "grid",
 
                       gridTemplateColumns:
-                        "1.2fr 0.7fr 0.8fr 1.8fr 1fr 1.5fr",
+                        "1.25fr 0.65fr 0.65fr 0.55fr 1.7fr 0.8fr 0.75fr",
 
                       gap:
                         "12px",
@@ -1523,29 +1662,13 @@ export default function OzonFboSupplyClient({
                         700,
                     }}
                   >
-                    <span>
-                      Кластер
-                    </span>
-
-                    <span>
-                      Нужно
-                    </span>
-
-                    <span>
-                      После проверки
-                    </span>
-
-                    <span>
-                      Рекомендуемый склад
-                    </span>
-
-                    <span>
-                      Доступность
-                    </span>
-
-                    <span>
-                      Другие доступные склады
-                    </span>
+                    <span>Кластер</span>
+                    <span>Нужно</span>
+                    <span>К поставке</span>
+                    <span>Коробов</span>
+                    <span>Рекомендуемый склад</span>
+                    <span>Общий слот</span>
+                    <span>Состав</span>
                   </div>
 
 
@@ -1557,18 +1680,9 @@ export default function OzonFboSupplyClient({
                     ).map(
                       cluster => {
 
-                        const recommended =
-                          cluster
-                            .recommended_warehouse;
-
-
-                        const otherWarehouses =
-                          cluster.warehouses.filter(
-                            warehouse =>
-                              warehouse.warehouse_id !==
-                              recommended
-                                ?.warehouse_id
-                          );
+                        const expanded =
+                          expandedPreviewCluster ===
+                          cluster.macrolocal_cluster_id;
 
 
                         return (
@@ -1577,226 +1691,422 @@ export default function OzonFboSupplyClient({
                             key={
                               cluster.macrolocal_cluster_id
                             }
-
-                            style={{
-                              display:
-                                "grid",
-
-                              gridTemplateColumns:
-                                "1.2fr 0.7fr 0.8fr 1.8fr 1fr 1.5fr",
-
-                              gap:
-                                "12px",
-
-                              padding:
-                                "10px 0",
-
-                              borderBottom:
-                                "1px solid var(--ws-border)",
-
-                              alignItems:
-                                "start",
-
-                              fontSize:
-                                "11px",
-                            }}
                           >
 
-                            <span>
-                              <strong>
+                            <div
+                              style={{
+                                display:
+                                  "grid",
+
+                                gridTemplateColumns:
+                                  "1.25fr 0.65fr 0.65fr 0.55fr 1.7fr 0.8fr 0.75fr",
+
+                                gap:
+                                  "12px",
+
+                                padding:
+                                  "10px 0",
+
+                                borderBottom:
+                                  "1px solid var(--ws-border)",
+
+                                alignItems:
+                                  "start",
+
+                                fontSize:
+                                  "11px",
+                              }}
+                            >
+                              <span>
+                                <strong>
+                                  {
+                                    cluster.cluster_name
+                                    ??
+                                    `Кластер ${cluster.macrolocal_cluster_id}`
+                                  }
+                                </strong>
+
+                                <br />
+
+                                <small
+                                  className=
+                                    "reason-text"
+                                >
+                                  {
+                                    cluster.article_count
+                                  } ЕНОТ
+                                </small>
+                              </span>
+
+                              <span>
+                                <strong>
+                                  {
+                                    formatNumber(
+                                      cluster.raw_need_units
+                                    )
+                                  }
+                                </strong>
+                                {" шт."}
+                              </span>
+
+                              <span>
+                                <strong>
+                                  {
+                                    formatNumber(
+                                      cluster.proposed_units
+                                    )
+                                  }
+                                </strong>
+                                {" шт."}
+
                                 {
-                                  cluster.cluster_name
-                                  ??
-                                  `Кластер ${cluster.macrolocal_cluster_id}`
+                                  cluster.ozon_accepted_units !==
+                                    cluster.proposed_units
+                                    ? (
+                                      <>
+                                        <br />
+
+                                        <small
+                                          style={{
+                                            color:
+                                              "#b42318",
+                                          }}
+                                        >
+                                          Ozon принимает{" "}
+                                          {
+                                            formatNumber(
+                                              cluster.ozon_accepted_units
+                                            )
+                                          }
+                                        </small>
+                                      </>
+                                    )
+                                    : null
                                 }
-                              </strong>
+                              </span>
 
-                              <br />
+                              <span>
+                                <strong>
+                                  {
+                                    formatNumber(
+                                      cluster.cartons
+                                    )
+                                  }
+                                </strong>
+                              </span>
 
-                              <small
-                                className=
-                                  "reason-text"
-                              >
+                              <span>
                                 {
-                                  cluster.sku_count
-                                } SKU
-                              </small>
-                            </span>
+                                  cluster.recommended_warehouse
+                                    ? (
+                                      <>
+                                        <strong>
+                                          {
+                                            cluster.recommended_warehouse.name
+                                            ??
+                                            `Склад ${cluster.recommended_warehouse.warehouse_id}`
+                                          }
+                                        </strong>
 
+                                        {
+                                          cluster.recommended_warehouse.address
+                                            ? (
+                                              <>
+                                                <br />
 
-                            <span>
-                              <strong>
-                                {
-                                  formatNumber(
-                                    cluster.requested_units
-                                  )
-                                }
-                              </strong>
-                              {" шт."}
-                            </span>
-
-
-                            <span>
-                              <strong>
-                                {
-                                  formatNumber(
-                                    cluster.draft_accepted_units
-                                  )
-                                }
-                              </strong>
-                              {" шт."}
-
-                              {
-                                cluster.rejected_units >
-                                  0
-                                  ? (
-                                    <>
-                                      <br />
-
+                                                <small
+                                                  className=
+                                                    "reason-text"
+                                                >
+                                                  {
+                                                    cluster.recommended_warehouse.address
+                                                  }
+                                                </small>
+                                              </>
+                                            )
+                                            : null
+                                        }
+                                      </>
+                                    )
+                                    : (
                                       <small
                                         style={{
                                           color:
-                                            "#b42318",
-                                        }}
-                                      >
-                                        отклонено{" "}
-                                        {
-                                          formatNumber(
-                                            cluster.rejected_units
-                                          )
-                                        }
-                                      </small>
-                                    </>
-                                  )
-                                  : null
-                              }
-                            </span>
-
-
-                            <span>
-                              {
-                                recommended
-                                  ? (
-                                    <>
-                                      <strong>
-                                        {
-                                          recommended.name
-                                          ??
-                                          `Склад ${recommended.warehouse_id}`
-                                        }
-                                      </strong>
-
-                                      {
-                                        recommended.address
-                                          ? (
-                                            <>
-                                              <br />
-
-                                              <small
-                                                className=
-                                                  "reason-text"
-                                              >
-                                                {
-                                                  recommended.address
-                                                }
-                                              </small>
-                                            </>
-                                          )
-                                          : null
-                                      }
-                                    </>
-                                  )
-                                  : "—"
-                              }
-                            </span>
-
-
-                            <span>
-                              {
-                                cluster.status ===
-                                  "available"
-                                  ? "Полностью"
-
-                                  : cluster.status ===
-                                      "partial"
-                                    ? "Частично"
-
-                                    : cluster.status ===
-                                        "not_available"
-                                      ? "Недоступно"
-
-                                      : "Ошибка"
-                              }
-
-                              {
-                                recommended
-                                &&
-                                recommended.full_quantity_units !==
-                                  null
-                                  ? (
-                                    <>
-                                      <br />
-
-                                      <small
-                                        className=
-                                          "reason-text"
-                                      >
-                                        полный объём:{" "}
-                                        {
-                                          formatNumber(
-                                            recommended.full_quantity_units
-                                          )
-                                        } шт.
-                                      </small>
-                                    </>
-                                  )
-                                  : null
-                              }
-
-                              {
-                                cluster.error
-                                  ? (
-                                    <>
-                                      <br />
-
-                                      <small
-                                        style={{
-                                          color:
-                                            "#b42318",
+                                            cluster.proposed_units >
+                                              0
+                                              ? "#b42318"
+                                              : undefined,
                                         }}
                                       >
                                         {
                                           cluster.error
+                                          ??
+                                          "—"
                                         }
                                       </small>
-                                    </>
-                                  )
-                                  : null
-                              }
-                            </span>
+                                    )
+                                }
+                              </span>
+
+                              <span>
+                                {
+                                  cluster.supports_common_timeslot
+                                    ? "Да"
+                                    : cluster.proposed_units <=
+                                        0
+                                      ? "Не нужен"
+                                      : "Нет"
+                                }
+                              </span>
+
+                              <span>
+                                <button
+                                  type="button"
+
+                                  className=
+                                    "secondary-button"
+
+                                  onClick={
+                                    () => {
+                                      setExpandedPreviewCluster(
+                                        expanded
+                                          ? null
+                                          : cluster.macrolocal_cluster_id
+                                      );
+                                    }
+                                  }
+                                >
+                                  {
+                                    expanded
+                                      ? "Скрыть"
+                                      : `${cluster.article_count} поз.`
+                                  }
+                                </button>
+                              </span>
+                            </div>
 
 
-                            <span>
-                              {
-                                otherWarehouses.length >
-                                  0
-                                  ? otherWarehouses
-                                      .map(
-                                        warehouse =>
-                                          `${warehouse.name ?? warehouse.warehouse_id} (${
-                                            warehouse.availability ===
-                                              "FULL_AVAILABLE"
-                                              ? "полностью"
-                                              : "частично"
-                                          })`
+                            {
+                              expanded
+                                ? (
+
+                                  <div
+                                    style={{
+                                      padding:
+                                        "10px 0 16px 18px",
+
+                                      borderBottom:
+                                        "1px solid var(--ws-border)",
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        display:
+                                          "grid",
+
+                                        gridTemplateColumns:
+                                          "0.7fr 0.9fr 1.6fr 0.8fr 0.65fr 0.65fr 0.65fr 0.85fr",
+
+                                        gap:
+                                          "10px",
+
+                                        minWidth:
+                                          "1160px",
+
+                                        padding:
+                                          "6px 0",
+
+                                        fontSize:
+                                          "10px",
+
+                                        fontWeight:
+                                          700,
+                                      }}
+                                    >
+                                      <span>ЕНОТ</span>
+                                      <span>Артикул</span>
+                                      <span>Товар</span>
+                                      <span>Ozon SKU</span>
+                                      <span>Потребность</span>
+                                      <span>В коробе</span>
+                                      <span>Коробов</span>
+                                      <span>К поставке</span>
+                                    </div>
+
+
+                                    {
+                                      cluster.articles.map(
+                                        (
+                                          article,
+                                          index
+                                        ) => (
+
+                                          <div
+                                            key={
+                                              [
+                                                article.master_code,
+                                                article.sku,
+                                                index,
+                                              ].join(
+                                                ":"
+                                              )
+                                            }
+
+                                            style={{
+                                              display:
+                                                "grid",
+
+                                              gridTemplateColumns:
+                                                "0.7fr 0.9fr 1.6fr 0.8fr 0.65fr 0.65fr 0.65fr 0.85fr",
+
+                                              gap:
+                                                "10px",
+
+                                              minWidth:
+                                                "1160px",
+
+                                              padding:
+                                                "7px 0",
+
+                                              borderTop:
+                                                "1px solid var(--ws-border)",
+
+                                              fontSize:
+                                                "10px",
+                                            }}
+                                          >
+                                            <span>
+                                              <strong>
+                                                {
+                                                  article.master_code
+                                                  ??
+                                                  "—"
+                                                }
+                                              </strong>
+                                            </span>
+
+                                            <span>
+                                              {
+                                                article.offer_id
+                                                ??
+                                                "—"
+                                              }
+                                            </span>
+
+                                            <span>
+                                              {
+                                                article.product_name
+                                                ??
+                                                "—"
+                                              }
+                                            </span>
+
+                                            <span>
+                                              {
+                                                article.sku
+                                                ??
+                                                "—"
+                                              }
+                                            </span>
+
+                                            <span>
+                                              {
+                                                formatNumber(
+                                                  article.raw_need
+                                                )
+                                              }
+                                            </span>
+
+                                            <span>
+                                              {
+                                                article.units_per_carton
+                                                ??
+                                                "—"
+                                              }
+                                            </span>
+
+                                            <span>
+                                              {
+                                                formatNumber(
+                                                  article.cartons
+                                                )
+                                              }
+                                            </span>
+
+                                            <span>
+                                              <strong>
+                                                {
+                                                  formatNumber(
+                                                    article.final_quantity
+                                                  )
+                                                }
+                                              </strong>
+
+                                              {
+                                                article.rule ===
+                                                  "one_carton_over_half"
+                                                  ? " · >50% → 1 короб"
+
+                                                  : article.rule ===
+                                                      "zero_half_or_less"
+                                                    ? " · ≤50% → 0"
+
+                                                    : article.rule ===
+                                                        "missing_pack"
+                                                      ? " · нет вложимости"
+
+                                                      : article.rule ===
+                                                          "pack_conflict"
+                                                        ? " · конфликт вложимости"
+
+                                                        : article.rule ===
+                                                            "missing_enot"
+                                                          ? " · нет ЕНОТ"
+
+                                                          : article.rule ===
+                                                              "invalid_sku"
+                                                            ? " · нет SKU"
+
+                                                            : ""
+                                              }
+
+                                              {
+                                                article.ozon_rejected
+                                                  ? (
+                                                    <>
+                                                      <br />
+
+                                                      <small
+                                                        style={{
+                                                          color:
+                                                            "#b42318",
+                                                        }}
+                                                      >
+                                                        Ozon отклонил
+                                                        {
+                                                          article.ozon_rejection_reasons.length >
+                                                            0
+                                                            ? `: ${article.ozon_rejection_reasons.join(
+                                                                ", "
+                                                              )}`
+                                                            : ""
+                                                        }
+                                                      </small>
+                                                    </>
+                                                  )
+                                                  : null
+                                              }
+                                            </span>
+                                          </div>
+
+                                        )
                                       )
-                                      .join(
-                                        "; "
-                                      )
+                                    }
+                                  </div>
 
-                                  : "—"
-                              }
-                            </span>
+                                )
+                                : null
+                            }
 
                           </div>
 
@@ -1805,10 +2115,82 @@ export default function OzonFboSupplyClient({
                       }
                     )
                   }
-
                 </div>
-
               </div>
+
+
+              {
+                (
+                  preview.timeslot_candidates
+                  ??
+                  []
+                ).length >
+                  1
+                  ? (
+                    <div
+                      className=
+                        "reason-box"
+
+                      style={{
+                        marginTop:
+                          "14px",
+                      }}
+                    >
+                      <strong>
+                        Другие общие таймслоты
+                      </strong>
+
+                      {
+                        (
+                          preview.timeslot_candidates
+                          ??
+                          []
+                        )
+                          .slice(
+                            1,
+                            6
+                          )
+                          .map(
+                            slot => (
+                              <div
+                                key={
+                                  `${slot.from}:${slot.to}`
+                                }
+
+                                className=
+                                  "reason-text"
+                              >
+                                {
+                                  formatDateTime(
+                                    slot.from
+                                  )
+                                }
+
+                                {" → "}
+
+                                {
+                                  formatDateTime(
+                                    slot.to
+                                  )
+                                }
+
+                                {" · "}
+
+                                {
+                                  slot.cluster_count
+                                } кластеров ·{" "}
+
+                                {
+                                  slot.coverage_percent
+                                }%
+                              </div>
+                            )
+                          )
+                      }
+                    </div>
+                  )
+                  : null
+              }
 
 
               {
