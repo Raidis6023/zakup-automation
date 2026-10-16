@@ -355,6 +355,41 @@ svg {
 }
 
 
+/* Тот же индикатор синхронизации, что у Wildberries:
+   вместо отдельного вращающегося SVG используем ↻, 26px,
+   скорость 0.9s/оборот, внутри исходного круга статуса.
+   Оранжевая цветовая палитра Яндекс Маркета сохраняется. */
+.yandex-reference-page
+.ym-sync-status-card--loading
+.ym-sync-status-card__icon > span {
+  display: none;
+}
+
+.yandex-reference-page
+.ym-sync-status-card--loading
+.ym-sync-status-card__icon::before {
+  content: "↻";
+  display: block;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  transform-origin: center;
+  animation: ym-status-sync-spin 0.9s linear infinite;
+}
+
+@keyframes ym-status-sync-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yandex-reference-page
+  .ym-sync-status-card--loading
+  .ym-sync-status-card__icon::before {
+    animation: none;
+  }
+}
+
 .yandex-reference-page
 .ym-sync-status-card__content {
   min-width:
