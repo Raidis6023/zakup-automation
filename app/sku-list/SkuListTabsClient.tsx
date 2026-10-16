@@ -8,9 +8,11 @@ import {
 
 export type SkuListFinancialRow = {
   enot: string | null;
-  article: string;
-  operatingProfit: number;
+  sku: string | null;
+  sellerArticle: string;
+  productName: string | null;
   revenue: number;
+  operatingProfit: number;
   purchases: number;
 };
 
@@ -20,6 +22,29 @@ type MarketplaceTab =
   | "ozon"
   | "wildberries"
   | "yandex-market";
+
+
+type SortKey =
+  | "enot"
+  | "sku"
+  | "sellerArticle"
+  | "productName"
+  | "revenue"
+  | "operatingProfit"
+  | "purchases";
+
+
+type SortDirection =
+  | "asc"
+  | "desc";
+
+
+const TEXT_SORT =
+  new Set<SortKey>([
+    "enot",
+    "sellerArticle",
+    "productName",
+  ]);
 
 
 function formatMoney(
@@ -61,6 +86,136 @@ function formatInteger(
 }
 
 
+function sortValue(
+  row:
+    SkuListFinancialRow,
+  key:
+    SortKey
+):
+string | number | null {
+
+  return row[
+    key
+  ];
+
+}
+
+
+function compareRows(
+  left:
+    SkuListFinancialRow,
+  right:
+    SkuListFinancialRow,
+  key:
+    SortKey,
+  direction:
+    SortDirection
+) {
+
+  const leftValue =
+    sortValue(
+      left,
+      key
+    );
+
+
+  const rightValue =
+    sortValue(
+      right,
+      key
+    );
+
+
+  if (
+    leftValue ===
+      null
+    ||
+    leftValue ===
+      ""
+  ) {
+
+    return (
+      rightValue ===
+        null
+      ||
+      rightValue ===
+        ""
+    )
+
+      ? 0
+
+      : 1;
+
+  }
+
+
+  if (
+    rightValue ===
+      null
+    ||
+    rightValue ===
+      ""
+  ) {
+
+    return -1;
+
+  }
+
+
+  const sign =
+    direction ===
+      "asc"
+
+      ? 1
+
+      : -1;
+
+
+  if (
+    TEXT_SORT.has(
+      key
+    )
+  ) {
+
+    return String(
+      leftValue
+    ).localeCompare(
+      String(
+        rightValue
+      ),
+      [
+        "ru",
+        "en",
+      ],
+      {
+        numeric:
+          true,
+
+        sensitivity:
+          "base",
+      }
+    )
+    *
+    sign;
+
+  }
+
+
+  return (
+    Number(
+      leftValue
+    )
+    -
+    Number(
+      rightValue
+    )
+  )
+  *
+  sign;
+
+}
+
+
 export default function SkuListTabsClient({
   ozonRows,
 }: {
@@ -77,6 +232,24 @@ export default function SkuListTabsClient({
     );
 
 
+  const [
+    sortKey,
+    setSortKey,
+  ] =
+    useState<SortKey>(
+      "operatingProfit"
+    );
+
+
+  const [
+    sortDirection,
+    setSortDirection,
+  ] =
+    useState<SortDirection>(
+      "desc"
+    );
+
+
   const unmatchedCount =
     useMemo(
       () =>
@@ -88,6 +261,183 @@ export default function SkuListTabsClient({
         ozonRows,
       ]
     );
+
+
+  const sortedRows =
+    useMemo(
+      () =>
+        ozonRows
+          .map(
+            (
+              row,
+              index
+            ) => ({
+              row,
+              index,
+            })
+          )
+          .sort(
+            (
+              left,
+              right
+            ) =>
+              compareRows(
+                left.row,
+                right.row,
+                sortKey,
+                sortDirection
+              )
+              ||
+              left.index
+              -
+              right.index
+          )
+          .map(
+            item =>
+              item.row
+          ),
+      [
+        ozonRows,
+        sortKey,
+        sortDirection,
+      ]
+    );
+
+
+  function handleSort(
+    key:
+      SortKey
+  ) {
+
+    if (
+      sortKey ===
+      key
+    ) {
+
+      setSortDirection(
+        previous =>
+          previous ===
+            "asc"
+
+            ? "desc"
+
+            : "asc"
+      );
+
+
+      return;
+
+    }
+
+
+    setSortKey(
+      key
+    );
+
+
+    setSortDirection(
+      TEXT_SORT.has(
+        key
+      )
+
+        ? "asc"
+
+        : "desc"
+    );
+
+  }
+
+
+  function SortHeading({
+    column,
+    label,
+  }: {
+    column:
+      SortKey;
+
+    label:
+      string;
+  }) {
+
+    const active =
+      sortKey ===
+      column;
+
+
+    return (
+
+      <th
+        aria-sort={
+          !active
+
+            ? "none"
+
+            : sortDirection ===
+                "asc"
+
+              ? "ascending"
+
+              : "descending"
+        }
+      >
+
+        <button
+          type="button"
+
+          className={
+            active
+
+              ? "sku-list-sort-button sku-list-sort-button--active"
+
+              : "sku-list-sort-button"
+          }
+
+          onClick={
+            () =>
+              handleSort(
+                column
+              )
+          }
+        >
+
+          <span>
+            {
+              label
+            }
+          </span>
+
+
+          {
+            active
+
+              ? (
+                <span
+                  className=
+                    "sku-list-sort-arrow"
+
+                  aria-hidden="true"
+                >
+                  {
+                    sortDirection ===
+                      "asc"
+
+                      ? "↑"
+
+                      : "↓"
+                  }
+                </span>
+              )
+
+              : null
+          }
+
+        </button>
+
+      </th>
+
+    );
+
+  }
 
 
   return (
@@ -298,22 +648,32 @@ export default function SkuListTabsClient({
 
                     <col
                       className=
-                        "sku-list-col-article"
+                        "sku-list-col-sku"
                     />
 
                     <col
                       className=
-                        "sku-list-col-money"
+                        "sku-list-col-flex"
                     />
 
                     <col
                       className=
-                        "sku-list-col-money"
+                        "sku-list-col-flex"
                     />
 
                     <col
                       className=
-                        "sku-list-col-purchases"
+                        "sku-list-col-number"
+                    />
+
+                    <col
+                      className=
+                        "sku-list-col-number"
+                    />
+
+                    <col
+                      className=
+                        "sku-list-col-number"
                     />
 
                   </colgroup>
@@ -323,34 +683,40 @@ export default function SkuListTabsClient({
 
                     <tr>
 
-                      <th>
-                        ЕНОТ
-                      </th>
+                      <SortHeading
+                        column="enot"
+                        label="ЕНОТ"
+                      />
 
-                      <th>
-                        Артикул
-                      </th>
+                      <SortHeading
+                        column="sku"
+                        label="SKU"
+                      />
 
-                      <th
-                        className=
-                          "sku-list-number-cell"
-                      >
-                        Операционная прибыль, ₽
-                      </th>
+                      <SortHeading
+                        column="sellerArticle"
+                        label="Артикул продавца"
+                      />
 
-                      <th
-                        className=
-                          "sku-list-number-cell"
-                      >
-                        Выручка, ₽
-                      </th>
+                      <SortHeading
+                        column="productName"
+                        label="Товар"
+                      />
 
-                      <th
-                        className=
-                          "sku-list-number-cell"
-                      >
-                        Выкупы, шт.
-                      </th>
+                      <SortHeading
+                        column="revenue"
+                        label="Выручка, ₽"
+                      />
+
+                      <SortHeading
+                        column="operatingProfit"
+                        label="Операционная прибыль, ₽"
+                      />
+
+                      <SortHeading
+                        column="purchases"
+                        label="Выкупы, шт."
+                      />
 
                     </tr>
 
@@ -360,7 +726,7 @@ export default function SkuListTabsClient({
                   <tbody>
 
                     {
-                      ozonRows.map(
+                      sortedRows.map(
                         (
                           row,
                           index
@@ -368,18 +734,13 @@ export default function SkuListTabsClient({
 
                           <tr
                             key={
-                              `${row.article}-${index}`
+                              \`\${row.sellerArticle}-\${index}\`
                             }
                           >
 
                             <td
-                              className={
-                                row.enot
-
-                                  ? "sku-list-enot"
-
-                                  : "sku-list-enot sku-list-enot--missing"
-                              }
+                              className=
+                                "sku-list-enot sku-list-compact-cell"
                             >
                               {
                                 row.enot
@@ -391,10 +752,54 @@ export default function SkuListTabsClient({
 
                             <td
                               className=
-                                "sku-list-article"
+                                "sku-list-sku sku-list-compact-cell"
                             >
                               {
-                                row.article
+                                row.sku
+                                ??
+                                "—"
+                              }
+                            </td>
+
+
+                            <td
+                              className=
+                                "sku-list-text-cell"
+                              title={
+                                row.sellerArticle
+                              }
+                            >
+                              {
+                                row.sellerArticle
+                              }
+                            </td>
+
+
+                            <td
+                              className=
+                                "sku-list-text-cell"
+                              title={
+                                row.productName
+                                ??
+                                undefined
+                              }
+                            >
+                              {
+                                row.productName
+                                ??
+                                "—"
+                              }
+                            </td>
+
+
+                            <td
+                              className=
+                                "sku-list-number-cell"
+                            >
+                              {
+                                formatMoney(
+                                  row.revenue
+                                )
                               }
                             </td>
 
@@ -412,18 +817,6 @@ export default function SkuListTabsClient({
                               {
                                 formatMoney(
                                   row.operatingProfit
-                                )
-                              }
-                            </td>
-
-
-                            <td
-                              className=
-                                "sku-list-number-cell"
-                            >
-                              {
-                                formatMoney(
-                                  row.revenue
                                 )
                               }
                             </td>

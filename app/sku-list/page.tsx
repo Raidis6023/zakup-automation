@@ -15,6 +15,8 @@ import "./sku-list.css";
 type ProductMappingRow = {
   offer_id: string | null;
   master_code: string | null;
+  ozon_product_id: string | number | null;
+  name: string | null;
 };
 
 
@@ -71,7 +73,7 @@ Promise<ProductMappingRow[]> {
     await fetch(
       config.supabaseUrl
       +
-      "/rest/v1/products?select=offer_id,master_code&offer_id=not.is.null&master_code=not.is.null&limit=2000",
+      "/rest/v1/products?select=offer_id,master_code,ozon_product_id,name&offer_id=not.is.null&master_code=not.is.null&limit=2000",
       {
         headers: {
           apikey:
@@ -222,6 +224,39 @@ function articleContainsOffer(
 }
 
 
+function capitalizeArticle(
+  value:
+    string
+) {
+
+  const trimmed =
+    value.trim();
+
+
+  if (
+    !trimmed
+  ) {
+
+    return trimmed;
+
+  }
+
+
+  return (
+    trimmed.charAt(
+      0
+    ).toLocaleUpperCase(
+      "ru-RU"
+    )
+    +
+    trimmed.slice(
+      1
+    )
+  );
+
+}
+
+
 function buildOzonRows(
   mappings:
     ProductMappingRow[]
@@ -243,6 +278,19 @@ SkuListFinancialRow[] {
 
           enot:
             row.master_code as string,
+
+          sku:
+            row.ozon_product_id ===
+              null
+
+              ? null
+
+              : String(
+                  row.ozon_product_id
+                ),
+
+          productName:
+            row.name,
         })
       )
       .sort(
@@ -276,14 +324,26 @@ SkuListFinancialRow[] {
             ??
             null,
 
-          article:
-            row.article,
+          sku:
+            mapping?.sku
+            ??
+            null,
 
-          operatingProfit:
-            row.profit,
+          sellerArticle:
+            capitalizeArticle(
+              row.article
+            ),
+
+          productName:
+            mapping?.productName
+            ??
+            null,
 
           revenue:
             row.revenue,
+
+          operatingProfit:
+            row.profit,
 
           purchases:
             row.buys,
