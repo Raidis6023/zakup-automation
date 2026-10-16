@@ -1404,8 +1404,8 @@ async function getDetail(
     );
 
 
-  const summary =
-    normalizeSummary(
+  const summary = {
+    ...normalizeSummary(
       order,
       supply,
       {
@@ -1427,11 +1427,10 @@ async function getDetail(
         cargoCount:
           cargoPlaces.length,
       }
-    );
+    ),
 
-
-  summary.plannedUnits =
-    plannedUnits;
+    plannedUnits,
+  };
 
 
   return {

@@ -806,33 +806,33 @@ async function getDetail(
     };
 
 
-  const summary =
-    normalizeSummary(
+  const summary = {
+    ...normalizeSummary(
       fakeRow,
       detail
-    );
+    ),
 
+    boxCount:
+      boxes.length >
+        0
+        ? boxes.length
+        : null,
 
-  summary.boxCount =
-    boxes.length >
-      0
-      ? boxes.length
-      : null;
+    palletCount:
+      detail.boxTypeID ===
+        5
+        ? boxes.length >
+            0
+            ? boxes.length
+            : null
+        : null,
 
-  summary.palletCount =
-    detail.boxTypeID ===
-      5
-      ? boxes.length >
-          0
-          ? boxes.length
-          : null
-      : null;
-
-  summary.cargoCount =
-    boxes.length >
-      0
-      ? boxes.length
-      : null;
+    cargoCount:
+      boxes.length >
+        0
+        ? boxes.length
+        : null,
+  };
 
 
   return {
