@@ -2531,6 +2531,41 @@ html[data-theme="dark"]
   .ozon-reference-page .ozon-unified-sync-icon--loading { animation: none; }
 }
 
+/* ============================================================
+   ИНДИКАТОР СИНХРОНИЗАЦИИ В ТОЧНОМ ФОРМАТЕ WB.
+   При активном ручном обновлении в статусной плашке вместо
+   галочки показывается та же стрелка ↻, 26px / 0.9s.
+   Используем уже существующее состояние кнопки и :has(),
+   не затрагивая API и фоновый ежедневный cron.
+   ============================================================ */
+.ozon-reference-page .ozon-sync-hero:has(.ozon-unified-sync-icon--loading)
+.ozon-sync-hero-status-icon {
+  font-size: 0;
+}
+
+.ozon-reference-page .ozon-sync-hero:has(.ozon-unified-sync-icon--loading)
+.ozon-sync-hero-status-icon::before {
+  content: "↻";
+  display: block;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  transform-origin: center;
+  animation: ozon-status-sync-spin 0.9s linear infinite;
+}
+
+@keyframes ozon-status-sync-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ozon-reference-page .ozon-sync-hero:has(.ozon-unified-sync-icon--loading)
+  .ozon-sync-hero-status-icon::before {
+    animation: none;
+  }
+}
+
 /* Generic .workspace-content--module .card becomes 14px at <=700px.
    Preserve the Ozon panel's horizontal alignment and mirror WB vertical inset. */
 @media (max-width: 700px) {
