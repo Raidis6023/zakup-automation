@@ -229,6 +229,8 @@ type DraftInfoWarehouse = {
     invalid_reason?: string;
     state?: string;
   };
+  bundle_id?: string;
+  restricted_bundle_id?: string;
   storage_warehouse?: {
     address?: string;
     name?: string;
@@ -277,6 +279,61 @@ type SupplyCreateStatusResponse = {
   error_reasons?: string[];
   order_id?: number;
   status?: string;
+};
+
+type PreviewWarehouse = {
+  warehouse_id: number;
+  name: string | null;
+  address: string | null;
+  availability: string;
+  invalid_reason: string | null;
+  total_score: number | null;
+  total_rank: number | null;
+  full_quantity_units: number | null;
+};
+
+type PreviewCluster = {
+  macrolocal_cluster_id: number;
+  cluster_name: string | null;
+  requested_units: number;
+  draft_accepted_units: number;
+  rejected_units: number;
+  sku_count: number;
+  rejected_skus: number[];
+  draft_id: number | null;
+  status: "available" | "partial" | "not_available" | "error";
+  recommended_warehouse: PreviewWarehouse | null;
+  warehouses: PreviewWarehouse[];
+  error: string | null;
+};
+
+type PreviewPayload = {
+  ok: true;
+  mode: "preview_only";
+  real_supply_created: false;
+  calculation_run_id: string;
+  formation_date: string;
+  target_date: string;
+  window_date_from: string;
+  window_date_to: string;
+  drop_off: {
+    warehouse_id: number;
+    warehouse_type: string;
+    name: string | null;
+    address: string | null;
+  };
+  draft_ids: number[];
+  summary: {
+    clusters: number;
+    available_clusters: number;
+    partial_clusters: number;
+    blocked_clusters: number;
+    requested_units: number;
+    draft_accepted_units: number;
+    rejected_units: number;
+  };
+  clusters: PreviewCluster[];
+  warnings: string[];
 };
 
 type StatusPayload = {
@@ -494,6 +551,40 @@ function sleep(
         milliseconds
       )
   );
+
+}
+
+
+function chunkArray<T>(
+  values:
+    T[],
+
+  size:
+    number
+) {
+
+  const result:
+    T[][] =
+    [];
+
+
+  for (
+    let index = 0;
+    index < values.length;
+    index += size
+  ) {
+
+    result.push(
+      values.slice(
+        index,
+        index + size
+      )
+    );
+
+  }
+
+
+  return result;
 
 }
 
@@ -2884,6 +2975,1320 @@ async function startSupplyRun() {
 }
 
 
+
+// ============================================================
+// TEST / DRY-RUN
+//
+// ВАЖНО:
+// - создаёт только временные draft_id в Ozon;
+// - НЕ вызывает /v2/draft/supply/create;
+// - НЕ создаёт реальную заявку;
+// - НЕ пишет очередь реальных поставок в Supabase.
+// ============================================================
+
+function rejectedSkusForCluster(
+  errors:
+    DraftCreateError[]
+    | undefined,
+
+  macrolocalClusterId:
+    number
+) {
+
+  const rejected =
+    new Set<number>();
+
+
+  for (
+    const error
+    of errors
+    ??
+    []
+  ) {
+
+    for (
+      const validation
+      of error.items_validation
+      ??
+      []
+    ) {
+
+      const validationClusterId =
+        Number(
+          (
+            validation as {
+              macrolocal_cluster_id?:
+                number;
+            }
+          ).macrolocal_cluster_id
+        );
+
+
+      if (
+        Number.isFinite(
+          validationClusterId
+        )
+        &&
+        validationClusterId !==
+          macrolocalClusterId
+      ) {
+
+        continue;
+
+      }
+
+
+      for (
+        const item
+        of validation.rejected_items
+        ??
+        []
+      ) {
+
+        const sku =
+          toPositiveInteger(
+            item.sku
+          );
+
+
+        if (
+          sku !==
+          null
+        ) {
+
+          rejected.add(
+            sku
+          );
+
+        }
+
+      }
+
+    }
+
+  }
+
+
+  return Array.from(
+    rejected
+  );
+
+}
+
+
+async function waitForDraftInfo(
+  draftId:
+    number
+) {
+
+  let last:
+    DraftInfoResponse =
+    {};
+
+
+  for (
+    let attempt = 0;
+    attempt < 20;
+    attempt++
+  ) {
+
+    last =
+      await ozonPost<
+        DraftInfoResponse
+      >(
+        "/v2/draft/create/info",
+        {
+          draft_id:
+            draftId,
+        }
+      );
+
+
+    if (
+      last.status ===
+        "SUCCESS"
+      ||
+      last.status ===
+        "FAILED"
+    ) {
+
+      return last;
+
+    }
+
+
+    await sleep(
+      2500
+    );
+
+  }
+
+
+  return last;
+
+}
+
+
+function mapPreviewWarehouse(
+  warehouse:
+    DraftInfoWarehouse,
+
+  fullUnits:
+    number
+) {
+
+  const warehouseId =
+    toPositiveInteger(
+      warehouse
+        .storage_warehouse
+        ?.warehouse_id
+    );
+
+
+  if (
+    warehouseId ===
+    null
+  ) {
+
+    return null;
+
+  }
+
+
+  const availability =
+    normalizeKey(
+      warehouse
+        .availability_status
+        ?.state
+    )
+    ||
+    "UNSPECIFIED";
+
+
+  return {
+    warehouse_id:
+      warehouseId,
+
+    name:
+      normalizeKey(
+        warehouse
+          .storage_warehouse
+          ?.name
+      )
+      ||
+      null,
+
+    address:
+      normalizeKey(
+        warehouse
+          .storage_warehouse
+          ?.address
+      )
+      ||
+      null,
+
+    availability,
+
+    invalid_reason:
+      normalizeKey(
+        warehouse
+          .availability_status
+          ?.invalid_reason
+      )
+      ||
+      null,
+
+    total_score:
+      Number.isFinite(
+        Number(
+          warehouse.total_score
+        )
+      )
+        ? Number(
+            warehouse.total_score
+          )
+        : null,
+
+    total_rank:
+      Number.isFinite(
+        Number(
+          warehouse.total_rank
+        )
+      )
+        ? Number(
+            warehouse.total_rank
+          )
+        : null,
+
+    full_quantity_units:
+      availability ===
+        "FULL_AVAILABLE"
+        ? fullUnits
+        : null,
+  } satisfies PreviewWarehouse;
+
+}
+
+
+async function previewSupplyPlan() {
+
+  const run =
+    await getLatestReplenishmentRun();
+
+
+  if (!run) {
+
+    return Response.json(
+      {
+        ok:
+          false,
+
+        error:
+          "Нет успешного расчёта потребности FBO",
+      },
+      {
+        status:
+          409,
+      }
+    );
+
+  }
+
+
+  const dashboard =
+    await getDashboard();
+
+
+  const latestSync =
+    dashboard.latest_sync;
+
+
+  const fresh =
+    Boolean(
+      latestSync
+      &&
+      latestSync.status ===
+        "success"
+      &&
+      latestSync.date_from ===
+        run.sales_date_from
+      &&
+      latestSync.date_to ===
+        run.sales_date_to
+      &&
+      dashboard.stock_snapshot_date ===
+        run.stock_snapshot_date
+    );
+
+
+  if (!fresh) {
+
+    return Response.json(
+      {
+        ok:
+          false,
+
+        error:
+          "Расчёт потребности не соответствует последней успешной синхронизации Ozon. Тест не запускался.",
+      },
+      {
+        status:
+          409,
+      }
+    );
+
+  }
+
+
+  const replenishmentItems =
+    await getReplenishmentItems(
+      run.id
+    );
+
+
+  if (
+    replenishmentItems.length ===
+    0
+  ) {
+
+    return Response.json(
+      {
+        ok:
+          false,
+
+        error:
+          "В свежем расчёте нет положительной потребности",
+      },
+      {
+        status:
+          409,
+      }
+    );
+
+  }
+
+
+  const [
+    russianClusters,
+    cisClusters,
+    sellerWarehouses,
+    dropOff,
+  ] =
+    await Promise.all([
+      getClusters(
+        "CLUSTER_TYPE_OZON"
+      ),
+
+      getClusters(
+        "CLUSTER_TYPE_CIS"
+      ),
+
+      getSellerWarehouses(),
+
+      resolveDropOff(),
+    ]);
+
+
+  const belarusClusters =
+    cisClusters.filter(
+      isBelarusCluster
+    );
+
+
+  const excludedCisClusterIds =
+    new Set(
+      cisClusters
+        .filter(
+          cluster =>
+            !isBelarusCluster(
+              cluster
+            )
+        )
+        .map(
+          cluster =>
+            normalizeKey(
+              cluster.id
+            )
+        )
+        .filter(
+          Boolean
+        )
+    );
+
+
+  const plan =
+    buildSupplyPlan(
+      replenishmentItems,
+      [
+        ...russianClusters,
+        ...belarusClusters,
+      ],
+      excludedCisClusterIds
+    );
+
+
+  if (
+    plan.unresolved.length >
+    0
+  ) {
+
+    return Response.json(
+      {
+        ok:
+          false,
+
+        error:
+          "Есть строки потребности, которые нельзя безопасно сопоставить с кластером или Ozon SKU. Даже тестовый draft не создавался.",
+
+        unresolved_count:
+          plan.unresolved.length,
+
+        sample:
+          plan.unresolved.slice(
+            0,
+            50
+          ),
+      },
+      {
+        status:
+          409,
+      }
+    );
+
+  }
+
+
+  if (
+    plan.clusters.length ===
+    0
+  ) {
+
+    return Response.json(
+      {
+        ok:
+          false,
+
+        error:
+          "После применения географии Россия + Беларусь не осталось кластеров для проверки",
+      },
+      {
+        status:
+          409,
+      }
+    );
+
+  }
+
+
+  const sellerWarehouse =
+    sellerWarehouses.find(
+      warehouse =>
+        normalizeKey(
+          warehouse.seller_warehouse_id
+        ) ===
+          MOSCOW_SELLER_WAREHOUSE_ID
+        &&
+        warehouse.is_active !==
+          false
+    );
+
+
+  if (!sellerWarehouse) {
+
+    return Response.json(
+      {
+        ok:
+          false,
+
+        error:
+          "Не найден активный склад МСК ФБС с seller_warehouse_id 1020005014074930",
+      },
+      {
+        status:
+          409,
+      }
+    );
+
+  }
+
+
+  const formationDate =
+    getMoscowDate();
+
+  const targetDate =
+    addDays(
+      formationDate,
+      7
+    );
+
+  const windowDateFrom =
+    addDays(
+      formationDate,
+      5
+    );
+
+  const windowDateTo =
+    addDays(
+      formationDate,
+      9
+    );
+
+
+  const batches =
+    chunkArray(
+      plan.clusters,
+      20
+    );
+
+
+  const previewClusters:
+    PreviewCluster[] =
+    [];
+
+  const draftIds:
+    number[] =
+    [];
+
+
+  let lastDraftCreatedAt =
+    0;
+
+
+  for (
+    let batchIndex = 0;
+    batchIndex < batches.length;
+    batchIndex++
+  ) {
+
+    const batch =
+      batches[
+        batchIndex
+      ];
+
+
+    if (
+      batchIndex >
+      0
+    ) {
+
+      const elapsed =
+        Date.now()
+        -
+        lastDraftCreatedAt;
+
+      const waitMs =
+        Math.max(
+          0,
+          DRAFT_GAP_SECONDS
+          *
+          1000
+          -
+          elapsed
+        );
+
+
+      if (
+        waitMs >
+        0
+      ) {
+
+        await sleep(
+          waitMs
+        );
+
+      }
+
+    }
+
+
+    lastDraftCreatedAt =
+      Date.now();
+
+
+    let draft:
+      DraftCreateResponse;
+
+
+    try {
+
+      draft =
+        await ozonPost<
+          DraftCreateResponse
+        >(
+          "/v1/draft/multi-cluster/create",
+          {
+            clusters_info:
+              batch.map(
+                cluster => ({
+                  macrolocal_cluster_id:
+                    cluster.macrolocal_cluster_id,
+
+                  items:
+                    cluster.items,
+                })
+              ),
+
+            deletion_sku_mode:
+              "PARTIAL",
+
+            delivery_info: {
+              type:
+                "DROPOFF",
+
+              drop_off_warehouse: {
+                warehouse_id:
+                  dropOff.resolved_warehouse_id,
+
+                warehouse_type:
+                  dropOff.resolved_warehouse_type,
+              },
+
+              seller_warehouse_id:
+                Number(
+                  MOSCOW_SELLER_WAREHOUSE_ID
+                ),
+            },
+          }
+        );
+
+    } catch (error) {
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : String(
+              error
+            );
+
+
+      for (
+        const cluster
+        of batch
+      ) {
+
+        const requestedUnits =
+          cluster.items.reduce(
+            (
+              total,
+              item
+            ) =>
+              total
+              +
+              item.quantity,
+            0
+          );
+
+
+        previewClusters.push({
+          macrolocal_cluster_id:
+            cluster.macrolocal_cluster_id,
+
+          cluster_name:
+            cluster.cluster_name,
+
+          requested_units:
+            requestedUnits,
+
+          draft_accepted_units:
+            0,
+
+          rejected_units:
+            requestedUnits,
+
+          sku_count:
+            cluster.items.length,
+
+          rejected_skus:
+            [],
+
+          draft_id:
+            null,
+
+          status:
+            "error",
+
+          recommended_warehouse:
+            null,
+
+          warehouses:
+            [],
+
+          error:
+            message,
+        });
+
+      }
+
+
+      continue;
+
+    }
+
+
+    const draftId =
+      toPositiveInteger(
+        draft.draft_id
+      );
+
+
+    const createErrors =
+      meaningfulErrors(
+        draft.errors
+      );
+
+
+    if (
+      draftId ===
+        null
+    ) {
+
+      const message =
+        createErrors.length >
+          0
+          ? formatErrors(
+              createErrors
+            )
+          : "Ozon не вернул draft_id";
+
+
+      for (
+        const cluster
+        of batch
+      ) {
+
+        const requestedUnits =
+          cluster.items.reduce(
+            (
+              total,
+              item
+            ) =>
+              total
+              +
+              item.quantity,
+            0
+          );
+
+
+        previewClusters.push({
+          macrolocal_cluster_id:
+            cluster.macrolocal_cluster_id,
+
+          cluster_name:
+            cluster.cluster_name,
+
+          requested_units:
+            requestedUnits,
+
+          draft_accepted_units:
+            0,
+
+          rejected_units:
+            requestedUnits,
+
+          sku_count:
+            cluster.items.length,
+
+          rejected_skus:
+            [],
+
+          draft_id:
+            null,
+
+          status:
+            "error",
+
+          recommended_warehouse:
+            null,
+
+          warehouses:
+            [],
+
+          error:
+            message,
+        });
+
+      }
+
+
+      continue;
+
+    }
+
+
+    draftIds.push(
+      draftId
+    );
+
+
+    const info =
+      await waitForDraftInfo(
+        draftId
+      );
+
+
+    if (
+      info.status !==
+      "SUCCESS"
+    ) {
+
+      const infoErrors =
+        meaningfulErrors(
+          info.errors
+        );
+
+      const message =
+        infoErrors.length >
+          0
+          ? formatErrors(
+              infoErrors
+            )
+          : `Ozon вернул статус черновика ${normalizeKey(
+              info.status
+            )
+            ||
+            "UNKNOWN"}`;
+
+
+      for (
+        const cluster
+        of batch
+      ) {
+
+        const requestedUnits =
+          cluster.items.reduce(
+            (
+              total,
+              item
+            ) =>
+              total
+              +
+              item.quantity,
+            0
+          );
+
+
+        previewClusters.push({
+          macrolocal_cluster_id:
+            cluster.macrolocal_cluster_id,
+
+          cluster_name:
+            cluster.cluster_name,
+
+          requested_units:
+            requestedUnits,
+
+          draft_accepted_units:
+            0,
+
+          rejected_units:
+            requestedUnits,
+
+          sku_count:
+            cluster.items.length,
+
+          rejected_skus:
+            [],
+
+          draft_id:
+            draftId,
+
+          status:
+            "error",
+
+          recommended_warehouse:
+            null,
+
+          warehouses:
+            [],
+
+          error:
+            message,
+        });
+
+      }
+
+
+      continue;
+
+    }
+
+
+    for (
+      const cluster
+      of batch
+    ) {
+
+      const requestedUnits =
+        cluster.items.reduce(
+          (
+            total,
+            item
+          ) =>
+            total
+            +
+            item.quantity,
+          0
+        );
+
+
+      const rejectedSkus =
+        rejectedSkusForCluster(
+          [
+            ...(
+              draft.errors
+              ??
+              []
+            ),
+            ...(
+              info.errors
+              ??
+              []
+            ),
+          ],
+          cluster.macrolocal_cluster_id
+        );
+
+
+      const rejectedSkuSet =
+        new Set(
+          rejectedSkus
+        );
+
+
+      const rejectedUnits =
+        cluster.items.reduce(
+          (
+            total,
+            item
+          ) =>
+            total
+            +
+            (
+              rejectedSkuSet.has(
+                item.sku
+              )
+                ? item.quantity
+                : 0
+            ),
+          0
+        );
+
+
+      const draftAcceptedUnits =
+        Math.max(
+          0,
+          requestedUnits
+          -
+          rejectedUnits
+        );
+
+
+      const infoCluster =
+        (
+          info.clusters
+          ??
+          []
+        ).find(
+          item =>
+            Number(
+              item.macrolocal_cluster_id
+            ) ===
+            cluster.macrolocal_cluster_id
+        );
+
+
+      const availableWarehouses =
+        (
+          infoCluster
+            ?.warehouses
+          ??
+          []
+        )
+          .map(
+            warehouse =>
+              mapPreviewWarehouse(
+                warehouse,
+                draftAcceptedUnits
+              )
+          )
+          .filter(
+            (
+              warehouse
+            ): warehouse is PreviewWarehouse =>
+              Boolean(
+                warehouse
+              )
+              &&
+              (
+                warehouse.availability ===
+                  "FULL_AVAILABLE"
+                ||
+                warehouse.availability ===
+                  "PARTIAL_AVAILABLE"
+              )
+          )
+          .sort(
+            (
+              left,
+              right
+            ) => {
+
+              if (
+                left.availability !==
+                right.availability
+              ) {
+
+                if (
+                  left.availability ===
+                  "FULL_AVAILABLE"
+                ) {
+
+                  return -1;
+
+                }
+
+
+                if (
+                  right.availability ===
+                  "FULL_AVAILABLE"
+                ) {
+
+                  return 1;
+
+                }
+
+              }
+
+
+              return (
+                (
+                  right.total_score
+                  ??
+                  0
+                )
+                -
+                (
+                  left.total_score
+                  ??
+                  0
+                )
+              );
+
+            }
+          );
+
+
+      const recommendedRaw =
+        chooseStorageWarehouse(
+          info,
+          cluster.macrolocal_cluster_id
+        );
+
+
+      const recommended =
+        recommendedRaw
+          ? mapPreviewWarehouse(
+              recommendedRaw,
+              draftAcceptedUnits
+            )
+          : null;
+
+
+      const hasFull =
+        availableWarehouses.some(
+          warehouse =>
+            warehouse.availability ===
+            "FULL_AVAILABLE"
+        );
+
+
+      const hasPartial =
+        availableWarehouses.some(
+          warehouse =>
+            warehouse.availability ===
+            "PARTIAL_AVAILABLE"
+        );
+
+
+      previewClusters.push({
+        macrolocal_cluster_id:
+          cluster.macrolocal_cluster_id,
+
+        cluster_name:
+          cluster.cluster_name,
+
+        requested_units:
+          requestedUnits,
+
+        draft_accepted_units:
+          draftAcceptedUnits,
+
+        rejected_units:
+          rejectedUnits,
+
+        sku_count:
+          cluster.items.length,
+
+        rejected_skus:
+          rejectedSkus,
+
+        draft_id:
+          draftId,
+
+        status:
+          hasFull
+            ? "available"
+            : hasPartial
+              ? "partial"
+              : "not_available",
+
+        recommended_warehouse:
+          recommended,
+
+        warehouses:
+          availableWarehouses,
+
+        error:
+          availableWarehouses.length >
+            0
+            ? null
+            : "Ozon не предложил доступный склад размещения для этого состава.",
+      });
+
+    }
+
+  }
+
+
+  previewClusters.sort(
+    (
+      left,
+      right
+    ) =>
+      left.macrolocal_cluster_id
+      -
+      right.macrolocal_cluster_id
+  );
+
+
+  const availableClusters =
+    previewClusters.filter(
+      cluster =>
+        cluster.status ===
+        "available"
+    ).length;
+
+  const partialClusters =
+    previewClusters.filter(
+      cluster =>
+        cluster.status ===
+        "partial"
+    ).length;
+
+  const blockedClusters =
+    previewClusters.filter(
+      cluster =>
+        cluster.status ===
+          "not_available"
+        ||
+        cluster.status ===
+          "error"
+    ).length;
+
+  const requestedUnits =
+    previewClusters.reduce(
+      (
+        total,
+        cluster
+      ) =>
+        total
+        +
+        cluster.requested_units,
+      0
+    );
+
+  const acceptedUnits =
+    previewClusters.reduce(
+      (
+        total,
+        cluster
+      ) =>
+        total
+        +
+        cluster.draft_accepted_units,
+      0
+    );
+
+  const rejectedUnits =
+    previewClusters.reduce(
+      (
+        total,
+        cluster
+      ) =>
+        total
+        +
+        cluster.rejected_units,
+      0
+    );
+
+
+  const payload:
+    PreviewPayload =
+    {
+      ok:
+        true,
+
+      mode:
+        "preview_only",
+
+      real_supply_created:
+        false,
+
+      calculation_run_id:
+        run.id,
+
+      formation_date:
+        formationDate,
+
+      target_date:
+        targetDate,
+
+      window_date_from:
+        windowDateFrom,
+
+      window_date_to:
+        windowDateTo,
+
+      drop_off: {
+        warehouse_id:
+          dropOff.resolved_warehouse_id,
+
+        warehouse_type:
+          dropOff.resolved_warehouse_type,
+
+        name:
+          normalizeKey(
+            dropOff.name
+          )
+          ||
+          null,
+
+        address:
+          normalizeKey(
+            dropOff.address
+          )
+          ||
+          null,
+      },
+
+      draft_ids:
+        draftIds,
+
+      summary: {
+        clusters:
+          previewClusters.length,
+
+        available_clusters:
+          availableClusters,
+
+        partial_clusters:
+          partialClusters,
+
+        blocked_clusters:
+          blockedClusters,
+
+        requested_units:
+          requestedUnits,
+
+        draft_accepted_units:
+          acceptedUnits,
+
+        rejected_units:
+          rejectedUnits,
+      },
+
+      clusters:
+        previewClusters,
+
+      warnings: [
+        "Реальные заявки Ozon не создавались.",
+
+        "Для проверки доступности Ozon создаёт только технические черновики draft_id.",
+
+        "FULL_AVAILABLE означает, что Ozon принимает полный состав после SKU-валидации.",
+
+        "PARTIAL_AVAILABLE означает, что склад доступен только частично; точное количество по конкретному складу этот ответ Ozon не сообщает.",
+      ],
+    };
+
+
+  return Response.json(
+    payload
+  );
+
+}
+
+
 // ============================================================
 // ROW UPDATES
 // ============================================================
@@ -4673,6 +6078,16 @@ export async function POST(
           run_id?:
             string;
         };
+
+
+    if (
+      body.action ===
+      "preview"
+    ) {
+
+      return previewSupplyPlan();
+
+    }
 
 
     if (

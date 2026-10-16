@@ -57,6 +57,56 @@ type SupplyRequest = {
   error_message: string | null;
 };
 
+type PreviewWarehouse = {
+  warehouse_id: number;
+  name: string | null;
+  address: string | null;
+  availability: string;
+  invalid_reason: string | null;
+  total_score: number | null;
+  total_rank: number | null;
+  full_quantity_units: number | null;
+};
+
+type PreviewCluster = {
+  macrolocal_cluster_id: number;
+  cluster_name: string | null;
+  requested_units: number;
+  draft_accepted_units: number;
+  rejected_units: number;
+  sku_count: number;
+  rejected_skus: number[];
+  draft_id: number | null;
+  status: "available" | "partial" | "not_available" | "error";
+  recommended_warehouse: PreviewWarehouse | null;
+  warehouses: PreviewWarehouse[];
+  error: string | null;
+};
+
+type PreviewPayload = {
+  ok: boolean;
+  error?: string;
+  mode?: "preview_only";
+  real_supply_created?: false;
+  calculation_run_id?: string;
+  formation_date?: string;
+  target_date?: string;
+  window_date_from?: string;
+  window_date_to?: string;
+  draft_ids?: number[];
+  summary?: {
+    clusters: number;
+    available_clusters: number;
+    partial_clusters: number;
+    blocked_clusters: number;
+    requested_units: number;
+    draft_accepted_units: number;
+    rejected_units: number;
+  };
+  clusters?: PreviewCluster[];
+  warnings?: string[];
+};
+
 type StatusPayload = {
   ok: boolean;
   error?: string;
@@ -365,6 +415,37 @@ export default function OzonFboSupplyClient({
     );
 
 
+  const [
+    previewLoading,
+    setPreviewLoading,
+  ] =
+    useState(
+      false
+    );
+
+
+  const [
+    previewError,
+    setPreviewError,
+  ] =
+    useState(
+      ""
+    );
+
+
+  const [
+    preview,
+    setPreview,
+  ] =
+    useState<
+      PreviewPayload
+      |
+      null
+    >(
+      null
+    );
+
+
   const mountedRef =
     useRef(
       true
@@ -619,6 +700,117 @@ export default function OzonFboSupplyClient({
   }
 
 
+  async function runPreview() {
+
+    if (
+      previewLoading
+      ||
+      processing
+      ||
+      starting
+      ||
+      !calculationRunId
+      ||
+      pairsWithNeed <=
+        0
+    ) {
+
+      return;
+
+    }
+
+
+    setPreviewLoading(
+      true
+    );
+
+
+    setPreviewError(
+      ""
+    );
+
+
+    setPreview(
+      null
+    );
+
+
+    try {
+
+      const response =
+        await fetch(
+          "/api/ozon/fbo-supply",
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify(
+                {
+                  action:
+                    "preview",
+                }
+              ),
+
+            cache:
+              "no-store",
+          }
+        );
+
+
+      const data =
+        await response
+          .json() as
+          PreviewPayload;
+
+
+      if (
+        !response.ok
+        ||
+        data.ok !==
+          true
+      ) {
+
+        throw new Error(
+          data.error
+          ??
+          `HTTP ${response.status}`
+        );
+
+      }
+
+
+      setPreview(
+        data
+      );
+
+    } catch (previewRequestError) {
+
+      setPreviewError(
+        previewRequestError
+          instanceof Error
+          ? previewRequestError.message
+          : String(
+              previewRequestError
+            )
+      );
+
+    } finally {
+
+      setPreviewLoading(
+        false
+      );
+
+    }
+
+  }
+
+
   async function start() {
 
     if (
@@ -848,6 +1040,29 @@ export default function OzonFboSupplyClient({
       "running";
 
 
+  const previewMatchesCurrentCalculation =
+    Boolean(
+      preview
+        ?.calculation_run_id
+      &&
+      calculationRunId
+      &&
+      preview.calculation_run_id ===
+        calculationRunId
+    );
+
+
+  const previewAllowsRealCreation =
+    Boolean(
+      previewMatchesCurrentCalculation
+      &&
+      preview
+        ?.summary
+        ?.blocked_clusters ===
+        0
+    );
+
+
   const canStart =
     Boolean(
       calculationRunId
@@ -862,6 +1077,10 @@ export default function OzonFboSupplyClient({
       !starting
       &&
       !processing
+      &&
+      !previewLoading
+      &&
+      previewAllowsRealCreation
     );
 
 
@@ -939,44 +1158,116 @@ export default function OzonFboSupplyClient({
         </div>
 
 
-        <button
-          type="button"
+        <div
+          style={{
+            display:
+              "flex",
 
-          className=
-            "primary-button"
+            flexDirection:
+              "column",
 
-          disabled={
-            !canStart
-          }
+            gap:
+              "8px",
 
-          onClick={
-            () => {
-              void start();
-            }
-          }
+            minWidth:
+              "250px",
+          }}
         >
 
-          {
-            loading
-              ? "Проверяем состояние..."
+          <button
+            type="button"
 
-              : starting
-                ? "Формируем очередь..."
+            className=
+              "secondary-button"
 
-                : runIsRunning
-                  ? "Заявки создаются..."
+            disabled={
+              previewLoading
+              ||
+              starting
+              ||
+              processing
+              ||
+              !calculationRunId
+              ||
+              pairsWithNeed <=
+                0
+            }
 
-                  : currentCalculationDone
-                    ? "Текущий расчёт обработан"
+            onClick={
+              () => {
+                void runPreview();
+              }
+            }
+          >
+            {
+              previewLoading
+                ? "Ozon проверяет склады..."
+                : "Тест: проверить поставку"
+            }
+          </button>
 
-                    : pairsWithNeed <=
-                        0
-                      ? "Поставка не требуется"
 
-                      : "Создать заявки по кластерам"
-          }
+          <button
+            type="button"
 
-        </button>
+            className=
+              "primary-button"
+
+            disabled={
+              !canStart
+            }
+
+            onClick={
+              () => {
+                void start();
+              }
+            }
+          >
+
+            {
+              loading
+                ? "Проверяем состояние..."
+
+                : starting
+                  ? "Формируем очередь..."
+
+                  : runIsRunning
+                    ? "Заявки создаются..."
+
+                    : currentCalculationDone
+                      ? "Текущий расчёт обработан"
+
+                      : pairsWithNeed <=
+                          0
+                        ? "Поставка не требуется"
+
+                        : !previewAllowsRealCreation
+                          ? "Сначала выполните тест"
+
+                          : "Создать реальные заявки"
+            }
+
+          </button>
+
+
+          <div
+            className=
+              "reason-text"
+
+            style={{
+              textAlign:
+                "right",
+
+              fontSize:
+                "11px",
+            }}
+          >
+            Тест создаёт только технические
+            черновики Ozon. Метод создания
+            реальной заявки не вызывается.
+          </div>
+
+        </div>
 
       </div>
 
@@ -1062,6 +1353,495 @@ export default function OzonFboSupplyClient({
         </div>
 
       </div>
+
+
+
+      {
+        previewError
+          ? (
+
+            <div
+              className=
+                "ozon-fbo-supply-error"
+            >
+              <strong>
+                Тест поставки не прошёл
+              </strong>
+
+              <div>
+                {
+                  previewError
+                }
+              </div>
+            </div>
+
+          )
+          : null
+      }
+
+
+      {
+        preview
+        &&
+        preview.ok
+        &&
+        preview.summary
+          ? (
+
+            <div
+              className=
+                "ozon-fbo-supply-progress-wrap"
+            >
+
+              <div
+                className=
+                  "ozon-fbo-supply-progress-top"
+              >
+                <strong>
+                  Тест поставки завершён
+                </strong>
+
+                <span>
+                  Реальные заявки: 0
+                </span>
+              </div>
+
+
+              <div
+                className=
+                  "reason-text"
+              >
+                Ozon проверил текущий состав
+                через технические черновики.
+                Нажатие тестовой кнопки не вызывает
+                создание заявки на поставку.
+              </div>
+
+
+              <div
+                className=
+                  "ozon-fbo-supply-counters"
+              >
+                <span>
+                  Кластеров:{" "}
+                  <strong>
+                    {
+                      preview.summary.clusters
+                    }
+                  </strong>
+                </span>
+
+                <span>
+                  Полностью доступны:{" "}
+                  <strong>
+                    {
+                      preview.summary.available_clusters
+                    }
+                  </strong>
+                </span>
+
+                <span>
+                  Частично:{" "}
+                  <strong>
+                    {
+                      preview.summary.partial_clusters
+                    }
+                  </strong>
+                </span>
+
+                <span>
+                  Недоступны:{" "}
+                  <strong>
+                    {
+                      preview.summary.blocked_clusters
+                    }
+                  </strong>
+                </span>
+
+                <span>
+                  По расчёту:{" "}
+                  <strong>
+                    {
+                      formatNumber(
+                        preview.summary.requested_units
+                      )
+                    } шт.
+                  </strong>
+                </span>
+
+                <span>
+                  После SKU-проверки:{" "}
+                  <strong>
+                    {
+                      formatNumber(
+                        preview.summary.draft_accepted_units
+                      )
+                    } шт.
+                  </strong>
+                </span>
+              </div>
+
+
+              <div
+                style={{
+                  marginTop:
+                    "14px",
+
+                  overflowX:
+                    "auto",
+                }}
+              >
+
+                <div
+                  style={{
+                    minWidth:
+                      "940px",
+                  }}
+                >
+
+                  <div
+                    style={{
+                      display:
+                        "grid",
+
+                      gridTemplateColumns:
+                        "1.2fr 0.7fr 0.8fr 1.8fr 1fr 1.5fr",
+
+                      gap:
+                        "12px",
+
+                      padding:
+                        "8px 0",
+
+                      borderBottom:
+                        "1px solid var(--ws-border)",
+
+                      fontSize:
+                        "11px",
+
+                      fontWeight:
+                        700,
+                    }}
+                  >
+                    <span>
+                      Кластер
+                    </span>
+
+                    <span>
+                      Нужно
+                    </span>
+
+                    <span>
+                      После проверки
+                    </span>
+
+                    <span>
+                      Рекомендуемый склад
+                    </span>
+
+                    <span>
+                      Доступность
+                    </span>
+
+                    <span>
+                      Другие доступные склады
+                    </span>
+                  </div>
+
+
+                  {
+                    (
+                      preview.clusters
+                      ??
+                      []
+                    ).map(
+                      cluster => {
+
+                        const recommended =
+                          cluster
+                            .recommended_warehouse;
+
+
+                        const otherWarehouses =
+                          cluster.warehouses.filter(
+                            warehouse =>
+                              warehouse.warehouse_id !==
+                              recommended
+                                ?.warehouse_id
+                          );
+
+
+                        return (
+
+                          <div
+                            key={
+                              cluster.macrolocal_cluster_id
+                            }
+
+                            style={{
+                              display:
+                                "grid",
+
+                              gridTemplateColumns:
+                                "1.2fr 0.7fr 0.8fr 1.8fr 1fr 1.5fr",
+
+                              gap:
+                                "12px",
+
+                              padding:
+                                "10px 0",
+
+                              borderBottom:
+                                "1px solid var(--ws-border)",
+
+                              alignItems:
+                                "start",
+
+                              fontSize:
+                                "11px",
+                            }}
+                          >
+
+                            <span>
+                              <strong>
+                                {
+                                  cluster.cluster_name
+                                  ??
+                                  `Кластер ${cluster.macrolocal_cluster_id}`
+                                }
+                              </strong>
+
+                              <br />
+
+                              <small
+                                className=
+                                  "reason-text"
+                              >
+                                {
+                                  cluster.sku_count
+                                } SKU
+                              </small>
+                            </span>
+
+
+                            <span>
+                              <strong>
+                                {
+                                  formatNumber(
+                                    cluster.requested_units
+                                  )
+                                }
+                              </strong>
+                              {" шт."}
+                            </span>
+
+
+                            <span>
+                              <strong>
+                                {
+                                  formatNumber(
+                                    cluster.draft_accepted_units
+                                  )
+                                }
+                              </strong>
+                              {" шт."}
+
+                              {
+                                cluster.rejected_units >
+                                  0
+                                  ? (
+                                    <>
+                                      <br />
+
+                                      <small
+                                        style={{
+                                          color:
+                                            "#b42318",
+                                        }}
+                                      >
+                                        отклонено{" "}
+                                        {
+                                          formatNumber(
+                                            cluster.rejected_units
+                                          )
+                                        }
+                                      </small>
+                                    </>
+                                  )
+                                  : null
+                              }
+                            </span>
+
+
+                            <span>
+                              {
+                                recommended
+                                  ? (
+                                    <>
+                                      <strong>
+                                        {
+                                          recommended.name
+                                          ??
+                                          `Склад ${recommended.warehouse_id}`
+                                        }
+                                      </strong>
+
+                                      {
+                                        recommended.address
+                                          ? (
+                                            <>
+                                              <br />
+
+                                              <small
+                                                className=
+                                                  "reason-text"
+                                              >
+                                                {
+                                                  recommended.address
+                                                }
+                                              </small>
+                                            </>
+                                          )
+                                          : null
+                                      }
+                                    </>
+                                  )
+                                  : "—"
+                              }
+                            </span>
+
+
+                            <span>
+                              {
+                                cluster.status ===
+                                  "available"
+                                  ? "Полностью"
+
+                                  : cluster.status ===
+                                      "partial"
+                                    ? "Частично"
+
+                                    : cluster.status ===
+                                        "not_available"
+                                      ? "Недоступно"
+
+                                      : "Ошибка"
+                              }
+
+                              {
+                                recommended
+                                &&
+                                recommended.full_quantity_units !==
+                                  null
+                                  ? (
+                                    <>
+                                      <br />
+
+                                      <small
+                                        className=
+                                          "reason-text"
+                                      >
+                                        полный объём:{" "}
+                                        {
+                                          formatNumber(
+                                            recommended.full_quantity_units
+                                          )
+                                        } шт.
+                                      </small>
+                                    </>
+                                  )
+                                  : null
+                              }
+
+                              {
+                                cluster.error
+                                  ? (
+                                    <>
+                                      <br />
+
+                                      <small
+                                        style={{
+                                          color:
+                                            "#b42318",
+                                        }}
+                                      >
+                                        {
+                                          cluster.error
+                                        }
+                                      </small>
+                                    </>
+                                  )
+                                  : null
+                              }
+                            </span>
+
+
+                            <span>
+                              {
+                                otherWarehouses.length >
+                                  0
+                                  ? otherWarehouses
+                                      .map(
+                                        warehouse =>
+                                          `${warehouse.name ?? warehouse.warehouse_id} (${
+                                            warehouse.availability ===
+                                              "FULL_AVAILABLE"
+                                              ? "полностью"
+                                              : "частично"
+                                          })`
+                                      )
+                                      .join(
+                                        "; "
+                                      )
+
+                                  : "—"
+                              }
+                            </span>
+
+                          </div>
+
+                        );
+
+                      }
+                    )
+                  }
+
+                </div>
+
+              </div>
+
+
+              {
+                (
+                  preview.warnings
+                  ??
+                  []
+                ).map(
+                  warning => (
+                    <div
+                      key={
+                        warning
+                      }
+
+                      className=
+                        "reason-text"
+
+                      style={{
+                        marginTop:
+                          "6px",
+                      }}
+                    >
+                      {warning}
+                    </div>
+                  )
+                )
+              }
+
+            </div>
+
+          )
+          : null
+      }
 
 
       {
