@@ -16,8 +16,6 @@ import {
   createClient,
 } from "../../lib/supabase/client";
 
-import AccessPanda from "./AccessPanda";
-import pandaStyles from "./AccessPanda.module.css";
 
 
 // ============================================================
@@ -841,7 +839,7 @@ export default function LoginForm() {
         >
 
           <div
-            className={pandaStyles.stage}
+            className="access-modal-stage"
             onMouseDown={(event) => {
               if (event.target === event.currentTarget) {
                 closeAccessModal();
@@ -1155,7 +1153,6 @@ export default function LoginForm() {
 
           </div>
 
-          <AccessPanda success={accessSuccess} />
 
           </div>
 

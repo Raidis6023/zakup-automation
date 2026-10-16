@@ -12,6 +12,8 @@ import LoginForm
 import styles
   from "./LoginNotice.module.css";
 
+import LoginPanda from "./LoginPanda";
+
 import "./login.css";
 
 
@@ -91,6 +93,8 @@ export default async function LoginPage({
       className=
         "login-page"
     >
+      <div className="login-layout">
+
 
       <section
         className=
@@ -215,8 +219,10 @@ export default async function LoginPage({
 
 
         <LoginForm />
-
       </section>
+
+      <LoginPanda />
+      </div>
 
     </main>
 
