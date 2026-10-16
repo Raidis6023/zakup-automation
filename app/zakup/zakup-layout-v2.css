@@ -14,7 +14,7 @@
     100px;
 
   --zakup-v2-green:
-    #B76E7E;
+    #19b978;
 
   --zakup-v2-red:
     #e84868;
@@ -2092,9 +2092,4 @@ html[data-theme="dark"]
       100%;
   }
 
-}
-
-/* Розово-бежевый акцент положительных показателей в тёмной теме. */
-html[data-theme="dark"] .zakup-reference-page {
-  --zakup-v2-green: #E4A9B3;
 }

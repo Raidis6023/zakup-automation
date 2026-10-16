@@ -114,34 +114,3 @@
   .panda { animation: none; }
   .bubble p { transition: none; }
 }
-
-
-/* Цвет облачка соответствует розово-бежевой теме, рисунок панды не меняем. */
-:global(.login-page) .bubble {
-  border-color: #D8ADB3;
-  background: #FFFFFF;
-  color: #3A2B2D;
-  box-shadow: 0 15px 44px rgba(74, 42, 51, 0.12);
-}
-:global(.login-page) .bubble::after {
-  border-color: #D8ADB3;
-  background: #FFFFFF;
-}
-:global(html[data-theme="dark"]) :global(.login-page) .bubble {
-  border-color: #714F57;
-  background: #3A2B2D;
-  color: #F6E7E5;
-  box-shadow: 0 15px 44px rgba(0, 0, 0, 0.28);
-}
-:global(html[data-theme="dark"]) :global(.login-page) .bubble::after {
-  border-color: #714F57;
-  background: #3A2B2D;
-}
-
-/* Переключатель шрифта помощника использует ту же общую палитру. */
-:global(.login-page) .fontPicker { color: #9D7479; }
-:global(.login-page) .fontPicker select { border-color: #E7C9C3; background: #FFF9F7; color: #2E1F1F; }
-:global(.login-page) .fontPicker select:focus-visible { outline-color: #B76E7E; }
-:global(html[data-theme="dark"]) :global(.login-page) .fontPicker { color: #C6A6AC; }
-:global(html[data-theme="dark"]) :global(.login-page) .fontPicker select { border-color: #664A50; background: #473337; color: #F6E7E5; }
-:global(html[data-theme="dark"]) :global(.login-page) .fontPicker select:focus-visible { outline-color: #D78A9A; }

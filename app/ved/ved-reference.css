@@ -7,7 +7,7 @@
     var(--ws-blue);
 
   --ved-green:
-    #B76E7E;
+    #21b878;
 
   --ved-purple:
     #8e68da;
@@ -1033,9 +1033,4 @@ html[data-theme="dark"]
       78px;
   }
 
-}
-
-/* Розово-бежевый акцент положительных показателей в тёмной теме. */
-html[data-theme="dark"] .ved-reference-page {
-  --ved-green: #E4A9B3;
 }
