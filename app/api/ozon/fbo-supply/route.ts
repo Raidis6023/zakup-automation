@@ -3256,26 +3256,28 @@ function chooseTimeslot(
         );
 
 
-    if (
+    const firstSlot =
       slots[
         0
-      ]
+      ];
+
+
+    if (
+      firstSlot
+      &&
+      firstSlot.from_in_timezone
+      &&
+      firstSlot.to_in_timezone
     ) {
 
       return {
         date,
 
         from:
-          slots[
-            0
-          ].from_in_timezone
-          as string,
+          firstSlot.from_in_timezone,
 
         to:
-          slots[
-            0
-          ].to_in_timezone
-          as string,
+          firstSlot.to_in_timezone,
       };
 
     }
