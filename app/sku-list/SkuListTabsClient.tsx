@@ -360,11 +360,7 @@ export default function SkuListTabsClient({
           purchasesHeader.getBoundingClientRect();
 
         const previousHeader =
-          revenueHeader.previousElementSibling
-          as
-            HTMLElement
-            |
-            null;
+          revenueHeader.previousElementSibling;
 
         const dividerWidth =
           previousHeader
