@@ -6,8 +6,18 @@ import {
 } from "react";
 
 
+export type ProductArticleStatus =
+  | "Активный"
+  | "Неактивный"
+  | "FBS"
+  | "Выводится из продажи"
+  | "Сезонный"
+  | "В пути";
+
+
 export type SkuListFinancialRow = {
   enot: string | null;
+  status: ProductArticleStatus | null;
   sku: string | null;
   sellerArticle: string;
   productName: string | null;
@@ -26,6 +36,7 @@ type MarketplaceTab =
 
 type SortKey =
   | "enot"
+  | "status"
   | "sku"
   | "sellerArticle"
   | "productName"
@@ -39,92 +50,99 @@ type SortDirection =
   | "desc";
 
 
+const STATUS_OPTIONS:
+ReadonlyArray<ProductArticleStatus> = [
+  "Активный",
+  "Неактивный",
+  "FBS",
+  "Выводится из продажи",
+  "Сезонный",
+  "В пути",
+];
+
+
 const TEXT_SORT =
   new Set<SortKey>([
     "enot",
+    "status",
     "sellerArticle",
     "productName",
   ]);
 
 
-function formatMoney(
-  value:
-    number
-) {
-
-  return new Intl.NumberFormat(
+const moneyFormatter =
+  new Intl.NumberFormat(
     "ru-RU",
     {
       minimumFractionDigits:
         0,
 
       maximumFractionDigits:
-        2,
+        0,
     }
-  ).format(
-    value
   );
 
-}
 
-
-function formatInteger(
-  value:
-    number
-) {
-
-  return new Intl.NumberFormat(
+const integerFormatter =
+  new Intl.NumberFormat(
     "ru-RU",
     {
       maximumFractionDigits:
         0,
     }
-  ).format(
-    value
   );
 
+
+function formatRubles(
+  value: number
+) {
+  return (
+    moneyFormatter.format(
+      value
+    )
+    +
+    " ₽"
+  );
+}
+
+
+function formatInteger(
+  value: number
+) {
+  return integerFormatter.format(
+    value
+  );
 }
 
 
 function sortValue(
-  row:
-    SkuListFinancialRow,
-  key:
-    SortKey
+  row: SkuListFinancialRow,
+  key: SortKey
 ):
 string | number | null {
-
   return row[
     key
   ];
-
 }
 
 
 function compareRows(
-  left:
-    SkuListFinancialRow,
-  right:
-    SkuListFinancialRow,
-  key:
-    SortKey,
-  direction:
-    SortDirection
+  left: SkuListFinancialRow,
+  right: SkuListFinancialRow,
+  key: SortKey,
+  direction: SortDirection
 ) {
-
   const leftValue =
     sortValue(
       left,
       key
     );
 
-
   const rightValue =
     sortValue(
       right,
       key
     );
-
 
   if (
     leftValue ===
@@ -133,7 +151,6 @@ function compareRows(
     leftValue ===
       ""
   ) {
-
     return (
       rightValue ===
         null
@@ -145,9 +162,7 @@ function compareRows(
       ? 0
 
       : 1;
-
   }
-
 
   if (
     rightValue ===
@@ -156,11 +171,8 @@ function compareRows(
     rightValue ===
       ""
   ) {
-
     return -1;
-
   }
-
 
   const sign =
     direction ===
@@ -170,13 +182,11 @@ function compareRows(
 
       : -1;
 
-
   if (
     TEXT_SORT.has(
       key
     )
   ) {
-
     return String(
       leftValue
     ).localeCompare(
@@ -197,9 +207,7 @@ function compareRows(
     )
     *
     sign;
-
   }
-
 
   return (
     Number(
@@ -212,7 +220,6 @@ function compareRows(
   )
   *
   sign;
-
 }
 
 
@@ -222,7 +229,6 @@ export default function SkuListTabsClient({
   ozonRows:
     SkuListFinancialRow[];
 }) {
-
   const [
     activeTab,
     setActiveTab,
@@ -231,6 +237,25 @@ export default function SkuListTabsClient({
       "ozon"
     );
 
+  const [
+    rows,
+    setRows,
+  ] =
+    useState<
+      SkuListFinancialRow[]
+    >(
+      ozonRows
+    );
+
+  const [
+    savingMasterCodes,
+    setSavingMasterCodes,
+  ] =
+    useState<
+      Set<string>
+    >(
+      new Set()
+    );
 
   const [
     sortKey,
@@ -240,7 +265,6 @@ export default function SkuListTabsClient({
       "operatingProfit"
     );
 
-
   const [
     sortDirection,
     setSortDirection,
@@ -249,24 +273,10 @@ export default function SkuListTabsClient({
       "desc"
     );
 
-
-  const unmatchedCount =
-    useMemo(
-      () =>
-        ozonRows.filter(
-          row =>
-            !row.enot
-        ).length,
-      [
-        ozonRows,
-      ]
-    );
-
-
   const sortedRows =
     useMemo(
       () =>
-        ozonRows
+        rows
           .map(
             (
               row,
@@ -297,23 +307,19 @@ export default function SkuListTabsClient({
               item.row
           ),
       [
-        ozonRows,
+        rows,
         sortKey,
         sortDirection,
       ]
     );
 
-
   function handleSort(
-    key:
-      SortKey
+    key: SortKey
   ) {
-
     if (
       sortKey ===
       key
     ) {
-
       setSortDirection(
         previous =>
           previous ===
@@ -324,16 +330,12 @@ export default function SkuListTabsClient({
             : "asc"
       );
 
-
       return;
-
     }
-
 
     setSortKey(
       key
     );
-
 
     setSortDirection(
       TEXT_SORT.has(
@@ -344,9 +346,120 @@ export default function SkuListTabsClient({
 
         : "desc"
     );
-
   }
 
+  async function handleStatusChange(
+    masterCode: string,
+    nextStatus: ProductArticleStatus
+  ) {
+    const previousStatus =
+      rows.find(
+        row =>
+          row.enot ===
+          masterCode
+      )?.status
+      ??
+      null;
+
+    setRows(
+      previous =>
+        previous.map(
+          row =>
+            row.enot ===
+              masterCode
+
+              ? {
+                  ...row,
+                  status:
+                    nextStatus,
+                }
+
+              : row
+        )
+    );
+
+    setSavingMasterCodes(
+      previous => {
+        const next =
+          new Set(
+            previous
+          );
+
+        next.add(
+          masterCode
+        );
+
+        return next;
+      }
+    );
+
+    try {
+      const response =
+        await fetch(
+          "/api/sku-list/status",
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify({
+                masterCode,
+                status:
+                  nextStatus,
+              }),
+          }
+        );
+
+      if (!response.ok) {
+        throw new Error(
+          "Не удалось сохранить статус"
+        );
+      }
+    } catch (
+      error
+    ) {
+      console.error(
+        error
+      );
+
+      setRows(
+        previous =>
+          previous.map(
+            row =>
+              row.enot ===
+                masterCode
+
+                ? {
+                    ...row,
+                    status:
+                      previousStatus,
+                  }
+
+                : row
+          )
+      );
+    } finally {
+      setSavingMasterCodes(
+        previous => {
+          const next =
+            new Set(
+              previous
+            );
+
+          next.delete(
+            masterCode
+          );
+
+          return next;
+        }
+      );
+    }
+  }
 
   function SortHeading({
     column,
@@ -358,14 +471,11 @@ export default function SkuListTabsClient({
     label:
       string;
   }) {
-
     const active =
       sortKey ===
       column;
 
-
     return (
-
       <th
         aria-sort={
           !active
@@ -380,10 +490,8 @@ export default function SkuListTabsClient({
               : "descending"
         }
       >
-
         <button
           type="button"
-
           className={
             active
 
@@ -391,7 +499,6 @@ export default function SkuListTabsClient({
 
               : "sku-list-sort-button"
           }
-
           onClick={
             () =>
               handleSort(
@@ -399,13 +506,11 @@ export default function SkuListTabsClient({
               )
           }
         >
-
           <span>
             {
               label
             }
           </span>
-
 
           {
             active
@@ -414,7 +519,6 @@ export default function SkuListTabsClient({
                 <span
                   className=
                     "sku-list-sort-arrow"
-
                   aria-hidden="true"
                 >
                   {
@@ -430,43 +534,30 @@ export default function SkuListTabsClient({
 
               : null
           }
-
         </button>
-
       </th>
-
     );
-
   }
 
-
   return (
-
     <section
       className=
         "sku-list-data-section"
     >
-
       <div
         className=
           "sku-list-tabs"
-
         role="tablist"
-
         aria-label=
           "Маркетплейс"
       >
-
         <button
           type="button"
-
           role="tab"
-
           aria-selected={
             activeTab ===
               "all"
           }
-
           className={
             activeTab ===
               "all"
@@ -475,7 +566,6 @@ export default function SkuListTabsClient({
 
               : "sku-list-tab sku-list-tab--all"
           }
-
           onClick={
             () =>
               setActiveTab(
@@ -486,17 +576,13 @@ export default function SkuListTabsClient({
           Все МП
         </button>
 
-
         <button
           type="button"
-
           role="tab"
-
           aria-selected={
             activeTab ===
               "ozon"
           }
-
           className={
             activeTab ===
               "ozon"
@@ -505,7 +591,6 @@ export default function SkuListTabsClient({
 
               : "sku-list-tab sku-list-tab--ozon"
           }
-
           onClick={
             () =>
               setActiveTab(
@@ -516,17 +601,13 @@ export default function SkuListTabsClient({
           Ozon
         </button>
 
-
         <button
           type="button"
-
           role="tab"
-
           aria-selected={
             activeTab ===
               "wildberries"
           }
-
           className={
             activeTab ===
               "wildberries"
@@ -535,7 +616,6 @@ export default function SkuListTabsClient({
 
               : "sku-list-tab sku-list-tab--wildberries"
           }
-
           onClick={
             () =>
               setActiveTab(
@@ -546,17 +626,13 @@ export default function SkuListTabsClient({
           WB
         </button>
 
-
         <button
           type="button"
-
           role="tab"
-
           aria-selected={
             activeTab ===
               "yandex-market"
           }
-
           className={
             activeTab ===
               "yandex-market"
@@ -565,7 +641,6 @@ export default function SkuListTabsClient({
 
               : "sku-list-tab sku-list-tab--yandex"
           }
-
           onClick={
             () =>
               setActiveTab(
@@ -575,75 +650,34 @@ export default function SkuListTabsClient({
         >
           Яндекс Маркет
         </button>
-
       </div>
-
 
       {
         activeTab ===
           "ozon"
 
           ? (
-
             <div
               className=
                 "sku-list-table-card"
             >
-
-              <div
-                className=
-                  "sku-list-table-meta"
-              >
-
-                <span>
-                  Ozon · {
-                    formatInteger(
-                      ozonRows.length
-                    )
-                  } позиций
-                </span>
-
-
-                {
-                  unmatchedCount >
-                  0
-
-                    ? (
-
-                      <span
-                        className=
-                          "sku-list-unmatched"
-                      >
-                        Без ЕНОТ: {
-                          formatInteger(
-                            unmatchedCount
-                          )
-                        }
-                      </span>
-
-                    )
-
-                    : null
-                }
-
-              </div>
-
-
               <div
                 className=
                   "sku-list-table-scroll"
               >
-
                 <table
                   className=
                     "sku-list-table"
                 >
-
                   <colgroup>
-
                     <col
                       className=
                         "sku-list-col-enot"
+                    />
+
+                    <col
+                      className=
+                        "sku-list-col-status"
                     />
 
                     <col
@@ -653,17 +687,12 @@ export default function SkuListTabsClient({
 
                     <col
                       className=
-                        "sku-list-col-flex"
+                        "sku-list-col-seller"
                     />
 
                     <col
                       className=
-                        "sku-list-col-flex"
-                    />
-
-                    <col
-                      className=
-                        "sku-list-col-number"
+                        "sku-list-col-product"
                     />
 
                     <col
@@ -673,19 +702,25 @@ export default function SkuListTabsClient({
 
                     <col
                       className=
-                        "sku-list-col-number"
+                        "sku-list-col-profit"
                     />
 
+                    <col
+                      className=
+                        "sku-list-col-number"
+                    />
                   </colgroup>
 
-
                   <thead>
-
                     <tr>
-
                       <SortHeading
                         column="enot"
                         label="ЕНОТ"
+                      />
+
+                      <SortHeading
+                        column="status"
+                        label="Статус"
                       />
 
                       <SortHeading
@@ -717,154 +752,229 @@ export default function SkuListTabsClient({
                         column="purchases"
                         label="Выкупы, шт."
                       />
-
                     </tr>
-
                   </thead>
 
-
                   <tbody>
-
                     {
                       sortedRows.map(
                         (
                           row,
                           index
-                        ) => (
+                        ) => {
+                          const masterCode =
+                            row.enot
+                            ??
+                            "";
 
-                          <tr
-                            key={
-                              `${row.sellerArticle}-${index}`
-                            }
-                          >
+                          const saving =
+                            masterCode
+                            &&
+                            savingMasterCodes.has(
+                              masterCode
+                            );
 
-                            <td
-                              className=
-                                "sku-list-enot sku-list-compact-cell"
-                            >
-                              {
-                                row.enot
-                                ??
-                                "—"
-                              }
-                            </td>
-
-
-                            <td
-                              className=
-                                "sku-list-sku sku-list-compact-cell"
-                            >
-                              {
-                                row.sku
-                                ??
-                                "—"
-                              }
-                            </td>
-
-
-                            <td
-                              className=
-                                "sku-list-text-cell"
-                              title={
+                          return (
+                            <tr
+                              key={
                                 row.sellerArticle
+                                +
+                                "-"
+                                +
+                                index
                               }
                             >
-                              {
-                                row.sellerArticle
-                              }
-                            </td>
+                              <td
+                                className=
+                                  "sku-list-enot sku-list-compact-cell"
+                              >
+                                {
+                                  row.enot
+                                  ??
+                                  "—"
+                                }
+                              </td>
 
+                              <td
+                                className=
+                                  "sku-list-status-cell"
+                              >
+                                <div
+                                  className=
+                                    "sku-list-status-control"
+                                  data-status={
+                                    row.status
+                                    ??
+                                    "empty"
+                                  }
+                                >
+                                  <select
+                                    className=
+                                      "sku-list-status-select"
+                                    value={
+                                      row.status
+                                      ??
+                                      ""
+                                    }
+                                    disabled={
+                                      !masterCode
+                                      ||
+                                      Boolean(
+                                        saving
+                                      )
+                                    }
+                                    aria-label={
+                                      "Статус "
+                                      +
+                                      (
+                                        row.sellerArticle
+                                      )
+                                    }
+                                    onChange={
+                                      event => {
+                                        if (
+                                          !masterCode
+                                        ) {
+                                          return;
+                                        }
 
-                            <td
-                              className=
-                                "sku-list-text-cell"
-                              title={
-                                row.productName
-                                ??
-                                undefined
-                              }
-                            >
-                              {
-                                row.productName
-                                ??
-                                "—"
-                              }
-                            </td>
+                                        handleStatusChange(
+                                          masterCode,
+                                          event
+                                            .target
+                                            .value as
+                                              ProductArticleStatus
+                                        );
+                                      }
+                                    }
+                                  >
+                                    <option
+                                      value=""
+                                      disabled
+                                    >
+                                      —
+                                    </option>
 
+                                    {
+                                      STATUS_OPTIONS.map(
+                                        option => (
+                                          <option
+                                            key={
+                                              option
+                                            }
+                                            value={
+                                              option
+                                            }
+                                          >
+                                            {
+                                              option
+                                            }
+                                          </option>
+                                        )
+                                      )
+                                    }
+                                  </select>
+                                </div>
+                              </td>
 
-                            <td
-                              className=
-                                "sku-list-number-cell"
-                            >
-                              {
-                                formatMoney(
-                                  row.revenue
-                                )
-                              }
-                            </td>
+                              <td
+                                className=
+                                  "sku-list-sku sku-list-compact-cell"
+                              >
+                                {
+                                  row.sku
+                                  ??
+                                  "—"
+                                }
+                              </td>
 
+                              <td
+                                className=
+                                  "sku-list-text-cell"
+                                title={
+                                  row.sellerArticle
+                                }
+                              >
+                                {
+                                  row.sellerArticle
+                                }
+                              </td>
 
-                            <td
-                              className={
-                                row.operatingProfit <
-                                0
+                              <td
+                                className=
+                                  "sku-list-text-cell"
+                                title={
+                                  row.productName
+                                  ??
+                                  undefined
+                                }
+                              >
+                                {
+                                  row.productName
+                                  ??
+                                  "—"
+                                }
+                              </td>
 
-                                  ? "sku-list-number-cell sku-list-profit-negative"
+                              <td
+                                className=
+                                  "sku-list-number-cell"
+                              >
+                                {
+                                  formatRubles(
+                                    row.revenue
+                                  )
+                                }
+                              </td>
 
-                                  : "sku-list-number-cell"
-                              }
-                            >
-                              {
-                                formatMoney(
-                                  row.operatingProfit
-                                )
-                              }
-                            </td>
+                              <td
+                                className={
+                                  row.operatingProfit <
+                                  0
 
+                                    ? "sku-list-number-cell sku-list-profit-negative"
 
-                            <td
-                              className=
-                                "sku-list-number-cell"
-                            >
-                              {
-                                formatInteger(
-                                  row.purchases
-                                )
-                              }
-                            </td>
+                                    : "sku-list-number-cell"
+                                }
+                              >
+                                {
+                                  formatRubles(
+                                    row.operatingProfit
+                                  )
+                                }
+                              </td>
 
-                          </tr>
-
-                        )
+                              <td
+                                className=
+                                  "sku-list-number-cell"
+                              >
+                                {
+                                  formatInteger(
+                                    row.purchases
+                                  )
+                                }
+                              </td>
+                            </tr>
+                          );
+                        }
                       )
                     }
-
                   </tbody>
-
                 </table>
-
               </div>
-
             </div>
-
           )
 
           : (
-
             <div
               className=
                 "sku-list-empty-tab"
-
               aria-live="polite"
             >
               Данные для этого раздела пока не добавлены.
             </div>
-
           )
       }
-
     </section>
-
   );
-
 }

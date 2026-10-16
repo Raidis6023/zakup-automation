@@ -1,11 +1,11 @@
-import Link
-  from "next/link";
+import Link from "next/link";
 
 import {
   getOzonSeptemberRows,
 } from "./ozonFinancialData";
 
 import SkuListTabsClient, {
+  type ProductArticleStatus,
   type SkuListFinancialRow,
 } from "./SkuListTabsClient";
 
@@ -20,60 +20,56 @@ type ProductMappingRow = {
 };
 
 
-function getSupabaseConfig() {
+type ProductStatusRow = {
+  master_code: string;
+  status: ProductArticleStatus;
+};
 
+
+function getSupabaseConfig() {
   const supabaseUrl =
     process.env.SUPABASE_URL
     ??
     process.env.NEXT_PUBLIC_SUPABASE_URL;
-
 
   const supabaseKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY
     ??
     process.env.SUPABASE_SECRET_KEY;
 
-
   if (
     !supabaseUrl
     ||
     !supabaseKey
   ) {
-
     return null;
-
   }
-
 
   return {
     supabaseUrl,
     supabaseKey,
   };
-
 }
 
 
-async function getProductMappings():
-Promise<ProductMappingRow[]> {
-
+async function supabaseGet<T>(
+  path: string
+):
+Promise<T> {
   const config =
     getSupabaseConfig();
 
-
-  if (
-    !config
-  ) {
-
-    return [];
-
+  if (!config) {
+    return [] as T;
   }
-
 
   const response =
     await fetch(
       config.supabaseUrl
       +
-      "/rest/v1/products?select=offer_id,master_code,ozon_product_id,name&offer_id=not.is.null&master_code=not.is.null&limit=2000",
+      "/rest/v1/"
+      +
+      path,
       {
         headers: {
           apikey:
@@ -93,29 +89,47 @@ Promise<ProductMappingRow[]> {
       }
     );
 
-
-  if (
-    !response.ok
-  ) {
-
-    return [];
-
+  if (!response.ok) {
+    return [] as T;
   }
-
 
   return (
     await response.json()
-  ) as
-    ProductMappingRow[];
+  ) as T;
+}
 
+
+async function getProductMappings():
+Promise<ProductMappingRow[]> {
+  return supabaseGet<ProductMappingRow[]>(
+    "products"
+    +
+    "?select=offer_id,master_code,ozon_product_id,name"
+    +
+    "&offer_id=not.is.null"
+    +
+    "&master_code=not.is.null"
+    +
+    "&limit=2000"
+  );
+}
+
+
+async function getProductStatuses():
+Promise<ProductStatusRow[]> {
+  return supabaseGet<ProductStatusRow[]>(
+    "product_article_statuses"
+    +
+    "?select=master_code,status"
+    +
+    "&limit=2000"
+  );
 }
 
 
 function normalizeForMatch(
-  value:
-    string
+  value: string
 ) {
-
   return value
     .trim()
     .toUpperCase()
@@ -127,60 +141,43 @@ function normalizeForMatch(
       /[‐‑‒–—−]/g,
       "-"
     );
-
 }
 
 
 function escapeRegExp(
-  value:
-    string
+  value: string
 ) {
-
   return value.replace(
     /[.*+?^$()|[\]\\{}]/g,
     "\\$&"
   );
-
 }
 
 
 function articleContainsOffer(
-  article:
-    string,
-  offerId:
-    string
+  article: string,
+  offerId: string
 ) {
-
   const normalizedArticle =
     normalizeForMatch(
       article
     );
-
 
   const normalizedOffer =
     normalizeForMatch(
       offerId
     );
 
-
-  if (
-    !normalizedOffer
-  ) {
-
+  if (!normalizedOffer) {
     return false;
-
   }
-
 
   if (
     normalizedArticle ===
     normalizedOffer
   ) {
-
     return true;
-
   }
-
 
   const boundaryPattern =
     new RegExp(
@@ -194,24 +191,14 @@ function articleContainsOffer(
       "u"
     );
 
-
   if (
     boundaryPattern.test(
       normalizedArticle
     )
   ) {
-
     return true;
-
   }
 
-
-  /*
-   * В отчёте Ozon встречаются строки вроде
-   * "0,5 лAVD-TH5", где код приклеен к описанию
-   * без пробела. Для достаточно длинных кодов
-   * разрешаем точное вхождение.
-   */
   return (
     normalizedOffer.length >=
       5
@@ -220,27 +207,18 @@ function articleContainsOffer(
       normalizedOffer
     )
   );
-
 }
 
 
 function capitalizeArticle(
-  value:
-    string
+  value: string
 ) {
-
   const trimmed =
     value.trim();
 
-
-  if (
-    !trimmed
-  ) {
-
+  if (!trimmed) {
     return trimmed;
-
   }
-
 
   return (
     trimmed.charAt(
@@ -253,15 +231,23 @@ function capitalizeArticle(
       1
     )
   );
-
 }
 
 
 function buildOzonRows(
-  mappings:
-    ProductMappingRow[]
+  mappings: ProductMappingRow[],
+  statuses: ProductStatusRow[]
 ):
 SkuListFinancialRow[] {
+  const statusByMasterCode =
+    new Map(
+      statuses.map(
+        row => [
+          row.master_code,
+          row.status,
+        ]
+      )
+    );
 
   const candidates =
     mappings
@@ -303,11 +289,9 @@ SkuListFinancialRow[] {
           left.offerId.length
       );
 
-
   return getOzonSeptemberRows()
     .map(
       row => {
-
         const mapping =
           candidates.find(
             candidate =>
@@ -317,12 +301,26 @@ SkuListFinancialRow[] {
               )
           );
 
+        const enot =
+          mapping?.enot
+          ??
+          null;
 
         return {
-          enot:
-            mapping?.enot
-            ??
-            null,
+          enot,
+
+          status:
+            enot
+
+              ? (
+                  statusByMasterCode.get(
+                    enot
+                  )
+                  ??
+                  null
+                )
+
+              : null,
 
           sku:
             mapping?.sku
@@ -348,10 +346,8 @@ SkuListFinancialRow[] {
           purchases:
             row.buys,
         };
-
       }
     );
-
 }
 
 
@@ -360,36 +356,35 @@ SkuListFinancialRow[] {
 // ============================================================
 
 export default async function SkuListPage() {
-
-  const mappings =
-    await getProductMappings();
-
+  const [
+    mappings,
+    statuses,
+  ] =
+    await Promise.all([
+      getProductMappings(),
+      getProductStatuses(),
+    ]);
 
   const ozonRows =
     buildOzonRows(
-      mappings
+      mappings,
+      statuses
     );
 
-
   return (
-
     <main
       className=
         "page sku-list-page"
     >
-
       <div
         className=
           "container sku-list-container"
       >
-
         <header
           className=
             "header sku-list-header"
         >
-
           <div>
-
             <div
               className=
                 "sku-list-eyebrow"
@@ -397,49 +392,36 @@ export default async function SkuListPage() {
               КАТАЛОГ / ОБЩИЙ СПИСОК
             </div>
 
-
             <h1>
               Список артикулов
             </h1>
-
 
             <p>
               Финансовые показатели по артикулам
               маркетплейсов с привязкой к ЕНОТ.
             </p>
-
           </div>
-
 
           <div
             className=
               "header-actions sku-list-header-actions"
           >
-
             <Link
               href="/"
-
               className=
                 "secondary-button workspace-home-button sku-list-home-button"
             >
               Главная
             </Link>
-
           </div>
-
         </header>
-
 
         <SkuListTabsClient
           ozonRows={
             ozonRows
           }
         />
-
       </div>
-
     </main>
-
   );
-
 }

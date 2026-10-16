@@ -1,38 +1,20 @@
 .sku-list-page {
-  min-height:
-    0;
+  min-height: 0;
+  color: var(--ws-text);
 
-  color:
-    var(--ws-text);
+  --sku-ozon-accent: #157dbc;
+  --sku-ozon-soft: #e3f3ff;
+  --sku-ozon-grid: rgba(21, 125, 188, 0.22);
+  --sku-ozon-scroll: #157dbc;
 
-  --sku-ozon-accent:
-    #157dbc;
-
-  --sku-ozon-accent-strong:
-    #0b6295;
-
-  --sku-ozon-soft:
-    #e3f3ff;
-
-  --sku-ozon-grid:
-    rgba(
-      21,
-      125,
-      188,
-      0.22
-    );
-
-  --sku-ozon-scroll:
-    #157dbc;
+  --sku-status-width: 170px;
+  --sku-base-flex: calc((100% - 667px) / 2);
 }
 
 
 .sku-list-container {
-  width:
-    100%;
-
-  margin:
-    0;
+  width: 100%;
+  margin: 0;
 }
 
 
@@ -41,104 +23,54 @@
    ============================================================ */
 
 .sku-list-header {
-  display:
-    flex;
-
-  align-items:
-    center;
-
-  justify-content:
-    space-between;
-
-  gap:
-    24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
 }
 
 
 .sku-list-eyebrow {
-  margin-bottom:
-    8px;
-
-  color:
-    var(--ws-text-muted);
-
-  font-size:
-    11px;
-
-  font-weight:
-    700;
-
-  letter-spacing:
-    0.08em;
+  margin-bottom: 8px;
+  color: var(--ws-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
 }
 
 
 .sku-list-header h1 {
-  margin:
-    0;
-
-  color:
-    var(--ws-text);
-
-  font-size:
-    31px;
-
-  line-height:
-    1.12;
-
-  font-weight:
-    750;
-
-  letter-spacing:
-    -0.02em;
+  margin: 0;
+  color: var(--ws-text);
+  font-size: 31px;
+  line-height: 1.12;
+  font-weight: 750;
+  letter-spacing: -0.02em;
 }
 
 
 .sku-list-header p {
-  max-width:
-    680px;
-
-  margin:
-    9px 0 0;
-
-  color:
-    var(--ws-text-muted);
-
-  font-size:
-    13px;
-
-  line-height:
-    1.55;
+  max-width: 680px;
+  margin: 9px 0 0;
+  color: var(--ws-text-muted);
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 
 .sku-list-header-actions {
-  display:
-    flex;
-
-  align-items:
-    center;
-
-  gap:
-    10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 
 .sku-list-home-button {
-  display:
-    inline-flex;
-
-  align-items:
-    center;
-
-  justify-content:
-    center;
-
-  text-decoration:
-    none;
-
-  white-space:
-    nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 
@@ -147,345 +79,157 @@
    ============================================================ */
 
 .sku-list-data-section {
-  min-width:
-    0;
+  min-width: 0;
 }
 
 
 .sku-list-tabs {
-  display:
-    flex;
-
-  align-items:
-    center;
-
-  gap:
-    8px;
-
-  margin-bottom:
-    14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
 }
 
 
 .sku-list-tab {
-  min-height:
-    38px;
-
-  padding:
-    8px
-    16px;
-
-  border:
-    1px solid
-    var(--ws-border);
-
-  border-radius:
-    9px;
-
-  background:
-    var(--ws-surface);
-
-  color:
-    var(--ws-text-secondary);
-
-  font:
-    inherit;
-
-  font-size:
-    13px;
-
-  font-weight:
-    700;
-
-  cursor:
-    pointer;
-
+  min-height: 38px;
+  padding: 8px 16px;
+  border: 1px solid var(--ws-border);
+  border-radius: 9px;
+  background: var(--ws-surface);
+  color: var(--ws-text-secondary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
   transition:
-    background-color
-      0.14s
-      ease,
-    border-color
-      0.14s
-      ease,
-    color
-      0.14s
-      ease,
-    transform
-      0.05s
-      ease;
+    background-color 0.14s ease,
+    border-color 0.14s ease,
+    color 0.14s ease,
+    transform 0.05s ease;
 }
 
 
 .sku-list-tab:hover {
-  background:
-    var(--ws-surface-hover);
-
-  color:
-    var(--ws-text);
+  background: var(--ws-surface-hover);
+  color: var(--ws-text);
 }
 
 
 .sku-list-tab:active {
-  transform:
-    translateY(
-      1px
-    );
+  transform: translateY(1px);
 }
 
 
-.sku-list-tab--ozon:not(
-  .sku-list-tab--active
-):hover {
-  border-color:
-    rgba(
-      21,
-      125,
-      188,
-      0.35
-    );
-
-  background:
-    #e3f3ff;
-
-  color:
-    #157dbc;
+.sku-list-tab--ozon:not(.sku-list-tab--active):hover {
+  border-color: rgba(21, 125, 188, 0.35);
+  background: #e3f3ff;
+  color: #157dbc;
 }
 
 
-.sku-list-tab--wildberries:not(
-  .sku-list-tab--active
-):hover {
-  border-color:
-    rgba(
-      130,
-      49,
-      180,
-      0.35
-    );
-
-  background:
-    #f4e9fb;
-
-  color:
-    #8231b4;
+.sku-list-tab--wildberries:not(.sku-list-tab--active):hover {
+  border-color: rgba(130, 49, 180, 0.35);
+  background: #f4e9fb;
+  color: #8231b4;
 }
 
 
-.sku-list-tab--yandex:not(
-  .sku-list-tab--active
-):hover {
-  border-color:
-    rgba(
-      182,
-      90,
-      21,
-      0.35
-    );
-
-  background:
-    #fff0e0;
-
-  color:
-    #b65a15;
+.sku-list-tab--yandex:not(.sku-list-tab--active):hover {
+  border-color: rgba(182, 90, 21, 0.35);
+  background: #fff0e0;
+  color: #b65a15;
 }
 
 
 .sku-list-tab--all.sku-list-tab--active {
-  border-color:
-    #37c98e;
-
-  background:
-    #11865d;
-
-  color:
-    #ffffff;
+  border-color: #37c98e;
+  background: #11865d;
+  color: #ffffff;
 }
 
 
 .sku-list-tab--ozon.sku-list-tab--active {
-  border-color:
-    #1478bb;
-
-  background:
-    #1478bb;
-
-  color:
-    #ffffff;
+  border-color: #1478bb;
+  background: #1478bb;
+  color: #ffffff;
 }
 
 
 .sku-list-tab--wildberries.sku-list-tab--active {
-  border-color:
-    #9d2fbd;
-
-  background:
-    #9d2fbd;
-
-  color:
-    #ffffff;
+  border-color: #9d2fbd;
+  background: #9d2fbd;
+  color: #ffffff;
 }
 
 
 .sku-list-tab--yandex.sku-list-tab--active {
-  border-color:
-    #d86520;
-
-  background:
-    #d86520;
-
-  color:
-    #ffffff;
+  border-color: #d86520;
+  background: #d86520;
+  color: #ffffff;
 }
 
 
 /* ============================================================
-   TABLE CARD
+   TABLE / SCROLL AREA
    ============================================================ */
 
 .sku-list-table-card {
-  overflow:
-    hidden;
-
-  border:
-    1px solid
-    var(--sku-ozon-grid);
-
-  border-radius:
-    14px;
-
-  background:
-    var(--ws-surface);
-
-  box-shadow:
-    var(--ws-shadow-soft);
+  overflow: hidden;
+  border: 1px solid var(--sku-ozon-grid);
+  border-radius: 14px;
+  background: var(--ws-surface);
+  box-shadow: var(--ws-shadow-soft);
 }
 
-
-.sku-list-table-meta {
-  display:
-    flex;
-
-  align-items:
-    center;
-
-  justify-content:
-    space-between;
-
-  gap:
-    16px;
-
-  min-height:
-    42px;
-
-  padding:
-    0
-    14px;
-
-  border-bottom:
-    1px solid
-    var(--sku-ozon-grid);
-
-  color:
-    var(--ws-text-muted);
-
-  font-size:
-    12px;
-
-  font-weight:
-    650;
-}
-
-
-.sku-list-unmatched {
-  color:
-    #c07a2d;
-}
-
-
-/* ============================================================
-   SCROLL AREA
-   ============================================================ */
 
 .sku-list-table-scroll {
-  position:
-    relative;
-
-  width:
-    100%;
-
+  position: relative;
+  width: 100%;
   height:
     calc(
       100vh
       -
-      var(
-        --home-topbar-height,
-        72px
-      )
+      var(--home-topbar-height, 72px)
       -
-      var(
-        --workspace-module-header-height,
-        98px
-      )
+      var(--workspace-module-header-height, 98px)
       -
-      118px
+      76px
     );
-
-  min-height:
-    320px;
-
-  max-height:
-    68vh;
-
-  overflow-x:
-    auto;
-
-  overflow-y:
-    auto;
-
-  overscroll-behavior:
-    contain;
-
-  scrollbar-gutter:
-    stable;
-
+  min-height: 320px;
+  max-height: 68vh;
+  overflow-x: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   scrollbar-color:
     color-mix(
       in srgb,
-      var(--sku-ozon-scroll)
-      65%,
+      var(--sku-ozon-scroll) 65%,
       transparent
     )
     var(--ws-surface-soft);
-
-  background:
-    var(--ws-surface);
+  background: var(--ws-surface);
 }
 
 
 .sku-list-table-scroll::-webkit-scrollbar {
-  width:
-    8px;
-
-  height:
-    8px;
+  width: 8px;
+  height: 8px;
 }
 
 
 .sku-list-table-scroll::-webkit-scrollbar-track {
-  background:
-    var(--ws-surface-soft);
+  background: var(--ws-surface-soft);
 }
 
 
 .sku-list-table-scroll::-webkit-scrollbar-thumb {
-  border-radius:
-    12px;
-
+  border-radius: 12px;
   background:
     color-mix(
       in srgb,
-      var(--sku-ozon-scroll)
-      55%,
+      var(--sku-ozon-scroll) 55%,
       transparent
     );
 }
@@ -495,8 +239,7 @@
   background:
     color-mix(
       in srgb,
-      var(--sku-ozon-scroll)
-      78%,
+      var(--sku-ozon-scroll) 78%,
       transparent
     );
 }
@@ -507,290 +250,293 @@
    ============================================================ */
 
 .sku-list-table {
-  width:
-    100%;
-
-  min-width:
-    940px;
-
-  border-spacing:
-    0;
-
-  border-collapse:
-    separate;
-
-  table-layout:
-    fixed;
+  width: 100%;
+  min-width: 1120px;
+  border-spacing: 0;
+  border-collapse: separate;
+  table-layout: fixed;
 }
 
 
 .sku-list-col-enot {
-  width:
-    90px;
+  width: 90px;
+}
+
+
+.sku-list-col-status {
+  width: var(--sku-status-width);
 }
 
 
 .sku-list-col-sku {
-  width:
-    112px;
+  width: 112px;
 }
 
 
-.sku-list-col-flex {
+/*
+ * Артикул продавца уменьшается РОВНО на ширину нового
+ * столбца Статус относительно прежнего деления 50/50.
+ */
+.sku-list-col-seller {
   width:
     calc(
-      (
-        100%
-        -
-        667px
-      )
-      /
-      2
+      var(--sku-base-flex)
+      -
+      var(--sku-status-width)
+    );
+}
+
+
+/*
+ * Операционной прибыли добавлено 6 px.
+ * Чтобы общая ширина таблицы не изменилась, эти 6 px
+ * компенсируются здесь.
+ */
+.sku-list-col-product {
+  width:
+    calc(
+      var(--sku-base-flex)
+      -
+      6px
     );
 }
 
 
 .sku-list-col-number {
-  width:
-    155px;
+  width: 155px;
 }
 
 
-.sku-list-table
-thead
-th {
-  position:
-    sticky;
-
-  z-index:
-    2;
-
-  top:
-    0;
-
-  height:
-    42px;
-
-  padding:
-    0;
-
-  border-right:
-    1px solid
-    var(--sku-ozon-grid);
-
-  border-bottom:
-    1px solid
-    var(--sku-ozon-grid);
-
-  background:
-    var(--ws-surface-soft);
-
-  color:
-    var(--ws-text-muted);
-
-  vertical-align:
-    middle;
+.sku-list-col-profit {
+  width: 161px;
 }
 
 
-.sku-list-table
-thead
-th:last-child,
+.sku-list-table thead th {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  height: 42px;
+  padding: 0;
+  border-right: 1px solid var(--sku-ozon-grid);
+  border-bottom: 1px solid var(--sku-ozon-grid);
+  background: var(--ws-surface-soft);
+  color: var(--ws-text-muted);
+  vertical-align: middle;
+}
 
-.sku-list-table
-tbody
-td:last-child {
-  border-right:
-    0;
+
+.sku-list-table thead th:last-child,
+.sku-list-table tbody td:last-child {
+  border-right: 0;
 }
 
 
 .sku-list-sort-button {
-  display:
-    flex;
-
-  width:
-    100%;
-
-  min-height:
-    42px;
-
-  padding:
-    10px
-    9px;
-
-  align-items:
-    center;
-
-  justify-content:
-    center;
-
-  gap:
-    5px;
-
-  border:
-    0;
-
-  background:
-    transparent;
-
-  color:
-    var(--ws-text-muted);
-
-  font:
-    inherit;
-
-  font-size:
-    11px;
-
-  font-weight:
-    700;
-
-  line-height:
-    1.2;
-
-  text-align:
-    center;
-
-  white-space:
-    nowrap;
-
-  cursor:
-    pointer;
+  display: flex;
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 8px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--ws-text-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
 
 .sku-list-sort-button:hover {
-  background:
-    var(--sku-ozon-soft);
-
-  color:
-    var(--sku-ozon-accent);
+  background: var(--sku-ozon-soft);
+  color: var(--sku-ozon-accent);
 }
 
 
 .sku-list-sort-button--active {
-  color:
-    var(--sku-ozon-accent);
+  color: var(--sku-ozon-accent);
 }
 
 
 .sku-list-sort-arrow {
-  flex:
-    0 0 auto;
+  flex: 0 0 auto;
 }
 
 
-.sku-list-table
-tbody
-td {
-  box-sizing:
-    border-box;
-
-  padding:
-    11px
-    10px;
-
-  border-right:
-    1px solid
-    var(--sku-ozon-grid);
-
-  border-bottom:
-    1px solid
-    var(--sku-ozon-grid);
-
-  background:
-    var(--ws-surface);
-
-  color:
-    var(--ws-text);
-
-  font-size:
-    12px;
-
-  line-height:
-    1.35;
-
-  vertical-align:
-    middle;
+.sku-list-table tbody td {
+  box-sizing: border-box;
+  padding: 11px 10px;
+  border-right: 1px solid var(--sku-ozon-grid);
+  border-bottom: 1px solid var(--sku-ozon-grid);
+  background: var(--ws-surface);
+  color: var(--ws-text);
+  font-size: 12px;
+  line-height: 1.35;
+  vertical-align: middle;
 }
 
 
-.sku-list-table
-tbody
-tr:nth-child(even)
-td {
+.sku-list-table tbody tr:nth-child(even) td {
   background:
     color-mix(
       in srgb,
-      var(--ws-surface)
-      92%,
+      var(--ws-surface) 92%,
       var(--ws-surface-soft)
     );
 }
 
 
-.sku-list-table
-tbody
-tr:hover
-td {
-  background:
-    var(--sku-ozon-soft);
+.sku-list-table tbody tr:hover td {
+  background: var(--sku-ozon-soft);
 }
 
 
-.sku-list-table
-tbody
-tr:last-child
-td {
-  border-bottom:
-    0;
+.sku-list-table tbody tr:last-child td {
+  border-bottom: 0;
 }
 
 
 .sku-list-compact-cell,
-.sku-list-number-cell {
-  text-align:
-    center;
-
-  font-variant-numeric:
-    tabular-nums;
-
-  white-space:
-    nowrap;
+.sku-list-number-cell,
+.sku-list-status-cell {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 
+/*
+ * Точно как ЕНОТ в таблице товаров Ozon:
+ * monospace + 700 + Ozon accent, размер наследуется 12 px.
+ */
 .sku-list-enot {
-  font-weight:
-    750;
-
-  letter-spacing:
-    0.02em;
+  color: var(--sku-ozon-accent) !important;
+  font-family: monospace;
+  font-weight: 700;
 }
 
 
 .sku-list-sku {
-  font-weight:
-    650;
+  font-weight: 650;
 }
 
 
 .sku-list-text-cell {
-  overflow:
-    hidden;
-
-  text-overflow:
-    ellipsis;
-
-  white-space:
-    nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 
 .sku-list-profit-negative {
-  color:
-    #d96a6a !important;
+  color: #d96a6a !important;
+}
+
+
+/* ============================================================
+   STATUS CHIP
+   ============================================================ */
+
+.sku-list-status-cell {
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+
+
+.sku-list-status-control {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  border-radius: 999px;
+  background: #e4e9ee;
+  color: #526273;
+  box-shadow:
+    inset 0 0 0 1px
+    rgba(82, 98, 115, 0.10);
+}
+
+
+.sku-list-status-control::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 11px;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+  transform: translateY(-35%);
+  pointer-events: none;
+}
+
+
+.sku-list-status-select {
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  padding: 0 28px 0 10px;
+  border: 0;
+  border-radius: 999px;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  text-align-last: center;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+
+.sku-list-status-select:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+
+.sku-list-status-control[data-status="Активный"] {
+  background: #dff4e7;
+  color: #18764c;
+}
+
+
+.sku-list-status-control[data-status="Неактивный"] {
+  background: #e3e6ea;
+  color: #59636e;
+}
+
+
+.sku-list-status-control[data-status="FBS"] {
+  background: #eee2f8;
+  color: #7432a2;
+}
+
+
+.sku-list-status-control[data-status="Выводится из продажи"] {
+  background: #f9e2e2;
+  color: #a64646;
+}
+
+
+.sku-list-status-control[data-status="Сезонный"] {
+  background: #fff0cf;
+  color: #9a6814;
+}
+
+
+.sku-list-status-control[data-status="В пути"] {
+  background: #dceefd;
+  color: #256b9c;
 }
 
 
@@ -799,33 +545,15 @@ td {
    ============================================================ */
 
 .sku-list-empty-tab {
-  display:
-    flex;
-
-  align-items:
-    center;
-
-  justify-content:
-    center;
-
-  min-height:
-    180px;
-
-  border:
-    1px solid
-    var(--ws-border-soft);
-
-  border-radius:
-    14px;
-
-  background:
-    var(--ws-surface);
-
-  color:
-    var(--ws-text-muted);
-
-  font-size:
-    13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  border: 1px solid var(--ws-border-soft);
+  border-radius: 14px;
+  background: var(--ws-surface);
+  color: var(--ws-text-muted);
+  font-size: 13px;
 }
 
 
@@ -833,87 +561,86 @@ td {
    DARK
    ============================================================ */
 
-html[data-theme="dark"]
-.sku-list-page {
-  --sku-ozon-accent:
-    #75c4f2;
-
-  --sku-ozon-accent-strong:
-    #42b4ec;
-
-  --sku-ozon-soft:
-    #162d40;
-
-  --sku-ozon-grid:
-    rgba(
-      117,
-      196,
-      242,
-      0.28
-    );
-
-  --sku-ozon-scroll:
-    #75c4f2;
+html[data-theme="dark"] .sku-list-page {
+  --sku-ozon-accent: #75c4f2;
+  --sku-ozon-soft: #162d40;
+  --sku-ozon-grid: rgba(117, 196, 242, 0.28);
+  --sku-ozon-scroll: #75c4f2;
 }
 
 
 html[data-theme="dark"]
-.sku-list-tab--ozon:not(
-  .sku-list-tab--active
-):hover {
-  border-color:
-    rgba(
-      117,
-      196,
-      242,
-      0.38
-    );
-
-  background:
-    #162d40;
-
-  color:
-    #75c4f2;
+.sku-list-tab--ozon:not(.sku-list-tab--active):hover {
+  border-color: rgba(117, 196, 242, 0.38);
+  background: #162d40;
+  color: #75c4f2;
 }
 
 
 html[data-theme="dark"]
-.sku-list-tab--wildberries:not(
-  .sku-list-tab--active
-):hover {
-  border-color:
-    rgba(
-      215,
-      160,
-      239,
-      0.38
-    );
-
-  background:
-    #2a1b38;
-
-  color:
-    #d7a0ef;
+.sku-list-tab--wildberries:not(.sku-list-tab--active):hover {
+  border-color: rgba(215, 160, 239, 0.38);
+  background: #2a1b38;
+  color: #d7a0ef;
 }
 
 
 html[data-theme="dark"]
-.sku-list-tab--yandex:not(
-  .sku-list-tab--active
-):hover {
-  border-color:
-    rgba(
-      255,
-      182,
-      123,
-      0.38
-    );
+.sku-list-tab--yandex:not(.sku-list-tab--active):hover {
+  border-color: rgba(255, 182, 123, 0.38);
+  background: #3b281b;
+  color: #ffb67b;
+}
 
-  background:
-    #3b281b;
 
-  color:
-    #ffb67b;
+html[data-theme="dark"] .sku-list-status-control {
+  background: #263039;
+  color: #c3cbd2;
+  box-shadow:
+    inset 0 0 0 1px
+    rgba(255, 255, 255, 0.08);
+}
+
+
+html[data-theme="dark"]
+.sku-list-status-control[data-status="Активный"] {
+  background: #173b2b;
+  color: #73d6a5;
+}
+
+
+html[data-theme="dark"]
+.sku-list-status-control[data-status="Неактивный"] {
+  background: #2a3036;
+  color: #b9c0c7;
+}
+
+
+html[data-theme="dark"]
+.sku-list-status-control[data-status="FBS"] {
+  background: #352342;
+  color: #d3a2ec;
+}
+
+
+html[data-theme="dark"]
+.sku-list-status-control[data-status="Выводится из продажи"] {
+  background: #432525;
+  color: #f0a1a1;
+}
+
+
+html[data-theme="dark"]
+.sku-list-status-control[data-status="Сезонный"] {
+  background: #44341b;
+  color: #f2c66e;
+}
+
+
+html[data-theme="dark"]
+.sku-list-status-control[data-status="В пути"] {
+  background: #183549;
+  color: #8acaf2;
 }
 
 
@@ -925,12 +652,9 @@ html[data-theme="dark"]
   max-width:
     1100px
 ) {
-
   .sku-list-table-scroll {
-    max-height:
-      62vh;
+    max-height: 62vh;
   }
-
 }
 
 
@@ -938,37 +662,22 @@ html[data-theme="dark"]
   max-width:
     800px
 ) {
-
   .sku-list-header h1 {
-    font-size:
-      28px;
+    font-size: 28px;
   }
-
 
   .sku-list-tabs {
-    overflow-x:
-      auto;
-
-    padding-bottom:
-      2px;
+    overflow-x: auto;
+    padding-bottom: 2px;
   }
-
 
   .sku-list-tab {
-    flex:
-      0 0 auto;
+    flex: 0 0 auto;
   }
-
 
   .sku-list-table-scroll {
-    height:
-      56vh;
-
-    min-height:
-      300px;
-
-    max-height:
-      56vh;
+    height: 56vh;
+    min-height: 300px;
+    max-height: 56vh;
   }
-
 }
