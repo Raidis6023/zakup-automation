@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 540" role="img" aria-labelledby="title">
+<title id="title">Красная панда в деловом костюме машет лапой и проверяет папку</title>
+<defs>
+ <linearGradient id="coat" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#35404b"/><stop offset=".48" stop-color="#1b222c"/><stop offset="1" stop-color="#111720"/></linearGradient>
+ <linearGradient id="fur" x1="0" y1="0" x2="1" y2=".8"><stop stop-color="#f6a357"/><stop offset=".48" stop-color="#dc7035"/><stop offset="1" stop-color="#a94327"/></linearGradient>
+ <linearGradient id="whiteFur" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3da"/><stop offset="1" stop-color="#eed5ac"/></linearGradient>
+ <linearGradient id="tail" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fa9c52"/><stop offset="1" stop-color="#b14a2c"/></linearGradient>
+ <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="8"/></filter>
+</defs>
+<style><![CDATA[
+.panda-body{animation:rise 2s ease-out both,breathe 5.2s ease-in-out 2s infinite;transform-origin:210px 465px}
+.panda-head{animation:headUp 2.3s ease-out both;transform-origin:205px 245px}
+.panda-wave{animation:wave 3.2s ease-in-out .25s both;transform-origin:138px 323px}
+.panda-tail{animation:wag 4.7s ease-in-out infinite;transform-origin:283px 415px}
+.panda-eye{animation:blink 6s ease-in-out 4.2s infinite;transform-origin:center;transform-box:fill-box}
+.panda-folder{animation:folder 3.4s ease-in-out 2.8s both;transform-origin:304px 362px}
+.panda-check{stroke-dasharray:64;stroke-dashoffset:64;animation:check 1s ease-out 4.55s both}
+@keyframes rise{0%{transform:translateY(17px) scaleY(.965)}55%{transform:translateY(-8px) scaleY(1.012)}100%{transform:translateY(0) scaleY(1)}}
+@keyframes breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes headUp{0%{transform:rotate(-9deg) translateY(8px)}55%{transform:rotate(4deg)}100%{transform:rotate(0)}}
+@keyframes wave{0%,4%,84%,100%{transform:rotate(0)}14%,34%,54%{transform:rotate(-22deg)}24%,44%,64%{transform:rotate(16deg)}}
+@keyframes wag{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(9deg)}}
+@keyframes blink{0%,5%,9%,100%{transform:scaleY(1)}7%{transform:scaleY(.08)}}
+@keyframes folder{0%,15%{transform:rotate(0)}32%,65%{transform:rotate(-8deg) translate(-3px,-5px)}100%{transform:rotate(0)}}
+@keyframes check{from{stroke-dashoffset:64}to{stroke-dashoffset:0}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important}.panda-check{stroke-dashoffset:0}}
+]]></style>
+<ellipse cx="217" cy="519" rx="128" ry="13" fill="#000" opacity=".33" filter="url(#soft)"/>
+<g class="panda-tail">
+ <path d="M275 409 C355 364 417 406 405 459 C396 501 351 501 323 474" fill="none" stroke="#a8472d" stroke-width="70" stroke-linecap="round"/>
+ <path d="M275 409 C355 364 417 406 405 459 C396 501 351 501 323 474" fill="none" stroke="url(#tail)" stroke-width="60" stroke-linecap="round"/>
+ <path d="M337 400 Q362 405 373 423 M389 445 Q383 467 365 480" stroke="#ffe0a2" stroke-width="25" opacity=".9" fill="none"/>
+</g>
+<g class="panda-body">
+<path d="M164 426 L150 488 L190 493 L205 432 Z M246 432 L266 489 L307 486 L285 425Z" fill="#131922" stroke="#46505b" stroke-width="3"/>
+<path d="M139 484 Q156 479 195 488 Q216 506 196 511 L119 511 Q112 492 139 484Z M265 488 Q292 480 318 490 Q336 509 306 513 L249 513 Q240 503 265 488Z" fill="#0b1018" stroke="#4a535d" stroke-width="3"/>
+<path d="M119 510 L201 510 M251 512 L320 512" stroke="#df8539" stroke-width="5" stroke-linecap="round"/>
+<path d="M146 290 Q191 275 232 284 Q285 289 309 325 L294 447 Q217 476 133 443 L120 331 Q126 304 146 290Z" fill="url(#coat)" stroke="#414955" stroke-width="3"/>
+<path d="M172 294 L215 301 L256 291 L265 421 Q215 443 160 416Z" fill="#f4f1eb"/>
+<path d="M179 315 L212 340 L205 423 Q184 420 161 404 L158 320Z M252 315 L218 340 L222 425 Q240 421 263 409 L268 320Z" fill="#232c38" stroke="#4b5560" stroke-width="2"/>
+<path d="M184 320 L211 350 L197 362 L163 326Z M248 318 L217 350 L231 361 L267 324Z" fill="#121a24" stroke="#5a6270" stroke-width="2"/>
+<path d="M207 324 L219 324 L227 342 L218 389 L208 402 L199 391 L207 342Z" fill="#f28a35" stroke="#b95a29" stroke-width="2"/>
+<path d="M207 345 L220 359 M208 364 L219 377" stroke="#ffe2a6" stroke-width="3" opacity=".6"/>
+<path d="M151 295 L178 323 L159 350 L185 379 L185 434 L128 437 L121 324Z M272 295 L248 324 L269 350 L247 380 L244 435 L298 437 L308 328Z" fill="url(#coat)" stroke="#4a535d" stroke-width="2.5"/>
+<path d="M151 295 L177 323 L159 351 L182 376 M272 295 L249 323 L269 350 L249 375" stroke="#646b74" stroke-width="2.5" fill="none"/>
+<circle cx="213" cy="383" r="3" fill="#dce0df"/><circle cx="213" cy="402" r="3" fill="#dce0df"/>
+<path d="M269 350 l17 0 -13 13Z" fill="#e98739"/>
+<g class="panda-wave">
+<path d="M137 316 C110 308 93 264 91 231" stroke="#252c36" stroke-width="35" fill="none" stroke-linecap="round"/>
+<path d="M90 232 C68 214 63 196 67 180 Q69 164 79 173 L88 191 L84 165 Q88 155 97 162 L101 185 L105 156 Q112 151 117 162 L113 193 L122 174 Q133 170 136 181 L125 217 Q117 238 90 232Z" fill="#342721" stroke="#b16c44" stroke-width="3"/>
+<path d="M104 230 L88 235" stroke="#f8f1e6" stroke-width="14" stroke-linecap="round"/>
+</g>
+<path d="M285 319 Q330 336 321 386" fill="none" stroke="#242b35" stroke-width="36" stroke-linecap="round"/>
+<path d="M312 376 Q330 384 324 409" fill="none" stroke="#f1e8db" stroke-width="12" stroke-linecap="round"/>
+<ellipse cx="318" cy="406" rx="19" ry="24" fill="#433129" stroke="#a4663f" stroke-width="3"/>
+<g class="panda-head">
+<path d="M115 129 Q85 64 118 54 Q150 55 159 103Z M260 105 Q280 54 315 63 Q341 91 306 143Z" fill="#7b3828" stroke="#49251f" stroke-width="4"/>
+<path d="M122 117 Q101 80 119 76 Q138 79 142 109Z M273 110 Q289 75 312 85 Q315 102 295 128Z" fill="#ffe6c5"/>
+<path d="M91 159 C89 95 138 83 204 88 C272 86 321 114 323 170 C325 253 277 301 208 302 C135 301 87 251 91 159Z" fill="url(#fur)" stroke="#8d452c" stroke-width="3.5"/>
+<path d="M109 158 Q140 127 172 153 Q191 178 182 215 Q158 247 122 239 Q92 213 109 158Z M301 159 Q274 126 243 154 Q225 183 236 216 Q266 248 303 238 Q330 210 301 159Z" fill="url(#whiteFur)"/>
+<path d="M140 237 Q166 225 207 238 Q250 225 283 240 Q274 285 210 289 Q152 281 140 237Z" fill="#fff1d4"/>
+<path d="M125 170 Q154 144 182 173 Q188 213 159 223 Q126 223 125 170Z M231 173 Q257 145 285 170 Q292 224 259 224 Q231 215 231 173Z" fill="#5a2f28"/>
+<g class="panda-eye">
+<ellipse cx="157" cy="189" rx="12" ry="16" fill="#fff8e9"/><ellipse cx="159" cy="191" rx="6" ry="9" fill="#2b2726"/><circle cx="161" cy="185" r="2.7" fill="#fff"/>
+<ellipse cx="258" cy="189" rx="12" ry="16" fill="#fff8e9"/><ellipse cx="259" cy="191" rx="6" ry="9" fill="#2b2726"/><circle cx="262" cy="185" r="2.7" fill="#fff"/>
+</g>
+<path d="M144 158 Q158 153 174 161 M243 160 Q258 153 271 159" stroke="#783c2e" stroke-width="7" fill="none" stroke-linecap="round"/>
+<path d="M176 229 Q183 210 211 213 Q240 211 245 231 Q245 253 209 258 Q180 255 176 229Z" fill="#fff2da"/>
+<path d="M194 224 Q210 212 226 224 Q226 233 209 237 Q196 233 194 224Z" fill="#332924"/>
+<path d="M209 235 L209 244 M182 243 Q209 273 238 243" stroke="#503127" stroke-width="4" fill="none" stroke-linecap="round"/>
+<path d="M192 250 Q208 266 229 251" fill="#ad4f54" opacity=".85"/>
+</g>
+<g class="panda-folder">
+<path d="M270 343 Q280 338 292 343 L341 359 L342 448 Q318 458 263 434Z" fill="#131b25" stroke="#e78a3d" stroke-width="3"/>
+<path d="M284 352 L331 365 L333 439 L274 426Z" fill="#e9dec8"/>
+<path d="M289 371 L298 374 M305 376 L322 381 M286 392 L296 395 M304 398 L322 403 M284 412 L294 415 M300 417 L322 422" stroke="#8c918e" stroke-width="3" stroke-linecap="round"/>
+<path class="panda-check" d="M282 371 l6 8 13 -17 M280 390 l6 8 12 -15" fill="none" stroke="#189569" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M264 343 Q267 336 274 339 L343 358 L345 452 L264 434Z" fill="none" stroke="#f6a352" stroke-width="4"/>
+<rect x="293" y="343" width="24" height="8" rx="3" fill="#b9b8ad" transform="rotate(15 293 343)"/>
+</g></g></svg>

@@ -16,6 +16,9 @@ import {
   createClient,
 } from "../../lib/supabase/client";
 
+import AccessPanda from "./AccessPanda";
+import pandaStyles from "./AccessPanda.module.css";
+
 
 // ============================================================
 // ICONS
@@ -838,6 +841,14 @@ export default function LoginForm() {
         >
 
           <div
+            className={pandaStyles.stage}
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                closeAccessModal();
+              }
+            }}
+          >
+          <div
             className="access-modal"
             role="dialog"
             aria-modal="true"
@@ -1141,6 +1152,10 @@ export default function LoginForm() {
 
               )
             }
+
+          </div>
+
+          <AccessPanda success={accessSuccess} />
 
           </div>
 
