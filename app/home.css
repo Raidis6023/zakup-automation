@@ -1958,3 +1958,20 @@ html[data-theme="dark"]
   }
 
 }
+
+
+/* Шалфейная карточка «Все МП». Фирменные карточки Ozon, WB и ЯМ без изменений. */
+.home-marketplace-metric-card--all {
+  --home-metric-accent: #47594B;
+  --home-metric-soft: rgba(126, 159, 137, 0.12);
+  --home-metric-border: rgba(71, 89, 75, 0.26);
+}
+html[data-theme="dark"] .home-marketplace-metric-card--all {
+  --home-metric-accent: #A5C4AE;
+  --home-metric-soft: rgba(165, 196, 174, 0.12);
+  --home-metric-border: rgba(165, 196, 174, 0.30);
+  background: #1F2A21;
+}
+html[data-theme="dark"] .home-marketplace-metric-card--all .home-marketplace-ip-badge {
+  color: #1F2A21;
+}

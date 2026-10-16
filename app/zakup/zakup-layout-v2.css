@@ -14,7 +14,7 @@
     100px;
 
   --zakup-v2-green:
-    #19b978;
+    #7E9F89;
 
   --zakup-v2-red:
     #e84868;
@@ -2092,4 +2092,9 @@ html[data-theme="dark"]
       100%;
   }
 
+}
+
+/* Шалфейный цвет положительных показателей в тёмной теме. */
+html[data-theme="dark"] .zakup-reference-page {
+  --zakup-v2-green: #A5C4AE;
 }

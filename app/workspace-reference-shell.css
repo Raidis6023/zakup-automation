@@ -1891,3 +1891,149 @@ html[data-theme="dark"]
   }
 
 }
+
+
+/* ============================================================
+   УТВЕРЖДЁННАЯ ШАЛФЕЙНАЯ ТЕМА КПК МИА
+   Применяется ТОЛЬКО к общим разделам WorkSpace.
+   Палитры Ozon, Wildberries и Яндекс Маркета не изменяются.
+   ============================================================ */
+.home-shell[data-accent-area="general"] {
+  /* Светлая тема: шалфей, белые карточки, мягкая зелёная подложка. */
+  --ws-page: #F6F9F6;
+  --ws-sidebar: #FFFFFF;
+  --ws-topbar: rgba(246, 249, 246, 0.96);
+  --ws-surface: #FFFFFF;
+  --ws-surface-soft: #E7F2E6;
+  --ws-surface-hover: #E7F2E6;
+  --ws-border: #D4E2D8;
+  --ws-border-soft: #E1EBE3;
+  --ws-text: #1F2A21;
+  --ws-text-secondary: #47594B;
+  --ws-text-muted: #728777;
+  --ws-nav-text: #25392D;
+  --ws-blue: #47594B;
+  --ws-blue-hover: #354B3B;
+  --ws-blue-soft: #E7F2E6;
+  --ws-icon: #47594B;
+  --ws-nav-hover-text: #47594B;
+  --ws-active: #47594B;
+  --ws-active-text: #FFFFFF;
+  --button: #47594B;
+  --button-hover: #354B3B;
+  --button-text: #FFFFFF;
+  --accent: #7E9F89;
+  --background: var(--ws-page);
+  --surface: var(--ws-surface);
+  --surface-soft: #F0F5F0;
+  --surface-strong: #E7F2E6;
+  --input: #FFFFFF;
+  --secondary-button: #E7F2E6;
+  --secondary-button-hover: #D9E8DC;
+  --border: var(--ws-border);
+  --border-soft: var(--ws-border-soft);
+  --border-strong: #B9D0BE;
+  --text: var(--ws-text);
+  --text-secondary: var(--ws-text-secondary);
+  --text-muted: var(--ws-text-muted);
+  --ws-shadow-soft: 0 3px 14px rgba(31, 42, 33, 0.05);
+  --ws-shadow-popup: 0 18px 45px rgba(31, 42, 33, 0.14);
+  --ws-decor-1-from: #47594B;
+  --ws-decor-1-to: #5C7864;
+  --ws-decor-2-from: #5C7864;
+  --ws-decor-2-to: #7E9F89;
+  --ws-decor-3-from: #7E9F89;
+  --ws-decor-3-to: #A7C1AE;
+  --ws-decor-4-from: #A7C1AE;
+  --ws-decor-4-mid: #BDD2C3;
+  --ws-decor-4-to: #CFE0D6;
+}
+
+html[data-theme="dark"] .home-shell[data-accent-area="general"] {
+  /* Тёмная тема: глубина леса, матовые поверхности, шалфейный акцент. */
+  --ws-page: #17251E;
+  --ws-sidebar: #15221B;
+  --ws-topbar: rgba(21, 34, 27, 0.97);
+  --ws-surface: #1F2A21;
+  --ws-surface-soft: #2E3E36;
+  --ws-surface-hover: #35483C;
+  --ws-border: #405548;
+  --ws-border-soft: #344739;
+  --ws-text: #F1F6F1;
+  --ws-text-secondary: #CFE0D6;
+  --ws-text-muted: #9FB2A5;
+  --ws-nav-text: #F1F6F1;
+  --ws-blue: #7E9F89;
+  --ws-blue-hover: #A5C4AE;
+  --ws-blue-soft: #2E3E36;
+  --ws-icon: #A5C4AE;
+  --ws-nav-hover-text: #CFE0D6;
+  --ws-active: #47594B;
+  --ws-active-text: #F1F6F1;
+  --button: #7E9F89;
+  --button-hover: #A5C4AE;
+  --button-text: #1F2A21;
+  --accent: #A5C4AE;
+  --background: var(--ws-page);
+  --surface: var(--ws-surface);
+  --surface-soft: var(--ws-surface-soft);
+  --surface-strong: #34483A;
+  --input: #203026;
+  --secondary-button: #2E3E36;
+  --secondary-button-hover: #35483C;
+  --border: var(--ws-border);
+  --border-soft: var(--ws-border-soft);
+  --border-strong: #536D5A;
+  --text: var(--ws-text);
+  --text-secondary: var(--ws-text-secondary);
+  --text-muted: var(--ws-text-muted);
+  --ws-shadow-soft: 0 3px 14px rgba(0, 0, 0, 0.15);
+  --ws-shadow-popup: 0 18px 45px rgba(0, 0, 0, 0.30);
+  --ws-decor-1-from: #47594B;
+  --ws-decor-1-to: #63816B;
+  --ws-decor-2-from: #63816B;
+  --ws-decor-2-to: #7E9F89;
+  --ws-decor-3-from: #7E9F89;
+  --ws-decor-3-to: #A7C1AE;
+  --ws-decor-4-from: #A7C1AE;
+  --ws-decor-4-mid: #BDD2C3;
+  --ws-decor-4-to: #CFE0D6;
+}
+
+/* Общие пункты бокового меню. Фирменные ссылки МП не затрагиваем. */
+.home-shell[data-accent-area="general"] .home-workspace-link:not([data-marketplace]) {
+  --ws-surface-hover: #E7F2E6;
+  --ws-border-soft: #B5CDBB;
+  --ws-nav-hover-text: #47594B;
+  --ws-active: #47594B;
+  --ws-blue-hover: #354B3B;
+}
+
+html[data-theme="dark"] .home-shell[data-accent-area="general"] .home-workspace-link:not([data-marketplace]) {
+  --ws-surface-hover: #2E3E36;
+  --ws-border-soft: #526B58;
+  --ws-nav-hover-text: #CFE0D6;
+  --ws-active: #47594B;
+  --ws-blue-hover: #A5C4AE;
+}
+
+.home-shell[data-accent-area="general"] .home-avatar {
+  background: linear-gradient(145deg, #CFE0D6, #7E9F89);
+  color: #1F2A21;
+}
+
+.home-shell[data-accent-area="general"] .home-search input::placeholder,
+.home-shell[data-accent-area="general"] .home-search-shortcut {
+  color: var(--ws-text-muted);
+}
+
+/* Общие таблицы в тёмной теме, смысловые статусы не перекрашиваем. */
+html[data-theme="dark"] .home-shell[data-accent-area="general"] .workspace-content--module .table tbody tr {
+  background: #1F2A21;
+}
+html[data-theme="dark"] .home-shell[data-accent-area="general"] .workspace-content--module .table tbody tr:nth-child(even) {
+  background: #25352B;
+}
+html[data-theme="dark"] .home-shell[data-accent-area="general"] .workspace-content--module .table tbody tr:hover {
+  background: var(--ws-surface-hover);
+}

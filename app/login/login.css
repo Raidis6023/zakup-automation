@@ -1013,3 +1013,154 @@
     gap: 20px;
   }
 }
+
+
+/* ============================================================
+   ШАЛФЕЙНАЯ ТЕМА: АВТОРИЗАЦИЯ И ЗАПРОС ДОСТУПА
+   Палитра соответствует общим страницам КПК МИА.
+   ============================================================ */
+.login-page {
+  --login-blue: #47594B;
+  --login-blue-hover: #354B3B;
+  --login-page-bg: #F6F9F6;
+  --login-panel: #FFFFFF;
+  --login-field-bg: #F6F9F6;
+  --login-border: #D4E2D8;
+  --login-border-soft: #E1EBE3;
+  --login-text: #1F2A21;
+  --login-secondary: #47594B;
+  --login-muted: #728777;
+  --login-hover: #E7F2E6;
+  --login-focus: #7E9F89;
+  --login-primary-text: #FFFFFF;
+  --text: var(--login-text);
+  --text-secondary: var(--login-secondary);
+  --text-muted: var(--login-muted);
+  --border: var(--login-border);
+  --surface-soft: var(--login-hover);
+  color: var(--login-text);
+  background:
+    radial-gradient(circle at 50% 18%, rgba(126, 159, 137, 0.13), transparent 42%),
+    linear-gradient(180deg, #F6F9F6 0%, #E7F2E6 100%);
+}
+
+html[data-theme="dark"] .login-page {
+  --login-blue: #7E9F89;
+  --login-blue-hover: #A5C4AE;
+  --login-page-bg: #17251E;
+  --login-panel: #1F2A21;
+  --login-field-bg: #203026;
+  --login-border: #405548;
+  --login-border-soft: #344739;
+  --login-text: #F1F6F1;
+  --login-secondary: #CFE0D6;
+  --login-muted: #9FB2A5;
+  --login-hover: #2E3E36;
+  --login-focus: #A5C4AE;
+  --login-primary-text: #1F2A21;
+  color: var(--login-text);
+  background:
+    radial-gradient(circle at 50% 18%, rgba(126, 159, 137, 0.12), transparent 42%),
+    linear-gradient(180deg, #17251E 0%, #15221B 100%);
+}
+
+.login-page .login-card,
+.login-page .access-modal {
+  border-color: var(--login-border);
+  background: var(--login-panel);
+  box-shadow: 0 20px 60px rgba(31, 42, 33, 0.12);
+}
+html[data-theme="dark"] .login-page .login-card,
+html[data-theme="dark"] .login-page .access-modal {
+  box-shadow: 0 20px 65px rgba(0, 0, 0, 0.30);
+}
+
+.login-page .login-heading h1,
+.login-page .access-modal-heading h2,
+.login-page .access-success h2 {
+  color: var(--login-text);
+}
+.login-page .login-heading p,
+.login-page .access-modal-heading p,
+.login-page .access-success p,
+.login-page .login-access-caption,
+.login-page .login-forgot-password {
+  color: var(--login-muted);
+}
+.login-page .login-field > span {
+  color: var(--login-secondary);
+}
+.login-page .login-field input,
+.login-page .login-field textarea {
+  border-color: var(--login-border);
+  background: var(--login-field-bg);
+  color: var(--login-text);
+  color-scheme: light;
+}
+html[data-theme="dark"] .login-page .login-field input,
+html[data-theme="dark"] .login-page .login-field textarea {
+  color-scheme: dark;
+}
+.login-page .login-field input::placeholder,
+.login-page .login-field textarea::placeholder {
+  color: var(--login-muted);
+}
+.login-page .login-field input:focus,
+.login-page .login-field textarea:focus {
+  border-color: var(--login-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--login-focus) 22%, transparent);
+}
+.login-page .login-password-toggle,
+.login-page .access-modal-close {
+  color: var(--login-muted);
+}
+.login-page .login-password-toggle:hover,
+.login-page .access-modal-close:hover:not(:disabled) {
+  background: var(--login-hover);
+  color: var(--login-secondary);
+}
+.login-page .login-submit,
+.login-page .access-primary-button {
+  border-color: var(--login-blue);
+  background: var(--login-blue);
+  color: var(--login-primary-text);
+  box-shadow: 0 8px 24px rgba(71, 89, 75, 0.16);
+}
+.login-page .login-submit:hover:not(:disabled),
+.login-page .access-primary-button:hover:not(:disabled) {
+  border-color: var(--login-blue-hover);
+  background: var(--login-blue-hover);
+  color: var(--login-primary-text);
+}
+.login-page .login-access-section {
+  border-top-color: var(--login-border-soft);
+}
+.login-page .login-access-button,
+.login-page .access-secondary-button {
+  border-color: var(--login-border);
+  background: var(--login-hover);
+  color: var(--login-secondary);
+}
+.login-page .login-access-button:hover:not(:disabled),
+.login-page .access-secondary-button:hover:not(:disabled) {
+  border-color: var(--login-focus);
+  background: var(--login-field-bg);
+  color: var(--login-text);
+}
+.login-page .access-modal-overlay {
+  background: rgba(15, 29, 23, 0.62);
+}
+.login-page .access-success-icon {
+  background: color-mix(in srgb, var(--login-focus) 18%, transparent);
+  color: var(--login-blue);
+}
+.login-page .login-error {
+  color: #A64646;
+  border-color: rgba(166, 70, 70, 0.25);
+  background: rgba(166, 70, 70, 0.07);
+}
+html[data-theme="dark"] .login-page .login-error {
+  color: #F0A1A1;
+  border-color: rgba(240, 161, 161, 0.32);
+  background: rgba(240, 161, 161, 0.09);
+}

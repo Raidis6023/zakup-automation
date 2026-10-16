@@ -60,3 +60,26 @@
   .panda { animation: none; }
   .bubble p { transition: none; }
 }
+
+
+/* Цвет облачка соответствует шалфейной теме, рисунок панды не меняем. */
+:global(.login-page) .bubble {
+  border-color: #B5CDBB;
+  background: #FFFFFF;
+  color: #1F2A21;
+  box-shadow: 0 15px 44px rgba(31, 42, 33, 0.12);
+}
+:global(.login-page) .bubble::after {
+  border-color: #B5CDBB;
+  background: #FFFFFF;
+}
+:global(html[data-theme="dark"]) :global(.login-page) .bubble {
+  border-color: #536D5A;
+  background: #1F2A21;
+  color: #F1F6F1;
+  box-shadow: 0 15px 44px rgba(0, 0, 0, 0.28);
+}
+:global(html[data-theme="dark"]) :global(.login-page) .bubble::after {
+  border-color: #536D5A;
+  background: #1F2A21;
+}

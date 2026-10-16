@@ -7,7 +7,7 @@
     var(--ws-blue);
 
   --ved-green:
-    #21b878;
+    #7E9F89;
 
   --ved-purple:
     #8e68da;
@@ -1033,4 +1033,9 @@ html[data-theme="dark"]
       78px;
   }
 
+}
+
+/* Шалфейный цвет положительных показателей в тёмной теме. */
+html[data-theme="dark"] .ved-reference-page {
+  --ved-green: #A5C4AE;
 }
