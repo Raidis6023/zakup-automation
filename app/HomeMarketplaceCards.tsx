@@ -173,12 +173,16 @@ export default function HomeMarketplaceCards({
 
   useEffect(
     () => {
-      const board =
+      const currentBoard =
         boardRef.current;
 
-      if (!board) {
+      if (!currentBoard) {
         return;
       }
+
+      const board:
+      HTMLDivElement =
+        currentBoard;
 
       function arrange() {
         const width =
