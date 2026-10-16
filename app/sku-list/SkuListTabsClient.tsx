@@ -234,6 +234,100 @@ function compareRows(
 }
 
 
+function buildAllMarketplaceRows(
+  ozonRows: SkuListFinancialRow[],
+  wildberriesRows: SkuListFinancialRow[],
+  yandexRows: SkuListFinancialRow[]
+):
+SkuListFinancialRow[] {
+  const byEnot =
+    new Map<
+      string,
+      SkuListFinancialRow
+    >();
+
+  const sources = [
+    ozonRows,
+    wildberriesRows,
+    yandexRows,
+  ];
+
+  for (
+    const source
+    of sources
+  ) {
+    for (
+      const row
+      of source
+    ) {
+      if (!row.enot) {
+        continue;
+      }
+
+      const current =
+        byEnot.get(
+          row.enot
+        );
+
+      if (!current) {
+        byEnot.set(
+          row.enot,
+          {
+            enot:
+              row.enot,
+
+            status:
+              row.status,
+
+            sku:
+              null,
+
+            sellerArticle:
+              row.enot,
+
+            productName:
+              row.productName,
+
+            revenue:
+              row.revenue,
+
+            operatingProfit:
+              row.operatingProfit,
+
+            purchases:
+              row.purchases,
+          }
+        );
+
+        continue;
+      }
+
+      current.revenue +=
+        row.revenue;
+
+      current.operatingProfit +=
+        row.operatingProfit;
+
+      current.purchases +=
+        row.purchases;
+
+      if (
+        !current.productName
+        &&
+        row.productName
+      ) {
+        current.productName =
+          row.productName;
+      }
+    }
+  }
+
+  return Array.from(
+    byEnot.values()
+  );
+}
+
+
 export default function SkuListTabsClient({
   ozonRows,
   wildberriesRows,
@@ -281,7 +375,24 @@ export default function SkuListTabsClient({
     });
 
 
+  const allMarketplaceRows =
+    useMemo(
+      () =>
+        buildAllMarketplaceRows(
+          marketplaceRows.ozon,
+          marketplaceRows.wildberries,
+          marketplaceRows.yandexMarket
+        ),
+      [
+        marketplaceRows,
+      ]
+    );
+
+
   const tableActive =
+    activeTab ===
+      "all"
+    ||
     activeTab ===
       "ozon"
     ||
@@ -294,19 +405,24 @@ export default function SkuListTabsClient({
 
   const rows =
     activeTab ===
-      "wildberries"
+      "all"
 
-      ? marketplaceRows
-          .wildberries
+      ? allMarketplaceRows
 
       : activeTab ===
-          "yandex-market"
+          "wildberries"
 
         ? marketplaceRows
-            .yandexMarket
+            .wildberries
 
-        : marketplaceRows
-            .ozon;
+        : activeTab ===
+            "yandex-market"
+
+          ? marketplaceRows
+              .yandexMarket
+
+          : marketplaceRows
+              .ozon;
 
   const [
     savingMasterCodes,
@@ -909,16 +1025,21 @@ export default function SkuListTabsClient({
     <section
       className={
         activeTab ===
-          "wildberries"
+          "all"
 
-          ? "sku-list-data-section sku-list-data-section--wildberries"
+          ? "sku-list-data-section sku-list-data-section--all"
 
           : activeTab ===
-              "yandex-market"
+              "wildberries"
 
-            ? "sku-list-data-section sku-list-data-section--yandex"
+            ? "sku-list-data-section sku-list-data-section--wildberries"
 
-            : "sku-list-data-section"
+            : activeTab ===
+                "yandex-market"
+
+              ? "sku-list-data-section sku-list-data-section--yandex"
+
+              : "sku-list-data-section"
       }
       data-marketplace={
         activeTab
@@ -1086,8 +1207,14 @@ export default function SkuListTabsClient({
                           "hidden",
                       }
                 }
-                aria-label=
-                  "Итоги по Ozon"
+                aria-label={
+                  activeTab ===
+                    "all"
+
+                    ? "Итоги по всем маркетплейсам"
+
+                    : "Итоги по маркетплейсу"
+                }
               >
                 <div
                   className=
@@ -1152,45 +1279,83 @@ export default function SkuListTabsClient({
                         "sku-list-table"
                     >
                   <colgroup>
-                    <col
-                      className=
-                        "sku-list-col-enot"
-                    />
+                    {
+                      activeTab ===
+                        "all"
 
-                    <col
-                      className=
-                        "sku-list-col-status"
-                    />
+                        ? (
+                          <>
+                            <col
+                              className=
+                                "sku-list-col-enot"
+                            />
 
-                    <col
-                      className=
-                        "sku-list-col-sku"
-                    />
+                            <col
+                              className=
+                                "sku-list-col-product-all"
+                            />
 
-                    <col
-                      className=
-                        "sku-list-col-seller"
-                    />
+                            <col
+                              className=
+                                "sku-list-col-number"
+                            />
 
-                    <col
-                      className=
-                        "sku-list-col-product"
-                    />
+                            <col
+                              className=
+                                "sku-list-col-profit"
+                            />
 
-                    <col
-                      className=
-                        "sku-list-col-number"
-                    />
+                            <col
+                              className=
+                                "sku-list-col-number"
+                            />
+                          </>
+                        )
 
-                    <col
-                      className=
-                        "sku-list-col-profit"
-                    />
+                        : (
+                          <>
+                            <col
+                              className=
+                                "sku-list-col-enot"
+                            />
 
-                    <col
-                      className=
-                        "sku-list-col-number"
-                    />
+                            <col
+                              className=
+                                "sku-list-col-status"
+                            />
+
+                            <col
+                              className=
+                                "sku-list-col-sku"
+                            />
+
+                            <col
+                              className=
+                                "sku-list-col-seller"
+                            />
+
+                            <col
+                              className=
+                                "sku-list-col-product"
+                            />
+
+                            <col
+                              className=
+                                "sku-list-col-number"
+                            />
+
+                            <col
+                              className=
+                                "sku-list-col-profit"
+                            />
+
+                            <col
+                              className=
+                                "sku-list-col-number"
+                            />
+                          </>
+                        )
+                    }
                   </colgroup>
 
                   <thead>
@@ -1200,25 +1365,41 @@ export default function SkuListTabsClient({
                         label="ЕНОТ"
                       />
 
-                      <SortHeading
-                        column="status"
-                        label="Статус"
-                      />
+                      {
+                        activeTab ===
+                          "all"
 
-                      <SortHeading
-                        column="sku"
-                        label="SKU"
-                      />
+                          ? (
+                            <SortHeading
+                              column="productName"
+                              label="Товар"
+                            />
+                          )
 
-                      <SortHeading
-                        column="sellerArticle"
-                        label="Артикул продавца"
-                      />
+                          : (
+                            <>
+                              <SortHeading
+                                column="status"
+                                label="Статус"
+                              />
 
-                      <SortHeading
-                        column="productName"
-                        label="Товар"
-                      />
+                              <SortHeading
+                                column="sku"
+                                label="SKU"
+                              />
+
+                              <SortHeading
+                                column="sellerArticle"
+                                label="Артикул продавца"
+                              />
+
+                              <SortHeading
+                                column="productName"
+                                label="Товар"
+                              />
+                            </>
+                          )
+                      }
 
                       <SortHeading
                         column="revenue"
@@ -1244,6 +1425,91 @@ export default function SkuListTabsClient({
                           row,
                           index
                         ) => {
+                          if (
+                            activeTab ===
+                            "all"
+                          ) {
+                            return (
+                              <tr
+                                key={
+                                  row.enot
+                                  ??
+                                  (
+                                    "all-"
+                                    +
+                                    index
+                                  )
+                                }
+                              >
+                                <td
+                                  className=
+                                    "sku-list-enot sku-list-compact-cell"
+                                >
+                                  {
+                                    row.enot
+                                    ??
+                                    "—"
+                                  }
+                                </td>
+
+                                <td
+                                  className=
+                                    "sku-list-text-cell"
+                                  title={
+                                    row.productName
+                                    ??
+                                    undefined
+                                  }
+                                >
+                                  {
+                                    row.productName
+                                    ??
+                                    "—"
+                                  }
+                                </td>
+
+                                <td
+                                  className=
+                                    "sku-list-number-cell"
+                                >
+                                  {
+                                    formatRubles(
+                                      row.revenue
+                                    )
+                                  }
+                                </td>
+
+                                <td
+                                  className={
+                                    row.operatingProfit <
+                                    0
+
+                                      ? "sku-list-number-cell sku-list-profit-negative"
+
+                                      : "sku-list-number-cell"
+                                  }
+                                >
+                                  {
+                                    formatRubles(
+                                      row.operatingProfit
+                                    )
+                                  }
+                                </td>
+
+                                <td
+                                  className=
+                                    "sku-list-number-cell"
+                                >
+                                  {
+                                    formatInteger(
+                                      row.purchases
+                                    )
+                                  }
+                                </td>
+                              </tr>
+                            );
+                          }
+
                           const masterCode =
                             row.enot
                             ??
