@@ -1982,18 +1982,18 @@ html[data-theme="dark"]
 }
 
 
-/* Шалфейная карточка «Все МП». Фирменные карточки Ozon, WB и ЯМ без изменений. */
+/* Розово-бежевая карточка «Все МП». Фирменные карточки Ozon, WB и ЯМ без изменений. */
 .home-marketplace-metric-card--all {
-  --home-metric-accent: #47594B;
-  --home-metric-soft: rgba(126, 159, 137, 0.12);
-  --home-metric-border: rgba(71, 89, 75, 0.26);
+  --home-metric-accent: #7A3E52;
+  --home-metric-soft: rgba(183, 110, 126, 0.12);
+  --home-metric-border: rgba(122, 62, 82, 0.26);
 }
 html[data-theme="dark"] .home-marketplace-metric-card--all {
-  --home-metric-accent: #A5C4AE;
-  --home-metric-soft: rgba(165, 196, 174, 0.12);
-  --home-metric-border: rgba(165, 196, 174, 0.30);
-  background: #1F2A21;
+  --home-metric-accent: #D78A9A;
+  --home-metric-soft: rgba(215, 138, 154, 0.12);
+  --home-metric-border: rgba(215, 138, 154, 0.30);
+  background: #3A2B2D;
 }
 html[data-theme="dark"] .home-marketplace-metric-card--all .home-marketplace-ip-badge {
-  color: #1F2A21;
+  color: #3A2B2D;
 }

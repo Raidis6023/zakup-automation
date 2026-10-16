@@ -1016,22 +1016,22 @@
 
 
 /* ============================================================
-   ШАЛФЕЙНАЯ ТЕМА: АВТОРИЗАЦИЯ И ЗАПРОС ДОСТУПА
+   РОЗОВО-БЕЖЕВАЯ ТЕМА: АВТОРИЗАЦИЯ И ЗАПРОС ДОСТУПА
    Палитра соответствует общим страницам КПК МИА.
    ============================================================ */
 .login-page {
-  --login-blue: #47594B;
-  --login-blue-hover: #354B3B;
-  --login-page-bg: #F6F9F6;
+  --login-blue: #7A3E52;
+  --login-blue-hover: #653245;
+  --login-page-bg: #FAEDE9;
   --login-panel: #FFFFFF;
-  --login-field-bg: #F6F9F6;
-  --login-border: #D4E2D8;
-  --login-border-soft: #E1EBE3;
-  --login-text: #1F2A21;
-  --login-secondary: #47594B;
-  --login-muted: #728777;
-  --login-hover: #E7F2E6;
-  --login-focus: #7E9F89;
+  --login-field-bg: #FAEDE9;
+  --login-border: #E7C9C3;
+  --login-border-soft: #F0DCD8;
+  --login-text: #2E1F1F;
+  --login-secondary: #7A3E52;
+  --login-muted: #9D7479;
+  --login-hover: #F6D6D2;
+  --login-focus: #B76E7E;
   --login-primary-text: #FFFFFF;
   --text: var(--login-text);
   --text-secondary: var(--login-secondary);
@@ -1040,28 +1040,28 @@
   --surface-soft: var(--login-hover);
   color: var(--login-text);
   background:
-    radial-gradient(circle at 50% 18%, rgba(126, 159, 137, 0.13), transparent 42%),
-    linear-gradient(180deg, #F6F9F6 0%, #E7F2E6 100%);
+    radial-gradient(circle at 50% 18%, rgba(183, 110, 126, 0.13), transparent 42%),
+    linear-gradient(180deg, #FAEDE9 0%, #F6D6D2 100%);
 }
 
 html[data-theme="dark"] .login-page {
-  --login-blue: #7E9F89;
-  --login-blue-hover: #A5C4AE;
-  --login-page-bg: #17251E;
-  --login-panel: #1F2A21;
-  --login-field-bg: #203026;
-  --login-border: #405548;
-  --login-border-soft: #344739;
-  --login-text: #F1F6F1;
-  --login-secondary: #CFE0D6;
-  --login-muted: #9FB2A5;
-  --login-hover: #2E3E36;
-  --login-focus: #A5C4AE;
-  --login-primary-text: #1F2A21;
+  --login-blue: #D78A9A;
+  --login-blue-hover: #E4A9B3;
+  --login-page-bg: #2A1F20;
+  --login-panel: #3A2B2D;
+  --login-field-bg: #342629;
+  --login-border: #664A50;
+  --login-border-soft: #4A3639;
+  --login-text: #F6E7E5;
+  --login-secondary: #F0C4C7;
+  --login-muted: #C6A6AC;
+  --login-hover: #473337;
+  --login-focus: #E4A9B3;
+  --login-primary-text: #2A1F20;
   color: var(--login-text);
   background:
-    radial-gradient(circle at 50% 18%, rgba(126, 159, 137, 0.12), transparent 42%),
-    linear-gradient(180deg, #17251E 0%, #15221B 100%);
+    radial-gradient(circle at 50% 18%, rgba(215, 138, 154, 0.10), transparent 42%),
+    linear-gradient(180deg, #2A1F20 0%, #241A1D 100%);
 }
 
 .login-page .login-card,
@@ -1124,7 +1124,7 @@ html[data-theme="dark"] .login-page .login-field textarea {
   border-color: var(--login-blue);
   background: var(--login-blue);
   color: var(--login-primary-text);
-  box-shadow: 0 8px 24px rgba(71, 89, 75, 0.16);
+  box-shadow: 0 8px 24px rgba(122, 62, 82, 0.16);
 }
 .login-page .login-submit:hover:not(:disabled),
 .login-page .access-primary-button:hover:not(:disabled) {
@@ -1148,7 +1148,7 @@ html[data-theme="dark"] .login-page .login-field textarea {
   color: var(--login-text);
 }
 .login-page .access-modal-overlay {
-  background: rgba(15, 29, 23, 0.62);
+  background: rgba(33, 17, 22, 0.64);
 }
 .login-page .access-success-icon {
   background: color-mix(in srgb, var(--login-focus) 18%, transparent);

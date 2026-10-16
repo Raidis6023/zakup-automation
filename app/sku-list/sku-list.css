@@ -84,10 +84,10 @@
 
 
 .sku-list-data-section--all {
-  --sku-ozon-accent: #47594B;
-  --sku-ozon-soft: #E7F2E6;
-  --sku-ozon-grid: rgba(71, 89, 75, 0.22);
-  --sku-ozon-scroll: #7E9F89;
+  --sku-ozon-accent: #7A3E52;
+  --sku-ozon-soft: #F6D6D2;
+  --sku-ozon-grid: rgba(122, 62, 82, 0.22);
+  --sku-ozon-scroll: #B76E7E;
 }
 
 
@@ -146,9 +146,9 @@
 
 
 .sku-list-tab--all:not(.sku-list-tab--active):hover {
-  border-color: rgba(71, 89, 75, 0.35);
-  background: #E7F2E6;
-  color: #47594B;
+  border-color: rgba(122, 62, 82, 0.35);
+  background: #F6D6D2;
+  color: #7A3E52;
 }
 
 
@@ -174,8 +174,8 @@
 
 
 .sku-list-tab--all.sku-list-tab--active {
-  border-color: #7E9F89;
-  background: #47594B;
+  border-color: #B76E7E;
+  background: #7A3E52;
   color: #FFFFFF;
 }
 
@@ -684,10 +684,10 @@ html[data-theme="dark"] .sku-list-page {
 
 html[data-theme="dark"]
 .sku-list-data-section--all {
-  --sku-ozon-accent: #A5C4AE;
-  --sku-ozon-soft: #2E3E36;
-  --sku-ozon-grid: rgba(165, 196, 174, 0.28);
-  --sku-ozon-scroll: #A5C4AE;
+  --sku-ozon-accent: #E4A9B3;
+  --sku-ozon-soft: #473337;
+  --sku-ozon-grid: rgba(228, 169, 179, 0.28);
+  --sku-ozon-scroll: #E4A9B3;
 }
 
 
@@ -711,9 +711,9 @@ html[data-theme="dark"]
 
 html[data-theme="dark"]
 .sku-list-tab--all:not(.sku-list-tab--active):hover {
-  border-color: rgba(165, 196, 174, 0.38);
-  background: #2E3E36;
-  color: #CFE0D6;
+  border-color: rgba(228, 169, 179, 0.38);
+  background: #473337;
+  color: #F0C4C7;
 }
 
 
@@ -832,7 +832,7 @@ html[data-theme="dark"]
 
 /* Общая вкладка: тёмная тема. Палитры трёх МП не трогать. */
 html[data-theme="dark"] .sku-list-tab--all.sku-list-tab--active {
-  border-color: #7E9F89;
-  background: #47594B;
-  color: #F1F6F1;
+  border-color: #B76E7E;
+  background: #7A3E52;
+  color: #F6E7E5;
 }

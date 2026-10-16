@@ -4,7 +4,7 @@
 
 .zakup-reference-page {
   --zakup-green:
-    #7E9F89;
+    #B76E7E;
 
   --zakup-red:
     #e84868;
@@ -1098,7 +1098,7 @@ html[data-theme="dark"]
 
 }
 
-/* Шалфейный цвет положительных показателей в тёмной теме. */
+/* Розово-бежевый акцент положительных показателей в тёмной теме. */
 html[data-theme="dark"] .zakup-reference-page {
-  --zakup-green: #A5C4AE;
+  --zakup-green: #E4A9B3;
 }

@@ -15,36 +15,36 @@
 
 /*
  * Светлая тема:
- * та же шалфейная гамма, что у Закупа и ВЭД.
+ * та же розово-бежевая гамма, что у Закупа и ВЭД.
  */
 .articleList {
-  --article-bg-start: #7E9F89;
-  --article-bg-end: #47594B;
+  --article-bg-start: #B76E7E;
+  --article-bg-end: #7A3E52;
 
   --article-card-start: #ffffff;
-  --article-card-end: #F6F9F6;
+  --article-card-end: #FAEDE9;
 
-  --article-detail: #47594B;
-  --article-detail-soft: #CFE0D6;
+  --article-detail: #7A3E52;
+  --article-detail-soft: #F0C4C7;
 }
 
 
 /*
  * Тёмная тема:
- * светлый фон + шалфейная внутренняя графика.
+ * светлый фон + розово-бежевая внутренняя графика.
  */
 :global(html[data-theme="dark"])
 .articleList,
 :global(html.dark)
 .articleList {
   --article-bg-start: #ffffff;
-  --article-bg-end: #E7F2E6;
+  --article-bg-end: #F6D6D2;
 
-  --article-card-start: #47594B;
-  --article-card-end: #7E9F89;
+  --article-card-start: #7A3E52;
+  --article-card-end: #B76E7E;
 
   --article-detail: #ffffff;
-  --article-detail-soft: #CFE0D6;
+  --article-detail-soft: #F0C4C7;
 }
 
 
@@ -53,12 +53,12 @@
    ============================================================ */
 
 .procurement {
-  --icon-bg-start: #7E9F89;
-  --icon-bg-end: #47594B;
+  --icon-bg-start: #B76E7E;
+  --icon-bg-end: #7A3E52;
 
   --icon-main: #ffffff;
-  --icon-side: #CFE0D6;
-  --icon-accent: #47594B;
+  --icon-side: #F0C4C7;
+  --icon-accent: #7A3E52;
 }
 
 
@@ -67,10 +67,10 @@
 :global(html.dark)
 .procurement {
   --icon-bg-start: #ffffff;
-  --icon-bg-end: #E7F2E6;
+  --icon-bg-end: #F6D6D2;
 
-  --icon-main: #47594B;
-  --icon-side: #7E9F89;
+  --icon-main: #7A3E52;
+  --icon-side: #B76E7E;
   --icon-accent: #ffffff;
 }
 
@@ -80,9 +80,9 @@
    ============================================================ */
 
 .ved {
-  --ved-bg-start: #A7C1AE;
-  --ved-bg-middle: #7E9F89;
-  --ved-bg-end: #47594B;
+  --ved-bg-start: #D9A3A7;
+  --ved-bg-middle: #B76E7E;
+  --ved-bg-end: #7A3E52;
 
   --ved-symbol: #ffffff;
   --ved-highlight: rgba(255, 255, 255, 0.22);
@@ -102,11 +102,11 @@
 :global(html.dark)
 .ved {
   --ved-bg-start: #ffffff;
-  --ved-bg-middle: #F6F9F6;
-  --ved-bg-end: #E7F2E6;
+  --ved-bg-middle: #FAEDE9;
+  --ved-bg-end: #F6D6D2;
 
-  --ved-symbol: #47594B;
-  --ved-highlight: rgba(17, 134, 93, 0.08);
+  --ved-symbol: #7A3E52;
+  --ved-highlight: rgba(183, 110, 126, 0.10);
 }
 
 
@@ -115,11 +115,11 @@
    ============================================================ */
 
 .employees {
-  --icon-bg-start: #7E9F89;
-  --icon-bg-end: #47594B;
+  --icon-bg-start: #B76E7E;
+  --icon-bg-end: #7A3E52;
 
   --icon-card: #ffffff;
-  --icon-detail: #354B3B;
+  --icon-detail: #653245;
 }
 
 
@@ -128,8 +128,8 @@
 :global(html.dark)
 .employees {
   --icon-bg-start: #ffffff;
-  --icon-bg-end: #E7F2E6;
+  --icon-bg-end: #F6D6D2;
 
-  --icon-card: #47594B;
+  --icon-card: #7A3E52;
   --icon-detail: #ffffff;
 }

@@ -231,3 +231,18 @@
     overflow-y: auto;
   }
 }
+
+/* Розово-бежевое оформление помощника в окне запроса доступа. */
+:global(.login-page) .bubble { border-color: #D9A3A7; background: #FFF9F7; color: #2E1F1F; }
+:global(.login-page) .bubble::after { border-color: #D9A3A7; background: #FFF9F7; }
+:global(.login-page) .bubble strong { color: #7A3E52; }
+:global(.login-page) .previewPicker, :global(.login-page) .previewReplay { border-color: #D9A3A7; background: #F6D6D2; color: #7A3E52; }
+:global(.login-page) .previewPlaceholder { border-color: #D9A3A7; color: #7A3E52; }
+:global(.login-page) .previewPlaceholderIcon { color: #B76E7E; }
+:global(.login-page) .previewReplay:hover, :global(.login-page) .previewPicker:focus-within { border-color: #B76E7E; }
+:global(html[data-theme="dark"]) :global(.login-page) .bubble { border-color: #79565E; background: #3A2B2D; color: #F6E7E5; }
+:global(html[data-theme="dark"]) :global(.login-page) .bubble::after { border-color: #79565E; background: #3A2B2D; }
+:global(html[data-theme="dark"]) :global(.login-page) .bubble strong { color: #F0C4C7; }
+:global(html[data-theme="dark"]) :global(.login-page) .previewPicker, :global(html[data-theme="dark"]) :global(.login-page) .previewReplay { border-color: #79565E; background: #473337; color: #F0C4C7; }
+:global(html[data-theme="dark"]) :global(.login-page) .previewPlaceholder { border-color: #79565E; color: #F0C4C7; }
+:global(html[data-theme="dark"]) :global(.login-page) .previewPlaceholderIcon { color: #D78A9A; }
