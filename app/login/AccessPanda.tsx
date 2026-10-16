@@ -8,7 +8,6 @@ type AccessPandaProps = {
 };
 
 export default function AccessPanda({ success }: AccessPandaProps) {
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewFileName, setPreviewFileName] = useState("");
   const [fileError, setFileError] = useState<string | null>(null);
@@ -16,9 +15,6 @@ export default function AccessPanda({ success }: AccessPandaProps) {
   const currentObjectUrl = useRef<string | null>(null);
 
   useEffect(() => {
-    setIsPreviewMode(
-      new URLSearchParams(window.location.search).get("panda_preview") === "1"
-    );
     return () => {
       if (currentObjectUrl.current) URL.revokeObjectURL(currentObjectUrl.current);
     };
@@ -42,8 +38,8 @@ export default function AccessPanda({ success }: AccessPandaProps) {
     setFileError(null);
   }
 
-  // До утверждения новой модели никакой старой панды на обычном входе.
-  if (!isPreviewMode) return null;
+  // Предпросмотр доступен в обычном окне запроса доступа.
+  // Забракованную модель не показываем даже временно.
 
   return (
     <aside className={styles.assistant} aria-label="Предпросмотр красной панды WorkSpace">
@@ -102,8 +98,8 @@ export default function AccessPanda({ success }: AccessPandaProps) {
       ) : (
         <div className={styles.previewPlaceholder} role="status">
           <span className={styles.previewPlaceholderIcon} aria-hidden="true">◎</span>
-          <span>Старая панда отключена.</span>
-          <span>Выберите файл panda_2d_suit_animated_web.svg, чтобы увидеть новую модель и её движения.</span>
+          <span>Готово к проверке новой панды</span>
+          <span>Нажмите «Выбрать новую SVG-панду» и откройте скачанный файл panda_2d_suit_animated_web.svg. После выбора появится анимированный персонаж.</span>
         </div>
       )}
     </aside>
