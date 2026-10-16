@@ -91,6 +91,14 @@
 }
 
 
+.sku-list-data-section--yandex {
+  --sku-ozon-accent: #d86520;
+  --sku-ozon-soft: #fff0e0;
+  --sku-ozon-grid: rgba(216, 101, 32, 0.22);
+  --sku-ozon-scroll: #d86520;
+}
+
+
 .sku-list-tabs {
   display: flex;
   align-items: center;
@@ -655,6 +663,15 @@ html[data-theme="dark"]
   --sku-ozon-soft: #2a1b38;
   --sku-ozon-grid: rgba(215, 160, 239, 0.28);
   --sku-ozon-scroll: #d7a0ef;
+}
+
+
+html[data-theme="dark"]
+.sku-list-data-section--yandex {
+  --sku-ozon-accent: #ffb67b;
+  --sku-ozon-soft: #3b281b;
+  --sku-ozon-grid: rgba(255, 182, 123, 0.28);
+  --sku-ozon-scroll: #ffb67b;
 }
 
 

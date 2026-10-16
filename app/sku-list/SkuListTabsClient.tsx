@@ -237,11 +237,15 @@ function compareRows(
 export default function SkuListTabsClient({
   ozonRows,
   wildberriesRows,
+  yandexRows,
 }: {
   ozonRows:
     SkuListFinancialRow[];
 
   wildberriesRows:
+    SkuListFinancialRow[];
+
+  yandexRows:
     SkuListFinancialRow[];
 }) {
   const [
@@ -262,12 +266,18 @@ export default function SkuListTabsClient({
 
       wildberries:
         SkuListFinancialRow[];
+
+      yandexMarket:
+        SkuListFinancialRow[];
     }>({
       ozon:
         ozonRows,
 
       wildberries:
         wildberriesRows,
+
+      yandexMarket:
+        yandexRows,
     });
 
 
@@ -276,7 +286,10 @@ export default function SkuListTabsClient({
       "ozon"
     ||
     activeTab ===
-      "wildberries";
+      "wildberries"
+    ||
+    activeTab ===
+      "yandex-market";
 
 
   const rows =
@@ -286,8 +299,14 @@ export default function SkuListTabsClient({
       ? marketplaceRows
           .wildberries
 
-      : marketplaceRows
-          .ozon;
+      : activeTab ===
+          "yandex-market"
+
+        ? marketplaceRows
+            .yandexMarket
+
+        : marketplaceRows
+            .ozon;
 
   const [
     savingMasterCodes,
@@ -672,6 +691,21 @@ export default function SkuListTabsClient({
 
                 : row
           ),
+
+        yandexMarket:
+          previous.yandexMarket.map(
+            row =>
+              row.enot ===
+                masterCode
+
+                ? {
+                    ...row,
+                    status:
+                      nextStatus,
+                  }
+
+                : row
+          ),
       })
     );
 
@@ -743,6 +777,21 @@ export default function SkuListTabsClient({
 
           wildberries:
             previous.wildberries.map(
+              row =>
+                row.enot ===
+                  masterCode
+
+                  ? {
+                      ...row,
+                      status:
+                        previousStatus,
+                    }
+
+                  : row
+            ),
+
+          yandexMarket:
+            previous.yandexMarket.map(
               row =>
                 row.enot ===
                   masterCode
@@ -864,7 +913,12 @@ export default function SkuListTabsClient({
 
           ? "sku-list-data-section sku-list-data-section--wildberries"
 
-          : "sku-list-data-section"
+          : activeTab ===
+              "yandex-market"
+
+            ? "sku-list-data-section sku-list-data-section--yandex"
+
+            : "sku-list-data-section"
       }
       data-marketplace={
         activeTab

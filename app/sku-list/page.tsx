@@ -8,6 +8,10 @@ import {
   getWbSeptemberRows,
 } from "./wbFinancialData";
 
+import {
+  getYandexSeptemberRows,
+} from "./yandexFinancialData";
+
 import SkuListTabsClient, {
   type ProductArticleStatus,
   type SkuListFinancialRow,
@@ -34,6 +38,14 @@ type MarketplaceListingRow = {
   external_id: string;
   seller_article: string | null;
   master_code: string;
+};
+
+
+type YandexProductRow = {
+  offer_id: string;
+  market_sku: string | null;
+  master_code: string | null;
+  product_name: string | null;
 };
 
 
@@ -138,6 +150,49 @@ Promise<MarketplaceListingRow[]> {
     "&account_key=eq.main"
     +
     "&is_active=eq.true"
+    +
+    "&limit=2000"
+  );
+}
+
+
+async function getYandexMappings():
+Promise<MarketplaceListingRow[]> {
+  return supabaseGet<MarketplaceListingRow[]>(
+    "marketplace_listings"
+    +
+    "?select=external_id,seller_article,master_code"
+    +
+    "&marketplace=eq.yandex_market"
+    +
+    "&account_key=eq.main"
+    +
+    "&is_active=eq.true"
+    +
+    "&limit=2000"
+  );
+}
+
+
+async function getYandexProducts():
+Promise<YandexProductRow[]> {
+  const select =
+    encodeURIComponent(
+      "offer_id,market_sku,master_code,product_name:raw_data->offer->>name"
+    );
+
+  return supabaseGet<YandexProductRow[]>(
+    "yandex_products"
+    +
+    "?select="
+    +
+    select
+    +
+    "&is_active=eq.true"
+    +
+    "&market_sku=not.is.null"
+    +
+    "&master_code=not.is.null"
     +
     "&limit=2000"
   );
@@ -481,6 +536,233 @@ SkuListFinancialRow[] {
 }
 
 
+const YANDEX_ARTICLE_ALIASES =
+  new Map<string, string>([
+    [
+      normalizeForMatch(
+        "Сучкорез малый"
+      ),
+      normalizeForMatch(
+        "Suchkorez"
+      ),
+    ],
+    [
+      normalizeForMatch(
+        "Крючи настенные самоклеящиеся"
+      ),
+      normalizeForMatch(
+        "Крючки настенные самоклеящиеся"
+      ),
+    ],
+  ]);
+
+
+function buildYandexRows(
+  listings: MarketplaceListingRow[],
+  yandexProducts: YandexProductRow[],
+  products: ProductMappingRow[],
+  statuses: ProductStatusRow[]
+):
+SkuListFinancialRow[] {
+  const statusByMasterCode =
+    new Map(
+      statuses.map(
+        row => [
+          row.master_code,
+          row.status,
+        ]
+      )
+    );
+
+  const productNameByMasterCode =
+    new Map<string, string>();
+
+  for (
+    const product
+    of products
+  ) {
+    if (
+      product.master_code
+      &&
+      product.name
+      &&
+      !productNameByMasterCode.has(
+        product.master_code
+      )
+    ) {
+      productNameByMasterCode.set(
+        product.master_code,
+        product.name
+      );
+    }
+  }
+
+  const yandexProductByOffer =
+    new Map<
+      string,
+      YandexProductRow
+    >();
+
+  for (
+    const product
+    of yandexProducts
+  ) {
+    if (
+      product.offer_id
+    ) {
+      yandexProductByOffer.set(
+        normalizeForMatch(
+          product.offer_id
+        ),
+        product
+      );
+    }
+  }
+
+  const candidates =
+    listings
+      .filter(
+        row =>
+          row.seller_article
+          &&
+          row.master_code
+      )
+      .map(
+        row => {
+          const sellerArticle =
+            row.seller_article as string;
+
+          const yandexProduct =
+            yandexProductByOffer.get(
+              normalizeForMatch(
+                sellerArticle
+              )
+            );
+
+          return {
+            sellerArticle,
+            normalizedSellerArticle:
+              normalizeForMatch(
+                sellerArticle
+              ),
+            enot:
+              row.master_code,
+            sku:
+              yandexProduct
+                ?.market_sku
+              ??
+              null,
+            productName:
+              yandexProduct
+                ?.product_name
+              ??
+              productNameByMasterCode.get(
+                row.master_code
+              )
+              ??
+              sellerArticle,
+          };
+        }
+      )
+      .sort(
+        (
+          left,
+          right
+        ) =>
+          right.sellerArticle.length
+          -
+          left.sellerArticle.length
+      );
+
+  const exactByArticle =
+    new Map(
+      candidates.map(
+        candidate => [
+          candidate
+            .normalizedSellerArticle,
+          candidate,
+        ]
+      )
+    );
+
+  return getYandexSeptemberRows()
+    .map(
+      row => {
+        const normalizedArticle =
+          normalizeForMatch(
+            row.article
+          );
+
+        const aliasedArticle =
+          YANDEX_ARTICLE_ALIASES.get(
+            normalizedArticle
+          );
+
+        const mapping =
+          exactByArticle.get(
+            aliasedArticle
+            ??
+            normalizedArticle
+          )
+          ??
+          candidates.find(
+            candidate =>
+              articleContainsOffer(
+                row.article,
+                candidate.sellerArticle
+              )
+          );
+
+        const enot =
+          mapping?.enot
+          ??
+          null;
+
+        return {
+          enot,
+
+          status:
+            enot
+
+              ? (
+                  statusByMasterCode.get(
+                    enot
+                  )
+                  ??
+                  "Активный"
+                )
+
+              : "Активный",
+
+          sku:
+            mapping?.sku
+            ??
+            null,
+
+          sellerArticle:
+            capitalizeArticle(
+              row.article
+            ),
+
+          productName:
+            mapping?.productName
+            ??
+            null,
+
+          revenue:
+            row.revenue,
+
+          operatingProfit:
+            row.profit,
+
+          purchases:
+            row.buys,
+        };
+      }
+    );
+}
+
+
 // ============================================================
 // СТРАНИЦА
 // ============================================================
@@ -489,11 +771,15 @@ export default async function SkuListPage() {
   const [
     mappings,
     wbMappings,
+    yandexMappings,
+    yandexProducts,
     statuses,
   ] =
     await Promise.all([
       getProductMappings(),
       getWbMappings(),
+      getYandexMappings(),
+      getYandexProducts(),
       getProductStatuses(),
     ]);
 
@@ -506,6 +792,15 @@ export default async function SkuListPage() {
   const wildberriesRows =
     buildWbRows(
       wbMappings,
+      statuses
+    );
+
+
+  const yandexRows =
+    buildYandexRows(
+      yandexMappings,
+      yandexProducts,
+      mappings,
       statuses
     );
 
@@ -560,6 +855,9 @@ export default async function SkuListPage() {
           }
           wildberriesRows={
             wildberriesRows
+          }
+          yandexRows={
+            yandexRows
           }
         />
       </div>
