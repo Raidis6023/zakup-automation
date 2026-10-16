@@ -1,5 +1,6 @@
 .sku-list-page {
-  min-height: 100%;
+  min-height:
+    0;
 
   color:
     var(--ws-text);
@@ -7,32 +8,29 @@
 
 
 .sku-list-container {
-  width: min(
-    100%,
-    1600px
-  );
+  width:
+    100%;
 
   margin:
-    0 auto;
+    0;
 }
 
 
+/* ============================================================
+   HEADER
+   ============================================================ */
+
 .sku-list-header {
-  display: flex;
+  display:
+    flex;
 
   align-items:
-    flex-start;
+    center;
 
   justify-content:
     space-between;
 
   gap:
-    24px;
-
-  margin-top:
-    16px;
-
-  margin-bottom:
     24px;
 }
 
@@ -124,20 +122,152 @@
 }
 
 
-.sku-list-placeholder {
-  display: flex;
+/* ============================================================
+   TABS
+   ============================================================ */
+
+.sku-list-data-section {
+  min-width:
+    0;
+}
+
+
+.sku-list-tabs {
+  display:
+    flex;
 
   align-items:
     center;
 
   gap:
-    18px;
+    8px;
 
+  margin-bottom:
+    14px;
+}
+
+
+.sku-list-tab {
   min-height:
-    118px;
+    38px;
 
   padding:
-    22px;
+    8px
+    16px;
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    9px;
+
+  background:
+    var(--ws-surface);
+
+  color:
+    var(--ws-text-secondary);
+
+  font:
+    inherit;
+
+  font-size:
+    13px;
+
+  font-weight:
+    700;
+
+  cursor:
+    pointer;
+
+  transition:
+    background-color
+      0.14s
+      ease,
+    border-color
+      0.14s
+      ease,
+    color
+      0.14s
+      ease,
+    transform
+      0.05s
+      ease;
+}
+
+
+.sku-list-tab:hover {
+  background:
+    var(--ws-surface-hover);
+
+  color:
+    var(--ws-text);
+}
+
+
+.sku-list-tab:active {
+  transform:
+    translateY(
+      1px
+    );
+}
+
+
+.sku-list-tab--all.sku-list-tab--active {
+  border-color:
+    #37c98e;
+
+  background:
+    #11865d;
+
+  color:
+    #ffffff;
+}
+
+
+.sku-list-tab--ozon.sku-list-tab--active {
+  border-color:
+    #1478bb;
+
+  background:
+    #1478bb;
+
+  color:
+    #ffffff;
+}
+
+
+.sku-list-tab--wildberries.sku-list-tab--active {
+  border-color:
+    #9d2fbd;
+
+  background:
+    #9d2fbd;
+
+  color:
+    #ffffff;
+}
+
+
+.sku-list-tab--yandex.sku-list-tab--active {
+  border-color:
+    #d86520;
+
+  background:
+    #d86520;
+
+  color:
+    #ffffff;
+}
+
+
+/* ============================================================
+   TABLE CARD
+   ============================================================ */
+
+.sku-list-table-card {
+  overflow:
+    hidden;
 
   border:
     1px solid
@@ -154,8 +284,361 @@
 }
 
 
-.sku-list-placeholder-icon {
-  display: flex;
+.sku-list-table-meta {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  gap:
+    16px;
+
+  min-height:
+    42px;
+
+  padding:
+    0
+    14px;
+
+  border-bottom:
+    1px solid
+    var(--ws-border-soft);
+
+  color:
+    var(--ws-text-muted);
+
+  font-size:
+    12px;
+
+  font-weight:
+    650;
+}
+
+
+.sku-list-unmatched {
+  color:
+    #c07a2d;
+}
+
+
+/* ============================================================
+   SCROLL AREA
+   ============================================================ */
+
+.sku-list-table-scroll {
+  position:
+    relative;
+
+  width:
+    100%;
+
+  height:
+    calc(
+      100vh
+      -
+      var(
+        --home-topbar-height,
+        72px
+      )
+      -
+      var(
+        --workspace-module-header-height,
+        98px
+      )
+      -
+      118px
+    );
+
+  min-height:
+    320px;
+
+  max-height:
+    68vh;
+
+  overflow-x:
+    auto;
+
+  overflow-y:
+    auto;
+
+  overscroll-behavior:
+    contain;
+
+  scrollbar-gutter:
+    stable;
+
+  scrollbar-color:
+    rgba(
+      201,
+      30,
+      216,
+      0.28
+    )
+    var(--ws-surface-soft);
+
+  background:
+    var(--ws-surface);
+}
+
+
+.sku-list-table-scroll::-webkit-scrollbar {
+  width:
+    10px;
+
+  height:
+    10px;
+}
+
+
+.sku-list-table-scroll::-webkit-scrollbar-track {
+  background:
+    var(--ws-surface-soft);
+}
+
+
+.sku-list-table-scroll::-webkit-scrollbar-thumb {
+  border:
+    2px solid
+    var(--ws-surface-soft);
+
+  border-radius:
+    999px;
+
+  background:
+    rgba(
+      201,
+      30,
+      216,
+      0.28
+    );
+}
+
+
+.sku-list-table-scroll::-webkit-scrollbar-thumb:hover {
+  background:
+    rgba(
+      201,
+      30,
+      216,
+      0.42
+    );
+}
+
+
+/* ============================================================
+   TABLE
+   ============================================================ */
+
+.sku-list-table {
+  width:
+    100%;
+
+  min-width:
+    940px;
+
+  border-spacing:
+    0;
+
+  border-collapse:
+    separate;
+
+  table-layout:
+    fixed;
+}
+
+
+.sku-list-col-enot {
+  width:
+    120px;
+}
+
+
+.sku-list-col-article {
+  width:
+    38%;
+}
+
+
+.sku-list-col-money {
+  width:
+    190px;
+}
+
+
+.sku-list-col-purchases {
+  width:
+    140px;
+}
+
+
+.sku-list-table
+thead
+th {
+  position:
+    sticky;
+
+  z-index:
+    2;
+
+  top:
+    0;
+
+  padding:
+    11px
+    13px;
+
+  border-bottom:
+    1px solid
+    var(--ws-border);
+
+  background:
+    var(--ws-surface-soft);
+
+  color:
+    var(--ws-text-muted);
+
+  font-size:
+    11px;
+
+  font-weight:
+    700;
+
+  line-height:
+    1.25;
+
+  text-align:
+    left;
+
+  white-space:
+    nowrap;
+}
+
+
+.sku-list-table
+tbody
+td {
+  padding:
+    11px
+    13px;
+
+  border-bottom:
+    1px solid
+    var(--ws-border-soft);
+
+  background:
+    var(--ws-surface);
+
+  color:
+    var(--ws-text);
+
+  font-size:
+    12px;
+
+  line-height:
+    1.35;
+
+  vertical-align:
+    middle;
+}
+
+
+.sku-list-table
+tbody
+tr:nth-child(even)
+td {
+  background:
+    color-mix(
+      in srgb,
+      var(--ws-surface)
+      92%,
+      var(--ws-surface-soft)
+    );
+}
+
+
+.sku-list-table
+tbody
+tr:hover
+td {
+  background:
+    var(--ws-surface-hover);
+}
+
+
+.sku-list-table
+tbody
+tr:last-child
+td {
+  border-bottom:
+    0;
+}
+
+
+.sku-list-number-cell {
+  text-align:
+    right !important;
+
+  font-variant-numeric:
+    tabular-nums;
+
+  white-space:
+    nowrap;
+}
+
+
+.sku-list-enot {
+  color:
+    var(--ws-text);
+
+  font-weight:
+    750;
+
+  letter-spacing:
+    0.02em;
+
+  white-space:
+    nowrap;
+}
+
+
+.sku-list-enot--missing {
+  color:
+    var(--ws-text-muted);
+
+  font-weight:
+    600;
+}
+
+
+.sku-list-article {
+  overflow:
+    hidden;
+
+  text-overflow:
+    ellipsis;
+
+  white-space:
+    nowrap;
+}
+
+
+.sku-list-profit-negative {
+  color:
+    #d96a6a !important;
+}
+
+
+/* ============================================================
+   EMPTY TABS
+   ============================================================ */
+
+.sku-list-empty-tab {
+  display:
+    flex;
 
   align-items:
     center;
@@ -163,56 +646,87 @@
   justify-content:
     center;
 
-  width:
-    58px;
+  min-height:
+    180px;
 
-  height:
-    58px;
+  border:
+    1px solid
+    var(--ws-border-soft);
 
-  flex:
-    0 0 58px;
-}
+  border-radius:
+    14px;
 
-
-.sku-list-placeholder-icon svg {
-  display:
-    block;
-
-  width:
-    58px;
-
-  height:
-    58px;
-}
-
-
-.sku-list-placeholder h2 {
-  margin:
-    0;
-
-  color:
-    var(--ws-text);
-
-  font-size:
-    17px;
-
-  font-weight:
-    700;
-}
-
-
-.sku-list-placeholder p {
-  margin:
-    7px 0 0;
+  background:
+    var(--ws-surface);
 
   color:
     var(--ws-text-muted);
 
   font-size:
     13px;
+}
 
-  line-height:
-    1.5;
+
+/* ============================================================
+   DARK — SCROLLBAR
+   Тот же WB-фиолетовый, что на таблице товаров Wildberries.
+   ============================================================ */
+
+html[data-theme="dark"]
+.sku-list-table-scroll {
+  scrollbar-color:
+    rgba(
+      223,
+      114,
+      232,
+      0.68
+    )
+    var(--ws-surface-soft);
+}
+
+
+html[data-theme="dark"]
+.sku-list-table-scroll::-webkit-scrollbar-thumb {
+  border:
+    2px solid
+    var(--ws-surface-soft);
+
+  background:
+    rgba(
+      223,
+      114,
+      232,
+      0.68
+    );
+}
+
+
+html[data-theme="dark"]
+.sku-list-table-scroll::-webkit-scrollbar-thumb:hover {
+  background:
+    rgba(
+      234,
+      94,
+      242,
+      0.90
+    );
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (
+  max-width:
+    1100px
+) {
+
+  .sku-list-table-scroll {
+    max-height:
+      62vh;
+  }
+
 }
 
 
@@ -227,9 +741,30 @@
   }
 
 
-  .sku-list-placeholder {
-    align-items:
-      flex-start;
+  .sku-list-tabs {
+    overflow-x:
+      auto;
+
+    padding-bottom:
+      2px;
+  }
+
+
+  .sku-list-tab {
+    flex:
+      0 0 auto;
+  }
+
+
+  .sku-list-table-scroll {
+    height:
+      56vh;
+
+    min-height:
+      300px;
+
+    max-height:
+      56vh;
   }
 
 }
