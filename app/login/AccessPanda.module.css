@@ -110,3 +110,64 @@
 @media (prefers-reduced-motion: reduce) {
   .bubble { animation: none; }
 }
+
+
+/* Локальная проверка SVG на реальном экране, без отправки файла на сервер. */
+.previewControls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding-top: 10px;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.previewPicker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, 290px);
+  min-height: 37px;
+  box-sizing: border-box;
+  border: 1px solid #a46a46;
+  border-radius: 9px;
+  color: #ffb479;
+  background: #20272e;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.previewPicker:focus-within {
+  outline: 2px solid #ffb479;
+  outline-offset: 2px;
+}
+
+.previewPicker input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.previewFileName {
+  font-size: 11px;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #97a5b1;
+}
+
+.previewError {
+  color: #ff9898;
+  font-size: 12px;
+  text-align: center;
+}
+
+@media (max-width: 940px) {
+  .previewControls { grid-column: 1 / -1; order: 2; }
+}
