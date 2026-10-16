@@ -734,7 +734,7 @@ export default function SkuListTabsClient({
 
                           <tr
                             key={
-                              \`\${row.sellerArticle}-\${index}\`
+                              `${row.sellerArticle}-${index}`
                             }
                           >
 
