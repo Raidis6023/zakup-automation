@@ -586,15 +586,11 @@ export default function SkuListTabsClient({
     >
       <div
         className=
-          "sku-list-top-row"
+          "sku-list-tabs"
+        role="tablist"
+        aria-label=
+          "Маркетплейс"
       >
-        <div
-          className=
-            "sku-list-tabs"
-          role="tablist"
-          aria-label=
-            "Маркетплейс"
-        >
         <button
           type="button"
           role="tab"
@@ -693,71 +689,7 @@ export default function SkuListTabsClient({
           }
         >
           Яндекс Маркет
-          </button>
-        </div>
-
-        {
-          activeTab ===
-            "ozon"
-
-            ? (
-              <div
-                className=
-                  "sku-list-totals-wrap"
-              >
-                <div
-                  className=
-                    "sku-list-totals-strip"
-                  aria-label=
-                    "Итоги по Ozon"
-                >
-                  <div
-                    className=
-                      "sku-list-total-cell sku-list-total-label"
-                  >
-                    ИТОГО
-                  </div>
-
-                  <div
-                    className=
-                      "sku-list-total-cell sku-list-total-value"
-                  >
-                    {
-                      formatRubles(
-                        totals.revenue
-                      )
-                    }
-                  </div>
-
-                  <div
-                    className=
-                      "sku-list-total-cell sku-list-total-value"
-                  >
-                    {
-                      formatRubles(
-                        totals.operatingProfit
-                      )
-                    }
-                  </div>
-
-                  <div
-                    className=
-                      "sku-list-total-cell sku-list-total-value"
-                  >
-                    {
-                      formatInteger(
-                        totals.purchases
-                      )
-                      +
-                      " шт."
-                    }
-                  </div>
-                </div>
-              </div>
-            )
-
-            : null
-        }
+        </button>
       </div>
 
       {
@@ -769,6 +701,119 @@ export default function SkuListTabsClient({
               className=
                 "sku-list-table-shell"
             >
+              <div
+                className=
+                  "sku-list-totals-viewport"
+              >
+                <table
+                  className=
+                    "sku-list-totals-table"
+                  aria-label=
+                    "Итоги по Ozon"
+                >
+                  <colgroup>
+                    <col
+                      className=
+                        "sku-list-col-enot"
+                    />
+
+                    <col
+                      className=
+                        "sku-list-col-status"
+                    />
+
+                    <col
+                      className=
+                        "sku-list-col-sku"
+                    />
+
+                    <col
+                      className=
+                        "sku-list-col-seller"
+                    />
+
+                    <col
+                      className=
+                        "sku-list-col-product"
+                    />
+
+                    <col
+                      className=
+                        "sku-list-col-number"
+                    />
+
+                    <col
+                      className=
+                        "sku-list-col-profit"
+                    />
+
+                    <col
+                      className=
+                        "sku-list-col-number"
+                    />
+                  </colgroup>
+
+                  <tbody>
+                    <tr>
+                      <td
+                        colSpan={
+                          4
+                        }
+                        className=
+                          "sku-list-total-empty"
+                      />
+
+                      <td
+                        className=
+                          "sku-list-total-product-slot"
+                      >
+                        <div
+                          className=
+                            "sku-list-total-label-box"
+                        >
+                          ИТОГО
+                        </div>
+                      </td>
+
+                      <td
+                        className=
+                          "sku-list-total-value-cell"
+                      >
+                        {
+                          formatRubles(
+                            totals.revenue
+                          )
+                        }
+                      </td>
+
+                      <td
+                        className=
+                          "sku-list-total-value-cell"
+                      >
+                        {
+                          formatRubles(
+                            totals.operatingProfit
+                          )
+                        }
+                      </td>
+
+                      <td
+                        className=
+                          "sku-list-total-value-cell sku-list-total-value-cell--last"
+                      >
+                        {
+                          formatInteger(
+                            totals.purchases
+                          )
+                          +
+                          " шт."
+                        }
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
               <div
                 className=
                   "sku-list-table-card"
