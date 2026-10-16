@@ -359,13 +359,39 @@ export default function SkuListTabsClient({
         const purchasesRect =
           purchasesHeader.getBoundingClientRect();
 
+        const previousHeader =
+          revenueHeader.previousElementSibling
+          as
+            HTMLElement
+            |
+            null;
+
+        const dividerWidth =
+          previousHeader
+
+            ? (
+                Number.parseFloat(
+                  window
+                    .getComputedStyle(
+                      previousHeader
+                    )
+                    .borderRightWidth
+                )
+                ||
+                0
+              )
+
+            : 0;
+
         setTotalsLayout({
           left:
             revenueRect.left
             -
             shellRect.left
             -
-            72,
+            72
+            -
+            dividerWidth,
 
           revenueWidth:
             profitRect.left
