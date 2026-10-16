@@ -3975,9 +3975,8 @@ async function previewSupplyPlan() {
             (
               warehouse
             ): warehouse is PreviewWarehouse =>
-              Boolean(
-                warehouse
-              )
+              warehouse !==
+                null
               &&
               (
                 warehouse.availability ===
