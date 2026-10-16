@@ -1334,7 +1334,7 @@ html[data-theme="dark"]
   top: 0;
   left: 0;
 
-  z-index: 1;
+  z-index: 4;
 
   height: 136px;
 
@@ -1410,6 +1410,7 @@ html[data-theme="dark"]
   color: #111318;
 
   transition:
+    transform 0.18s ease,
     border-color 0.14s ease,
     box-shadow 0.14s ease;
 
@@ -1433,6 +1434,10 @@ html[data-theme="dark"]
 
 .home-marketplace-metric-card--dragging {
   z-index: 10;
+
+  transition:
+    border-color 0.14s ease,
+    box-shadow 0.14s ease;
 
   box-shadow:
     0 15px 36px
@@ -1561,49 +1566,6 @@ html[data-theme="dark"]
   font-weight: 850;
 
   letter-spacing: 0.04em;
-}
-
-
-.home-marketplace-card-grip {
-  display: grid;
-
-  grid-template-columns:
-    repeat(
-      2,
-      3px
-    );
-
-  grid-template-rows:
-    repeat(
-      3,
-      3px
-    );
-
-  gap: 3px;
-
-  width: 9px;
-  height: 15px;
-
-  flex:
-    0 0 9px;
-
-  margin-right: 3px;
-
-  opacity: 0.62;
-
-  color:
-    var(--home-metric-accent);
-}
-
-
-.home-marketplace-card-grip > span {
-  width: 3px;
-  height: 3px;
-
-  border-radius: 50%;
-
-  background:
-    currentColor;
 }
 
 

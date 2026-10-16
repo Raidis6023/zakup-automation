@@ -640,30 +640,11 @@ export default function HomeMarketplaceCards({
       +
       column;
 
-    const occupied =
-      METRIC_IDS.some(
-        id =>
-          id !==
-            drag.id
-          &&
-          slots[
-            id
-          ] ===
-            candidate
-      );
-
-    const nextTarget =
-      occupied
-
-        ? null
-
-        : candidate;
-
     targetSlotRef.current =
-      nextTarget;
+      candidate;
 
     setTargetSlot(
-      nextTarget
+      candidate
     );
   }
 
@@ -688,7 +669,25 @@ export default function HomeMarketplaceCards({
     ) {
       setSlots(
         current => {
-          const next = {
+          const currentSlot =
+            current[
+              drag.id
+            ];
+
+          const occupant =
+            METRIC_IDS.find(
+              id =>
+                id !==
+                  drag.id
+                &&
+                current[
+                  id
+                ] ===
+                  nextTarget
+            );
+
+          const next:
+          SlotMap = {
             ...current,
 
             [
@@ -696,6 +695,13 @@ export default function HomeMarketplaceCards({
             ]:
               nextTarget,
           };
+
+          if (occupant) {
+            next[
+              occupant
+            ] =
+              currentSlot;
+          }
 
           try {
             window
@@ -928,30 +934,6 @@ export default function HomeMarketplaceCards({
                         </strong>
                       </div>
 
-                      <span
-                        className=
-                          "home-marketplace-card-grip"
-                        aria-hidden="true"
-                      >
-                        {
-                          Array.from(
-                            {
-                              length:
-                                6,
-                            },
-                            (
-                              _,
-                              index
-                            ) => (
-                              <span
-                                key={
-                                  index
-                                }
-                              />
-                            )
-                          )
-                        }
-                      </span>
                     </div>
 
                     <div
