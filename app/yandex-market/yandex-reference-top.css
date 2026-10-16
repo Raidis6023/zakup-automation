@@ -238,20 +238,21 @@
 
 .yandex-reference-page
 .ym-sync-status-card--loading {
+  /* Как у WB: во время синхронизации плашка остаётся зелёной. */
   border-color:
     rgba(
-      249,
-      115,
-      22,
-      0.24
+      16,
+      185,
+      129,
+      0.20
     );
 
   background:
     rgba(
-      249,
-      115,
-      22,
-      0.09
+      16,
+      185,
+      129,
+      0.08
     );
 }
 
@@ -337,10 +338,10 @@ svg {
 .ym-sync-status-card--loading
 .ym-sync-status-card__icon {
   color:
-    #7c2d12;
+    #064e3b;
 
   background:
-    #fb923c;
+    #34d399;
 }
 
 
@@ -420,7 +421,7 @@ svg {
 .ym-sync-status-card--loading
 .ym-sync-status-card__title {
   color:
-    #ea580c;
+    #059669;
 }
 
 
