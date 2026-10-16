@@ -1705,38 +1705,18 @@ html[data-theme="dark"]
 
 
 .home-marketplace-board--compact {
-  height:
-    calc(
-      184px * 2
-      +
-      14px
-    );
+  height: 382px;
 
-  min-height:
-    calc(
-      184px * 2
-      +
-      14px
-    );
+  min-height: 382px;
 
   overflow: visible;
 }
 
 
 .home-marketplace-board--single {
-  height:
-    calc(
-      184px * 4
-      +
-      14px * 3
-    );
+  height: 778px;
 
-  min-height:
-    calc(
-      184px * 4
-      +
-      14px * 3
-    );
+  min-height: 778px;
 }
 
 
