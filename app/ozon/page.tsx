@@ -8,6 +8,9 @@ from "next/link";
 import ThemeToggle
 from "../ThemeToggle";
 
+import MarketplaceSuppliesPanel
+from "../MarketplaceSuppliesPanel";
+
 import OzonUnifiedSyncClient from "./OzonUnifiedSyncClient";
 
 import OzonFboSupplyClient
@@ -1616,6 +1619,17 @@ export default async function OzonPage() {
               0
             )
           }
+        />
+
+
+        {/* ===================================
+            УПРАВЛЕНИЕ ПОСТАВКАМИ
+            =================================== */}
+
+        <MarketplaceSuppliesPanel
+          marketplace="ozon"
+          endpoint="/api/ozon/supplies"
+          title="Поставки Ozon"
         />
 
 
