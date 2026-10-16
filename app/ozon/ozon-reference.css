@@ -2590,3 +2590,426 @@ html[data-theme="dark"]
   }
 }
 
+
+
+
+/* ============================================================
+   АВТОСОЗДАНИЕ ПОСТАВОК FBO
+   ============================================================ */
+
+.ozon-reference-page
+.ozon-fbo-supply-section {
+  padding:
+    18px;
+}
+
+.ozon-reference-page
+.ozon-fbo-supply-head {
+  display:
+    flex;
+
+  align-items:
+    flex-start;
+
+  justify-content:
+    space-between;
+
+  gap:
+    22px;
+}
+
+.ozon-reference-page
+.ozon-fbo-supply-head
+.primary-button {
+  flex:
+    0 0 auto;
+
+  min-width:
+    235px;
+}
+
+.ozon-reference-page
+.ozon-fbo-supply-facts {
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap:
+    10px;
+
+  margin-top:
+    16px;
+}
+
+.ozon-reference-page
+.ozon-fbo-supply-fact {
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    5px;
+
+  min-width:
+    0;
+
+  padding:
+    12px 13px;
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    10px;
+
+  background:
+    var(--ws-surface-soft);
+}
+
+.ozon-reference-page
+.ozon-fbo-supply-fact
+span {
+  color:
+    var(--ws-muted);
+
+  font-size:
+    11px;
+
+  font-weight:
+    600;
+}
+
+.ozon-reference-page
+.ozon-fbo-supply-fact
+strong {
+  overflow:
+    hidden;
+
+  color:
+    var(--ws-text);
+
+  font-size:
+    14px;
+
+  text-overflow:
+    ellipsis;
+
+  white-space:
+    nowrap;
+}
+
+.ozon-reference-page
+.ozon-fbo-supply-progress-wrap {
+  margin-top:
+    16px;
+
+  padding:
+    14px;
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    11px;
+
+  background:
+    var(--ws-surface-soft);
+}
+
+.ozon-reference-page
+.ozon-fbo-supply-progress-top {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  gap:
+    12px;
+
+  margin-bottom:
+    9px;
+}
+
+.ozon-reference-page
+.ozon-fbo-supply-progress-top
+strong {
+  color:
+    var(--ws-text);
+}
+
+.ozon-reference-page
+.ozon-fbo-supply-progress-top
+span {
+  color:
+    var(--ws-muted);
+
+  font-size:
+    12px;
+
+  font-weight:
+    700;
+}
+
+.ozon-reference-page
+.ozon-fbo-supply-progress {
+  position:
+    relative;
+
+  width:
+    100%;
+
+  height:
+    8px;
+
+  overflow:
+    hidden;
+
+  border-radius:
+    999px;
+
+  background:
+    var(--ws-border);
+}
+
+.ozon-reference-page
+.ozon-fbo-supply-progress
+span {
+  display:
+    block;
+
+  height:
+    100%;
+
+  border-radius:
+    inherit;
+
+  background:
+    var(--ozon-green);
+
+  transition:
+    width 220ms ease;
+}
+
+.ozon-reference-page
+.ozon-fbo-supply-counters {
+  display:
+    flex;
+
+  flex-wrap:
+    wrap;
+
+  gap:
+    8px 18px;
+
+  margin-top:
+    10px;
+
+  margin-bottom:
+    8px;
+
+  color:
+    var(--ws-muted);
+
+  font-size:
+    12px;
+}
+
+.ozon-reference-page
+.ozon-fbo-supply-counters
+strong {
+  color:
+    var(--ws-text);
+}
+
+.ozon-reference-page
+.ozon-fbo-supply-error,
+.ozon-reference-page
+.ozon-fbo-supply-problems,
+.ozon-reference-page
+.ozon-fbo-supply-success-list {
+  margin-top:
+    14px;
+
+  padding:
+    13px 14px;
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    10px;
+}
+
+.ozon-reference-page
+.ozon-fbo-supply-error,
+.ozon-reference-page
+.ozon-fbo-supply-problems {
+  border-color:
+    color-mix(
+      in srgb,
+      var(--ozon-red) 30%,
+      var(--ws-border)
+    );
+
+  background:
+    color-mix(
+      in srgb,
+      var(--ozon-red) 6%,
+      var(--ws-surface)
+    );
+}
+
+.ozon-reference-page
+.ozon-fbo-supply-success-list {
+  border-color:
+    color-mix(
+      in srgb,
+      var(--ozon-green) 27%,
+      var(--ws-border)
+    );
+
+  background:
+    color-mix(
+      in srgb,
+      var(--ozon-green) 5%,
+      var(--ws-surface)
+    );
+}
+
+.ozon-reference-page
+.ozon-fbo-supply-error
+.secondary-button {
+  margin-top:
+    10px;
+}
+
+.ozon-reference-page
+.ozon-fbo-supply-row {
+  display:
+    grid;
+
+  grid-template-columns:
+    minmax(
+      180px,
+      1.1fr
+    )
+    minmax(
+      120px,
+      0.7fr
+    )
+    minmax(
+      220px,
+      1.7fr
+    );
+
+  gap:
+    12px;
+
+  align-items:
+    start;
+
+  padding:
+    9px 0;
+
+  border-bottom:
+    1px solid
+    var(--ws-border);
+
+  color:
+    var(--ws-muted);
+
+  font-size:
+    12px;
+}
+
+.ozon-reference-page
+.ozon-fbo-supply-row:last-child {
+  padding-bottom:
+    0;
+
+  border-bottom:
+    0;
+}
+
+.ozon-reference-page
+.ozon-fbo-supply-row
+span:first-child {
+  color:
+    var(--ws-text);
+
+  font-weight:
+    700;
+}
+
+
+@media (
+  max-width:
+    920px
+) {
+
+  .ozon-reference-page
+  .ozon-fbo-supply-head {
+    flex-direction:
+      column;
+  }
+
+  .ozon-reference-page
+  .ozon-fbo-supply-head
+  .primary-button {
+    width:
+      100%;
+
+    min-width:
+      0;
+  }
+
+  .ozon-reference-page
+  .ozon-fbo-supply-facts {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(
+          0,
+          1fr
+        )
+      );
+  }
+
+  .ozon-reference-page
+  .ozon-fbo-supply-row {
+    grid-template-columns:
+      1fr;
+  }
+
+}
+
+
+@media (
+  max-width:
+    560px
+) {
+
+  .ozon-reference-page
+  .ozon-fbo-supply-facts {
+    grid-template-columns:
+      1fr;
+  }
+
+}
