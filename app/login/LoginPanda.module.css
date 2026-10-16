@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@500;700&family=Montserrat+Alternates:wght@500;700&family=Nunito+Sans:wght@500;700&family=Onest:wght@500;700&display=swap");
+
 .assistant {
   display: flex;
   flex-direction: column;
@@ -7,21 +9,23 @@
   pointer-events: none;
   user-select: none;
 }
+
 .bubble {
   box-sizing: border-box;
   width: min(100%, 408px);
-  min-height: 107px;
-  padding: 20px 22px;
+  min-height: 136px;
+  padding: 19px 22px 13px;
   border: 1px solid #b87744;
   border-radius: 22px;
   background: rgba(24, 30, 36, .96);
   box-shadow: 0 15px 44px rgba(0, 0, 0, .25);
   color: #eef2f6;
-  font-size: 16px;
+  font-size: 17px;
   line-height: 1.5;
   position: relative;
   z-index: 1;
 }
+
 .bubble::after {
   content: "";
   position: absolute;
@@ -34,9 +38,50 @@
   border-bottom: 1px solid #b87744;
   transform: rotate(45deg);
 }
-.bubble p { margin: 0; transition: opacity .5s ease; }
+
+.bubble p {
+  margin: 0;
+  font-weight: 500;
+  transition: opacity .5s ease;
+}
+
+.bubble strong { font-weight: 700; }
+
 .phraseHidden { opacity: 0; }
 .phraseVisible { opacity: 1; }
+
+.fontPicker {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 7px;
+  margin-top: 10px;
+  position: relative;
+  z-index: 2;
+  font-size: 11px;
+  font-weight: 500;
+  color: #8294a4;
+  pointer-events: auto;
+}
+
+.fontPicker select {
+  max-width: 195px;
+  min-height: 29px;
+  border: 1px solid #465566;
+  border-radius: 8px;
+  padding: 3px 24px 3px 9px;
+  background: #202833;
+  color: #d9e3eb;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.fontPicker select:focus-visible {
+  outline: 2px solid #e6a467;
+  outline-offset: 2px;
+}
+
 .panda {
   display: block;
   width: min(100%, 380px);
@@ -47,15 +92,24 @@
   margin-top: 8px;
   animation: enter .7s ease-out both;
 }
+
 @keyframes enter {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
 @media (max-width: 860px) {
   .assistant { max-width: 440px; }
-  .bubble { min-height: 0; padding: 14px 18px; font-size: 14px; }
+  .bubble {
+    min-height: 0;
+    padding: 14px 18px 12px;
+    font-size: 15px;
+  }
+  .fontPicker { font-size: 10px; }
+  .fontPicker select { font-size: 11px; }
   .panda { width: min(67%, 245px); max-height: 285px; }
 }
+
 @media (prefers-reduced-motion: reduce) {
   .panda { animation: none; }
   .bubble p { transition: none; }
