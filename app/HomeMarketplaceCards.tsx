@@ -4,18 +4,30 @@ import {
   useEffect,
   useRef,
   useState,
-  type PointerEvent,
+  type PointerEvent as ReactPointerEvent,
 } from "react";
 
-import WorkspaceMarketplaceLogo, {
-  type WorkspaceMarketplaceKind,
-} from "./WorkspaceMarketplaceLogos";
+import WorkspaceMarketplaceLogo
+  from "./WorkspaceMarketplaceLogos";
+
+
+type MetricId =
+  | "all"
+  | "ozon"
+  | "wildberries"
+  | "yandex-market";
+
+
+type MarketplaceKind =
+  Exclude<
+    MetricId,
+    "all"
+  >;
 
 
 export type HomeMarketplaceMetric = {
   id:
-    | "all"
-    | WorkspaceMarketplaceKind;
+    MetricId;
 
   title:
     string;
@@ -31,48 +43,21 @@ export type HomeMarketplaceMetric = {
 };
 
 
-type CardPosition = {
+type Position = {
   x: number;
   y: number;
 };
-
-
-type PositionMap =
-Record<
-  HomeMarketplaceMetric["id"],
-  CardPosition
->;
-
-
-type RatioPosition = {
-  x: number;
-  y: number;
-};
-
-
-type RatioMap =
-Partial<
-  Record<
-    HomeMarketplaceMetric["id"],
-    RatioPosition
-  >
->;
 
 
 type DragState = {
-  id:
-    HomeMarketplaceMetric["id"];
-
-  offsetX:
-    number;
-
-  offsetY:
-    number;
+  id: MetricId;
+  offsetX: number;
+  offsetY: number;
 };
 
 
 const STORAGE_KEY =
-  "workspace-home-marketplace-card-positions-v1";
+  "workspace-home-marketplace-card-positions-v2";
 
 
 const CARD_GAP =
@@ -140,153 +125,6 @@ function clamp(
 }
 
 
-function defaultDesktopPositions(
-  boardWidth: number,
-  cardWidth: number
-):
-PositionMap {
-  const step =
-    cardWidth
-    +
-    CARD_GAP;
-
-  return {
-    all: {
-      x:
-        0,
-
-      y:
-        0,
-    },
-
-    ozon: {
-      x:
-        step,
-
-      y:
-        0,
-    },
-
-    wildberries: {
-      x:
-        step * 2,
-
-      y:
-        0,
-    },
-
-    "yandex-market": {
-      x:
-        Math.min(
-          step * 3,
-          boardWidth
-          -
-          cardWidth
-        ),
-
-      y:
-        0,
-    },
-  };
-}
-
-
-function defaultCompactPositions(
-  boardWidth: number,
-  cardWidth: number,
-  singleColumn: boolean
-):
-PositionMap {
-  if (singleColumn) {
-    const step =
-      CARD_HEIGHT
-      +
-      CARD_GAP;
-
-    return {
-      all: {
-        x:
-          0,
-
-        y:
-          0,
-      },
-
-      ozon: {
-        x:
-          0,
-
-        y:
-          step,
-      },
-
-      wildberries: {
-        x:
-          0,
-
-        y:
-          step * 2,
-      },
-
-      "yandex-market": {
-        x:
-          0,
-
-        y:
-          step * 3,
-      },
-    };
-  }
-
-  const secondColumn =
-    Math.max(
-      0,
-      boardWidth
-      -
-      cardWidth
-    );
-
-  const secondRow =
-    CARD_HEIGHT
-    +
-    CARD_GAP;
-
-  return {
-    all: {
-      x:
-        0,
-
-      y:
-        0,
-    },
-
-    ozon: {
-      x:
-        secondColumn,
-
-      y:
-        0,
-    },
-
-    wildberries: {
-      x:
-        0,
-
-      y:
-        secondRow,
-    },
-
-    "yandex-market": {
-      x:
-        secondColumn,
-
-      y:
-        secondRow,
-    },
-  };
-}
-
-
 export default function HomeMarketplaceCards({
   metrics,
 }: {
@@ -303,17 +141,17 @@ export default function HomeMarketplaceCards({
       null
     );
 
-  const ratiosRef =
-    useRef<RatioMap>(
-      {}
-    );
-
   const [
     positions,
     setPositions,
   ] =
-    useState<PositionMap | null>(
-      null
+    useState<
+      Record<
+        string,
+        Position
+      >
+    >(
+      {}
     );
 
   const [
@@ -325,30 +163,10 @@ export default function HomeMarketplaceCards({
     );
 
   const [
-    compact,
-    setCompact,
-  ] =
-    useState(
-      false
-    );
-
-  const [
-    singleColumn,
-    setSingleColumn,
-  ] =
-    useState(
-      false
-    );
-
-  const [
     draggingId,
     setDraggingId,
   ] =
-    useState<
-      HomeMarketplaceMetric["id"]
-      |
-      null
-    >(
+    useState<MetricId | null>(
       null
     );
 
@@ -362,92 +180,54 @@ export default function HomeMarketplaceCards({
         return;
       }
 
-      try {
-        const saved =
-          window
-            .localStorage
-            .getItem(
-              STORAGE_KEY
-            );
-
-        if (saved) {
-          ratiosRef.current =
-            JSON.parse(
-              saved
-            ) as RatioMap;
-        }
-      } catch {
-        ratiosRef.current =
-          {};
-      }
-
-      function layoutCards() {
+      function arrange() {
         const width =
           board.clientWidth;
 
-        const height =
-          board.clientHeight;
-
-        const nextSingleColumn =
-          width <
-          540;
-
-        const nextCompact =
-          width <
-          980;
-
         const nextCardWidth =
-          nextSingleColumn
-
-            ? width
-
-            : nextCompact
-
-              ? (
-                  width
-                  -
-                  CARD_GAP
-                )
-                /
-                2
-
-              : (
-                  width
-                  -
-                  CARD_GAP * 3
-                )
-                /
-                4;
-
-        setCompact(
-          nextCompact
-        );
-
-        setSingleColumn(
-          nextSingleColumn
-        );
+          Math.max(
+            230,
+            (
+              width
+              -
+              CARD_GAP * 3
+            )
+            /
+            4
+          );
 
         setCardWidth(
           nextCardWidth
         );
 
-        if (nextCompact) {
-          setPositions(
-            defaultCompactPositions(
-              width,
-              nextCardWidth,
-              nextSingleColumn
-            )
-          );
+        let saved:
+        Record<
+          string,
+          Position
+        > = {};
 
-          return;
+        try {
+          const raw =
+            window
+              .localStorage
+              .getItem(
+                STORAGE_KEY
+              );
+
+          if (raw) {
+            saved =
+              JSON.parse(
+                raw
+              ) as
+                Record<
+                  string,
+                  Position
+                >;
+          }
+        } catch {
+          saved =
+            {};
         }
-
-        const defaults =
-          defaultDesktopPositions(
-            width,
-            nextCardWidth
-          );
 
         const maxX =
           Math.max(
@@ -460,70 +240,88 @@ export default function HomeMarketplaceCards({
         const maxY =
           Math.max(
             0,
-            height
+            board.clientHeight
             -
             CARD_HEIGHT
           );
 
-        const next =
-          {
-            ...defaults,
-          };
+        const next:
+        Record<
+          string,
+          Position
+        > = {};
 
-        for (
-          const metric
-          of metrics
-        ) {
-          const ratio =
-            ratiosRef.current[
+        metrics.forEach(
+          (
+            metric,
+            index
+          ) => {
+            const stored =
+              saved[
+                metric.id
+              ];
+
+            if (stored) {
+              next[
+                metric.id
+              ] = {
+                x:
+                  clamp(
+                    stored.x,
+                    0,
+                    maxX
+                  ),
+
+                y:
+                  clamp(
+                    stored.y,
+                    0,
+                    maxY
+                  ),
+              };
+
+              return;
+            }
+
+            next[
               metric.id
-            ];
+            ] = {
+              x:
+                Math.min(
+                  index
+                  *
+                  (
+                    nextCardWidth
+                    +
+                    CARD_GAP
+                  ),
+                  maxX
+                ),
 
-          if (!ratio) {
-            continue;
+              y:
+                0,
+            };
           }
-
-          next[
-            metric.id
-          ] = {
-            x:
-              clamp(
-                ratio.x
-                *
-                maxX,
-                0,
-                maxX
-              ),
-
-            y:
-              clamp(
-                ratio.y
-                *
-                maxY,
-                0,
-                maxY
-              ),
-          };
-        }
+        );
 
         setPositions(
           next
         );
       }
 
-      layoutCards();
+      arrange();
 
-      const resizeObserver =
+      const observer =
         new ResizeObserver(
-          layoutCards
+          arrange
         );
 
-      resizeObserver.observe(
+      observer.observe(
         board
       );
 
       return () => {
-        resizeObserver.disconnect();
+        observer.disconnect();
       };
     },
     [
@@ -534,18 +332,10 @@ export default function HomeMarketplaceCards({
 
   function handlePointerDown(
     event:
-      PointerEvent<HTMLDivElement>,
+      ReactPointerEvent<HTMLDivElement>,
     id:
-      HomeMarketplaceMetric["id"]
+      MetricId
   ) {
-    if (
-      compact
-      ||
-      !positions
-    ) {
-      return;
-    }
-
     const card =
       event.currentTarget
         .parentElement;
@@ -554,7 +344,7 @@ export default function HomeMarketplaceCards({
       return;
     }
 
-    const cardRect =
+    const rect =
       card.getBoundingClientRect();
 
     dragRef.current = {
@@ -563,12 +353,12 @@ export default function HomeMarketplaceCards({
       offsetX:
         event.clientX
         -
-        cardRect.left,
+        rect.left,
 
       offsetY:
         event.clientY
         -
-        cardRect.top,
+        rect.top,
     };
 
     event.currentTarget
@@ -584,20 +374,18 @@ export default function HomeMarketplaceCards({
 
   function handlePointerMove(
     event:
-      PointerEvent<HTMLDivElement>
+      ReactPointerEvent<HTMLDivElement>
   ) {
-    const drag =
-      dragRef.current;
-
     const board =
       boardRef.current;
 
+    const drag =
+      dragRef.current;
+
     if (
-      !drag
-      ||
       !board
       ||
-      compact
+      !drag
     ) {
       return;
     }
@@ -621,114 +409,53 @@ export default function HomeMarketplaceCards({
         CARD_HEIGHT
       );
 
-    const x =
-      clamp(
-        event.clientX
-        -
-        boardRect.left
-        -
-        drag.offsetX,
-        0,
-        maxX
-      );
+    const nextPosition = {
+      x:
+        clamp(
+          event.clientX
+          -
+          boardRect.left
+          -
+          drag.offsetX,
+          0,
+          maxX
+        ),
 
-    const y =
-      clamp(
-        event.clientY
-        -
-        boardRect.top
-        -
-        drag.offsetY,
-        0,
-        maxY
-      );
+      y:
+        clamp(
+          event.clientY
+          -
+          boardRect.top
+          -
+          drag.offsetY,
+          0,
+          maxY
+        ),
+    };
 
     setPositions(
-      previous => {
-        if (!previous) {
-          return previous;
-        }
+      current => ({
+        ...current,
 
-        return {
-          ...previous,
-
-          [
-            drag.id
-          ]: {
-            x,
-            y,
-          },
-        };
-      }
+        [
+          drag.id
+        ]:
+          nextPosition,
+      })
     );
   }
 
 
-  function handlePointerUp(
+  function handlePointerEnd(
     event:
-      PointerEvent<HTMLDivElement>
+      ReactPointerEvent<HTMLDivElement>
   ) {
     const drag =
       dragRef.current;
 
-    const board =
-      boardRef.current;
-
-    if (
-      !drag
-      ||
-      !board
-      ||
-      !positions
-    ) {
-      dragRef.current =
-        null;
-
-      setDraggingId(
-        null
-      );
-
+    if (!drag) {
       return;
     }
-
-    const position =
-      positions[
-        drag.id
-      ];
-
-    const maxX =
-      Math.max(
-        1,
-        board.clientWidth
-        -
-        cardWidth
-      );
-
-    const maxY =
-      Math.max(
-        1,
-        board.clientHeight
-        -
-        CARD_HEIGHT
-      );
-
-    ratiosRef.current = {
-      ...ratiosRef.current,
-
-      [
-        drag.id
-      ]: {
-        x:
-          position.x
-          /
-          maxX,
-
-        y:
-          position.y
-          /
-          maxY,
-      },
-    };
 
     try {
       window
@@ -736,11 +463,11 @@ export default function HomeMarketplaceCards({
         .setItem(
           STORAGE_KEY,
           JSON.stringify(
-            ratiosRef.current
+            positions
           )
         );
     } catch {
-      // Положение просто не сохранится.
+      // Сохранение позиции не влияет на работу карточек.
     }
 
     if (
@@ -769,23 +496,12 @@ export default function HomeMarketplaceCards({
       ref={
         boardRef
       }
-      className={
-        singleColumn
-
-          ? "home-marketplace-board home-marketplace-board--compact home-marketplace-board--single"
-
-          : compact
-
-            ? "home-marketplace-board home-marketplace-board--compact"
-
-            : "home-marketplace-board"
-      }
+      className=
+        "home-marketplace-board"
       aria-label=
         "Финансовые показатели маркетплейсов"
     >
       {
-        positions
-        &&
         cardWidth >
           0
 
@@ -794,7 +510,15 @@ export default function HomeMarketplaceCards({
                 const position =
                   positions[
                     metric.id
-                  ];
+                  ]
+                  ??
+                  {
+                    x:
+                      0,
+
+                    y:
+                      0,
+                  };
 
                 const isAll =
                   metric.id ===
@@ -851,10 +575,10 @@ export default function HomeMarketplaceCards({
                         handlePointerMove
                       }
                       onPointerUp={
-                        handlePointerUp
+                        handlePointerEnd
                       }
                       onPointerCancel={
-                        handlePointerUp
+                        handlePointerEnd
                       }
                     >
                       <div
@@ -878,7 +602,7 @@ export default function HomeMarketplaceCards({
                               <WorkspaceMarketplaceLogo
                                 kind={
                                   metric.id as
-                                    WorkspaceMarketplaceKind
+                                    MarketplaceKind
                                 }
                                 className=
                                   "home-marketplace-metric-logo"
