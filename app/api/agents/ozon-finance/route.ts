@@ -571,8 +571,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ok:true,...result});
     }
     if (payload.action === "syncDay") {
-      const day = String(payload.day ?? "");
-      return NextResponse.json({ ok: true, ...(await syncOneDay(db, day)) });
+      return fail("Устаревшая выгрузка отключена. Используйте постраничный импорт через /api/agents/ozon-finance-sync.", 410);
     }
     if (payload.action === "saveProduct") {
       const master = String(payload.master_code ?? "").trim();
