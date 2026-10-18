@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { POST as processOneFinancePage } from "../ozon-finance-sync/route";
+import { POST as processSkuMapping } from "../ozon-finance-map/route";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -43,10 +45,17 @@ export async function GET(request: NextRequest) {
       });
       if(mapError)return reply({ok:false,phase:"mapping_lookup",error:mapError.message},503);
       if((unmapped??[]).length===0)continue;
-      const m=await fetch(new URL("/api/agents/ozon-finance-map",request.url),{
-        method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+cronSecret},
-        body:JSON.stringify({day:candidate.day}),cache:"no-store",signal:AbortSignal.timeout(26000)
-      });
+      // Call the trusted handler directly. Self-HTTP can be blocked by
+      // deployment protection and previously hid the real error behind 502.
+      const mapRequest = new NextRequest(
+        new URL("/api/agents/ozon-finance-map", request.url), {
+          method: "POST",
+          headers: { "Content-Type": "application/json",
+            Authorization: "Bearer " + cronSecret },
+          body: JSON.stringify({ day: candidate.day }),
+        }
+      );
+      const m=await processSkuMapping(mapRequest);
       const parsed=await m.json() as {ok?:boolean;processed?:number;resolved?:number;error?:string};
       return reply({ok:!!parsed.ok,phase:"sku_mapping",day:candidate.day,
         mapped:parsed.resolved??0,processed:parsed.processed??0,
@@ -62,18 +71,33 @@ export async function GET(request: NextRequest) {
   let pages=0, last:null|unknown=null;
   try {
     while(pages<10 && Date.now()-started<235000) {
-      const response=await fetch(new URL("/api/agents/ozon-finance-sync",request.url),{
-        method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+cronSecret},
-        body:JSON.stringify({day}),cache:"no-store",
-        signal:AbortSignal.timeout(26000),
-      });
+      // Execute in the same server process. No Vercel-to-Vercel fetch.
+      // This shares authenticated service-role access with the scheduler.
+      const pageRequest = new NextRequest(
+        new URL("/api/agents/ozon-finance-sync", request.url), {
+          method: "POST",
+          headers: { "Content-Type": "application/json",
+            Authorization: "Bearer " + cronSecret },
+          body: JSON.stringify({ day }),
+        }
+      );
+      const response=await processOneFinancePage(pageRequest);
       const state=await response.json() as {
         ok?:boolean; busy?:boolean; done?:boolean; error?:string;
         rows_saved?:number; pages_completed?:number;
       };
       if(!response.ok || !state.ok) {
-        return reply({ok:false,phase:"import_failed",day,
-          detail:state.error??("HTTP "+response.status)},502);
+        // Persist the exact stage/error where the operator can inspect it.
+        // Never include access tokens, secrets or request headers.
+        const diagnostic = String(state.error ?? ("HTTP "+response.status)).slice(0,400);
+        await db.from("ozon_finance_page_jobs")
+          .update({status:"failed",last_error:"Cron: "+diagnostic,
+            updated_at:new Date().toISOString()})
+          .eq("account_key","main").eq("day",day)
+          .eq("pages_completed",0);
+        console.error("Ozon finance background import failure",
+          {day, status:response.status, detail:diagnostic});
+        return reply({ok:false,phase:"import_failed",day,detail:diagnostic},502);
       }
       last={day,rows_saved:state.rows_saved,pages_completed:state.pages_completed,
         done:!!state.done,busy:!!state.busy};
@@ -82,7 +106,13 @@ export async function GET(request: NextRequest) {
     }
     return reply({ok:true,phase:"import",remaining_days:pending.length,last});
   }catch(error) {
-    return reply({ok:false,phase:"server_error",day,
-      error:error instanceof Error?error.message:"Unexpected exception"},503);
+    const diagnostic = error instanceof Error?error.message:"Unexpected exception";
+    await db.from("ozon_finance_page_jobs")
+      .update({status:"failed",last_error:"Cron exception: "+diagnostic.slice(0,350),
+        updated_at:new Date().toISOString()})
+      .eq("account_key","main").eq("day",day)
+      .eq("pages_completed",0);
+    console.error("Ozon finance scheduler exception", {day, diagnostic});
+    return reply({ok:false,phase:"server_error",day,error:diagnostic.slice(0,300)},503);
   }
 }
