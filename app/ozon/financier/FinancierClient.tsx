@@ -42,6 +42,8 @@ export default function FinancierClient() {
   const [data, setData] = useState<FinanceReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [diagnosing, setDiagnosing] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState("");
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
   const [managerFilter, setManagerFilter] = useState("Все КМ");
@@ -76,6 +78,48 @@ export default function FinancierClient() {
     r.unit_cost === null || r.mayak_unit === null
   ).sort((a,b)=>a.offer_id.localeCompare(b.offer_id,"ru")),[data]);
   const active = rows.find(r => r.offer_id === selected);
+  async function preflight(): Promise<void> {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 15000);
+    try {
+      const response = await fetch("/api/agents/ozon-finance-sync?diagnostics=1", {
+        method: "GET", cache: "no-store", signal: controller.signal,
+      });
+      const raw = await response.text();
+      let json: { ok?: boolean; error?: string; stage?: string;
+        project_ref?: string; server_latency_ms?: number };
+      try { json = JSON.parse(raw); }
+      catch { throw new Error("Vercel вернул не JSON, HTTP " + response.status +
+        ". Проверьте Preview URL и авторизацию сайта."); }
+      if (!response.ok || !json.ok) throw new Error(
+        "Ошибка проверки API (" + (json.stage ?? "unknown") +
+        "), HTTP " + response.status + ": " + (json.error ?? "неизвестная ошибка")
+      );
+      if (json.project_ref !== "zlkluzcjppefelgwihyz") throw new Error(
+        "Preview подключён к другой Supabase (" + (json.project_ref ?? "?") +
+        "), а финансовая база проекта имеет ID zlkluzcjppefelgwihyz. Импорт остановлен."
+      );
+      setConnectionStatus("Соединение исправно: Vercel → Supabase (" +
+        json.project_ref + "), " + json.server_latency_ms + " мс.");
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new Error("API не ответил за 15 секунд ещё до обращения к Ozon. Проверьте авторизацию, Supabase и Preview.");
+      }
+      throw error;
+    } finally {
+      window.clearTimeout(timer);
+    }
+  }
+  async function checkConnection() {
+    setDiagnosing(true);
+    setError("");
+    setConnectionStatus("Проверяем подключение Vercel к Supabase…");
+    try { await preflight(); }
+    catch (error) {
+      setConnectionStatus("");
+      setError(error instanceof Error ? error.message : String(error));
+    } finally { setDiagnosing(false); }
+  }
   async function mapDaySkus(day: string) {
     let totalMatched = 0;
     let notMatched = 0;
@@ -124,6 +168,8 @@ export default function FinancierClient() {
     let totalPages = 0;
     let totalRows = 0;
     try {
+      setProgress("Проверяем соединение с Supabase перед загрузкой…");
+      await preflight();
       for (const day of days) {
         let firstStep = true;
         let waiting = 0;
@@ -134,7 +180,7 @@ export default function FinancierClient() {
             ". Запрашиваем следующую страницу…"
           );
           const controller = new AbortController();
-          const timer = window.setTimeout(() => controller.abort(), 65000);
+          const timer = window.setTimeout(() => controller.abort(), 48000);
           let response: Response;
           try {
             response = await fetch("/api/agents/ozon-finance-sync", {
@@ -144,6 +190,11 @@ export default function FinancierClient() {
               body: JSON.stringify({ day, restart: forceRefresh && firstStep }),
               signal: controller.signal,
             });
+          } catch (networkError) {
+            if (networkError instanceof Error && networkError.name === "AbortError") {
+              throw new Error("Сервер не закончил загрузку страницы за 48 секунд. Проверьте состояние API и повторите. Сохранённые ранее страницы не потеряются.");
+            }
+            throw networkError;
           } finally {
             window.clearTimeout(timer);
           }
@@ -253,6 +304,9 @@ export default function FinancierClient() {
       <div className="ozf-panel ozf-filters">
         <label>С даты<input type="date" value={from} onChange={e => setFrom(e.target.value)} disabled={busy}/></label>
         <label>По дату<input type="date" value={to} onChange={e => setTo(e.target.value)} disabled={busy}/></label>
+        <button className="ozf-btn" onClick={() => void checkConnection()} disabled={busy || diagnosing}>
+          {diagnosing ? "Проверяем API…" : "Проверить соединение"}
+        </button>
         <button className="ozf-btn" onClick={() => void load()} disabled={loading || busy}>Обновить отчёт</button>
         <button className="ozf-btn ozf-primary" onClick={() => void syncPeriod()} disabled={busy || loading || !data}>
           {busy ? "Загрузка…" : (data?.missing_days.length ? "Загрузить недостающие дни" : "Пересинхронизировать период")}
@@ -261,6 +315,7 @@ export default function FinancierClient() {
           Сопоставить SKU
         </button>
       </div>
+      {connectionStatus && <p className="ozf-progress" role="status">{connectionStatus}</p>}
       {error && <p className="ozf-error" role="alert">{error}</p>}
       {progress && <p className="ozf-progress" role="status">{progress}</p>}
       <div className="ozf-metrics">
