@@ -6,13 +6,17 @@ type FinanceRow = {
   offer_id: string; master_code: string | null; name: string | null; manager: string;
   ozon_amount: number; sold_units: number | null; unit_cost: number | null;
   cogs: number | null; mayak_unit: number | null; mayak_expense: number | null;
-  mayak_covered_units: number | null; estimated_result: number | null; details: Detail[];
+  mayak_covered_units: number | null; estimated_result: number | null;
+  buyout_units: number | null; data_gaps: string[]; details: Detail[];
 };
 type FinanceReport = {
   from: string; to: string; synced_days: number; total_days: number;
   missing_days: string[]; operation_count: number; ledger_amount: number;
   allocated_amount: number; unallocated_amount: number; total_mayak: number; sales_window_covered: boolean;
   profit_status: string; warning: string;
+  actual_buyout_days: number; actual_buyouts_covered: boolean;
+  source: string; calculation_includes_api_calls: boolean;
+  reference_gaps: Array<{offer_id:string;master_code:string|null;name:string|null;manager:string;missing:string[]}>;
   rows: FinanceRow[]; unallocated_details: Array<{ name: string; amount: number }>;
 };
 const API = "/api/agents/ozon-finance";
@@ -25,7 +29,7 @@ function isoShift(delta: number): string {
 function listDays(from: string, to: string) {
   const arr: string[] = [];
   for (let v = Date.parse(from + "T00:00:00Z"), end = Date.parse(to + "T00:00:00Z");
-    Number.isFinite(v) && v <= end && arr.length < 32; v += 86400000)
+    Number.isFinite(v) && v <= end && arr.length < 367; v += 86400000)
     arr.push(new Date(v).toISOString().slice(0, 10));
   return arr;
 }
@@ -37,7 +41,7 @@ async function post(body: Record<string, unknown>) {
   return data;
 }
 export default function FinancierClient() {
-  const [from, setFrom] = useState(() => isoShift(-7));
+  const [from, setFrom] = useState(() => isoShift(-14));
   const [to, setTo] = useState(() => isoShift(-1));
   const [data, setData] = useState<FinanceReport | null>(null);
   const [loading, setLoading] = useState(false);
@@ -74,9 +78,7 @@ export default function FinancierClient() {
     (managerFilter === "Все КМ" || r.manager === managerFilter) &&
     (r.offer_id + " " + (r.master_code ?? "") + " " + (r.name ?? ""))
       .toLocaleLowerCase("ru").includes(search.toLocaleLowerCase("ru"))), [data, managerFilter, search]);
-  const missingRows = useMemo(() => (data?.rows ?? []).filter(r =>
-    r.unit_cost === null || r.mayak_unit === null
-  ).sort((a,b)=>a.offer_id.localeCompare(b.offer_id,"ru")),[data]);
+  const missingRows = useMemo(() => data?.reference_gaps ?? [], [data]);
   const active = rows.find(r => r.offer_id === selected);
   async function preflight(): Promise<void> {
     const controller = new AbortController();
@@ -323,7 +325,8 @@ export default function FinancierClient() {
         <div className="ozf-panel"><span>Привязано к артикулам</span><strong>{currency(data?.allocated_amount)}</strong><small>Сумма операций с установленным товаром</small></div>
         <div className="ozf-panel"><span>Без привязки к товару</span><strong>{currency(data?.unallocated_amount)}</strong><small>Не распределяется произвольно</small></div>
         <div className="ozf-panel"><span>ТК Маяк, учтённый расход</span><strong>{currency(data?.total_mayak)}</strong><small>Сумма только по товарам с полными тарифами и FBO-данными</small></div>
-        <div className="ozf-panel"><span>Полнота выгрузки</span><strong>{data ? data.synced_days + " / " + data.total_days + " дней" : "..."}</strong><small>{data?.operation_count.toLocaleString("ru-RU") ?? "0"} начислений</small></div>
+        <div className="ozf-panel"><span>Кэш Ozon</span><strong>{data ? data.synced_days + " / " + data.total_days + " дней" : "..."}</strong><small>{data?.operation_count.toLocaleString("ru-RU") ?? "0"} начислений · смена дат без запросов к Ozon</small></div>
+        <div className="ozf-panel"><span>Фактические выкупы</span><strong>{data ? data.actual_buyout_days + " / " + data.total_days + " дней" : "..."}</strong><small>Себестоимость признаётся только по подтверждённым выкупам</small></div>
       </div>
       <p className="ozf-notice">{data?.warning ?? "Загружаем доступные финансовые данные…"}</p>
       <div className="ozf-panel">
@@ -338,38 +341,38 @@ export default function FinancierClient() {
           </div>
         </div>
         <div className="ozf-table-scroll"><table className="ozf-table">
-          <thead><tr><th>Артикул Ozon</th><th>master_code</th><th>КМ</th><th>Начисления, ₽</th><th>Заказано FBO, шт*</th><th>Себестоимость/шт</th><th>ТК Маяк, ₽/шт</th><th>ТК Маяк, ₽</th><th>Результат*</th></tr></thead>
+          <thead><tr><th>Артикул Ozon</th><th>master_code</th><th>КМ</th><th>Начисления, ₽</th><th>Заказано FBO, шт*</th><th>Факт. выкупы, шт</th><th>Себестоимость/шт</th><th>ТК Маяк, ₽/шт</th><th>ТК Маяк, ₽</th><th>Результат*</th></tr></thead>
           <tbody>
             {rows.map(r => <tr key={r.offer_id} onClick={() => choose(r)} className={selected === r.offer_id ? "ozf-row-active" : ""}>
               <td><b>{r.offer_id}</b><small>{r.name ?? ""}</small></td>
               <td>{r.master_code ?? "Не сопоставлен"}</td><td>{r.manager}</td>
               <td className={r.ozon_amount < 0 ? "ozf-negative" : ""}>{currency(r.ozon_amount)}</td>
               <td>{r.sold_units ?? "Нет подтверждения"}</td>
+              <td>{r.buyout_units ?? "Нет подтверждения"}</td>
               <td>{currency(r.unit_cost)}</td><td>{currency(r.mayak_unit)}</td>
               <td>{currency(r.mayak_expense)}</td>
               <td>{r.estimated_result == null ? "Нет расчёта" : currency(r.estimated_result) + " *"}</td>
             </tr>)}
-            {!rows.length && <tr><td colSpan={9} className="ozf-empty">Нет данных для выбранного периода или КМ.</td></tr>}
+            {!rows.length && <tr><td colSpan={10} className="ozf-empty">Нет данных для выбранного периода или КМ.</td></tr>}
           </tbody>
         </table></div>
-        <p className="ozf-footnote">* Заказанные единицы FBO без отмен, рассчитаны из строк заказов. ТК Маяк = тариф × заказанные штуки. Предварительный результат = начисления Ozon по артикулу − себестоимость − ТК Маяк. Общие начисления без SKU и FBS сюда не распределены. Даты начисления и заказа могут различаться.</p>
+        <p className="ozf-footnote">* ТК Маяк = тариф × неотменённые заказанные FBO-штуки. Себестоимость = подтверждённые фактические выкупы × себестоимость на дату реализации. При отсутствии подтверждённых выкупов результат не публикуется. Общие начисления не распределяются произвольно.</p>
       </div>
       <div className="ozf-panel ozf-missing-report">
         <div className="ozf-toolbar">
-          <div><h2>Не заполнены данные · {missingRows.length} товаров</h2>
-            <p>Отдельный реестр товаров с отсутствующей себестоимостью или тарифом ТК Маяк. Прибыль по ним не рассчитывается.</p></div>
+          <div><h2>Контроль незаполненных данных · {missingRows.length} размещений</h2>
+            <p>Отдельный реестр по всей номенклатуре, независимо от выгрузки начислений. Нет master_code, КМ, себестоимости или ТК Маяк.</p></div>
           <a href="#ozf-rates" className="ozf-btn">Открыть справочник тарифов</a>
         </div>
         <div className="ozf-table-scroll"><table className="ozf-table">
-          <thead><tr><th>Артикул</th><th>master_code</th><th>КМ</th><th>Нет себестоимости</th><th>Нет ТК Маяк</th><th>Результат</th></tr></thead>
+          <thead><tr><th>Артикул</th><th>master_code</th><th>КМ</th><th>Чего не хватает</th><th>Статус результата</th></tr></thead>
           <tbody>
             {missingRows.map(r=><tr key={r.offer_id}>
               <td>{r.offer_id}</td><td>{r.master_code??"Не привязан"}</td><td>{r.manager}</td>
-              <td>{r.unit_cost===null?"Не заполнено":"Есть"}</td>
-              <td>{r.mayak_unit===null?"Не заполнено":"Есть"}</td>
-              <td>Не рассчитан</td>
+              <td>{r.missing.join(", ")}</td>
+              <td>Неполные исходные данные</td>
             </tr>)}
-            {!missingRows.length&&<tr><td colSpan={6} className="ozf-empty">Среди загруженных начислений все товары с заполненными тарифами. Проверьте также общий справочник.</td></tr>}
+            {!missingRows.length&&<tr><td colSpan={5} className="ozf-empty">В справочнике товаров все обязательные поля заполнены.</td></tr>}
           </tbody>
         </table></div>
       </div>
