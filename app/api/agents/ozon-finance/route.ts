@@ -327,6 +327,115 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
       .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount)),
   };
 }
+
+type WorkbookInput = { master_code?: unknown; manager?: unknown; offer_id?: unknown;
+  product_id?: unknown; sku?: unknown; cost?: unknown; mayak?: unknown };
+
+async function buildSettings(db: ReturnType<typeof createAdminClient>) {
+  const [p, costs, mayak, managers] = await Promise.all([
+    db.from("products").select("master_code,offer_id,name,ozon_product_id").not("master_code", "is", null).limit(2500),
+    db.from("ozon_finance_costs").select("master_code,valid_from,unit_cost_rub").order("valid_from"),
+    db.from("ozon_finance_mayak").select("master_code,valid_from,unit_cost_rub").order("valid_from"),
+    db.from("ozon_finance_managers").select("master_code,manager_name"),
+  ]);
+  for (const r of [p,costs,mayak,managers]) if (r.error) throw r.error;
+  const items = new Map<string, { master_code: string; offer_id: string; name: string | null;
+    cost: number | null; cost_date: string | null; mayak: number | null; mayak_date: string | null; manager: string }>();
+  for (const product of p.data ?? []) {
+    if (!product.master_code) continue;
+    if (!items.has(product.master_code)) items.set(product.master_code, {
+      master_code: product.master_code,
+      offer_id: product.offer_id || "",
+      name: product.name ?? null, cost: null, cost_date: null,
+      mayak: null, mayak_date: null, manager: "Не назначен",
+    });
+  }
+  for (const value of costs.data ?? []) {
+    const item = items.get(value.master_code);
+    if (item) { item.cost = Number(value.unit_cost_rub); item.cost_date = value.valid_from; }
+  }
+  for (const value of mayak.data ?? []) {
+    const item = items.get(value.master_code);
+    if (item) { item.mayak = Number(value.unit_cost_rub); item.mayak_date = value.valid_from; }
+  }
+  for (const value of managers.data ?? []) {
+    const item = items.get(value.master_code);
+    if (item) item.manager = value.manager_name;
+  }
+  return { rows: [...items.values()].sort((a,b) => a.master_code.localeCompare(b.master_code)), count: items.size };
+}
+
+async function importWorkbookRows(db: ReturnType<typeof createAdminClient>, rows: WorkbookInput[], validFrom: string) {
+  if (!validDate(validFrom)) throw new Error("Неверная дата начала действия импортированных тарифов");
+  if (rows.length < 1 || rows.length > 2000) throw new Error("Допустимо от 1 до 2000 строк за одну загрузку");
+  const candidates = rows.map(r => ({
+    master: String(r.master_code ?? "").trim(),
+    productId: String(r.product_id ?? "").trim(),
+    sku: String(r.sku ?? "").trim(),
+    manager: String(r.manager ?? "").trim(),
+    cost: r.cost === "" || r.cost == null ? null : Number(r.cost),
+    mayak: r.mayak === "" || r.mayak == null ? null : Number(r.mayak),
+  })).filter(x => x.master && x.productId && x.sku);
+  const ids = [...new Set(candidates.map(x => x.productId))];
+  const dbProducts: Array<{ master_code: string | null; offer_id: string | null; ozon_product_id: string | number | null }> = [];
+  for (let i = 0; i < ids.length; i += 250) {
+    const { data, error } = await db.from("products")
+      .select("master_code,offer_id,ozon_product_id").in("ozon_product_id", ids.slice(i,i+250));
+    if (error) throw error;
+    dbProducts.push(...(data ?? []));
+  }
+  const byId = new Map(dbProducts.map(p => [String(p.ozon_product_id), p]));
+  const mapped: Array<{ master: string; manager: string; cost: number | null;
+    mayak: number | null; sku: string; offer: string }> = [];
+  const issues: string[] = [];
+  const usedMaster = new Set<string>();
+  const usedSku = new Set<string>();
+  for (const row of candidates) {
+    const existing = byId.get(row.productId);
+    if (!existing || existing.master_code !== row.master || !existing.offer_id) {
+      issues.push(row.master + " / Product ID " + row.productId + ": не совпадает со справочником сайта");
+      continue;
+    }
+    if (usedMaster.has(row.master) || usedSku.has(row.sku)) {
+      issues.push(row.master + ": повторный master_code или SKU в файле"); continue;
+    }
+    if (row.manager.length > 80 ||
+        (row.cost !== null && (!Number.isFinite(row.cost) || row.cost < 0 || row.cost > 1e9)) ||
+        (row.mayak !== null && (!Number.isFinite(row.mayak) || row.mayak < 0 || row.mayak > 1e9))) {
+      issues.push(row.master + ": некорректный КМ или цена"); continue;
+    }
+    usedMaster.add(row.master); usedSku.add(row.sku);
+    mapped.push({ master: row.master, manager: row.manager,
+      cost: row.cost, mayak: row.mayak, sku: row.sku, offer: existing.offer_id });
+  }
+  if (!mapped.length) throw new Error("Не найдено товаров, совпадающих с Product ID и master_code из базы");
+  // Reject ambiguous imports rather than partly overwriting rates.
+  if (issues.length) throw new Error("Обнаружено " + issues.length + " расхождений: " +
+    issues.slice(0,8).join("; ") + ". Ничего не импортировано.");
+  async function save(table: string, records: Record<string, unknown>[], conflict: string) {
+    if (!records.length) return;
+    for (let i=0;i<records.length;i+=250) {
+      const { error } = await db.from(table).upsert(records.slice(i,i+250),{ onConflict: conflict });
+      if (error) throw error;
+    }
+  }
+  await save("ozon_finance_costs", mapped.filter(x=>x.cost!==null).map(x=>({
+    master_code: x.master, valid_from: validFrom, unit_cost_rub: x.cost
+  })), "master_code,valid_from");
+  await save("ozon_finance_mayak", mapped.filter(x=>x.mayak!==null).map(x=>({
+    master_code: x.master, valid_from: validFrom, unit_cost_rub: x.mayak
+  })), "master_code,valid_from");
+  await save("ozon_finance_managers", mapped.filter(x=>x.manager).map(x=>({
+    master_code: x.master, manager_name: x.manager
+  })), "master_code");
+  await save("ozon_finance_sku_map", mapped.map(x=>({
+    account_key: ACCOUNT, sku:x.sku, offer_id:x.offer, master_code:x.master,
+  })), "account_key,sku");
+  return { imported: mapped.length, prices: mapped.filter(x=>x.cost!==null).length,
+    mayak: mapped.filter(x=>x.mayak!==null).length, managers: mapped.filter(x=>!!x.manager).length,
+    skipped_blank_rows: rows.length-candidates.length };
+}
+
 function fail(e: unknown, status = 500) {
   const message = e instanceof Error ? e.message : String(e);
   return NextResponse.json({ ok: false, error: message }, { status });
@@ -336,6 +445,9 @@ export async function GET(request: NextRequest) {
   if (!db) return fail("Доступ к финансовым данным разрешён только администраторам", 403);
   const url = new URL(request.url);
   try {
+    if (url.searchParams.get("mode") === "settings") {
+      return NextResponse.json({ok: true, ...(await buildSettings(db))});
+    }
     const from = url.searchParams.get("from") ?? "";
     const to = url.searchParams.get("to") ?? "";
     return NextResponse.json({ ok: true, ...(await buildReport(db, from, to)) });
@@ -346,6 +458,11 @@ export async function POST(request: NextRequest) {
   if (!db) return fail("Доступ к финансовым данным разрешён только администраторам", 403);
   try {
     const payload = await request.json() as Record<string, unknown>;
+    if (payload.action === "importWorkbook") {
+      if (!Array.isArray(payload.rows)) return fail("Требуется список строк файла",400);
+      const result = await importWorkbookRows(db, payload.rows as WorkbookInput[], String(payload.valid_from ?? ""));
+      return NextResponse.json({ok:true,...result});
+    }
     if (payload.action === "syncDay") {
       const day = String(payload.day ?? "");
       return NextResponse.json({ ok: true, ...(await syncOneDay(db, day)) });
