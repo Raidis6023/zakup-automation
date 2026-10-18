@@ -12,7 +12,10 @@ type Supabase = ReturnType<typeof createAdminClient>;
 function response(data: object, status = 200) {
   return NextResponse.json(data, { status, headers: { "Cache-Control": "private, no-store" } });
 }
-async function getAdmin(): Promise<Supabase | null> {
+async function getAdmin(request?: NextRequest): Promise<Supabase | null> {
+  if (request && process.env.CRON_SECRET &&
+    request.headers.get("authorization")==="Bearer "+process.env.CRON_SECRET)
+    return createAdminClient();
   const session = await createClient();
   const { data: { user }, error } = await session.auth.getUser();
   if (error || !user) return null;
@@ -39,7 +42,7 @@ async function ozonInfo(skus: string[]): Promise<Info[]> {
   return data.items;
 }
 export async function POST(request: NextRequest) {
-  const db = await getAdmin();
+  const db = await getAdmin(request);
   if (!db) return response({ ok: false, error: "Нужны права администратора" }, 403);
   try {
     const body = await request.json() as { day?: string };
