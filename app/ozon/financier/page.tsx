@@ -1,6 +1,7 @@
 import Link from "next/link";
 import FinancierClient from "./FinancierClient";
 import RatesEditorClient from "./RatesEditorClient";
+import PerformanceConnectionClient from "./PerformanceConnectionClient";
 import "./financier.css";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,7 @@ export default function OzonFinancierPage() {
         </div>
         <span className="ozf-guard">Режим аудита · без изменений в Ozon</span>
       </header>
+      <PerformanceConnectionClient />
       <RatesEditorClient />
       <FinancierClient />
     </main>
