@@ -262,45 +262,44 @@ export async function POST(request: NextRequest) {
   }
 }
 export async function GET(request: NextRequest) {
-  // Cheap diagnostic query, with the same authentication as the real import.
-  // This separates network/proxy/auth/database problems from Ozon problems.
-  const started = Date.now();
-  const db = await Promise.race([
-    admin(),
-    new Promise<null>((_, reject) => setTimeout(
-      () => reject(new Error("Авторизация Supabase отвечает дольше 10 секунд")), 10000
-    )),
-  ]).catch(error => {
-    throw error;
-  });
-  if (!db) return result({ ok: false, stage: "authorization", error: "Доступ разрешён только администраторам" }, 403);
-  if (new URL(request.url).searchParams.get("diagnostics") === "1") {
-    const projectRef = (() => {
-      try { return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").hostname.split(".")[0]; }
-      catch { return "invalid"; }
-    })();
-    const database = await Promise.race([
-      db.from("ozon_finance_page_jobs").select("day", { count: "exact", head: true }),
-      new Promise<never>((_, reject) => setTimeout(
-        () => reject(new Error("Supabase SQL-запрос отвечает дольше 10 секунд")), 10000
+  try {
+    const started = Date.now();
+    // Protected diagnostics: exactly the same permissions as importing finance.
+    const db = await Promise.race([
+      admin(),
+      new Promise<null>((_, reject) => setTimeout(
+        () => reject(new Error("Авторизация Supabase не ответила за 10 секунд")), 10000
       )),
     ]);
-    if (database.error) return result({
-      ok: false, stage: "checkpoint", project_ref: projectRef,
-      error: "Контрольная таблица не доступна: " + database.error.message.slice(0,220),
-    }, 503);
-    return result({
-      ok: true, stage: "ready", project_ref: projectRef,
-      checkpoint_records: database.count ?? 0,
-      server_latency_ms: Date.now() - started,
-      note: "Связь браузер → Vercel → Supabase работает. Ozon пока не вызывался.",
-    });
-  }
-  if (!db) return result({ ok: false, error: "Доступ разрешён только администраторам" }, 403);
-  const day = new URL(request.url).searchParams.get("day");
-  if (!day || !validDay(day)) return result({ ok: false, error: "Неверная дата" }, 400);
-  try {
+    if (!db) return result({ ok: false, stage: "authorization",
+      error: "Доступ разрешён только администраторам" }, 403);
+    if (new URL(request.url).searchParams.get("diagnostics") === "1") {
+      const projectRef = (() => {
+        try { return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").hostname.split(".")[0]; }
+        catch { return "invalid"; }
+      })();
+      const database = await Promise.race([
+        db.from("ozon_finance_page_jobs").select("day", { count: "exact", head: true }),
+        new Promise<never>((_, reject) => setTimeout(
+          () => reject(new Error("Контрольная таблица Supabase не ответила за 10 секунд")), 10000
+        )),
+      ]);
+      if (database.error) return result({
+        ok: false, stage: "database", project_ref: projectRef,
+        error: "Контрольная таблица недоступна: " + database.error.message.slice(0,220),
+      }, 503);
+      return result({
+        ok: true, stage: "ready", project_ref: projectRef,
+        checkpoint_records: database.count ?? 0,
+        server_latency_ms: Date.now() - started,
+        note: "Браузер, Vercel и Supabase доступны. Сервис Ozon ещё не проверялся.",
+      });
+    }
+    const day = new URL(request.url).searchParams.get("day");
+    if (!day || !validDay(day)) return result({ ok: false, error: "Неверная дата" }, 400);
     const job = await getJob(db, day);
     return result({ ok: true, job: job ? publicProgress(job) : null });
-  } catch (error) { return result({ ok: false, error: safeError(error) }, 500); }
+  } catch (error) {
+    return result({ ok: false, stage: "server", error: safeError(error) }, 503);
+  }
 }
