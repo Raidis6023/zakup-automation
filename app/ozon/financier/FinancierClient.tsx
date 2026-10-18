@@ -5,12 +5,13 @@ type Detail = { type_id: string; name: string; amount: number; count: number };
 type FinanceRow = {
   offer_id: string; master_code: string | null; name: string | null; manager: string;
   ozon_amount: number; sold_units: number | null; unit_cost: number | null;
-  cogs: number | null; estimated_result: number | null; details: Detail[];
+  cogs: number | null; mayak_unit: number | null; mayak_expense: number | null;
+  mayak_covered_units: number | null; estimated_result: number | null; details: Detail[];
 };
 type FinanceReport = {
   from: string; to: string; synced_days: number; total_days: number;
   missing_days: string[]; operation_count: number; ledger_amount: number;
-  allocated_amount: number; unallocated_amount: number; sales_window_covered: boolean;
+  allocated_amount: number; unallocated_amount: number; total_mayak: number; sales_window_covered: boolean;
   profit_status: string; warning: string;
   rows: FinanceRow[]; unallocated_details: Array<{ name: string; amount: number }>;
 };
@@ -48,6 +49,8 @@ export default function FinancierClient() {
   const [selected, setSelected] = useState("");
   const [editManager, setEditManager] = useState("");
   const [editCost, setEditCost] = useState("");
+  const [editMayak, setEditMayak] = useState("");
+  const [editValidFrom, setEditValidFrom] = useState(() => isoShift(0));
   const [advice, setAdvice] = useState("");
   const [aiBusy, setAiBusy] = useState(false);
   const load = useCallback(async () => {
@@ -93,6 +96,8 @@ export default function FinancierClient() {
     setSelected(r.offer_id === selected ? "" : r.offer_id);
     setEditManager(r.manager === "Не назначен" ? "" : r.manager);
     setEditCost(r.unit_cost == null ? "" : String(r.unit_cost));
+    setEditMayak(r.mayak_unit == null ? "" : String(r.mayak_unit));
+    setEditValidFrom(from);
   }
   async function save() {
     if (!active?.master_code) return;
@@ -103,7 +108,11 @@ export default function FinancierClient() {
       };
       if (editCost.trim() !== "") {
         body.cost = Number(editCost.replace(",", "."));
-        body.valid_from = from;
+        body.valid_from = editValidFrom;
+      }
+      if (editMayak.trim() !== "") {
+        body.mayak = Number(editMayak.replace(",", "."));
+        body.valid_from = editValidFrom;
       }
       await post(body);
       setProgress("Изменения сохранены для " + active.master_code);
@@ -122,10 +131,10 @@ export default function FinancierClient() {
   function exportCsv() {
     const content = [
       ["Артикул", "master_code", "КМ", "Начисления Ozon, ₽", "Продажи, шт (предварительно)",
-        "Себестоимость, ₽/шт", "Предварительный результат"].join(";"),
+        "Себестоимость, ₽/шт", "ТК Маяк, ₽/шт", "ТК Маяк, расход, ₽", "Предварительный результат"].join(";"),
       ...rows.map(r => [r.offer_id, r.master_code ?? "", r.manager,
         r.ozon_amount.toFixed(2).replace(".", ","),
-        r.sold_units ?? "", r.unit_cost ?? "", r.estimated_result ?? ""].map(x => '"' + String(x).replaceAll('"', '""') + '"').join(";")),
+        r.sold_units ?? "", r.unit_cost ?? "", r.mayak_unit ?? "", r.mayak_expense ?? "", r.estimated_result ?? ""].map(x => '"' + String(x).replaceAll('"', '""') + '"').join(";")),
     ].join("\r\n");
     const url = URL.createObjectURL(new Blob(["\ufeff" + content], { type: "text/csv;charset=utf-8" }));
     const a = document.createElement("a"); a.href = url;
@@ -148,6 +157,7 @@ export default function FinancierClient() {
         <div className="ozf-panel"><span>Начисления Ozon, все статьи</span><strong>{currency(data?.ledger_amount)}</strong><small>Без себестоимости. Это не прибыль.</small></div>
         <div className="ozf-panel"><span>Привязано к артикулам</span><strong>{currency(data?.allocated_amount)}</strong><small>Сумма операций с установленным товаром</small></div>
         <div className="ozf-panel"><span>Без привязки к товару</span><strong>{currency(data?.unallocated_amount)}</strong><small>Не распределяется произвольно</small></div>
+        <div className="ozf-panel"><span>ТК Маяк, учтённый расход</span><strong>{currency(data?.total_mayak)}</strong><small>Сумма только по товарам с полными тарифами и FBO-данными</small></div>
         <div className="ozf-panel"><span>Полнота выгрузки</span><strong>{data ? data.synced_days + " / " + data.total_days + " дней" : "..."}</strong><small>{data?.operation_count.toLocaleString("ru-RU") ?? "0"} начислений</small></div>
       </div>
       <p className="ozf-notice">{data?.warning ?? "Загружаем доступные финансовые данные…"}</p>
@@ -163,28 +173,33 @@ export default function FinancierClient() {
           </div>
         </div>
         <div className="ozf-table-scroll"><table className="ozf-table">
-          <thead><tr><th>Артикул Ozon</th><th>master_code</th><th>КМ</th><th>Начисления, ₽</th><th>Продажи, шт*</th><th>Себестоимость/шт</th><th>Результат</th></tr></thead>
+          <thead><tr><th>Артикул Ozon</th><th>master_code</th><th>КМ</th><th>Начисления, ₽</th><th>Заказано FBO, шт*</th><th>Себестоимость/шт</th><th>ТК Маяк, ₽/шт</th><th>ТК Маяк, ₽</th><th>Результат*</th></tr></thead>
           <tbody>
             {rows.map(r => <tr key={r.offer_id} onClick={() => choose(r)} className={selected === r.offer_id ? "ozf-row-active" : ""}>
               <td><b>{r.offer_id}</b><small>{r.name ?? ""}</small></td>
               <td>{r.master_code ?? "Не сопоставлен"}</td><td>{r.manager}</td>
               <td className={r.ozon_amount < 0 ? "ozf-negative" : ""}>{currency(r.ozon_amount)}</td>
               <td>{r.sold_units ?? "Нет подтверждения"}</td>
-              <td>{currency(r.unit_cost)}</td><td>{r.estimated_result == null ? "Нет расчёта" : currency(r.estimated_result) + " *"}</td>
+              <td>{currency(r.unit_cost)}</td><td>{currency(r.mayak_unit)}</td>
+              <td>{currency(r.mayak_expense)}</td>
+              <td>{r.estimated_result == null ? "Нет расчёта" : currency(r.estimated_result) + " *"}</td>
             </tr>)}
-            {!rows.length && <tr><td colSpan={7} className="ozf-empty">Нет данных для выбранного периода или КМ.</td></tr>}
+            {!rows.length && <tr><td colSpan={9} className="ozf-empty">Нет данных для выбранного периода или КМ.</td></tr>}
           </tbody>
         </table></div>
-        <p className="ozf-footnote">* Количества из операционной синхронизации продаж Ozon. Предварительный результат = начисления, связанные с товаром, минус себестоимость по операционным продажам. Общие расходы без привязки сюда не входят. Расхождения по датам и возвратам требуют сверки.</p>
+        <p className="ozf-footnote">* Заказанные единицы FBO без отмен, рассчитаны из строк заказов. ТК Маяк = тариф × заказанные штуки. Предварительный результат = начисления Ozon по артикулу − себестоимость − ТК Маяк. Общие начисления без SKU и FBS сюда не распределены. Даты начисления и заказа могут различаться.</p>
       </div>
       {active && <div className="ozf-panel ozf-detail">
         <h2>{active.offer_id} · детализация</h2>
         <div className="ozf-edit">
           <label>Ответственный КМ<input value={editManager} onChange={e => setEditManager(e.target.value)} placeholder="Дарья, Вероника, Ольга…"/></label>
           <label>Себестоимость, ₽ / шт<input type="text" inputMode="decimal" value={editCost} onChange={e => setEditCost(e.target.value)} placeholder="Например, 139.50"/></label>
+          <label>ТК Маяк, ₽ / шт<input type="text" inputMode="decimal" value={editMayak} onChange={e => setEditMayak(e.target.value)} placeholder="Например, 3.14"/></label>
+          <label>Тариф с даты<input type="date" value={editValidFrom} onChange={e=>setEditValidFrom(e.target.value)}/></label>
           <button className="ozf-btn ozf-primary" disabled={busy || !active.master_code} onClick={() => void save()}>Сохранить</button>
         </div>
-        <p className="ozf-footnote">Стоимость сохраняется с начальной даты отчёта. Если стоимость изменилась в середине периода, нужна история партий и отдельный расчёт COGS.</p>
+        <p className="ozf-footnote">Стоимость и «ТК Маяк» сохраняются с указанной даты. Расчёт учитывает изменения тарифов по дням FBO-заказов. Если в исходной таблице цена отсутствует, она не заменяется нулём.</p>
+        <div className="ozf-notice">ТК Маяк: {currency(active.mayak_unit)} × {active.sold_units ?? "нет данных"} шт. = {currency(active.mayak_expense)}. Этот расход не является начислением Ozon и не входит в сумму Ozon выше.</div>
         <table className="ozf-table"><thead><tr><th>Статья начисления Ozon</th><th>Операций</th><th>Сумма</th></tr></thead>
           <tbody>{active.details.map((d, i) => <tr key={d.type_id + "-" + i}><td>{d.name}</td><td>{d.count}</td><td className={d.amount < 0 ? "ozf-negative" : ""}>{currency(d.amount)}</td></tr>)}</tbody>
         </table>
