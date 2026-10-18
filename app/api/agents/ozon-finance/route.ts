@@ -356,9 +356,13 @@ export async function POST(request: NextRequest) {
       const summary = { from: report.from, to: report.to, ledger_amount: report.ledger_amount,
         allocated_amount: report.allocated_amount, unallocated_amount: report.unallocated_amount,
         operation_count: report.operation_count, profit_status: report.profit_status,
-        top_negative: report.rows.slice(0, 15).map(r => ({
+        top_negative: report.rows.slice().sort((a, b) =>
+          (a.estimated_result ?? a.ozon_amount) - (b.estimated_result ?? b.ozon_amount)
+        ).slice(0, 15).map(r => ({
           offer_id: r.offer_id, master_code: r.master_code, manager: r.manager,
-          ozon_amount: r.ozon_amount, details: r.details.slice(0, 8),
+          ozon_amount: r.ozon_amount, sold_units: r.sold_units,
+          unit_cost: r.unit_cost, cogs: r.cogs, estimated_result: r.estimated_result,
+          details: r.details.slice(0, 8),
         })), unallocated_details: report.unallocated_details.slice(0, 12) };
       const response = await fetch("https://api.openai.com/v1/responses", {
         method: "POST", headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" },
