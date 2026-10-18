@@ -17,6 +17,7 @@ type FinanceReport = {
   actual_buyout_days: number; actual_buyouts_covered: boolean;
   source: string; calculation_includes_api_calls: boolean;
   reference_gaps: Array<{offer_id:string;master_code:string|null;name:string|null;manager:string;missing:string[]}>;
+  background_jobs: Array<{day:string;status:string;pages_completed:number;rows_saved:number;last_error:string|null;updated_at:string}>;
   rows: FinanceRow[]; unallocated_details: Array<{ name: string; amount: number }>;
 };
 const API = "/api/agents/ozon-finance";
@@ -89,7 +90,8 @@ export default function FinancierClient() {
       });
       const raw = await response.text();
       let json: { ok?: boolean; error?: string; stage?: string;
-        project_ref?: string; server_latency_ms?: number };
+        project_ref?: string; server_latency_ms?: number;
+        credentials?: { seller_id_present?:boolean; seller_api_key_present?:boolean } };
       try { json = JSON.parse(raw); }
       catch { throw new Error("Vercel вернул не JSON, HTTP " + response.status +
         ". Проверьте Preview URL и авторизацию сайта."); }
@@ -101,6 +103,9 @@ export default function FinancierClient() {
         "Preview подключён к другой Supabase (" + (json.project_ref ?? "?") +
         "), а финансовая база проекта имеет ID zlkluzcjppefelgwihyz. Импорт остановлен."
       );
+      if (!json.credentials?.seller_id_present || !json.credentials?.seller_api_key_present) {
+        throw new Error("В этом окружении Vercel отсутствуют Seller API-ключи OZON_CLIENT_ID / OZON_API_KEY. Рекламные ключи Performance их не заменяют.");
+      }
       setConnectionStatus("Соединение исправно: Vercel → Supabase (" +
         json.project_ref + "), " + json.server_latency_ms + " мс.");
     } catch (error) {
@@ -320,6 +325,20 @@ export default function FinancierClient() {
       {connectionStatus && <p className="ozf-progress" role="status">{connectionStatus}</p>}
       {error && <p className="ozf-error" role="alert">{error}</p>}
       {progress && <p className="ozf-progress" role="status">{progress}</p>}
+      {data?.background_jobs?.length ? <div className="ozf-panel">
+        <div className="ozf-toolbar">
+          <div><h2>Фоновая выгрузка в Supabase</h2><p>Очередь импортируется независимо от выбранных дат. Переключение периода не запускает запросы Ozon.</p></div>
+          <button className="ozf-btn" onClick={()=>void load()} disabled={loading}>Обновить состояние</button>
+        </div>
+        <div className="ozf-jobs">
+          {data.background_jobs.map(j=><div className="ozf-job" key={j.day}>
+            <b>{j.day}</b>
+            <span>{j.status==="complete"?"Готово":j.status==="failed"?"Ошибка":"В очереди / загрузка"}</span>
+            <span>{j.pages_completed} стр. · {j.rows_saved} записей</span>
+            {j.last_error && <small title={j.last_error}>{j.last_error}</small>}
+          </div>)}
+        </div>
+      </div> : null}
       <div className="ozf-metrics">
         <div className="ozf-panel"><span>Начисления Ozon, все статьи</span><strong>{currency(data?.ledger_amount)}</strong><small>Без себестоимости. Это не прибыль.</small></div>
         <div className="ozf-panel"><span>Привязано к артикулам</span><strong>{currency(data?.allocated_amount)}</strong><small>Сумма операций с установленным товаром</small></div>
