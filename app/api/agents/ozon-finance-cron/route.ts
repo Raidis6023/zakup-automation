@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 function reply(data: object, status=200) {
   return NextResponse.json(data,{status,headers:{"Cache-Control":"no-store"}});
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
   const started=Date.now();
   let pages=0, last:null|unknown=null;
   try {
-    while(pages<2 && Date.now()-started<47000) {
+    while(pages<10 && Date.now()-started<235000) {
       const response=await fetch(new URL("/api/agents/ozon-finance-sync",request.url),{
         method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+cronSecret},
         body:JSON.stringify({day}),cache:"no-store",
