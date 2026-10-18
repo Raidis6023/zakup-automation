@@ -76,6 +76,44 @@ export default function FinancierClient() {
     r.unit_cost === null || r.mayak_unit === null
   ).sort((a,b)=>a.offer_id.localeCompare(b.offer_id,"ru")),[data]);
   const active = rows.find(r => r.offer_id === selected);
+  async function mapDaySkus(day: string) {
+    let totalMatched = 0;
+    let notMatched = 0;
+    for (let batch = 1; batch <= 100; batch++) {
+      setProgress("Начисления за " + day + " сохранены. Сопоставляем SKU с артикулами: пакет " + batch + "…");
+      const reply = await fetch("/api/agents/ozon-finance-map", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        cache: "no-store", body: JSON.stringify({ day }),
+        signal: AbortSignal.timeout(55000),
+      });
+      const json = await reply.json();
+      if (!reply.ok || !json.ok) throw new Error(json.error || "Не удалось сопоставить товары Ozon");
+      totalMatched += Number(json.resolved ?? 0);
+      notMatched += Number(json.unresolved ?? 0);
+      if (!json.more) return { matched: totalMatched, unresolved: notMatched };
+      await new Promise(resolve => setTimeout(resolve, 280));
+    }
+    throw new Error("Не завершено сопоставление SKU: больше 100 пакетов.");
+  }
+  async function remapPeriod() {
+    if (!data || busy) return;
+    const ready = listDays(from, to).filter(d => !data.missing_days.includes(d));
+    if (!ready.length) { setError("Сначала загрузите хотя бы один день начислений"); return; }
+    setBusy(true); setError("");
+    let matched = 0, unmatched = 0;
+    try {
+      for (const day of ready) {
+        const status = await mapDaySkus(day);
+        matched += status.matched; unmatched += status.unresolved;
+      }
+      setProgress("Сопоставление завершено. Найдено товаров: " + matched +
+        (unmatched ? ". Не удалось определить артикул для " + unmatched + " SKU." : "."));
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      await load();
+    } finally { setBusy(false); }
+  }
   async function syncPeriod() {
     if (!data) return;
     const forceRefresh = data.missing_days.length === 0;
@@ -131,6 +169,18 @@ export default function FinancierClient() {
           );
           if (result.done) {
             completed += 1;
+            try {
+              const mappings = await mapDaySkus(day);
+              setProgress("Ozon " + day + " готов · строк: " + result.rows_saved +
+                " · SKU сопоставлено: " + mappings.matched +
+                (mappings.unresolved ? " · без артикула: " + mappings.unresolved : ""));
+            } catch (mappingError) {
+              // Finance rows are already committed. Mapping failure is non-fatal
+              // and can be resumed from the separate button, without a costly reimport.
+              setError("Начисления за " + day + " сохранены. Сопоставление SKU: " +
+                (mappingError instanceof Error ? mappingError.message : String(mappingError)) +
+                ". Используйте кнопку «Сопоставить SKU», не перезагружая начисления.");
+            }
             await load();
             break;
           }
@@ -206,6 +256,9 @@ export default function FinancierClient() {
         <button className="ozf-btn" onClick={() => void load()} disabled={loading || busy}>Обновить отчёт</button>
         <button className="ozf-btn ozf-primary" onClick={() => void syncPeriod()} disabled={busy || loading || !data}>
           {busy ? "Загрузка…" : (data?.missing_days.length ? "Загрузить недостающие дни" : "Пересинхронизировать период")}
+        </button>
+        <button className="ozf-btn" onClick={() => void remapPeriod()} disabled={busy || loading || !data || data.synced_days===0}>
+          Сопоставить SKU
         </button>
       </div>
       {error && <p className="ozf-error" role="alert">{error}</p>}
