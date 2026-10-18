@@ -83,10 +83,13 @@ async function requireFinanceAccess() {
   const session = await createClient();
   const { data: { user }, error } = await session.auth.getUser();
   if (error || !user) return null;
-  const { data: rights, error: rightsError } = await session
+  // app_user_access is intentionally blocked by RLS for browser sessions.
+  // Verify JWT first, then resolve permissions on the trusted server client.
+  const admin = createAdminClient();
+  const { data: rights, error: rightsError } = await admin
     .from("app_user_access").select("admin_level,is_blocked").eq("user_id", user.id).maybeSingle();
   if (rightsError || !rights || rights.is_blocked || !["admin", "senior_admin"].includes(rights.admin_level ?? "")) return null;
-  return createAdminClient();
+  return admin;
 }
 async function ozonPost<T>(path: string, body: unknown): Promise<T> {
   const client = process.env.OZON_CLIENT_ID;
