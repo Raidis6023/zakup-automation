@@ -114,6 +114,6 @@ language sql stable security invoker set search_path = public as $$
   join public.products p on p.id = s.product_id
   where s.sale_date between p_from and p_to and p.master_code is not null
   group by p.offer_id, p.master_code
-$;
+$$;
 revoke all on function public.ozon_finance_sold_units(date,date) from public,anon,authenticated;
 grant execute on function public.ozon_finance_sold_units(date,date) to service_role;
