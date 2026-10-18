@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 const ACCOUNT = "main";
-const MAX_DAYS = 31;
+const MAX_DAYS = 366;
 const API = "https://api-seller.ozon.ru";
 
 type Entry = {
@@ -40,7 +40,8 @@ type Expense = { offer_id: string; master_code: string; ordered_units: number; c
 type Product = { offer_id: string | null; master_code: string | null; name: string | null };
 type MapRow = { sku: string; offer_id: string | null; master_code: string | null };
 type Manager = { master_code: string; manager_name: string };
-type Sold = { offer_id: string; master_code: string; sold_units: number };
+type Realized = { offer_id: string | null; master_code: string | null; net_buyouts: number; covered_buyouts: number; cogs_total: string | number };
+type BuyoutCoverage = { day: string; source: string };
 type Group = {
   offer_id: string;
   master_code: string | null;
@@ -48,6 +49,8 @@ type Group = {
   manager: string;
   ozon_amount: number;
   sold_units: number | null;
+  buyout_units: number | null;
+  data_gaps: string[];
   unit_cost: number | null;
   cogs: number | null;
   mayak_unit: number | null;
@@ -226,7 +229,7 @@ async function syncOneDay(db: ReturnType<typeof createAdminClient>, day: string)
 }
 async function buildReport(db: ReturnType<typeof createAdminClient>, from: string, to: string) {
   const days = dateRange(from, to);
-  const [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, salesRunsRes, typesRes, productsRes] =
+  const [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, buyoutsRes, buyoutCoverageRes, salesRunsRes, typesRes, productsRes] =
     await Promise.all([
       db.from("ozon_finance_sync_days").select("day,record_count,synced_at").eq("account_key", ACCOUNT)
         .gte("day", from).lte("day", to),
@@ -236,12 +239,14 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
       db.from("ozon_finance_mayak").select("master_code,valid_from,unit_cost_rub").lte("valid_from", to).order("valid_from"),
       db.from("ozon_finance_managers").select("master_code,manager_name"),
       db.rpc("ozon_finance_cost_breakdown", { p_from: from, p_to: to }),
+      db.rpc("ozon_finance_realized_cost", { p_from: from, p_to: to, p_account: ACCOUNT }),
+      db.from("ozon_finance_buyout_coverage").select("day,source").eq("account_key", ACCOUNT).gte("day",from).lte("day",to),
       db.from("ozon_sales_sync_runs").select("date_from,date_to").eq("status", "success")
         .lte("date_from", from).gte("date_to", to).limit(1),
       db.from("ozon_finance_types").select("type_id,description,name"),
       db.from("products").select("offer_id,master_code,name").limit(2000),
     ]);
-  for (const item of [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, salesRunsRes, typesRes, productsRes]) {
+  for (const item of [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, buyoutsRes, buyoutCoverageRes, salesRunsRes, typesRes, productsRes]) {
     if (item.error) throw item.error;
   }
   const loaded = new Set((syncRes.data ?? []).map(r => r.day));
@@ -250,6 +255,9 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
   const productByOffer = new Map((productsRes.data as Product[] ?? []).filter(p => p.offer_id).map(p => [p.offer_id!, p]));
   const managers = new Map((managersRes.data as Manager[] ?? []).map(r => [r.master_code, r.manager_name]));
   const expenses = new Map((expenseRes.data as Expense[] ?? []).map(r => [r.offer_id, r]));
+  const buyoutsByOffer = new Map((buyoutsRes.data as Realized[] ?? []).filter(x=>x.offer_id).map(r => [r.offer_id!, r]));
+  const buyoutCoverage = new Set((buyoutCoverageRes.data as BuyoutCoverage[] ?? []).map(r => r.day));
+  const verifiedBuyoutsCovered = days.every(d=>buyoutCoverage.has(d));
   const mayakHistory = new Map<string, Cost[]>();
   for (const m of mayakRes.data as Cost[] ?? []) {
     const arr = mayakHistory.get(m.master_code) ?? [];
@@ -271,7 +279,8 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     accounting.ledgerKopecks += amountCents;
     operationCount += Number(line.item_count);
     const m = line.sku ? mapBySku.get(line.sku) : null;
-    const offer = m?.offer_id;
+    // Keep SKU-level charges even when the product has no master_code.
+    const offer = m?.offer_id || (line.sku ? "SKU:" + line.sku : null);
     const master = m?.master_code || (offer ? productByOffer.get(offer)?.master_code : null) || null;
     const typeId = line.type_id || line.accrued_category || "unknown";
     const name = types.get(typeId) || typeId;
@@ -282,7 +291,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     } else if (!types.has(typeId)) {
       accounting.unknownTypeOperations += Number(line.item_count);
     }
-    if (!offer || !master) {
+    if (!offer) {
       accounting.unallocatedKopecks += amountCents;
       if (advertising.isAdvertising) accounting.advertisingUnallocatedKopecks += amountCents;
       unallocatedDetails.set(name, (unallocatedDetails.get(name) ?? 0) + amount);
@@ -293,7 +302,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
       g = { offer_id: offer, master_code: master,
         name: productByOffer.get(offer)?.name ?? null,
         manager: managers.get(master) || "Не назначен",
-        ozon_amount: 0, sold_units: null, unit_cost: null, cogs: null,
+        ozon_amount: 0, sold_units: null, buyout_units: null, data_gaps: [], unit_cost: null, cogs: null,
         mayak_unit: null, mayak_expense: null, mayak_covered_units: null,
         estimated_result: null, advertising_amount: 0, details: [] };
       byOffer.set(offer, g);
@@ -322,8 +331,17 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     g.mayak_unit = mayakH.length ? Number(mayakH.at(-1)!.unit_cost_rub) : null;
     const calc = expenses.get(g.offer_id);
     g.sold_units = salesWindowCovered ? Number(calc?.ordered_units ?? 0) : null;
-    if (salesWindowCovered && calc && calc.ordered_units === calc.covered_cogs_units) {
-      g.cogs = round(Number(calc.cogs_total));
+    // Cost of goods is recognized ONLY on VERIFIED ACTUAL BUYOUTS, never orders.
+    const realized = buyoutsByOffer.get(g.offer_id);
+    if (verifiedBuyoutsCovered && realized) {
+      g.buyout_units = Number(realized.net_buyouts);
+      if (g.buyout_units === Number(realized.covered_buyouts)) {
+        g.cogs = round(Number(realized.cogs_total));
+      }
+    } else if (verifiedBuyoutsCovered && !realized) {
+      // A fully verified period with no buyouts is genuinely zero.
+      g.buyout_units = 0;
+      g.cogs = 0;
     }
     if (salesWindowCovered && calc && calc.ordered_units === calc.covered_mayak_units) {
       g.mayak_expense = round(Number(calc.mayak_total));
@@ -332,11 +350,19 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     }
     if (salesWindowCovered && !calc) {
       // No ordered units on this listing during a covered period.
-      g.cogs = 0;
+      // No orders does not imply no actual buyouts in this period.
       g.mayak_expense = 0;
       g.mayak_covered_units = 0;
     }
+    if (!g.master_code) g.data_gaps.push("Нет master_code");
+    if (g.manager === "Не назначен") g.data_gaps.push("Не назначен КМ");
+    if (g.unit_cost === null) g.data_gaps.push("Нет себестоимости");
+    if (g.mayak_unit === null) g.data_gaps.push("Нет ТК Маяк");
+    if (!verifiedBuyoutsCovered) g.data_gaps.push("Не подтверждены выкупы за весь период");
+    if (g.cogs === null && verifiedBuyoutsCovered) g.data_gaps.push("Не вся себестоимость выкупов известна");
+    if (g.mayak_expense === null) g.data_gaps.push("Нет полного расчёта ТК Маяк");
     if (
+      g.master_code !== null &&
       g.unit_cost !== null &&
       g.mayak_unit !== null &&
       g.cogs !== null &&
@@ -375,8 +401,12 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
         ? "requires_type_review" : "not_checked_against_performance",
     },
     sales_window_covered: salesWindowCovered,
-    profit_status: "provisional",
-    warning: "Реклама внутри финансовых начислений Ozon уже учтена. Performance API используется только для аналитики и будущего распределения между артикулами, повторно расход НЕ вычитается. Операционные заказы и финансовые начисления имеют разные даты; FBS, возвраты и общие начисления требуют сверки.",
+    actual_buyout_days: buyoutCoverage.size,
+    actual_buyouts_covered: verifiedBuyoutsCovered,
+    source: "supabase_cached_finance",
+    calculation_includes_api_calls: false,
+    profit_status: verifiedBuyoutsCovered ? "provisional" : "waiting_for_confirmed_buyouts",
+    warning: "Отчёт строится из кеша Supabase без запросов к Ozon. Реклама уже включена в начисления и второй раз не вычитается. Себестоимость считается только по подтверждённым фактическим выкупам; пока они не загружены за весь период, прибыль не публикуется. ТК Маяк: ставка × неотменённые заказанные единицы.",
     rows: Array.from(byOffer.values()).sort((a, b) => a.ozon_amount - b.ozon_amount),
     unallocated_details: [...unallocatedDetails.entries()]
       .map(([name, sum]) => ({ name, amount: round(sum) }))
