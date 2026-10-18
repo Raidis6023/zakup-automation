@@ -19,6 +19,16 @@ export async function proxy(
     request.nextUrl.pathname;
 
 
+  // Финансовые агентские API проходят собственную серверную авторизацию
+  // и проверку роли администратора. Не дублируем 3 сетевых RPC в proxy:
+  // при медленном Supabase это блокировало даже начало импорта.
+  if (
+    pathname === "/api/agents/ozon-finance-sync" ||
+    pathname === "/api/agents/ozon-finance-map"
+  ) {
+    return NextResponse.next();
+  }
+
   // ==========================================================
   // OZON DAILY CRON
   //
@@ -29,6 +39,9 @@ export async function proxy(
   if (
     pathname ===
     "/api/ozon/daily-sync"
+    ||
+    pathname ===
+    "/api/agents/ozon-finance-cron"
   ) {
 
     return NextResponse.next();

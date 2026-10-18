@@ -11,6 +11,10 @@
     {
       "path": "/api/yandex/daily-sync",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/agents/ozon-finance-cron",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

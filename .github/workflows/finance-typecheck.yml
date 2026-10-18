@@ -1,0 +1,21 @@
+name: Finance module typecheck
+on:
+  pull_request:
+    paths:
+      - 'app/api/agents/**'
+      - 'app/ozon/financier/**'
+      - 'lib/ozon/**'
+      - 'supabase/migrations/20261018_ozon_finance_**'
+      - '.github/workflows/finance-typecheck.yml'
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm install --ignore-scripts --no-save --package-lock=false --no-audit --no-fund
+      - run: npx tsc --noEmit --pretty false
