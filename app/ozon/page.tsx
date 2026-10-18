@@ -1348,6 +1348,13 @@ export default async function OzonPage() {
               "header-actions ozon-header-actions"
           >
 
+            <Link
+              href="/ozon/financier"
+              className="secondary-button ozon-navigation-button"
+            >
+              ИИ-финансист
+            </Link>
+
             <ThemeToggle />
 
 
