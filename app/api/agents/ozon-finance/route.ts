@@ -308,8 +308,16 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
       g.mayak_expense = 0;
       g.mayak_covered_units = 0;
     }
-    if (g.cogs !== null && g.mayak_expense !== null) {
+    if (
+      g.unit_cost !== null &&
+      g.mayak_unit !== null &&
+      g.cogs !== null &&
+      g.mayak_expense !== null
+    ) {
       g.estimated_result = round(g.ozon_amount - g.cogs - g.mayak_expense);
+    } else {
+      // Never show a financial result for incomplete reference data.
+      g.estimated_result = null;
     }
     g.details = g.details.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
   }
