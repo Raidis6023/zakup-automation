@@ -29,6 +29,7 @@ export default function RatesEditorClient() {
   const [message,setMessage]=useState("");
   const [busy,setBusy]=useState(false);
   const [query,setQuery]=useState("");
+  const [showMissingOnly,setShowMissingOnly]=useState(false);
   const [selected,setSelected]=useState("");
   const [effectiveDate,setEffectiveDate]=useState(today);
   const [manager,setManager]=useState("");
@@ -44,9 +45,13 @@ export default function RatesEditorClient() {
     finally{setLoaded(true);}
   },[]);
   useEffect(()=>{void getRates();},[getRates]);
-  const visible=useMemo(()=>rates.filter(r=>(
-    r.master_code+" "+r.offer_id+" "+(r.name||"")+" "+r.manager
-  ).toLocaleLowerCase("ru").includes(query.toLocaleLowerCase("ru"))).slice(0,150),[query,rates]);
+  const missing=useMemo(()=>rates.filter(r=>r.cost===null || r.mayak===null),[rates]);
+  const filtered=useMemo(()=>rates.filter(r=>(
+    (!showMissingOnly || r.cost===null || r.mayak===null) &&
+    (r.master_code+" "+r.offer_id+" "+(r.name||"")+" "+r.manager)
+      .toLocaleLowerCase("ru").includes(query.toLocaleLowerCase("ru"))
+  )),[query,rates,showMissingOnly]);
+  const visible=useMemo(()=>filtered.slice(0,150),[filtered]);
   const current=rates.find(r=>r.master_code===selected);
   function choose(r:Rate){
     setSelected(r.master_code);
@@ -111,6 +116,16 @@ export default function RatesEditorClient() {
         </div>
         <span className="ozf-count">{loaded?rates.length+" master_code":"Загрузка…"}</span>
       </div>
+      <div className="ozf-missing-summary">
+        <div><b>Не заполнены данные: {missing.length}</b>
+          <p>Нет себестоимости: {rates.filter(r=>r.cost===null).length}; нет тарифа «ТК Маяк»: {rates.filter(r=>r.mayak===null).length}.
+            Прибыль по таким товарам не рассчитывается, пока значения не внесены.</p>
+        </div>
+        <label className="ozf-missing-filter">
+          <input type="checkbox" checked={showMissingOnly} onChange={e=>setShowMissingOnly(e.target.checked)}/>
+          Показывать только незаполненные
+        </label>
+      </div>
       <div className="ozf-rate-controls">
         <label>Тарифы действуют с
           <input type="date" value={effectiveDate} onChange={e=>setEffectiveDate(e.target.value)} disabled={busy}/>
@@ -132,16 +147,19 @@ export default function RatesEditorClient() {
       {message&&<p className="ozf-progress" role="status">{message}</p>}
       <div className="ozf-table-scroll ozf-rates-scroll">
         <table className="ozf-table"><thead><tr>
-          <th>master_code</th><th>Артикул Ozon</th><th>КМ</th><th>Себестоимость, ₽/шт</th><th>ТК Маяк, ₽/шт</th>
+          <th>master_code</th><th>Артикул Ozon</th><th>КМ</th><th>Себестоимость, ₽/шт</th><th>ТК Маяк, ₽/шт</th><th>Что не заполнено</th>
         </tr></thead><tbody>
           {visible.map(r=><tr key={r.master_code} className={selected===r.master_code?"ozf-row-active":""} onClick={()=>choose(r)}>
             <td><b>{r.master_code}</b></td><td>{r.offer_id}<small>{r.name||""}</small></td>
             <td>{r.manager}</td><td>{r.cost===null?"Не задана":r.cost.toLocaleString("ru-RU")}</td>
             <td>{r.mayak===null?"Не задан":r.mayak.toLocaleString("ru-RU")}</td>
+            <td>{r.cost===null || r.mayak===null
+              ? <span className="ozf-missing-tag">{[r.cost===null?"Себестоимость":null,r.mayak===null?"ТК Маяк":null].filter(Boolean).join(", ")}</span>
+              : "Заполнено"}</td>
           </tr>)}
         </tbody></table>
       </div>
-      <p className="ozf-footnote">Показано {visible.length} из {rates.filter(r=>(r.master_code+" "+r.offer_id+" "+(r.name||"")+" "+r.manager).toLocaleLowerCase("ru").includes(query.toLocaleLowerCase("ru"))).length} совпадений. Используйте поиск для остальных.</p>
+      <p className="ozf-footnote">Показано {visible.length} из {filtered.length} совпадений. Используйте поиск для остальных.</p>
       {current&&<div className="ozf-rate-edit">
         <div><h3>{current.master_code} · {current.offer_id}</h3>
           <p>Правки применяются ко всем размещениям с этим master_code. Ранее записанные тарифы по другим датам сохраняются.</p>
