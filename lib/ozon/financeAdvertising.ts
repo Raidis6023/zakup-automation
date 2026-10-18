@@ -36,44 +36,43 @@ export function classifyAdvertisingAccrual(
   return { isAdvertising: false, reason: "none" };
 }
 
-/** Exact kopeck parsing. Avoid floating point errors in ledger reconciliation. */
-export function toKopecks(value: string | number): bigint {
+/** Exact kopeck parsing to safe integer to avoid fractional arithmetic. */
+export function toKopecks(value: string | number): number {
   const input = String(value).trim();
-  const m = /^(-?)(\d+)(?:\.(\d{1,2}))?$/.exec(input);
-  if (!m) throw new Error("Некорректная сумма финансового начисления: " + input);
-  const amount = BigInt(m[2]) * BigInt(100) +
-    BigInt((m[3] ?? "").padEnd(2, "0") || "0");
-  return m[1] === "-" ? -amount : amount;
+  const matched = /^(-?)(\\d+)(?:\\.(\\d{1,2}))?$/.exec(input);
+  if (!matched) throw new Error("Некорректная сумма финансового начисления: " + input);
+  const rubles = Number(matched[2]);
+  const kopecks = Number((matched[3] ?? "").padEnd(2, "0") || "0");
+  const total = rubles * 100 + kopecks;
+  if (!Number.isSafeInteger(total)) throw new Error("Начисление превышает безопасный диапазон");
+  return matched[1] === "-" ? -total : total;
 }
 
-export function fromKopecks(value: bigint): number {
-  const n = Number(value);
-  if (!Number.isSafeInteger(n)) {
-    throw new Error("Финансовая сумма превышает безопасный диапазон");
-  }
-  return n / 100;
+export function fromKopecks(value: number): number {
+  if (!Number.isSafeInteger(value)) throw new Error("Сумма превышает безопасный диапазон");
+  return value / 100;
 }
 
 /** Disjoint sources and counts. Performance isn't an accounting source. */
 export type AccrualReconciliation = {
-  ledgerKopecks: bigint;
-  directKopecks: bigint;
-  unallocatedKopecks: bigint;
-  advertisingTotalKopecks: bigint;
-  advertisingDirectKopecks: bigint;
-  advertisingUnallocatedKopecks: bigint;
+  ledgerKopecks: number;
+  directKopecks: number;
+  unallocatedKopecks: number;
+  advertisingTotalKopecks: number;
+  advertisingDirectKopecks: number;
+  advertisingUnallocatedKopecks: number;
   classifiedAdvertisingOperations: number;
   unknownTypeOperations: number;
 };
 
 export function emptyAccrualReconciliation(): AccrualReconciliation {
   return {
-    ledgerKopecks: BigInt(0),
-    directKopecks: BigInt(0),
-    unallocatedKopecks: BigInt(0),
-    advertisingTotalKopecks: BigInt(0),
-    advertisingDirectKopecks: BigInt(0),
-    advertisingUnallocatedKopecks: BigInt(0),
+    ledgerKopecks: 0,
+    directKopecks: 0,
+    unallocatedKopecks: 0,
+    advertisingTotalKopecks: 0,
+    advertisingDirectKopecks: 0,
+    advertisingUnallocatedKopecks: 0,
     classifiedAdvertisingOperations: 0,
     unknownTypeOperations: 0,
   };
