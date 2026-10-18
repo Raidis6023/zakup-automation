@@ -31,7 +31,7 @@ type Cost = { master_code: string; valid_from: string; unit_cost_rub: number };
 type Product = { offer_id: string | null; master_code: string | null; name: string | null };
 type MapRow = { sku: string; offer_id: string | null; master_code: string | null };
 type Manager = { master_code: string; manager_name: string };
-type Sold = { master_code: string; sold_units: number };
+type Sold = { offer_id: string; master_code: string; sold_units: number };
 type Group = {
   offer_id: string;
   master_code: string | null;
@@ -232,7 +232,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
   const mapBySku = new Map((mappingsRes.data as MapRow[] ?? []).map(r => [r.sku, r]));
   const productByOffer = new Map((productsRes.data as Product[] ?? []).filter(p => p.offer_id).map(p => [p.offer_id!, p]));
   const managers = new Map((managersRes.data as Manager[] ?? []).map(r => [r.master_code, r.manager_name]));
-  const sold = new Map((soldRes.data as Sold[] ?? []).map(r => [r.master_code, Number(r.sold_units)]));
+  const sold = new Map((soldRes.data as Sold[] ?? []).map(r => [r.offer_id, Number(r.sold_units)]));
   const types = new Map((typesRes.data ?? []).map(r => [r.type_id, r.description || r.name || r.type_id]));
   const costHistory = new Map<string, Cost[]>();
   for (const c of costsRes.data as Cost[] ?? []) {
@@ -277,11 +277,13 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     const changedDuringPeriod = history.some(c => c.valid_from > from && c.valid_from <= to);
     const chosen = validCosts.at(-1);
     if (chosen && !changedDuringPeriod) g.unit_cost = Number(chosen.unit_cost_rub);
-    // A master_code can have multiple offer_ids. Never repeat total COGS on every listing.
-    // COGS is only calculated after granular posting quantities are available.
-    g.sold_units = salesWindowCovered ? (sold.get(g.master_code!) ?? 0) : null;
-    g.cogs = null;
-    g.estimated_result = null;
+    // Quantity is grouped by OFFER, not master_code, to prevent doubled COGS.
+    // This remains provisional: accounting accrual dates and operational sales dates may differ.
+    g.sold_units = salesWindowCovered ? (sold.get(g.offer_id) ?? 0) : null;
+    if (g.sold_units !== null && g.unit_cost !== null) {
+      g.cogs = round(g.sold_units * g.unit_cost);
+      g.estimated_result = round(g.ozon_amount - g.cogs);
+    }
     g.details = g.details.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
   }
   return {
@@ -290,8 +292,8 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     ledger_amount: round(totalLedger), allocated_amount: round(totalLedger - unallocated),
     unallocated_amount: round(unallocated),
     sales_window_covered: salesWindowCovered,
-    profit_status: "not_verified",
-    warning: "Начисления Ozon проверяются по общей сумме. Прибыль не публикуется, пока не подтверждены количества выкупов и себестоимость по каждому размещению.",
+    profit_status: "provisional",
+    warning: "Результат по артикулам предварительный: вычтена себестоимость продаж из операционных данных. Возвраты, дата начисления и нераспределённые общие расходы требуют сверки. Это НЕ закрытая бухгалтерская прибыль.",
     rows: Array.from(byOffer.values()).sort((a, b) => a.ozon_amount - b.ozon_amount),
     unallocated_details: [...unallocatedDetails.entries()]
       .map(([name, sum]) => ({ name, amount: round(sum) }))
@@ -359,7 +361,7 @@ export async function POST(request: NextRequest) {
         method: "POST", headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" },
         body: JSON.stringify({ model: process.env.OPENAI_FINANCE_MODEL || "gpt-6-astra",
           store: false, max_output_tokens: 900,
-          instructions: "Ты финансовый аудитор Ozon. Анализируй только переданные суммы. Разделяй факт и гипотезу. Никогда не называй озон-начисления прибылью, потому что себестоимость и точные выкупы не подтверждены. Не давай вымышленных чисел. Ответь по-русски компактно: 3-6 находок, риски сверки и следующие проверки.",
+          instructions: "Ты финансовый аудитор Ozon. Анализируй только переданные суммы. Разделяй факт и гипотезу. estimated_result является лишь предварительной оценкой, не бухгалтерской прибылью. Не давай вымышленных чисел. Ответь по-русски компактно: 3-6 находок, риски сверки и следующие проверки.",
           input: JSON.stringify(summary) }),
         signal: AbortSignal.timeout(60000),
       });
