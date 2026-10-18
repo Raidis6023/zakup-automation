@@ -229,7 +229,7 @@ async function syncOneDay(db: ReturnType<typeof createAdminClient>, day: string)
 }
 async function buildReport(db: ReturnType<typeof createAdminClient>, from: string, to: string) {
   const days = dateRange(from, to);
-  const [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, buyoutsRes, buyoutCoverageRes, salesRunsRes, typesRes, productsRes] =
+  const [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, buyoutsRes, buyoutCoverageRes, salesRunsRes, typesRes, productsRes, jobsRes] =
     await Promise.all([
       db.from("ozon_finance_sync_days").select("day,record_count,synced_at").eq("account_key", ACCOUNT)
         .gte("day", from).lte("day", to),
@@ -245,8 +245,10 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
         .lte("date_from", from).gte("date_to", to).limit(1),
       db.from("ozon_finance_types").select("type_id,description,name"),
       db.from("products").select("offer_id,master_code,name").limit(2000),
+      db.from("ozon_finance_page_jobs").select("day,status,pages_completed,rows_saved,last_error,updated_at")
+        .eq("account_key",ACCOUNT).gte("day",from).lte("day",to).order("day"),
     ]);
-  for (const item of [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, buyoutsRes, buyoutCoverageRes, salesRunsRes, typesRes, productsRes]) {
+  for (const item of [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, buyoutsRes, buyoutCoverageRes, salesRunsRes, typesRes, productsRes, jobsRes]) {
     if (item.error) throw item.error;
   }
   const loaded = new Set((syncRes.data ?? []).map(r => r.day));
@@ -421,6 +423,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     actual_buyout_days: buyoutCoverage.size,
     actual_buyouts_covered: verifiedBuyoutsCovered,
     source: "supabase_cached_finance",
+    background_jobs: jobsRes.data ?? [],
     calculation_includes_api_calls: false,
     profit_status: verifiedBuyoutsCovered ? "provisional" : "waiting_for_confirmed_buyouts",
     warning: "Отчёт строится из кеша Supabase без запросов к Ozon. Реклама уже включена в начисления и второй раз не вычитается. Себестоимость считается только по подтверждённым фактическим выкупам; пока они не загружены за весь период, прибыль не публикуется. ТК Маяк: ставка × неотменённые заказанные единицы.",
