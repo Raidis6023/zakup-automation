@@ -376,6 +376,23 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     }
     g.details = g.details.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
   }
+  // Reference data completeness is independent of whether a finance day
+  // was imported. Product listings without master_code must remain visible.
+  const referenceGaps = (productsRes.data as Product[] ?? []).map(product => {
+    const master = product.master_code;
+    const miss: string[] = [];
+    if (!master) miss.push("master_code");
+    if (!master || !managers.has(master)) miss.push("КМ");
+    if (!master || !(costHistory.get(master) ?? []).some(x=>x.valid_from <= from))
+      miss.push("Себестоимость");
+    if (!master || !(mayakHistory.get(master) ?? []).some(x=>x.valid_from <= from))
+      miss.push("ТК Маяк");
+    return { offer_id: product.offer_id ?? "(без артикула)",
+      master_code: master, name: product.name,
+      manager: master ? managers.get(master) ?? "Не назначен" : "Не назначен",
+      missing: miss };
+  }).filter(p=>p.missing.length>0);
+
   // Invariant: the Seller finance ledger is partitioned, never augmented by
   // Performance statistics. Throw rather than publish silently doubled amounts.
   assertAdvertisingAccountingInvariant(accounting);
@@ -408,6 +425,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     profit_status: verifiedBuyoutsCovered ? "provisional" : "waiting_for_confirmed_buyouts",
     warning: "Отчёт строится из кеша Supabase без запросов к Ozon. Реклама уже включена в начисления и второй раз не вычитается. Себестоимость считается только по подтверждённым фактическим выкупам; пока они не загружены за весь период, прибыль не публикуется. ТК Маяк: ставка × неотменённые заказанные единицы.",
     rows: Array.from(byOffer.values()).sort((a, b) => a.ozon_amount - b.ozon_amount),
+    reference_gaps: referenceGaps.sort((a,b)=>a.offer_id.localeCompare(b.offer_id,"ru")),
     unallocated_details: [...unallocatedDetails.entries()]
       .map(([name, sum]) => ({ name, amount: round(sum) }))
       .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount)),
