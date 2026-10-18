@@ -29,7 +29,31 @@ export async function GET(request: NextRequest) {
     .lt("day",today).order("day",{ascending:true}).limit(14);
   if(error)return reply({ok:false,error:error.message},503);
   const pending=data??[];
-  if(!pending.length)return reply({ok:true,phase:"idle",remaining_days:0});
+  if(!pending.length) {
+    // Historical import finished. Resolve SKU mappings in small batches,
+    // without reloading Ozon accruals or blocking interactive reports.
+    const {data:complete,error:doneError}=await db.from("ozon_finance_sync_days")
+      .select("day").eq("account_key","main")
+      .gte("day","2026-10-04").lt("day",today)
+      .order("day",{ascending:true}).limit(365);
+    if(doneError)return reply({ok:false,phase:"mapping_lookup",error:doneError.message},503);
+    for(const candidate of complete??[]) {
+      const {data:unmapped,error:mapError}=await db.rpc("ozon_finance_unmapped_skus",{
+        p_day:candidate.day,p_limit:1,p_account:"main"
+      });
+      if(mapError)return reply({ok:false,phase:"mapping_lookup",error:mapError.message},503);
+      if((unmapped??[]).length===0)continue;
+      const m=await fetch(new URL("/api/agents/ozon-finance-map",request.url),{
+        method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+cronSecret},
+        body:JSON.stringify({day:candidate.day}),cache:"no-store",signal:AbortSignal.timeout(26000)
+      });
+      const parsed=await m.json() as {ok?:boolean;processed?:number;resolved?:number;error?:string};
+      return reply({ok:!!parsed.ok,phase:"sku_mapping",day:candidate.day,
+        mapped:parsed.resolved??0,processed:parsed.processed??0,
+        error:parsed.ok?undefined:parsed.error},m.ok?200:502);
+    }
+    return reply({ok:true,phase:"idle",remaining_days:0,mappings_complete:true});
+  }
 
   // Do NOT use user-supplied URLs. Fixed same-origin endpoint, credential
   // passed only over HTTPS, never included in response or logs.
