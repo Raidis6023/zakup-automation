@@ -78,20 +78,74 @@ export default function FinancierClient() {
   const active = rows.find(r => r.offer_id === selected);
   async function syncPeriod() {
     if (!data) return;
-    if (data.missing_days.length === 0 && !window.confirm("Все дни уже загружены. Перезагрузить их для актуализации начислений?")) return;
-    const days = data.missing_days.length ? data.missing_days : listDays(from, to);
+    const forceRefresh = data.missing_days.length === 0;
+    if (forceRefresh && !window.confirm("Все дни загружены. Перезапустить финансовую синхронизацию за выбранный период?")) return;
+    const days = forceRefresh ? listDays(from, to) : data.missing_days;
     setBusy(true); setError(""); setAdvice("");
-    let done = 0;
+    let completed = 0;
+    let totalPages = 0;
+    let totalRows = 0;
     try {
       for (const day of days) {
-        setProgress("Начисления Ozon: " + day + " (" + (done + 1) + "/" + days.length + ")");
-        await post({ action: "syncDay", day });
-        done++;
+        let firstStep = true;
+        let waiting = 0;
+        while (true) {
+          setProgress(
+            "Ozon " + day + " · день " + (completed + 1) + "/" + days.length +
+            " · страниц: " + totalPages + " · сохранено записей: " + totalRows +
+            ". Запрашиваем следующую страницу…"
+          );
+          const controller = new AbortController();
+          const timer = window.setTimeout(() => controller.abort(), 65000);
+          let response: Response;
+          try {
+            response = await fetch("/api/agents/ozon-finance-sync", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              cache: "no-store",
+              body: JSON.stringify({ day, restart: forceRefresh && firstStep }),
+              signal: controller.signal,
+            });
+          } finally {
+            window.clearTimeout(timer);
+          }
+          firstStep = false;
+          const result = await response.json();
+          if (!response.ok || !result.ok) {
+            throw new Error(result.error || "Ошибка синхронизации Ozon за " + day);
+          }
+          if (result.busy) {
+            waiting += 1;
+            if (waiting > 35) throw new Error("Запрос по " + day + " слишком долго обрабатывается. Прогресс сохранён. Обновите страницу и продолжите.");
+            setProgress("Ozon " + day + ": ждём освобождения предыдущей страницы. Сохранено " + result.rows_saved + " записей.");
+            await new Promise(resolve => setTimeout(resolve, 2500));
+            continue;
+          }
+          waiting = 0;
+          totalPages = Number(result.pages_completed ?? totalPages);
+          totalRows = Number(result.rows_saved ?? totalRows);
+          setProgress(
+            "Ozon " + day + " · загружено страниц: " +
+            result.pages_completed + " · начислений: " + result.rows_saved +
+            (result.done ? " · день готов." : " · продолжаем…")
+          );
+          if (result.done) {
+            completed += 1;
+            await load();
+            break;
+          }
+          await new Promise(resolve => setTimeout(resolve, 250));
+        }
       }
-      setProgress("Загружено дней: " + done);
+      setProgress("Выгрузка завершена. Загружено дней: " + completed + " из " + days.length +
+        ". Количество начислений: " + totalRows + " за последний день.");
       await load();
     } catch (e) {
-      setError("Загружено " + done + " дней. " + (e instanceof Error ? e.message : String(e)));
+      setError(
+        "Завершено дней: " + completed + "/" + days.length +
+        ". " + (e instanceof Error ? e.message : String(e)) +
+        " Уже загруженные страницы сохранены. Можно продолжить после обновления страницы."
+      );
       await load();
     } finally { setBusy(false); }
   }
