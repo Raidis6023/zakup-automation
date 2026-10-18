@@ -39,6 +39,9 @@ export async function proxy(
   if (
     pathname ===
     "/api/ozon/daily-sync"
+    ||
+    pathname ===
+    "/api/agents/ozon-finance-cron"
   ) {
 
     return NextResponse.next();
