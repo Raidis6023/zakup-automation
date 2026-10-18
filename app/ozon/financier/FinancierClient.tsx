@@ -122,10 +122,10 @@ export default function FinancierClient() {
   function exportCsv() {
     const content = [
       ["Артикул", "master_code", "КМ", "Начисления Ozon, ₽", "Продажи, шт (предварительно)",
-        "Себестоимость, ₽/шт", "Прибыль"].join(";"),
+        "Себестоимость, ₽/шт", "Предварительный результат"].join(";"),
       ...rows.map(r => [r.offer_id, r.master_code ?? "", r.manager,
         r.ozon_amount.toFixed(2).replace(".", ","),
-        r.sold_units ?? "", r.unit_cost ?? "", ""].map(x => '"' + String(x).replaceAll('"', '""') + '"').join(";")),
+        r.sold_units ?? "", r.unit_cost ?? "", r.estimated_result ?? ""].map(x => '"' + String(x).replaceAll('"', '""') + '"').join(";")),
     ].join("\r\n");
     const url = URL.createObjectURL(new Blob(["\ufeff" + content], { type: "text/csv;charset=utf-8" }));
     const a = document.createElement("a"); a.href = url;
@@ -170,12 +170,12 @@ export default function FinancierClient() {
               <td>{r.master_code ?? "Не сопоставлен"}</td><td>{r.manager}</td>
               <td className={r.ozon_amount < 0 ? "ozf-negative" : ""}>{currency(r.ozon_amount)}</td>
               <td>{r.sold_units ?? "Нет подтверждения"}</td>
-              <td>{currency(r.unit_cost)}</td><td>Не подтверждён</td>
+              <td>{currency(r.unit_cost)}</td><td>{r.estimated_result == null ? "Нет расчёта" : currency(r.estimated_result) + " *"}</td>
             </tr>)}
             {!rows.length && <tr><td colSpan={7} className="ozf-empty">Нет данных для выбранного периода или КМ.</td></tr>}
           </tbody>
         </table></div>
-        <p className="ozf-footnote">* Количества из операционной синхронизации продаж Ozon. Не использовать как подтверждённые выкупы или базу себестоимости до сверки.</p>
+        <p className="ozf-footnote">* Количества из операционной синхронизации продаж Ozon. Предварительный результат = начисления, связанные с товаром, минус себестоимость по операционным продажам. Общие расходы без привязки сюда не входят. Расхождения по датам и возвратам требуют сверки.</p>
       </div>
       {active && <div className="ozf-panel ozf-detail">
         <h2>{active.offer_id} · детализация</h2>
