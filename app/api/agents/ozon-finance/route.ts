@@ -301,7 +301,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     if (!g) {
       g = { offer_id: offer, master_code: master,
         name: productByOffer.get(offer)?.name ?? null,
-        manager: managers.get(master) || "Не назначен",
+        manager: (master ? managers.get(master) : null) || "Не назначен",
         ozon_amount: 0, sold_units: null, buyout_units: null, data_gaps: [], unit_cost: null, cogs: null,
         mayak_unit: null, mayak_expense: null, mayak_covered_units: null,
         estimated_result: null, advertising_amount: 0, details: [] };
