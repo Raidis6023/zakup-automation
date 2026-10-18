@@ -28,6 +28,7 @@ type ReportLine = {
   item_count: number;
 };
 type Cost = { master_code: string; valid_from: string; unit_cost_rub: number };
+type Expense = { offer_id: string; master_code: string; ordered_units: number; covered_cogs_units: number; covered_mayak_units: number; cogs_total: number; mayak_total: number };
 type Product = { offer_id: string | null; master_code: string | null; name: string | null };
 type MapRow = { sku: string; offer_id: string | null; master_code: string | null };
 type Manager = { master_code: string; manager_name: string };
@@ -41,6 +42,9 @@ type Group = {
   sold_units: number | null;
   unit_cost: number | null;
   cogs: number | null;
+  mayak_unit: number | null;
+  mayak_expense: number | null;
+  mayak_covered_units: number | null;
   estimated_result: number | null;
   details: Array<{ type_id: string; name: string; amount: number; count: number }>;
 };
@@ -213,21 +217,22 @@ async function syncOneDay(db: ReturnType<typeof createAdminClient>, day: string)
 }
 async function buildReport(db: ReturnType<typeof createAdminClient>, from: string, to: string) {
   const days = dateRange(from, to);
-  const [syncRes, ledgerRes, mappingsRes, costsRes, managersRes, soldRes, salesRunsRes, typesRes, productsRes] =
+  const [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, salesRunsRes, typesRes, productsRes] =
     await Promise.all([
       db.from("ozon_finance_sync_days").select("day,record_count,synced_at").eq("account_key", ACCOUNT)
         .gte("day", from).lte("day", to),
       db.rpc("ozon_finance_report", { p_from: from, p_to: to, p_account_key: ACCOUNT }),
       db.from("ozon_finance_sku_map").select("sku,offer_id,master_code").eq("account_key", ACCOUNT),
       db.from("ozon_finance_costs").select("master_code,valid_from,unit_cost_rub").lte("valid_from", to).order("valid_from"),
+      db.from("ozon_finance_mayak").select("master_code,valid_from,unit_cost_rub").lte("valid_from", to).order("valid_from"),
       db.from("ozon_finance_managers").select("master_code,manager_name"),
-      db.rpc("ozon_finance_sold_units", { p_from: from, p_to: to }),
+      db.rpc("ozon_finance_cost_breakdown", { p_from: from, p_to: to }),
       db.from("ozon_sales_sync_runs").select("date_from,date_to").eq("status", "success")
         .lte("date_from", from).gte("date_to", to).limit(1),
       db.from("ozon_finance_types").select("type_id,description,name"),
       db.from("products").select("offer_id,master_code,name").limit(2000),
     ]);
-  for (const item of [syncRes, ledgerRes, mappingsRes, costsRes, managersRes, soldRes, salesRunsRes, typesRes, productsRes]) {
+  for (const item of [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, salesRunsRes, typesRes, productsRes]) {
     if (item.error) throw item.error;
   }
   const loaded = new Set((syncRes.data ?? []).map(r => r.day));
@@ -235,7 +240,12 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
   const mapBySku = new Map((mappingsRes.data as MapRow[] ?? []).map(r => [r.sku, r]));
   const productByOffer = new Map((productsRes.data as Product[] ?? []).filter(p => p.offer_id).map(p => [p.offer_id!, p]));
   const managers = new Map((managersRes.data as Manager[] ?? []).map(r => [r.master_code, r.manager_name]));
-  const sold = new Map((soldRes.data as Sold[] ?? []).map(r => [r.offer_id, Number(r.sold_units)]));
+  const expenses = new Map((expenseRes.data as Expense[] ?? []).map(r => [r.offer_id, r]));
+  const mayakHistory = new Map<string, Cost[]>();
+  for (const m of mayakRes.data as Cost[] ?? []) {
+    const arr = mayakHistory.get(m.master_code) ?? [];
+    arr.push(m); mayakHistory.set(m.master_code, arr);
+  }
   const types = new Map((typesRes.data ?? []).map(r => [r.type_id, r.description || r.name || r.type_id]));
   const costHistory = new Map<string, Cost[]>();
   for (const c of costsRes.data as Cost[] ?? []) {
@@ -264,6 +274,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
         name: productByOffer.get(offer)?.name ?? null,
         manager: managers.get(master) || "Не назначен",
         ozon_amount: 0, sold_units: null, unit_cost: null, cogs: null,
+        mayak_unit: null, mayak_expense: null, mayak_covered_units: null,
         estimated_result: null, details: [] };
       byOffer.set(offer, g);
     }
@@ -271,32 +282,45 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     const name = types.get(typeId) || typeId;
     g.details.push({ type_id: typeId, name, amount, count: Number(line.item_count) });
   }
-  // Existing 28-day sales table gives only a preliminary COGS quantity.
+  // Financial accruals and posted-order units have different accounting dates.
+  // Profit must remain "provisional" until reconciliation to settlement reports.
   const salesWindowCovered = (salesRunsRes.data ?? []).length > 0;
+  let totalMayak = 0;
   for (const g of byOffer.values()) {
     g.ozon_amount = round(g.ozon_amount);
-    const history = costHistory.get(g.master_code!) ?? [];
-    const validCosts = history.filter(c => c.valid_from <= from);
-    const changedDuringPeriod = history.some(c => c.valid_from > from && c.valid_from <= to);
-    const chosen = validCosts.at(-1);
-    if (chosen && !changedDuringPeriod) g.unit_cost = Number(chosen.unit_cost_rub);
-    // Quantity is grouped by OFFER, not master_code, to prevent doubled COGS.
-    // This remains provisional: accounting accrual dates and operational sales dates may differ.
-    g.sold_units = salesWindowCovered ? (sold.get(g.offer_id) ?? 0) : null;
-    if (g.sold_units !== null && g.unit_cost !== null) {
-      g.cogs = round(g.sold_units * g.unit_cost);
-      g.estimated_result = round(g.ozon_amount - g.cogs);
+    const costH = costHistory.get(g.master_code!) ?? [];
+    const mayakH = mayakHistory.get(g.master_code!) ?? [];
+    g.unit_cost = costH.length ? Number(costH.at(-1)!.unit_cost_rub) : null;
+    g.mayak_unit = mayakH.length ? Number(mayakH.at(-1)!.unit_cost_rub) : null;
+    const calc = expenses.get(g.offer_id);
+    g.sold_units = salesWindowCovered ? Number(calc?.ordered_units ?? 0) : null;
+    if (salesWindowCovered && calc && calc.ordered_units === calc.covered_cogs_units) {
+      g.cogs = round(Number(calc.cogs_total));
+    }
+    if (salesWindowCovered && calc && calc.ordered_units === calc.covered_mayak_units) {
+      g.mayak_expense = round(Number(calc.mayak_total));
+      g.mayak_covered_units = Number(calc.covered_mayak_units);
+      totalMayak += g.mayak_expense;
+    }
+    if (salesWindowCovered && !calc) {
+      // No ordered units on this listing during a covered period.
+      g.cogs = 0;
+      g.mayak_expense = 0;
+      g.mayak_covered_units = 0;
+    }
+    if (g.cogs !== null && g.mayak_expense !== null) {
+      g.estimated_result = round(g.ozon_amount - g.cogs - g.mayak_expense);
     }
     g.details = g.details.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
   }
   return {
     from, to, synced_days: loaded.size, total_days: days.length, missing_days: missingDays,
-    operation_count: operationCount,
+    operation_count: operationCount, total_mayak: round(totalMayak),
     ledger_amount: round(totalLedger), allocated_amount: round(totalLedger - unallocated),
     unallocated_amount: round(unallocated),
     sales_window_covered: salesWindowCovered,
     profit_status: "provisional",
-    warning: "Результат по артикулам предварительный: вычтена себестоимость продаж из операционных данных. Возвраты, дата начисления и нераспределённые общие расходы требуют сверки. Это НЕ закрытая бухгалтерская прибыль.",
+    warning: "Предварительный результат = привязанные начисления Ozon − себестоимость заказанных FBO-единиц − ТК Маяк за эти же единицы. Операционные заказы и финансовые начисления имеют разные даты. Не учтены нераспределённые статьи; FBS и возвраты требуют отдельной сверки.",
     rows: Array.from(byOffer.values()).sort((a, b) => a.ozon_amount - b.ozon_amount),
     unallocated_details: [...unallocatedDetails.entries()]
       .map(([name, sum]) => ({ name, amount: round(sum) }))
@@ -337,6 +361,15 @@ export async function POST(request: NextRequest) {
           : await db.from("ozon_finance_managers").delete().eq("master_code", master);
         if (error) throw error;
       }
+      if (payload.mayak !== undefined) {
+        const m = Number(payload.mayak), validFrom = String(payload.valid_from ?? "");
+        if (!Number.isFinite(m) || m < 0 || m > 1e9 || !validDate(validFrom))
+          return fail("Некорректный тариф ТК Маяк или дата действия", 400);
+        const { error } = await db.from("ozon_finance_mayak").upsert({
+          master_code: master, valid_from: validFrom, unit_cost_rub: m, updated_at: new Date().toISOString(),
+        }, { onConflict: "master_code,valid_from" });
+        if (error) throw error;
+      }
       if (payload.cost !== undefined) {
         const c = Number(payload.cost), validFrom = String(payload.valid_from ?? "");
         if (!Number.isFinite(c) || c < 0 || c > 1e9 || !validDate(validFrom))
@@ -353,7 +386,7 @@ export async function POST(request: NextRequest) {
       if (!key) return fail("Для ИИ-анализа добавьте OPENAI_API_KEY в переменные Vercel. Основной финансовый расчёт от него не зависит.", 409);
       const report = await buildReport(db, String(payload.from ?? ""), String(payload.to ?? ""));
       if (report.missing_days.length) return fail("Сначала синхронизируйте весь выбранный период", 409);
-      const summary = { from: report.from, to: report.to, ledger_amount: report.ledger_amount,
+      const summary = { from: report.from, to: report.to, total_mayak: report.total_mayak, ledger_amount: report.ledger_amount,
         allocated_amount: report.allocated_amount, unallocated_amount: report.unallocated_amount,
         operation_count: report.operation_count, profit_status: report.profit_status,
         top_negative: report.rows.slice().sort((a, b) =>
@@ -361,7 +394,7 @@ export async function POST(request: NextRequest) {
         ).slice(0, 15).map(r => ({
           offer_id: r.offer_id, master_code: r.master_code, manager: r.manager,
           ozon_amount: r.ozon_amount, sold_units: r.sold_units,
-          unit_cost: r.unit_cost, cogs: r.cogs, estimated_result: r.estimated_result,
+          unit_cost: r.unit_cost, cogs: r.cogs, mayak_expense: r.mayak_expense, estimated_result: r.estimated_result,
           details: r.details.slice(0, 8),
         })), unallocated_details: report.unallocated_details.slice(0, 12) };
       const response = await fetch("https://api.openai.com/v1/responses", {
