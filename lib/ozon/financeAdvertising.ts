@@ -10,7 +10,7 @@
  * and are intentionally reported as a classification rather than a financial
  * source. Unknown expense types remain inside total ledger.
  */
-const OZON_ADVERTISING_TYPES = new Set(["19", "33", "41", "54", "75"]);
+const OZON_ADVERTISING_TYPES = new Set<string>(); // Type IDs require reconciliation with Ozon's live dictionary.
 
 export type AdvertisingClassification = {
   isAdvertising: boolean;
@@ -41,7 +41,7 @@ export function toKopecks(value: string | number): bigint {
   const input = String(value).trim();
   const m = /^(-?)(\d+)(?:\.(\d{1,2}))?$/.exec(input);
   if (!m) throw new Error("Некорректная сумма финансового начисления: " + input);
-  const amount = BigInt(m[2]) * 100n +
+  const amount = BigInt(m[2]) * BigInt(100) +
     BigInt((m[3] ?? "").padEnd(2, "0") || "0");
   return m[1] === "-" ? -amount : amount;
 }
@@ -68,12 +68,12 @@ export type AccrualReconciliation = {
 
 export function emptyAccrualReconciliation(): AccrualReconciliation {
   return {
-    ledgerKopecks: 0n,
-    directKopecks: 0n,
-    unallocatedKopecks: 0n,
-    advertisingTotalKopecks: 0n,
-    advertisingDirectKopecks: 0n,
-    advertisingUnallocatedKopecks: 0n,
+    ledgerKopecks: BigInt(0),
+    directKopecks: BigInt(0),
+    unallocatedKopecks: BigInt(0),
+    advertisingTotalKopecks: BigInt(0),
+    advertisingDirectKopecks: BigInt(0),
+    advertisingUnallocatedKopecks: BigInt(0),
     classifiedAdvertisingOperations: 0,
     unknownTypeOperations: 0,
   };
