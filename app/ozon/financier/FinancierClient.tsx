@@ -72,6 +72,9 @@ export default function FinancierClient() {
     (managerFilter === "Все КМ" || r.manager === managerFilter) &&
     (r.offer_id + " " + (r.master_code ?? "") + " " + (r.name ?? ""))
       .toLocaleLowerCase("ru").includes(search.toLocaleLowerCase("ru"))), [data, managerFilter, search]);
+  const missingRows = useMemo(() => (data?.rows ?? []).filter(r =>
+    r.unit_cost === null || r.mayak_unit === null
+  ).sort((a,b)=>a.offer_id.localeCompare(b.offer_id,"ru")),[data]);
   const active = rows.find(r => r.offer_id === selected);
   async function syncPeriod() {
     if (!data) return;
@@ -188,6 +191,25 @@ export default function FinancierClient() {
           </tbody>
         </table></div>
         <p className="ozf-footnote">* Заказанные единицы FBO без отмен, рассчитаны из строк заказов. ТК Маяк = тариф × заказанные штуки. Предварительный результат = начисления Ozon по артикулу − себестоимость − ТК Маяк. Общие начисления без SKU и FBS сюда не распределены. Даты начисления и заказа могут различаться.</p>
+      </div>
+      <div className="ozf-panel ozf-missing-report">
+        <div className="ozf-toolbar">
+          <div><h2>Не заполнены данные · {missingRows.length} товаров</h2>
+            <p>Отдельный реестр товаров с отсутствующей себестоимостью или тарифом ТК Маяк. Прибыль по ним не рассчитывается.</p></div>
+          <a href="#ozf-rates" className="ozf-btn">Открыть справочник тарифов</a>
+        </div>
+        <div className="ozf-table-scroll"><table className="ozf-table">
+          <thead><tr><th>Артикул</th><th>master_code</th><th>КМ</th><th>Нет себестоимости</th><th>Нет ТК Маяк</th><th>Результат</th></tr></thead>
+          <tbody>
+            {missingRows.map(r=><tr key={r.offer_id}>
+              <td>{r.offer_id}</td><td>{r.master_code??"Не привязан"}</td><td>{r.manager}</td>
+              <td>{r.unit_cost===null?"Не заполнено":"Есть"}</td>
+              <td>{r.mayak_unit===null?"Не заполнено":"Есть"}</td>
+              <td>Не рассчитан</td>
+            </tr>)}
+            {!missingRows.length&&<tr><td colSpan={6} className="ozf-empty">Среди загруженных начислений все товары с заполненными тарифами. Проверьте также общий справочник.</td></tr>}
+          </tbody>
+        </table></div>
       </div>
       {active && <div className="ozf-panel ozf-detail">
         <h2>{active.offer_id} · детализация</h2>
