@@ -39,7 +39,7 @@ export function classifyAdvertisingAccrual(
 /** Exact kopeck parsing to safe integer to avoid fractional arithmetic. */
 export function toKopecks(value: string | number): number {
   const input = String(value).trim();
-  const matched = /^(-?)(\\d+)(?:\\.(\\d{1,2}))?$/.exec(input);
+  const matched = /^(-?)(\d+)(?:\.(\d{1,2}))?$/.exec(input);
   if (!matched) throw new Error("Некорректная сумма финансового начисления: " + input);
   const rubles = Number(matched[2]);
   const kopecks = Number((matched[3] ?? "").padEnd(2, "0") || "0");
