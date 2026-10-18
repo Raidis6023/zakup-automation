@@ -107,13 +107,13 @@ grant execute on function public.ozon_finance_report(date,date,text) to service_
 -- Imported sales history is not a financial closing record; it supplies a
 -- provisional cost-of-goods estimate only when the chosen dates are covered.
 create or replace function public.ozon_finance_sold_units(p_from date,p_to date)
-returns table (master_code text, sold_units bigint)
+returns table (offer_id text, master_code text, sold_units bigint)
 language sql stable security invoker set search_path = public as $$
-  select p.master_code, sum(s.sales_quantity)::bigint
+  select p.offer_id, p.master_code, sum(s.sales_quantity)::bigint
   from public.ozon_sales_daily s
   join public.products p on p.id = s.product_id
   where s.sale_date between p_from and p_to and p.master_code is not null
-  group by p.master_code
-$$;
+  group by p.offer_id, p.master_code
+$;
 revoke all on function public.ozon_finance_sold_units(date,date) from public,anon,authenticated;
 grant execute on function public.ozon_finance_sold_units(date,date) to service_role;
