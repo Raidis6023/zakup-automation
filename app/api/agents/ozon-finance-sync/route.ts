@@ -48,7 +48,11 @@ function validDay(day: string) {
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === day &&
     day <= new Date().toISOString().slice(0, 10);
 }
-async function admin() {
+async function admin(request?: NextRequest) {
+  // Dedicated scheduler may run without a browser session, only with a
+  // secret not exposed to clients. Users still need an authenticated admin.
+  if (request && process.env.CRON_SECRET && request.headers.get("authorization") ===
+      "Bearer " + process.env.CRON_SECRET) return createAdminClient();
   const session = await createClient();
   const { data: { user }, error } = await session.auth.getUser();
   if (error || !user) return null;
@@ -249,7 +253,7 @@ async function syncPage(db: AdminDB, day: string, restart: boolean) {
   }
 }
 export async function POST(request: NextRequest) {
-  const db = await admin();
+  const db = await admin(request);
   if (!db) return result({ ok: false, error: "Доступ разрешён только администраторам" }, 403);
   try {
     const input = await request.json() as { day?: string; restart?: boolean };
@@ -290,6 +294,8 @@ export async function GET(request: NextRequest) {
       }, 503);
       return result({
         ok: true, stage: "ready", project_ref: projectRef,
+        credentials: { seller_id_present: !!process.env.OZON_CLIENT_ID,
+          seller_api_key_present: !!process.env.OZON_API_KEY },
         checkpoint_records: database.count ?? 0,
         server_latency_ms: Date.now() - started,
         note: "Браузер, Vercel и Supabase доступны. Сервис Ozon ещё не проверялся.",
