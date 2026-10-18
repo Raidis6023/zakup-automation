@@ -2,6 +2,14 @@ import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 import { createClient } from "../../../../lib/supabase/server";
+import {
+  assertAdvertisingAccountingInvariant,
+  classifyAdvertisingAccrual,
+  emptyAccrualReconciliation,
+  fromKopecks,
+  provisionalResult,
+  toKopecks,
+} from "../../../../lib/ozon/financeAdvertising";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,7 +54,8 @@ type Group = {
   mayak_expense: number | null;
   mayak_covered_units: number | null;
   estimated_result: number | null;
-  details: Array<{ type_id: string; name: string; amount: number; count: number }>;
+  advertising_amount: number;
+  details: Array<{ type_id: string; name: string; amount: number; count: number; is_advertising: boolean }>;
 };
 
 function validDate(value: string): boolean {
@@ -253,18 +262,29 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     arr.push(c); costHistory.set(c.master_code, arr);
   }
   const byOffer = new Map<string, Group>();
-  let unallocated = 0, totalLedger = 0, operationCount = 0;
+  let operationCount = 0;
+  const accounting = emptyAccrualReconciliation();
   const unallocatedDetails = new Map<string, number>();
   for (const line of ledgerRes.data as ReportLine[] ?? []) {
-    const amount = Number(line.amount);
-    totalLedger += amount; operationCount += Number(line.item_count);
+    const amountCents = toKopecks(line.amount);
+    const amount = fromKopecks(amountCents);
+    accounting.ledgerKopecks += amountCents;
+    operationCount += Number(line.item_count);
     const m = line.sku ? mapBySku.get(line.sku) : null;
     const offer = m?.offer_id;
     const master = m?.master_code || (offer ? productByOffer.get(offer)?.master_code : null) || null;
     const typeId = line.type_id || line.accrued_category || "unknown";
+    const name = types.get(typeId) || typeId;
+    const advertising = classifyAdvertisingAccrual(line.type_id, name, line.accrued_category);
+    if (advertising.isAdvertising) {
+      accounting.advertisingTotalKopecks += amountCents;
+      accounting.classifiedAdvertisingOperations += Number(line.item_count);
+    } else if (!types.has(typeId)) {
+      accounting.unknownTypeOperations += Number(line.item_count);
+    }
     if (!offer || !master) {
-      unallocated += amount;
-      const name = types.get(typeId) || typeId;
+      accounting.unallocatedKopecks += amountCents;
+      if (advertising.isAdvertising) accounting.advertisingUnallocatedKopecks += amountCents;
       unallocatedDetails.set(name, (unallocatedDetails.get(name) ?? 0) + amount);
       continue;
     }
@@ -275,12 +295,19 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
         manager: managers.get(master) || "Не назначен",
         ozon_amount: 0, sold_units: null, unit_cost: null, cogs: null,
         mayak_unit: null, mayak_expense: null, mayak_covered_units: null,
-        estimated_result: null, details: [] };
+        estimated_result: null, advertising_amount: 0, details: [] };
       byOffer.set(offer, g);
     }
+    accounting.directKopecks += amountCents;
+    if (advertising.isAdvertising) {
+      accounting.advertisingDirectKopecks += amountCents;
+      g.advertising_amount += amount;
+    }
     g.ozon_amount += amount;
-    const name = types.get(typeId) || typeId;
-    g.details.push({ type_id: typeId, name, amount, count: Number(line.item_count) });
+    g.details.push({
+      type_id: typeId, name, amount, count: Number(line.item_count),
+      is_advertising: advertising.isAdvertising,
+    });
   }
   // Financial accruals and posted-order units have different accounting dates.
   // Profit must remain "provisional" until reconciliation to settlement reports.
@@ -288,6 +315,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
   let totalMayak = 0;
   for (const g of byOffer.values()) {
     g.ozon_amount = round(g.ozon_amount);
+    g.advertising_amount = round(g.advertising_amount);
     const costH = costHistory.get(g.master_code!) ?? [];
     const mayakH = mayakHistory.get(g.master_code!) ?? [];
     g.unit_cost = costH.length ? Number(costH.at(-1)!.unit_cost_rub) : null;
@@ -314,21 +342,41 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
       g.cogs !== null &&
       g.mayak_expense !== null
     ) {
-      g.estimated_result = round(g.ozon_amount - g.cogs - g.mayak_expense);
+      // Performance API spend NEVER appears in this formula.
+      g.estimated_result = provisionalResult(g.ozon_amount, g.cogs, g.mayak_expense);
     } else {
       // Never show a financial result for incomplete reference data.
       g.estimated_result = null;
     }
     g.details = g.details.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
   }
+  // Invariant: the Seller finance ledger is partitioned, never augmented by
+  // Performance statistics. Throw rather than publish silently doubled amounts.
+  assertAdvertisingAccountingInvariant(accounting);
   return {
     from, to, synced_days: loaded.size, total_days: days.length, missing_days: missingDays,
     operation_count: operationCount, total_mayak: round(totalMayak),
-    ledger_amount: round(totalLedger), allocated_amount: round(totalLedger - unallocated),
-    unallocated_amount: round(unallocated),
+    ledger_amount: fromKopecks(accounting.ledgerKopecks),
+    allocated_amount: fromKopecks(accounting.directKopecks),
+    unallocated_amount: fromKopecks(accounting.unallocatedKopecks),
+    advertising: {
+      financial_source: "ozon_seller_accruals",
+      performance_role: "analytics_and_allocation_only",
+      expense_already_in_ledger: true,
+      performance_added_to_profit: false,
+      finance_total: fromKopecks(accounting.advertisingTotalKopecks),
+      finance_direct: fromKopecks(accounting.advertisingDirectKopecks),
+      finance_unallocated: fromKopecks(accounting.advertisingUnallocatedKopecks),
+      classified_operations: accounting.classifiedAdvertisingOperations,
+      unknown_type_operations: accounting.unknownTypeOperations,
+      performance_total: null,
+      discrepancy: null,
+      reconciliation_status: accounting.unknownTypeOperations > 0
+        ? "requires_type_review" : "not_checked_against_performance",
+    },
     sales_window_covered: salesWindowCovered,
     profit_status: "provisional",
-    warning: "Предварительный результат = привязанные начисления Ozon − себестоимость заказанных FBO-единиц − ТК Маяк за эти же единицы. Операционные заказы и финансовые начисления имеют разные даты. Не учтены нераспределённые статьи; FBS и возвраты требуют отдельной сверки.",
+    warning: "Реклама внутри финансовых начислений Ozon уже учтена. Performance API используется только для аналитики и будущего распределения между артикулами, повторно расход НЕ вычитается. Операционные заказы и финансовые начисления имеют разные даты; FBS, возвраты и общие начисления требуют сверки.",
     rows: Array.from(byOffer.values()).sort((a, b) => a.ozon_amount - b.ozon_amount),
     unallocated_details: [...unallocatedDetails.entries()]
       .map(([name, sum]) => ({ name, amount: round(sum) }))
@@ -511,7 +559,7 @@ export async function POST(request: NextRequest) {
       if (!key) return fail("Для ИИ-анализа добавьте OPENAI_API_KEY в переменные Vercel. Основной финансовый расчёт от него не зависит.", 409);
       const report = await buildReport(db, String(payload.from ?? ""), String(payload.to ?? ""));
       if (report.missing_days.length) return fail("Сначала синхронизируйте весь выбранный период", 409);
-      const summary = { from: report.from, to: report.to, total_mayak: report.total_mayak, ledger_amount: report.ledger_amount,
+      const summary = { from: report.from, to: report.to, advertising: report.advertising, total_mayak: report.total_mayak, ledger_amount: report.ledger_amount,
         allocated_amount: report.allocated_amount, unallocated_amount: report.unallocated_amount,
         operation_count: report.operation_count, profit_status: report.profit_status,
         top_negative: report.rows.slice().sort((a, b) =>
