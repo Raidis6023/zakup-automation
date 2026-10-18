@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       }
     );
     if (listError) throw listError;
-    const skus = (records ?? []).map((r: { sku: string }) => r.sku);
+    const skus: string[] = ((records ?? []) as Array<{ sku: string }>).map(r => r.sku);
     if (!skus.length) return response({ok:true,processed:0,resolved:0,unresolved:0,more:false});
     const infos = await ozonInfo(skus);
     const infoBySku = new Map(infos.filter(x => x.sku != null)
