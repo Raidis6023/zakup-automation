@@ -3,6 +3,9 @@ import HomeMarketplaceCards, {
   type HomeMarketplaceMetric,
 } from "./HomeMarketplaceCards";
 
+import HomeRightPanel
+  from "./HomeRightPanel";
+
 import {
   getOzonSeptemberRows,
 } from "./sku-list/ozonFinancialData";
@@ -166,11 +169,18 @@ export default function Home() {
         <WorkspaceDecoration />
       </div>
 
-      <HomeMarketplaceCards
-        metrics={
-          metrics
-        }
-      />
+      <div
+        className=
+          "home-main-board-wrap"
+      >
+        <HomeMarketplaceCards
+          metrics={
+            metrics
+          }
+        />
+
+        <HomeRightPanel />
+      </div>
     </section>
   );
 }

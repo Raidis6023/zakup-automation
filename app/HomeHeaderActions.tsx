@@ -96,6 +96,50 @@ function CalendarIcon() {
 }
 
 
+function TasksIcon() {
+
+  return (
+
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+
+      <rect
+        x="5"
+        y="3"
+        width="14"
+        height="18"
+        rx="2"
+      />
+
+
+      <path
+        d="m8 8 1.5 1.5L12 7"
+      />
+
+
+      <path
+        d="M13.5 8H16"
+      />
+
+
+      <path
+        d="m8 13 1.5 1.5L12 12"
+      />
+
+
+      <path
+        d="M13.5 13H16"
+      />
+
+    </svg>
+
+  );
+
+}
+
+
 function ChevronIcon() {
 
   return (
@@ -720,6 +764,15 @@ export default function HomeHeaderActions() {
 
 
   const [
+    tasksPanelOpen,
+    setTasksPanelOpen,
+  ] =
+    useState(
+      false
+    );
+
+
+  const [
     notifications,
     setNotifications,
   ] =
@@ -904,6 +957,57 @@ export default function HomeHeaderActions() {
     >(
       null
     );
+
+
+  // ==========================================================
+  // RIGHT TASKS PANEL STATE
+  // ==========================================================
+
+  useEffect(
+    () => {
+
+      function handleState(
+        event:
+          Event
+      ) {
+
+        const customEvent =
+          event as
+            CustomEvent<{
+              open:
+                boolean;
+            }>;
+
+
+        setTasksPanelOpen(
+          Boolean(
+            customEvent
+              .detail
+              ?.open
+          )
+        );
+
+      }
+
+
+      window.addEventListener(
+        "workspace-right-panel-state",
+        handleState
+      );
+
+
+      return () => {
+
+        window.removeEventListener(
+          "workspace-right-panel-state",
+          handleState
+        );
+
+      };
+
+    },
+    []
+  );
 
 
   // ==========================================================
@@ -1695,6 +1799,26 @@ export default function HomeHeaderActions() {
         now.getFullYear(),
         now.getMonth(),
         1
+      )
+    );
+
+  }
+
+
+  // ==========================================================
+  // TASKS PANEL
+  // ==========================================================
+
+  function toggleTasksPanel() {
+
+    setOpenPanel(
+      null
+    );
+
+
+    window.dispatchEvent(
+      new CustomEvent(
+        "workspace-toggle-right-panel"
       )
     );
 
@@ -3118,6 +3242,45 @@ export default function HomeHeaderActions() {
           actionsRef
         }
       >
+
+        {/* ====================================================
+            TASKS
+        ==================================================== */}
+
+        <div
+          className=
+            "home-action-wrapper"
+        >
+
+          <button
+            type="button"
+
+            className={
+              tasksPanelOpen
+
+                ? "home-icon-button active"
+
+                : "home-icon-button"
+            }
+
+            aria-label=
+              "Задачи"
+
+            aria-expanded={
+              tasksPanelOpen
+            }
+
+            onClick={
+              toggleTasksPanel
+            }
+          >
+
+            <TasksIcon />
+
+          </button>
+
+        </div>
+
 
         {/* ====================================================
             NOTIFICATIONS
