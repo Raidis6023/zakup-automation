@@ -6,16 +6,9 @@ import {
   createClient,
 } from "../../lib/supabase/server";
 
-import LoginForm
-  from "./LoginForm";
-
-import styles
-  from "./LoginNotice.module.css";
-
-import LoginPanda from "./LoginPanda";
-
+import LoginExperience from "./LoginExperience";
+import styles from "./LoginNotice.module.css";
 import "./login.css";
-
 
 // ============================================================
 // TYPES
@@ -88,53 +81,8 @@ export default async function LoginPage({
 
 
   return (
-
-    <main
-      className=
-        "login-page"
-    >
-      <div className="login-layout">
-
-
-      <section
-        className=
-          "login-card"
-      >
-
-        <div
-          className=
-            "login-logo"
-        >
-
-          <img
-            src=
-              "/logos/babushkina-marketplace.png"
-
-            alt=
-              "ИП Бабушкина Маркетплейсы"
-          />
-
-        </div>
-
-
-        <div
-          className=
-            "login-heading"
-        >
-
-          <h1>
-            Вход в WorkSpace
-          </h1>
-
-
-          <p>
-            Введите данные вашей
-            учётной записи
-          </p>
-
-        </div>
-
-
+    <main className="login-page">
+      <LoginExperience>
         {
           isBlocked
           &&
@@ -218,14 +166,8 @@ export default async function LoginPage({
         }
 
 
-        <LoginForm />
-      </section>
 
-      <LoginPanda />
-      </div>
-
+      </LoginExperience>
     </main>
-
   );
-
 }

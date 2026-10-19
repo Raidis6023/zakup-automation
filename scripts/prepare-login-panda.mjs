@@ -24,3 +24,15 @@ console.log("Approved panda asset prepared:", {
   height: output.height,
   size: output.size,
 });
+
+const accessSource = "public/panda/access-panda-source.avif";
+const accessDestination = "public/panda/access-panda.webp";
+const accessMeta = await sharp(accessSource).metadata();
+if (!accessMeta.hasAlpha || (accessMeta.width ?? 0) < 650 || (accessMeta.height ?? 0) < 900) {
+  throw new Error("Thoughtful panda asset is not a valid transparent high-resolution image.");
+}
+const accessResult = await sharp(accessSource)
+  .webp({ quality: 89, alphaQuality: 100, effort: 6 })
+  .toFile(accessDestination);
+if (accessResult.size < 12000) throw new Error("Thoughtful panda output unexpectedly small");
+console.log("Thoughtful panda WebP prepared", accessResult.width, accessResult.height, accessResult.size);

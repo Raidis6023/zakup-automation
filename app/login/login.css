@@ -1013,3 +1013,107 @@
     gap: 20px;
   }
 }
+
+/* ===============================================
+   Unified WorkSpace palette for both login screens.
+   =============================================== */
+.login-page {
+  --login-accent: #11865d;
+  --login-accent-hover: #0b6c4b;
+  --login-accent-text: #078456;
+  --login-bg: var(--background);
+  --login-card-bg: var(--surface);
+  --login-input-bg: var(--input);
+  --login-text: var(--text);
+  --login-secondary: var(--text-secondary);
+  --login-muted: var(--text-muted);
+  --login-border: var(--border-strong);
+  --login-soft-border: var(--border);
+  --login-shadow: var(--shadow);
+  --login-halo: rgba(17,134,93,.10);
+  background: radial-gradient(circle at 50% 20%, var(--login-halo), transparent 45%), var(--login-bg);
+  color: var(--login-text);
+}
+html[data-theme="dark"] .login-page {
+  --login-accent: #24ac78;
+  --login-accent-hover: #12895f;
+  --login-accent-text: #58d5a1;
+  --login-shadow: 0 24px 70px rgba(0,0,0,.26);
+}
+.login-card {
+  background: var(--login-card-bg);
+  border-color: var(--login-soft-border);
+  box-shadow: var(--login-shadow);
+}
+.login-heading h1, .access-modal-heading h1, .access-success h2 { color: var(--login-text); }
+.login-heading p, .access-modal-heading p, .access-success p { color: var(--login-secondary); }
+.login-field > span { color: var(--login-text); }
+.login-field input, .login-field textarea {
+  background: var(--login-input-bg);
+  color: var(--login-text);
+  border-color: var(--login-border);
+}
+.login-field input::placeholder, .login-field textarea::placeholder { color: var(--login-muted); }
+.login-field input:focus, .login-field textarea:focus {
+  border-color: var(--login-accent);
+  box-shadow: 0 0 0 3px var(--login-halo);
+}
+.login-password-toggle { color: var(--login-muted); }
+.login-password-toggle:hover { background: var(--surface-soft); color: var(--login-accent-text); }
+.login-submit, .access-primary-button {
+  background: var(--login-accent);
+  border-color: var(--login-accent);
+  color: #fff;
+}
+.login-submit:hover:not(:disabled), .access-primary-button:hover:not(:disabled) {
+  background: var(--login-accent-hover);
+  border-color: var(--login-accent-hover);
+}
+.login-forgot-password, .login-access-caption { color: var(--login-muted); }
+.login-access-section { border-top-color: var(--login-soft-border); }
+.login-access-button, .access-secondary-button {
+  color: var(--login-text);
+  background: var(--surface-soft);
+  border-color: var(--login-border);
+}
+.login-access-button:hover:not(:disabled), .access-secondary-button:hover:not(:disabled) {
+  background: var(--surface-strong);
+  border-color: var(--login-accent);
+  color: var(--login-text);
+}
+.access-modal-heading h1 {
+  margin: 0 0 8px;
+  font-size: 23px;
+  line-height: 1.25;
+}
+.access-modal-heading { margin-bottom: 24px; }
+.access-screen { position: relative; }
+.access-screen .access-modal-close {
+  top: -12px;
+  right: -12px;
+  color: var(--login-muted);
+}
+.access-screen .access-modal-close:hover:not(:disabled) {
+  background: var(--surface-soft);
+  color: var(--login-text);
+}
+.access-success-icon { background: var(--login-halo); color: var(--login-accent-text); }
+.access-success { padding: 16px 8px 10px; }
+.access-modal-actions { margin-top: 3px; }
+.login-access-card { max-width: 560px; padding: 30px; }
+.login-layout:has(.login-access-card) {
+  grid-template-columns: minmax(0,560px) minmax(0,420px);
+  width: min(100%,1040px);
+}
+@media (max-width: 860px) {
+  .login-layout:has(.login-access-card) {
+    grid-template-columns: minmax(0,560px);
+    width: min(100%,560px);
+  }
+}
+@media (max-width: 520px) {
+  .login-access-card { padding: 26px 20px 22px; }
+  .access-modal-heading h1 { font-size: 22px; }
+  .access-modal-actions { flex-direction: column-reverse; }
+  .access-primary-button, .access-secondary-button { width: 100%; }
+}
