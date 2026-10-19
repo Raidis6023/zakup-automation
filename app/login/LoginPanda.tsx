@@ -41,7 +41,7 @@ export default function LoginPanda({ mode }: { mode: Mode }) {
   const introduction = greeting && STARTS.find(part => greeting.startsWith(part));
   const rest = greeting && introduction ? greeting.slice(introduction.length).trimStart() : greeting;
   const src = mode === "access"
-    ? (imageFallback ? "/panda/login-panda-approved.webp" : "/panda/access-panda.webp")
+    ? (imageFallback ? "/panda/login-panda-approved.webp" : "/panda/access-panda.webp?v=20261019-2")
     : (imageFallback ? "/panda/login-panda.webp" : "/panda/login-panda-approved.webp");
 
   return (
@@ -59,7 +59,7 @@ export default function LoginPanda({ mode }: { mode: Mode }) {
           ? "Красная панда задумчиво изучает папку «Сотрудники», придерживая подбородок"
           : "Красная панда приветственно машет лапой и держит папку «Сотрудники»"}
         width={mode === "access" ? 820 : 820}
-        height={mode === "access" ? 1147 : 1108}
+        height={mode === "access" ? 1093 : 1108}
         decoding="async"
       />
     </aside>
