@@ -75,10 +75,10 @@ export default function LoginPanda() {
       </div>
       <img
         className={styles.panda}
-        src="/panda/login-panda-hq.webp"
+        src="/panda/login-panda-approved.avif"
         alt="Красная панда машет лапой и держит папку «Сотрудники»"
         width={820}
-        height={1107}
+        height={1108}
         decoding="async"
       />
     </aside>
