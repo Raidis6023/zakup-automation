@@ -53,6 +53,12 @@ type CurrentUserProfileRow = {
 };
 
 
+type TabId =
+  | "all"
+  | "notes"
+  | TaskRole;
+
+
 const STORAGE_KEY =
   "workspace-home-right-panel-open";
 
