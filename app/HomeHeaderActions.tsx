@@ -4,6 +4,7 @@ import Link
   from "next/link";
 
 import {
+  usePathname,
   useRouter,
 } from "next/navigation";
 
@@ -34,6 +35,11 @@ import HomeThemeToggle
 import WorkspaceModeSwitcher
   from "./WorkspaceModeSwitcher";
 
+import {
+  HomeBellIcon,
+  HomeTasksIcon,
+} from "./HomeHeaderIcons";
+
 import styles
   from "./HomeHeaderActions.module.css";
 
@@ -41,31 +47,6 @@ import styles
 // ============================================================
 // ICONS
 // ============================================================
-
-function BellIcon() {
-
-  return (
-
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-
-      <path
-        d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"
-      />
-
-
-      <path
-        d="M10 21h4"
-      />
-
-    </svg>
-
-  );
-
-}
-
 
 function CalendarIcon() {
 
@@ -87,50 +68,6 @@ function CalendarIcon() {
 
       <path
         d="M16 3v4M8 3v4M3 10h18"
-      />
-
-    </svg>
-
-  );
-
-}
-
-
-function TasksIcon() {
-
-  return (
-
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-
-      <rect
-        x="5"
-        y="3"
-        width="14"
-        height="18"
-        rx="2"
-      />
-
-
-      <path
-        d="m8 8 1.5 1.5L12 7"
-      />
-
-
-      <path
-        d="M13.5 8H16"
-      />
-
-
-      <path
-        d="m8 13 1.5 1.5L12 12"
-      />
-
-
-      <path
-        d="M13.5 13H16"
       />
 
     </svg>
@@ -744,6 +681,20 @@ export default function HomeHeaderActions() {
 
   const router =
     useRouter();
+
+
+  const pathname =
+    usePathname()
+    ??
+    "/";
+
+
+  const showTasksButton =
+    pathname ===
+      "/"
+    ||
+    pathname ===
+      "/admin";
 
 
   const [
@@ -3247,39 +3198,49 @@ export default function HomeHeaderActions() {
             TASKS
         ==================================================== */}
 
-        <div
-          className=
-            "home-action-wrapper"
-        >
+        {
+          showTasksButton
 
-          <button
-            type="button"
+            ? (
 
-            className={
-              tasksPanelOpen
+              <div
+                className=
+                  "home-action-wrapper"
+              >
 
-                ? "home-icon-button active"
+                <button
+                  type="button"
 
-                : "home-icon-button"
-            }
+                  className={
+                    tasksPanelOpen
 
-            aria-label=
-              "Задачи"
+                      ? "home-icon-button active"
 
-            aria-expanded={
-              tasksPanelOpen
-            }
+                      : "home-icon-button"
+                  }
 
-            onClick={
-              toggleTasksPanel
-            }
-          >
+                  aria-label=
+                    "Задачи"
 
-            <TasksIcon />
+                  aria-expanded={
+                    tasksPanelOpen
+                  }
 
-          </button>
+                  onClick={
+                    toggleTasksPanel
+                  }
+                >
 
-        </div>
+                  <HomeTasksIcon />
+
+                </button>
+
+              </div>
+
+            )
+
+            : null
+        }
 
 
         {/* ====================================================
@@ -3316,7 +3277,7 @@ export default function HomeHeaderActions() {
             }
           >
 
-            <BellIcon />
+            <HomeBellIcon />
 
 
             {
@@ -3381,7 +3342,7 @@ export default function HomeHeaderActions() {
                             home-notifications-empty-icon
                           "
                         >
-                          <BellIcon />
+                          <HomeBellIcon />
                         </div>
 
 
@@ -3417,7 +3378,7 @@ export default function HomeHeaderActions() {
                               home-notifications-empty-icon
                             "
                           >
-                            <BellIcon />
+                            <HomeBellIcon />
                           </div>
 
 
@@ -3452,7 +3413,7 @@ export default function HomeHeaderActions() {
                                 home-notifications-empty-icon
                               "
                             >
-                              <BellIcon />
+                              <HomeBellIcon />
                             </div>
 
 

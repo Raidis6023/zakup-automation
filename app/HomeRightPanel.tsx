@@ -7,13 +7,25 @@ import {
 } from "react";
 
 import {
+  usePathname,
+} from "next/navigation";
+
+import {
   createClient,
 } from "../lib/supabase/client";
+
+import {
+  HomeBellIcon,
+  HomeTasksIcon,
+} from "./HomeHeaderIcons";
 
 import "./HomeRightPanel.css";
 
 
 type CurrentUserProfileRow = {
+  user_id:
+    string;
+
   first_name:
     string;
 
@@ -60,6 +72,18 @@ type TaskItem = {
 
   role:
     TaskRole;
+
+  status:
+    TaskStatus;
+};
+
+
+type PersonalNote = {
+  id:
+    string;
+
+  title:
+    string;
 
   status:
     TaskStatus;
@@ -154,7 +178,7 @@ const PRIVILEGED_TASKS:
 TaskItem[] = [
   {
     id:
-      "task-1",
+      "task-ved-1",
     title:
       "Проверить расчёт по новому товару",
     creator:
@@ -168,7 +192,7 @@ TaskItem[] = [
   },
   {
     id:
-      "task-2",
+      "task-procurement-1",
     title:
       "Подтвердить заказ поставщику",
     creator:
@@ -182,7 +206,7 @@ TaskItem[] = [
   },
   {
     id:
-      "task-3",
+      "task-analyst-1",
     title:
       "Согласовать цену на товар",
     creator:
@@ -196,7 +220,7 @@ TaskItem[] = [
   },
   {
     id:
-      "task-4",
+      "task-category-1",
     title:
       "Проверить карточки новой категории",
     creator:
@@ -210,7 +234,7 @@ TaskItem[] = [
   },
   {
     id:
-      "task-5",
+      "task-marketing-1",
     title:
       "Подготовить материалы для акции",
     creator:
@@ -225,75 +249,6 @@ TaskItem[] = [
 ];
 
 
-function TasksPanelIcon() {
-
-  return (
-
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-
-      <rect
-        x="5"
-        y="3"
-        width="14"
-        height="18"
-        rx="2"
-      />
-
-
-      <path
-        d="m8 8 1.5 1.5L12 7"
-      />
-
-
-      <path
-        d="M13.5 8H16"
-      />
-
-
-      <path
-        d="m8 13 1.5 1.5L12 12"
-      />
-
-
-      <path
-        d="M13.5 13H16"
-      />
-
-    </svg>
-
-  );
-
-}
-
-
-function BellIcon() {
-
-  return (
-
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-
-      <path
-        d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"
-      />
-
-
-      <path
-        d="M10 21h4"
-      />
-
-    </svg>
-
-  );
-
-}
-
-
 function ToggleIcon() {
 
   return (
@@ -302,9 +257,11 @@ function ToggleIcon() {
       viewBox="0 0 24 24"
       aria-hidden="true"
     >
+
       <path
         d="m9 6 6 6-6 6"
       />
+
     </svg>
 
   );
@@ -373,7 +330,92 @@ function isManager(
 }
 
 
+function getTaskRole(
+  profile:
+    CurrentUserProfileRow | null
+):
+TaskRole {
+
+  const role =
+    profile
+      ?.role_name
+      ?.trim()
+      .toLowerCase()
+    ||
+    "";
+
+
+  if (
+    role.startsWith(
+      "категорийный менеджер"
+    )
+  ) {
+
+    return "category_manager";
+
+  }
+
+
+  if (
+    role ===
+      "вэд"
+  ) {
+
+    return "ved";
+
+  }
+
+
+  if (
+    role ===
+      "закуп"
+  ) {
+
+    return "procurement";
+
+  }
+
+
+  if (
+    role ===
+      "аналитик"
+    ||
+    role ===
+      "аналитика"
+  ) {
+
+    return "analyst";
+
+  }
+
+
+  if (
+    role ===
+      "маркетинг"
+  ) {
+
+    return "marketing";
+
+  }
+
+
+  return "analyst";
+
+}
+
+
 export default function HomeRightPanel() {
+
+  const pathname =
+    usePathname()
+    ??
+    "/";
+
+
+  const adminHomeMode =
+    pathname ===
+      "/admin";
+
 
   const [
     open,
@@ -430,7 +472,7 @@ export default function HomeRightPanel() {
 
       } catch {
 
-        // Панель просто останется открытой.
+        // Без localStorage панель просто останется открытой.
 
       }
 
@@ -558,22 +600,9 @@ export default function HomeRightPanel() {
 
             } catch {
 
-              // localStorage здесь не критичен.
+              // Сама панель продолжит работать.
 
             }
-
-
-            window.dispatchEvent(
-              new CustomEvent(
-                "workspace-right-panel-state",
-                {
-                  detail: {
-                    open:
-                      next,
-                  },
-                }
-              )
-            );
 
 
             return next;
@@ -626,10 +655,7 @@ export default function HomeRightPanel() {
 
 
   const privileged =
-    Boolean(
-      profile
-        ?.has_admin_access
-    )
+    adminHomeMode
     ||
     isManager(
       profile
@@ -675,12 +701,18 @@ export default function HomeRightPanel() {
     );
 
 
-  const basicTasks =
+  const currentTaskRole =
+    getTaskRole(
+      profile
+    );
+
+
+  const departmentTasks =
     useMemo<TaskItem[]>(
       () => [
         {
           id:
-            "basic-task-1",
+            "department-task-1",
           title:
             "Проверить расчёт по новому товару",
           creator:
@@ -688,13 +720,13 @@ export default function HomeRightPanel() {
           assignee:
             currentUserName,
           role:
-            "ved",
+            currentTaskRole,
           status:
             "red",
         },
         {
           id:
-            "basic-task-2",
+            "department-task-2",
           title:
             "Подтвердить данные перед отправкой",
           creator:
@@ -702,13 +734,13 @@ export default function HomeRightPanel() {
           assignee:
             currentUserName,
           role:
-            "procurement",
+            currentTaskRole,
           status:
             "yellow",
         },
         {
           id:
-            "basic-task-3",
+            "department-task-3",
           title:
             "Проверить изменения по товару",
           creator:
@@ -716,13 +748,52 @@ export default function HomeRightPanel() {
           assignee:
             currentUserName,
           role:
-            "analyst",
+            currentTaskRole,
           status:
             "green",
         },
       ],
       [
+        currentTaskRole,
         currentUserName,
+      ]
+    );
+
+
+  const personalNotes =
+    useMemo<PersonalNote[]>(
+      () => {
+
+        const ownerKey =
+          profile
+            ?.user_id
+          ||
+          "current-user";
+
+
+        return [
+          {
+            id:
+              `${ownerKey}-note-1`,
+            title:
+              "Не забыть проверить новые позиции",
+            status:
+              "yellow",
+          },
+          {
+            id:
+              `${ownerKey}-note-2`,
+            title:
+              "Вернуться к сверке отчёта",
+            status:
+              "green",
+          },
+        ];
+
+      },
+      [
+        profile
+          ?.user_id,
       ]
     );
 
@@ -732,7 +803,7 @@ export default function HomeRightPanel() {
 
       ? PRIVILEGED_TASKS
 
-      : basicTasks;
+      : departmentTasks;
 
 
   const filteredTasks =
@@ -757,11 +828,27 @@ export default function HomeRightPanel() {
 
     <aside
       className={
-        open
+        [
+          "home-right-panel",
 
-          ? "home-right-panel"
+          adminHomeMode
 
-          : "home-right-panel home-right-panel--collapsed"
+            ? "home-right-panel--admin"
+
+            : "home-right-panel--work",
+
+          open
+
+            ? ""
+
+            : "home-right-panel--collapsed",
+        ]
+          .filter(
+            Boolean
+          )
+          .join(
+            " "
+          )
       }
 
       aria-label=
@@ -820,9 +907,9 @@ export default function HomeRightPanel() {
 
           <span
             className=
-              "home-right-panel-avatar"
+              "home-right-panel-heading-icon"
           >
-            <TasksPanelIcon />
+            <HomeTasksIcon />
           </span>
 
 
@@ -886,58 +973,41 @@ export default function HomeRightPanel() {
             activeTab ===
               "notes"
 
-              ? (
+              ? personalNotes.map(
+                  note => (
 
-                <>
-                  <div
-                    className=
-                      "home-right-panel-task"
-                  >
+                    <div
+                      key={
+                        note.id
+                      }
 
-                    <span
                       className=
-                        "home-right-panel-status home-right-panel-status--yellow"
-                    />
+                        "home-right-panel-task"
+                    >
+
+                      <span
+                        className={
+                          `home-right-panel-status home-right-panel-status--${note.status}`
+                        }
+                      />
 
 
-                    <div>
-                      <strong>
-                        Не забыть проверить новые позиции
-                      </strong>
+                      <div>
+                        <strong>
+                          {
+                            note.title
+                          }
+                        </strong>
 
-                      <span>
-                        Личная заметка
-                      </span>
+                        <span>
+                          Личная заметка
+                        </span>
+                      </div>
+
                     </div>
 
-                  </div>
-
-
-                  <div
-                    className=
-                      "home-right-panel-task"
-                  >
-
-                    <span
-                      className=
-                        "home-right-panel-status home-right-panel-status--green"
-                    />
-
-
-                    <div>
-                      <strong>
-                        Вернуться к сверке отчёта
-                      </strong>
-
-                      <span>
-                        Личная заметка
-                      </span>
-                    </div>
-
-                  </div>
-                </>
-
-              )
+                  )
+                )
 
               : filteredTasks.length >
                   0
@@ -1015,9 +1085,9 @@ export default function HomeRightPanel() {
 
           <span
             className=
-              "home-right-panel-secondary-icon"
+              "home-right-panel-heading-icon"
           >
-            <BellIcon />
+            <HomeBellIcon />
           </span>
 
 
@@ -1027,23 +1097,7 @@ export default function HomeRightPanel() {
 
         </div>
 
-
-        <div
-          className=
-            "home-right-panel-placeholder"
-        >
-          Содержимое этого блока добавим следующим этапом.
-        </div>
-
       </section>
-
-
-      <section
-        className=
-          "home-right-panel-section"
-        aria-label=
-          "Дополнительный блок"
-      />
 
     </aside>
 

@@ -3,8 +3,6 @@ import HomeMarketplaceCards, {
   type HomeMarketplaceMetric,
 } from "./HomeMarketplaceCards";
 
-import HomeRightPanel
-  from "./HomeRightPanel";
 
 import {
   getOzonSeptemberRows,
@@ -169,18 +167,11 @@ export default function Home() {
         <WorkspaceDecoration />
       </div>
 
-      <div
-        className=
-          "home-main-board-wrap"
-      >
-        <HomeMarketplaceCards
-          metrics={
-            metrics
-          }
-        />
-
-        <HomeRightPanel />
-      </div>
+      <HomeMarketplaceCards
+        metrics={
+          metrics
+        }
+      />
     </section>
   );
 }

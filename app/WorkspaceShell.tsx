@@ -20,6 +20,9 @@ import type {
 import HomeHeaderActions
   from "./HomeHeaderActions";
 
+import HomeRightPanel
+  from "./HomeRightPanel";
+
 import WorkspaceDecoration
   from "./WorkspaceDecoration";
 
@@ -212,6 +215,14 @@ export default function WorkspaceShell({
     pathname.startsWith(
       "/admin/"
     );
+
+
+  const showHomeRightPanel =
+    pathname ===
+      "/"
+    ||
+    pathname ===
+      "/admin";
 
 
   const homeHref =
@@ -1176,6 +1187,17 @@ export default function WorkspaceShell({
           }
 
         </div>
+
+
+        {
+          showHomeRightPanel
+
+            ? (
+              <HomeRightPanel />
+            )
+
+            : null
+        }
 
       </div>
 
