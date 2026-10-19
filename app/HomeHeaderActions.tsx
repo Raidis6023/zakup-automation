@@ -4,6 +4,7 @@ import Link
   from "next/link";
 
 import {
+  usePathname,
   useRouter,
 } from "next/navigation";
 
@@ -40,6 +41,7 @@ import {
 } from "./HomeHeaderIcons";
 
 import {
+  buildAdministratorTasks,
   buildCurrentUserTasks,
 } from "./HomeTasksData";
 
@@ -684,6 +686,21 @@ export default function HomeHeaderActions() {
 
   const router =
     useRouter();
+
+
+  const pathname =
+    usePathname()
+    ??
+    "/";
+
+
+  const adminMode =
+    pathname ===
+      "/admin"
+    ||
+    pathname.startsWith(
+      "/admin/"
+    );
 
 
 
@@ -2250,10 +2267,15 @@ export default function HomeHeaderActions() {
   const currentUserTasks =
     useMemo(
       () =>
-        buildCurrentUserTasks(
-          currentProfile
-        ),
+        adminMode
+          ? buildAdministratorTasks(
+              currentProfile
+            )
+          : buildCurrentUserTasks(
+              currentProfile
+            ),
       [
+        adminMode,
         currentProfile,
       ]
     );

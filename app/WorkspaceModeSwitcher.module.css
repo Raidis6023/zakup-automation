@@ -129,3 +129,84 @@
   }
 
 }
+
+
+/* ============================================================
+   DARK THEME CONTRAST
+   ============================================================ */
+
+:global(html[data-theme="dark"]) .modeButton {
+  border-color:
+    color-mix(
+      in srgb,
+      var(--ws-border) 72%,
+      #ffffff
+    );
+
+  background:
+    color-mix(
+      in srgb,
+      var(--ws-surface-soft) 88%,
+      #ffffff
+    );
+
+  color:
+    var(--ws-text-secondary);
+}
+
+:global(html[data-theme="dark"]) .modeButton:hover {
+  border-color:
+    color-mix(
+      in srgb,
+      var(--ws-border) 55%,
+      #ffffff
+    );
+
+  background:
+    color-mix(
+      in srgb,
+      var(--ws-surface-hover) 88%,
+      #ffffff
+    );
+
+  color:
+    var(--ws-text);
+}
+
+:global(html[data-theme="dark"]) .modeButtonAdmin {
+  border-color:
+    color-mix(
+      in srgb,
+      var(--ws-icon) 62%,
+      transparent
+    );
+
+  background:
+    color-mix(
+      in srgb,
+      var(--ws-icon) 14%,
+      var(--ws-surface)
+    );
+
+  color:
+    var(--ws-icon);
+}
+
+:global(html[data-theme="dark"]) .modeButtonAdmin:hover {
+  border-color:
+    color-mix(
+      in srgb,
+      var(--ws-icon) 82%,
+      transparent
+    );
+
+  background:
+    color-mix(
+      in srgb,
+      var(--ws-icon) 20%,
+      var(--ws-surface)
+    );
+
+  color:
+    var(--ws-icon);
+}

@@ -1891,3 +1891,53 @@ html[data-theme="dark"]
   }
 
 }
+
+
+/* ============================================================
+   DARK THEME: ЯРКОСТЬ ПЕРЕКЛЮЧАТЕЛЯ ТЕМЫ
+   ============================================================ */
+
+html[data-theme="dark"] .home-theme-toggle {
+  border-color:
+    color-mix(
+      in srgb,
+      var(--ws-icon) 34%,
+      var(--ws-border)
+    );
+
+  background:
+    color-mix(
+      in srgb,
+      var(--ws-surface-soft) 88%,
+      var(--ws-icon)
+    );
+}
+
+html[data-theme="dark"] .home-theme-toggle button {
+  color:
+    color-mix(
+      in srgb,
+      var(--ws-icon) 82%,
+      #ffffff
+    );
+}
+
+html[data-theme="dark"] .home-theme-toggle button.active {
+  background:
+    color-mix(
+      in srgb,
+      var(--ws-icon) 13%,
+      var(--ws-surface)
+    );
+
+  color:
+    var(--ws-icon);
+
+  box-shadow:
+    inset 0 0 0 1px
+    color-mix(
+      in srgb,
+      var(--ws-icon) 24%,
+      transparent
+    );
+}

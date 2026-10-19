@@ -460,3 +460,25 @@
   }
 
 }
+
+
+/* ============================================================
+   НИЖНИЕ РАЗДЕЛЫ ЛЕВОГО МЕНЮ
+   ============================================================ */
+
+.home-shell .home-sidebar {
+  display: flex;
+  flex-direction: column;
+}
+
+.home-workspaces-secondary {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-soft);
+}
+
+@media (max-width: 800px) {
+  .home-workspaces-secondary {
+    margin-top: 12px;
+  }
+}

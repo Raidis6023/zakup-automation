@@ -15,6 +15,10 @@ import {
   createClient,
 } from "../../../lib/supabase/client";
 
+import {
+  deleteAdminUser,
+} from "./admin-user-actions";
+
 
 // ============================================================
 // TYPES
@@ -340,6 +344,28 @@ function getBadgeClass(
 
 
   return "admin-level-badge";
+
+}
+
+
+function TrashIcon() {
+
+  return (
+
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+
+      <path d="M5 7h14" />
+      <path d="M9 7V5h6v2" />
+      <path d="M7 7l1 13h8l1-13" />
+      <path d="M10 11v5" />
+      <path d="M14 11v5" />
+
+    </svg>
+
+  );
 
 }
 
@@ -1252,6 +1278,86 @@ export default function AdminUsersPanel() {
 
 
   // ==========================================================
+  // DELETE USER
+  // ==========================================================
+
+  async function handleDeleteUser(
+    targetUser:
+      AdminUserRow
+  ) {
+
+    if (
+      !canManageAdminLevels
+      ||
+      changingUserId !== null
+      ||
+      targetUser.user_id === currentUserId
+    ) {
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        `Удалить пользователя ${targetUser.first_name} ${targetUser.last_name} полностью? Будут удалены имя, фамилия, email, пароль, фото и доступ к WorkSpace. Действие необратимо.`
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setChangingUserId(
+      targetUser.user_id
+    );
+
+    clearStatus();
+
+    try {
+      const result =
+        await deleteAdminUser(
+          targetUser.user_id
+        );
+
+      if (!result.ok) {
+        setStatus("error");
+        setStatusMessage(
+          result.error
+        );
+        return;
+      }
+
+      setUsers(
+        current =>
+          current.filter(
+            user =>
+              user.user_id !==
+              targetUser.user_id
+          )
+      );
+
+      setStatus("success");
+      setStatusMessage(
+        result.warning
+          ? `Пользователь ${targetUser.first_name} ${targetUser.last_name} удалён. ${result.warning}`
+          : `Пользователь ${targetUser.first_name} ${targetUser.last_name} удалён полностью`
+      );
+
+      router.refresh();
+    } catch (error) {
+      console.error(
+        "Ошибка удаления пользователя:",
+        error
+      );
+      setStatus("error");
+      setStatusMessage(
+        "Не удалось удалить пользователя"
+      );
+    } finally {
+      setChangingUserId(null);
+    }
+  }
+
+
+  // ==========================================================
   // RENDER
   // ==========================================================
 
@@ -1862,6 +1968,39 @@ export default function AdminUsersPanel() {
                                         )
                                     }
 
+
+
+                                    {
+                                      canManageAdminLevels
+                                      &&
+                                      user.user_id !== currentUserId
+                                      &&
+                                      (
+
+                                        <button
+                                          type="button"
+                                          className=
+                                            "admin-delete-user-button"
+                                          disabled={
+                                            changingUserId !== null
+                                          }
+                                          onClick={
+                                            () =>
+                                              void handleDeleteUser(
+                                                user
+                                              )
+                                          }
+                                          aria-label={
+                                            `Удалить пользователя ${user.first_name} ${user.last_name}`
+                                          }
+                                          title=
+                                            "Удалить пользователя"
+                                        >
+                                          <TrashIcon />
+                                        </button>
+
+                                      )
+                                    }
                                   </div>
 
                                 </td>

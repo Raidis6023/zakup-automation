@@ -825,16 +825,7 @@ export default async function Home() {
             className=
               "zakup-v2-title"
           >
-
-            <div
-              className=
-                "small-label"
-            >
-              СИСТЕМА ЗАКУПА / РАСЧЁТЫ ПОТРЕБНОСТИ
-            </div>
-
-
-            <h1
+<h1
               className=
                 "title"
             >

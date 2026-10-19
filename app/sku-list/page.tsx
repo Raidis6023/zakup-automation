@@ -818,14 +818,7 @@ export default async function SkuListPage() {
             "header sku-list-header"
         >
           <div>
-            <div
-              className=
-                "sku-list-eyebrow"
-            >
-              КАТАЛОГ / ОБЩИЙ СПИСОК
-            </div>
-
-            <h1>
+<h1>
               Список артикулов
             </h1>
 

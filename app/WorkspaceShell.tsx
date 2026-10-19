@@ -20,6 +20,10 @@ import type {
 import HomeHeaderActions
   from "./HomeHeaderActions";
 
+import {
+  HomeTasksIcon,
+} from "./HomeHeaderIcons";
+
 import HomeRightPanel
   from "./HomeRightPanel";
 
@@ -128,6 +132,26 @@ function SidebarToggleIcon() {
 }
 
 
+function HistoryLogIcon() {
+
+  return (
+
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+
+      <path d="M4 8V4H8" />
+      <path d="M4.8 5.1A8 8 0 1 1 4.6 16" />
+      <path d="M12 8V12L15 14" />
+
+    </svg>
+
+  );
+
+}
+
+
 // ============================================================
 // ТИПЫ
 // ============================================================
@@ -141,6 +165,9 @@ type WorkspaceShellProps = {
 type WorkspaceNavKey =
   | "admin-home"
   | "admin-users"
+  | "admin-tasks"
+  | "admin-logs"
+  | "tasks"
   | "sku-list"
   | "procurement"
   | "ved"
@@ -385,6 +412,42 @@ export default function WorkspaceShell({
           ||
           pathname.startsWith(
             "/admin/users/"
+          )
+        );
+
+
+      case "admin-tasks":
+
+        return (
+          pathname ===
+            "/admin/tasks"
+          ||
+          pathname.startsWith(
+            "/admin/tasks/"
+          )
+        );
+
+
+      case "admin-logs":
+
+        return (
+          pathname ===
+            "/admin/logs"
+          ||
+          pathname.startsWith(
+            "/admin/logs/"
+          )
+        );
+
+
+      case "tasks":
+
+        return (
+          pathname ===
+            "/tasks"
+          ||
+          pathname.startsWith(
+            "/tasks/"
           )
         );
 
@@ -1091,6 +1154,101 @@ export default function WorkspaceShell({
 
               </nav>
 
+            )
+        }
+
+
+        {
+          adminMode
+            ? (
+              <nav
+                className="home-workspaces home-workspaces-secondary"
+                aria-label="Дополнительные разделы администрирования"
+              >
+                <Link
+                  href="/admin/tasks"
+                  onClick={
+                    event =>
+                      handleNavClick(
+                        event,
+                        "admin-tasks"
+                      )
+                  }
+                  className={navClass("admin-tasks")}
+                  aria-current={
+                    isNavActive("admin-tasks")
+                      ? "page"
+                      : undefined
+                  }
+                  aria-label="Задачи"
+                  title="Задачи"
+                >
+                  <span className="home-workspace-icon">
+                    <HomeTasksIcon />
+                  </span>
+                  <span className="home-workspace-label">
+                    Задачи
+                  </span>
+                </Link>
+
+                <Link
+                  href="/admin/logs"
+                  onClick={
+                    event =>
+                      handleNavClick(
+                        event,
+                        "admin-logs"
+                      )
+                  }
+                  className={navClass("admin-logs")}
+                  aria-current={
+                    isNavActive("admin-logs")
+                      ? "page"
+                      : undefined
+                  }
+                  aria-label="История логов"
+                  title="История логов"
+                >
+                  <span className="home-workspace-icon">
+                    <HistoryLogIcon />
+                  </span>
+                  <span className="home-workspace-label">
+                    История логов
+                  </span>
+                </Link>
+              </nav>
+            )
+            : (
+              <nav
+                className="home-workspaces home-workspaces-secondary"
+                aria-label="Дополнительные рабочие разделы"
+              >
+                <Link
+                  href="/tasks"
+                  onClick={
+                    event =>
+                      handleNavClick(
+                        event,
+                        "tasks"
+                      )
+                  }
+                  className={navClass("tasks")}
+                  aria-current={
+                    isNavActive("tasks")
+                      ? "page"
+                      : undefined
+                  }
+                  aria-label="Задачи"
+                  title="Задачи"
+                >
+                  <span className="home-workspace-icon">
+                    <HomeTasksIcon />
+                  </span>
+                  <span className="home-workspace-label">
+                    Задачи
+                  </span>
+                </Link>
+              </nav>
             )
         }
 

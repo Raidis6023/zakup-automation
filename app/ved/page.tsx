@@ -1111,15 +1111,7 @@ export default async function VedPage() {
             <div
               className="ved-title-wrap"
             >
-
-              <div
-                className="small-label"
-              >
-                РАБОЧЕЕ ПРОСТРАНСТВО
-              </div>
-
-
-              <h1
+<h1
                 className="title"
               >
                 ВЭД
@@ -1251,15 +1243,7 @@ export default async function VedPage() {
           <div
             className="ved-title-wrap"
           >
-
-            <div
-              className="small-label"
-            >
-              РАБОЧЕЕ ПРОСТРАНСТВО
-            </div>
-
-
-            <h1
+<h1
               className="title"
             >
               ВЭД
