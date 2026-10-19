@@ -4,7 +4,7 @@ import LoginForm from "./LoginForm";
 import LoginPanda from "./LoginPanda";
 import AccessRequestForm from "./AccessRequestForm";
 
-export default function LoginExperience({ children }: { children: ReactNode }) {
+export default function LoginExperience({ children, blocked = false }: { children: ReactNode; blocked?: boolean }) {
   const [screen, setScreen] = useState<"login" | "access">("login");
   const [initialEmail, setInitialEmail] = useState("");
   const [accessKey, setAccessKey] = useState(0);
@@ -36,7 +36,7 @@ export default function LoginExperience({ children }: { children: ReactNode }) {
           <AccessRequestForm key={accessKey} initialEmail={initialEmail} onBack={backToLogin} />
         </section>
       )}
-      <LoginPanda key={screen + (screen === "access" ? accessKey : "")} mode={screen} />
+      <LoginPanda key={screen + (screen === "access" ? accessKey : "")} mode={screen === "access" ? "access" : blocked ? "blocked" : "login"} />
     </div>
   );
 }

@@ -82,7 +82,7 @@ export default async function LoginPage({
 
   return (
     <main className="login-page">
-      <LoginExperience>
+      <LoginExperience blocked={isBlocked}>
         {
           isBlocked
           &&
