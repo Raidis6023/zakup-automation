@@ -1157,3 +1157,142 @@
   }
 
 }
+
+
+/* ============================================================
+   TASKS POPUP
+   ============================================================ */
+
+.taskPopupList {
+  max-height:
+    360px;
+
+  overflow-y:
+    auto;
+}
+
+
+.taskPopupItem {
+  display:
+    grid;
+
+  grid-template-columns:
+    9px
+    minmax(
+      0,
+      1fr
+    );
+
+  gap:
+    10px;
+
+  align-items:
+    start;
+
+  padding:
+    14px
+    18px;
+
+  border-bottom:
+    1px solid
+    var(--border-soft);
+}
+
+
+.taskPopupItem:last-child {
+  border-bottom:
+    none;
+}
+
+
+.taskUrgencyDot {
+  width:
+    8px;
+
+  height:
+    8px;
+
+  margin-top:
+    5px;
+
+  border-radius:
+    50%;
+}
+
+
+.taskUrgencyRed {
+  background:
+    #ef5d64;
+}
+
+
+.taskUrgencyYellow {
+  background:
+    #e9ad37;
+}
+
+
+.taskUrgencyGreen {
+  background:
+    #42aa73;
+}
+
+
+.taskPopupCopy {
+  min-width:
+    0;
+}
+
+
+.taskPopupCopy strong {
+  display:
+    block;
+
+  overflow:
+    hidden;
+
+  color:
+    var(--text);
+
+  font-size:
+    13px;
+
+  font-weight:
+    700;
+
+  line-height:
+    1.4;
+
+  text-overflow:
+    ellipsis;
+
+  white-space:
+    nowrap;
+}
+
+
+.taskPopupCopy span {
+  display:
+    block;
+
+  margin-top:
+    5px;
+
+  overflow:
+    hidden;
+
+  color:
+    var(--text-muted);
+
+  font-size:
+    12px;
+
+  line-height:
+    1.45;
+
+  text-overflow:
+    ellipsis;
+
+  white-space:
+    nowrap;
+}

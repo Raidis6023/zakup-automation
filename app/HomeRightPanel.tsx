@@ -19,6 +19,16 @@ import {
   HomeTasksIcon,
 } from "./HomeHeaderIcons";
 
+import {
+  buildCurrentUserTasks,
+  buildPersonalNotes,
+  isManagerTaskProfile,
+  PRIVILEGED_TASKS,
+  type PersonalNote,
+  type TaskItem,
+  type TaskRole,
+} from "./HomeTasksData";
+
 import "./HomeRightPanel.css";
 
 
@@ -41,56 +51,6 @@ type CurrentUserProfileRow = {
   admin_role_name:
     string | null;
 };
-
-
-type TaskRole =
-  | "category_manager"
-  | "ved"
-  | "procurement"
-  | "analyst"
-  | "marketing";
-
-
-type TaskStatus =
-  | "red"
-  | "yellow"
-  | "green";
-
-
-type TaskItem = {
-  id:
-    string;
-
-  title:
-    string;
-
-  creator:
-    string;
-
-  assignee:
-    string;
-
-  role:
-    TaskRole;
-
-  status:
-    TaskStatus;
-};
-
-
-type PersonalNote = {
-  id:
-    string;
-
-  title:
-    string;
-};
-
-
-type TabId =
-  | "all"
-  | "notes"
-  | TaskRole;
 
 
 const STORAGE_KEY =
@@ -171,81 +131,6 @@ const BASIC_TABS: Array<{
 ];
 
 
-const PRIVILEGED_TASKS:
-TaskItem[] = [
-  {
-    id:
-      "task-ved-1",
-    title:
-      "Проверить расчёт по новому товару",
-    creator:
-      "Анна Волкова",
-    assignee:
-      "Мария Соколова",
-    role:
-      "ved",
-    status:
-      "red",
-  },
-  {
-    id:
-      "task-procurement-1",
-    title:
-      "Подтвердить заказ поставщику",
-    creator:
-      "Илья Петров",
-    assignee:
-      "Алексей Орлов",
-    role:
-      "procurement",
-    status:
-      "yellow",
-  },
-  {
-    id:
-      "task-analyst-1",
-    title:
-      "Согласовать цену на товар",
-    creator:
-      "Елена Смирнова",
-    assignee:
-      "Олег Крылов",
-    role:
-      "analyst",
-    status:
-      "yellow",
-  },
-  {
-    id:
-      "task-category-1",
-    title:
-      "Проверить карточки новой категории",
-    creator:
-      "Алексей Орлов",
-    assignee:
-      "Мария Соколова",
-    role:
-      "category_manager",
-    status:
-      "green",
-  },
-  {
-    id:
-      "task-marketing-1",
-    title:
-      "Подготовить материалы для акции",
-    creator:
-      "Мария Соколова",
-    assignee:
-      "Елена Смирнова",
-    role:
-      "marketing",
-    status:
-      "green",
-  },
-];
-
-
 function ToggleIcon() {
 
   return (
@@ -262,141 +147,6 @@ function ToggleIcon() {
     </svg>
 
   );
-
-}
-
-
-function getFullName(
-  profile:
-    CurrentUserProfileRow | null
-) {
-
-  if (
-    !profile
-  ) {
-
-    return "Текущий сотрудник";
-
-  }
-
-
-  const value =
-    [
-      profile.first_name,
-      profile.last_name,
-    ]
-      .filter(
-        Boolean
-      )
-      .join(
-        " "
-      )
-      .trim();
-
-
-  return value
-    ||
-    "Текущий сотрудник";
-
-}
-
-
-function isManager(
-  profile:
-    CurrentUserProfileRow | null
-) {
-
-  const role =
-    profile
-      ?.role_name
-      ?.trim()
-      .toLowerCase()
-    ||
-    "";
-
-
-  return (
-    role ===
-      "руководитель"
-    ||
-    role.startsWith(
-      "руководитель "
-    )
-  );
-
-}
-
-
-function getTaskRole(
-  profile:
-    CurrentUserProfileRow | null
-):
-TaskRole {
-
-  const role =
-    profile
-      ?.role_name
-      ?.trim()
-      .toLowerCase()
-    ||
-    "";
-
-
-  if (
-    role.startsWith(
-      "категорийный менеджер"
-    )
-  ) {
-
-    return "category_manager";
-
-  }
-
-
-  if (
-    role ===
-      "вэд"
-  ) {
-
-    return "ved";
-
-  }
-
-
-  if (
-    role ===
-      "закуп"
-  ) {
-
-    return "procurement";
-
-  }
-
-
-  if (
-    role ===
-      "аналитик"
-    ||
-    role ===
-      "аналитика"
-  ) {
-
-    return "analyst";
-
-  }
-
-
-  if (
-    role ===
-      "маркетинг"
-  ) {
-
-    return "marketing";
-
-  }
-
-
-  return "analyst";
 
 }
 
@@ -654,7 +404,7 @@ export default function HomeRightPanel() {
   const privileged =
     adminHomeMode
     ||
-    isManager(
+    isManagerTaskProfile(
       profile
     );
 
@@ -692,103 +442,29 @@ export default function HomeRightPanel() {
   );
 
 
-  const currentUserName =
-    getFullName(
-      profile
-    );
-
-
-  const currentTaskRole =
-    getTaskRole(
-      profile
-    );
-
-
-  const departmentTasks =
+  const currentUserTasks =
     useMemo<TaskItem[]>(
-      () => [
-        {
-          id:
-            "department-task-1",
-          title:
-            "Проверить расчёт по новому товару",
-          creator:
-            "Анна Волкова",
-          assignee:
-            currentUserName,
-          role:
-            currentTaskRole,
-          status:
-            "red",
-        },
-        {
-          id:
-            "department-task-2",
-          title:
-            "Подтвердить данные перед отправкой",
-          creator:
-            "Илья Петров",
-          assignee:
-            currentUserName,
-          role:
-            currentTaskRole,
-          status:
-            "yellow",
-        },
-        {
-          id:
-            "department-task-3",
-          title:
-            "Проверить изменения по товару",
-          creator:
-            "Мария Соколова",
-          assignee:
-            currentUserName,
-          role:
-            currentTaskRole,
-          status:
-            "green",
-        },
-      ],
+      () =>
+        buildCurrentUserTasks(
+          profile
+        ),
       [
-        currentTaskRole,
-        currentUserName,
+        profile,
       ]
     );
 
 
   const personalNotes =
     useMemo<PersonalNote[]>(
-      () => {
-
-        const ownerKey =
+      () =>
+        buildPersonalNotes(
           profile
-            ?.user_id
-          ||
-          "current-user";
-
-
-        return [
-          {
-            id:
-              `${ownerKey}-note-1`,
-            title:
-              "Не забыть проверить новые позиции",
-          },
-          {
-            id:
-              `${ownerKey}-note-2`,
-            title:
-              "Вернуться к сверке отчёта",
-          },
-        ];
-
-      },
+        ),
       [
-        profile
-          ?.user_id,
+        profile,
       ]
     );
+
 
 
   const visibleTasks =
@@ -796,7 +472,7 @@ export default function HomeRightPanel() {
 
       ? PRIVILEGED_TASKS
 
-      : departmentTasks;
+      : currentUserTasks;
 
 
   const filteredTasks =

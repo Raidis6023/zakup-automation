@@ -4,7 +4,6 @@ import Link
   from "next/link";
 
 import {
-  usePathname,
   useRouter,
 } from "next/navigation";
 
@@ -39,6 +38,10 @@ import {
   HomeBellIcon,
   HomeTasksIcon,
 } from "./HomeHeaderIcons";
+
+import {
+  buildCurrentUserTasks,
+} from "./HomeTasksData";
 
 import styles
   from "./HomeHeaderActions.module.css";
@@ -683,19 +686,6 @@ export default function HomeHeaderActions() {
     useRouter();
 
 
-  const pathname =
-    usePathname()
-    ??
-    "/";
-
-
-  const showTasksButton =
-    pathname ===
-      "/"
-    ||
-    pathname ===
-      "/admin";
-
 
   const [
     openPanel,
@@ -703,6 +693,8 @@ export default function HomeHeaderActions() {
   ] =
     useState<
       "calendar"
+      |
+      "tasks"
       |
       "notifications"
       |
@@ -713,14 +705,6 @@ export default function HomeHeaderActions() {
       null
     );
 
-
-  const [
-    tasksPanelOpen,
-    setTasksPanelOpen,
-  ] =
-    useState(
-      false
-    );
 
 
   const [
@@ -908,57 +892,6 @@ export default function HomeHeaderActions() {
     >(
       null
     );
-
-
-  // ==========================================================
-  // RIGHT TASKS PANEL STATE
-  // ==========================================================
-
-  useEffect(
-    () => {
-
-      function handleState(
-        event:
-          Event
-      ) {
-
-        const customEvent =
-          event as
-            CustomEvent<{
-              open:
-                boolean;
-            }>;
-
-
-        setTasksPanelOpen(
-          Boolean(
-            customEvent
-              .detail
-              ?.open
-          )
-        );
-
-      }
-
-
-      window.addEventListener(
-        "workspace-right-panel-state",
-        handleState
-      );
-
-
-      return () => {
-
-        window.removeEventListener(
-          "workspace-right-panel-state",
-          handleState
-        );
-
-      };
-
-    },
-    []
-  );
 
 
   // ==========================================================
@@ -1757,20 +1690,19 @@ export default function HomeHeaderActions() {
 
 
   // ==========================================================
-  // TASKS PANEL
+  // TASKS POPUP
   // ==========================================================
 
-  function toggleTasksPanel() {
+  function toggleTasks() {
 
     setOpenPanel(
-      null
-    );
+      current =>
+        current ===
+          "tasks"
 
+          ? null
 
-    window.dispatchEvent(
-      new CustomEvent(
-        "workspace-toggle-right-panel"
-      )
+          : "tasks"
     );
 
   }
@@ -2313,6 +2245,18 @@ export default function HomeHeaderActions() {
 
   const unreadCount =
     notifications.length;
+
+
+  const currentUserTasks =
+    useMemo(
+      () =>
+        buildCurrentUserTasks(
+          currentProfile
+        ),
+      [
+        currentProfile,
+      ]
+    );
 
 
   const canApprove =
@@ -3198,49 +3142,185 @@ export default function HomeHeaderActions() {
             TASKS
         ==================================================== */}
 
-        {
-          showTasksButton
+        <div
+          className=
+            "home-action-wrapper"
+        >
 
-            ? (
+          <button
+            type="button"
+
+            className={
+              openPanel ===
+                "tasks"
+
+                ? "home-icon-button active"
+
+                : "home-icon-button"
+            }
+
+            aria-label=
+              "Задачи"
+
+            aria-expanded={
+              openPanel ===
+                "tasks"
+            }
+
+            onClick={
+              toggleTasks
+            }
+          >
+
+            <HomeTasksIcon />
+
+          </button>
+
+
+          {
+            openPanel ===
+              "tasks"
+            &&
+            (
 
               <div
-                className=
-                  "home-action-wrapper"
+                className="
+                  home-popup
+                  home-notifications-popup
+                "
               >
 
-                <button
-                  type="button"
-
-                  className={
-                    tasksPanelOpen
-
-                      ? "home-icon-button active"
-
-                      : "home-icon-button"
-                  }
-
-                  aria-label=
-                    "Задачи"
-
-                  aria-expanded={
-                    tasksPanelOpen
-                  }
-
-                  onClick={
-                    toggleTasksPanel
-                  }
+                <div
+                  className=
+                    "home-popup-header"
                 >
+                  <strong>
+                    Мои задачи
+                  </strong>
+                </div>
 
-                  <HomeTasksIcon />
 
-                </button>
+                {
+                  currentUserTasks.length ===
+                    0
+
+                    ? (
+
+                      <div
+                        className="
+                          home-notifications-empty
+                        "
+                      >
+
+                        <div
+                          className="
+                            home-notifications-empty-icon
+                          "
+                        >
+                          <HomeTasksIcon />
+                        </div>
+
+
+                        <strong>
+                          Задач нет
+                        </strong>
+
+
+                        <span>
+                          Здесь будут задачи,
+                          назначенные именно вам.
+                        </span>
+
+                      </div>
+
+                    )
+
+                    : (
+
+                      <div
+                        className={
+                          styles.taskPopupList
+                        }
+                      >
+
+                        {
+                          currentUserTasks.map(
+                            task => (
+
+                              <div
+                                key={
+                                  task.id
+                                }
+
+                                className=
+                                  {
+                                    styles.taskPopupItem
+                                  }
+                              >
+
+                                <span
+                                  className={
+                                    `${styles.taskUrgencyDot} ${
+                                      task.status ===
+                                        "red"
+
+                                        ? styles.taskUrgencyRed
+
+                                        : task.status ===
+                                            "yellow"
+
+                                          ? styles.taskUrgencyYellow
+
+                                          : styles.taskUrgencyGreen
+                                    }`
+                                  }
+                                />
+
+
+                                <div
+                                  className={
+                                    styles.taskPopupCopy
+                                  }
+                                >
+
+                                  <strong>
+                                    {
+                                      task.title
+                                    }
+                                  </strong>
+
+
+                                  <span>
+                                    {
+                                      task.creator
+                                    }
+
+                                    {" → "}
+
+                                    {
+                                      task.assignee
+                                    }
+                                  </span>
+
+                                </div>
+
+                              </div>
+
+                            )
+                          )
+                        }
+
+                      </div>
+
+                    )
+                }
 
               </div>
 
             )
+          }
 
-            : null
-        }
+        </div>
 
 
         {/* ====================================================
