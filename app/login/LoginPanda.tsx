@@ -32,6 +32,7 @@ const STARTS = [
 export default function LoginPanda() {
   const [greeting, setGreeting] = useState<string | null>(null);
   const [font, setFont] = useState<FontChoice>("nunito");
+  const [imageFallback, setImageFallback] = useState(false);
 
   useEffect(() => {
     setGreeting(GREETINGS[Math.floor(Math.random() * GREETINGS.length)]);
@@ -75,7 +76,8 @@ export default function LoginPanda() {
       </div>
       <img
         className={styles.panda}
-        src="/panda/login-panda-approved.avif"
+        src={imageFallback ? "/panda/login-panda.webp" : "/panda/login-panda-approved.webp"}
+        onError={() => setImageFallback(true)}
         alt="Красная панда машет лапой и держит папку «Сотрудники»"
         width={820}
         height={1108}

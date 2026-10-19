@@ -1,0 +1,26 @@
+import sharp from "sharp";
+import { mkdir } from "node:fs/promises";
+import { dirname } from "node:path";
+
+const source = "public/panda/login-panda-approved.avif";
+const destination = "public/panda/login-panda-approved.webp";
+
+const metadata = await sharp(source).metadata();
+if (!metadata.hasAlpha || metadata.width < 800 || metadata.height < 1000) {
+  throw new Error("Approved panda image has invalid dimensions or transparency.");
+}
+
+await mkdir(dirname(destination), { recursive: true });
+const output = await sharp(source)
+  .webp({ quality: 91, alphaQuality: 100, effort: 6 })
+  .toFile(destination);
+
+if (!output.width || !output.height || output.size < 10000) {
+  throw new Error("Failed to prepare approved panda WebP.");
+}
+console.log("Approved panda asset prepared:", {
+  source, destination,
+  width: output.width,
+  height: output.height,
+  size: output.size,
+});
