@@ -84,9 +84,6 @@ type PersonalNote = {
 
   title:
     string;
-
-  status:
-    TaskStatus;
 };
 
 
@@ -777,16 +774,12 @@ export default function HomeRightPanel() {
               `${ownerKey}-note-1`,
             title:
               "Не забыть проверить новые позиции",
-            status:
-              "yellow",
           },
           {
             id:
               `${ownerKey}-note-2`,
             title:
               "Вернуться к сверке отчёта",
-            status:
-              "green",
           },
         ];
 
@@ -982,15 +975,8 @@ export default function HomeRightPanel() {
                       }
 
                       className=
-                        "home-right-panel-task"
+                        "home-right-panel-task home-right-panel-task--note"
                     >
-
-                      <span
-                        className={
-                          `home-right-panel-status home-right-panel-status--${note.status}`
-                        }
-                      />
-
 
                       <div>
                         <strong>

@@ -77,7 +77,7 @@
 
   transition:
     transform
-      0.18s
+      0.70s
       ease,
     background-color
       0.14s
@@ -337,14 +337,13 @@ strong {
     38px;
 
   border:
-    1px solid
-    var(--ws-border-soft);
+    none;
 
   border-radius:
-    9px;
+    0;
 
   background:
-    var(--ws-blue-soft);
+    transparent;
 
   color:
     var(--ws-icon);
@@ -522,6 +521,18 @@ svg {
 .home-right-panel-task:last-child {
   border-bottom:
     none;
+}
+
+
+.home-right-panel-task--note {
+  grid-template-columns:
+    minmax(
+      0,
+      1fr
+    );
+
+  gap:
+    0;
 }
 
 
