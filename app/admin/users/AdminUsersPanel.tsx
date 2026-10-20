@@ -15,11 +15,6 @@ import {
   createClient,
 } from "../../../lib/supabase/client";
 
-import {
-  deleteAdminUser,
-} from "./admin-user-actions";
-
-
 // ============================================================
 // TYPES
 // ============================================================
@@ -1312,15 +1307,45 @@ export default function AdminUsersPanel() {
     clearStatus();
 
     try {
-      const result =
-        await deleteAdminUser(
-          targetUser.user_id
+      const response =
+        await fetch(
+          "/api/admin/users/delete",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify(
+                {
+                  targetUserId:
+                    targetUser.user_id,
+                }
+              ),
+          }
         );
 
-      if (!result.ok) {
+      const result =
+        await response.json() as
+          {
+            ok: boolean;
+            error?: string;
+            warning?: string;
+          };
+
+      if (
+        !response.ok
+        ||
+        !result.ok
+      ) {
         setStatus("error");
         setStatusMessage(
           result.error
+          ??
+          "Не удалось удалить пользователя"
         );
         return;
       }
