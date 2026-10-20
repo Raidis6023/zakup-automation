@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 
 export type FinancialRow = {
   offer_id:string;master_code:string|null;manager:string;name:string|null;
@@ -16,6 +16,7 @@ export type FinancialRow = {
 type Data = {
   from:string;to:string;missing_days:string[];unallocated_amount:number;
   stock_as_of?:{ozon_at:string|null;main_at:string|null;ox_at:string|null}|null;
+  unallocated_details?:Array<{name:string;amount:number}>;
   ads_covered?:boolean;ads_covered_days?:number;ads_performance_total?:number|null;
   advertising?:{finance_total:number;finance_unallocated:number};
 };
@@ -23,7 +24,7 @@ type SortKey =
   "master_code"|"manager"|"offer_id"|"estimated_result"|"revenue"|"ad"|"drr"|
   "storage"|"orders"|"cancelled"|"buyout"|"roas"|"transit"|"transit_revenue"|
   "transit_drr"|"ozon_stock"|"crossdock"|"main"|"ox"|"stock"|"margin"|
-  "price"|"mayak"|"china"|"abc";
+  "price"|"mayak"|"china"|"abc"|"discontinued";
 const money=(v:number|null|undefined)=>v==null?"—":v.toLocaleString("ru-RU",{style:"currency",currency:"RUB"});
 const qty=(v:number|null|undefined)=>v==null?"—":v.toLocaleString("ru-RU");
 const pct=(v:number|null|undefined)=>v==null||!Number.isFinite(v)?"—":
@@ -74,6 +75,7 @@ function valueFor(r:FinancialRow,key:SortKey):number|string|null{
     case "price":return r.buyout_units&&r.revenue!=null?r.revenue/r.buyout_units:null;
     case "mayak":return r.mayak_expense==null?null:-Math.abs(r.mayak_expense);
     case "china":return r.in_china;case "abc":return null;
+    case "discontinued":return r.discontinued?1:0;
   }
 }
 export default function FinancierDetailTable({
@@ -119,7 +121,12 @@ export default function FinancierDetailTable({
   const sellerAdGlobal=includeUnallocated && data?.advertising
     ?Number(data.advertising.finance_total):null;
   const adAmount=sellerAdGlobal!=null?sellerAdGlobal:marketingBySku;
-  const storageAmount=numericSum(rows,storage);
+  const directStorage=numericSum(rows,storage);
+  const unallocatedStorage=includeUnallocated?
+    (data?.unallocated_details??[]).filter(x=>/хранени|размещени/i.test(x.name))
+      .reduce((sum,x)=>sum+Number(x.amount),0):0;
+  const storageAmount=directStorage==null && unallocatedStorage===0?null:
+    round((directStorage??0)+unallocatedStorage);
   const positionsPositive=rows.filter(r=>r.estimated_result!=null&&r.estimated_result>0).length;
   const positionsNegative=rows.filter(r=>r.estimated_result!=null&&r.estimated_result<0).length;
   const profitability=operatingProfit!=null&&sumRevenue!=null&&sumRevenue>0
@@ -146,7 +153,8 @@ export default function FinancierDetailTable({
     ["crossdock","В пути на склады"],["main","Аведэкс основной"],
     ["ox","Аведэкс ОХ"],["stock","Итого остатки"],
     ["margin","Прибыль/ед."],["price","Цена реализации"],
-    ["mayak","ТК Маяк, ₽"],["china","В пути из Китая"],["abc","ABC"]
+    ["mayak","ТК Маяк, ₽"],["china","В пути из Китая"],["abc","ABC"],
+    ["discontinued","Выведено из продажи"]
   ];
   function toggleSort(key:SortKey){
     setSort(s=>({key,dir:s.key===key?(s.dir===1?-1:1):-1}));
@@ -182,14 +190,14 @@ export default function FinancierDetailTable({
           <th key={key}><button type="button" className="ozf-sort-control" onClick={()=>toggleSort(key)}
             aria-label={"Сортировать "+label}>{label}{sort.key===key?(sort.dir===-1?" ↓":" ↑"):<span className="ozf-sort-hint"> ↕</span>}</button>
           </th>)}
-          <th className="ozf-status-header">Выведено из продажи</th></tr></thead>
+        </tr></thead>
         <tbody>{display.map(r=>{
           const fig=rowFigures(r),stockValues=[r.ozon_stock,r.main_stock,r.ox_stock];
           const stockTotal=stockValues.every(v=>v!=null)?stockValues.reduce<number>((s,v)=>s+Number(v),0):null;
           const margin=r.buyout_units&&r.estimated_result!=null?r.estimated_result/r.buyout_units:null;
           const price=r.buyout_units&&r.revenue!=null?r.revenue/r.buyout_units:null;
           const roasClass=fig.roas==null?"":fig.roas<1?"ozf-bad":"ozf-good";
-          return <><tr key={r.offer_id} className={r.discontinued?"ozf-discontinued":""}>
+          return <Fragment key={r.offer_id}><tr className={r.discontinued?"ozf-discontinued":""}>
             <td>{r.master_code??"—"}</td><td>{r.manager}</td>
             <td><button type="button" className="ozf-article-btn" aria-expanded={expanded===r.offer_id}
               onClick={()=>{setExpanded(expanded===r.offer_id?null:r.offer_id);setSelectedMarketplace("ozon");}}>
@@ -246,7 +254,7 @@ export default function FinancierDetailTable({
               </div>
             </td>
           </tr>}
-          </>;
+          </Fragment>;
         })}
         {!display.length&&<tr><td colSpan={26} className="ozf-empty">Нет артикулов для выбранного фильтра.</td></tr>}
         </tbody>
