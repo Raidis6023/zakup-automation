@@ -37,7 +37,14 @@ type ReportLine = {
 };
 type Cost = { master_code: string; valid_from: string; unit_cost_rub: number };
 type Expense = { offer_id: string; master_code: string; ordered_units: number; covered_cogs_units: number; covered_mayak_units: number; cogs_total: number; mayak_total: number };
-type Product = { offer_id: string | null; master_code: string | null; name: string | null };
+type Product = { id: string; offer_id: string | null; master_code: string | null; name: string | null };
+type OrderTotals = { offer_id:string; master_code:string|null; orders:number;cancelled:number;net_orders:number;covered_cogs_units:number;calculated_cogs:number;mayak_total:number;covered_mayak_units:number };
+type RevenueRow = { sku:string;revenue:number };
+type TransitRow = { sku:string;quantity:number;open_order_value:number|null;as_of:string };
+type StockRow = {product_id:string;ozon_stock:number|null;main_stock:number|null;ox_stock:number|null;ozon_at:string|null;main_at:string|null;ox_at:string|null};
+type VedOrder = { id:string;workflow_status:string|null;status:string|null };
+type VedItem = {product_id:string|null;ved_order_id:string;status:string;order_quantity:number|null;quantity:number|null};
+type StatusRow = {master_code:string;status:string};
 type MapRow = { sku: string; offer_id: string | null; master_code: string | null };
 type Manager = { master_code: string; manager_name: string };
 type Realized = { offer_id: string | null; master_code: string | null; net_buyouts: number; covered_buyouts: number; cogs_total: string | number };
@@ -58,6 +65,13 @@ type Group = {
   mayak_covered_units: number | null;
   estimated_result: number | null;
   advertising_amount: number;
+  order_count: number | null;
+  cancelled_units: number | null;
+  revenue: number | null;
+  main_stock: number | null; ox_stock: number | null; ozon_stock: number | null;
+  in_china: number | null; in_crossdock: number | null; in_transit: number | null;
+  transit_revenue: number | null; transit_drr: number | null;
+  discontinued: boolean;
   details: Array<{ type_id: string; name: string; amount: number; count: number; is_advertising: boolean }>;
 };
 
@@ -229,26 +243,32 @@ async function syncOneDay(db: ReturnType<typeof createAdminClient>, day: string)
 }
 async function buildReport(db: ReturnType<typeof createAdminClient>, from: string, to: string) {
   const days = dateRange(from, to);
-  const [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, buyoutsRes, buyoutCoverageRes, salesRunsRes, typesRes, productsRes, jobsRes] =
+  const [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, transitRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes] =
     await Promise.all([
       db.from("ozon_finance_sync_days").select("day,record_count,synced_at").eq("account_key", ACCOUNT)
         .gte("day", from).lte("day", to),
-      db.rpc("ozon_finance_report", { p_from: from, p_to: to, p_account_key: ACCOUNT }),
+      db.rpc("ozon_finance_report_v2", { p_from: from, p_to: to, p_account_key: ACCOUNT }),
       db.from("ozon_finance_sku_map").select("sku,offer_id,master_code").eq("account_key", ACCOUNT),
       db.from("ozon_finance_costs").select("master_code,valid_from,unit_cost_rub").lte("valid_from", to).order("valid_from"),
       db.from("ozon_finance_mayak").select("master_code,valid_from,unit_cost_rub").lte("valid_from", to).order("valid_from"),
       db.from("ozon_finance_managers").select("master_code,manager_name"),
       db.rpc("ozon_finance_cost_breakdown", { p_from: from, p_to: to }),
-      db.rpc("ozon_finance_realized_cost", { p_from: from, p_to: to, p_account: ACCOUNT }),
-      db.from("ozon_finance_buyout_coverage").select("day,source").eq("account_key", ACCOUNT).gte("day",from).lte("day",to),
+      db.rpc("ozon_finance_order_totals", { p_from: from, p_to: to }),
+      db.rpc("ozon_finance_sales_revenue", {p_from:from,p_to:to,p_account:ACCOUNT}),
+      db.rpc("ozon_finance_transit_totals",{p_account:ACCOUNT}),
+      db.rpc("ozon_finance_stock_summary"),
+      db.from("ved_orders").select("id,workflow_status,status").limit(500),
+      db.from("ved_order_items").select("product_id,ved_order_id,status,order_quantity,quantity").limit(1500),
+      db.from("product_article_statuses").select("master_code,status").limit(1500),
       db.from("ozon_sales_sync_runs").select("date_from,date_to").eq("status", "success")
         .lte("date_from", from).gte("date_to", to).limit(1),
       db.from("ozon_finance_types").select("type_id,description,name"),
-      db.from("products").select("offer_id,master_code,name").limit(2000),
+      db.from("products").select("id,offer_id,master_code,name").limit(2000),
       db.from("ozon_finance_page_jobs").select("day,status,pages_completed,rows_saved,last_error,updated_at")
         .eq("account_key",ACCOUNT).gte("day",from).lte("day",to).order("day"),
+      db.rpc("ozon_finance_unallocated_breakdown",{p_from:from,p_to:to,p_account:ACCOUNT}),
     ]);
-  for (const item of [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, buyoutsRes, buyoutCoverageRes, salesRunsRes, typesRes, productsRes, jobsRes]) {
+  for (const item of [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, transitRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes]) {
     if (item.error) throw item.error;
   }
   const loaded = new Set((syncRes.data ?? []).map(r => r.day));
@@ -257,9 +277,23 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
   const productByOffer = new Map((productsRes.data as Product[] ?? []).filter(p => p.offer_id).map(p => [p.offer_id!, p]));
   const managers = new Map((managersRes.data as Manager[] ?? []).map(r => [r.master_code, r.manager_name]));
   const expenses = new Map((expenseRes.data as Expense[] ?? []).map(r => [r.offer_id, r]));
-  const buyoutsByOffer = new Map((buyoutsRes.data as Realized[] ?? []).filter(x=>x.offer_id).map(r => [r.offer_id!, r]));
-  const buyoutCoverage = new Set((buyoutCoverageRes.data as BuyoutCoverage[] ?? []).map(r => r.day));
-  const verifiedBuyoutsCovered = days.every(d=>buyoutCoverage.has(d));
+  const ordersByOffer = new Map((ordersRes.data as OrderTotals[] ?? []).map(r=>[r.offer_id,r]));
+  const revenueBySku = new Map((revenueRes.data as RevenueRow[] ?? []).map(r=>[r.sku,Number(r.revenue)]));
+  const transitBySku = new Map((transitRes.data as TransitRow[] ?? []).map(r=>[r.sku,r]));
+  const transitSnapshotReady = (transitRes.data as TransitRow[] ?? []).length>0;
+  const transitAsOf = (transitRes.data as TransitRow[] ?? [])[0]?.as_of??null;
+  const stocksByProduct = new Map((stocksRes.data as StockRow[] ?? []).map(r=>[r.product_id,r]));
+  const articleStatus = new Map((statusesRes.data as StatusRow[] ?? []).map(r=>[r.master_code,r.status]));
+  const vedOrderStatus = new Map((vedOrdersRes.data as VedOrder[] ?? []).map(r=>[r.id,r.workflow_status || r.status || "draft"]));
+  const vedByProduct = new Map<string,number>();
+  for(const v of vedItemsRes.data as VedItem[] ?? []){
+    const status=vedOrderStatus.get(v.ved_order_id);
+    if(!v.product_id || !status || !["in_transit","dispatched","shipping","on_the_way"].includes(status))continue;
+    if(["cancelled","received","rejected"].includes(v.status))continue;
+    vedByProduct.set(v.product_id,(vedByProduct.get(v.product_id)??0)+Number(v.order_quantity??v.quantity??0));
+  }
+  const productById = new Map((productsRes.data as Product[]??[]).map(p=>[p.id,p]));
+  const unknownChinaStatuses = ![...vedOrderStatus.values()].some(v=>["in_transit","dispatched","shipping","on_the_way"].includes(v));
   const mayakHistory = new Map<string, Cost[]>();
   for (const m of mayakRes.data as Cost[] ?? []) {
     const arr = mayakHistory.get(m.master_code) ?? [];
@@ -272,6 +306,20 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     arr.push(c); costHistory.set(c.master_code, arr);
   }
   const byOffer = new Map<string, Group>();
+  const revenueByOffer = new Map<string,number>();
+  const transitByOffer=new Map<string,{units:number;money:number|null}>();
+  for(const [sku,t] of transitBySku){
+    const offer=mapBySku.get(sku)?.offer_id;
+    if(!offer)continue;
+    const prev=transitByOffer.get(offer);
+    transitByOffer.set(offer,{units:(prev?.units??0)+Number(t.quantity),
+      money:prev?.money===null||t.open_order_value===null?null:
+        (prev?.money??0)+Number(t.open_order_value)});
+  }
+  for(const [sku,revenue] of revenueBySku){
+    const m=mapBySku.get(sku); if(!m?.offer_id)continue;
+    revenueByOffer.set(m.offer_id,(revenueByOffer.get(m.offer_id)??0)+revenue);
+  }
   let operationCount = 0;
   const accounting = emptyAccrualReconciliation();
   const unallocatedDetails = new Map<string, number>();
@@ -285,7 +333,14 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     const offer = m?.offer_id || (line.sku ? "SKU:" + line.sku : null);
     const master = m?.master_code || (offer ? productByOffer.get(offer)?.master_code : null) || null;
     const typeId = line.type_id || line.accrued_category || "unknown";
-    const name = types.get(typeId) || typeId;
+    const fallback:Record<string,string>={
+      "1":"Эквайринг","12":"Кросс-докинг","15":"Утилизация",
+      "25":"Товарная компенсация","29":"Доставка до места выдачи",
+      "32":"Логистика","41":"Оплата за клик",
+      "46":"Размещение на складах Ozon",
+      "77":"Приёмка поставки на склад Ozon"
+    };
+    const name = types.get(typeId) || fallback[typeId] || (line.type_id ? "Статья Ozon №"+typeId : line.accrued_category || "Прочие начисления");
     const advertising = classifyAdvertisingAccrual(line.type_id, name, line.accrued_category);
     if (advertising.isAdvertising) {
       accounting.advertisingTotalKopecks += amountCents;
@@ -306,7 +361,12 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
         manager: (master ? managers.get(master) : null) || "Не назначен",
         ozon_amount: 0, sold_units: null, buyout_units: null, data_gaps: [], unit_cost: null, cogs: null,
         mayak_unit: null, mayak_expense: null, mayak_covered_units: null,
-        estimated_result: null, advertising_amount: 0, details: [] };
+        estimated_result: null, advertising_amount: 0,
+        order_count:null,cancelled_units:null,revenue:null,
+        main_stock:null,ox_stock:null,ozon_stock:null,
+        in_china:null,in_crossdock:null,in_transit:null,
+        transit_revenue:null,transit_drr:null,discontinued:false,
+        details: [] };
       byOffer.set(offer, g);
     }
     accounting.directKopecks += amountCents;
@@ -332,50 +392,54 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     g.unit_cost = costH.length ? Number(costH.at(-1)!.unit_cost_rub) : null;
     g.mayak_unit = mayakH.length ? Number(mayakH.at(-1)!.unit_cost_rub) : null;
     const calc = expenses.get(g.offer_id);
-    g.sold_units = salesWindowCovered ? Number(calc?.ordered_units ?? 0) : null;
-    // Cost of goods is recognized ONLY on VERIFIED ACTUAL BUYOUTS, never orders.
-    const realized = buyoutsByOffer.get(g.offer_id);
-    if (verifiedBuyoutsCovered && realized) {
-      g.buyout_units = Number(realized.net_buyouts);
-      if (g.buyout_units === Number(realized.covered_buyouts)) {
-        g.cogs = round(Number(realized.cogs_total));
-      }
-    } else if (verifiedBuyoutsCovered && !realized) {
-      // A fully verified period with no buyouts is genuinely zero.
-      g.buyout_units = 0;
-      g.cogs = 0;
+    const units = ordersByOffer.get(g.offer_id);
+    g.order_count = salesWindowCovered ? Number(units?.orders ?? 0) : null;
+    g.cancelled_units = salesWindowCovered ? Number(units?.cancelled ?? 0) : null;
+    // User-defined proxy: ordered minus cancelled. The sales_quantity source
+    // already excludes cancelled FBO postings. Never subtract twice.
+    g.sold_units = salesWindowCovered ? Number(units?.net_orders ?? 0) : null;
+    g.buyout_units = g.sold_units;
+    if (salesWindowCovered && units && Number(units.net_orders)===Number(units.covered_cogs_units))
+      g.cogs=round(Number(units.calculated_cogs));
+    if (salesWindowCovered && !units) g.cogs=0;
+    if (salesWindowCovered && units && Number(units.net_orders)===Number(units.covered_mayak_units)){
+      g.mayak_expense=round(Number(units.mayak_total));
+      g.mayak_covered_units=Number(units.covered_mayak_units);
+      totalMayak+=g.mayak_expense;
     }
-    if (salesWindowCovered && calc && calc.ordered_units === calc.covered_mayak_units) {
-      g.mayak_expense = round(Number(calc.mayak_total));
-      g.mayak_covered_units = Number(calc.covered_mayak_units);
-      totalMayak += g.mayak_expense;
+    if(salesWindowCovered && !units){
+      g.mayak_expense=0;g.mayak_covered_units=0;
     }
-    if (salesWindowCovered && !calc) {
-      // No ordered units on this listing during a covered period.
-      // No orders does not imply no actual buyouts in this period.
-      g.mayak_expense = 0;
-      g.mayak_covered_units = 0;
-    }
-    if (!g.master_code) g.data_gaps.push("Нет master_code");
-    if (g.manager === "Не назначен") g.data_gaps.push("Не назначен КМ");
-    if (g.unit_cost === null) g.data_gaps.push("Нет себестоимости");
-    if (g.mayak_unit === null) g.data_gaps.push("Нет ТК Маяк");
-    if (!verifiedBuyoutsCovered) g.data_gaps.push("Не подтверждены выкупы за весь период");
-    if (g.cogs === null && verifiedBuyoutsCovered) g.data_gaps.push("Не вся себестоимость выкупов известна");
-    if (g.mayak_expense === null) g.data_gaps.push("Нет полного расчёта ТК Маяк");
-    if (
-      g.master_code !== null &&
-      g.unit_cost !== null &&
-      g.mayak_unit !== null &&
-      g.cogs !== null &&
-      g.mayak_expense !== null
-    ) {
-      // Performance API spend NEVER appears in this formula.
-      g.estimated_result = provisionalResult(g.ozon_amount, g.cogs, g.mayak_expense);
-    } else {
-      // Never show a financial result for incomplete reference data.
-      g.estimated_result = null;
-    }
+    g.revenue=round(revenueByOffer.get(g.offer_id)??0);
+    const product=productByOffer.get(g.offer_id);
+    const stock=product ? stocksByProduct.get(product.id) : null;
+    g.ozon_stock=stock?.ozon_stock==null?null:Number(stock.ozon_stock);
+    g.main_stock=stock?.main_stock==null?null:Number(stock.main_stock);
+    g.ox_stock=stock?.ox_stock==null?null:Number(stock.ox_stock);
+    g.in_china=product && !unknownChinaStatuses ? (vedByProduct.get(product.id)??0):null;
+    // Transit to buyers and cross-docking need real shipping statuses; current
+    // stock snapshots and replenishment CALCULATIONS do not prove in-transit units.
+    g.in_crossdock=null;
+    const open=transitByOffer.get(g.offer_id);
+    g.in_transit=transitSnapshotReady?(open?.units??0):null;
+    g.transit_revenue=transitSnapshotReady && g.revenue!==null &&
+      (open?.money??(open?null:0))!==null
+      ?round(g.revenue+Number(open?.money??0)):null;
+    const matchedAd=g.advertising_amount<0?-g.advertising_amount:0;
+    g.transit_drr=g.transit_revenue && g.transit_revenue>0 && g.advertising_amount<0
+      ?matchedAd/g.transit_revenue:null;
+    g.discontinued=!!(g.master_code && /выведен|выводится/i.test(articleStatus.get(g.master_code)||""));
+    if(!g.master_code)g.data_gaps.push("Нет master_code");
+    if(g.manager==="Не назначен")g.data_gaps.push("Не назначен КМ");
+    if(g.unit_cost===null)g.data_gaps.push("Нет цены закупа");
+    if(g.mayak_unit===null)g.data_gaps.push("Нет ТК Маяк");
+    if(!salesWindowCovered)g.data_gaps.push("Не подтверждена полнота заказов и отмен");
+    if(g.cogs===null && salesWindowCovered)g.data_gaps.push("Не вся цена закупа известна");
+    if(g.mayak_expense===null)g.data_gaps.push("Нет полного расчёта ТК Маяк");
+    if(g.master_code!==null && g.unit_cost!==null && g.mayak_unit!==null &&
+        g.cogs!==null && g.mayak_expense!==null) {
+      g.estimated_result=provisionalResult(g.ozon_amount,g.cogs,g.mayak_expense);
+    }else g.estimated_result=null;
     g.details = g.details.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
   }
   // Reference data completeness is independent of whether a finance day
@@ -420,18 +484,37 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
         ? "requires_type_review" : "not_checked_against_performance",
     },
     sales_window_covered: salesWindowCovered,
-    actual_buyout_days: buyoutCoverage.size,
-    actual_buyouts_covered: verifiedBuyoutsCovered,
+    actual_buyout_days: salesWindowCovered ? days.length : 0,
+    actual_buyouts_covered: salesWindowCovered,
+    unit_method:"orders_minus_cancellations",
+    stock_as_of:(stocksRes.data as StockRow[]??[])[0] ?? null,
+    transit_as_of:transitAsOf,
+    transit_snapshot_ready:transitSnapshotReady,
     source: "supabase_cached_finance",
     background_jobs: jobsRes.data ?? [],
     calculation_includes_api_calls: false,
-    profit_status: verifiedBuyoutsCovered ? "provisional" : "waiting_for_confirmed_buyouts",
-    warning: "Отчёт строится из кеша Supabase без запросов к Ozon. Реклама уже включена в начисления и второй раз не вычитается. Себестоимость считается только по подтверждённым фактическим выкупам; пока они не загружены за весь период, прибыль не публикуется. ТК Маяк: ставка × неотменённые заказанные единицы.",
+    profit_status: salesWindowCovered ? "calculated_from_orders_less_cancellations" : "missing_sales_coverage",
+    warning: "Расчёты по кэшу Supabase: количество «выкупов» по согласованной формуле = заказы − отмены (НЕ подтверждение вручения покупателю). Цена закупа списывается по этому количеству. Реклама уже учтена в начислениях Ozon и не списывается дважды. Товары в пути и кросс-докинг без подтверждённых статусов не подменяются нулями.",
     rows: Array.from(byOffer.values()).sort((a, b) => a.ozon_amount - b.ozon_amount),
     reference_gaps: referenceGaps.sort((a,b)=>a.offer_id.localeCompare(b.offer_id,"ru")),
-    unallocated_details: [...unallocatedDetails.entries()]
-      .map(([name, sum]) => ({ name, amount: round(sum) }))
-      .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount)),
+    unallocated_details: (unallocatedRes.data as Array<{
+      type_id:string;accrued_category:string;amount:string|number;item_count:number
+    }>??[]).map(item=>{
+      const fallback:Record<string,string>={
+        "1":"Эквайринг","12":"Кросс-докинг","15":"Утилизация",
+        "25":"Товарная компенсация","29":"Доставка до места выдачи",
+        "32":"Логистика","41":"Оплата за клик","46":"Размещение на складах Ozon",
+        "77":"Приёмка поставки на склад Ozon",
+        "UNSPECIFIED":"Операции по отправлениям с несколькими товарами",
+        "ITEM_REMAINDER":"Остаток товарных начислений без детализации",
+        "ITEM_UNCLASSIFIED":"Товарные начисления без типа"
+      };
+      return {type_id:item.type_id,
+        name:types.get(item.type_id)||fallback[item.type_id]||
+          "Статья Ozon №"+item.type_id,
+        amount:round(Number(item.amount)),count:Number(item.item_count),
+        category:item.accrued_category};
+    }).sort((a,b)=>Math.abs(b.amount)-Math.abs(a.amount)),
   };
 }
 
@@ -572,6 +655,47 @@ export async function POST(request: NextRequest) {
     }
     if (payload.action === "syncDay") {
       return fail("Устаревшая выгрузка отключена. Используйте постраничный импорт через /api/agents/ozon-finance-sync.", 410);
+    }
+    if (payload.action === "queuePeriod") {
+      const from=String(payload.from??""),to=String(payload.to??"");
+      const dates=dateRange(from,to);
+      const today=new Date().toISOString().slice(0,10);
+      const eligible=dates.filter(day=>day<=today);
+      const {data:completed,error:completedError}=await db.from("ozon_finance_sync_days")
+        .select("day").eq("account_key",ACCOUNT).gte("day",from).lte("day",to);
+      if(completedError)throw completedError;
+      const done=new Set((completed??[]).map(x=>x.day));
+      const pending=eligible.filter(day=>!done.has(day));
+      for(const day of pending){
+        const {error}=await db.from("ozon_finance_page_jobs").upsert({
+          account_key:ACCOUNT,day,run_id:randomUUID(),
+          status:"running",last_id:"",pages_completed:0,rows_saved:0
+        },{onConflict:"account_key,day",ignoreDuplicates:true});
+        if(error)throw error;
+      }
+      return NextResponse.json({ok:true,queued_days:pending.length,
+        completed_days:done.size,requested_days:dates.length,
+        source:"supabase_background_queue",
+        note:"Даты включительно; очередь пополняется только недостающими днями."});
+    }
+    if (payload.action === "setDiscontinued") {
+      const master=String(payload.master_code??"").trim();
+      if(!/^[A-Za-zА-Яа-яЁё0-9._-]{1,80}$/.test(master))
+        return fail("Не указан корректный master_code",400);
+      const {data:existingStatus,error:readStatusError}=await db
+        .from("product_article_statuses").select("status").eq("master_code",master).maybeSingle();
+      if(readStatusError)throw readStatusError;
+      if(existingStatus && !["Активный","Выводится из продажи"].includes(existingStatus.status))
+        return fail("Для этого товара задан специальный статус («"+existingStatus.status+
+          "»). Его нельзя изменять флажком финансиста.",409);
+      const {error}=await db.from("product_article_statuses").upsert({
+        master_code:master,
+        status:payload.discontinued===true?"Выводится из продажи":"Активный",
+        updated_at:new Date().toISOString()
+      },{onConflict:"master_code"});
+      if(error)throw error;
+      return NextResponse.json({ok:true,master_code:master,
+        discontinued:payload.discontinued===true});
     }
     if (payload.action === "saveProduct") {
       const master = String(payload.master_code ?? "").trim();

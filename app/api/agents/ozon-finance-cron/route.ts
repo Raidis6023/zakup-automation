@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { POST as processOneFinancePage } from "../ozon-finance-sync/route";
 import { POST as processSkuMapping } from "../ozon-finance-map/route";
+import { GET as processFboTransit } from "../ozon-finance-transit/route";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -24,6 +25,32 @@ export async function GET(request: NextRequest) {
   },503);
 
   const db=createAdminClient();
+  // Keep the descriptions of ALL Ozon charge types in the local dictionary.
+  // Refresh at most when empty; the report itself never calls Ozon.
+  const { count:typesCount }=await db.from("ozon_finance_types")
+    .select("type_id",{head:true,count:"exact"});
+  if(!typesCount) {
+    try {
+      const tr=await fetch("https://api-seller.ozon.ru/v1/finance/accrual/types",{
+        method:"POST",cache:"no-store",headers:{
+          "Client-Id":client,"Api-Key":key,"Content-Type":"application/json"
+        },body:"{}",signal:AbortSignal.timeout(17000)
+      });
+      if(tr.ok) {
+        const parsed=await tr.json() as {accrual_types?:Array<{
+          id:number|string;name?:string;description?:string
+        }>};
+        const values=(parsed.accrual_types??[]).filter(x=>x.id!=null)
+          .map(x=>({type_id:String(x.id),name:x.name||"",
+            description:x.description||x.name||""}));
+        if(values.length)await db.from("ozon_finance_types")
+          .upsert(values,{onConflict:"type_id"});
+      } else {
+        console.warn("Ozon finance type dictionary: HTTP",tr.status);
+      }
+    }catch(error){console.warn("Ozon finance type dictionary unavailable",
+      error instanceof Error?error.message:"Unknown error")}
+  }
   const today=new Date().toISOString().slice(0,10);
   const {data,error}=await db.from("ozon_finance_page_jobs")
     .select("day,status,pages_completed,rows_saved,updated_at")
@@ -61,7 +88,13 @@ export async function GET(request: NextRequest) {
         mapped:parsed.resolved??0,processed:parsed.processed??0,
         error:parsed.ok?undefined:parsed.error},m.ok?200:502);
     }
-    return reply({ok:true,phase:"idle",remaining_days:0,mappings_complete:true});
+    // No financial pages or missing SKU remain. Refresh a coherent snapshot
+    // of FBO customer shipments still not delivered to the buyer.
+    const tr=await processFboTransit(request);
+    const trData=await tr.json();
+    if(!tr.ok)console.warn("Ozon transit refresh pending:",trData);
+    return reply({ok:true,phase:tr.ok?"transit_snapshot":"transit_unavailable",
+      remaining_days:0,mappings_complete:true,transit:trData});
   }
 
   // Do NOT use user-supplied URLs. Fixed same-origin endpoint, credential
