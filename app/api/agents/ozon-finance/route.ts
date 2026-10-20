@@ -666,6 +666,12 @@ export async function POST(request: NextRequest) {
       const master=String(payload.master_code??"").trim();
       if(!/^[A-Za-zА-Яа-яЁё0-9._-]{1,80}$/.test(master))
         return fail("Не указан корректный master_code",400);
+      const {data:existingStatus,error:readStatusError}=await db
+        .from("product_article_statuses").select("status").eq("master_code",master).maybeSingle();
+      if(readStatusError)throw readStatusError;
+      if(existingStatus && !["Активный","Выводится из продажи"].includes(existingStatus.status))
+        return fail("Для этого товара задан специальный статус («"+existingStatus.status+
+          "»). Его нельзя изменять флажком финансиста.",409);
       const {error}=await db.from("product_article_statuses").upsert({
         master_code:master,
         status:payload.discontinued===true?"Выводится из продажи":"Активный",
