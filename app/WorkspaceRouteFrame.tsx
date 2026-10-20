@@ -26,6 +26,7 @@ const standalonePaths = [
   "/register",
   "/auth",
   "/reset-password",
+  "/set-password",
   "/forgot-password",
   "/access-denied",
 ];

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { readRegistrationSession } from "@/lib/registration/session";
 import SetPasswordForm from "./SetPasswordForm";
+import PasswordPanda from "./PasswordPanda";
 import "./set-password.css";
 
 export default async function SetPasswordPage() {
@@ -20,7 +21,8 @@ export default async function SetPasswordPage() {
 
   return (
     <main className="set-password-page">
-      <section className="set-password-card">
+      <div className={registration ? "set-password-layout" : "set-password-layout set-password-layout-single"}>
+        <section className="set-password-card">
         <div className="set-password-logo">
           <img src="/logos/babushkina-marketplace.png" alt="ИП Бабушкина Маркетплейсы" />
         </div>
@@ -29,7 +31,9 @@ export default async function SetPasswordPage() {
           <p>Придумайте постоянный пароль для входа в вашу учётную запись WorkSpace.</p>
         </div>
         <SetPasswordForm mode={registration ? "registration" : "change"} />
-      </section>
+        </section>
+        {registration && <PasswordPanda />}
+      </div>
     </main>
   );
 }
