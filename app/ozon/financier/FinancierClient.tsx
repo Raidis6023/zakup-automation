@@ -1,4 +1,5 @@
 "use client";
+import FinancierDetailTable from "./FinancierDetailTable";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type Detail = { type_id: string; name: string; amount: number; count: number };
@@ -353,20 +354,11 @@ export default function FinancierClient() {
       {connectionStatus && <p className="ozf-progress" role="status">{connectionStatus}</p>}
       {error && <p className="ozf-error" role="alert">{error}</p>}
       {progress && <p className="ozf-progress" role="status">{progress}</p>}
-      {data?.background_jobs?.length ? <div className="ozf-panel">
-        <div className="ozf-toolbar">
-          <div><h2>Фоновая выгрузка в Supabase</h2><p>Очередь импортируется независимо от выбранных дат. Переключение периода не запускает запросы Ozon.</p></div>
-          <button className="ozf-btn" onClick={()=>void load()} disabled={loading}>Обновить состояние</button>
-        </div>
-        <div className="ozf-jobs">
-          {data.background_jobs.map(j=><div className="ozf-job" key={j.day}>
-            <b>{j.day}</b>
-            <span>{j.status==="complete"?"Готово":j.status==="failed"?"Ошибка":"В очереди / загрузка"}</span>
-            <span>{j.pages_completed} стр. · {j.rows_saved} записей</span>
-            {j.last_error && <small title={j.last_error}>{j.last_error}</small>}
-          </div>)}
-        </div>
-      </div> : null}
+      <FinancierDetailTable data={data} rows={rows}
+        onToggle={(masterCode,offerId,checked)=>{
+          const row=rows.find(r=>r.master_code===masterCode && r.offer_id===offerId);
+          if(row) return toggleDiscontinued(row,checked);
+        }}/>
       <div className="ozf-metrics">
         <div className="ozf-panel"><span>Начисления Ozon, все статьи</span><strong>{currency(data?.ledger_amount)}</strong><small>Без себестоимости. Это не прибыль.</small></div>
         <div className="ozf-panel"><span>Привязано к артикулам</span><strong>{currency(data?.allocated_amount)}</strong><small>Сумма операций с установленным товаром</small></div>
