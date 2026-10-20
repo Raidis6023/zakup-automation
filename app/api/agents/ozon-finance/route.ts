@@ -666,10 +666,18 @@ export async function POST(request: NextRequest) {
       if(completedError)throw completedError;
       const done=new Set((completed??[]).map(x=>x.day));
       const pending=eligible.filter(day=>!done.has(day));
-      if(pending.length){
-        // Preserve as a separate queue: never merge Performance expenses into ledger.
+      // A completed Seller import does not mean Performance SKU data exists.
+      // Queue missing ad dates for background processing independently.
+      const {data:adCoverage,error:adCovErr}=await db.from("ozon_finance_ad_coverage")
+        .select("day").eq("account_key",ACCOUNT).gte("day",from).lte("day",to);
+      if(adCovErr)throw adCovErr;
+      const adCompleted=new Set((adCoverage??[]).map(x=>x.day));
+      const missingAd=eligible.filter(day=>!adCompleted.has(day));
+      if(missingAd.length){
+        const adStart=missingAd[0],adEnd=missingAd[missingAd.length-1];
         const {error:adError}=await db.from("ozon_finance_ad_sync_jobs").upsert({
-          account_key:ACCOUNT,date_from:from,date_to:to,status:"pending",last_error:null
+          account_key:ACCOUNT,date_from:adStart,date_to:adEnd,status:"pending",
+          last_error:null
         },{onConflict:"account_key,date_from,date_to",ignoreDuplicates:true});
         if(adError)throw adError;
       }
