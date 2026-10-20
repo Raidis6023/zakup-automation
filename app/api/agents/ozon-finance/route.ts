@@ -610,6 +610,41 @@ export async function POST(request: NextRequest) {
     if (payload.action === "syncDay") {
       return fail("Устаревшая выгрузка отключена. Используйте постраничный импорт через /api/agents/ozon-finance-sync.", 410);
     }
+    if (payload.action === "queuePeriod") {
+      const from=String(payload.from??""),to=String(payload.to??"");
+      const dates=dateRange(from,to);
+      const today=new Date().toISOString().slice(0,10);
+      const eligible=dates.filter(day=>day<=today);
+      const {data:completed,error:completedError}=await db.from("ozon_finance_sync_days")
+        .select("day").eq("account_key",ACCOUNT).gte("day",from).lte("day",to);
+      if(completedError)throw completedError;
+      const done=new Set((completed??[]).map(x=>x.day));
+      const pending=eligible.filter(day=>!done.has(day));
+      for(const day of pending){
+        const {error}=await db.from("ozon_finance_page_jobs").upsert({
+          account_key:ACCOUNT,day,run_id:randomUUID(),
+          status:"running",last_id:"",pages_completed:0,rows_saved:0
+        },{onConflict:"account_key,day",ignoreDuplicates:true});
+        if(error)throw error;
+      }
+      return NextResponse.json({ok:true,queued_days:pending.length,
+        completed_days:done.size,requested_days:dates.length,
+        source:"supabase_background_queue",
+        note:"Даты включительно; очередь пополняется только недостающими днями."});
+    }
+    if (payload.action === "setDiscontinued") {
+      const master=String(payload.master_code??"").trim();
+      if(!/^[A-Za-zА-Яа-яЁё0-9._-]{1,80}$/.test(master))
+        return fail("Не указан корректный master_code",400);
+      const {error}=await db.from("product_article_statuses").upsert({
+        master_code:master,
+        status:payload.discontinued===true?"Выводится из продажи":"Активный",
+        updated_at:new Date().toISOString()
+      },{onConflict:"master_code"});
+      if(error)throw error;
+      return NextResponse.json({ok:true,master_code:master,
+        discontinued:payload.discontinued===true});
+    }
     if (payload.action === "saveProduct") {
       const master = String(payload.master_code ?? "").trim();
       if (!/^[A-Za-zА-Яа-яЁё0-9._-]{1,80}$/.test(master)) return fail("Некорректный master_code", 400);
