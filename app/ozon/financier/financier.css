@@ -7,3 +7,15 @@
 .ozf-job{display:flex;flex-direction:column;gap:5px;border:1px solid rgba(135,152,195,.24);border-radius:10px;padding:12px;font-size:12px}
 .ozf-job b{font-variant-numeric:tabular-nums}.ozf-job span{opacity:.85}
 .ozf-job small{color:#f3bb80;overflow-wrap:anywhere;line-height:1.4}
+
+.ozf-financial-summary{overflow:hidden}
+.ozf-financial-scroll{max-height:690px;overflow:auto}
+.ozf-financial-table{min-width:2800px}
+.ozf-financial-table th{position:sticky;top:0;z-index:2;background:#19253e;white-space:nowrap}
+.ozf-financial-table td{white-space:nowrap;font-variant-numeric:tabular-nums}
+.ozf-financial-table td:first-child,.ozf-financial-table th:first-child{position:sticky;left:0;z-index:1;background:#19253e}
+.ozf-financial-table th:first-child{z-index:3}
+.ozf-discontinued{opacity:.68;background:#111a2b}
+.ozf-discontinued td:first-child{background:#111a2b}
+.ozf-financial-table input[type=checkbox]{accent-color:#6e91ee;cursor:pointer}
+.ozf-filters select{width:100%;min-width:155px;background:#0d1524;color:#e5ecff;border:1px solid #354664;border-radius:9px;padding:12px}
