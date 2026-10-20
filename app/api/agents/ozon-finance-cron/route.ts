@@ -24,6 +24,32 @@ export async function GET(request: NextRequest) {
   },503);
 
   const db=createAdminClient();
+  // Keep the descriptions of ALL Ozon charge types in the local dictionary.
+  // Refresh at most when empty; the report itself never calls Ozon.
+  const { count:typesCount }=await db.from("ozon_finance_types")
+    .select("type_id",{head:true,count:"exact"});
+  if(!typesCount) {
+    try {
+      const tr=await fetch("https://api-seller.ozon.ru/v1/finance/accrual/types",{
+        method:"POST",cache:"no-store",headers:{
+          "Client-Id":client,"Api-Key":key,"Content-Type":"application/json"
+        },body:"{}",signal:AbortSignal.timeout(17000)
+      });
+      if(tr.ok) {
+        const parsed=await tr.json() as {accrual_types?:Array<{
+          id:number|string;name?:string;description?:string
+        }>};
+        const values=(parsed.accrual_types??[]).filter(x=>x.id!=null)
+          .map(x=>({type_id:String(x.id),name:x.name||"",
+            description:x.description||x.name||""}));
+        if(values.length)await db.from("ozon_finance_types")
+          .upsert(values,{onConflict:"type_id"});
+      } else {
+        console.warn("Ozon finance type dictionary: HTTP",tr.status);
+      }
+    }catch(error){console.warn("Ozon finance type dictionary unavailable",
+      error instanceof Error?error.message:"Unknown error")}
+  }
   const today=new Date().toISOString().slice(0,10);
   const {data,error}=await db.from("ozon_finance_page_jobs")
     .select("day,status,pages_completed,rows_saved,updated_at")
