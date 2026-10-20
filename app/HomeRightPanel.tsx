@@ -46,6 +46,32 @@ type TabId =
   | "notes"
   | TaskRole;
 
+
+type SyncNotification = {
+  id:
+    string;
+
+  marketplace:
+    "ozon"
+    | "wildberries"
+    | "yandex_market";
+
+  marketplaceLabel:
+    string;
+
+  title:
+    string;
+
+  completedAt:
+    string;
+
+  dataDate:
+    string;
+
+  time:
+    string;
+};
+
 const ADMIN_TABS: Array<{ id: TabId; label: string }> = [
   { id: "all", label: "Все" },
   { id: "notes", label: "Заметки" },
@@ -83,6 +109,20 @@ function ToggleIcon() {
   );
 }
 
+
+function SyncSuccessIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path
+        d="m7.5 12.4 3 3 6.2-6.4"
+      />
+    </svg>
+  );
+}
+
 export default function HomeRightPanel() {
   const pathname = usePathname() ?? "/";
   const adminHomeMode = pathname === "/admin";
@@ -92,6 +132,12 @@ export default function HomeRightPanel() {
 
   const [profile, setProfile] =
     useState<CurrentUserProfileRow | null>(null);
+
+  const [syncNotifications, setSyncNotifications] =
+    useState<SyncNotification[]>([]);
+
+  const [notificationsLoading, setNotificationsLoading] =
+    useState(false);
 
   const [activeTab, setActiveTab] =
     useState<TabId>("all");
@@ -172,6 +218,102 @@ export default function HomeRightPanel() {
       };
     },
     []
+  );
+
+
+  useEffect(
+    () => {
+      if (
+        !open
+      ) {
+        return;
+      }
+
+      const controller =
+        new AbortController();
+
+      async function loadSyncNotifications() {
+        setNotificationsLoading(
+          true
+        );
+
+        try {
+          const response =
+            await fetch(
+              "/api/home/sync-notifications",
+              {
+                method:
+                  "GET",
+
+                cache:
+                  "no-store",
+
+                signal:
+                  controller.signal,
+              }
+            );
+
+          const data =
+            await response.json() as {
+              ok?:
+                boolean;
+
+              notifications?:
+                SyncNotification[];
+            };
+
+          if (
+            !response.ok
+            ||
+            data.ok !==
+              true
+          ) {
+            return;
+          }
+
+          setSyncNotifications(
+            Array.isArray(
+              data.notifications
+            )
+              ? data.notifications
+              : []
+          );
+        } catch (
+          error
+        ) {
+          if (
+            error instanceof DOMException
+            &&
+            error.name ===
+              "AbortError"
+          ) {
+            return;
+          }
+
+          console.error(
+            "Не удалось загрузить уведомления синхронизации:",
+            error
+          );
+        } finally {
+          if (
+            !controller.signal.aborted
+          ) {
+            setNotificationsLoading(
+              false
+            );
+          }
+        }
+      }
+
+      void loadSyncNotifications();
+
+      return () => {
+        controller.abort();
+      };
+    },
+    [
+      open,
+    ]
   );
 
   const managerMode =
@@ -366,7 +508,92 @@ export default function HomeRightPanel() {
           <span className="home-right-panel-heading-icon">
             <HomeBellIcon />
           </span>
-          <strong>Уведомления</strong>
+
+          <strong>
+            Уведомления
+          </strong>
+        </div>
+
+        <div
+          className=
+            "home-sync-notification-list"
+        >
+          {
+            notificationsLoading
+            &&
+            syncNotifications.length ===
+              0
+              ? (
+                <div
+                  className=
+                    "home-sync-notification-empty"
+                >
+                  Загружаем уведомления…
+                </div>
+              )
+              : syncNotifications.length ===
+                  0
+                ? (
+                  <div
+                    className=
+                      "home-sync-notification-empty"
+                  >
+                    Уведомлений пока нет.
+                  </div>
+                )
+                : syncNotifications.map(
+                    notification => (
+                      <div
+                        key={
+                          notification.id
+                        }
+                        className=
+                          "home-sync-notification"
+                      >
+                        <span
+                          className=
+                            "home-sync-notification-icon"
+                        >
+                          <SyncSuccessIcon />
+                        </span>
+
+                        <div
+                          className=
+                            "home-sync-notification-copy"
+                        >
+                          <strong>
+                            {
+                              notification.title
+                            }
+                          </strong>
+
+                          <span>
+                            {
+                              notification.marketplaceLabel
+                            }
+                            {", данные за "}
+                            {
+                              notification.dataDate
+                            }
+                          </span>
+                        </div>
+
+                        <time
+                          className=
+                            "home-sync-notification-time"
+
+                          dateTime={
+                            notification.completedAt
+                          }
+                        >
+                          {
+                            notification.time
+                          }
+                        </time>
+                      </div>
+                    )
+                  )
+          }
         </div>
       </section>
     </aside>
