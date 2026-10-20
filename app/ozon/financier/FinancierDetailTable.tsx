@@ -22,7 +22,7 @@ const count=(v:number|null|undefined)=>v==null?"—":v.toLocaleString("ru-RU");
 const share=(v:number|null|undefined)=>v==null||!Number.isFinite(v)?"—":(v*100).toLocaleString("ru-RU",{maximumFractionDigits:1})+"%";
 export default function FinancierDetailTable(props:{
  data:FinanceData|null;rows:FinancialRow[];
- onToggle:(r:FinancialRow,checked:boolean)=>void|Promise<void>;
+ onToggle:(masterCode:string|null,offerId:string,checked:boolean)=>void|Promise<void>;
 }) {
  const {data,rows,onToggle}=props;
  const [search,setSearch]=useState("");
@@ -86,7 +86,7 @@ export default function FinancierDetailTable(props:{
        <td>{money(r.mayak_expense)}</td><td>{count(r.in_china)}</td>
        <td><input type="checkbox" checked={r.discontinued} disabled={!r.master_code}
         aria-label={"Выведено из продажи "+r.offer_id}
-        onChange={e=>void onToggle(r,e.target.checked)}/></td>
+        onChange={e=>void onToggle(r.master_code,r.offer_id,e.target.checked)}/></td>
        <td>{abc}</td>
      </tr>
     })}
