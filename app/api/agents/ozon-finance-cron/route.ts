@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { POST as processOneFinancePage } from "../ozon-finance-sync/route";
 import { POST as processSkuMapping } from "../ozon-finance-map/route";
+import { GET as processFboTransit } from "../ozon-finance-transit/route";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -87,7 +88,13 @@ export async function GET(request: NextRequest) {
         mapped:parsed.resolved??0,processed:parsed.processed??0,
         error:parsed.ok?undefined:parsed.error},m.ok?200:502);
     }
-    return reply({ok:true,phase:"idle",remaining_days:0,mappings_complete:true});
+    // No financial pages or missing SKU remain. Refresh a coherent snapshot
+    // of FBO customer shipments still not delivered to the buyer.
+    const tr=await processFboTransit(request);
+    const trData=await tr.json();
+    return reply({ok:tr.ok,phase:"transit_snapshot",
+      remaining_days:0,mappings_complete:true,transit:trData},
+      tr.ok?200:502);
   }
 
   // Do NOT use user-supplied URLs. Fixed same-origin endpoint, credential
