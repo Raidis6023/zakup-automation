@@ -18,6 +18,7 @@ type Data = {
   stock_as_of?:{ozon_at:string|null;main_at:string|null;ox_at:string|null}|null;
   unallocated_details?:Array<{name:string;amount:number}>;
   ads_covered?:boolean;ads_covered_days?:number;ads_performance_total?:number|null;
+  ads_jobs?:Array<{status:string;last_error:string|null;date_from:string;date_to:string}>;
   advertising?:{finance_total:number;finance_unallocated:number};
 };
 type SortKey =
@@ -178,6 +179,11 @@ export default function FinancierDetailTable({
       Расходы на рекламу по SKU пока не подтверждены Performance API за все даты.
       Без полной выгрузки ДРР показывается прочерком, а не искусственным нулём.
       Покрыто {data?.ads_covered_days??0} дней.
+      {data?.ads_jobs?.some(x=>x.status==="failed")?<strong className="ozf-bad">
+        Ошибка Performance API: {data.ads_jobs.find(x=>x.status==="failed")?.last_error}
+      </strong>:null}
+      {data?.ads_jobs?.some(x=>x.status==="pending"||x.status==="running")?
+        " Загрузка рекламной детализации ожидает выполнения." : null}
     </p>}
     <div className="ozf-section-tools">
       <input placeholder="Поиск по артикулу, коду или КМ" aria-label="Поиск товаров" value={search}
