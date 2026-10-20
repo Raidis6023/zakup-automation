@@ -92,9 +92,9 @@ export async function GET(request: NextRequest) {
     // of FBO customer shipments still not delivered to the buyer.
     const tr=await processFboTransit(request);
     const trData=await tr.json();
-    return reply({ok:tr.ok,phase:"transit_snapshot",
-      remaining_days:0,mappings_complete:true,transit:trData},
-      tr.ok?200:502);
+    if(!tr.ok)console.warn("Ozon transit refresh pending:",trData);
+    return reply({ok:true,phase:tr.ok?"transit_snapshot":"transit_unavailable",
+      remaining_days:0,mappings_complete:true,transit:trData});
   }
 
   // Do NOT use user-supplied URLs. Fixed same-origin endpoint, credential
