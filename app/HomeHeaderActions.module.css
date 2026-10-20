@@ -819,29 +819,28 @@
 
 
 .approveButton {
-  border:
-    1px solid
-    var(--ws-blue);
-
-  background:
-    var(--ws-blue);
-
-  color:
-    #ffffff;
-
-  box-shadow:
-    0 6px 18px
-    color-mix(in srgb, var(--ws-blue) 18%, transparent);
+  border: 1px solid #15966b;
+  background: #15966b;
+  color: #ffffff;
+  box-shadow: 0 6px 18px rgba(21,150,107,.17);
 }
-
-
 .approveButton:hover:not(:disabled) {
-  background:
-    var(--ws-blue-hover);
-
-  border-color:
-    var(--ws-blue-hover);
+  background: #117f5a;
+  border-color: #117f5a;
 }
+.approveButton:disabled {
+  opacity: 1;
+  background: #dcece5;
+  color: #648b77;
+  border-color: #b9d9ca;
+  box-shadow: none;
+}
+:global(html[data-theme="dark"]) .approveButton:disabled {
+  background: #203a30;
+  color: #8dac9b;
+  border-color: #315645;
+}
+
 
 
 .rejectButton:disabled,
@@ -1295,4 +1294,27 @@
 
   white-space:
     nowrap;
+}
+
+.field input[type="password"] {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  padding: 0 13px;
+  color: var(--text);
+  background: var(--input);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  outline: none;
+  font: inherit;
+}
+.field input[type="password"]:focus {
+  border-color: #15966b;
+  box-shadow: 0 0 0 3px rgba(21,150,107,.12);
+}
+.field input[type="password"]:disabled { opacity: .65; }
+.field small {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.45;
 }

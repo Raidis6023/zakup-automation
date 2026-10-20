@@ -93,7 +93,7 @@ function EyeIcon({
 }
 
 
-export default function SetPasswordForm() {
+export default function SetPasswordForm({ mode = "change" }: { mode?: "change" | "registration" }) {
 
   const router =
     useRouter();
@@ -193,6 +193,29 @@ export default function SetPasswordForm() {
 
 
     try {
+      if (mode === "registration") {
+        const response = await fetch("/api/registration/complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password }),
+        });
+        const result = await response.json();
+        if (!response.ok || !result.ok) {
+          setError(result.error || "Не удалось завершить регистрацию");
+          return;
+        }
+        const supabase = createClient();
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: result.email, password,
+        });
+        if (signInError) {
+          setError("Пароль создан. Авторизуйтесь с ним на странице входа.");
+          return;
+        }
+        router.replace("/");
+        router.refresh();
+        return;
+      }
 
       const supabase =
         createClient();
@@ -467,8 +490,7 @@ export default function SetPasswordForm() {
         className="set-password-hint"
       >
         Используйте не менее 10 символов.
-        Этот пароль заменит временный пароль,
-        выданный администратором.
+        Используйте надёжную комбинацию, которую сможете запомнить.
       </p>
 
 

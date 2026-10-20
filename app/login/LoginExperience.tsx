@@ -1,13 +1,28 @@
 "use client";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import LoginForm from "./LoginForm";
 import LoginPanda from "./LoginPanda";
 import AccessRequestForm from "./AccessRequestForm";
+import RegistrationWaiting from "./RegistrationWaiting";
 
 export default function LoginExperience({ children, blocked = false }: { children: ReactNode; blocked?: boolean }) {
-  const [screen, setScreen] = useState<"login" | "access">("login");
+  const [screen, setScreen] = useState<"login" | "access" | "waiting">("login");
   const [initialEmail, setInitialEmail] = useState("");
   const [accessKey, setAccessKey] = useState(0);
+
+  useEffect(() => {
+    if (blocked) return;
+    let alive = true;
+    void fetch("/api/registration/status", { cache: "no-store" })
+      .then(r => r.json())
+      .then(result => {
+        if (alive && result.ok && ["pending", "approved"].includes(result.status)) {
+          setScreen("waiting");
+        }
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [blocked]);
 
   const openAccess = (email: string) => {
     setInitialEmail(email.trim());
@@ -16,6 +31,8 @@ export default function LoginExperience({ children, blocked = false }: { childre
   };
 
   const backToLogin = () => setScreen("login");
+  const mode = screen === "waiting" ? "waiting" :
+    screen === "access" ? "access" : blocked ? "blocked" : "login";
 
   return (
     <div className="login-layout">
@@ -31,12 +48,17 @@ export default function LoginExperience({ children, blocked = false }: { childre
           {children}
           <LoginForm onRequestAccess={openAccess} />
         </section>
+      ) : screen === "access" ? (
+        <section className="login-card login-access-card">
+          <AccessRequestForm key={accessKey} initialEmail={initialEmail}
+            onBack={backToLogin} onSubmitted={() => setScreen("waiting")} />
+        </section>
       ) : (
         <section className="login-card login-access-card">
-          <AccessRequestForm key={accessKey} initialEmail={initialEmail} onBack={backToLogin} />
+          <RegistrationWaiting onBack={backToLogin} />
         </section>
       )}
-      <LoginPanda key={screen + (screen === "access" ? accessKey : "")} mode={screen === "access" ? "access" : blocked ? "blocked" : "login"} />
+      <LoginPanda key={mode + (mode === "access" ? accessKey : "")} mode={mode} />
     </div>
   );
 }

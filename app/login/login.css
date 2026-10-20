@@ -1117,3 +1117,24 @@ html[data-theme="dark"] .login-page {
   .access-modal-actions { flex-direction: column-reverse; }
   .access-primary-button, .access-secondary-button { width: 100%; }
 }
+
+
+/* Appointment waiting state. Keep the indicator visible in both themes. */
+.registration-loading-icon {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 22px;
+  border: 4px solid rgba(21,150,107,.16);
+  border-top-color: #21ac7d;
+  border-radius: 50%;
+  animation: registration-rotate .9s linear infinite;
+}
+@keyframes registration-rotate { to { transform: rotate(360deg); } }
+.registration-waiting-hint {
+  font-size: 12px;
+  opacity: .72;
+  margin-top: 14px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .registration-loading-icon { animation-duration: 2.6s; }
+}

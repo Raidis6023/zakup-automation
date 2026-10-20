@@ -260,10 +260,6 @@ type ApprovalResult = {
 
   fullName:
     string;
-
-  temporaryPassword:
-    string;
-
 };
 
 
@@ -821,16 +817,7 @@ export default function HomeHeaderActions() {
     );
 
 
-  const [
-    copyStatus,
-    setCopyStatus,
-  ] =
-    useState<
-      CopyStatus
-    >(
-      "idle"
-    );
-
+  const [adminPassword, setAdminPassword] = useState("");
 
   const [
     currentProfile,
@@ -1775,6 +1762,8 @@ export default function HomeHeaderActions() {
       ""
     );
 
+    setAdminPassword("");
+
 
     setRequestAction(
       null
@@ -1789,12 +1778,7 @@ export default function HomeHeaderActions() {
     setApprovalResult(
       null
     );
-
-
-    setCopyStatus(
-      "idle"
-    );
-
+    setAdminPassword("");
 
     setOpenPanel(
       null
@@ -1838,11 +1822,7 @@ export default function HomeHeaderActions() {
     setApprovalResult(
       null
     );
-
-
-    setCopyStatus(
-      "idle"
-    );
+    setAdminPassword("");
 
   }
 
@@ -1923,6 +1903,11 @@ export default function HomeHeaderActions() {
     }
 
 
+    if (!adminPassword) {
+      setRequestActionError("Введите пароль Администратора");
+      return;
+    }
+
     setRequestAction(
       "approve"
     );
@@ -1944,6 +1929,8 @@ export default function HomeHeaderActions() {
 
             systemRole:
               selectedRole,
+
+            adminPassword,
 
             categoryMarketplace:
               selectedRole ===
@@ -1989,16 +1976,7 @@ export default function HomeHeaderActions() {
 
           fullName:
             result.fullName,
-
-          temporaryPassword:
-            result.temporaryPassword,
-
         }
-      );
-
-
-      setCopyStatus(
-        "idle"
       );
 
     } catch {
@@ -2102,11 +2080,6 @@ export default function HomeHeaderActions() {
         null
       );
 
-
-      setCopyStatus(
-        "idle"
-      );
-
     } catch {
 
       setRequestActionError(
@@ -2123,41 +2096,6 @@ export default function HomeHeaderActions() {
 
   }
 
-
-  async function copyTemporaryPassword() {
-
-    if (
-      !approvalResult
-    ) {
-
-      return;
-
-    }
-
-
-    try {
-
-      await navigator
-        .clipboard
-        .writeText(
-          approvalResult
-            .temporaryPassword
-        );
-
-
-      setCopyStatus(
-        "copied"
-      );
-
-    } catch {
-
-      setCopyStatus(
-        "error"
-      );
-
-    }
-
-  }
 
 
   // ==========================================================
@@ -2282,6 +2220,8 @@ export default function HomeHeaderActions() {
 
 
   const canApprove =
+    adminPassword.length > 0
+    &&
     selectedRole !==
       ""
     &&
@@ -2469,217 +2409,26 @@ export default function HomeHeaderActions() {
                   ? (
 
                     <>
-
-                      <div
-                        className={
-                          styles.modalHeader
-                        }
-                      >
-
-                        <h2
-                          id=
-                            "access-request-title"
-                        >
-                          Доступ одобрен
-                        </h2>
-
-
-                        <p>
-                          Учётная запись создана.
-                          Передайте сотруднику email
-                          и временный пароль.
-                        </p>
-
+                      <div className={styles.modalHeader}>
+                        <h2 id="access-request-title">Доступ одобрен</h2>
+                        <p>Роль назначена. Сотрудник автоматически перейдёт к созданию своего пароля после подтверждения.</p>
                       </div>
-
-
-                      <div
-                        className={
-                          styles.successBox
-                        }
-                      >
-
-                        <div
-                          className={
-                            styles.successTitle
-                          }
-                        >
-                          Сотрудник создан
+                      <div className={styles.successBox}>
+                        <div className={styles.successTitle}>Ожидаем завершения регистрации сотрудником</div>
+                        <div className={styles.credentialRow}>
+                          <span className={styles.credentialLabel}>Сотрудник</span>
+                          <strong className={styles.credentialValue}>{approvalResult.fullName}</strong>
                         </div>
-
-
-                        <div
-                          className={
-                            styles.credentialRow
-                          }
-                        >
-
-                          <span
-                            className={
-                              styles.credentialLabel
-                            }
-                          >
-                            Сотрудник
-                          </span>
-
-
-                          <strong
-                            className={
-                              styles.credentialValue
-                            }
-                          >
-                            {
-                              approvalResult
-                                .fullName
-                            }
-                          </strong>
-
+                        <div className={styles.credentialRow}>
+                          <span className={styles.credentialLabel}>Email</span>
+                          <strong className={styles.credentialValue}>{approvalResult.email}</strong>
                         </div>
-
-
-                        <div
-                          className={
-                            styles.credentialRow
-                          }
-                        >
-
-                          <span
-                            className={
-                              styles.credentialLabel
-                            }
-                          >
-                            Email
-                          </span>
-
-
-                          <strong
-                            className={
-                              styles.credentialValue
-                            }
-                          >
-                            {
-                              approvalResult
-                                .email
-                            }
-                          </strong>
-
-                        </div>
-
-
-                        <div
-                          className={
-                            styles.passwordBlock
-                          }
-                        >
-
-                          <span
-                            className={
-                              styles.credentialLabel
-                            }
-                          >
-                            Временный пароль
-                          </span>
-
-
-                          <div
-                            className={
-                              styles.passwordLine
-                            }
-                          >
-
-                            <code
-                              className={
-                                styles.passwordValue
-                              }
-                            >
-                              {
-                                approvalResult
-                                  .temporaryPassword
-                              }
-                            </code>
-
-
-                            <button
-                              type="button"
-
-                              className={
-                                styles.copyButton
-                              }
-
-                              onClick={
-                                copyTemporaryPassword
-                              }
-                            >
-                              {
-                                copyStatus ===
-                                  "copied"
-
-                                  ? "Скопировано"
-
-                                  : copyStatus ===
-                                      "error"
-
-                                    ? "Ошибка копирования"
-
-                                    : "Копировать"
-                              }
-                            </button>
-
-                          </div>
-
-                        </div>
-
                       </div>
-
-
-                      <div
-                        className={
-                          styles.warningNote
-                        }
-                      >
-                        Этот временный пароль
-                        показывается здесь только
-                        сейчас. После первого входа
-                        сотрудник будет обязан
-                        создать собственный пароль.
+                      <div className={styles.footer}>
+                        <span className={styles.footerHint}>Временный пароль не создаётся. Сотрудник установит собственный.</span>
+                        <button type="button" className={styles.closeFooterButton} onClick={closeAccessRequest}>Закрыть</button>
                       </div>
-
-
-                      <div
-                        className={
-                          styles.footer
-                        }
-                      >
-
-                        <span
-                          className={
-                            styles.footerHint
-                          }
-                        >
-                          После закрытия окна
-                          временный пароль повторно
-                          в WorkSpace показан не будет.
-                        </span>
-
-
-                        <button
-                          type="button"
-
-                          className={
-                            styles.closeFooterButton
-                          }
-
-                          onClick={
-                            closeAccessRequest
-                          }
-                        >
-                          Закрыть
-                        </button>
-
-                      </div>
-
                     </>
-
                   )
 
                   : (
@@ -3024,6 +2773,22 @@ export default function HomeHeaderActions() {
 
                         </div>
 
+                        <div className={styles.field}>
+                          <label htmlFor="access-request-admin-password">Пароль Администратора *</label>
+                          <input
+                            id="access-request-admin-password"
+                            type="password"
+                            autoComplete="current-password"
+                            value={adminPassword}
+                            onChange={event => {
+                              setAdminPassword(event.currentTarget.value);
+                              setRequestActionError(null);
+                            }}
+                            disabled={requestAction !== null}
+                          />
+                          <small>Подтвердите назначение роли паролем своей учётной записи.</small>
+                        </div>
+
                       </div>
 
 
@@ -3059,9 +2824,7 @@ export default function HomeHeaderActions() {
                             styles.footerHint
                           }
                         >
-                          При одобрении будет создана
-                          учётная запись с временным
-                          паролем и выбранной ролью.
+                          После одобрения сотрудник сможет создать собственный пароль.
                         </span>
 
 

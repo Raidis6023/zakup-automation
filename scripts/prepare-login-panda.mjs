@@ -48,3 +48,16 @@ const blockedResult = await sharp(blockedSource)
   .toFile(blockedDestination);
 if (blockedResult.size < 12000) throw new Error("Blocked panda output unexpectedly small");
 console.log("Blocked panda WebP prepared", blockedResult.width, blockedResult.height, blockedResult.size);
+
+
+const waitingSource = "public/panda/waiting-panda-source.avif";
+const waitingDestination = "public/panda/waiting-panda.webp";
+const waitingMeta = await sharp(waitingSource).metadata();
+if (!waitingMeta.hasAlpha || (waitingMeta.width ?? 0) < 700 || (waitingMeta.height ?? 0) < 900) {
+  throw new Error("Waiting panda source must have a transparent background and sufficient resolution");
+}
+const waitingOutput = await sharp(waitingSource)
+  .webp({ quality: 91, alphaQuality: 100, effort: 6 })
+  .toFile(waitingDestination);
+if (waitingOutput.size < 12000) throw new Error("Waiting panda output unexpectedly small");
+console.log("Waiting panda WebP prepared", waitingOutput.width, waitingOutput.height, waitingOutput.size);

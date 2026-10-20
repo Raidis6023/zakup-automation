@@ -1,16 +1,14 @@
 "use server";
 
 import {
-  randomInt,
-} from "node:crypto";
-
-import {
   createClient as createSessionClient,
 } from "@/lib/supabase/server";
 
 import {
   createAdminClient,
 } from "@/lib/supabase/admin";
+
+import { createClient as createCredentialClient } from "@supabase/supabase-js";
 
 
 // ============================================================
@@ -36,6 +34,7 @@ type ApproveAccessRequestInput = {
   requestId: string;
   systemRole: string;
   categoryMarketplace: string | null;
+  adminPassword: string;
 };
 
 
@@ -44,7 +43,6 @@ export type ApproveAccessRequestResult =
       ok: true;
       email: string;
       fullName: string;
-      temporaryPassword: string;
     }
   | {
       ok: false;
@@ -143,48 +141,6 @@ function isCategoryMarketplace(
       return false;
 
   }
-
-}
-
-
-// ============================================================
-// ВРЕМЕННЫЙ ПАРОЛЬ
-// ============================================================
-
-function createTemporaryPassword() {
-
-  const alphabet =
-    "ABCDEFGHJKLMNPQRSTUVWXYZ"
-    +
-    "abcdefghijkmnopqrstuvwxyz"
-    +
-    "23456789";
-
-
-  let randomPart =
-    "";
-
-
-  for (
-    let index = 0;
-    index < 16;
-    index += 1
-  ) {
-
-    randomPart +=
-      alphabet[
-        randomInt(
-          0,
-          alphabet.length
-        )
-      ];
-
-  }
-
-
-  return (
-    `Ws9!${randomPart}`
-  );
 
 }
 
@@ -313,464 +269,69 @@ Promise<
 // ОДОБРЕНИЕ ЗАЯВКИ
 // ============================================================
 
-export async function approveAccessRequest(
-  input:
-    ApproveAccessRequestInput
-):
-Promise<ApproveAccessRequestResult> {
+export async function approveAccessRequest(input: ApproveAccessRequestInput): Promise<ApproveAccessRequestResult> {
+  const requestId = input.requestId.trim();
+  const role = input.systemRole.trim();
+  const password = input.adminPassword;
+  const marketplace = role === "category_manager" ? (input.categoryMarketplace?.trim() || null) : null;
 
-  // ==========================================================
-  // 1. БАЗОВАЯ ВАЛИДАЦИЯ
-  // ==========================================================
-
-  const requestId =
-    input.requestId.trim();
-
-
-  const systemRole =
-    input.systemRole.trim();
-
-
-  const marketplaceRaw =
-    input.categoryMarketplace
-      ?.trim()
-      ||
-      null;
-
-
-  if (
-    !isUuid(
-      requestId
-    )
-  ) {
-
-    return {
-      ok: false,
-      error:
-        "Некорректный ID заявки",
-    };
-
+  if (!isUuid(requestId)) return { ok: false, error: "Некорректный ID заявки" };
+  if (!isWorkingRole(role)) return { ok: false, error: "Выберите рабочую роль" };
+  if (role === "category_manager" && (!marketplace || !isCategoryMarketplace(marketplace))) {
+    return { ok: false, error: "Выберите маркетплейс" };
+  }
+  if (!password || password.length > 256) {
+    return { ok: false, error: "Введите пароль Администратора" };
   }
 
-
-  if (
-    !isWorkingRole(
-      systemRole
-    )
-  ) {
-
-    return {
-      ok: false,
-      error:
-        "Не выбрана допустимая рабочая роль",
-    };
-
+  const currentAdmin = await getCurrentAdminUserId();
+  if (!currentAdmin.ok) return currentAdmin;
+  const session = await createSessionClient();
+  const { data: { user } } = await session.auth.getUser();
+  if (!user?.email || user.id !== currentAdmin.userId) {
+    return { ok: false, error: "Не удалось подтвердить личность Администратора" };
   }
 
-
-  let categoryMarketplace:
-    CategoryMarketplace
-    |
-    null =
-    null;
-
-
-  if (
-    systemRole ===
-      "category_manager"
-  ) {
-
-    if (
-      !marketplaceRaw
-      ||
-      !isCategoryMarketplace(
-        marketplaceRaw
-      )
-    ) {
-
-      return {
-        ok: false,
-        error:
-          "Для категорийного менеджера необходимо выбрать маркетплейс",
-      };
-
-    }
-
-
-    categoryMarketplace =
-      marketplaceRaw;
-
-  } else {
-
-    categoryMarketplace =
-      null;
-
+  // A separate client verifies credentials without replacing the active admin's browser session.
+  const verifier = createCredentialClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } },
+  );
+  const { data: verified, error: credentialError } = await verifier.auth.signInWithPassword({
+    email: user.email,
+    password,
+  });
+  if (credentialError || !verified.user || verified.user.id !== user.id) {
+    return { ok: false, error: "Неверный пароль Администратора" };
   }
+  await verifier.auth.signOut();
 
+  const admin = createAdminClient();
+  // Atomic conditional update: two admins cannot both approve one pending request.
+  const { data: approved, error } = await admin.from("app_access_requests")
+    .update({
+      status: "approved",
+      assigned_system_role: role,
+      assigned_category_marketplace: marketplace,
+      reviewed_by: user.id,
+      reviewed_at: new Date().toISOString(),
+      approved_user_id: null,
+    })
+    .eq("id", requestId)
+    .eq("status", "pending")
+    .select("id,email,first_name,last_name")
+    .maybeSingle();
 
-  // ==========================================================
-  // 2. ПРОВЕРЯЕМ АДМИНИСТРАТОРА
-  // ==========================================================
-
-  const adminCheck =
-    await getCurrentAdminUserId();
-
-
-  if (
-    !adminCheck.ok
-  ) {
-
-    return {
-      ok: false,
-      error:
-        adminCheck.error,
-    };
-
+  if (error || !approved) {
+    return { ok: false, error: "Не удалось одобрить заявку: возможно, она уже обработана" };
   }
-
-
-  const reviewedBy =
-    adminCheck.userId;
-
-
-  const admin =
-    createAdminClient();
-
-
-  // ==========================================================
-  // 3. ПОЛУЧАЕМ ЗАЯВКУ
-  //
-  // ВАЖНО:
-  // select записан буквальной строкой.
-  // Supabase TypeScript parser использует её для определения
-  // полей результата.
-  // ==========================================================
-
-  const {
-    data:
-      requestData,
-    error:
-      requestError,
-  } =
-    await admin
-      .from(
-        "app_access_requests"
-      )
-      .select(
-        "id,first_name,last_name,email,status"
-      )
-      .eq(
-        "id",
-        requestId
-      )
-      .maybeSingle();
-
-
-  if (
-    requestError
-  ) {
-
-    console.error(
-      "Ошибка загрузки заявки:",
-      requestError
-    );
-
-
-    return {
-      ok: false,
-      error:
-        "Не удалось загрузить заявку",
-    };
-
-  }
-
-
-  if (
-    !requestData
-  ) {
-
-    return {
-      ok: false,
-      error:
-        "Заявка не найдена",
-    };
-
-  }
-
-
-  const request:
-    AccessRequestRow =
-    {
-      id:
-        requestData.id,
-
-      first_name:
-        requestData.first_name,
-
-      last_name:
-        requestData.last_name,
-
-      email:
-        requestData.email,
-
-      status:
-        requestData.status,
-    };
-
-
-  if (
-    request.status !==
-      "pending"
-  ) {
-
-    return {
-      ok: false,
-      error:
-        "Заявка уже обработана",
-    };
-
-  }
-
-
-  const email =
-    request.email
-      .trim()
-      .toLowerCase();
-
-
-  if (
-    !email
-  ) {
-
-    return {
-      ok: false,
-      error:
-        "В заявке отсутствует email",
-    };
-
-  }
-
-
-  // ==========================================================
-  // 4. СОЗДАЁМ ВРЕМЕННЫЙ ПАРОЛЬ
-  // ==========================================================
-
-  const temporaryPassword =
-    createTemporaryPassword();
-
-
-  // ==========================================================
-  // 5. СОЗДАЁМ AUTH-ПОЛЬЗОВАТЕЛЯ
-  //
-  // email_confirm = true:
-  // подтверждение через почту не требуется.
-  // ==========================================================
-
-  const {
-    data:
-      createUserData,
-    error:
-      createUserError,
-  } =
-    await admin
-      .auth
-      .admin
-      .createUser({
-        email,
-
-        password:
-          temporaryPassword,
-
-        email_confirm:
-          true,
-
-        user_metadata: {
-          first_name:
-            request.first_name,
-
-          last_name:
-            request.last_name,
-        },
-      });
-
-
-  if (
-    createUserError
-  ) {
-
-    console.error(
-      "Ошибка создания Auth-пользователя:",
-      createUserError
-    );
-
-
-    const loweredMessage =
-      createUserError
-        .message
-        .toLowerCase();
-
-
-    if (
-      loweredMessage.includes(
-        "already"
-      )
-      ||
-      loweredMessage.includes(
-        "registered"
-      )
-      ||
-      loweredMessage.includes(
-        "exists"
-      )
-    ) {
-
-      return {
-        ok: false,
-        error:
-          "Пользователь с таким email уже существует",
-      };
-
-    }
-
-
-    return {
-      ok: false,
-      error:
-        "Не удалось создать учётную запись сотрудника",
-    };
-
-  }
-
-
-  const createdUser =
-    createUserData.user;
-
-
-  if (
-    !createdUser
-  ) {
-
-    return {
-      ok: false,
-      error:
-        "Supabase не вернул созданного пользователя",
-    };
-
-  }
-
-
-  // ==========================================================
-  // 6. ФИНАЛИЗИРУЕМ ЗАЯВКУ И ДОСТУП
-  // ==========================================================
-
-  const {
-    error:
-      finalizeError,
-  } =
-    await admin
-      .rpc(
-        "app_finalize_access_request_approval",
-        {
-          p_request_id:
-            requestId,
-
-          p_approved_user_id:
-            createdUser.id,
-
-          p_reviewed_by:
-            reviewedBy,
-
-          p_system_role:
-            systemRole,
-
-          p_category_marketplace:
-            categoryMarketplace,
-        }
-      );
-
-
-  // ==========================================================
-  // 7. ЕСЛИ ФИНАЛИЗАЦИЯ НЕ ПРОШЛА,
-  //    УДАЛЯЕМ СОЗДАННОГО AUTH-ПОЛЬЗОВАТЕЛЯ
-  // ==========================================================
-
-  if (
-    finalizeError
-  ) {
-
-    console.error(
-      "Ошибка финализации заявки:",
-      finalizeError
-    );
-
-
-    const {
-      error:
-        rollbackError,
-    } =
-      await admin
-        .auth
-        .admin
-        .deleteUser(
-          createdUser.id
-        );
-
-
-    if (
-      rollbackError
-    ) {
-
-      console.error(
-        "КРИТИЧЕСКАЯ ОШИБКА отката Auth-пользователя:",
-        rollbackError
-      );
-
-
-      return {
-        ok: false,
-        error:
-          "Не удалось завершить создание сотрудника, а автоматический откат также завершился ошибкой. Повторно заявку не одобряйте до проверки пользователя в Supabase Auth.",
-      };
-
-    }
-
-
-    return {
-      ok: false,
-      error:
-        "Не удалось завершить одобрение заявки. Созданная учётная запись автоматически удалена.",
-    };
-
-  }
-
-
-  // ==========================================================
-  // 8. УСПЕХ
-  // ==========================================================
-
-  const fullName =
-    [
-      request.first_name,
-      request.last_name,
-    ]
-      .filter(
-        Boolean
-      )
-      .join(
-        " "
-      );
-
 
   return {
     ok: true,
-
-    email,
-
-    fullName,
-
-    temporaryPassword,
+    email: String(approved.email),
+    fullName: [approved.first_name, approved.last_name].filter(Boolean).join(" "),
   };
-
 }
 
 

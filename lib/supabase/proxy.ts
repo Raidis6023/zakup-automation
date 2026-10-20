@@ -278,6 +278,14 @@ export async function updateSession(
   const isPublicRoute =
     pathname === "/login"
     ||
+    pathname === "/set-password"
+    ||
+    pathname === "/api/registration/submit"
+    ||
+    pathname === "/api/registration/status"
+    ||
+    pathname === "/api/registration/complete"
+    ||
     pathname === "/request-access"
     ||
     pathname === "/auth"

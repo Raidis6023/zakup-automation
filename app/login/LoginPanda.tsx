@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import styles from "./LoginPanda.module.css";
 
-type Mode = "login" | "access" | "blocked";
+type Mode = "login" | "access" | "blocked" | "waiting";
 
 const LOGIN_GREETINGS = [
   "Добро пожаловать! Я уже подготовил серьёзный вид. Осталось заняться делами.",
@@ -34,7 +34,32 @@ const BLOCKED_GREETINGS = [
   "Вот ведь ситуация… Костюм есть, папка есть, серьёзное выражение мордочки тоже. А полномочий разблокировать тебя нет.",
 ] as const;
 
+const WAITING_GREETINGS = [
+  "Всё готово с нашей стороны! Осталось дождаться Администраторов. Это особый вид терпения, которому здесь быстро учатся.",
+  "Ждём подтверждения роли. Я бы поторопил Администраторов, но мне ещё с ними работать.",
+  "Администраторы получили заявку. Теперь они решают твою судьбу. Звучит страшнее, чем есть на самом деле.",
+  "Администраторы пока молчат. Возможно, обсуждают твою будущую роль. А возможно, выбирают, кто сегодня отвечает за кнопки.",
+  "Заявка уже у Администраторов. Я бы позвонил ещё раз, но боюсь оказаться в списке заблокированных раньше тебя.",
+  "Проверяю сообщения от Администраторов. Обновляю, обновляю… Может, если смотреть на телефон достаточно строго, ответ придёт быстрее?",
+  "Ждём ответ. Я даже перестал отвлекаться на бамбук. Надеюсь, Администраторы оценят масштаб этой жертвы.",
+  "Заявка на рассмотрении. Администраторы пока заняты. Наверное, снова чинят то, что вчера прекрасно работало.",
+  "Администраторы получили запрос. Теперь всё зависит от них. Мне остаётся только ждать и делать вид, что я очень занят.",
+  "Я уже связался с Администраторами и сообщил, что у нас пополнение. Теперь жду подтверждения. Если они ответят быстро, обещаю даже не шутить про их скорость работы.",
+  "Пока ждём Администраторов, расскажу, как тут всё устроено. Они назначают роли, я встречаю сотрудников, а ты пока наблюдаешь, как мы изображаем слаженную командную работу.",
+] as const;
+
 const STARTS = [
+  "Всё готово с нашей стороны!",
+  "Ждём подтверждения роли.",
+  "Администраторы получили заявку.",
+  "Администраторы пока молчат.",
+  "Заявка уже у Администраторов.",
+  "Проверяю сообщения от Администраторов.",
+  "Ждём ответ.",
+  "Заявка на рассмотрении.",
+  "Администраторы получили запрос.",
+  "Я уже связался с Администраторами и сообщил, что у нас пополнение.",
+  "Пока ждём Администраторов, расскажу, как тут всё устроено.",
   "Добро пожаловать!", "Приветствую!", "Рад встрече!", "Рад тебя видеть!", "Привет!",
   "Хочешь к нам присоединиться?", "Посмотрим…", "Любопытно…", "Хм…",
   "Надеюсь, ты умеешь ждать.",
@@ -53,14 +78,16 @@ export default function LoginPanda({ mode }: { mode: Mode }) {
   const [imageFallback, setImageFallback] = useState(false);
 
   useEffect(() => {
-    const pool = mode === "access" ? ACCESS_GREETINGS : mode === "blocked" ? BLOCKED_GREETINGS : LOGIN_GREETINGS;
+    const pool = mode === "waiting" ? WAITING_GREETINGS : mode === "access" ? ACCESS_GREETINGS : mode === "blocked" ? BLOCKED_GREETINGS : LOGIN_GREETINGS;
     setGreeting(pool[Math.floor(Math.random() * pool.length)]);
     setImageFallback(false);
   }, [mode]);
 
   const introduction = greeting && STARTS.find(part => greeting.startsWith(part));
   const rest = greeting && introduction ? greeting.slice(introduction.length).trimStart() : greeting;
-  const src = mode === "access"
+  const src = mode === "waiting"
+    ? (imageFallback ? "/panda/access-panda.webp" : "/panda/waiting-panda.webp?v=20261020-1")
+    : mode === "access"
     ? (imageFallback ? "/panda/login-panda-approved.webp" : "/panda/access-panda.webp?v=20261019-2")
     : mode === "blocked"
       ? (imageFallback ? "/panda/login-panda-approved.webp" : "/panda/blocked-panda.webp?v=20261019-1")
@@ -77,13 +104,15 @@ export default function LoginPanda({ mode }: { mode: Mode }) {
         className={styles.panda}
         src={src}
         onError={() => { if (!imageFallback) setImageFallback(true); }}
-        alt={mode === "access"
+        alt={mode === "waiting"
+          ? "Красная панда внимательно смотрит в смартфон, ожидая ответа Администратора, и держит папку «Сотрудники»"
+          : mode === "access"
           ? "Красная панда задумчиво изучает папку «Сотрудники», придерживая подбородок"
           : mode === "blocked"
             ? "Грустная красная панда разводит лапой и держит папку «Сотрудники»"
             : "Красная панда приветственно машет лапой и держит папку «Сотрудники»"}
         width={mode === "access" ? 820 : 820}
-        height={mode === "login" ? 1108 : 1093}
+        height={mode === "login" ? 1108 : mode === "waiting" ? 984 : 1093}
         decoding="async"
       />
     </aside>
