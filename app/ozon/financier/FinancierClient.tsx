@@ -88,6 +88,10 @@ export default function FinancierClient() {
     (managerFilter === "Все КМ" || r.manager === managerFilter) &&
     (r.offer_id + " " + (r.master_code ?? "") + " " + (r.name ?? ""))
       .toLocaleLowerCase("ru").includes(search.toLocaleLowerCase("ru"))), [data, managerFilter, search]);
+  const filteredAccruals = useMemo(()=>{
+    if(managerFilter==="Все КМ")return data?.allocated_amount??null;
+    return rows.reduce((sum,r)=>sum+Number(r.ozon_amount),0);
+  },[rows,data,managerFilter]);
   const missingRows = useMemo(() => data?.reference_gaps ?? [], [data]);
   const active = rows.find(r => r.offer_id === selected);
   async function formReport() {
@@ -361,7 +365,7 @@ export default function FinancierClient() {
         }}/>
       <div className="ozf-metrics">
         <div className="ozf-panel"><span>Начисления Ozon, все статьи</span><strong>{currency(data?.ledger_amount)}</strong><small>Без себестоимости. Это не прибыль.</small></div>
-        <div className="ozf-panel"><span>Привязано к артикулам</span><strong>{currency(data?.allocated_amount)}</strong><small>Сумма операций с установленным товаром</small></div>
+        <div className="ozf-panel"><span>Привязано к артикулам{managerFilter==="Все КМ"?"":" · "+managerFilter}</span><strong>{currency(filteredAccruals)}</strong><small>Без общих статей, которые нельзя отнести к определённому КМ</small></div>
         <div className="ozf-panel"><span>Без привязки к товару</span><strong>{currency(data?.unallocated_amount)}</strong><small>Не распределяется произвольно</small></div>
         <div className="ozf-panel"><span>ТК Маяк, учтённый расход</span><strong>{currency(data?.total_mayak)}</strong><small>Сумма только по товарам с полными тарифами и FBO-данными</small></div>
         <div className="ozf-panel"><span>Кэш Ozon</span><strong>{data ? data.synced_days + " / " + data.total_days + " дней" : "..."}</strong><small>{data?.operation_count.toLocaleString("ru-RU") ?? "0"} начислений · смена дат без запросов к Ozon</small></div>
