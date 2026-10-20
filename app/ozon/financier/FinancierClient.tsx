@@ -8,6 +8,10 @@ type FinanceRow = {
   cogs: number | null; mayak_unit: number | null; mayak_expense: number | null;
   mayak_covered_units: number | null; estimated_result: number | null;
   buyout_units: number | null; data_gaps: string[]; details: Detail[];
+  order_count:number|null;cancelled_units:number|null;revenue:number|null;advertising_amount:number;
+  ozon_stock:number|null;main_stock:number|null;ox_stock:number|null;
+  in_china:number|null;in_crossdock:number|null;in_transit:number|null;
+  transit_revenue:number|null;transit_drr:number|null;discontinued:boolean;
 };
 type FinanceReport = {
   from: string; to: string; synced_days: number; total_days: number;
@@ -15,6 +19,7 @@ type FinanceReport = {
   allocated_amount: number; unallocated_amount: number; total_mayak: number; sales_window_covered: boolean;
   profit_status: string; warning: string;
   actual_buyout_days: number; actual_buyouts_covered: boolean;
+  unit_method?:string;stock_as_of?:{ozon_at:string|null;main_at:string|null;ox_at:string|null}|null;
   source: string; calculation_includes_api_calls: boolean;
   reference_gaps: Array<{offer_id:string;master_code:string|null;name:string|null;manager:string;missing:string[]}>;
   background_jobs: Array<{day:string;status:string;pages_completed:number;rows_saved:number;last_error:string|null;updated_at:string}>;
@@ -44,6 +49,9 @@ async function post(body: Record<string, unknown>) {
 export default function FinancierClient() {
   const [from, setFrom] = useState(() => isoShift(-14));
   const [to, setTo] = useState(() => isoShift(-1));
+  const [appliedFrom,setAppliedFrom] = useState(() => isoShift(-14));
+  const [appliedTo,setAppliedTo] = useState(() => isoShift(-1));
+  const [pendingManager,setPendingManager] = useState("Все КМ");
   const [data, setData] = useState<FinanceReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -63,14 +71,14 @@ export default function FinancierClient() {
   const load = useCallback(async () => {
     setError(""); setLoading(true);
     try {
-      const query = new URLSearchParams({ from, to });
+      const query = new URLSearchParams({from:appliedFrom,to:appliedTo});
       const response = await fetch(API + "?" + query.toString(), { cache: "no-store" });
       const json = await response.json();
       if (!response.ok || !json.ok) throw new Error(json.error || "Ошибка получения отчёта");
       setData(json as FinanceReport);
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setLoading(false); }
-  }, [from, to]);
+  }, [appliedFrom,appliedTo]);
   useEffect(() => { void load(); }, [load]);
   const managers = useMemo(() => ["Все КМ",
     ...new Set((data?.rows ?? []).map(r => r.manager).sort((a, b) => a.localeCompare(b, "ru")))],
@@ -81,6 +89,30 @@ export default function FinancierClient() {
       .toLocaleLowerCase("ru").includes(search.toLocaleLowerCase("ru"))), [data, managerFilter, search]);
   const missingRows = useMemo(() => data?.reference_gaps ?? [], [data]);
   const active = rows.find(r => r.offer_id === selected);
+  async function formReport() {
+    setBusy(true);setError("");setProgress("");
+    try {
+      if (!from || !to || from>to)throw new Error("Проверь даты периода");
+      const result=await post({action:"queuePeriod",from,to});
+      setManagerFilter(pendingManager);setAppliedFrom(from);setAppliedTo(to);
+      setProgress("Отчёт за "+from+" — "+to+" включительно. Уже загружено: "+
+        result.completed_days+"; ожидают загрузки: "+result.queued_days+".");
+      if(appliedFrom===from && appliedTo===to)await load();
+    }catch(error){setError(error instanceof Error?error.message:String(error))}
+    finally{setBusy(false)}
+  }
+  async function toggleDiscontinued(r:FinanceRow,checked:boolean) {
+    if(!r.master_code)return;
+    try {
+      await post({action:"setDiscontinued",master_code:r.master_code,discontinued:checked});
+      setData(current=>current?({...current,rows:current.rows.map(item=>
+        item.master_code===r.master_code?{...item,discontinued:checked}:item)}):current);
+    }catch(error){setError(error instanceof Error?error.message:String(error))}
+  }
+  const pct=(value:number|null|undefined)=>
+    value==null||!Number.isFinite(value)?"—":(value*100).toLocaleString("ru-RU",{maximumFractionDigits:1})+"%";
+  const qty=(value:number|null|undefined)=>value==null?"—":value.toLocaleString("ru-RU");
+
   async function preflight(): Promise<void> {
     const controller = new AbortController();
     const timer = window.setTimeout(() => controller.abort(), 15000);
@@ -309,18 +341,14 @@ export default function FinancierClient() {
   return (
     <section className="ozf-layout">
       <div className="ozf-panel ozf-filters">
-        <label>С даты<input type="date" value={from} onChange={e => setFrom(e.target.value)} disabled={busy}/></label>
-        <label>По дату<input type="date" value={to} onChange={e => setTo(e.target.value)} disabled={busy}/></label>
-        <button className="ozf-btn" onClick={() => void checkConnection()} disabled={busy || diagnosing}>
-          {diagnosing ? "Проверяем API…" : "Проверить соединение"}
-        </button>
-        <button className="ozf-btn" onClick={() => void load()} disabled={loading || busy}>Обновить отчёт</button>
-        <button className="ozf-btn ozf-primary" onClick={() => void syncPeriod()} disabled={busy || loading || !data}>
-          {busy ? "Загрузка…" : (data?.missing_days.length ? "Загрузить недостающие дни" : "Пересинхронизировать период")}
-        </button>
-        <button className="ozf-btn" onClick={() => void remapPeriod()} disabled={busy || loading || !data || data.synced_days===0}>
-          Сопоставить SKU
-        </button>
+        <label>С даты<input type="date" value={from} onChange={e=>setFrom(e.target.value)} disabled={busy}/></label>
+        <label>По дату (включительно)<input type="date" value={to} onChange={e=>setTo(e.target.value)} disabled={busy}/></label>
+        <label>КМ<select value={pendingManager} onChange={e=>setPendingManager(e.target.value)}>
+          {managers.map(m=><option key={m} value={m}>{m}</option>)}
+        </select></label>
+        <button className="ozf-btn ozf-primary" disabled={busy||loading}
+          onClick={()=>void formReport()}>{busy?"Формируем…":"Сформировать"}</button>
+        <button className="ozf-btn" onClick={()=>void load()} disabled={loading||busy}>Обновить отчёт</button>
       </div>
       {connectionStatus && <p className="ozf-progress" role="status">{connectionStatus}</p>}
       {error && <p className="ozf-error" role="alert">{error}</p>}
@@ -345,7 +373,7 @@ export default function FinancierClient() {
         <div className="ozf-panel"><span>Без привязки к товару</span><strong>{currency(data?.unallocated_amount)}</strong><small>Не распределяется произвольно</small></div>
         <div className="ozf-panel"><span>ТК Маяк, учтённый расход</span><strong>{currency(data?.total_mayak)}</strong><small>Сумма только по товарам с полными тарифами и FBO-данными</small></div>
         <div className="ozf-panel"><span>Кэш Ozon</span><strong>{data ? data.synced_days + " / " + data.total_days + " дней" : "..."}</strong><small>{data?.operation_count.toLocaleString("ru-RU") ?? "0"} начислений · смена дат без запросов к Ozon</small></div>
-        <div className="ozf-panel"><span>Фактические выкупы</span><strong>{data ? data.actual_buyout_days + " / " + data.total_days + " дней" : "..."}</strong><small>Себестоимость признаётся только по подтверждённым выкупам</small></div>
+        <div className="ozf-panel"><span>Выкупы = заказы − отмены</span><strong>{data ? data.actual_buyout_days + " / " + data.total_days + " дней" : "..."}</strong><small>Расчётное количество, а не подтверждённая доставка</small></div>
       </div>
       <p className="ozf-notice">{data?.warning ?? "Загружаем доступные финансовые данные…"}</p>
       <div className="ozf-panel">
@@ -353,14 +381,12 @@ export default function FinancierClient() {
           <div><h2>Финансы по артикулам</h2><p>Нажмите на товар для статей начислений и назначения КМ.</p></div>
           <div className="ozf-filter-actions">
             <input aria-label="Поиск артикула" value={search} onChange={e => setSearch(e.target.value)} placeholder="Поиск артикула / master_code"/>
-            <select aria-label="Категорийный менеджер" value={managerFilter} onChange={e => setManagerFilter(e.target.value)}>
-              {managers.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
+            <span className="ozf-footnote">КМ: {managerFilter}</span>
             <button className="ozf-btn" onClick={exportCsv} disabled={!rows.length}>CSV</button>
           </div>
         </div>
         <div className="ozf-table-scroll"><table className="ozf-table">
-          <thead><tr><th>Артикул Ozon</th><th>master_code</th><th>КМ</th><th>Начисления, ₽</th><th>Заказано FBO, шт*</th><th>Факт. выкупы, шт</th><th>Себестоимость/шт</th><th>ТК Маяк, ₽/шт</th><th>ТК Маяк, ₽</th><th>Результат*</th></tr></thead>
+          <thead><tr><th>Артикул Ozon</th><th>master_code</th><th>КМ</th><th>Начисления, ₽</th><th>Заказано FBO, шт*</th><th>Факт. выкупы, шт</th><th>Цена закупа, руб</th><th>ТК Маяк, ₽/шт</th><th>ТК Маяк, ₽</th><th>Результат*</th></tr></thead>
           <tbody>
             {rows.map(r => <tr key={r.offer_id} onClick={() => choose(r)} className={selected === r.offer_id ? "ozf-row-active" : ""}>
               <td><b>{r.offer_id}</b><small>{r.name ?? ""}</small></td>
@@ -399,7 +425,7 @@ export default function FinancierClient() {
         <h2>{active.offer_id} · детализация</h2>
         <div className="ozf-edit">
           <label>Ответственный КМ<input value={editManager} onChange={e => setEditManager(e.target.value)} placeholder="Дарья, Вероника, Ольга…"/></label>
-          <label>Себестоимость, ₽ / шт<input type="text" inputMode="decimal" value={editCost} onChange={e => setEditCost(e.target.value)} placeholder="Например, 139.50"/></label>
+          <label>Цена закупа, руб / шт<input type="text" inputMode="decimal" value={editCost} onChange={e => setEditCost(e.target.value)} placeholder="Например, 139.50"/></label>
           <label>ТК Маяк, ₽ / шт<input type="text" inputMode="decimal" value={editMayak} onChange={e => setEditMayak(e.target.value)} placeholder="Например, 3.14"/></label>
           <label>Тариф с даты<input type="date" value={editValidFrom} onChange={e=>setEditValidFrom(e.target.value)}/></label>
           <button className="ozf-btn ozf-primary" disabled={busy || !active.master_code} onClick={() => void save()}>Сохранить</button>
