@@ -1,5 +1,6 @@
 import sharp from "sharp";
-import { mkdir } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { dirname } from "node:path";
 
 const source = "public/panda/login-panda-approved.avif";
@@ -62,6 +63,20 @@ const waitingOutput = await sharp(waitingSource)
 if (waitingOutput.size < 12000) throw new Error("Waiting panda output unexpectedly small");
 console.log("Waiting panda WebP prepared", waitingOutput.width, waitingOutput.height, waitingOutput.size);
 
+
+// The original transparent approved mascot is stored as verified base64 parts.
+// Reconstruct its optimized AVIF source at build time. No network fetch is needed.
+const chunks = await Promise.all(
+  Array.from({ length: 6 }, (_, index) =>
+    readFile(`public/panda/password-panda-parts/${index}.txt`, "utf8")
+  )
+);
+const approvedAvif = Buffer.from(chunks.join(""), "base64");
+const approvedDigest = createHash("sha256").update(approvedAvif).digest("hex");
+if (approvedDigest !== "83ac9d45d889f86d09c9470feb0c6a78d386b6a0fcbc3288396a74c17131f919") {
+  throw new Error("Approved panda asset did not pass integrity check");
+}
+await writeFile("public/panda/password-panda-source.avif", approvedAvif);
 
 const passwordSource = "public/panda/password-panda-source.avif";
 const passwordDestination = "public/panda/password-panda.webp";
