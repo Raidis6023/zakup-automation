@@ -69,6 +69,20 @@ export async function GET(request:NextRequest){
      expense_rub:(prev?.expense_rub??0)+expense});
   }
   const data=[...grouped.values()];
+  // Ozon Seller already has real PPC charges for this period. A zero or
+  // empty Performance SKU report must NOT turn every article's DRR green.
+  const {data:sellerCharges,error:sellerError}=await db.rpc(
+    "ozon_finance_unallocated_breakdown",
+    {p_from:job.date_from,p_to:job.date_to,p_account:"main"}
+  );
+  if(sellerError)throw sellerError;
+  const sellerPpc=(sellerCharges??[]).filter(
+    (r:{type_id:string})=>r.type_id==="41")
+      .reduce((sum:number,r:{amount:number|string})=>sum+Math.abs(Number(r.amount)),0);
+  const skuTotal=data.reduce((sum,r)=>sum+r.expense_rub,0);
+  if(sellerPpc>0.01 && skuTotal<0.01)
+    throw new Error("Performance returned no SKU advertising spend despite "+
+      "Seller PPC expenses. Allocation was NOT marked complete.");
   for(let i=0;i<data.length;i+=300){
    const {error}=await db.from("ozon_finance_ad_sku_daily")
      .upsert(data.slice(i,i+300),{onConflict:"account_key,day,sku,campaign_id"});
