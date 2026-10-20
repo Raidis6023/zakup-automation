@@ -333,7 +333,7 @@ export default function FinancierClient() {
   function exportCsv() {
     const content = [
       ["Артикул", "master_code", "КМ", "Начисления Ozon, ₽", "Продажи, шт (предварительно)",
-        "Себестоимость, ₽/шт", "ТК Маяк, ₽/шт", "ТК Маяк, расход, ₽", "Предварительный результат"].join(";"),
+        "Цена закупа, руб/шт", "ТК Маяк, ₽/шт", "ТК Маяк, расход, ₽", "Предварительный результат"].join(";"),
       ...rows.map(r => [r.offer_id, r.master_code ?? "", r.manager,
         r.ozon_amount.toFixed(2).replace(".", ","),
         r.sold_units ?? "", r.unit_cost ?? "", r.mayak_unit ?? "", r.mayak_expense ?? "", r.estimated_result ?? ""].map(x => '"' + String(x).replaceAll('"', '""') + '"').join(";")),
@@ -382,7 +382,7 @@ export default function FinancierClient() {
           </div>
         </div>
         <div className="ozf-table-scroll"><table className="ozf-table">
-          <thead><tr><th>Артикул Ozon</th><th>master_code</th><th>КМ</th><th>Начисления, ₽</th><th>Заказано FBO, шт*</th><th>Факт. выкупы, шт</th><th>Цена закупа, руб</th><th>ТК Маяк, ₽/шт</th><th>ТК Маяк, ₽</th><th>Результат*</th></tr></thead>
+          <thead><tr><th>Артикул Ozon</th><th>master_code</th><th>КМ</th><th>Начисления, ₽</th><th>Заказано FBO, шт*</th><th>Выкупы (заказы − отмены), шт</th><th>Цена закупа, руб</th><th>ТК Маяк, ₽/шт</th><th>ТК Маяк, ₽</th><th>Результат*</th></tr></thead>
           <tbody>
             {rows.map(r => <tr key={r.offer_id} onClick={() => choose(r)} className={selected === r.offer_id ? "ozf-row-active" : ""}>
               <td><b>{r.offer_id}</b><small>{r.name ?? ""}</small></td>
@@ -397,7 +397,7 @@ export default function FinancierClient() {
             {!rows.length && <tr><td colSpan={10} className="ozf-empty">Нет данных для выбранного периода или КМ.</td></tr>}
           </tbody>
         </table></div>
-        <p className="ozf-footnote">* ТК Маяк = тариф × неотменённые заказанные FBO-штуки. Себестоимость = подтверждённые фактические выкупы × себестоимость на дату реализации. При отсутствии подтверждённых выкупов результат не публикуется. Общие начисления не распределяются произвольно.</p>
+        <p className="ozf-footnote">* Выкупы по принятой формуле = заказы − отмены. Ozon sales_quantity уже исключает отменённые отправления, поэтому отмены второй раз не вычитаются. Цена закупа × расчётные выкупы. ТК Маяк = тариф × неотменённые заказанные FBO-единицы. Общие начисления не распределяются произвольно.</p>
       </div>
       <div className="ozf-panel ozf-missing-report">
         <div className="ozf-toolbar">
