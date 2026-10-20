@@ -1318,3 +1318,6 @@
   font-size: 11px;
   line-height: 1.45;
 }
+
+/* Keep the disabled approve label readable on both themes. */
+.approveButton:disabled { opacity: 1; }

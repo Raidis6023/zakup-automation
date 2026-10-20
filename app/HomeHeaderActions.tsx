@@ -1968,6 +1968,8 @@ export default function HomeHeaderActions() {
       );
 
 
+      setAdminPassword("");
+
       setApprovalResult(
         {
 

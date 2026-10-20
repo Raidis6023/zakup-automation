@@ -305,7 +305,7 @@ export async function approveAccessRequest(input: ApproveAccessRequestInput): Pr
   if (credentialError || !verified.user || verified.user.id !== user.id) {
     return { ok: false, error: "Неверный пароль Администратора" };
   }
-  await verifier.auth.signOut();
+  await verifier.auth.signOut({ scope: "local" });
 
   const admin = createAdminClient();
   // Atomic conditional update: two admins cannot both approve one pending request.
