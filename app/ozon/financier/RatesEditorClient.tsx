@@ -111,7 +111,7 @@ export default function RatesEditorClient() {
     <section id="ozf-rates" className="ozf-panel ozf-rates">
       <div className="ozf-toolbar">
         <div>
-          <h2>Справочник: закупка, ТК Маяк и КМ</h2>
+          <h2>Справочник: цена закупа, ТК Маяк и КМ</h2>
           <p>Настройки редактируются на сайте независимо от того, загружен ли финансовый отчёт Ozon.</p>
         </div>
         <span className="ozf-count">{loaded?rates.length+" master_code":"Загрузка…"}</span>
@@ -147,7 +147,7 @@ export default function RatesEditorClient() {
       {message&&<p className="ozf-progress" role="status">{message}</p>}
       <div className="ozf-table-scroll ozf-rates-scroll">
         <table className="ozf-table"><thead><tr>
-          <th>master_code</th><th>Артикул Ozon</th><th>КМ</th><th>Себестоимость, ₽/шт</th><th>ТК Маяк, ₽/шт</th><th>Что не заполнено</th>
+          <th>master_code</th><th>Артикул Ozon</th><th>КМ</th><th>Цена закупа, руб</th><th>ТК Маяк, ₽/шт</th><th>Что не заполнено</th>
         </tr></thead><tbody>
           {visible.map(r=><tr key={r.master_code} className={selected===r.master_code?"ozf-row-active":""} onClick={()=>choose(r)}>
             <td><b>{r.master_code}</b></td><td>{r.offer_id}<small>{r.name||""}</small></td>
@@ -166,7 +166,7 @@ export default function RatesEditorClient() {
         </div>
         <div className="ozf-edit">
           <label>Ответственный КМ<input value={manager} onChange={e=>setManager(e.target.value)}/></label>
-          <label>Закупка, ₽/шт<input inputMode="decimal" value={cost} onChange={e=>setCost(e.target.value)} placeholder="Не задана"/></label>
+          <label>Цена закупа, руб<input inputMode="decimal" value={cost} onChange={e=>setCost(e.target.value)} placeholder="Не задана"/></label>
           <label>ТК Маяк, ₽/шт<input inputMode="decimal" value={mayak} onChange={e=>setMayak(e.target.value)} placeholder="Не задан"/></label>
           <button className="ozf-btn ozf-primary" disabled={busy} onClick={()=>void save()}>
             {busy?"Сохраняем…":"Сохранить изменения"}
