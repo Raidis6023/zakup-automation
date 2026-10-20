@@ -36,7 +36,8 @@ export async function GET(request:NextRequest) {
  }
  const runId=run.run_id;
  try {
-  const since=new Date(Date.now()-60*86400000).toISOString();
+  const since=new Date(Date.now()-30*86400000).toISOString().slice(0,10)+"T00:00:00+03:00";
+  const to=new Date().toISOString().slice(0,10)+"T23:59:59+03:00";
   const started=Date.now();
   let pages=0,complete=false,total=0,cursor=run.cursor??"";
   while(pages<3 && Date.now()-started<44000) {
@@ -44,19 +45,25 @@ export async function GET(request:NextRequest) {
      method:"POST",cache:"no-store",
      headers:{"Client-Id":sellerId,"Api-Key":key,"Content-Type":"application/json"},
      body:JSON.stringify({cursor,
-       filter:{since,to:new Date().toISOString(),status:[
-         "awaiting_packaging","awaiting_deliver","delivering"]},
-       limit:1000,sort_dir:"asc",translit:false,
-       with:{analytics_data:false,financial_data:true,legal_info:false}}),
+       filter:{since,to},
+       limit:100,sort_dir:"asc",translit:false,
+       with:{analytics_data:true,financial_data:true,legal_info:false}}),
      signal:AbortSignal.timeout(22000)
    });
-   if(!resp.ok)throw new Error("FBO postings HTTP "+resp.status);
+   if(!resp.ok) {
+     const body=(await resp.text()).slice(0,360);
+     throw new Error("FBO postings HTTP "+resp.status+": "+body);
+   }
    const response=await resp.json() as Reply;
    if(!Array.isArray(response.postings)||typeof response.has_next!=="boolean")
      throw new Error("Ozon FBO postings: unexpected schema");
    const saved:Array<{run_id:string;posting_number:string;sku:string;posting_status:string;
      quantity:number;unit_price_rub:number|null}>=[];
    for(const posting of response.postings) {
+    // Match the known-working Ozon FBO list request, then filter locally;
+    // the extra API-side status filter caused HTTP 400 in Production.
+    if(!["awaiting_packaging","awaiting_deliver","delivering"].includes(posting.status??""))
+      continue;
     if(!posting.posting_number)continue;
     const within=new Map<string,{quantity:number;unit_price_rub:number|null}>();
     for(const p of posting.products??[]){
