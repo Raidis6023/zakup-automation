@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { POST as processOneFinancePage } from "../ozon-finance-sync/route";
 import { POST as processSkuMapping } from "../ozon-finance-map/route";
 import { GET as processFboTransit } from "../ozon-finance-transit/route";
+import { GET as processSkuAdvertising } from "../ozon-finance-ads/route";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -87,6 +88,18 @@ export async function GET(request: NextRequest) {
       return reply({ok:!!parsed.ok,phase:"sku_mapping",day:candidate.day,
         mapped:parsed.resolved??0,processed:parsed.processed??0,
         error:parsed.ok?undefined:parsed.error},m.ok?200:502);
+    }
+    // Ad attribution is a separate analytic source. Its values are never
+    // booked as extra deductions to the Seller financial ledger.
+    const {count:adPending,error:adPendingError}=await db.from("ozon_finance_ad_sync_jobs")
+      .select("id",{head:true,count:"exact"})
+      .eq("account_key","main").eq("status","pending");
+    if(adPendingError)console.warn("Performance ads cache queue:",adPendingError.message);
+    if((adPending??0)>0){
+      const ads=await processSkuAdvertising(request);
+      const details=await ads.json();
+      return reply({ok:true,phase:ads.ok?"ad_allocation":"ad_allocation_unavailable",
+        advertising:details,mappings_complete:true});
     }
     // No financial pages or missing SKU remain. Refresh a coherent snapshot
     // of FBO customer shipments still not delivered to the buyer.
