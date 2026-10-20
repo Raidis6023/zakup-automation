@@ -74,7 +74,7 @@ export default function FinancierDetailTable(props:{
      return <tr key={r.offer_id} className={r.discontinued?"ozf-discontinued":""}>
        <td>{r.master_code??"—"}</td><td>{r.manager}</td><td>{r.offer_id}</td>
        <td>{money(r.estimated_result)}</td><td>{money(r.revenue)}</td>
-       <td>{money(r.advertising_amount)}</td>
+       <td>{r.advertising_amount===0?"—":money(r.advertising_amount)}</td>
        <td>{r.revenue&&ads?share(ads/r.revenue):"—"}</td>
        <td>{money(storage)}</td><td>{count(r.order_count)}</td>
        <td>{count(r.cancelled_units)}</td><td>{count(r.buyout_units)}</td>
