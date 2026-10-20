@@ -666,6 +666,13 @@ export async function POST(request: NextRequest) {
       if(completedError)throw completedError;
       const done=new Set((completed??[]).map(x=>x.day));
       const pending=eligible.filter(day=>!done.has(day));
+      if(pending.length){
+        // Preserve as a separate queue: never merge Performance expenses into ledger.
+        const {error:adError}=await db.from("ozon_finance_ad_sync_jobs").upsert({
+          account_key:ACCOUNT,date_from:from,date_to:to,status:"pending",last_error:null
+        },{onConflict:"account_key,date_from,date_to",ignoreDuplicates:true});
+        if(adError)throw adError;
+      }
       for(const day of pending){
         const {error}=await db.from("ozon_finance_page_jobs").upsert({
           account_key:ACCOUNT,day,run_id:randomUUID(),
