@@ -332,7 +332,13 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     const offer = m?.offer_id || (line.sku ? "SKU:" + line.sku : null);
     const master = m?.master_code || (offer ? productByOffer.get(offer)?.master_code : null) || null;
     const typeId = line.type_id || line.accrued_category || "unknown";
-    const fallback:Record<string,string>={"41":"Оплата за клик","32":"Логистика","29":"Доставка до места выдачи","1":"Эквайринг","46":"Размещение на складах Ozon","15":"Утилизация"};
+    const fallback:Record<string,string>={
+      "1":"Эквайринг","12":"Кросс-докинг","15":"Утилизация",
+      "25":"Товарная компенсация","29":"Доставка до места выдачи",
+      "32":"Логистика","41":"Оплата за клик",
+      "46":"Размещение на складах Ozon",
+      "77":"Приёмка поставки на склад Ozon"
+    };
     const name = types.get(typeId) || fallback[typeId] || (line.type_id ? "Статья Ozon №"+typeId : line.accrued_category || "Прочие начисления");
     const advertising = classifyAdvertisingAccrual(line.type_id, name, line.accrued_category);
     if (advertising.isAdvertising) {
