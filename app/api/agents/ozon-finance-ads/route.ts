@@ -104,10 +104,16 @@ export async function GET(request:NextRequest){
       const all=new Set<string>();
       // Campaigns stopped today can still have expenses in selected history.
       for(let page=1;page<=10;page++){
-        const v=await api<{list?:Array<{id?:string|number}>}>(
+        const v=await api<{list?:Array<{id?:string|number;advObjectType?:string}>}>(
           "/api/client/campaign?page="+page+"&pageSize=100",auth);
         if(!Array.isArray(v.list))throw new Error("Performance campaign list: unexpected schema");
-        for(const cmp of v.list)if(cmp.id!=null)all.add(String(cmp.id));
+        for(const cmp of v.list){
+          // Banner campaigns have no SKU and cannot be allocated to articles.
+          if(cmp.id==null)continue;
+          const kind=String(cmp.advObjectType??"").toUpperCase();
+          if(kind && !["SKU","PRODUCT","SEARCH_PROMO"].includes(kind))continue;
+          all.add(String(cmp.id));
+        }
         if(v.list.length<100)break;
         if(page===10)throw new Error("Too many campaigns; cannot guarantee complete ad allocation");
       }
