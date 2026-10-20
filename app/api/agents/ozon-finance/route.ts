@@ -40,6 +40,8 @@ type Expense = { offer_id: string; master_code: string; ordered_units: number; c
 type Product = { id: string; offer_id: string | null; master_code: string | null; name: string | null };
 type OrderTotals = { offer_id:string; master_code:string|null; orders:number;cancelled:number;net_orders:number;covered_cogs_units:number;calculated_cogs:number;mayak_total:number;covered_mayak_units:number };
 type RevenueRow = { sku:string;revenue:number };
+type AdRow = {sku:string;expense:number|string};
+type AdDay = {day:string};
 type TransitRow = { sku:string;quantity:number;open_order_value:number|null;as_of:string };
 type StockRow = {product_id:string;ozon_stock:number|null;main_stock:number|null;ox_stock:number|null;ozon_at:string|null;main_at:string|null;ox_at:string|null};
 type VedOrder = { id:string;workflow_status:string|null;status:string|null };
@@ -65,6 +67,7 @@ type Group = {
   mayak_covered_units: number | null;
   estimated_result: number | null;
   advertising_amount: number;
+  performance_ad_expense: number | null;
   order_count: number | null;
   cancelled_units: number | null;
   revenue: number | null;
@@ -243,7 +246,7 @@ async function syncOneDay(db: ReturnType<typeof createAdminClient>, day: string)
 }
 async function buildReport(db: ReturnType<typeof createAdminClient>, from: string, to: string) {
   const days = dateRange(from, to);
-  const [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, transitRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes] =
+  const [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, transitRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes] =
     await Promise.all([
       db.from("ozon_finance_sync_days").select("day,record_count,synced_at").eq("account_key", ACCOUNT)
         .gte("day", from).lte("day", to),
@@ -255,6 +258,9 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
       db.rpc("ozon_finance_cost_breakdown", { p_from: from, p_to: to }),
       db.rpc("ozon_finance_order_totals", { p_from: from, p_to: to }),
       db.rpc("ozon_finance_sales_revenue", {p_from:from,p_to:to,p_account:ACCOUNT}),
+      db.rpc("ozon_finance_ad_by_sku",{p_from:from,p_to:to,p_account:ACCOUNT}),
+      db.from("ozon_finance_ad_coverage").select("day")
+        .eq("account_key",ACCOUNT).gte("day",from).lte("day",to),
       db.rpc("ozon_finance_transit_totals",{p_account:ACCOUNT}),
       db.rpc("ozon_finance_stock_summary"),
       db.from("ved_orders").select("id,workflow_status,status").limit(500),
@@ -268,7 +274,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
         .eq("account_key",ACCOUNT).gte("day",from).lte("day",to).order("day"),
       db.rpc("ozon_finance_unallocated_breakdown",{p_from:from,p_to:to,p_account:ACCOUNT}),
     ]);
-  for (const item of [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, transitRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes]) {
+  for (const item of [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, transitRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes]) {
     if (item.error) throw item.error;
   }
   const loaded = new Set((syncRes.data ?? []).map(r => r.day));
@@ -279,6 +285,13 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
   const expenses = new Map((expenseRes.data as Expense[] ?? []).map(r => [r.offer_id, r]));
   const ordersByOffer = new Map((ordersRes.data as OrderTotals[] ?? []).map(r=>[r.offer_id,r]));
   const revenueBySku = new Map((revenueRes.data as RevenueRow[] ?? []).map(r=>[r.sku,Number(r.revenue)]));
+  const adCoverage=new Set((adDaysRes.data as AdDay[]??[]).map(x=>x.day));
+  const adComplete=days.every(day=>adCoverage.has(day));
+  const adByOffer=new Map<string,number>();
+  for(const item of adRes.data as AdRow[]??[]){
+    const offer=mapBySku.get(item.sku)?.offer_id;
+    if(offer)adByOffer.set(offer,(adByOffer.get(offer)??0)+Number(item.expense));
+  }
   const transitBySku = new Map((transitRes.data as TransitRow[] ?? []).map(r=>[r.sku,r]));
   const transitSnapshotReady = (transitRes.data as TransitRow[] ?? []).length>0;
   const transitAsOf = (transitRes.data as TransitRow[] ?? [])[0]?.as_of??null;
@@ -361,7 +374,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
         manager: (master ? managers.get(master) : null) || "Не назначен",
         ozon_amount: 0, sold_units: null, buyout_units: null, data_gaps: [], unit_cost: null, cogs: null,
         mayak_unit: null, mayak_expense: null, mayak_covered_units: null,
-        estimated_result: null, advertising_amount: 0,
+        estimated_result: null, advertising_amount: 0, performance_ad_expense:null,
         order_count:null,cancelled_units:null,revenue:null,
         main_stock:null,ox_stock:null,ozon_stock:null,
         in_china:null,in_crossdock:null,in_transit:null,
@@ -387,6 +400,9 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
   for (const g of byOffer.values()) {
     g.ozon_amount = round(g.ozon_amount);
     g.advertising_amount = round(g.advertising_amount);
+    // Performance SKU allocation is analytic ONLY. Financial Seller postings
+    // and per-SKU profit are unchanged; no duplicate booking.
+    g.performance_ad_expense=adComplete ? round(adByOffer.get(g.offer_id)??0):null;
     const costH = costHistory.get(g.master_code!) ?? [];
     const mayakH = mayakHistory.get(g.master_code!) ?? [];
     g.unit_cost = costH.length ? Number(costH.at(-1)!.unit_cost_rub) : null;
@@ -491,6 +507,9 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     transit_as_of:transitAsOf,
     transit_snapshot_ready:transitSnapshotReady,
     source: "supabase_cached_finance",
+    ads_covered:adComplete,
+    ads_covered_days:adCoverage.size,
+    ads_performance_total:adComplete?round([...adByOffer.values()].reduce((a,b)=>a+b,0)):null,
     background_jobs: jobsRes.data ?? [],
     calculation_includes_api_calls: false,
     profit_status: salesWindowCovered ? "calculated_from_orders_less_cancellations" : "missing_sales_coverage",
