@@ -28,6 +28,18 @@ export default function FinancierDetailTable(props:{
  const [search,setSearch]=useState("");
  const shown=rows.filter(r=>(r.offer_id+" "+(r.master_code??"")+" "+r.manager)
   .toLocaleLowerCase("ru").includes(search.toLocaleLowerCase("ru")));
+ // True ABC classification: cumulative share of positive revenue in the
+ // current filtered report (80% A, next 15% B, remaining 5% C).
+ const sorted=rows.filter(r=>(r.revenue??0)>0)
+   .slice().sort((a,b)=>(b.revenue??0)-(a.revenue??0));
+ const totalRevenue=sorted.reduce((sum,r)=>sum+(r.revenue??0),0);
+ const abcByOffer=new Map<string,string>();
+ let running=0;
+ for(const row of sorted) {
+   const previousShare=totalRevenue>0?running/totalRevenue:0;
+   abcByOffer.set(row.offer_id,previousShare<0.8?"A":previousShare<0.95?"B":"C");
+   running+=row.revenue??0;
+ }
  return <div className="ozf-panel ozf-financial-summary">
   <div className="ozf-toolbar">
    <div><h2>Финансовые результаты · детализация</h2>
@@ -70,7 +82,7 @@ export default function FinancierDetailTable(props:{
      const aov=r.buyout_units&&r.revenue!=null?r.revenue/r.buyout_units:null;
      const resultPer=r.buyout_units&&r.estimated_result!=null
        ?r.estimated_result/r.buyout_units:null;
-     const abc=r.revenue==null?"—":r.revenue>10000?"A":r.revenue<0?"C":"B";
+     const abc=abcByOffer.get(r.offer_id)??"—";
      return <tr key={r.offer_id} className={r.discontinued?"ozf-discontinued":""}>
        <td>{r.master_code??"—"}</td><td>{r.manager}</td><td>{r.offer_id}</td>
        <td>{money(r.estimated_result)}</td><td>{money(r.revenue)}</td>
