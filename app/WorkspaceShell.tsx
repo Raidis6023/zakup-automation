@@ -141,9 +141,31 @@ function HistoryLogIcon() {
       aria-hidden="true"
     >
 
-      <path d="M4 8V4H8" />
-      <path d="M4.8 5.1A8 8 0 1 1 4.6 16" />
-      <path d="M12 8V12L15 14" />
+      <path
+        d="
+          M5.3 7.2
+          A8.2 8.2 0 1 1
+          4.1 14.8
+        "
+      />
+
+
+      <path
+        d="
+          M5.3 7.2
+          H2.8
+          V4.7
+        "
+      />
+
+
+      <path
+        d="
+          M12 7.4
+          V12
+          L15.3 14
+        "
+      />
 
     </svg>
 

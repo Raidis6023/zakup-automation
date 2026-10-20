@@ -347,7 +347,7 @@ export default function SkuListTabsClient({
     setActiveTab,
   ] =
     useState<MarketplaceTab>(
-      "ozon"
+      "all"
     );
 
   const [

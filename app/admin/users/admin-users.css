@@ -721,3 +721,53 @@
     margin-right: 0;
   }
 }
+
+
+/* ============================================================
+   УДАЛЕНИЕ: ОТДЕЛЬНЫЙ ПРАВЫЙ СТОЛБЕЦ
+   ============================================================ */
+
+.admin-delete-column-header,
+.admin-delete-column {
+  width: 56px;
+  min-width: 56px;
+  padding-left: 8px !important;
+  padding-right: 14px !important;
+  text-align: right !important;
+}
+
+.admin-delete-user-button {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+
+  padding: 0;
+
+  border: none;
+  border-radius: 0;
+
+  background: transparent;
+
+  color: #ef4e4e;
+
+  box-shadow: none;
+}
+
+.admin-delete-user-button:hover:not(:disabled) {
+  border: none;
+  background: transparent;
+  color: #ff5b5b;
+}
+
+.admin-delete-user-button:focus-visible {
+  outline:
+    2px solid
+    rgba(239, 78, 78, 0.42);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.admin-delete-user-button svg {
+  width: 20px;
+  height: 20px;
+}

@@ -1534,6 +1534,15 @@ export default function AdminUsersPanel() {
                           Управление
                         </th>
 
+
+                        <th
+                          className=
+                            "admin-delete-column-header"
+
+                          aria-label=
+                            "Удаление"
+                        />
+
                       </tr>
 
                     </thead>
@@ -1995,38 +2004,52 @@ export default function AdminUsersPanel() {
 
 
 
-                                    {
-                                      canManageAdminLevels
-                                      &&
-                                      user.user_id !== currentUserId
-                                      &&
-                                      (
-
-                                        <button
-                                          type="button"
-                                          className=
-                                            "admin-delete-user-button"
-                                          disabled={
-                                            changingUserId !== null
-                                          }
-                                          onClick={
-                                            () =>
-                                              void handleDeleteUser(
-                                                user
-                                              )
-                                          }
-                                          aria-label={
-                                            `Удалить пользователя ${user.first_name} ${user.last_name}`
-                                          }
-                                          title=
-                                            "Удалить пользователя"
-                                        >
-                                          <TrashIcon />
-                                        </button>
-
-                                      )
-                                    }
                                   </div>
+
+                                </td>
+
+
+                                <td
+                                  className=
+                                    "admin-delete-column"
+                                >
+
+                                  {
+                                    canManageAdminLevels
+                                    &&
+                                    user.user_id !== currentUserId
+                                    &&
+                                    (
+
+                                      <button
+                                        type="button"
+
+                                        className=
+                                          "admin-delete-user-button"
+
+                                        disabled={
+                                          changingUserId !== null
+                                        }
+
+                                        onClick={
+                                          () =>
+                                            void handleDeleteUser(
+                                              user
+                                            )
+                                        }
+
+                                        aria-label={
+                                          `Удалить пользователя ${user.first_name} ${user.last_name}`
+                                        }
+
+                                        title=
+                                          "Удалить пользователя"
+                                      >
+                                        <TrashIcon />
+                                      </button>
+
+                                    )
+                                  }
 
                                 </td>
 
