@@ -128,8 +128,14 @@ export default function HomeRightPanel() {
                 : [];
 
           setProfile(
-            (rows[0] ?? null)
-            as CurrentUserProfileRow | null
+            (
+              rows[0]
+              ??
+              null
+            ) as
+              CurrentUserProfileRow
+              |
+              null
           );
         } catch {
           if (active) {
