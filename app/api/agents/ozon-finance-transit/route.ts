@@ -40,7 +40,7 @@ export async function GET(request:NextRequest) {
   const to=new Date().toISOString().slice(0,10)+"T23:59:59+03:00";
   const started=Date.now();
   let pages=0,complete=false,total=0,cursor=run.cursor??"";
-  while(pages<3 && Date.now()-started<44000) {
+  while(pages<12 && Date.now()-started<100000) {
    const resp=await fetch("https://api-seller.ozon.ru/v3/posting/fbo/list",{
      method:"POST",cache:"no-store",
      headers:{"Client-Id":sellerId,"Api-Key":key,"Content-Type":"application/json"},
