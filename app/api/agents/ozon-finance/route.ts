@@ -243,7 +243,7 @@ async function syncOneDay(db: ReturnType<typeof createAdminClient>, day: string)
 }
 async function buildReport(db: ReturnType<typeof createAdminClient>, from: string, to: string) {
   const days = dateRange(from, to);
-  const [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, transitRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes] =
+  const [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, transitRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes] =
     await Promise.all([
       db.from("ozon_finance_sync_days").select("day,record_count,synced_at").eq("account_key", ACCOUNT)
         .gte("day", from).lte("day", to),
@@ -266,8 +266,9 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
       db.from("products").select("id,offer_id,master_code,name").limit(2000),
       db.from("ozon_finance_page_jobs").select("day,status,pages_completed,rows_saved,last_error,updated_at")
         .eq("account_key",ACCOUNT).gte("day",from).lte("day",to).order("day"),
+      db.rpc("ozon_finance_unallocated_breakdown",{p_from:from,p_to:to,p_account:ACCOUNT}),
     ]);
-  for (const item of [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, transitRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes]) {
+  for (const item of [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, transitRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes]) {
     if (item.error) throw item.error;
   }
   const loaded = new Set((syncRes.data ?? []).map(r => r.day));
@@ -496,9 +497,24 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     warning: "Расчёты по кэшу Supabase: количество «выкупов» по согласованной формуле = заказы − отмены (НЕ подтверждение вручения покупателю). Цена закупа списывается по этому количеству. Реклама уже учтена в начислениях Ozon и не списывается дважды. Товары в пути и кросс-докинг без подтверждённых статусов не подменяются нулями.",
     rows: Array.from(byOffer.values()).sort((a, b) => a.ozon_amount - b.ozon_amount),
     reference_gaps: referenceGaps.sort((a,b)=>a.offer_id.localeCompare(b.offer_id,"ru")),
-    unallocated_details: [...unallocatedDetails.entries()]
-      .map(([name, sum]) => ({ name, amount: round(sum) }))
-      .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount)),
+    unallocated_details: (unallocatedRes.data as Array<{
+      type_id:string;accrued_category:string;amount:string|number;item_count:number
+    }>??[]).map(item=>{
+      const fallback:Record<string,string>={
+        "1":"Эквайринг","12":"Кросс-докинг","15":"Утилизация",
+        "25":"Товарная компенсация","29":"Доставка до места выдачи",
+        "32":"Логистика","41":"Оплата за клик","46":"Размещение на складах Ozon",
+        "77":"Приёмка поставки на склад Ozon",
+        "UNSPECIFIED":"Операции по отправлениям с несколькими товарами",
+        "ITEM_REMAINDER":"Остаток товарных начислений без детализации",
+        "ITEM_UNCLASSIFIED":"Товарные начисления без типа"
+      };
+      return {type_id:item.type_id,
+        name:types.get(item.type_id)||fallback[item.type_id]||
+          "Статья Ozon №"+item.type_id,
+        amount:round(Number(item.amount)),count:Number(item.item_count),
+        category:item.accrued_category};
+    }).sort((a,b)=>Math.abs(b.amount)-Math.abs(a.amount)),
   };
 }
 
