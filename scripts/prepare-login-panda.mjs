@@ -61,3 +61,16 @@ const waitingOutput = await sharp(waitingSource)
   .toFile(waitingDestination);
 if (waitingOutput.size < 12000) throw new Error("Waiting panda output unexpectedly small");
 console.log("Waiting panda WebP prepared", waitingOutput.width, waitingOutput.height, waitingOutput.size);
+
+
+const passwordSource = "public/panda/password-panda-source.avif";
+const passwordDestination = "public/panda/password-panda.webp";
+const passwordMetadata = await sharp(passwordSource).metadata();
+if (!passwordMetadata.hasAlpha || (passwordMetadata.width ?? 0) < 800 || (passwordMetadata.height ?? 0) < 1000) {
+  throw new Error("Approved password panda asset must be transparent and at least 800×1000.");
+}
+const passwordOutput = await sharp(passwordSource)
+  .webp({ quality: 92, alphaQuality: 100, effort: 6 })
+  .toFile(passwordDestination);
+if (passwordOutput.size < 12000) throw new Error("Password panda generated file is unexpectedly small.");
+console.log("Password panda WebP prepared", passwordOutput.width, passwordOutput.height, passwordOutput.size);
