@@ -33,7 +33,9 @@ const pct=(v:number|null|undefined)=>v==null||!Number.isFinite(v)?"—":
 const round=(v:number)=>Math.round(v*100)/100;
 function moneyTone(value:number|null|undefined):string{
   if(value==null)return "";
-  if(value<0)return "ozf-bad";if(value>0)return "ozf-good";return "ozf-good";
+  if(value<0)return "ozf-bad";
+  if(value>0)return "ozf-good";
+  return "";
 }
 function advertising(r:FinancialRow):number|null {
   if(r.performance_ad_expense!=null)return -Math.abs(r.performance_ad_expense);
@@ -114,6 +116,8 @@ export default function FinancierDetailTable({
 
   // The summary is scoped to the selected KM, not the free-text search.
   const complete=rows.every(r=>r.estimated_result!=null);
+  const adsFailed=(data?.ads_jobs??[]).find(j=>j.status==="failed");
+  const adCoverageIncomplete=!data?.ads_covered;
   const sumProfit=numericSum(rows,r=>r.estimated_result);
   const globalAdjustment=includeUnallocated?Number(data?.unallocated_amount??0):0;
   const operatingProfit=sumProfit==null?null:round(sumProfit+globalAdjustment);
@@ -176,8 +180,10 @@ export default function FinancierDetailTable({
     </div>
     {!complete&&<p className="ozf-footnote">Часть артикулов без полной цены закупа или ТК Маяк. Прибыль по ним не рассчитана; итоги предварительные.</p>}
     {!data?.ads_covered&&<p className="ozf-footnote">
-      Расходы на рекламу по SKU пока не подтверждены Performance API за все даты.
-      Без полной выгрузки ДРР показывается прочерком, а не искусственным нулём.
+      Расходы на рекламу по SKU пока не подтверждены Performance API за весь период.
+      ДРР отмечается прочерком, а не нулём. Исторический запрос через
+      /statistics/products/sku отклонён Ozon: этот метод принимает только сегодня или вчера.
+      Для выбранных дат нужен исторический отчёт с отдельным созданием и получением результата.
       Покрыто {data?.ads_covered_days??0} дней.
       {data?.ads_jobs?.some(x=>x.status==="failed")?<strong className="ozf-bad">
         Ошибка Performance API: {data.ads_jobs.find(x=>x.status==="failed")?.last_error}
