@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 type Row={nm_id:string;article:string;name:string;realization:number;to_transfer:number;delivery:number;storage_in_report:number|null;acceptance:number;penalty:number;deduction:number;rows:number;operations:Record<string,{amount:number;count:number;realization:number;delivery:number;storage:number;penalty:number;deduction:number}>};
 type Ad={nm_id:number;date:string;campaign_id:number;spend:number;views:number;clicks:number;orders:number;sum_price:number};
 type Data={ok:boolean;from:string;to:string;financial_rows:number;rows:Row[];ads:{items:Ad[];campaigns:number;coverage:string;warning:string|null};coverage:Record<string,string>;notice:string};
@@ -7,10 +7,13 @@ const money=(v:number|null)=>v==null?"—":v.toLocaleString("ru-RU",{minimumFrac
 const day=(offset:number)=>{const d=new Date();d.setUTCDate(d.getUTCDate()+offset);return d.toISOString().slice(0,10);};
 export default function WbFinancierClient(){
 const [from,setFrom]=useState(()=>day(-14)),[to,setTo]=useState(()=>day(-1));
+const [retryAt,setRetryAt]=useState(""),[now,setNow]=useState(Date.now());
+useEffect(()=>{const id=setInterval(()=>setNow(Date.now()),1000);return ()=>clearInterval(id);},[]);
+const blocked=Boolean(retryAt&&Date.parse(retryAt)>now);
 const [data,setData]=useState<Data|null>(null),[error,setError]=useState(""),[busy,setBusy]=useState(false),[filter,setFilter]=useState(""),[selected,setSelected]=useState("");
-async function load(){setBusy(true);setError("");try{
+async function load(){if(blocked)return;setBusy(true);setError("");try{
 const q=new URLSearchParams({from,to});const r=await fetch("/api/agents/wb-finance?"+q,{cache:"no-store"});
-const obj=await r.json();if(!r.ok||!obj.ok)throw new Error(obj.error??"Ошибка загрузки");setData(obj);
+const obj=await r.json();if(r.status===429&&obj.retryAt)setRetryAt(obj.retryAt);if(!r.ok||!obj.ok)throw new Error(obj.error??"Ошибка загрузки");setRetryAt("");setData(obj);
 }catch(e){setData(null);setError(e instanceof Error?e.message:String(e));}finally{setBusy(false);}}
 const adsByNm=new Map<string,{spend:number;views:number;clicks:number;orders:number;sum_price:number}>();
 for(const a of data?.ads.items??[]){const k=String(a.nm_id),v=adsByNm.get(k)??{spend:0,views:0,clicks:0,orders:0,sum_price:0};v.spend+=a.spend;v.views+=a.views;v.clicks+=a.clicks;v.orders+=a.orders;v.sum_price+=a.sum_price;adsByNm.set(k,v);}
@@ -24,10 +27,11 @@ return <div className="ozf-layout">
 <label>С даты <input type="date" value={from} onChange={e=>setFrom(e.target.value)} /></label>
 <label>По дату включительно <input type="date" value={to} onChange={e=>setTo(e.target.value)} /></label>
 <label>КМ <select disabled><option>Все КМ · справочник ожидается</option></select></label>
-<button className="ozf-btn ozf-primary" disabled={busy} onClick={load}>{busy?"Загружаем...":"Сформировать"}</button>
-<button className="ozf-btn" disabled={busy} onClick={load}>Обновить отчёт</button>
+<button className="ozf-btn ozf-primary" disabled={busy||blocked} onClick={load}>{busy?"Загружаем...":blocked?"Лимит WB · ожидание":"Сформировать"}</button>
+<button className="ozf-btn" disabled={busy||blocked} onClick={load}>Обновить отчёт</button>
 </div>
 {error&&<p className="ozf-error" role="alert">{error}</p>}
+{blocked&&<p className="ozf-notice">Запросы временно заблокированы. Следующая попытка после {new Date(retryAt).toLocaleTimeString("ru-RU",{timeZone:"Asia/Krasnoyarsk"})} (Красноярск). Осталось {Math.ceil((Date.parse(retryAt)-now)/1000)} сек.</p>}
 </section>
 {data&&<>
 <section className="ozf-panel">
