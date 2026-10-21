@@ -693,7 +693,7 @@ export async function GET() {
         "Ozon",
 
       article:
-        "01OIP2",
+        "880466307",
 
       href:
         "/ozon?focusStockDays=01OIP2",
@@ -733,7 +733,7 @@ export async function GET() {
         "Яндекс Маркет",
 
       article:
-        "AVD-P01",
+        "6131086751",
 
       href:
         "/yandex-market?focusStockDays=AVD-P01",
