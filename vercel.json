@@ -23,6 +23,14 @@
     {
       "path": "/api/agents/ozon-finance-support-cron",
       "schedule": "7,22,37,52 * * * *"
+    },
+    {
+      "path": "/api/agents/wb-finance-cron",
+      "schedule": "0 23 * * *"
+    },
+    {
+      "path": "/api/agents/wb-finance-cron",
+      "schedule": "2-57/5 * * * *"
     }
   ]
 }
