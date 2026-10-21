@@ -1,9 +1,8 @@
 import Link from "next/link";
 import WbFinancierClient from "./WbFinancierClient";
+import "../../ozon/financier/financier.css";
 export const dynamic="force-dynamic";
-export default function Page(){return <main style={{maxWidth:1600,margin:"0 auto",padding:"26px 12px"}}>
-<Link href="/wildberries">← Wildberries</Link>
-<h1>ИИ-финансист Wildberries</h1>
-<p>Детализация по артикулам. Черновой режим аудита источников, без расчёта прибыли и без изменений в кабинете WB.</p>
+export default function Page(){return <main className="ozf-page">
+<header className="ozf-heading"><div><Link className="ozf-back" href="/wildberries">← Wildberries</Link><div className="ozf-eyebrow">ИИ-АГЕНТ / ФИНАНСЫ / WILDBERRIES</div><h1>ИИ-финансист Wildberries</h1><p>Доходы, расходы и детализация по артикулам. Прибыль появится после загрузки справочников.</p></div><span className="ozf-guard">Режим аудита · без изменений в WB</span></header>
 <WbFinancierClient/>
 </main>;}
