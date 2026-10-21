@@ -7,6 +7,16 @@
   overflow: hidden;
 }
 
+/*
+ * В workspace глобальное правило .workspace-content--module .section
+ * добавляет секциям внутренний padding и из-за этого плашка поставок
+ * получалась выше, чем "Данные по товарам". У поставок section является
+ * самой оболочкой collapsible-блока, поэтому padding здесь должен быть 0.
+ */
+:global(.workspace-content--module) .panel:global(.section) {
+  padding: 0;
+}
+
 .panel_ozon {
   --supplies-accent: var(--ws-icon, #2086cf);
   border-color: color-mix(in srgb, var(--supplies-accent) 20%, transparent);
