@@ -338,7 +338,7 @@ SyncNotification {
     marketplaceLabel,
 
     title:
-      "Загрузка данных завершена",
+      "Данные загружены",
 
     completedAt,
 
