@@ -2235,8 +2235,9 @@ html[data-theme="dark"]
   background: var(--ws-surface);
 }
 .ozon-reference-page .ozon-products-col-master { width: 100px; }
+.ozon-reference-page .ozon-products-col-sku { width: 140px; }
 .ozon-reference-page .ozon-products-col-name { width: calc((100% - 875px) * .60); }
-.ozon-reference-page .ozon-products-col-offer { width: calc((100% - 875px) * .40); }
+.ozon-reference-page .ozon-products-col-offer { width: calc((100% - 875px) * .40 - 140px); }
 .ozon-reference-page .ozon-products-col-number { width: 155px; }
 .ozon-reference-page .ozon-products-sort-table > thead > tr > th {
   position: sticky;

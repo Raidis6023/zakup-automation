@@ -501,6 +501,24 @@ function getCargoLabel(
 }
 
 
+function TruckIcon() {
+
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path d="M3.5 6.5h10.2v10H3.5z" />
+      <path d="M13.7 9h3.1l3.7 4.1v3.4h-6.8z" />
+      <path d="M16.8 9v4.1h3.7" />
+      <circle cx="7" cy="17.5" r="1.8" />
+      <circle cx="17.5" cy="17.5" r="1.8" />
+    </svg>
+  );
+
+}
+
+
 export default function MarketplaceSuppliesPanel({
   marketplace,
   endpoint,
@@ -553,6 +571,15 @@ export default function MarketplaceSuppliesPanel({
   ] =
     useState(
       ""
+    );
+
+
+  const [
+    panelExpanded,
+    setPanelExpanded,
+  ] =
+    useState(
+      true
     );
 
 
@@ -1055,11 +1082,65 @@ export default function MarketplaceSuppliesPanel({
 
       <div
         className={
-          styles.header
+          `${styles.header} ${styles[`header_${marketplace}`]}`
+        }
+
+        role="button"
+
+        tabIndex={0}
+
+        aria-expanded={
+          panelExpanded
+        }
+
+        onClick={
+          () =>
+            setPanelExpanded(
+              current =>
+                !current
+            )
+        }
+
+        onKeyDown={
+          event => {
+
+            if (
+              event.key ===
+                "Enter"
+              ||
+              event.key ===
+                " "
+            ) {
+
+              event.preventDefault();
+
+              setPanelExpanded(
+                current =>
+                  !current
+              );
+
+            }
+
+          }
         }
       >
 
-        <div>
+        <span
+          className={
+            styles.headerIcon
+          }
+
+          aria-hidden="true"
+        >
+          <TruckIcon />
+        </span>
+
+
+        <div
+          className={
+            styles.headerCopy
+          }
+        >
 
           <h2
             className=
@@ -1097,10 +1178,14 @@ export default function MarketplaceSuppliesPanel({
           }
 
           onClick={
-            () => {
+            event => {
+
+              event.stopPropagation();
+
               void loadOverview(
                 true
               );
+
             }
           }
         >
@@ -1113,6 +1198,15 @@ export default function MarketplaceSuppliesPanel({
 
       </div>
 
+
+      {
+        panelExpanded
+          ? (
+            <div
+              className={
+                styles.body
+              }
+            >
 
       {
         error
@@ -1482,6 +1576,11 @@ export default function MarketplaceSuppliesPanel({
 
             </>
 
+          )
+          : null
+      }
+
+            </div>
           )
           : null
       }

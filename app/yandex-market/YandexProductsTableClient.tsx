@@ -45,6 +45,10 @@ export type YandexProductsTableItem = {
   offer_id:
     string;
 
+  market_sku:
+    string
+    | null;
+
   sales:
     number;
 
@@ -65,6 +69,7 @@ export type YandexProductsTableItem = {
 
 type SortKey =
   | "master_code"
+  | "market_sku"
   | "name"
   | "offer_id"
   | "sales"
@@ -281,6 +286,9 @@ SortDirection {
       "master_code"
     ||
     key ===
+      "market_sku"
+    ||
+    key ===
       "name"
     ||
     key ===
@@ -320,6 +328,11 @@ SortValue {
     case "master_code":
 
       return item.master_code;
+
+
+    case "market_sku":
+
+      return item.market_sku;
 
 
     case "name":
@@ -802,6 +815,28 @@ export default function YandexProductsTableClient({
 
 
           <SortableHeader
+            label="SKU"
+
+            sortKey=
+              "market_sku"
+
+            currentKey={
+              sortKey
+            }
+
+            direction={
+              sortDirection
+            }
+
+            onSort={
+              changeSort
+            }
+
+            align="left"
+          />
+
+
+          <SortableHeader
             label="Товар"
 
             sortKey="name"
@@ -1032,6 +1067,18 @@ export default function YandexProductsTableClient({
 
                       </span>
 
+                    </MainCell>
+
+
+                    <MainCell
+                      strong
+                      text
+                    >
+                      {
+                        item.market_sku
+                        ??
+                        "—"
+                      }
                     </MainCell>
 
 
