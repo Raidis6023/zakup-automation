@@ -15,6 +15,10 @@
     {
       "path": "/api/agents/ozon-finance-cron",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/agents/ozon-finance-plan",
+      "schedule": "0 22 * * *"
     }
   ]
 }
