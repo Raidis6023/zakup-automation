@@ -9,6 +9,7 @@ import {
 
 import WorkspaceMarketplaceLogo
   from "./WorkspaceMarketplaceLogos";
+import HomeIdlePanda from "./HomeIdlePanda";
 
 
 type MetricId =
@@ -180,6 +181,46 @@ Position {
   };
 }
 
+
+function assistantReservedRectangle(boardWidth: number, boardHeight: number) {
+  const compact = window.innerWidth <= 800;
+  const medium = window.innerWidth <= 1100;
+  const width = compact ? 490 : medium ? 560 : 630;
+  const height = compact ? 250 : medium ? 280 : 320;
+  return {
+    left: Math.max(0, boardWidth - Math.min(width, boardWidth)),
+    top: Math.max(CARD_HEIGHT + CARD_GAP, boardHeight - height),
+  };
+}
+
+// Нижние правые ячейки принадлежат помощнику.
+function cardHitsAssistant(
+  position: Position,
+  cardWidth: number,
+  boardWidth: number,
+  boardHeight: number
+): boolean {
+  const reserved = assistantReservedRectangle(boardWidth, boardHeight);
+  return position.x < boardWidth &&
+    position.x + cardWidth > reserved.left &&
+    position.y < boardHeight &&
+    position.y + CARD_HEIGHT > reserved.top;
+}
+
+function isAllowedSlot(
+  slot: number,
+  cardWidth: number,
+  boardWidth: number,
+  boardHeight: number
+) {
+  if (Math.floor(slot / COLUMN_COUNT) === 0) return true;
+  return !cardHitsAssistant(
+    positionForSlot(slot, cardWidth),
+    cardWidth,
+    boardWidth,
+    boardHeight
+  );
+}
 
 function readSavedSlots():
 SlotMap | null {
@@ -398,25 +439,44 @@ export default function HomeMarketplaceCards({
           -
           1;
 
-        setSlots(
-          current => {
-            const fits =
-              METRIC_IDS.every(
-                id =>
-                  current[
-                    id
-                  ]
-                  <=
-                  maxSlot
-              );
+        setSlots(current => {
+          const next: SlotMap = { ...current };
+          const used = new Set<number>();
+          const needsMove: MetricId[] = [];
 
-            return fits
-
-              ? current
-
-              : DEFAULT_SLOTS;
+          for (const id of METRIC_IDS) {
+            const slot = next[id];
+            if (slot <= maxSlot &&
+                !used.has(slot) &&
+                isAllowedSlot(slot, nextCardWidth, width, board.clientHeight)) {
+              used.add(slot);
+            } else {
+              needsMove.push(id);
+            }
           }
-        );
+
+          for (const id of needsMove) {
+            const origin = next[id];
+            const options = Array.from(
+              { length: maxSlot + 1 }, (_, index) => index
+            ).filter(slot =>
+              !used.has(slot) &&
+              isAllowedSlot(slot, nextCardWidth, width, board.clientHeight)
+            );
+            options.sort((a, b) =>
+              Math.abs(a - origin) - Math.abs(b - origin)
+            );
+            const replacement = options[0];
+            if (replacement !== undefined) {
+              next[id] = replacement;
+              used.add(replacement);
+            }
+          }
+
+          return METRIC_IDS.every(id => next[id] === current[id])
+            ? current
+            : next;
+        });
       }
 
       measure();
@@ -579,6 +639,25 @@ export default function HomeMarketplaceCards({
         ),
     };
 
+    // Во время перемещения карточка не должна заходить под панду.
+    if (cardHitsAssistant(
+      nextPosition, cardWidth, board.clientWidth, board.clientHeight
+    )) {
+      const reserved = assistantReservedRectangle(
+        board.clientWidth, board.clientHeight
+      );
+      const safeLeft = reserved.left - cardWidth;
+      if (safeLeft >= 0 &&
+          Math.abs(nextPosition.x - safeLeft) <
+            Math.abs(nextPosition.y - (reserved.top - CARD_HEIGHT))) {
+        nextPosition.x = Math.min(nextPosition.x, safeLeft);
+      } else {
+        nextPosition.y = Math.min(
+          nextPosition.y, reserved.top - CARD_HEIGHT
+        );
+      }
+    }
+
     setDragPosition(
       nextPosition
     );
@@ -640,11 +719,29 @@ export default function HomeMarketplaceCards({
       +
       column;
 
+    const maxSlot = (maxRow + 1) * COLUMN_COUNT - 1;
+    const candidates = Array.from(
+      { length: maxSlot + 1 }, (_, index) => index
+    ).filter(slot =>
+      isAllowedSlot(
+        slot, cardWidth, board.clientWidth, board.clientHeight
+      )
+    );
+    candidates.sort((a, b) => {
+      const distance = (slot: number) => {
+        const pos = positionForSlot(slot, cardWidth);
+        return (pos.x - nextPosition.x) ** 2 +
+          (pos.y - nextPosition.y) ** 2;
+      };
+      return distance(a) - distance(b);
+    });
+    const allowedTarget = candidates[0] ?? candidate;
+
     targetSlotRef.current =
-      candidate;
+      allowedTarget;
 
     setTargetSlot(
-      candidate
+      allowedTarget
     );
   }
 
@@ -981,6 +1078,7 @@ export default function HomeMarketplaceCards({
 
           : null
       }
+      <HomeIdlePanda />
     </div>
   );
 }

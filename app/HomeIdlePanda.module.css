@@ -1,0 +1,90 @@
+@import url("https://fonts.googleapis.com/css2?family=Montserrat+Alternates:wght@500;700&display=swap");
+
+/* Выделенный нижний правый участок доски. Не плавающее окно над карточками. */
+.assistant {
+  position: fixed;
+  right: 30px;
+  bottom: 20px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  width: min(630px, 100%);
+  height: min(320px, calc(100dvh - 230px));
+  padding: 0 0 0 6px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.speech {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 358px;
+  margin-bottom: 33px;
+  padding: 19px 20px;
+  border: 1px solid #15966b;
+  border-radius: 20px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 9px 28px rgba(0, 0, 0, .09);
+  font-family: "Montserrat Alternates", Arial, sans-serif;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.speech::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -9px;
+  width: 15px;
+  height: 15px;
+  border-top: 1px solid #15966b;
+  border-right: 1px solid #15966b;
+  background: var(--surface);
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.speech p {
+  margin: 0;
+  transition: opacity .38s ease;
+}
+.speech strong {
+  color: #15966b;
+  font-weight: 700;
+}
+.phraseVisible { opacity: 1; }
+.phraseHidden { opacity: 0; }
+
+.panda {
+  display: block;
+  flex: 0 0 auto;
+  align-self: flex-end;
+  width: auto;
+  height: 100%;
+  max-width: 232px;
+  max-height: 310px;
+  object-fit: contain;
+  object-position: bottom right;
+  filter: drop-shadow(0 12px 15px rgba(0,0,0,.14));
+}
+
+@media (max-width: 1100px) {
+  .assistant { width: min(560px, 100%); height: min(280px, calc(100dvh - 210px)); gap: 5px; right: 20px; }
+  .panda { max-width: 205px; max-height: 273px; }
+  .speech { font-size: 12px; padding: 14px 16px; margin-bottom: 22px; }
+}
+
+@media (max-width: 800px) {
+  .assistant { width: min(calc(100% - 32px), 490px); height: 250px; right: 16px; bottom: 10px; }
+  .panda { max-width: 175px; max-height: 235px; }
+  .speech { font-size: 11.5px; padding: 12px 13px; margin-bottom: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .speech p { transition: none; }
+}
