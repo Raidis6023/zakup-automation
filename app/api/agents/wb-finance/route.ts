@@ -116,21 +116,43 @@ async function adStats(from:string,to:string,token:string):Promise<{items:AdItem
   return {items,campaigns:ids.length,coverage:"stats_only",warning:"fullstats показывает статистику расхода, не подтверждённые списания. Сверка с рекламными актами /adv/v1/upd ещё не выполнена."};
 }
 export async function GET(request:NextRequest){
-  try{
-    await access();
-    const from=request.nextUrl.searchParams.get("from")??"",to=request.nextUrl.searchParams.get("to")??"";
-    if(!dateOK(from)||!dateOK(to)||from>to||Date.parse(to)-Date.parse(from)>30*86400000) return NextResponse.json({ok:false,error:"Выберите корректный период до 31 дня"},{status:400});
-    const token=process.env.WB_FINANCE_TOKEN?.trim();
-    if(!token) throw new Error("В Vercel не настроен WB_FINANCE_TOKEN");
-    const report=await finance(from,to,token);
-    let ads:Awaited<ReturnType<typeof adStats>>={items:[],campaigns:0,coverage:"not_configured",warning:"Не настроен WB_PROMOTION_TOKEN"};
-    if(process.env.WB_PROMOTION_TOKEN?.trim()){
-      try {ads=await adStats(from,to,process.env.WB_PROMOTION_TOKEN.trim());}
-      catch(e){ads={items:[],campaigns:0,coverage:"error",warning:e instanceof Error?e.message:String(e)};}
+ try{
+  await access();
+  const db=createAdminClient();
+  const from=request.nextUrl.searchParams.get("from")??"";
+  const to=request.nextUrl.searchParams.get("to")??"";
+  if(!dateOK(from)||!dateOK(to)||from>to||Date.parse(to)-Date.parse(from)>30*86400000)
+    return NextResponse.json({ok:false,error:"Выберите корректный период до 31 дня"},{status:400});
+  const {data:latest,error:latestError}=await db.from("wb_finance_cache_jobs")
+   .select("run_day,date_from,date_to,status,rows_saved,completed_at")
+   .eq("status","complete").lte("date_from",from).gte("date_to",to)
+   .order("run_day",{ascending:false}).limit(1).maybeSingle();
+  if(latestError)throw latestError;
+  if(!latest){
+    const {data:progress}=await db.from("wb_finance_cache_jobs")
+      .select("run_day,date_from,date_to,status,rows_saved,retry_at,last_error")
+      .order("run_day",{ascending:false}).limit(1).maybeSingle();
+    return NextResponse.json({ok:false,cache_pending:true,progress,
+      error:"За выбранный период нет завершённого кэша WB. Дождитесь фоновой загрузки. Изменение фильтров не отправляет запросы в WB."},{status:503});
+  }
+  const lines:FinanceLine[]=[];
+  // Read only Supabase. Paginate because PostgREST defaults to 1000 records.
+  for(let offset=0;offset<latest.rows_saved;offset+=1000){
+    const {data,error}=await db.from("wb_finance_cache_lines").select("payload")
+      .eq("run_day",latest.run_day).order("line_index",{ascending:true}).range(offset,offset+999);
+    if(error)throw error;
+    if(!data?.length)break;
+    for(const rec of data){
+      const line=rec.payload as FinanceLine;
+      const reportDate=String(line.rrdDt??line.rrdDate??line.saleDt??line.saleDate??"").slice(0,10);
+      if(reportDate>=from&&reportDate<=to)lines.push(line);
     }
-    return NextResponse.json({ok:true,from,to,financial_rows:report.length,rows:groupFinancial(report),ads,coverage:{finance:"loaded",advertising:ads.coverage,paid_storage:"not_loaded",advertising_actual_charges:"not_loaded"},notice:"Платное хранение по отдельному отчёту WB пока не загружено. Не считать отчёт полным финансовым результатом."});
-  }catch(e){
-  if(e instanceof FinanceCooldown)return NextResponse.json({ok:false,error:e.message,retryAt:e.retryAt},{status:429});
-  return NextResponse.json({ok:false,error:e instanceof Error?e.message:String(e)},{status:500});
-}
+  }
+  return NextResponse.json({ok:true,from,to,financial_rows:lines.length,
+    rows:groupFinancial(lines),
+    ads:{items:[],campaigns:0,coverage:"not_loaded",warning:"Рекламная статистика пока не загружена в кэш. Новые запросы к WB при смене фильтра не отправляются."},
+    coverage:{finance:"cached_complete",advertising:"not_loaded",paid_storage:"not_loaded",advertising_actual_charges:"not_loaded"},
+    cache:{runDay:latest.run_day,from:latest.date_from,to:latest.date_to,completedAt:latest.completed_at,rowsSaved:latest.rows_saved},
+    notice:"Отчёт сформирован из Supabase без обращения к WB. Хранение и реклама требуют отдельной фоновой синхронизации."});
+ }catch(e){return NextResponse.json({ok:false,error:e instanceof Error?e.message:String(e)},{status:500});}
 }
