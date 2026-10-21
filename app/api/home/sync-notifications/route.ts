@@ -33,10 +33,16 @@ type SyncNotification = {
   completedAt:
     string;
 
+  notificationAt:
+    string;
+
   dataDate:
     string;
 
-  time:
+  updateTime:
+    string;
+
+  notificationTime:
     string;
 };
 
@@ -104,6 +110,7 @@ function buildNotification({
   marketplace,
   marketplaceLabel,
   completedAt,
+  notificationAt,
 }: {
   marketplace:
     SyncNotification["marketplace"];
@@ -113,8 +120,17 @@ function buildNotification({
 
   completedAt:
     string;
+
+  notificationAt?:
+    string;
 }):
 SyncNotification {
+
+  const resolvedNotificationAt =
+    notificationAt
+    ??
+    completedAt;
+
 
   return {
     id:
@@ -129,14 +145,22 @@ SyncNotification {
 
     completedAt,
 
+    notificationAt:
+      resolvedNotificationAt,
+
     dataDate:
       formatKrasnoyarskDate(
         completedAt
       ),
 
-    time:
+    updateTime:
       formatKrasnoyarskTime(
         completedAt
+      ),
+
+    notificationTime:
+      formatKrasnoyarskTime(
+        resolvedNotificationAt
       ),
   };
 
@@ -216,7 +240,7 @@ export async function GET() {
           "wb_sync_state"
         )
         .select(
-          "last_success_at"
+          "last_success_at,updated_at"
         )
         .eq(
           "sync_key",
@@ -299,6 +323,12 @@ export async function GET() {
       "string"
   ) {
 
+    const wbNotificationAt =
+      wbResult
+        .data
+        ?.updated_at;
+
+
     notifications.push(
       buildNotification({
         marketplace:
@@ -309,6 +339,14 @@ export async function GET() {
 
         completedAt:
           wbCompletedAt,
+
+        notificationAt:
+          typeof wbNotificationAt ===
+            "string"
+
+            ? wbNotificationAt
+
+            : wbCompletedAt,
       })
     );
 
@@ -348,11 +386,11 @@ export async function GET() {
       right
     ) =>
       new Date(
-        right.completedAt
+        left.notificationAt
       ).getTime()
       -
       new Date(
-        left.completedAt
+        right.notificationAt
       ).getTime()
   );
 

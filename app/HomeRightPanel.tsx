@@ -65,10 +65,16 @@ type SyncNotification = {
   completedAt:
     string;
 
+  notificationAt:
+    string;
+
   dataDate:
     string;
 
-  time:
+  updateTime:
+    string;
+
+  notificationTime:
     string;
 };
 
@@ -117,7 +123,7 @@ function SyncSuccessIcon() {
       aria-hidden="true"
     >
       <path
-        d="m7.5 12.4 3 3 6.2-6.4"
+        d="m5.8 12.4 3.7 3.7 8.7-8.9"
       />
     </svg>
   );
@@ -575,6 +581,10 @@ export default function HomeRightPanel() {
                             {
                               notification.dataDate
                             }
+                            {", "}
+                            {
+                              notification.updateTime
+                            }
                           </span>
                         </div>
 
@@ -583,11 +593,11 @@ export default function HomeRightPanel() {
                             "home-sync-notification-time"
 
                           dateTime={
-                            notification.completedAt
+                            notification.notificationAt
                           }
                         >
                           {
-                            notification.time
+                            notification.notificationTime
                           }
                         </time>
                       </div>
