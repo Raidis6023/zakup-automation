@@ -34,7 +34,7 @@ declare
  busy integer := 0;
  ret jsonb;
 begin
- if auth.role() is distinct from 'service_role' then
+ if current_user not in ('service_role','postgres') then
    raise exception 'Not authorized';
  end if;
  if p_window_days<>31 or p_recent_refresh_days<>7 then
