@@ -27,7 +27,7 @@ type FinanceReport = {
   source: string; calculation_includes_api_calls: boolean;
   reference_gaps: Array<{offer_id:string;master_code:string|null;name:string|null;manager:string;missing:string[]}>;
   background_jobs: Array<{day:string;status:string;pages_completed:number;rows_saved:number;last_error:string|null;updated_at:string}>;
-  rows: FinanceRow[]; unallocated_details: Array<{ name: string; amount: number }>;
+  rows: FinanceRow[]; unallocated_details: Array<{ type_id?:string; name: string; amount: number }>;
 };
 const API = "/api/agents/ozon-finance";
 const currency = (v: number | null | undefined) =>
@@ -371,7 +371,7 @@ export default function FinancierClient() {
         <div className="ozf-toolbar">
           <div><h2>Контроль незаполненных данных · {missingRows.length} размещений</h2>
             <p>Отдельный реестр по всей номенклатуре, независимо от выгрузки начислений. Нет master_code, КМ, себестоимости или ТК Маяк.</p></div>
-          <a href="#ozf-rates" className="ozf-btn">Открыть справочник тарифов</a>
+          <a href="/ozon/financier/settings" className="ozf-btn">Открыть справочник тарифов</a>
         </div>
         <div className="ozf-table-scroll"><table className="ozf-table">
           <thead><tr><th>Артикул</th><th>master_code</th><th>КМ</th><th>Чего не хватает</th><th>Статус результата</th></tr></thead>
@@ -391,10 +391,26 @@ export default function FinancierClient() {
         {advice ? <div className="ozf-advice">{advice}</div> : <p className="ozf-footnote">Для анализа потребуется отдельный ключ OpenAI API в серверных настройках. Без него отчёт и импорт работают.</p>}
       </div>
       {!!data?.unallocated_details.length && <div className="ozf-panel" id="ozf-unallocated">
-        <h2>Нераспределённые расходы</h2><p>Начисления, которые Ozon Seller не отнёс к конкретному SKU. Отрицательные значения уменьшают общую операционную прибыль, положительные увеличивают её. Performance API помогает показать расходы по SKU, но не списывает их повторно.</p>
-        <table className="ozf-table"><thead><tr><th>Статья</th><th>Сумма</th></tr></thead><tbody>
-          {data.unallocated_details.map((d, i) => <tr key={d.name + i}><td>{d.name}</td><td>{currency(d.amount)}</td></tr>)}
-        </tbody></table>
+        <h2>Нераспределённые расходы</h2>
+        <p>Только прочие начисления без привязки к товару. Реклама и платное хранение отражены отдельно.
+          Они остаются в общей прибыли по финансовому реестру Ozon ровно один раз.
+          {managerFilter!=="Все КМ"?" Это общие начисления всего кабинета Ozon, они не относятся автоматически к выбранному КМ.":""}
+        </p>
+        {(()=>{
+          const other=data.unallocated_details.filter(d=>
+            !["41","46"].includes(String(d.type_id??"")) &&
+            !/оплата за клик|реклам|размещени.*склад|платн.*хранени/i.test(d.name));
+          const otherTotal=Math.round(other.reduce((sum,d)=>sum+Number(d.amount),0)*100)/100;
+          return <table className="ozf-table">
+            <thead><tr><th>Статья</th><th>Сумма</th></tr></thead><tbody>
+              {other.map((d,i)=><tr key={String(d.type_id)+"-"+i}>
+                <td>{d.name}</td><td>{currency(d.amount)}</td>
+              </tr>)}
+              <tr className="ozf-breakdown-total"><td>Итого прочие нераспределённые начисления</td>
+                <td>{currency(otherTotal)}</td></tr>
+
+            </tbody></table>;
+        })()}
       </div>}
     </section>
   );

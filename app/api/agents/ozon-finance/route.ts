@@ -44,6 +44,7 @@ type AdRow = {sku:string;expense:number|string};
 type Itemized = {sku:string;type_id:string;name:string;amount:string|number;item_count:number};
 type AdDay = {day:string};
 type TransitRow = { sku:string;quantity:number;open_order_value:number|null;as_of:string };
+type CrossdockRow = {sku:string;quantity:number;as_of:string};
 type StockRow = {product_id:string;ozon_stock:number|null;main_stock:number|null;ox_stock:number|null;ozon_at:string|null;main_at:string|null;ox_at:string|null};
 type VedOrder = { id:string;workflow_status:string|null;status:string|null };
 type VedItem = {product_id:string|null;ved_order_id:string;status:string;order_quantity:number|null;quantity:number|null};
@@ -69,6 +70,7 @@ type Group = {
   estimated_result: number | null;
   advertising_amount: number;
   performance_ad_expense: number | null;
+  allocated_seller_ppc: number;
   order_count: number | null;
   cancelled_units: number | null;
   revenue: number | null;
@@ -247,7 +249,7 @@ async function syncOneDay(db: ReturnType<typeof createAdminClient>, day: string)
 }
 async function buildReport(db: ReturnType<typeof createAdminClient>, from: string, to: string) {
   const days = dateRange(from, to);
-  const [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, adJobsRes, itemizedRes, transitRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes] =
+  const [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, adJobsRes, itemizedRes, transitRes, crossdockRes, crossdockCurrentRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes] =
     await Promise.all([
       db.from("ozon_finance_sync_days").select("day,record_count,synced_at").eq("account_key", ACCOUNT)
         .gte("day", from).lte("day", to),
@@ -267,6 +269,8 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
         .order("updated_at",{ascending:false}).limit(3),
       db.rpc("ozon_finance_itemized_per_sku",{p_from:from,p_to:to,p_account:ACCOUNT}),
       db.rpc("ozon_finance_transit_totals",{p_account:ACCOUNT}),
+      db.rpc("ozon_finance_crossdock_totals",{p_account:ACCOUNT}),
+      db.from("ozon_finance_crossdock_current").select("published_at").eq("account_key",ACCOUNT).maybeSingle(),
       db.rpc("ozon_finance_stock_summary"),
       db.from("ved_orders").select("id,workflow_status,status").limit(500),
       db.from("ved_order_items").select("product_id,ved_order_id,status,order_quantity,quantity").limit(1500),
@@ -279,7 +283,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
         .eq("account_key",ACCOUNT).gte("day",from).lte("day",to).order("day"),
       db.rpc("ozon_finance_unallocated_breakdown",{p_from:from,p_to:to,p_account:ACCOUNT}),
     ]);
-  for (const item of [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, adJobsRes, itemizedRes, transitRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes]) {
+  for (const item of [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, adJobsRes, itemizedRes, transitRes, crossdockRes, crossdockCurrentRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes]) {
     if (item.error) throw item.error;
   }
   const loaded = new Set((syncRes.data ?? []).map(r => r.day));
@@ -301,6 +305,13 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
   const transitSnapshotReady = (transitRes.data as TransitRow[] ?? []).length>0;
   const transitAsOf = (transitRes.data as TransitRow[] ?? [])[0]?.as_of??null;
   const stocksByProduct = new Map((stocksRes.data as StockRow[] ?? []).map(r=>[r.product_id,r]));
+  const crossdockByOffer=new Map<string,number>();
+  const crossdockCurrent=crossdockCurrentRes.data;
+  for(const item of crossdockRes.data as CrossdockRow[]??[]){
+    const offer=mapBySku.get(item.sku)?.offer_id;
+    if(offer)crossdockByOffer.set(offer,
+      (crossdockByOffer.get(offer)??0)+Number(item.quantity));
+  }
   const articleStatus = new Map((statusesRes.data as StatusRow[] ?? []).map(r=>[r.master_code,r.status]));
   const vedOrderStatus = new Map((vedOrdersRes.data as VedOrder[] ?? []).map(r=>[r.id,r.workflow_status || r.status || "draft"]));
   const vedByProduct = new Map<string,number>();
@@ -341,6 +352,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
   let operationCount = 0;
   const accounting = emptyAccrualReconciliation();
   const unallocatedDetails = new Map<string, number>();
+  let unallocatedSellerPpcCents=0;
   for (const line of ledgerRes.data as ReportLine[] ?? []) {
     const amountCents = toKopecks(line.amount);
     const amount = fromKopecks(amountCents);
@@ -368,6 +380,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     }
     if (!offer) {
       accounting.unallocatedKopecks += amountCents;
+      if (String(line.type_id??"")==="41") unallocatedSellerPpcCents+=amountCents;
       if (advertising.isAdvertising) accounting.advertisingUnallocatedKopecks += amountCents;
       unallocatedDetails.set(name, (unallocatedDetails.get(name) ?? 0) + amount);
       continue;
@@ -380,6 +393,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
         ozon_amount: 0, sold_units: null, buyout_units: null, data_gaps: [], unit_cost: null, cogs: null,
         mayak_unit: null, mayak_expense: null, mayak_covered_units: null,
         estimated_result: null, advertising_amount: 0, performance_ad_expense:null,
+        allocated_seller_ppc:0,
         order_count:null,cancelled_units:null,revenue:null,
         main_stock:null,ox_stock:null,ozon_stock:null,
         in_china:null,in_crossdock:null,in_transit:null,
@@ -440,7 +454,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     g.in_china=product && !unknownChinaStatuses ? (vedByProduct.get(product.id)??0):null;
     // Transit to buyers and cross-docking need real shipping statuses; current
     // stock snapshots and replenishment CALCULATIONS do not prove in-transit units.
-    g.in_crossdock=null;
+    g.in_crossdock=crossdockCurrent ? (crossdockByOffer.get(g.offer_id)??0):null;
     const open=transitByOffer.get(g.offer_id);
     g.in_transit=transitSnapshotReady?(open?.units??0):null;
     g.transit_revenue=transitSnapshotReady && g.revenue!==null &&
@@ -463,6 +477,29 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     }else g.estimated_result=null;
     g.details = g.details.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
   }
+  // Attribution of the REAL Seller PPC charge to SKU. The Performance
+  // amounts are weights only, never a second expense booked to profit.
+  // While coverage is incomplete the charge stays in unallocated Seller
+  // totals. Redistribution leaves total company profit invariant.
+  let allocatedPpcCents=0;
+  const allWeight=[...adByOffer.values()].reduce((sum,v)=>sum+Math.max(0,v),0);
+  if(adComplete && unallocatedSellerPpcCents<0 && allWeight>0){
+    const ordered=[...adByOffer.entries()].filter(([,weight])=>weight>0)
+      .sort((a,b)=>b[1]-a[1]);
+    for(const [offer,weight] of ordered){
+      const row=byOffer.get(offer);
+      if(!row)continue; // unknown SKU allocation remains unallocated
+      const portion=Math.min(-unallocatedSellerPpcCents+allocatedPpcCents,
+        Math.round(-unallocatedSellerPpcCents*weight/allWeight));
+      if(portion<=0)continue;
+      const signed=-portion;
+      row.allocated_seller_ppc=fromKopecks(signed);
+      row.advertising_amount=round(row.advertising_amount+row.allocated_seller_ppc);
+      if(row.estimated_result!==null)
+        row.estimated_result=round(row.estimated_result+row.allocated_seller_ppc);
+      allocatedPpcCents+=signed;
+    }
+  }
   // Build per-article Ozon service lines from RAW nested finance operations.
   // The database reconciliation guarantees sum(service amounts) = Seller ledger.
   const drillByOffer=new Map<string,Map<string,Group["details"][number]>>();
@@ -482,6 +519,13 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
   for(const [offer,map] of drillByOffer){
     const row=byOffer.get(offer);
     if(row)row.details=[...map.values()].sort((a,b)=>Math.abs(b.amount)-Math.abs(a.amount));
+  }
+  for(const row of byOffer.values()){
+    if(row.allocated_seller_ppc!==0)
+      row.details.push({type_id:"PPC_ALLOCATION",
+        name:"Оплата за клик (распределено из общих начислений Seller API)",
+        amount:row.allocated_seller_ppc,count:0,is_advertising:true});
+    row.details.sort((a,b)=>Math.abs(b.amount)-Math.abs(a.amount));
   }
   // Reference data completeness is independent of whether a finance day
   // was imported. Product listings without master_code must remain visible.
@@ -508,7 +552,9 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     operation_count: operationCount, total_mayak: round(totalMayak),
     ledger_amount: fromKopecks(accounting.ledgerKopecks),
     allocated_amount: fromKopecks(accounting.directKopecks),
-    unallocated_amount: fromKopecks(accounting.unallocatedKopecks),
+    unallocated_amount: fromKopecks(accounting.unallocatedKopecks-allocatedPpcCents),
+    ppc_allocated_to_skus:fromKopecks(allocatedPpcCents),
+    ppc_still_unallocated:fromKopecks(unallocatedSellerPpcCents-allocatedPpcCents),
     advertising: {
       financial_source: "ozon_seller_accruals",
       performance_role: "analytics_and_allocation_only",
@@ -519,7 +565,8 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
       finance_unallocated: fromKopecks(accounting.advertisingUnallocatedKopecks),
       classified_operations: accounting.classifiedAdvertisingOperations,
       unknown_type_operations: accounting.unknownTypeOperations,
-      performance_total: null,
+      performance_total: adComplete
+        ?round([...adByOffer.values()].reduce((a,b)=>a+b,0)):null,
       discrepancy: null,
       reconciliation_status: accounting.unknownTypeOperations > 0
         ? "requires_type_review" : "not_checked_against_performance",
@@ -531,6 +578,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     stock_as_of:(stocksRes.data as StockRow[]??[])[0] ?? null,
     transit_as_of:transitAsOf,
     transit_snapshot_ready:transitSnapshotReady,
+    crossdock_as_of:crossdockCurrent?.published_at??null,
     source: "supabase_cached_finance",
     ads_covered:adComplete,
     ads_jobs:adJobsRes.data??[],

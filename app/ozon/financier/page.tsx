@@ -1,6 +1,5 @@
 import Link from "next/link";
 import FinancierClient from "./FinancierClient";
-import RatesEditorClient from "./RatesEditorClient";
 import PerformanceConnectionClient from "./PerformanceConnectionClient";
 import "./financier.css";
 
@@ -18,8 +17,8 @@ export default function OzonFinancierPage() {
         </div>
         <span className="ozf-guard">Режим аудита · без изменений в Ozon</span>
       </header>
+      <div className="ozf-toolbar"><Link href="/ozon/financier/settings" className="ozf-btn">Настройки: цена закупа, ТК Маяк, КМ и импорт Excel</Link></div>
       <PerformanceConnectionClient />
-      <RatesEditorClient />
       <FinancierClient />
     </main>
   );

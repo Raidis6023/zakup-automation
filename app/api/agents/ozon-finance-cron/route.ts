@@ -3,6 +3,7 @@ import { POST as processOneFinancePage } from "../ozon-finance-sync/route";
 import { POST as processSkuMapping } from "../ozon-finance-map/route";
 import { GET as processFboTransit } from "../ozon-finance-transit/route";
 import { GET as processSkuAdvertising } from "../ozon-finance-ads/route";
+import { GET as processCrossdock } from "../ozon-finance-crossdock/route";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -95,19 +96,22 @@ export async function GET(request: NextRequest) {
       .select("id",{head:true,count:"exact"})
       .eq("account_key","main").in("status",["pending","running","failed"]);
     if(adPendingError)console.warn("Performance ads cache queue:",adPendingError.message);
+    let adResult:null|object=null;
     if((adPending??0)>0){
       const ads=await processSkuAdvertising(request);
-      const details=await ads.json();
-      return reply({ok:true,phase:ads.ok?"ad_allocation":"ad_allocation_unavailable",
-        advertising:details,mappings_complete:true});
+      adResult=await ads.json() as object;
     }
-    // No financial pages or missing SKU remain. Refresh a coherent snapshot
-    // of FBO customer shipments still not delivered to the buyer.
+    // Independent snapshot work must continue even when Performance is rate-
+    // limited or waiting for asynchronous report generation.
     const tr=await processFboTransit(request);
     const trData=await tr.json();
-    if(!tr.ok)console.warn("Ozon transit refresh pending:",trData);
-    return reply({ok:true,phase:tr.ok?"transit_snapshot":"transit_unavailable",
-      remaining_days:0,mappings_complete:true,transit:trData});
+    if(!tr.ok)console.warn("FBO transit snapshot not yet available:",trData);
+    const cross=await processCrossdock(request);
+    const crossData=await cross.json();
+    if(!cross.ok)console.warn("Crossdock snapshot not yet available:",crossData);
+    return reply({ok:true,phase:"supporting_snapshots",remaining_days:0,
+      mappings_complete:true,advertising:adResult,
+      transit:trData,crossdock:crossData});
   }
 
   // Do NOT use user-supplied URLs. Fixed same-origin endpoint, credential

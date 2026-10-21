@@ -142,6 +142,14 @@ export async function GET(request:NextRequest){
  if(!secret||request.headers.get("authorization")!=="Bearer "+secret)
    return response({ok:false,error:"Unauthorized"},401);
  const db=createAdminClient();
+ // Ozon Performance limits concurrent requests for the entire account.
+ // Avoid hammering it every five minutes after HTTP 429.
+ const {data:lastRateLimit}=await db.from("ozon_finance_ad_sync_jobs")
+  .select("updated_at,last_error").ilike("last_error","%HTTP 429%")
+  .order("updated_at",{ascending:false}).limit(1).maybeSingle();
+ if(lastRateLimit && Date.now()-Date.parse(lastRateLimit.updated_at)<25*60000)
+   return response({ok:true,status:"rate_limited",
+     note:"Повтор Performance API отложен на 25 минут после 429"});
  const {data:job,error}=await db.from("ozon_finance_ad_sync_jobs")
   .select("id,date_from,date_to,status,last_error")
   .eq("account_key","main")
