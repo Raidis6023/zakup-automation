@@ -760,6 +760,15 @@ export async function confirmStockImport(
 
   let chinaRecalculation: { ok: boolean; error?: string } = { ok: false };
   try {
+    // Ручные корректировки принадлежат конкретному запуску.
+    // Новый расчёт не должен незаметно их сбрасывать.
+    const dashboard = await callSupabaseRpc("get_china_dashboard");
+    if (Array.isArray(dashboard?.items) && dashboard.items.some(
+      (item: { container_manual_quantity?: number | null; truck_manual_quantity?: number | null }) =>
+        item.container_manual_quantity != null || item.truck_manual_quantity != null
+    )) {
+      throw new Error("В последнем расчёте Китая есть ручные корректировки. Автоматический пересчёт пропущен.");
+    }
     await callSupabaseRpc("run_china_calculation");
     chinaRecalculation = { ok: true };
   } catch (cause) {

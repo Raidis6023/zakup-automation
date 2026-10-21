@@ -220,6 +220,23 @@ export async function POST(
 
     let chinaRecalculation: { ok: boolean; error?: string } = { ok: false };
     try {
+      const dashboardResponse = await fetch(supabaseUrl + "/rest/v1/rpc/get_china_dashboard", {
+        method: "POST",
+        headers: {
+          apikey: supabaseSecretKey,
+          Authorization: "Bearer " + supabaseSecretKey,
+          "Content-Type": "application/json",
+        },
+        body: "{}", cache: "no-store",
+      });
+      if (!dashboardResponse.ok) throw Error("Не удалось проверить ручные корректировки");
+      const dashboard = await dashboardResponse.json();
+      if (Array.isArray(dashboard?.items) && dashboard.items.some(
+        (item: { container_manual_quantity?: number | null; truck_manual_quantity?: number | null }) =>
+          item.container_manual_quantity != null || item.truck_manual_quantity != null
+      )) {
+        throw Error("Обнаружены ручные корректировки в последнем расчёте Китая. Автоматический пересчёт пропущен.");
+      }
       const calc = await fetch(supabaseUrl + "/rest/v1/rpc/run_china_calculation", {
         method: "POST",
         headers: { apikey: supabaseSecretKey, Authorization: "Bearer " + supabaseSecretKey, "Content-Type": "application/json" },
