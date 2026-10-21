@@ -371,7 +371,7 @@ export default function FinancierClient() {
         <div className="ozf-toolbar">
           <div><h2>Контроль незаполненных данных · {missingRows.length} размещений</h2>
             <p>Отдельный реестр по всей номенклатуре, независимо от выгрузки начислений. Нет master_code, КМ, себестоимости или ТК Маяк.</p></div>
-          <a href="#ozf-rates" className="ozf-btn">Открыть справочник тарифов</a>
+          <a href="/ozon/financier/settings" className="ozf-btn">Открыть справочник тарифов</a>
         </div>
         <div className="ozf-table-scroll"><table className="ozf-table">
           <thead><tr><th>Артикул</th><th>master_code</th><th>КМ</th><th>Чего не хватает</th><th>Статус результата</th></tr></thead>
@@ -399,8 +399,6 @@ export default function FinancierClient() {
             !["41","46"].includes(String(d.type_id??"")) &&
             !/оплата за клик|реклам|размещени.*склад|платн.*хранени/i.test(d.name));
           const otherTotal=Math.round(other.reduce((sum,d)=>sum+Number(d.amount),0)*100)/100;
-          const excluded=Math.round(data.unallocated_details.filter(d=>!other.includes(d))
-            .reduce((sum,d)=>sum+Number(d.amount),0)*100)/100;
           return <table className="ozf-table">
             <thead><tr><th>Статья</th><th>Сумма</th></tr></thead><tbody>
               {other.map((d,i)=><tr key={String(d.type_id)+"-"+i}>
@@ -408,8 +406,7 @@ export default function FinancierClient() {
               </tr>)}
               <tr className="ozf-breakdown-total"><td>Итого прочие нераспределённые начисления</td>
                 <td>{currency(otherTotal)}</td></tr>
-              <tr className="ozf-info-only"><td>Реклама и хранение, уже учтены отдельно (справочно)</td>
-                <td>{currency(excluded)}</td></tr>
+
             </tbody></table>;
         })()}
       </div>}
