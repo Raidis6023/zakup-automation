@@ -90,7 +90,6 @@ export default function FinancierDetailTable({
   const [search,setSearch]=useState("");
   const [sort,setSort]=useState<{key:SortKey;dir:1|-1}>({key:"estimated_result",dir:-1});
   const [expanded,setExpanded]=useState<string|null>(null);
-  const [selectedMarketplace,setSelectedMarketplace]=useState<"ozon"|"wb"|"yandex">("ozon");
   const [abcMetric]=useState("revenue");
 
   const abc=useMemo(()=>{
@@ -210,7 +209,7 @@ export default function FinancierDetailTable({
           return <Fragment key={r.offer_id}><tr className={r.discontinued?"ozf-discontinued":""}>
             <td>{r.master_code??"—"}</td><td>{r.manager}</td>
             <td><button type="button" className="ozf-article-btn" aria-expanded={expanded===r.offer_id}
-              onClick={()=>{setExpanded(expanded===r.offer_id?null:r.offer_id);setSelectedMarketplace("ozon");}}>
+              onClick={()=>setExpanded(expanded===r.offer_id?null:r.offer_id)}>
               <span>{expanded===r.offer_id?"▾":"▸"}</span> {r.offer_id}</button></td>
             <td className={moneyTone(r.estimated_result)}>{money(r.estimated_result)}</td>
             <td>{money(r.revenue)}</td>
@@ -236,31 +235,39 @@ export default function FinancierDetailTable({
           </tr>
           {expanded===r.offer_id&&<tr key={r.offer_id+"-detail"} className="ozf-expanded-row">
             <td colSpan={26}>
-              <div className="ozf-expanded-content"><h3>{r.offer_id} · доходы и расходы по маркетплейсам</h3>
-              <div className="ozf-market-tabs">{([["ozon","Ozon"],["wb","Wildberries"],["yandex","Яндекс Маркет"]] as const)
-                .map(([id,label])=><button type="button" key={id}
-                   className={selectedMarketplace===id?"active":""}
-                   onClick={()=>setSelectedMarketplace(id)}>{label}</button>)}</div>
-              {selectedMarketplace==="ozon"?<table className="ozf-breakdown-table"><thead><tr>
-                <th>Статья</th><th>Тип</th><th>Операций</th><th>Сумма, ₽</th></tr></thead><tbody>
-                {r.details.map((item,i)=><tr key={item.type_id+"-"+i}>
-                  <td>{item.name}</td><td>{item.type_id}</td><td>{item.count}</td>
-                  <td className={moneyTone(item.amount)}>{money(item.amount)}</td></tr>)}
-                {r.cogs!=null&&<tr><td>Цена закупа × выкупы</td><td>Себестоимость</td><td>{qty(r.buyout_units)}</td>
-                  <td className="ozf-bad">{money(-Math.abs(r.cogs))}</td></tr>}
-                {r.mayak_expense!=null&&<tr><td>ТК Маяк × заказанные штуки</td>
-                  <td>Внешний расход</td><td>{qty(r.buyout_units)}</td>
-                  <td className="ozf-bad">{money(-Math.abs(r.mayak_expense))}</td></tr>}
-                {r.performance_ad_expense!=null&&<tr className="ozf-info-only">
-                  <td>Реклама по SKU (Performance API, справочно)</td><td>Не добавлять второй раз</td>
-                  <td>—</td><td>{money(-Math.abs(r.performance_ad_expense))}</td></tr>}
-                <tr className="ozf-breakdown-total"><td>Операционная прибыль (без двойного списания рекламы)</td>
-                  <td>Итог</td><td>—</td><td className={moneyTone(r.estimated_result)}>
-                  {money(r.estimated_result)}</td></tr>
+              <div className="ozf-expanded-content"><h3>{r.offer_id} · доходы и расходы Ozon</h3>
+                <table className="ozf-breakdown-table"><thead><tr>
+                  <th>Статья</th><th>Категория</th><th>Операций</th><th>Сумма, ₽</th>
+                </tr></thead><tbody>
+                  {r.details.map((item,i)=>{
+                    const category=item.type_id==="SALES"?"Выручка":
+                      item.type_id==="COMMISSION"?"Комиссия":
+                      item.type_id==="REMAINDER"?"Прочее":
+                      item.type_id==="SERVICE"?"Услуга Ozon":"Начисление Ozon";
+                    return <tr key={item.type_id+"-"+i}>
+                      <td>{item.name}</td><td title={"Код Ozon: "+item.type_id}>{category}</td>
+                      <td>{item.count}</td><td className={moneyTone(item.amount)}>{money(item.amount)}</td>
+                    </tr>;
+                  })}
+                  {r.cogs!=null&&<tr>
+                    <td>Цена закупа × расчётные выкупы</td><td>Цена закупа</td>
+                    <td>{qty(r.buyout_units)}</td><td className="ozf-bad">{money(-Math.abs(r.cogs))}</td>
+                  </tr>}
+                  {r.mayak_expense!=null&&<tr>
+                    <td>ТК Маяк × заказанные единицы</td><td>Внешний расход</td>
+                    <td>{qty(r.order_count)}</td>
+                    <td className="ozf-bad">{money(-Math.abs(r.mayak_expense))}</td>
+                  </tr>}
+                  {r.performance_ad_expense!=null&&<tr className="ozf-info-only">
+                    <td>Реклама по SKU (Performance API, справочно)</td>
+                    <td>Распределение рекламы</td><td>—</td>
+                    <td>{money(-Math.abs(r.performance_ad_expense))}</td>
+                  </tr>}
+                  <tr className="ozf-breakdown-total"><td>Операционная прибыль</td>
+                    <td>Итог</td><td>—</td><td className={moneyTone(r.estimated_result)}>
+                    {money(r.estimated_result)}</td>
+                  </tr>
                 </tbody></table>
-              :<p className="ozf-footnote">По {selectedMarketplace==="wb"?"Wildberries":"Яндекс Маркету"}
-                детализированный финансовый реестр пока не подключён к этому агенту.
-                Не подставляем продажи вместо доходов и расходы другого маркетплейса.</p>}
               </div>
             </td>
           </tr>}
