@@ -1,3 +1,5 @@
+import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
 import {
   NextRequest,
   NextResponse,
@@ -54,6 +56,11 @@ export async function POST(
   request: NextRequest
 ) {
 
+  const auth = await createClient();
+  const { data: { user }, error: authError } = await auth.auth.getUser();
+  if (authError || !user) {
+    return NextResponse.json({ ok: false, error: "Требуется авторизация в WorkSpace" }, { status: 401 });
+  }
   try {
 
     const body =
@@ -211,12 +218,22 @@ export async function POST(
       );
 
 
-    return NextResponse.json(
-      data,
-      {
-        status: 200,
-      }
-    );
+    let chinaRecalculation: { ok: boolean; error?: string } = { ok: false };
+    try {
+      const calc = await fetch(supabaseUrl + "/rest/v1/rpc/run_china_calculation", {
+        method: "POST",
+        headers: { apikey: supabaseSecretKey, Authorization: "Bearer " + supabaseSecretKey, "Content-Type": "application/json" },
+        body: "{}", cache: "no-store",
+      });
+      if (!calc.ok) throw Error("HTTP " + calc.status + ": " + (await calc.text()).slice(0, 400));
+      chinaRecalculation = { ok: true };
+    } catch (cause) {
+      chinaRecalculation = { ok: false, error: cause instanceof Error ? cause.message : "Не удалось пересчитать Китай" };
+    }
+    revalidatePath("/stocks");
+    revalidatePath("/zakup");
+    revalidatePath("/ozon");
+    return NextResponse.json({ ...data, chinaRecalculation }, { status: 200 });
 
 
   } catch (error) {

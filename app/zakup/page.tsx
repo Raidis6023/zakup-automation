@@ -850,6 +850,7 @@ export default async function Home() {
             className=
               "zakup-v2-header-actions"
           >
+            <Link href="/stocks" className="secondary-button navigation-button">Остатки</Link>
 
             <Link
               href="/"

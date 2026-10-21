@@ -746,6 +746,8 @@ export async function confirmStockImport(
   revalidatePath(
     "/stock-import"
   );
+  revalidatePath("/stocks");
+  revalidatePath("/ozon");
 
   revalidatePath(
     "/zakup"
@@ -756,6 +758,15 @@ export async function confirmStockImport(
   );
 
 
-  return result;
+  let chinaRecalculation: { ok: boolean; error?: string } = { ok: false };
+  try {
+    await callSupabaseRpc("run_china_calculation");
+    chinaRecalculation = { ok: true };
+  } catch (cause) {
+    chinaRecalculation = { ok: false, error: cause instanceof Error ? cause.message : "Не удалось пересчитать Китай" };
+  }
+  revalidatePath("/zakup");
+  revalidatePath("/stocks");
+  return { ...result, chinaRecalculation };
 
 }

@@ -47,7 +47,7 @@ export default function ResponsibleStorageImportPage() {
 
 
             <Link
-              href="/stock-import"
+              href="/stocks"
 
               className=
                 "secondary-button navigation-button"
@@ -77,12 +77,12 @@ export default function ResponsibleStorageImportPage() {
 
 
             <Link
-              href="/"
+              href="/stocks"
 
               className=
                 "secondary-button navigation-button"
             >
-              ← Расчёт Китая
+              ← Остатки
             </Link>
 
           </div>

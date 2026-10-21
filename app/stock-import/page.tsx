@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import Link
   from "next/link";
 
@@ -168,7 +169,7 @@ export default async function StockImportPage({
 
 
             <h1 className="title">
-              Импорт остатков склада
+              Загрузка остатков АВЕДЭКС
             </h1>
 
 
@@ -187,10 +188,10 @@ export default async function StockImportPage({
 
 
             <Link
-              href="/"
+              href="/stocks"
               className="secondary-button navigation-button"
             >
-              ← Расчёт Китая
+              ← Остатки
             </Link>
 
           </div>
@@ -531,11 +532,8 @@ export default async function StockImportPage({
                     async () => {
                       "use server";
 
-                      await confirmStockImport(
-                        preview!
-                          .batch!
-                          .id
-                      );
+                      const result = await confirmStockImport(preview!.batch!.id);
+                      redirect("/stocks?import=avedex&calc=" + (result.chinaRecalculation.ok ? "ok" : "failed"));
                     }
                   }
                 >

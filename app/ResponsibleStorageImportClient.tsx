@@ -137,6 +137,8 @@ type ApplyResult = {
   ok:
     boolean;
 
+  chinaRecalculation?: { ok: boolean; error?: string };
+
   sync_run_id?:
     string;
 
@@ -2237,6 +2239,11 @@ export default function ResponsibleStorageImportClient() {
                 </div>
 
 
+                <div className="reason-text">
+                  {result.chinaRecalculation?.ok
+                    ? "Расчёт Китая обновлён после загрузки ОХ."
+                    : "Остатки ОХ сохранены, но расчёт Китая не обновился. Проверьте входные данные в «Закупе»."}
+                </div>
                 <div className="reason-text">
 
                   Без артикула:{" "}

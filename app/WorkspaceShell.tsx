@@ -497,6 +497,9 @@ export default function WorkspaceShell({
           )
           ||
           pathname ===
+            "/stocks"
+          ||
+          pathname ===
             "/stock-import"
           ||
           pathname.startsWith(
