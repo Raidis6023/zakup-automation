@@ -221,6 +221,14 @@ async function syncPage(db: AdminDB, day: string, restart: boolean) {
     const completed = !nextCursor;
     const rowsSaved = job.rows_saved + data.length;
     if (completed) {
+      const {count:actualCount,error:countError}=await db
+        .from("ozon_finance_accruals")
+        .select("row_index",{head:true,count:"exact"})
+        .eq("account_key",ACCOUNT).eq("day",day).eq("run_id",job.run_id);
+      if(countError)throw new Error("Не удалось проверить полноту финансового дня: "+countError.message);
+      if(actualCount!==rowsSaved)
+        throw new Error("Начисления Ozon неполные: ожидали "+rowsSaved+
+          ", сохранено "+actualCount+". День не опубликован.");
       const { error: publishError } = await db.from("ozon_finance_sync_days").upsert({
         account_key: ACCOUNT, day, active_run_id: job.run_id,
         record_count: rowsSaved, synced_at: new Date().toISOString(),
@@ -240,6 +248,15 @@ async function syncPage(db: AdminDB, day: string, restart: boolean) {
       .eq("pages_completed", job.pages_completed).select("*").maybeSingle();
     if (updateError) throw updateError;
     if (!updated) throw new Error("Страница сохранена, но контрольная запись устарела. Повторите запрос.");
+    if(completed) {
+      // The previous version remains published until all new pages
+      // are verified. Only then may obsolete generations be cleaned.
+      const {error:cleanupError}=await db.rpc("ozon_finance_cleanup_generations",{
+        p_day:day,p_account:ACCOUNT
+      });
+      if(cleanupError)console.warn("Deferred ledger generation cleanup:",
+        cleanupError.message.slice(0,180));
+    }
     return result({
       ok: true, ...publicProgress(updated as Job), done: completed,
       page_rows: data.length, resume_next: !completed,
