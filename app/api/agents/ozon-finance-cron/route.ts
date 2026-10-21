@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
     // booked as extra deductions to the Seller financial ledger.
     const {count:adPending,error:adPendingError}=await db.from("ozon_finance_ad_sync_jobs")
       .select("id",{head:true,count:"exact"})
-      .eq("account_key","main").eq("status","pending");
+      .eq("account_key","main").in("status",["pending","running","failed"]);
     if(adPendingError)console.warn("Performance ads cache queue:",adPendingError.message);
     if((adPending??0)>0){
       const ads=await processSkuAdvertising(request);
