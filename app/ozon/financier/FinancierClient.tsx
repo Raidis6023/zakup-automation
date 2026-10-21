@@ -101,10 +101,11 @@ export default function FinancierClient() {
     setBusy(true);setError("");setProgress("");
     try {
       if (!from || !to || from>to)throw new Error("Проверь даты периода");
-      const result=await post({action:"queuePeriod",from,to});
+      // Selecting a date or KM reads ONLY the local Supabase cache.
+      // It must never enqueue a fresh Ozon API import.
       setManagerFilter(pendingManager);setAppliedFrom(from);setAppliedTo(to);
-      setProgress("Отчёт за "+from+" — "+to+" включительно. Уже загружено: "+
-        result.completed_days+"; ожидают загрузки: "+result.queued_days+".");
+      setProgress("Отчёт за "+from+" — "+to+
+        " включительно. Данные только из Supabase; API Ozon не вызывается.");
       if(appliedFrom===from && appliedTo===to)await load();
     }catch(error){setError(error instanceof Error?error.message:String(error))}
     finally{setBusy(false)}
