@@ -45,13 +45,38 @@ function groupFinancial(lines:FinanceLine[]) {
   }
   return [...byId.values()].map(x=>({...x,realization:round(x.realization),to_transfer:round(x.to_transfer),delivery:round(x.delivery),storage_in_report:x.storage_in_report==null?null:round(x.storage_in_report),acceptance:round(x.acceptance),penalty:round(x.penalty),deduction:round(x.deduction)}));
 }
+
+const FINANCE_KEY="finance_detailed";
+class FinanceCooldown extends Error {
+  constructor(public retryAt:string) {super("Лимит WB. Повторный запрос разрешён после "+new Date(retryAt).toLocaleString("ru-RU",{timeZone:"Asia/Krasnoyarsk"})+" (Красноярск).");}
+}
+async function saveFinanceState(next:string,status:number|null,message:string){
+ const db=createAdminClient();
+ const {error}=await db.from("wb_sync_state").upsert({sync_key:FINANCE_KEY,next_allowed_at:next,last_http_status:status,last_message:message,updated_at:new Date().toISOString()},{onConflict:"sync_key"});
+ if(error)throw new Error("Не удалось сохранить лимит WB: "+error.message);
+}
+async function beforeFinanceRequest(){
+ const db=createAdminClient();
+ const {data,error}=await db.from("wb_sync_state").select("next_allowed_at").eq("sync_key",FINANCE_KEY).maybeSingle();
+ if(error)throw new Error("Не удалось проверить лимит WB: "+error.message);
+ if(data?.next_allowed_at && Date.parse(data.next_allowed_at)>Date.now()) throw new FinanceCooldown(data.next_allowed_at);
+ await saveFinanceState(new Date(Date.now()+75000).toISOString(),null,"Финансовый запрос отправлен; ограничение 75 секунд");
+}
 async function finance(from:string,to:string,token:string){
-  // One request per minute per seller. Never paginate synchronously without a shared persistent queue.
+  await beforeFinanceRequest();
+  // Avoid repeated calls until the cooldown expires.
   const response=await fetch("https://finance-api.wildberries.ru/api/finance/v1/sales-reports/detailed",{
     method:"POST",headers:{Authorization:token,"Content-Type":"application/json"},cache:"no-store",
     body:JSON.stringify({dateFrom:from+"T00:00:00",dateTo:to+"T23:59:59",limit:100000,offset:0}),
     signal:AbortSignal.timeout(50000)
   });
+  if(response.status===429){
+    const raw=response.headers.get("X-RateLimit-Retry")??response.headers.get("Retry-After")??"";
+    const sec=Number(raw);
+    const next=new Date(Date.now()+(Number.isFinite(sec)&&sec>0?Math.ceil(sec)*1000+5000:75000)).toISOString();
+    await saveFinanceState(next,429,"Wildberries вернул 429");
+    throw new FinanceCooldown(next);
+  }
   if(response.status===204) return [];
   if(!response.ok) throw new Error("WB Finance HTTP "+response.status+": "+(await response.text()).slice(0,350));
   const payload=await response.json() as unknown;
@@ -104,5 +129,8 @@ export async function GET(request:NextRequest){
       catch(e){ads={items:[],campaigns:0,coverage:"error",warning:e instanceof Error?e.message:String(e)};}
     }
     return NextResponse.json({ok:true,from,to,financial_rows:report.length,rows:groupFinancial(report),ads,coverage:{finance:"loaded",advertising:ads.coverage,paid_storage:"not_loaded",advertising_actual_charges:"not_loaded"},notice:"Платное хранение по отдельному отчёту WB пока не загружено. Не считать отчёт полным финансовым результатом."});
-  }catch(e){return NextResponse.json({ok:false,error:e instanceof Error?e.message:String(e)},{status:500});}
+  }catch(e){
+  if(e instanceof FinanceCooldown)return NextResponse.json({ok:false,error:e.message,retryAt:e.retryAt},{status:429});
+  return NextResponse.json({ok:false,error:e instanceof Error?e.message:String(e)},{status:500});
+}
 }
