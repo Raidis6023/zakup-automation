@@ -3731,8 +3731,6 @@ export default function HomeHeaderActions() {
                         )
                 }
 
-                }
-
               </div>
 
             )
