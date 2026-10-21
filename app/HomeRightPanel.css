@@ -1269,3 +1269,30 @@ html[data-theme="dark"] .home-sync-notification-icon--alert {
   height: 19px;
   stroke-width: 3;
 }
+
+
+/* Критичное уведомление: раздельно читаемые треугольник и ! */
+.home-sync-notification-icon--alert svg {
+  width: 24px;
+  height: 24px;
+}
+
+.home-sync-notification-icon--alert .stock-alert-triangle {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.home-sync-notification-icon--alert .stock-alert-mark {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.45;
+  stroke-linecap: round;
+}
+
+.home-sync-notification-icon--alert .stock-alert-dot {
+  fill: currentColor;
+  stroke: none;
+}
