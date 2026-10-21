@@ -44,6 +44,9 @@ type SyncNotification = {
 
   notificationTime:
     string;
+
+  notificationDisplay:
+    string;
 };
 
 
@@ -106,6 +109,83 @@ function formatKrasnoyarskTime(
 }
 
 
+function getKrasnoyarskDateKey(
+  value:
+    string
+    |
+    Date
+) {
+
+  const date =
+    value instanceof
+      Date
+
+      ? value
+
+      : new Date(
+          value
+        );
+
+
+  const parts =
+    new Intl.DateTimeFormat(
+      "en-GB",
+      {
+        timeZone:
+          KRASNOYARSK_TIME_ZONE,
+
+        year:
+          "numeric",
+
+        month:
+          "2-digit",
+
+        day:
+          "2-digit",
+      }
+    ).formatToParts(
+      date
+    );
+
+
+  const year =
+    parts.find(
+      part =>
+        part.type ===
+        "year"
+    )
+      ?.value
+    ??
+    "";
+
+
+  const month =
+    parts.find(
+      part =>
+        part.type ===
+        "month"
+    )
+      ?.value
+    ??
+    "";
+
+
+  const day =
+    parts.find(
+      part =>
+        part.type ===
+        "day"
+    )
+      ?.value
+    ??
+    "";
+
+
+  return `${year}-${month}-${day}`;
+
+}
+
+
 function buildNotification({
   marketplace,
   marketplaceLabel,
@@ -130,6 +210,16 @@ SyncNotification {
     notificationAt
     ??
     completedAt;
+
+
+  const notificationIsToday =
+    getKrasnoyarskDateKey(
+      resolvedNotificationAt
+    )
+    ===
+    getKrasnoyarskDateKey(
+      new Date()
+    );
 
 
   return {
@@ -162,6 +252,17 @@ SyncNotification {
       formatKrasnoyarskTime(
         resolvedNotificationAt
       ),
+
+    notificationDisplay:
+      notificationIsToday
+
+        ? formatKrasnoyarskTime(
+            resolvedNotificationAt
+          )
+
+        : formatKrasnoyarskDate(
+            resolvedNotificationAt
+          ),
   };
 
 }

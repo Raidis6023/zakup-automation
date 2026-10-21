@@ -76,6 +76,9 @@ type SyncNotification = {
 
   notificationTime:
     string;
+
+  notificationDisplay:
+    string;
 };
 
 const ADMIN_TABS: Array<{ id: TabId; label: string }> = [
@@ -597,7 +600,7 @@ export default function HomeRightPanel() {
                           }
                         >
                           {
-                            notification.notificationTime
+                            notification.notificationDisplay
                           }
                         </time>
                       </div>
