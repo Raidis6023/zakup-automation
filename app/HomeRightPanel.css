@@ -1235,3 +1235,37 @@ html[data-theme="dark"] .home-sync-notification-icon--alert {
   height: 24px;
   stroke-width: 2.5;
 }
+
+
+
+/* ============================================================
+   УВЕДОМЛЕНИЯ: КРЕСТИК В УГЛУ И ЧИТАЕМЫЙ CRITICAL ICON
+   ============================================================ */
+
+.home-sync-notification {
+  position: relative;
+}
+
+.home-sync-notification-meta {
+  position: static;
+}
+
+.home-sync-notification-dismiss {
+  top: 5px;
+  right: 4px;
+  left: auto;
+  transform: translateX(8px);
+}
+
+.home-sync-notification:hover
+.home-sync-notification-dismiss,
+.home-sync-notification:focus-within
+.home-sync-notification-dismiss {
+  transform: translateX(0);
+}
+
+.home-sync-notification-icon--alert svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 3;
+}
