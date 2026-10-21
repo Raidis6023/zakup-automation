@@ -1347,6 +1347,9 @@ export default async function YandexMarketPage() {
             offer_id:
               product.offer_id,
 
+            market_sku:
+              product.market_sku,
+
             sales:
               metrics.sales,
 
