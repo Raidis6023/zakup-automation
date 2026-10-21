@@ -116,8 +116,6 @@ export default function FinancierDetailTable({
 
   // The summary is scoped to the selected KM, not the free-text search.
   const complete=rows.every(r=>r.estimated_result!=null);
-  const adsFailed=(data?.ads_jobs??[]).find(j=>j.status==="failed");
-  const adCoverageIncomplete=!data?.ads_covered;
   const sumProfit=numericSum(rows,r=>r.estimated_result);
   const globalAdjustment=includeUnallocated?Number(data?.unallocated_amount??0):0;
   const operatingProfit=sumProfit==null?null:round(sumProfit+globalAdjustment);
