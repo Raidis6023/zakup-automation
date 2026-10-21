@@ -863,3 +863,9 @@ html[data-theme="dark"]
 .sku-new-message {padding-top:6px;font-size:11px;color:var(--ws-text-muted);}
 .sku-new-footnote {padding-top:12px;}
 @media(max-width:800px){.sku-new-section{padding:10px}.sku-new-heading h2{font-size:16px}}
+
+/* Two-step preview and explicit confirmation for new ENOT codes. */
+.sku-new-proposal {display:flex;flex-wrap:wrap;align-items:center;gap:7px;width:100%;}
+.sku-new-proposal-label {font-size:11px;color:var(--ws-text-muted);}
+.sku-new-proposal-code {font:700 13px monospace;letter-spacing:.04em;color:#168c69;padding:5px 8px;border:1px solid var(--ws-border-soft);border-radius:6px;}
+.sku-new-proposal button:first-of-type {border-color:#168c69;}

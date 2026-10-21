@@ -40,13 +40,18 @@ export async function POST(request:NextRequest){
   let result:Record<string,unknown>;
   if(body.action==="classify"){
    result=await rpc("set_ved_product_intake_classification",{p_article:article,p_classification:"new",p_actor_id:user.id});
-  }else if(body.action==="link"||body.action==="generate"){
+  }else if(body.action==="preview"){
+   const code=await rpc("next_ved_enot_code",{});
+   if(typeof code!=="string"||!/^[A-Z0-9]{6}$/.test(code))
+    throw Error("Не удалось предложить новый ЕНОТ");
+   return NextResponse.json({ok:true,proposedCode:code});
+  }else if(body.action==="link"||body.action==="confirm"){
    const masterCode=typeof body.masterCode==="string"?body.masterCode.trim().toUpperCase():"";
-   if(body.action==="link"&&!/^[A-Z0-9]{6}$/.test(masterCode))
+   if(!/^[A-Z0-9]{6}$/.test(masterCode))
     return NextResponse.json({ok:false,error:"ЕНОТ должен содержать ровно 6 латинских букв или цифр"},{status:400});
    result=await rpc("link_ved_product_intake",{
-    p_article:article,p_master_code:body.action==="link"?masterCode:"",
-    p_generate_new:body.action==="generate",p_actor_id:user.id
+    p_article:article,p_master_code:masterCode,
+    p_generate_new:body.action==="confirm",p_actor_id:user.id
    });
   }else return NextResponse.json({ok:false,error:"Неизвестная операция"},{status:400});
   revalidatePath("/sku-list");revalidatePath("/ved");revalidatePath("/zakup");

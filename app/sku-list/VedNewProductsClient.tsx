@@ -1,7 +1,7 @@
 "use client";
 import {useCallback,useEffect,useMemo,useState} from "react";
 type Product={article:string;name:string;quantity:number;activeQuantity:number;orders:string;classification:"new"|"review";masterCode:string|null;productId:string|null};
-type Result={ok?:boolean;rows?:Product[];error?:string;masterCode?:string};
+type Result={ok?:boolean;rows?:Product[];error?:string;masterCode?:string;proposedCode?:string};
 type Filter="all"|"new"|"review";
 export default function VedNewProductsClient(){
  const [rows,setRows]=useState<Product[]>([]);
@@ -9,6 +9,7 @@ export default function VedNewProductsClient(){
  const [loading,setLoading]=useState(true);
  const [busy,setBusy]=useState("");
  const [inputs,setInputs]=useState<Record<string,string>>({});
+ const [proposals,setProposals]=useState<Record<string,string>>({});
  const [messages,setMessages]=useState<Record<string,string>>({});
  const [error,setError]=useState("");
  const load=useCallback(async()=>{
@@ -23,19 +24,33 @@ export default function VedNewProductsClient(){
  const newCount=rows.filter(r=>r.classification==="new").length;
  const reviewCount=rows.filter(r=>r.classification==="review").length;
  const visible=useMemo(()=>rows.filter(r=>filter==="all"||r.classification===filter),[rows,filter]);
- async function act(row:Product,action:"classify"|"link"|"generate"){
-  setBusy(row.article);setMessages(m=>({...m,[row.article]:""}));
+ async function act(row:Product,action:"classify"|"link"|"preview"|"confirm"){
+  setBusy(row.article);
+  setMessages(m=>({...m,[row.article]:""}));
   try{
+   const masterCode=action==="confirm"?(proposals[row.article]||""):(inputs[row.article]||"");
+   if(action==="confirm"&&!/^[A-Z0-9]{6}$/.test(masterCode))
+    throw Error("Сначала сгенерируйте код ЕНОТ");
    const r=await fetch("/api/sku-list/new-products",{
     method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({action,article:row.article,masterCode:inputs[row.article]||""}),
+    body:JSON.stringify({action,article:row.article,masterCode}),
    });
    const result=await r.json() as Result;
    if(!r.ok||!result.ok)throw Error(result.error||"Не удалось сохранить");
+   if(action==="preview"){
+    if(!result.proposedCode)throw Error("Система не вернула код ЕНОТ");
+    setProposals(p=>({...p,[row.article]:result.proposedCode!}));
+    return;
+   }
    await load();
-   setMessages(m=>({...m,[row.article]:action==="classify"?"Подтверждено: новый товар":"Привязано к ЕНОТ "+(result.masterCode||inputs[row.article])}));
-  }catch(e){setMessages(m=>({...m,[row.article]:e instanceof Error?e.message:"Ошибка"}));}
-  finally{setBusy("");}
+   if(action==="confirm")setProposals(p=>{const v={...p};delete v[row.article];return v;});
+   setMessages(m=>({...m,[row.article]:action==="classify"?"Подтверждено: новый товар":"Привязано к ЕНОТ "+(result.masterCode||masterCode)}));
+  }catch(e){
+   const message=e instanceof Error?e.message:"Ошибка";
+   if(action==="confirm"&&message.includes("устарел"))
+    setProposals(p=>{const v={...p};delete v[row.article];return v;});
+   setMessages(m=>({...m,[row.article]:message}));
+  }finally{setBusy("");}
  }
  return <section className="sku-new-section" aria-label="Новые товары из заказов ВЭД">
   <div className="sku-new-heading"><div><h2>Новые товары</h2><p>Товары из заказов ВЭД, пока не размещённые на маркетплейсах. Привязанные остаются здесь до появления на МП.</p></div>
@@ -61,12 +76,21 @@ export default function VedNewProductsClient(){
       <button type="button" disabled={busy===row.article} onClick={()=>void act(row,"classify")}>Это новый товар</button>:
       row.masterCode?<span className="sku-new-linked">Привязан, ожидает появления на МП</span>:
       <div className="sku-new-controls">
-       <input placeholder="Код ЕНОТ" aria-label={"Код ЕНОТ для "+row.article} maxLength={6}
-        value={inputs[row.article]||""} disabled={busy===row.article}
-        onChange={e=>setInputs(v=>({...v,[row.article]:e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,"")}))}/>
-       <button type="button" disabled={busy===row.article||!/^[A-Z0-9]{6}$/.test(inputs[row.article]||"")}
-        onClick={()=>void act(row,"link")}>Привязать</button>
-       <button type="button" disabled={busy===row.article} onClick={()=>void act(row,"generate")}>Создать новый</button>
+       {proposals[row.article]?
+        <div className="sku-new-proposal" role="group" aria-label={"Подтверждение нового ЕНОТ для "+row.article}>
+         <span className="sku-new-proposal-label">Предлагаемый ЕНОТ, ещё не сохранён:</span>
+         <strong className="sku-new-proposal-code">{proposals[row.article]}</strong>
+         <button type="button" disabled={busy===row.article} onClick={()=>void act(row,"confirm")}>Подтвердить ЕНОТ</button>
+         <button type="button" disabled={busy===row.article} onClick={()=>setProposals(p=>{const v={...p};delete v[row.article];return v;})}>Отмена</button>
+        </div>:
+        <>
+         <input placeholder="Код ЕНОТ" aria-label={"Код ЕНОТ для "+row.article} maxLength={6}
+          value={inputs[row.article]||""} disabled={busy===row.article}
+          onChange={e=>setInputs(v=>({...v,[row.article]:e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,"")}))}/>
+         <button type="button" disabled={busy===row.article||!/^[A-Z0-9]{6}$/.test(inputs[row.article]||"")}
+          onClick={()=>void act(row,"link")}>Привязать</button>
+         <button type="button" disabled={busy===row.article} onClick={()=>void act(row,"preview")}>Создать новый</button>
+        </>}
       </div>}
      {messages[row.article]&&<div role="status" className="sku-new-message">{messages[row.article]}</div>}
     </td>
