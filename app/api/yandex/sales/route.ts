@@ -1101,9 +1101,154 @@ async function fetchReturns(
   }
 
 
+  // ==========================================================
+  // DEDUPLICATE RETURNS
+  // ==========================================================
+  //
+  // Yandex can return the same return id more than once across
+  // pages of the same response. Supabase upserts yandex_returns
+  // by return_id, and PostgreSQL rejects a single INSERT batch
+  // that tries to update the same key twice.
+  //
+  // Keep one row per return id. If duplicates differ, prefer
+  // the row with the newest updateDate, then creationDate.
+
+  const uniqueReturnsById =
+    new Map<
+      string,
+      YandexReturn
+    >();
+
+
+  const getReturnFreshness =
+    (
+      row:
+        YandexReturn
+    ) => {
+
+      const updateTime =
+        Date.parse(
+          String(
+            row.updateDate
+            ??
+            ""
+          )
+        );
+
+
+      if (
+        Number.isFinite(
+          updateTime
+        )
+      ) {
+
+        return updateTime;
+
+      }
+
+
+      const creationTime =
+        Date.parse(
+          String(
+            row.creationDate
+            ??
+            ""
+          )
+        );
+
+
+      return Number.isFinite(
+        creationTime
+      )
+        ? creationTime
+        : 0;
+
+    };
+
+
+  for (
+    const row
+    of returns
+  ) {
+
+    const returnId =
+      String(
+        row.id
+        ??
+        ""
+      ).trim();
+
+
+    if (!returnId) {
+
+      // buildReturnRows will still reject a malformed return
+      // without id. Do not hide invalid source data here.
+      uniqueReturnsById.set(
+        `__missing__:${uniqueReturnsById.size}`,
+        row
+      );
+
+      continue;
+
+    }
+
+
+    const existing =
+      uniqueReturnsById.get(
+        returnId
+      );
+
+
+    if (
+      !existing
+      ||
+      getReturnFreshness(
+        row
+      )
+      >=
+      getReturnFreshness(
+        existing
+      )
+    ) {
+
+      uniqueReturnsById.set(
+        returnId,
+        row
+      );
+
+    }
+
+  }
+
+
+  const uniqueReturns =
+    Array.from(
+      uniqueReturnsById.values()
+    );
+
+
+  const duplicatesDropped =
+    returns.length
+    -
+    uniqueReturns.length;
+
+
+  if (
+    duplicatesDropped >
+    0
+  ) {
+
+    console.warn(
+      `YANDEX RETURNS: removed ${duplicatesDropped} duplicate row(s) by return_id before database upsert`
+    );
+
+  }
+
+
   return {
     pages,
-    returns,
+    returns:
+      uniqueReturns,
   };
 
 }
