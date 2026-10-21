@@ -40,7 +40,9 @@ export async function GET(request:NextRequest){
   // Include both states where the supply has left the seller's hands, but
   // has not completed receiving at the destination storage warehouse.
   const list=await ozon<SupplyList>("/v3/supply-order/list",{
-    filter:{states:["ORDER_STATE_IN_TRANSIT","ORDER_STATE_ACCEPTED_AT_SUPPLY_WAREHOUSE"]},
+    // v3 uses unprefixed order states; v2 had ORDER_STATE_ prefixes.
+    // Verify response shape before publishing any stock snapshot.
+    filter:{states:["IN_TRANSIT","ACCEPTED_AT_SUPPLY_WAREHOUSE"]},
     last_id:run.last_id||"",limit:20,sort_by:"ORDER_STATE_UPDATED_AT",sort_dir:"DESC"
   },client,key);
   if(!Array.isArray(list.order_ids))throw new Error("Unexpected supply-order/list shape");
