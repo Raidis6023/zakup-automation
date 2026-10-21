@@ -4,7 +4,7 @@ import { Fragment, useMemo, useState } from "react";
 export type FinancialRow = {
   offer_id:string;master_code:string|null;manager:string;name:string|null;
   estimated_result:number|null;revenue:number|null;advertising_amount:number;
-  performance_ad_expense:number|null;ozon_amount:number;
+  performance_ad_expense:number|null;allocated_seller_ppc?:number;ozon_amount:number;
   order_count:number|null;cancelled_units:number|null;buyout_units:number|null;
   ozon_stock:number|null;main_stock:number|null;ox_stock:number|null;
   in_china:number|null;in_crossdock:number|null;in_transit:number|null;
@@ -38,8 +38,9 @@ function moneyTone(value:number|null|undefined):string{
   return "";
 }
 function advertising(r:FinancialRow):number|null {
+  if(r.advertising_amount!==0)return r.advertising_amount;
   if(r.performance_ad_expense!=null)return -Math.abs(r.performance_ad_expense);
-  return r.advertising_amount!==0?r.advertising_amount:null;
+  return null;
 }
 function adShare(r:FinancialRow):number|null{
   const expense=advertising(r);
@@ -139,7 +140,7 @@ export default function FinancierDetailTable({
     {name:"Выручка",value:money(sumRevenue),tone:moneyTone(sumRevenue)},
     {name:"Рентабельность",value:pct(profitability),tone:moneyTone(profitability)},
     {name:"Реклама",value:money(adAmount),tone:adAmount==null?"":Math.abs(adAmount)>0?"ozf-bad":"ozf-good",
-     note:includeUnallocated?"Сумма Seller API, повторно не списывается":"Разметка Performance API; в прибыль второй раз не входит"},
+     note:includeUnallocated?"Общие списания Seller API":"По КМ: сумма Seller API после распределения по артикулам"},
     {name:"Платное хранение",value:money(storageAmount),tone:storageAmount==null?"":Math.abs(storageAmount)>0?"ozf-bad":"ozf-good",
      note:"Только суммы, привязанные к SKU"},
     {name:"Положительные позиции",value:qty(positionsPositive),tone:positionsPositive>0?"ozf-good":"ozf-bad"},
@@ -176,7 +177,9 @@ export default function FinancierDetailTable({
       </div>)}
     </div>
     {!complete&&<p className="ozf-footnote">Часть артикулов без полной цены закупа или ТК Маяк. Прибыль по ним не рассчитана; итоги предварительные.</p>}
-    {!data?.ads_covered&&<p className="ozf-footnote">
+    {!data?.ads_covered&&<p className="ozf-footnote ozf-ad-warning">
+      Рекламные начисления Seller API учтены в общих результатах, но пока не распределены по КМ.
+      При выборе отдельного менеджера его прибыль предварительная до завершения рекламной детализации.
       Расходы на рекламу по SKU пока не подтверждены Performance API за весь период.
       ДРР отмечается прочерком, а не нулём. Исторический запрос через
       /statistics/products/sku отклонён Ozon: этот метод принимает только сегодня или вчера.
