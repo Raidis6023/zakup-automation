@@ -1,3 +1,4 @@
+import ExternalVedStatus from "./ExternalVedStatus";
 import Link
 from "next/link";
 
@@ -1698,6 +1699,13 @@ export default async function VedPage() {
 
                                   </span>
 
+                                  {order.created_by_name === "Импорт внешних заказов" && (
+                                    <ExternalVedStatus
+                                      id={order.id}
+                                      current={order.workflow_status}
+                                      number={order.order_number || order.id}
+                                    />
+                                  )}
                                 </td>
 
 
