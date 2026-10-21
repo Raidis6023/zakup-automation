@@ -393,7 +393,9 @@ export default function FinancierClient() {
       {!!data?.unallocated_details.length && <div className="ozf-panel" id="ozf-unallocated">
         <h2>Нераспределённые расходы</h2>
         <p>Только прочие начисления без привязки к товару. Реклама и платное хранение отражены отдельно.
-          Они остаются в общей прибыли по финансовому реестру Ozon ровно один раз.</p>
+          Они остаются в общей прибыли по финансовому реестру Ozon ровно один раз.
+          {managerFilter!=="Все КМ"?" Это общие начисления всего кабинета Ozon, они не относятся автоматически к выбранному КМ.":""}
+        </p>
         {(()=>{
           const other=data.unallocated_details.filter(d=>
             !["41","46"].includes(String(d.type_id??"")) &&
