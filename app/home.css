@@ -1942,3 +1942,371 @@ html[data-theme="dark"]
   }
 
 }
+
+
+/* ============================================================
+   TOPBAR: УВЕДОМЛЕНИЯ СИНХРОНИЗАЦИИ
+   ============================================================ */
+
+.home-header-sync-notification {
+  display:
+    grid;
+
+  grid-template-columns:
+    38px
+    minmax(
+      0,
+      1fr
+    )
+    54px;
+
+  gap:
+    10px;
+
+  align-items:
+    center;
+
+  min-height:
+    72px;
+
+  max-height:
+    88px;
+
+  padding:
+    11px
+    14px;
+
+  overflow:
+    hidden;
+
+  border-bottom:
+    1px solid
+    var(--border-soft);
+
+  transition:
+    transform
+      0.28s
+      ease,
+    opacity
+      0.22s
+      ease,
+    max-height
+      0.28s
+      ease,
+    min-height
+      0.28s
+      ease,
+    padding-top
+      0.28s
+      ease,
+    padding-bottom
+      0.28s
+      ease,
+    border-color
+      0.18s
+      ease;
+}
+
+
+.home-header-sync-notification--exiting {
+  min-height:
+    0;
+
+  max-height:
+    0;
+
+  padding-top:
+    0;
+
+  padding-bottom:
+    0;
+
+  opacity:
+    0;
+
+  border-bottom-color:
+    transparent;
+
+  transform:
+    translateX(
+      calc(
+        100%
+        +
+        18px
+      )
+    );
+}
+
+
+.home-header-sync-notification-icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    36px;
+
+  height:
+    36px;
+
+  border-radius:
+    50%;
+
+  background:
+    #20a86b;
+
+  color:
+    #ffffff;
+}
+
+
+.home-header-sync-notification-icon
+svg {
+  width:
+    23px;
+
+  height:
+    23px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    3;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+html[data-theme="dark"]
+.home-header-sync-notification-icon {
+  background:
+    #ecfff6;
+
+  color:
+    #15965f;
+}
+
+
+.home-header-sync-notification-copy {
+  min-width:
+    0;
+}
+
+
+.home-header-sync-notification-copy
+strong {
+  display:
+    block;
+
+  overflow:
+    hidden;
+
+  color:
+    var(--text);
+
+  font-size:
+    12.5px;
+
+  font-weight:
+    700;
+
+  line-height:
+    1.35;
+
+  text-overflow:
+    ellipsis;
+
+  white-space:
+    nowrap;
+}
+
+
+.home-header-sync-notification-copy
+span {
+  display:
+    block;
+
+  margin-top:
+    4px;
+
+  overflow:
+    hidden;
+
+  color:
+    var(--text-muted);
+
+  font-size:
+    11px;
+
+  line-height:
+    1.35;
+
+  text-overflow:
+    ellipsis;
+
+  white-space:
+    nowrap;
+}
+
+
+.home-header-sync-notification-meta {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  flex-direction:
+    column;
+
+  gap:
+    3px;
+
+  width:
+    54px;
+
+  min-width:
+    54px;
+}
+
+
+.home-header-sync-notification-dismiss {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    22px;
+
+  height:
+    22px;
+
+  padding:
+    0;
+
+  border:
+    none;
+
+  border-radius:
+    50%;
+
+  background:
+    transparent;
+
+  color:
+    #e45252;
+
+  opacity:
+    0;
+
+  pointer-events:
+    none;
+
+  cursor:
+    pointer;
+
+  transform:
+    translateX(
+      -10px
+    );
+
+  transition:
+    opacity
+      0.16s
+      ease,
+    transform
+      0.18s
+      ease,
+    background-color
+      0.13s
+      ease;
+}
+
+
+.home-header-sync-notification:hover
+.home-header-sync-notification-dismiss,
+.home-header-sync-notification:focus-within
+.home-header-sync-notification-dismiss {
+  opacity:
+    1;
+
+  pointer-events:
+    auto;
+
+  transform:
+    translateX(
+      0
+    );
+}
+
+
+.home-header-sync-notification-dismiss:hover {
+  background:
+    rgba(
+      228,
+      82,
+      82,
+      0.10
+    );
+}
+
+
+.home-header-sync-notification-dismiss
+svg {
+  width:
+    15px;
+
+  height:
+    15px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    2;
+
+  stroke-linecap:
+    round;
+}
+
+
+.home-header-sync-notification-time {
+  color:
+    var(--text-muted);
+
+  font-size:
+    11px;
+
+  font-variant-numeric:
+    tabular-nums;
+
+  text-align:
+    center;
+
+  white-space:
+    nowrap;
+}

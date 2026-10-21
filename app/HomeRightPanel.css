@@ -956,3 +956,213 @@ svg {
   stroke-width:
     3.1;
 }
+
+
+/* ============================================================
+   УВЕДОМЛЕНИЯ: УДАЛЕНИЕ И АНИМАЦИЯ
+   ============================================================ */
+
+.home-sync-notification {
+  max-height:
+    88px;
+
+  overflow:
+    hidden;
+
+  transition:
+    transform
+      0.28s
+      ease,
+    opacity
+      0.22s
+      ease,
+    max-height
+      0.28s
+      ease,
+    min-height
+      0.28s
+      ease,
+    padding-top
+      0.28s
+      ease,
+    padding-bottom
+      0.28s
+      ease,
+    border-color
+      0.18s
+      ease;
+}
+
+
+.home-sync-notification--exiting {
+  min-height:
+    0;
+
+  max-height:
+    0;
+
+  padding-top:
+    0;
+
+  padding-bottom:
+    0;
+
+  opacity:
+    0;
+
+  border-bottom-color:
+    transparent;
+
+  transform:
+    translateX(
+      calc(
+        100%
+        +
+        24px
+      )
+    );
+}
+
+
+.home-sync-notification-meta {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  flex-direction:
+    column;
+
+  width:
+    58px;
+
+  min-width:
+    58px;
+
+  gap:
+    3px;
+
+  align-self:
+    center;
+}
+
+
+.home-sync-notification-dismiss {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    22px;
+
+  height:
+    22px;
+
+  padding:
+    0;
+
+  border:
+    none;
+
+  border-radius:
+    50%;
+
+  background:
+    transparent;
+
+  color:
+    #e45252;
+
+  opacity:
+    0;
+
+  pointer-events:
+    none;
+
+  cursor:
+    pointer;
+
+  transform:
+    translateX(
+      -10px
+    );
+
+  transition:
+    opacity
+      0.16s
+      ease,
+    transform
+      0.18s
+      ease,
+    background-color
+      0.13s
+      ease;
+}
+
+
+.home-sync-notification:hover
+.home-sync-notification-dismiss,
+.home-sync-notification:focus-within
+.home-sync-notification-dismiss {
+  opacity:
+    1;
+
+  pointer-events:
+    auto;
+
+  transform:
+    translateX(
+      0
+    );
+}
+
+
+.home-sync-notification-dismiss:hover {
+  background:
+    rgba(
+      228,
+      82,
+      82,
+      0.10
+    );
+}
+
+
+.home-sync-notification-dismiss
+svg {
+  width:
+    15px;
+
+  height:
+    15px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    2;
+
+  stroke-linecap:
+    round;
+}
+
+
+.home-sync-notification-time {
+  padding-left:
+    0;
+
+  text-align:
+    center;
+}

@@ -109,7 +109,7 @@ function formatKrasnoyarskTime(
 }
 
 
-function getKrasnoyarskDateKey(
+function getKrasnoyarskDateParts(
   value:
     string
     |
@@ -149,39 +149,139 @@ function getKrasnoyarskDateKey(
 
 
   const year =
-    parts.find(
-      part =>
-        part.type ===
-        "year"
-    )
-      ?.value
-    ??
-    "";
+    Number(
+      parts.find(
+        part =>
+          part.type ===
+          "year"
+      )
+        ?.value
+      ??
+      "0"
+    );
 
 
   const month =
-    parts.find(
-      part =>
-        part.type ===
-        "month"
-    )
-      ?.value
-    ??
-    "";
+    Number(
+      parts.find(
+        part =>
+          part.type ===
+          "month"
+      )
+        ?.value
+      ??
+      "0"
+    );
 
 
   const day =
-    parts.find(
-      part =>
-        part.type ===
-        "day"
+    Number(
+      parts.find(
+        part =>
+          part.type ===
+          "day"
+      )
+        ?.value
+      ??
+      "0"
+    );
+
+
+  return {
+    year,
+    month,
+    day,
+  };
+
+}
+
+
+function getKrasnoyarskDayIndex(
+  value:
+    string
+    |
+    Date
+) {
+
+  const {
+    year,
+    month,
+    day,
+  } =
+    getKrasnoyarskDateParts(
+      value
+    );
+
+
+  return Math.floor(
+    Date.UTC(
+      year,
+      month - 1,
+      day
     )
-      ?.value
-    ??
-    "";
+    /
+    86_400_000
+  );
+
+}
 
 
-  return `${year}-${month}-${day}`;
+function getNotificationDisplay(
+  notificationAt:
+    string
+) {
+
+  const notificationDay =
+    getKrasnoyarskDayIndex(
+      notificationAt
+    );
+
+
+  const todayDay =
+    getKrasnoyarskDayIndex(
+      new Date()
+    );
+
+
+  const dayDifference =
+    todayDay
+    -
+    notificationDay;
+
+
+  if (
+    dayDifference <=
+      0
+  ) {
+
+    return formatKrasnoyarskTime(
+      notificationAt
+    );
+
+  }
+
+
+  if (
+    dayDifference ===
+      1
+  ) {
+
+    return "вчера";
+
+  }
+
+
+  if (
+    dayDifference ===
+      2
+  ) {
+
+    return "позавчера";
+
+  }
+
+
+  return "давно";
 
 }
 
@@ -210,16 +310,6 @@ SyncNotification {
     notificationAt
     ??
     completedAt;
-
-
-  const notificationIsToday =
-    getKrasnoyarskDateKey(
-      resolvedNotificationAt
-    )
-    ===
-    getKrasnoyarskDateKey(
-      new Date()
-    );
 
 
   return {
@@ -254,15 +344,9 @@ SyncNotification {
       ),
 
     notificationDisplay:
-      notificationIsToday
-
-        ? formatKrasnoyarskTime(
-            resolvedNotificationAt
-          )
-
-        : formatKrasnoyarskDate(
-            resolvedNotificationAt
-          ),
+      getNotificationDisplay(
+        resolvedNotificationAt
+      ),
   };
 
 }

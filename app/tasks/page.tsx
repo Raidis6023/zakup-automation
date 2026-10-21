@@ -1,3 +1,6 @@
+import "./tasks.css";
+
+
 export default function TasksPage() {
 
   return (
@@ -30,7 +33,7 @@ export default function TasksPage() {
 
       <section
         className=
-          "section"
+          "section tasks-page-intro"
       >
 
         <h2

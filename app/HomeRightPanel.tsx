@@ -30,6 +30,13 @@ import {
   type TaskRole,
 } from "./HomeTasksData";
 
+import {
+  dismissSyncNotification,
+  loadVisibleSyncNotifications,
+  SYNC_NOTIFICATION_DISMISSED_EVENT,
+  type SyncNotification,
+} from "./SyncNotificationsClient";
+
 import "./HomeRightPanel.css";
 
 type CurrentUserProfileRow = {
@@ -46,40 +53,6 @@ type TabId =
   | "notes"
   | TaskRole;
 
-
-type SyncNotification = {
-  id:
-    string;
-
-  marketplace:
-    "ozon"
-    | "wildberries"
-    | "yandex_market";
-
-  marketplaceLabel:
-    string;
-
-  title:
-    string;
-
-  completedAt:
-    string;
-
-  notificationAt:
-    string;
-
-  dataDate:
-    string;
-
-  updateTime:
-    string;
-
-  notificationTime:
-    string;
-
-  notificationDisplay:
-    string;
-};
 
 const ADMIN_TABS: Array<{ id: TabId; label: string }> = [
   { id: "all", label: "Все" },
@@ -132,6 +105,23 @@ function SyncSuccessIcon() {
   );
 }
 
+
+function DismissIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path
+        d="M7 7l10 10"
+      />
+      <path
+        d="M17 7 7 17"
+      />
+    </svg>
+  );
+}
+
 export default function HomeRightPanel() {
   const pathname = usePathname() ?? "/";
   const adminHomeMode = pathname === "/admin";
@@ -144,6 +134,15 @@ export default function HomeRightPanel() {
 
   const [syncNotifications, setSyncNotifications] =
     useState<SyncNotification[]>([]);
+
+  const [
+    exitingNotificationIds,
+    setExitingNotificationIds,
+  ] =
+    useState<Set<string>>(
+      () =>
+        new Set<string>()
+    );
 
   const [notificationsLoading, setNotificationsLoading] =
     useState(false);
@@ -247,45 +246,17 @@ export default function HomeRightPanel() {
         );
 
         try {
-          const response =
-            await fetch(
-              "/api/home/sync-notifications",
-              {
-                method:
-                  "GET",
-
-                cache:
-                  "no-store",
-
-                signal:
-                  controller.signal,
-              }
+          const nextNotifications =
+            await loadVisibleSyncNotifications(
+              profile
+                ?.user_id
+              ??
+              null,
+              controller.signal
             );
 
-          const data =
-            await response.json() as {
-              ok?:
-                boolean;
-
-              notifications?:
-                SyncNotification[];
-            };
-
-          if (
-            !response.ok
-            ||
-            data.ok !==
-              true
-          ) {
-            return;
-          }
-
           setSyncNotifications(
-            Array.isArray(
-              data.notifications
-            )
-              ? data.notifications
-              : []
+            nextNotifications
           );
         } catch (
           error
@@ -322,8 +293,137 @@ export default function HomeRightPanel() {
     },
     [
       open,
+      profile
+        ?.user_id,
     ]
   );
+
+
+  useEffect(
+    () => {
+
+      function handleDismissedNotification(
+        event:
+          Event
+      ) {
+
+        const customEvent =
+          event as
+            CustomEvent<{
+              notificationId?:
+                string;
+            }>;
+
+
+        const notificationId =
+          customEvent
+            .detail
+            ?.notificationId;
+
+
+        if (
+          !notificationId
+        ) {
+
+          return;
+
+        }
+
+
+        setSyncNotifications(
+          current =>
+            current.filter(
+              notification =>
+                notification.id !==
+                notificationId
+            )
+        );
+
+      }
+
+
+      window.addEventListener(
+        SYNC_NOTIFICATION_DISMISSED_EVENT,
+        handleDismissedNotification
+      );
+
+
+      return () => {
+
+        window.removeEventListener(
+          SYNC_NOTIFICATION_DISMISSED_EVENT,
+          handleDismissedNotification
+        );
+
+      };
+
+    },
+    []
+  );
+
+
+  function handleDismissSyncNotification(
+    notificationId:
+      string
+  ) {
+
+    setExitingNotificationIds(
+      current => {
+
+        const next =
+          new Set(
+            current
+          );
+
+
+        next.add(
+          notificationId
+        );
+
+
+        return next;
+
+      }
+    );
+
+
+    window.setTimeout(
+      () => {
+
+        dismissSyncNotification(
+          notificationId,
+          profile
+            ?.user_id
+          ??
+          null
+        );
+
+
+        setExitingNotificationIds(
+          current => {
+
+            const next =
+              new Set(
+                current
+              );
+
+
+            next.delete(
+              notificationId
+            );
+
+
+            return next;
+
+          }
+        );
+
+      },
+      280
+    );
+
+  }
+
 
   const managerMode =
     !adminHomeMode
@@ -556,8 +656,17 @@ export default function HomeRightPanel() {
                         key={
                           notification.id
                         }
-                        className=
-                          "home-sync-notification"
+                        className={
+                          `home-sync-notification ${
+                            exitingNotificationIds.has(
+                              notification.id
+                            )
+
+                              ? "home-sync-notification--exiting"
+
+                              : ""
+                          }`
+                        }
                       >
                         <span
                           className=
@@ -591,18 +700,45 @@ export default function HomeRightPanel() {
                           </span>
                         </div>
 
-                        <time
+                        <div
                           className=
-                            "home-sync-notification-time"
-
-                          dateTime={
-                            notification.notificationAt
-                          }
+                            "home-sync-notification-meta"
                         >
-                          {
-                            notification.notificationDisplay
-                          }
-                        </time>
+                          <button
+                            type="button"
+
+                            className=
+                              "home-sync-notification-dismiss"
+
+                            onClick={
+                              () =>
+                                handleDismissSyncNotification(
+                                  notification.id
+                                )
+                            }
+
+                            aria-label=
+                              "Убрать уведомление"
+
+                            title=
+                              "Убрать уведомление"
+                          >
+                            <DismissIcon />
+                          </button>
+
+                          <time
+                            className=
+                              "home-sync-notification-time"
+
+                            dateTime={
+                              notification.notificationAt
+                            }
+                          >
+                            {
+                              notification.notificationDisplay
+                            }
+                          </time>
+                        </div>
                       </div>
                     )
                   )

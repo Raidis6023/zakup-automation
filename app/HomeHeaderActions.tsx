@@ -45,6 +45,13 @@ import {
   buildCurrentUserTasks,
 } from "./HomeTasksData";
 
+import {
+  dismissSyncNotification,
+  loadVisibleSyncNotifications,
+  SYNC_NOTIFICATION_DISMISSED_EVENT,
+  type SyncNotification,
+} from "./SyncNotificationsClient";
+
 import styles
   from "./HomeHeaderActions.module.css";
 
@@ -158,6 +165,26 @@ function CloseIcon() {
 
       <path
         d="M18 6L6 18"
+      />
+
+    </svg>
+
+  );
+
+}
+
+
+function SyncSuccessIcon() {
+
+  return (
+
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+
+      <path
+        d="m5.8 12.4 3.7 3.7 8.7-8.9"
       />
 
     </svg>
@@ -732,6 +759,27 @@ export default function HomeHeaderActions() {
 
 
   const [
+    syncNotifications,
+    setSyncNotifications,
+  ] =
+    useState<
+      SyncNotification[]
+    >(
+      []
+    );
+
+
+  const [
+    exitingSyncNotificationIds,
+    setExitingSyncNotificationIds,
+  ] =
+    useState<Set<string>>(
+      () =>
+        new Set<string>()
+    );
+
+
+  const [
     notificationsLoading,
     setNotificationsLoading,
   ] =
@@ -901,6 +949,44 @@ export default function HomeHeaderActions() {
   // ==========================================================
   // NOTIFICATIONS
   // ==========================================================
+
+  const loadSyncNotifications =
+    useCallback(
+      async () => {
+
+        try {
+
+          const nextNotifications =
+            await loadVisibleSyncNotifications(
+              currentProfile
+                ?.user_id
+              ??
+              null
+            );
+
+
+          setSyncNotifications(
+            nextNotifications
+          );
+
+        } catch (
+          error
+        ) {
+
+          console.error(
+            "Не удалось загрузить уведомления синхронизации:",
+            error
+          );
+
+        }
+
+      },
+      [
+        currentProfile
+          ?.user_id,
+      ]
+    );
+
 
   const loadNotifications =
     useCallback(
@@ -1146,6 +1232,90 @@ export default function HomeHeaderActions() {
     },
     [
       loadNotifications,
+    ]
+  );
+
+
+  useEffect(
+    () => {
+
+      void loadSyncNotifications();
+
+
+      const intervalId =
+        window.setInterval(
+          () => {
+
+            void loadSyncNotifications();
+
+          },
+          60 * 1000
+        );
+
+
+      function handleDismissedNotification(
+        event:
+          Event
+      ) {
+
+        const customEvent =
+          event as
+            CustomEvent<{
+              notificationId?:
+                string;
+            }>;
+
+
+        const notificationId =
+          customEvent
+            .detail
+            ?.notificationId;
+
+
+        if (
+          !notificationId
+        ) {
+
+          return;
+
+        }
+
+
+        setSyncNotifications(
+          current =>
+            current.filter(
+              notification =>
+                notification.id !==
+                notificationId
+            )
+        );
+
+      }
+
+
+      window.addEventListener(
+        SYNC_NOTIFICATION_DISMISSED_EVENT,
+        handleDismissedNotification
+      );
+
+
+      return () => {
+
+        window.clearInterval(
+          intervalId
+        );
+
+
+        window.removeEventListener(
+          SYNC_NOTIFICATION_DISMISSED_EVENT,
+          handleDismissedNotification
+        );
+
+      };
+
+    },
+    [
+      loadSyncNotifications,
     ]
   );
 
@@ -1737,8 +1907,72 @@ export default function HomeHeaderActions() {
     ) {
 
       void loadNotifications();
+      void loadSyncNotifications();
 
     }
+
+  }
+
+
+  function handleDismissHeaderSyncNotification(
+    notificationId:
+      string
+  ) {
+
+    setExitingSyncNotificationIds(
+      current => {
+
+        const next =
+          new Set(
+            current
+          );
+
+
+        next.add(
+          notificationId
+        );
+
+
+        return next;
+
+      }
+    );
+
+
+    window.setTimeout(
+      () => {
+
+        dismissSyncNotification(
+          notificationId,
+          currentProfile
+            ?.user_id
+          ??
+          null
+        );
+
+
+        setExitingSyncNotificationIds(
+          current => {
+
+            const next =
+              new Set(
+                current
+              );
+
+
+            next.delete(
+              notificationId
+            );
+
+
+            return next;
+
+          }
+        );
+
+      },
+      280
+    );
 
   }
 
@@ -2201,7 +2435,9 @@ export default function HomeHeaderActions() {
 
 
   const unreadCount =
-    notifications.length;
+    notifications.length
+    +
+    syncNotifications.length;
 
 
   const currentUserTasks =
@@ -3195,6 +3431,9 @@ export default function HomeHeaderActions() {
                   &&
                   notifications.length ===
                     0
+                  &&
+                  syncNotifications.length ===
+                    0
 
                     ? (
 
@@ -3231,6 +3470,9 @@ export default function HomeHeaderActions() {
                       &&
                       notifications.length ===
                         0
+                      &&
+                      syncNotifications.length ===
+                        0
 
                       ? (
 
@@ -3265,6 +3507,9 @@ export default function HomeHeaderActions() {
                       )
 
                       : notifications.length ===
+                          0
+                        &&
+                        syncNotifications.length ===
                           0
 
                         ? (
@@ -3305,6 +3550,115 @@ export default function HomeHeaderActions() {
                               home-notifications-list
                             "
                           >
+
+                            {
+                              syncNotifications.map(
+                                notification => (
+
+                                  <div
+                                    key={
+                                      notification.id
+                                    }
+
+                                    className={
+                                      `home-header-sync-notification ${
+                                        exitingSyncNotificationIds.has(
+                                          notification.id
+                                        )
+
+                                          ? "home-header-sync-notification--exiting"
+
+                                          : ""
+                                      }`
+                                    }
+                                  >
+
+                                    <span
+                                      className=
+                                        "home-header-sync-notification-icon"
+                                    >
+                                      <SyncSuccessIcon />
+                                    </span>
+
+
+                                    <div
+                                      className=
+                                        "home-header-sync-notification-copy"
+                                    >
+
+                                      <strong>
+                                        {
+                                          notification.title
+                                        }
+                                      </strong>
+
+
+                                      <span>
+                                        {
+                                          notification.marketplaceLabel
+                                        }
+                                        {", данные за "}
+                                        {
+                                          notification.dataDate
+                                        }
+                                        {", "}
+                                        {
+                                          notification.updateTime
+                                        }
+                                      </span>
+
+                                    </div>
+
+
+                                    <div
+                                      className=
+                                        "home-header-sync-notification-meta"
+                                    >
+
+                                      <button
+                                        type="button"
+
+                                        className=
+                                          "home-header-sync-notification-dismiss"
+
+                                        onClick={
+                                          () =>
+                                            handleDismissHeaderSyncNotification(
+                                              notification.id
+                                            )
+                                        }
+
+                                        aria-label=
+                                          "Убрать уведомление"
+
+                                        title=
+                                          "Убрать уведомление"
+                                      >
+                                        <CloseIcon />
+                                      </button>
+
+
+                                      <time
+                                        className=
+                                          "home-header-sync-notification-time"
+
+                                        dateTime={
+                                          notification.notificationAt
+                                        }
+                                      >
+                                        {
+                                          notification.notificationDisplay
+                                        }
+                                      </time>
+
+                                    </div>
+
+                                  </div>
+
+                                )
+                              )
+                            }
+
 
                             {
                               notifications.map(
@@ -3375,6 +3729,8 @@ export default function HomeHeaderActions() {
                           </div>
 
                         )
+                }
+
                 }
 
               </div>
