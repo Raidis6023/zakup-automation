@@ -121,7 +121,7 @@ export default function HomePandaAssistant() {
   const [changing, setChanging] = useState(false);
 
   useEffect(() => {
-    let swapTimer: ReturnType<typeof setTimeout> | undefined;
+    let swapTimer: number | undefined;
     const changeTimer = window.setTimeout(() => {
       setChanging(true);
       swapTimer = window.setTimeout(() => {
