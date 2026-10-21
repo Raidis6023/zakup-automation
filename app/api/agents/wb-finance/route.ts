@@ -31,36 +31,32 @@ async function wb(url: string, token: string) {
 function groupFinancial(lines:FinanceLine[]) {
   const byId=new Map<string,{nm_id:string;article:string;name:string;realization:number;to_transfer:number;delivery:number;storage_in_report:number;acceptance:number;penalty:number;deduction:number;rows:number;operations:Record<string,number>}>();
   for(const l of lines){
-    const id=String(l.nm_id ?? "0"), article=String(l.sa_name ?? ""), name=String(l.subject_name ?? "");
+    const id=String(l.nmId ?? "0"), article=String(l.vendorCode ?? ""), name=String(l.title ?? l.subjectName ?? "");
     const key=id!=="0" ? id : "unallocated";
     let x=byId.get(key);
     if(!x){x={nm_id:key,article,name,realization:0,to_transfer:0,delivery:0,storage_in_report:0,acceptance:0,penalty:0,deduction:0,rows:0,operations:{}};byId.set(key,x);}
     x.rows++;
-    const op=String(l.supplier_oper_name ?? l.doc_type_name ?? "Неизвестная операция");
-    const transfer=num(l.ppvz_for_pay),sale=num(l.retail_amount), delivery=num(l.delivery_rub);
+    const op=String(l.supplierOperName ?? l.docTypeName ?? "Неизвестная операция");
+    const transfer=num(l.ppvzForPay),sale=num(l.retailAmount), delivery=num(l.deliveryRub);
     x.realization+=sale; x.to_transfer+=transfer; x.delivery+=delivery;
-    x.storage_in_report+=num(l.storage_fee);x.acceptance+=num(l.acceptance);x.penalty+=num(l.penalty);x.deduction+=num(l.deduction);
+    x.storage_in_report+=num(l.storageFee);x.acceptance+=num(l.acceptance);x.penalty+=num(l.penalty);x.deduction+=num(l.deduction);
     x.operations[op]=round((x.operations[op]??0)+transfer);
   }
   return [...byId.values()].map(x=>({...x,realization:round(x.realization),to_transfer:round(x.to_transfer),delivery:round(x.delivery),storage_in_report:round(x.storage_in_report),acceptance:round(x.acceptance),penalty:round(x.penalty),deduction:round(x.deduction)}));
 }
 async function finance(from:string,to:string,token:string){
-  const all:FinanceLine[]=[];let rrdid=0;let finished=false;
-  for(let page=0;page<30;page++){
-    const u=new URL("https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod");
-    u.searchParams.set("dateFrom",from);u.searchParams.set("dateTo",to);u.searchParams.set("limit","100000");u.searchParams.set("rrdid",String(rrdid));
-    const payload=await wb(u.toString(),token);
-    if(payload===null){finished=true;break;}
-    if(!Array.isArray(payload)) throw new Error("Неизвестный формат отчёта реализации WB");
-    if(!payload.length){finished=true;break;}
-    for(const row of payload) if(row && typeof row==="object") all.push(row as FinanceLine);
-    const cursor=num((payload[payload.length-1] as FinanceLine).rrd_id);
-    if(cursor<=rrdid) throw new Error("WB вернул повторяющийся курсор детализации");
-    rrdid=cursor;
-    if(payload.length<100000){finished=true;break;}
-  }
-  if(!finished) throw new Error("Отчёт больше 3 млн строк; нужна фоновая пакетная синхронизация");
-  return all;
+  // One request per minute per seller. Never paginate synchronously without a shared persistent queue.
+  const response=await fetch("https://finance-api.wildberries.ru/api/finance/v1/sales-reports/detailed",{
+    method:"POST",headers:{Authorization:token,"Content-Type":"application/json"},cache:"no-store",
+    body:JSON.stringify({dateFrom:from+"T00:00:00",dateTo:to+"T23:59:59",period:"daily",limit:100000,rrdId:0}),
+    signal:AbortSignal.timeout(50000)
+  });
+  if(response.status===204) return [];
+  if(!response.ok) throw new Error("WB Finance HTTP "+response.status+": "+(await response.text()).slice(0,350));
+  const payload=await response.json() as unknown;
+  if(!Array.isArray(payload))throw new Error("Неверный формат нового Finance API");
+  if(payload.length>=100000)throw new Error("Получено 100000 строк. Для полного отчёта нужна фоновая пагинация с лимитом 1 запрос/мин. Частичные суммы не показываются.");
+  return payload as FinanceLine[];
 }
 async function adStats(from:string,to:string,token:string):Promise<{items:AdItem[];campaigns:number;coverage:string;warning:string|null}>{
   const base="https://advert-api.wildberries.ru";
@@ -98,7 +94,7 @@ export async function GET(request:NextRequest){
     await access();
     const from=request.nextUrl.searchParams.get("from")??"",to=request.nextUrl.searchParams.get("to")??"";
     if(!dateOK(from)||!dateOK(to)||from>to||Date.parse(to)-Date.parse(from)>30*86400000) return NextResponse.json({ok:false,error:"Выберите корректный период до 31 дня"},{status:400});
-    const token=process.env.WB_FINANCE_TOKEN?.trim()??process.env.WB_READ_TOKEN?.trim();
+    const token=process.env.WB_FINANCE_TOKEN?.trim();
     if(!token) throw new Error("В Vercel не настроен WB_FINANCE_TOKEN");
     const report=await finance(from,to,token);
     let ads:Awaited<ReturnType<typeof adStats>>={items:[],campaigns:0,coverage:"not_configured",warning:"Не настроен WB_PROMOTION_TOKEN"};
