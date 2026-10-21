@@ -1,3 +1,4 @@
+import VedNewProductsClient from "./VedNewProductsClient";
 import Link from "next/link";
 
 import {
@@ -853,6 +854,7 @@ export default async function SkuListPage() {
             yandexRows
           }
         />
+        <VedNewProductsClient />
       </div>
     </main>
   );
