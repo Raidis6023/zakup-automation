@@ -4,6 +4,7 @@ import {
   useState,
 } from "react";
 
+import { parseStockDateFromFileName } from "@/lib/warehouse-file-date";
 import * as XLSX
   from "xlsx";
 
@@ -746,7 +747,7 @@ export default function ResponsibleStorageImportClient() {
     setMessage,
   ] =
     useState(
-      "Выберите Excel-отчёт ответственного хранения."
+      "Выберите Excel с датой остатков в названии, например «ОХ 19.10.xlsx»."
     );
 
 
@@ -880,15 +881,14 @@ export default function ResponsibleStorageImportClient() {
       // ======================================================
 
       const detectedDate =
-        findSnapshotDate(
-          excelRows
-        );
+        parseStockDateFromFileName(file.name)
+        ?? findSnapshotDate(excelRows);
 
 
       if (!detectedDate) {
 
         throw new Error(
-          "Не удалось определить дату отчёта из строки «Период отчета»"
+          "Не удалось определить дату остатков. Добавьте дату в имя файла, например «ОХ 19.10.xlsx»."
         );
 
       }

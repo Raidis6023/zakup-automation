@@ -13,13 +13,21 @@ type Props = {
   rows: StockRow[]; aDate: string | null; aPrev: string | null;
   oDate: string | null; oPrev: string | null;
   aTotal: number; oTotal: number; missing: number; calculatedFromLatest: boolean;
+  aUploadedAt: string | null; oUploadedAt: string | null;
 };
 const num = (n: number) => new Intl.NumberFormat("ru-RU").format(n);
 const day = (d: string | null) => d ? d.split("-").reverse().join(".") : "Нет загрузок";
+const uploaded = (d: string | null) => d
+  ? new Intl.DateTimeFormat("ru-RU", {
+      timeZone: "Asia/Krasnoyarsk",
+      day: "2-digit", month: "2-digit", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    }).format(new Date(d)) + " (Красноярск)"
+  : "Нет загрузок";
 const diff = (v: number | null) => v === null ? "—" : (v > 0 ? "+" : "") + num(v);
 
 export default function StocksClient(props: Props) {
-  const { rows, aDate, aPrev, oDate, oPrev, aTotal, oTotal, missing, calculatedFromLatest } = props;
+  const { rows, aDate, aPrev, oDate, oPrev, aTotal, oTotal, missing, calculatedFromLatest, aUploadedAt, oUploadedAt } = props;
   const [search, setSearch] = useState("");
   const [changed, setChanged] = useState(false);
   const [open, setOpen] = useState<string[]>([]);
@@ -37,11 +45,13 @@ export default function StocksClient(props: Props) {
     <section className="stocks-stats">
       <div className="card"><div className="card-label">АВЕДЭКС</div>
         <div className="big-number">{num(aTotal)} шт.</div>
-        <div className="muted">Excel: {day(aDate)}</div>
+        <div className="muted">Остатки на: {day(aDate)}</div>
+        <div className="stocks-tiny">Загружено: {uploaded(aUploadedAt)}</div>
         <div className="stocks-tiny">Предыдущий: {day(aPrev)}</div></div>
       <div className="card"><div className="card-label">Ответственное хранение</div>
         <div className="big-number">{num(oTotal)} шт.</div>
-        <div className="muted">Excel: {day(oDate)}</div>
+        <div className="muted">Остатки на: {day(oDate)}</div>
+        <div className="stocks-tiny">Загружено: {uploaded(oUploadedAt)}</div>
         <div className="stocks-tiny">Предыдущий: {day(oPrev)}</div></div>
       <div className="card"><div className="card-label">Общие остатки</div>
         <div className="big-number">{num(aTotal + oTotal)} шт.</div>

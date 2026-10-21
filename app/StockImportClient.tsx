@@ -5,9 +5,7 @@ import { useRouter } from "next/navigation";
 
 import * as XLSX from "xlsx";
 
-import {
-  createStockImportPreview,
-} from "./actions";
+import { parseStockDateFromFileName } from "@/lib/warehouse-file-date";
 
 
 // ============================================
@@ -257,7 +255,7 @@ export default function StockImportClient() {
     setMessage,
   ] =
     useState(
-      "Выберите Excel-файл с остатками."
+      "Выберите Excel с датой остатков в названии, например «Аведэкс 19.10.xlsx»."
     );
 
 
@@ -391,9 +389,7 @@ export default function StockImportClient() {
 
 
       let reportDate =
-        toIsoDate(
-          reportDateValue
-        );
+        parseStockDateFromFileName(file.name) ?? toIsoDate(reportDateValue);
 
 
       if (!reportDate) {
@@ -794,22 +790,24 @@ export default function StockImportClient() {
       // 16. СОЗДАЁМ PREVIEW В SUPABASE
       // ======================================
 
-      const batchId =
-        await createStockImportPreview(
-          {
-
-            fileName:
-              file.name,
-
-
-            reportDate,
-
-
-            rows:
-              parsedRows,
-
-          }
-        );
+      const response = await fetch("/api/stock-import-preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileName: file.name,
+          reportDate,
+          rows: parsedRows,
+        }),
+      });
+      const payload = await response.json() as {
+        ok?: boolean;
+        batchId?: string;
+        error?: string;
+      };
+      if (!response.ok || !payload.ok || !payload.batchId) {
+        throw new Error(payload.error || "Сервер не создал предварительную проверку Excel");
+      }
+      const batchId = payload.batchId;
 
 
       if (!batchId) {
@@ -835,7 +833,7 @@ export default function StockImportClient() {
       );
 
 
-      router.refresh();
+      // Не запускаем параллельный refresh во время перехода: он вызывал лишний RSC-запрос.
 
     } catch (error) {
 

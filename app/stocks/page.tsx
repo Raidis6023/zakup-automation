@@ -13,6 +13,7 @@ type StockSnapshot = {
   snapshot_date: string;
   warehouse_name: string;
   quantity: number;
+  imported_at: string | null;
 };
 type Product = { id: string; offer_id: string; name: string | null; master_code: string | null };
 type ChinaRun = {
@@ -54,7 +55,7 @@ async function load(table: string): Promise<StockSnapshot[]> {
   if (!last) return [];
   const after = new Date(last.snapshot_date + "T12:00:00Z");
   after.setUTCDate(after.getUTCDate() - 125);
-  return pages<StockSnapshot>(table, "id,product_id,snapshot_date,warehouse_name,quantity", {
+  return pages<StockSnapshot>(table, "id,product_id,snapshot_date,warehouse_name,quantity,imported_at", {
     snapshot_date: "gte." + after.toISOString().slice(0, 10),
   });
 }
@@ -145,6 +146,10 @@ async function getReport() {
   const chinaRun = lastRuns[0];
   return {
     rows, aDate, aPrev, oDate, oPrev,
+    aUploadedAt: avedex.filter((s) => s.snapshot_date === aDate)
+      .map((s) => s.imported_at).filter((d): d is string => !!d).sort().at(-1) || null,
+    oUploadedAt: oh.filter((s) => s.snapshot_date === oDate)
+      .map((s) => s.imported_at).filter((d): d is string => !!d).sort().at(-1) || null,
     aTotal: rows.reduce((sum, r) => sum + r.avedex, 0),
     oTotal: rows.reduce((sum, r) => sum + r.oh, 0),
     missing: rows.filter((r) => r.missingAvedex || r.missingOh).length,
