@@ -16,33 +16,33 @@ const adsByNm=new Map<string,{spend:number;views:number;clicks:number;orders:num
 for(const a of data?.ads.items??[]){const k=String(a.nm_id),v=adsByNm.get(k)??{spend:0,views:0,clicks:0,orders:0,sum_price:0};v.spend+=a.spend;v.views+=a.views;v.clicks+=a.clicks;v.orders+=a.orders;v.sum_price+=a.sum_price;adsByNm.set(k,v);}
 const rows=(data?.rows??[]).filter(r=>(r.article+" "+r.nm_id+" "+r.name).toLowerCase().includes(filter.toLowerCase()));
 const active=rows.find(r=>r.nm_id===selected);
-return <section style={{padding:24,display:"grid",gap:18}}>
-<div style={{display:"flex",flexWrap:"wrap",gap:12,alignItems:"end"}}>
+return <div className="ozf-layout"><section className="ozf-panel">
+<div className="ozf-filters">
 <label>С даты <input type="date" value={from} onChange={e=>setFrom(e.target.value)} /></label>
 <label>По дату <input type="date" value={to} onChange={e=>setTo(e.target.value)} /></label>
-<button type="button" disabled={busy} onClick={load}>{busy?"Выгружаем...":"Получить детализацию WB"}</button>
+<button className="ozf-btn ozf-primary" type="button" disabled={busy} onClick={load}>{busy?"Выгружаем...":"Получить детализацию WB"}</button>
 <input placeholder="Артикул / nmId / название" value={filter} onChange={e=>setFilter(e.target.value)}/>
 </div>
-{error&&<p role="alert" style={{color:"#e57373"}}>{error}</p>}
-{data&&<>
+{error&&<p className="ozf-error" role="alert">{error}</p>}
+</section>{data&&<><section className="ozf-metrics">{[["Реализация",data.rows.reduce((a,r)=>a+r.realization,0)],["К перечислению",data.rows.reduce((a,r)=>a+r.to_transfer,0)],["Логистика",data.rows.reduce((a,r)=>a+r.delivery,0)],["Штрафы и удержания",data.rows.reduce((a,r)=>a+r.penalty+r.deduction,0)]].map(([label,value])=><div className="ozf-panel" key={String(label)}><span>{label}</span><strong>{money(Number(value))} ₽</strong><small>По загруженной финансовой детализации</small></div>)}</section><section className="ozf-panel">
 <p><strong>Получено финансовых строк: {data.financial_rows.toLocaleString("ru-RU")}</strong>. Кампаний рекламы: {data.ads.campaigns}. Статус рекламы: {data.ads.coverage}.</p>
 <p role="status" style={{color:"#d9a441"}}>{data.notice} {data.ads.warning}</p>
-<div style={{overflowX:"auto"}}>
-<table style={{width:"100%",borderCollapse:"collapse",whiteSpace:"nowrap"}}>
+<div className="ozf-table-scroll">
+<table className="ozf-table">
 <thead><tr>{["Артикул","nmId","Реализация, ₽","К перечислению, ₽","Логистика, ₽","Хранение в отчёте, ₽","Приёмка, ₽","Штрафы, ₽","Удержания, ₽","Реклама (статистика), ₽","Операции"].map(h=><th key={h} style={{padding:10,textAlign:"left",borderBottom:"1px solid #8885"}}>{h}</th>)}</tr></thead>
 <tbody>{rows.map(r=><tr key={r.nm_id} onClick={()=>setSelected(r.nm_id)} style={{cursor:"pointer",background:selected===r.nm_id?"#7772":"transparent"}}>
 <td style={{padding:8}}>{r.article||"Не сопоставлен"}</td><td>{r.nm_id}</td>
 {[r.realization,r.to_transfer,r.delivery,r.storage_in_report,r.acceptance,r.penalty,r.deduction].map((v,i)=><td key={i} style={{padding:8,textAlign:"right"}}>{money(v)}</td>)}
 <td style={{padding:8,textAlign:"right"}}>{data.ads.coverage==="stats_only"?money(adsByNm.get(r.nm_id)?.spend??0):"Нет данных"}</td>
 <td style={{padding:8}}>{r.rows}</td></tr>)}</tbody></table></div>
-{active&&<article style={{padding:16,border:"1px solid #8885",borderRadius:12}}>
+{active&&<article className="ozf-panel">
 <h3>Операции: {active.article||active.nm_id}</h3>
 {Object.entries(active.operations).sort((a,b)=>a[0].localeCompare(b[0],"ru")).map(([k,v])=><div key={k} style={{display:"flex",justifyContent:"space-between",gap:12,padding:4}}><span>{k}</span><strong>{money(v)} ₽</strong></div>)}
 </article>}
 <h3>Подробная статистика рекламы</h3>
-<div style={{overflowX:"auto"}}><table style={{width:"100%"}}><thead><tr>{["Дата","Кампания","nmId","Расход, ₽","Показы","Клики","Заказы","Продажи РК, ₽"].map(x=><th key={x}>{x}</th>)}</tr></thead><tbody>
+<div style={{overflowX:"auto"}}><table className="ozf-table"><thead><tr>{["Дата","Кампания","nmId","Расход, ₽","Показы","Клики","Заказы","Продажи РК, ₽"].map(x=><th key={x}>{x}</th>)}</tr></thead><tbody>
 {data.ads.items.filter(x=>!filter||String(x.nm_id).includes(filter)).map((a,i)=><tr key={a.campaign_id+"-"+a.date+"-"+a.nm_id+"-"+i}><td>{a.date}</td><td>{a.campaign_id}</td><td>{a.nm_id}</td><td>{money(a.spend)}</td><td>{a.views}</td><td>{a.clicks}</td><td>{a.orders}</td><td>{money(a.sum_price)}</td></tr>)}
 </tbody></table></div>
-</>}
-</section>;
+</section></>}
+</div>;
 }
