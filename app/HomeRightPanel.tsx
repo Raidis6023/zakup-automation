@@ -113,9 +113,8 @@ function StockAlertIcon() {
       viewBox="0 0 24 24"
       aria-hidden="true"
     >
-      <path d="M12 4.5 20 19H4Z" />
-      <path d="M12 9v4.5" />
-      <path d="M12 16.7h.01" />
+      <path d="M12 6.5v7" />
+      <path d="M12 17.5h.01" />
     </svg>
   );
 }
