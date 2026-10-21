@@ -8,6 +8,7 @@ import {
 
 import {
   usePathname,
+  useRouter,
 } from "next/navigation";
 
 import {
@@ -106,6 +107,20 @@ function SyncSuccessIcon() {
 }
 
 
+function StockAlertIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path d="M12 4.5 20 19H4Z" />
+      <path d="M12 9v4.5" />
+      <path d="M12 16.7h.01" />
+    </svg>
+  );
+}
+
+
 function DismissIcon() {
   return (
     <svg
@@ -123,6 +138,9 @@ function DismissIcon() {
 }
 
 export default function HomeRightPanel() {
+  const router =
+    useRouter();
+
   const pathname = usePathname() ?? "/";
   const adminHomeMode = pathname === "/admin";
 
@@ -658,6 +676,13 @@ export default function HomeRightPanel() {
                         }
                         className={
                           `home-sync-notification ${
+                            notification.kind ===
+                              "stock_zero"
+
+                              ? "home-sync-notification--alert"
+
+                              : ""
+                          } ${
                             exitingNotificationIds.has(
                               notification.id
                             )
@@ -667,12 +692,57 @@ export default function HomeRightPanel() {
                               : ""
                           }`
                         }
+
+                        role="button"
+                        tabIndex={0}
+
+                        onClick={
+                          () =>
+                            router.push(
+                              notification.href
+                            )
+                        }
+
+                        onKeyDown={
+                          event => {
+
+                            if (
+                              event.key ===
+                                "Enter"
+                              ||
+                              event.key ===
+                                " "
+                            ) {
+
+                              event.preventDefault();
+
+                              router.push(
+                                notification.href
+                              );
+
+                            }
+
+                          }
+                        }
                       >
                         <span
-                          className=
-                            "home-sync-notification-icon"
+                          className={
+                            notification.kind ===
+                              "stock_zero"
+
+                              ? "home-sync-notification-icon home-sync-notification-icon--alert"
+
+                              : "home-sync-notification-icon"
+                          }
                         >
-                          <SyncSuccessIcon />
+                          {
+                            notification.kind ===
+                              "stock_zero"
+
+                              ? <StockAlertIcon />
+
+                              : <SyncSuccessIcon />
+                          }
                         </span>
 
                         <div
@@ -687,15 +757,7 @@ export default function HomeRightPanel() {
 
                           <span>
                             {
-                              notification.marketplaceLabel
-                            }
-                            {", данные за "}
-                            {
-                              notification.dataDate
-                            }
-                            {", "}
-                            {
-                              notification.updateTime
+                              notification.description
                             }
                           </span>
                         </div>
@@ -711,10 +773,23 @@ export default function HomeRightPanel() {
                               "home-sync-notification-dismiss"
 
                             onClick={
-                              () =>
+                              event => {
+
+                                event.stopPropagation();
+
                                 handleDismissSyncNotification(
                                   notification.id
-                                )
+                                );
+
+                              }
+                            }
+
+                            onKeyDown={
+                              event => {
+
+                                event.stopPropagation();
+
+                              }
                             }
 
                             aria-label=

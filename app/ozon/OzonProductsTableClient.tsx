@@ -221,24 +221,185 @@ export default function OzonProductsTableClient({
 
   const [expanded, setExpanded] = useState(false);
   const [ready, setReady] = useState(false);
+
+  const [
+    notificationFocus,
+    setNotificationFocus,
+  ] =
+    useState<
+      string
+      |
+      null
+    >(
+      null
+    );
   const [sortKey, setSortKey] = useState<OzonSortKey>("sales_28_days");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
-  useEffect(() => {
-    try {
-      setExpanded(window.localStorage.getItem(OZON_EXPANDED_KEY) === "1");
-    } catch {
-      // Storage may be disabled.
-    } finally {
-      setReady(true);
-    }
-  }, []);
+  useEffect(
+    () => {
+
+      const params =
+        new URLSearchParams(
+          window.location.search
+        );
+
+      const focus =
+        params.get(
+          "focusStockDays"
+        );
+
+      if (
+        focus
+      ) {
+
+        setExpanded(
+          true
+        );
+
+        setNotificationFocus(
+          focus
+        );
+
+        try {
+
+          window.localStorage.setItem(
+            OZON_EXPANDED_KEY,
+            "1"
+          );
+
+        } catch {
+
+          // Storage may be disabled.
+        }
+
+      } else {
+
+        try {
+
+          setExpanded(
+            window.localStorage.getItem(
+              OZON_EXPANDED_KEY
+            ) ===
+              "1"
+          );
+
+        } catch {
+
+          // Storage may be disabled.
+        }
+
+      }
+
+      setReady(
+        true
+      );
+
+    },
+    []
+  );
 
   const sortedProducts = useMemo(
     () => products.map((item, index) => ({ item, index }))
       .sort((a, b) => compareOzon(a.item, b.item, sortKey, sortDirection) || a.index - b.index)
       .map(row => row.item),
     [products, sortKey, sortDirection]
+  );
+
+
+  useEffect(
+    () => {
+
+      if (
+        !ready
+        ||
+        !expanded
+        ||
+        !notificationFocus
+      ) {
+
+        return;
+
+      }
+
+      const row =
+        Array.from(
+          document.querySelectorAll<
+            HTMLTableRowElement
+          >(
+            "[data-ozon-focus-key]"
+          )
+        ).find(
+          element =>
+            element.dataset
+              .ozonFocusKey ===
+              notificationFocus
+        );
+
+      if (
+        !row
+      ) {
+
+        return;
+
+      }
+
+      const url =
+        new URL(
+          window.location.href
+        );
+
+      url.searchParams.delete(
+        "focusStockDays"
+      );
+
+      window.history.replaceState(
+        {},
+        "",
+        `${url.pathname}${url.search}${url.hash}`
+      );
+
+      window.requestAnimationFrame(
+        () => {
+
+          row.scrollIntoView({
+            behavior:
+              "smooth",
+
+            block:
+              "center",
+          });
+
+        }
+      );
+
+      const timer =
+        window.setTimeout(
+          () => {
+
+            setNotificationFocus(
+              null
+            );
+
+          },
+          10_000
+        );
+
+      return () => {
+
+        window.clearTimeout(
+          timer
+        );
+
+      };
+
+    },
+    [
+      expanded,
+      notificationFocus,
+      ready,
+      sortedProducts,
+    ]
   );
 
   function toggleTable() {
@@ -524,9 +685,33 @@ export default function OzonProductsTableClient({
 
                     <tr
                       className={
-                        index % 2 === 0
-                          ? "ozon-products-master-row ozon-products-row-odd"
-                          : "ozon-products-master-row ozon-products-row-even"
+                        [
+                          "ozon-products-master-row",
+
+                          index % 2 ===
+                            0
+
+                            ? "ozon-products-row-odd"
+
+                            : "ozon-products-row-even",
+
+                          notificationFocus ===
+                            masterCode
+
+                            ? "ozon-products-master-row--notification-focus"
+
+                            : "",
+                        ]
+                          .filter(
+                            Boolean
+                          )
+                          .join(
+                            " "
+                          )
+                      }
+
+                      data-ozon-focus-key={
+                        masterCode
                       }
                     >
 
@@ -691,6 +876,15 @@ export default function OzonProductsTableClient({
 
                       <TableCell
                         align="right"
+
+                        className={
+                          notificationFocus ===
+                            masterCode
+
+                            ? "ozon-products-stock-days--notification-focus"
+
+                            : undefined
+                        }
                       >
                         {
                           formatDecimal(
@@ -1136,6 +1330,7 @@ function TableHeader({
 function TableCell({
   children,
   align = "left",
+  className,
 }: {
   children:
     ReactNode;
@@ -1144,15 +1339,35 @@ function TableCell({
     "left"
     |
     "right";
+
+  className?:
+    string;
 }) {
 
   return (
 
     <td
       className={
-        align === "right"
-          ? "ozon-table-right"
-          : undefined
+        [
+          align ===
+            "right"
+
+            ? "ozon-table-right"
+
+            : "",
+
+          className
+          ??
+          "",
+        ]
+          .filter(
+            Boolean
+          )
+          .join(
+            " "
+          )
+        ||
+        undefined
       }
     >
       {

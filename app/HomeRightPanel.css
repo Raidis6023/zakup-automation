@@ -1166,3 +1166,72 @@ svg {
   text-align:
     center;
 }
+
+
+/* ============================================================
+   УВЕДОМЛЕНИЯ: КЛИК, ЦЕНТРОВКА МЕТА И ALERT
+   ============================================================ */
+
+.home-sync-notification {
+  cursor: pointer;
+}
+
+.home-sync-notification:hover:not(.home-sync-notification--exiting) {
+  background: var(--ws-surface-hover);
+}
+
+.home-sync-notification:focus-visible {
+  outline: 2px solid var(--ws-icon);
+  outline-offset: -2px;
+}
+
+.home-sync-notification-meta {
+  position: relative;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: row;
+  gap: 0;
+}
+
+.home-sync-notification-time {
+  display: block;
+  width: 100%;
+  padding: 0;
+  text-align: center;
+}
+
+.home-sync-notification-dismiss {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  z-index: 2;
+  color: #ff3440;
+  transform: translate(calc(-50% - 10px), 0);
+}
+
+html[data-theme="dark"] .home-sync-notification-dismiss {
+  color: #ff7780;
+}
+
+.home-sync-notification:hover .home-sync-notification-dismiss,
+.home-sync-notification:focus-within .home-sync-notification-dismiss {
+  transform: translate(-50%, 0);
+}
+
+.home-sync-notification-icon--alert {
+  background: #ef5d64;
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .home-sync-notification-icon--alert {
+  background: #fff0f1;
+  color: #ef4f59;
+}
+
+.home-sync-notification-icon--alert svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2.5;
+}

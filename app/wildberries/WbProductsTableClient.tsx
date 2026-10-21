@@ -441,6 +441,19 @@ export default function WbProductsTableClient({
     );
 
 
+  const [
+    notificationFocus,
+    setNotificationFocus,
+  ] =
+    useState<
+      string
+      |
+      null
+    >(
+      null
+    );
+
+
   // ==========================================================
   // SORT
   //
@@ -473,53 +486,83 @@ export default function WbProductsTableClient({
   useEffect(
     () => {
 
-      try {
+      const params =
+        new URLSearchParams(
+          window.location.search
+        );
 
-        const stored =
-          window
-            .localStorage
-            .getItem(
-              STORAGE_KEY
-            );
+      const focus =
+        params.get(
+          "focusStockDays"
+        );
 
+      if (
+        focus
+      ) {
 
-        if (
-          stored ===
-          "1"
-        ) {
-
-          setExpanded(
-            true
-          );
-
-        }
-
-
-        if (
-          stored ===
-          "0"
-        ) {
-
-          setExpanded(
-            false
-          );
-
-        }
-
-      } catch {
-
-        /*
-         * Если localStorage недоступен,
-         * таблица просто останется свёрнутой.
-         */
-
-      } finally {
-
-        setStorageLoaded(
+        setExpanded(
           true
         );
 
+        setNotificationFocus(
+          focus
+        );
+
+        try {
+
+          window.localStorage.setItem(
+            STORAGE_KEY,
+            "1"
+          );
+
+        } catch {
+
+          // Storage may be unavailable.
+        }
+
+      } else {
+
+        try {
+
+          const stored =
+            window
+              .localStorage
+              .getItem(
+                STORAGE_KEY
+              );
+
+          if (
+            stored ===
+              "1"
+          ) {
+
+            setExpanded(
+              true
+            );
+
+          }
+
+          if (
+            stored ===
+              "0"
+          ) {
+
+            setExpanded(
+              false
+            );
+
+          }
+
+        } catch {
+
+          // Storage may be unavailable.
+        }
+
       }
+
+      setStorageLoaded(
+        true
+      );
 
     },
     []
@@ -589,6 +632,102 @@ export default function WbProductsTableClient({
         sortDirection,
       ]
     );
+
+
+  useEffect(
+    () => {
+
+      if (
+        !storageLoaded
+        ||
+        !expanded
+        ||
+        !notificationFocus
+      ) {
+
+        return;
+
+      }
+
+      const row =
+        Array.from(
+          document.querySelectorAll<
+            HTMLTableRowElement
+          >(
+            "[data-wb-focus-key]"
+          )
+        ).find(
+          element =>
+            element.dataset
+              .wbFocusKey ===
+              notificationFocus
+        );
+
+      if (
+        !row
+      ) {
+
+        return;
+
+      }
+
+      const url =
+        new URL(
+          window.location.href
+        );
+
+      url.searchParams.delete(
+        "focusStockDays"
+      );
+
+      window.history.replaceState(
+        {},
+        "",
+        `${url.pathname}${url.search}${url.hash}`
+      );
+
+      window.requestAnimationFrame(
+        () => {
+
+          row.scrollIntoView({
+            behavior:
+              "smooth",
+
+            block:
+              "center",
+          });
+
+        }
+      );
+
+      const timer =
+        window.setTimeout(
+          () => {
+
+            setNotificationFocus(
+              null
+            );
+
+          },
+          10_000
+        );
+
+      return () => {
+
+        window.clearTimeout(
+          timer
+        );
+
+      };
+
+    },
+    [
+      expanded,
+      notificationFocus,
+      sortedItems,
+      storageLoaded,
+    ]
+  );
 
 
   // ==========================================================
@@ -1146,6 +1285,23 @@ export default function WbProductsTableClient({
                             key={
                               row.nmId
                             }
+
+                            className={
+                              notificationFocus ===
+                                String(
+                                  row.nmId
+                                )
+
+                                ? "wb-products-row--notification-focus"
+
+                                : undefined
+                            }
+
+                            data-wb-focus-key={
+                              String(
+                                row.nmId
+                              )
+                            }
                           >
 
                             {/* ЕНОТ */}
@@ -1319,7 +1475,16 @@ export default function WbProductsTableClient({
                             {/* Дней запаса */}
 
                             <td
-                              className="wb-products-number-cell"
+                              className={
+                                notificationFocus ===
+                                  String(
+                                    row.nmId
+                                  )
+
+                                  ? "wb-products-number-cell wb-products-stock-days--notification-focus"
+
+                                  : "wb-products-number-cell"
+                              }
                             >
 
                               {

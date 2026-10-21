@@ -829,3 +829,28 @@ html[data-theme="dark"]
       0.045
     );
 }
+
+
+/* ============================================================
+   УВЕДОМЛЕНИЕ: ФОКУС НА НУЛЕВОМ ЗАПАСЕ В ДНЯХ
+   ============================================================ */
+
+.yandex-reference-page
+.ym-product-details--notification-focus
+> summary {
+  background: var(--ym-products-hover);
+}
+
+.yandex-reference-page
+.ym-products-main-cell--numeric.ym-products-stock-days--notification-focus {
+  background: rgba(223, 90, 112, 0.16);
+  color: #d94f67;
+  box-shadow: inset 0 0 0 1px rgba(223, 90, 112, 0.42);
+}
+
+html[data-theme="dark"]
+.yandex-reference-page
+.ym-products-main-cell--numeric.ym-products-stock-days--notification-focus {
+  background: rgba(236, 135, 153, 0.18);
+  color: #ff8fa2;
+}

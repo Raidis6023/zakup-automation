@@ -1,6 +1,14 @@
+export type SyncNotificationKind =
+  | "sync_success"
+  | "stock_zero";
+
+
 export type SyncNotification = {
   id:
     string;
+
+  kind:
+    SyncNotificationKind;
 
   marketplace:
     "ozon"
@@ -29,6 +37,12 @@ export type SyncNotification = {
     string;
 
   notificationDisplay:
+    string;
+
+  description:
+    string;
+
+  href:
     string;
 };
 

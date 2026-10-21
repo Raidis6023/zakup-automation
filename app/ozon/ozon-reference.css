@@ -3013,3 +3013,36 @@ span:first-child {
   }
 
 }
+
+
+/* ============================================================
+   УВЕДОМЛЕНИЕ: ФОКУС НА НУЛЕВОМ ЗАПАСЕ В ДНЯХ
+   ============================================================ */
+
+.ozon-reference-page
+.ozon-products-sort-table
+> tbody
+> tr.ozon-products-master-row--notification-focus
+> td {
+  background: var(--ws-surface-hover);
+}
+
+.ozon-reference-page
+.ozon-products-sort-table
+> tbody
+> tr
+> td.ozon-products-stock-days--notification-focus {
+  background: rgba(223, 90, 112, 0.16) !important;
+  color: #d94f67;
+  box-shadow: inset 0 0 0 1px rgba(223, 90, 112, 0.42);
+}
+
+html[data-theme="dark"]
+.ozon-reference-page
+.ozon-products-sort-table
+> tbody
+> tr
+> td.ozon-products-stock-days--notification-focus {
+  background: rgba(236, 135, 153, 0.18) !important;
+  color: #ff8fa2;
+}

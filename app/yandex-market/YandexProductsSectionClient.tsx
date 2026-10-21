@@ -93,49 +93,77 @@ export default function YandexProductsSectionClient({
   useEffect(
     () => {
 
-      try {
+      const params =
+        new URLSearchParams(
+          window.location.search
+        );
 
-        const stored =
-          window.localStorage.getItem(
-            STORAGE_KEY
-          );
+      const focus =
+        params.get(
+          "focusStockDays"
+        );
 
+      if (
+        focus
+      ) {
 
-        if (
-          stored ===
-          "1"
-        ) {
-
-          setExpanded(
-            true
-          );
-
-        }
-
-
-        if (
-          stored ===
-          "0"
-        ) {
-
-          setExpanded(
-            false
-          );
-
-        }
-
-      } catch {
-
-        // Если localStorage недоступен,
-        // таблица просто останется свёрнутой.
-
-      } finally {
-
-        setStorageLoaded(
+        setExpanded(
           true
         );
 
+        try {
+
+          window.localStorage.setItem(
+            STORAGE_KEY,
+            "1"
+          );
+
+        } catch {
+
+          // Storage may be unavailable.
+        }
+
+      } else {
+
+        try {
+
+          const stored =
+            window.localStorage.getItem(
+              STORAGE_KEY
+            );
+
+          if (
+            stored ===
+              "1"
+          ) {
+
+            setExpanded(
+              true
+            );
+
+          }
+
+          if (
+            stored ===
+              "0"
+          ) {
+
+            setExpanded(
+              false
+            );
+
+          }
+
+        } catch {
+
+          // Storage may be unavailable.
+        }
+
       }
+
+      setStorageLoaded(
+        true
+      );
 
     },
     []

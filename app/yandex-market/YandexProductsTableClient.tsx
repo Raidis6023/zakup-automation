@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -503,6 +504,47 @@ export default function YandexProductsTableClient({
     );
 
 
+  const [
+    notificationFocus,
+    setNotificationFocus,
+  ] =
+    useState<
+      string
+      |
+      null
+    >(
+      null
+    );
+
+
+  useEffect(
+    () => {
+
+      const params =
+        new URLSearchParams(
+          window.location.search
+        );
+
+      const focus =
+        params.get(
+          "focusStockDays"
+        );
+
+      if (
+        focus
+      ) {
+
+        setNotificationFocus(
+          focus
+        );
+
+      }
+
+    },
+    []
+  );
+
+
   // ==========================================================
   // SORTED ITEMS
   // ==========================================================
@@ -581,6 +623,96 @@ export default function YandexProductsTableClient({
         sortDirection,
       ]
     );
+
+
+  useEffect(
+    () => {
+
+      if (
+        !notificationFocus
+      ) {
+
+        return;
+
+      }
+
+      const row =
+        Array.from(
+          document.querySelectorAll<
+            HTMLElement
+          >(
+            "[data-ym-focus-key]"
+          )
+        ).find(
+          element =>
+            element.dataset
+              .ymFocusKey ===
+              notificationFocus
+        );
+
+      if (
+        !row
+      ) {
+
+        return;
+
+      }
+
+      const url =
+        new URL(
+          window.location.href
+        );
+
+      url.searchParams.delete(
+        "focusStockDays"
+      );
+
+      window.history.replaceState(
+        {},
+        "",
+        `${url.pathname}${url.search}${url.hash}`
+      );
+
+      window.requestAnimationFrame(
+        () => {
+
+          row.scrollIntoView({
+            behavior:
+              "smooth",
+
+            block:
+              "center",
+          });
+
+        }
+      );
+
+      const timer =
+        window.setTimeout(
+          () => {
+
+            setNotificationFocus(
+              null
+            );
+
+          },
+          10_000
+        );
+
+      return () => {
+
+        window.clearTimeout(
+          timer
+        );
+
+      };
+
+    },
+    [
+      notificationFocus,
+      sortedItems,
+    ]
+  );
 
 
   // ==========================================================
@@ -849,8 +981,18 @@ export default function YandexProductsTableClient({
                     item.id
                   }
 
-                  className=
-                    "ym-product-details"
+                  className={
+                    notificationFocus ===
+                      item.offer_id
+
+                      ? "ym-product-details ym-product-details--notification-focus"
+
+                      : "ym-product-details"
+                  }
+
+                  data-ym-focus-key={
+                    item.offer_id
+                  }
                 >
 
                   <summary
@@ -954,6 +1096,15 @@ export default function YandexProductsTableClient({
                     <MainCell
                       numeric
                       strong
+
+                      className={
+                        notificationFocus ===
+                          item.offer_id
+
+                          ? "ym-products-stock-days--notification-focus"
+
+                          : undefined
+                      }
                     >
                       {
                         stockDays ===
@@ -1291,6 +1442,7 @@ function MainCell({
   numeric = false,
   strong = false,
   text = false,
+  className,
 }: {
   children:
     ReactNode;
@@ -1303,6 +1455,9 @@ function MainCell({
 
   text?:
     boolean;
+
+  className?:
+    string;
 }) {
 
   return (
@@ -1322,6 +1477,10 @@ function MainCell({
           text
             ? "ym-products-main-cell--text"
             : "",
+
+          className
+          ??
+          "",
         ]
           .filter(
             Boolean

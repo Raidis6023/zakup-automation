@@ -194,6 +194,26 @@ function SyncSuccessIcon() {
 }
 
 
+function StockAlertIcon() {
+
+  return (
+
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+
+      <path d="M12 4.5 20 19H4Z" />
+      <path d="M12 9v4.5" />
+      <path d="M12 16.7h.01" />
+
+    </svg>
+
+  );
+
+}
+
+
 // ============================================================
 // TYPES
 // ============================================================
@@ -3562,6 +3582,13 @@ export default function HomeHeaderActions() {
 
                                     className={
                                       `home-header-sync-notification ${
+                                        notification.kind ===
+                                          "stock_zero"
+
+                                          ? "home-header-sync-notification--alert"
+
+                                          : ""
+                                      } ${
                                         exitingSyncNotificationIds.has(
                                           notification.id
                                         )
@@ -3571,13 +3598,69 @@ export default function HomeHeaderActions() {
                                           : ""
                                       }`
                                     }
+
+                                    role="button"
+                                    tabIndex={0}
+
+                                    onClick={
+                                      () => {
+
+                                        setOpenPanel(
+                                          null
+                                        );
+
+                                        router.push(
+                                          notification.href
+                                        );
+
+                                      }
+                                    }
+
+                                    onKeyDown={
+                                      event => {
+
+                                        if (
+                                          event.key ===
+                                            "Enter"
+                                          ||
+                                          event.key ===
+                                            " "
+                                        ) {
+
+                                          event.preventDefault();
+
+                                          setOpenPanel(
+                                            null
+                                          );
+
+                                          router.push(
+                                            notification.href
+                                          );
+
+                                        }
+
+                                      }
+                                    }
                                   >
 
                                     <span
-                                      className=
-                                        "home-header-sync-notification-icon"
+                                      className={
+                                        notification.kind ===
+                                          "stock_zero"
+
+                                          ? "home-header-sync-notification-icon home-header-sync-notification-icon--alert"
+
+                                          : "home-header-sync-notification-icon"
+                                      }
                                     >
-                                      <SyncSuccessIcon />
+                                      {
+                                        notification.kind ===
+                                          "stock_zero"
+
+                                          ? <StockAlertIcon />
+
+                                          : <SyncSuccessIcon />
+                                      }
                                     </span>
 
 
@@ -3595,15 +3678,7 @@ export default function HomeHeaderActions() {
 
                                       <span>
                                         {
-                                          notification.marketplaceLabel
-                                        }
-                                        {", данные за "}
-                                        {
-                                          notification.dataDate
-                                        }
-                                        {", "}
-                                        {
-                                          notification.updateTime
+                                          notification.description
                                         }
                                       </span>
 
@@ -3622,10 +3697,23 @@ export default function HomeHeaderActions() {
                                           "home-header-sync-notification-dismiss"
 
                                         onClick={
-                                          () =>
+                                          event => {
+
+                                            event.stopPropagation();
+
                                             handleDismissHeaderSyncNotification(
                                               notification.id
-                                            )
+                                            );
+
+                                          }
+                                        }
+
+                                        onKeyDown={
+                                          event => {
+
+                                            event.stopPropagation();
+
+                                          }
                                         }
 
                                         aria-label=

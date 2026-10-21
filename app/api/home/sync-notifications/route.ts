@@ -15,9 +15,17 @@ export const dynamic =
   "force-dynamic";
 
 
+type SyncNotificationKind =
+  | "sync_success"
+  | "stock_zero";
+
+
 type SyncNotification = {
   id:
     string;
+
+  kind:
+    SyncNotificationKind;
 
   marketplace:
     "ozon"
@@ -46,6 +54,12 @@ type SyncNotification = {
     string;
 
   notificationDisplay:
+    string;
+
+  description:
+    string;
+
+  href:
     string;
 };
 
@@ -316,6 +330,9 @@ SyncNotification {
     id:
       `${marketplace}:${completedAt}`,
 
+    kind:
+      "sync_success",
+
     marketplace,
 
     marketplaceLabel,
@@ -347,6 +364,101 @@ SyncNotification {
       getNotificationDisplay(
         resolvedNotificationAt
       ),
+
+    description:
+      `${marketplaceLabel}, данные за ${formatKrasnoyarskDate(
+        completedAt
+      )}, ${formatKrasnoyarskTime(
+        completedAt
+      )}`,
+
+    href:
+      marketplace ===
+        "ozon"
+
+        ? "/ozon"
+
+        : marketplace ===
+            "wildberries"
+
+          ? "/wildberries"
+
+          : "/yandex-market",
+  };
+
+}
+
+
+function buildTestStockNotification({
+  id,
+  marketplace,
+  marketplaceLabel,
+  article,
+  href,
+  notificationAt,
+}: {
+  id:
+    string;
+
+  marketplace:
+    SyncNotification["marketplace"];
+
+  marketplaceLabel:
+    string;
+
+  article:
+    string;
+
+  href:
+    string;
+
+  notificationAt:
+    string;
+}):
+SyncNotification {
+
+  return {
+    id,
+
+    kind:
+      "stock_zero",
+
+    marketplace,
+
+    marketplaceLabel,
+
+    title:
+      "Товар закончился",
+
+    completedAt:
+      notificationAt,
+
+    notificationAt,
+
+    dataDate:
+      formatKrasnoyarskDate(
+        notificationAt
+      ),
+
+    updateTime:
+      formatKrasnoyarskTime(
+        notificationAt
+      ),
+
+    notificationTime:
+      formatKrasnoyarskTime(
+        notificationAt
+      ),
+
+    notificationDisplay:
+      getNotificationDisplay(
+        notificationAt
+      ),
+
+    description:
+      `${marketplaceLabel}, ${article} — осталось 0 дней`,
+
+    href,
   };
 
 }
@@ -563,6 +675,73 @@ export async function GET() {
     );
 
   }
+
+
+  /*
+   * Пробные уведомления о нулевом запасе в днях.
+   * Данные маркетплейсов здесь не изменяются.
+   */
+  notifications.push(
+    buildTestStockNotification({
+      id:
+        "test-stock-zero:ozon:01OIP2:2026-10-21",
+
+      marketplace:
+        "ozon",
+
+      marketplaceLabel:
+        "Ozon",
+
+      article:
+        "01OIP2",
+
+      href:
+        "/ozon?focusStockDays=01OIP2",
+
+      notificationAt:
+        "2026-10-21T02:15:00.000Z",
+    }),
+
+    buildTestStockNotification({
+      id:
+        "test-stock-zero:wildberries:1286384330:2026-10-21",
+
+      marketplace:
+        "wildberries",
+
+      marketplaceLabel:
+        "WB",
+
+      article:
+        "1286384330",
+
+      href:
+        "/wildberries?focusStockDays=1286384330",
+
+      notificationAt:
+        "2026-10-21T02:16:00.000Z",
+    }),
+
+    buildTestStockNotification({
+      id:
+        "test-stock-zero:yandex-market:AVD-P01:2026-10-21",
+
+      marketplace:
+        "yandex_market",
+
+      marketplaceLabel:
+        "Яндекс Маркет",
+
+      article:
+        "AVD-P01",
+
+      href:
+        "/yandex-market?focusStockDays=AVD-P01",
+
+      notificationAt:
+        "2026-10-21T02:17:00.000Z",
+    })
+  );
 
 
   notifications.sort(

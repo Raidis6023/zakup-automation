@@ -1201,3 +1201,36 @@ html[data-theme="dark"]
   }
 
 }
+
+
+/* ============================================================
+   УВЕДОМЛЕНИЕ: ФОКУС НА НУЛЕВОМ ЗАПАСЕ В ДНЯХ
+   ============================================================ */
+
+.wb-reference-page
+.wb-products-sort-table
+tbody
+tr.wb-products-row--notification-focus
+td {
+  background: var(--wb-products-hover);
+}
+
+.wb-reference-page
+.wb-products-sort-table
+tbody
+tr
+td.wb-products-stock-days--notification-focus {
+  background: rgba(223, 90, 112, 0.16) !important;
+  color: #d94f67;
+  box-shadow: inset 0 0 0 1px rgba(223, 90, 112, 0.42);
+}
+
+html[data-theme="dark"]
+.wb-reference-page
+.wb-products-sort-table
+tbody
+tr
+td.wb-products-stock-days--notification-focus {
+  background: rgba(236, 135, 153, 0.18) !important;
+  color: #ff8fa2;
+}
