@@ -9,7 +9,8 @@ const BATCH=200;
 type Job={run_day:string;date_from:string;date_to:string;status:string;next_offset:number;rows_saved:number;retry_at:string|null;updated_at:string};
 const date=(v:Date)=>v.toISOString().slice(0,10);
 const shift=(d:string,delta:number)=>date(new Date(Date.parse(d+"T00:00:00Z")+delta*86400000));
-const todayKras=()=>date(new Date(Date.now()+7*3600000));
+// Reporting day rolls forward only at 06:00 Krasnoyarsk, not at midnight.
+const todayKras=()=>date(new Date(Date.now()+3600000));
 const reply=(obj:object,status=200)=>NextResponse.json(obj,{status,headers:{"Cache-Control":"no-store"}});
 export async function GET(req:NextRequest){
  if(!process.env.CRON_SECRET||req.headers.get("authorization")!=="Bearer "+process.env.CRON_SECRET)return reply({ok:false,error:"Unauthorized"},401);
