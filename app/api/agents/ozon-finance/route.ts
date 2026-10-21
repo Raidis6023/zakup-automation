@@ -350,7 +350,10 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     const m=mapBySku.get(sku); if(!m?.offer_id)continue;
     revenueByOffer.set(m.offer_id,(revenueByOffer.get(m.offer_id)??0)+revenue);
   }
-  let operationCount = 0;
+  // A multi-SKU source accrual can produce several itemized fee lines,
+  // but the operational counter must still count its original Ozon row once.
+  const operationCount = (syncRes.data ?? []).reduce(
+    (sum,r)=>sum+Number(r.record_count??0),0);
   const accounting = emptyAccrualReconciliation();
   const unallocatedDetails = new Map<string, number>();
   let unallocatedSellerPpcCents=0;
@@ -358,7 +361,6 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     const amountCents = toKopecks(line.amount);
     const amount = fromKopecks(amountCents);
     accounting.ledgerKopecks += amountCents;
-    operationCount += Number(line.item_count);
     const m = line.sku ? mapBySku.get(line.sku) : null;
     // Keep SKU-level charges even when the product has no master_code.
     const offer = m?.offer_id || (line.sku ? "SKU:" + line.sku : null);
