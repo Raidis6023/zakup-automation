@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { POST as processOneFinancePage } from "../ozon-finance-sync/route";
-import { POST as processSkuMapping } from "../ozon-finance-map/route";
-import { GET as processFboTransit } from "../ozon-finance-transit/route";
-import { GET as processSkuAdvertising } from "../ozon-finance-ads/route";
-import { GET as processCrossdock } from "../ozon-finance-crossdock/route";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -62,59 +58,8 @@ export async function GET(request: NextRequest) {
     .lt("day",localToday).order("day",{ascending:true}).limit(14);
   if(error)return reply({ok:false,error:error.message},503);
   const pending=data??[];
-  if(!pending.length) {
-    // Historical import finished. Resolve SKU mappings in small batches,
-    // without reloading Ozon accruals or blocking interactive reports.
-    const {data:complete,error:doneError}=await db.from("ozon_finance_sync_days")
-      .select("day").eq("account_key","main")
-      .gte("day",new Date(Date.parse(localToday+"T00:00:00Z")-62*86400000).toISOString().slice(0,10)).lt("day",localToday)
-      .order("day",{ascending:true}).limit(365);
-    if(doneError)return reply({ok:false,phase:"mapping_lookup",error:doneError.message},503);
-    for(const candidate of complete??[]) {
-      const {data:unmapped,error:mapError}=await db.rpc("ozon_finance_unmapped_skus",{
-        p_day:candidate.day,p_limit:1,p_account:"main"
-      });
-      if(mapError)return reply({ok:false,phase:"mapping_lookup",error:mapError.message},503);
-      if((unmapped??[]).length===0)continue;
-      // Call the trusted handler directly. Self-HTTP can be blocked by
-      // deployment protection and previously hid the real error behind 502.
-      const mapRequest = new NextRequest(
-        new URL("/api/agents/ozon-finance-map", request.url), {
-          method: "POST",
-          headers: { "Content-Type": "application/json",
-            Authorization: "Bearer " + cronSecret },
-          body: JSON.stringify({ day: candidate.day }),
-        }
-      );
-      const m=await processSkuMapping(mapRequest);
-      const parsed=await m.json() as {ok?:boolean;processed?:number;resolved?:number;error?:string};
-      return reply({ok:!!parsed.ok,phase:"sku_mapping",day:candidate.day,
-        mapped:parsed.resolved??0,processed:parsed.processed??0,
-        error:parsed.ok?undefined:parsed.error},m.ok?200:502);
-    }
-    // Ad attribution is a separate analytic source. Its values are never
-    // booked as extra deductions to the Seller financial ledger.
-    const {count:adPending,error:adPendingError}=await db.from("ozon_finance_ad_sync_jobs")
-      .select("id",{head:true,count:"exact"})
-      .eq("account_key","main").in("status",["pending","running","failed"]);
-    if(adPendingError)console.warn("Performance ads cache queue:",adPendingError.message);
-    let adResult:null|object=null;
-    if((adPending??0)>0){
-      const ads=await processSkuAdvertising(request);
-      adResult=await ads.json() as object;
-    }
-    // Independent snapshot work must continue even when Performance is rate-
-    // limited or waiting for asynchronous report generation.
-    const tr=await processFboTransit(request);
-    const trData=await tr.json();
-    if(!tr.ok)console.warn("FBO transit snapshot not yet available:",trData);
-    const cross=await processCrossdock(request);
-    const crossData=await cross.json();
-    if(!cross.ok)console.warn("Crossdock snapshot not yet available:",crossData);
-    return reply({ok:true,phase:"supporting_snapshots",remaining_days:0,
-      mappings_complete:true,advertising:adResult,
-      transit:trData,crossdock:crossData});
-  }
+  if(!pending.length)return reply({ok:true,phase:"ledger_cache_idle",
+    note:"31-day window is planned at 05:00 KRAS; supporting APIs run independently."});
 
   // Do NOT use user-supplied URLs. Fixed same-origin endpoint, credential
   // passed only over HTTPS, never included in response or logs.
