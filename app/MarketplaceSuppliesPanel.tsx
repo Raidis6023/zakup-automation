@@ -579,7 +579,7 @@ export default function MarketplaceSuppliesPanel({
     setPanelExpanded,
   ] =
     useState(
-      true
+      false
     );
 
 
@@ -1076,7 +1076,7 @@ export default function MarketplaceSuppliesPanel({
 
     <section
       className={
-        `section ${styles.panel}`
+        `section ${styles.panel} ${styles[`panel_${marketplace}`]}`
       }
     >
 
