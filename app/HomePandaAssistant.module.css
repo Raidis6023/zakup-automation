@@ -1,0 +1,86 @@
+@import url("https://fonts.googleapis.com/css2?family=Montserrat+Alternates:wght@500;700&display=swap");
+
+.assistant {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 390px) minmax(170px, 245px);
+  justify-content: end;
+  align-items: center;
+  column-gap: clamp(10px, 1.5vw, 22px);
+  width: min(100%, 665px);
+  min-width: 0;
+  height: clamp(255px, 34dvh, 340px);
+  font-family: "Montserrat Alternates", Arial, sans-serif;
+}
+
+.bubble {
+  --panda-bubble-surface: var(--ws-surface, var(--surface));
+  position: relative;
+  align-self: center;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: clamp(14px, 1.4vw, 20px);
+  border: 1px solid var(--ws-blue, #15966b);
+  border-radius: 20px;
+  background: var(--panda-bubble-surface);
+  color: var(--ws-text, var(--text));
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .08);
+  font-size: clamp(13px, 1vw, 15px);
+  font-weight: 500;
+  line-height: 1.55;
+}
+
+.bubble::after {
+  content: "";
+  position: absolute;
+  top: 48%;
+  right: -9px;
+  width: 16px;
+  height: 16px;
+  background: var(--panda-bubble-surface);
+  border-top: 1px solid var(--ws-blue, #15966b);
+  border-right: 1px solid var(--ws-blue, #15966b);
+  transform: rotate(45deg);
+}
+
+.bubble p { margin: 0; transition: opacity .35s ease; }
+.bubble strong { color: var(--ws-blue, #15966b); font-weight: 700; }
+.visible { opacity: 1; }
+.hidden { opacity: 0; }
+
+.panda {
+  align-self: end;
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom right;
+  user-select: none;
+  pointer-events: none;
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, .12));
+}
+
+@media (max-width: 840px) {
+  .assistant {
+    grid-template-columns: minmax(0, 1fr) minmax(140px, 34%);
+    width: min(100%, 570px);
+    height: clamp(240px, 32dvh, 305px);
+  }
+  .bubble { font-size: 13px; padding: 14px; }
+}
+
+@media (max-width: 500px) {
+  .assistant {
+    grid-template-columns: minmax(0, 1fr) minmax(110px, 33%);
+    column-gap: 10px;
+    height: 245px;
+  }
+  .bubble { padding: 11px 12px; border-radius: 14px; font-size: 11.5px; line-height: 1.4; }
+  .bubble::after { width: 12px; height: 12px; right: -7px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble p { transition: none; }
+}
