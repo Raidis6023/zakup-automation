@@ -1,0 +1,40 @@
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - var(--home-topbar-height, 80px) - 70px);
+  min-height: 520px;
+  min-width: 0;
+}
+
+/* Карточки занимают выделенный участок над пандой.
+   В отличие от наложения поверх поля перетаскивания,
+   здесь никакая карточка не может попасть в область помощника. */
+.dashboard :global(.home-marketplace-board) {
+  flex: 1 1 160px;
+  height: auto;
+  min-height: 145px;
+}
+
+.assistantDock {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  min-width: 0;
+  width: 100%;
+}
+
+@media (max-width: 800px) {
+  .dashboard {
+    height: auto;
+    min-height: calc(100dvh - var(--home-topbar-height, 80px) - 58px);
+  }
+  .dashboard :global(.home-marketplace-board) {
+    flex: 1 1 175px;
+    min-height: 175px;
+  }
+}
+
+@media (max-height: 700px) and (min-width: 801px) {
+  .dashboard { min-height: 490px; }
+}
