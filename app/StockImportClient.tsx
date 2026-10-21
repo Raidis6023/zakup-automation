@@ -475,6 +475,25 @@ export default function StockImportClient() {
       }
 
 
+      // Определяем реальные колонки по заголовкам Excel.
+      // В актуальном АВЕДЭКС A=название, B=артикул,
+      // D=свободный остаток, G=штрихкод. В старых
+      // выгрузках возможен формат A/E/G/J.
+      const headerRow = rows.find((row) => Array.isArray(row)
+        && row.some((cell) => normalizeText(cell).toLowerCase() === "номенклатура")
+        && row.some((cell) => normalizeText(cell).toLowerCase() === "свободный остаток"));
+      const columns = (headerRow || []).map((cell) => normalizeText(cell).toLowerCase());
+      const findHeader = (name: string) => columns.findIndex((value) => value === name);
+      const actualHeaders = !!headerRow;
+      const nameIndex = actualHeaders ? findHeader("номенклатура") : 0;
+      const articleIndex = actualHeaders ? findHeader("артикул") : 4;
+      const quantityIndex = actualHeaders ? findHeader("свободный остаток") : 6;
+      const barcodeHeaderIndex = findHeader("штрихкод");
+      const barcodeIndex = barcodeHeaderIndex >= 0 ? barcodeHeaderIndex : actualHeaders ? 6 : 9;
+      if (nameIndex < 0 || articleIndex < 0 || quantityIndex < 0) {
+        throw new Error("Не удалось найти колонки «Номенклатура», «Артикул» и «Свободный остаток»");
+      }
+
       // ======================================
       // 5. РАЗБИРАЕМ ТОВАРНЫЕ СТРОКИ
       // ======================================
@@ -517,7 +536,7 @@ export default function StockImportClient() {
             normalizeText(
               getCell(
                 row,
-                0
+                nameIndex
               )
             );
 
@@ -526,7 +545,7 @@ export default function StockImportClient() {
             normalizeText(
               getCell(
                 row,
-                4
+                articleIndex
               )
             );
 
@@ -534,7 +553,7 @@ export default function StockImportClient() {
           const columnGRaw =
             getCell(
               row,
-              6
+              quantityIndex
             );
 
 
@@ -548,7 +567,7 @@ export default function StockImportClient() {
             normalizeText(
               getCell(
                 row,
-                9
+                barcodeIndex
               )
             );
 
@@ -681,10 +700,19 @@ export default function StockImportClient() {
           // 11. СВОБОДНЫЙ ОСТАТОК
           // ==================================
 
-          const freeStock =
+          const parsedFreeStock =
             parseNumber(
               columnGRaw
             );
+          // Предохраняем базу от некорректных типов.
+          // Штрихкоды на 13 цифр никогда не могут
+          // быть количеством товара.
+          const freeStock = parsedFreeStock !== null
+            && Number.isInteger(parsedFreeStock)
+            && parsedFreeStock <= 2147483647
+            && parsedFreeStock >= -2147483648
+              ? parsedFreeStock
+              : null;
 
 
           // ==================================
@@ -720,10 +748,9 @@ export default function StockImportClient() {
             columnGText &&
             freeStock === null
           ) {
-
-            parseError =
-              "Не удалось прочитать свободный остаток";
-
+            parseError = parsedFreeStock !== null
+              ? "Свободный остаток слишком велик или некорректен"
+              : "Не удалось прочитать свободный остаток";
           }
 
 

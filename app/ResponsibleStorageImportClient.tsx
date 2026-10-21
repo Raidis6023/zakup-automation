@@ -895,6 +895,12 @@ export default function ResponsibleStorageImportClient() {
 
 
       // ======================================================
+      // Если в файле нет строки заголовков,
+      // структуру читаем по фактическим колонкам.
+      // Количества вложенных документов не суммируем.
+      // ======================================================
+
+      // ======================================================
       // 3. КОЛОНКИ
       // ======================================================
 
@@ -925,9 +931,37 @@ export default function ResponsibleStorageImportClient() {
           "Регистратор"
         );
 
+      // В упрощённой выгрузке 1С заголовков нет:
+      // A — номенклатура, B — артикул, G —
+      // количество «Конечный остаток».
+      const hasLegacyHeaders = !!nomenclatureHeader
+        && !!articleHeader
+        && !!finalStockHeader;
+      const noHeaderFormat = !nomenclatureHeader
+        && !articleHeader
+        && !finalStockHeader
+        && excelRows.some((row) => {
+          const article = normalizeText(row[1]);
+          const name = normalizeText(row[0]);
+          const quantity = parseNumber(row[6]);
+          return !!name && !!article && quantity !== null;
+        });
+      if (!hasLegacyHeaders && !noHeaderFormat) {
+        throw new Error("Не удалось распознать структуру отчёта ОХ: ожидаются заголовки или таблица A/B/G");
+      }
+      const stockHeaders = noHeaderFormat
+        ? excelRows
+          .map((row) => normalizeText(row[0]))
+          .filter((name) => isWarehouseRow(name))
+        : [];
+      const uniqueStockHeaders = Array.from(new Set(stockHeaders));
+      const fallbackWarehouse = uniqueStockHeaders.length === 1
+        ? uniqueStockHeaders[0]
+        : "";
+
 
       if (
-        !nomenclatureHeader
+        !nomenclatureHeader && !noHeaderFormat
       ) {
 
         throw new Error(
@@ -938,7 +972,7 @@ export default function ResponsibleStorageImportClient() {
 
 
       if (
-        !articleHeader
+        !articleHeader && !noHeaderFormat
       ) {
 
         throw new Error(
@@ -949,7 +983,7 @@ export default function ResponsibleStorageImportClient() {
 
 
       if (
-        !finalStockHeader
+        !finalStockHeader && !noHeaderFormat
       ) {
 
         throw new Error(
@@ -959,34 +993,24 @@ export default function ResponsibleStorageImportClient() {
       }
 
 
-      const nameColumn =
-        nomenclatureHeader
-          .columnIndex;
+      const nameColumn = noHeaderFormat ? 0 : nomenclatureHeader!.columnIndex;
 
 
-      const articleColumn =
-        articleHeader
-          .columnIndex;
+      const articleColumn = noHeaderFormat ? 1 : articleHeader!.columnIndex;
 
 
-      const quantityColumn =
-        finalStockHeader
-          .columnIndex;
+      const quantityColumn = noHeaderFormat ? 6 : finalStockHeader!.columnIndex;
 
 
-      const dataStartRow =
-        registrarHeader
-          ? registrarHeader
-              .rowIndex + 1
+      const dataStartRow = noHeaderFormat
+        ? 0
+        : registrarHeader
+          ? registrarHeader.rowIndex + 1
           : Math.max(
-              nomenclatureHeader
-                .rowIndex,
-              articleHeader
-                .rowIndex,
-              finalStockHeader
-                .rowIndex
-            )
-            + 1;
+              nomenclatureHeader!.rowIndex,
+              articleHeader!.rowIndex,
+              finalStockHeader!.rowIndex
+            ) + 1;
 
 
       // ======================================================
@@ -997,8 +1021,7 @@ export default function ResponsibleStorageImportClient() {
         "";
 
 
-      let currentWarehouse =
-        "";
+      let currentWarehouse = noHeaderFormat ? fallbackWarehouse : "";
 
 
       const parsedRows:
@@ -1127,21 +1150,25 @@ export default function ResponsibleStorageImportClient() {
             rowIndex,
             nameColumn
           );
+        // В этом отчёте 1С владелец может
+        // идти сразу перед товарами без
+        // отдельной строки склада (первый владелец).
+        // Строгий признак владельца: ООО/ИП,
+        // при отсутствии артикула.
+        const ownerWithoutWarehouse = noHeaderFormat
+          && !articleFromCell
+          && /(?:^|\s)(?:ООО|ИП)(?=\s|$|\()/i.test(itemName);
 
 
         if (
           !articleFromCell
-          &&
-          isWarehouseRow(
-            nextText
-          )
+          && (ownerWithoutWarehouse || isWarehouseRow(nextText))
         ) {
 
           currentOwner =
             itemName;
 
-          currentWarehouse =
-            "";
+          currentWarehouse = noHeaderFormat ? fallbackWarehouse : "";
 
           continue;
 
