@@ -114,35 +114,6 @@ function ProductsTableIcon() {
 }
 
 
-function ChevronIcon({
-  expanded,
-}: {
-  expanded: boolean;
-}) {
-
-  return (
-
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      className={
-        expanded
-          ? "wb-products-chevron wb-products-chevron--expanded"
-          : "wb-products-chevron"
-      }
-    >
-
-      <path
-        d="m7 10 5 5 5-5"
-      />
-
-    </svg>
-
-  );
-
-}
-
-
 // ============================================================
 // FORMAT
 // ============================================================
@@ -1013,18 +984,6 @@ export default function WbProductsTableClient({
 
         </span>
 
-
-        <span
-          className="wb-products-toggle-chevron"
-        >
-
-          <ChevronIcon
-            expanded={
-              expanded
-            }
-          />
-
-        </span>
 
       </button>
 
