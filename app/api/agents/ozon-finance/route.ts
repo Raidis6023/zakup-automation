@@ -44,6 +44,7 @@ type AdRow = {sku:string;expense:number|string};
 type Itemized = {sku:string;type_id:string;name:string;amount:string|number;item_count:number};
 type AdDay = {day:string};
 type TransitRow = { sku:string;quantity:number;open_order_value:number|null;as_of:string };
+type CrossdockRow = {sku:string;quantity:number;as_of:string};
 type StockRow = {product_id:string;ozon_stock:number|null;main_stock:number|null;ox_stock:number|null;ozon_at:string|null;main_at:string|null;ox_at:string|null};
 type VedOrder = { id:string;workflow_status:string|null;status:string|null };
 type VedItem = {product_id:string|null;ved_order_id:string;status:string;order_quantity:number|null;quantity:number|null};
@@ -248,7 +249,7 @@ async function syncOneDay(db: ReturnType<typeof createAdminClient>, day: string)
 }
 async function buildReport(db: ReturnType<typeof createAdminClient>, from: string, to: string) {
   const days = dateRange(from, to);
-  const [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, adJobsRes, itemizedRes, transitRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes] =
+  const [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, adJobsRes, itemizedRes, transitRes, crossdockRes, crossdockCurrentRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes] =
     await Promise.all([
       db.from("ozon_finance_sync_days").select("day,record_count,synced_at").eq("account_key", ACCOUNT)
         .gte("day", from).lte("day", to),
@@ -268,6 +269,8 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
         .order("updated_at",{ascending:false}).limit(3),
       db.rpc("ozon_finance_itemized_per_sku",{p_from:from,p_to:to,p_account:ACCOUNT}),
       db.rpc("ozon_finance_transit_totals",{p_account:ACCOUNT}),
+      db.rpc("ozon_finance_crossdock_totals",{p_account:ACCOUNT}),
+      db.from("ozon_finance_crossdock_current").select("published_at").eq("account_key",ACCOUNT).maybeSingle(),
       db.rpc("ozon_finance_stock_summary"),
       db.from("ved_orders").select("id,workflow_status,status").limit(500),
       db.from("ved_order_items").select("product_id,ved_order_id,status,order_quantity,quantity").limit(1500),
@@ -280,7 +283,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
         .eq("account_key",ACCOUNT).gte("day",from).lte("day",to).order("day"),
       db.rpc("ozon_finance_unallocated_breakdown",{p_from:from,p_to:to,p_account:ACCOUNT}),
     ]);
-  for (const item of [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, adJobsRes, itemizedRes, transitRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes]) {
+  for (const item of [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, adJobsRes, itemizedRes, transitRes, crossdockRes, crossdockCurrentRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes]) {
     if (item.error) throw item.error;
   }
   const loaded = new Set((syncRes.data ?? []).map(r => r.day));
@@ -302,6 +305,13 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
   const transitSnapshotReady = (transitRes.data as TransitRow[] ?? []).length>0;
   const transitAsOf = (transitRes.data as TransitRow[] ?? [])[0]?.as_of??null;
   const stocksByProduct = new Map((stocksRes.data as StockRow[] ?? []).map(r=>[r.product_id,r]));
+  const crossdockByOffer=new Map<string,number>();
+  const crossdockCurrent=crossdockCurrentRes.data;
+  for(const item of crossdockRes.data as CrossdockRow[]??[]){
+    const offer=mapBySku.get(item.sku)?.offer_id;
+    if(offer)crossdockByOffer.set(offer,
+      (crossdockByOffer.get(offer)??0)+Number(item.quantity));
+  }
   const articleStatus = new Map((statusesRes.data as StatusRow[] ?? []).map(r=>[r.master_code,r.status]));
   const vedOrderStatus = new Map((vedOrdersRes.data as VedOrder[] ?? []).map(r=>[r.id,r.workflow_status || r.status || "draft"]));
   const vedByProduct = new Map<string,number>();
@@ -444,7 +454,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     g.in_china=product && !unknownChinaStatuses ? (vedByProduct.get(product.id)??0):null;
     // Transit to buyers and cross-docking need real shipping statuses; current
     // stock snapshots and replenishment CALCULATIONS do not prove in-transit units.
-    g.in_crossdock=null;
+    g.in_crossdock=crossdockCurrent ? (crossdockByOffer.get(g.offer_id)??0):null;
     const open=transitByOffer.get(g.offer_id);
     g.in_transit=transitSnapshotReady?(open?.units??0):null;
     g.transit_revenue=transitSnapshotReady && g.revenue!==null &&
@@ -568,6 +578,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     stock_as_of:(stocksRes.data as StockRow[]??[])[0] ?? null,
     transit_as_of:transitAsOf,
     transit_snapshot_ready:transitSnapshotReady,
+    crossdock_as_of:crossdockCurrent?.published_at??null,
     source: "supabase_cached_finance",
     ads_covered:adComplete,
     ads_jobs:adJobsRes.data??[],
