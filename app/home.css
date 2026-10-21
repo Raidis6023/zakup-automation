@@ -2378,3 +2378,37 @@ html[data-theme="dark"] .home-header-sync-notification-icon--alert {
   height: 23px;
   stroke-width: 2.5;
 }
+
+
+
+/* ============================================================
+   TOPBAR УВЕДОМЛЕНИЯ: КРЕСТИК В УГЛУ И ЧИТАЕМЫЙ CRITICAL ICON
+   ============================================================ */
+
+.home-header-sync-notification {
+  position: relative;
+}
+
+.home-header-sync-notification-meta {
+  position: static;
+}
+
+.home-header-sync-notification-dismiss {
+  top: 5px;
+  right: 7px;
+  left: auto;
+  transform: translateX(8px);
+}
+
+.home-header-sync-notification:hover
+.home-header-sync-notification-dismiss,
+.home-header-sync-notification:focus-within
+.home-header-sync-notification-dismiss {
+  transform: translateX(0);
+}
+
+.home-header-sync-notification-icon--alert svg {
+  width: 23px;
+  height: 23px;
+  stroke-width: 3;
+}
