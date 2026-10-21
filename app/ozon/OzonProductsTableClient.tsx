@@ -106,16 +106,26 @@ type Props = {
 };
 
 
-type OzonSortKey = "master_code" | "product_name" | "offer_id" | "sales_28_days"
+type OzonSortKey = "master_code" | "ozon_product_id" | "product_name" | "offer_id" | "sales_28_days"
   | "average_sales_per_day" | "cancelled_28_days" | "stock_quantity" | "stock_days";
 type SortDirection = "asc" | "desc";
-const TEXT_SORT: ReadonlySet<OzonSortKey> = new Set(["master_code", "product_name", "offer_id"]);
+const TEXT_SORT: ReadonlySet<OzonSortKey> = new Set(["master_code", "ozon_product_id", "product_name", "offer_id"]);
 const OZON_EXPANDED_KEY = "ozon-products-expanded";
 
 function sortValue(product: OzonProductRow, column: OzonSortKey): string | number | null {
-  return column === "offer_id"
-    ? (product.listings ?? []).map(listing => listing.offer_id ?? "").join(", ")
-    : product[column];
+  if (column === "offer_id") {
+    return (product.listings ?? [])
+      .map(listing => listing.offer_id ?? "")
+      .join(", ");
+  }
+
+  if (column === "ozon_product_id") {
+    return (product.listings ?? [])
+      .map(listing => listing.ozon_product_id ?? "")
+      .join(", ");
+  }
+
+  return product[column];
 }
 
 function compareOzon(a: OzonProductRow, b: OzonProductRow, column: OzonSortKey, dir: SortDirection) {
@@ -593,7 +603,6 @@ export default function OzonProductsTableClient({
           <span>Одна строка соответствует одному ЕНОТ. Раскрытие показывает размещения и кластеры.</span>
           {calculationLabel && <span className="ozon-products-calculation-label">{calculationLabel}</span>}
         </span>
-        <span className={expanded ? "ozon-products-toggle-chevron ozon-products-toggle-chevron--expanded" : "ozon-products-toggle-chevron"} aria-hidden="true">⌄</span>
       </button>
       {ready && expanded ? (
       <div id="ozon-products-table" className="ozon-products-table-content">
@@ -606,6 +615,7 @@ export default function OzonProductsTableClient({
 
         <colgroup>
           <col className="ozon-products-col-master" />
+          <col className="ozon-products-col-sku" />
           <col className="ozon-products-col-name" />
           <col className="ozon-products-col-offer" />
           <col className="ozon-products-col-number" />
@@ -616,8 +626,9 @@ export default function OzonProductsTableClient({
         </colgroup>
         <thead><tr>
           <SortHeading column="master_code" label="ЕНОТ" />
+          <SortHeading column="ozon_product_id" label="SKU" />
           <SortHeading column="product_name" label="Товар" />
-          <SortHeading column="offer_id" label="Offer ID" />
+          <SortHeading column="offer_id" label="Артикулы" />
           <SortHeading column="sales_28_days" label="Продажи 28 дн." numeric />
           <SortHeading column="average_sales_per_day" label="Среднее / день" numeric />
           <SortHeading column="cancelled_28_days" label="Отмены" numeric />
@@ -670,6 +681,39 @@ export default function OzonProductsTableClient({
                             value
                           )
                     )
+                    .join(
+                      ", "
+                    );
+
+
+                const skus =
+                  Array.from(
+                    new Set(
+                      (
+                        product.listings
+                        ??
+                        []
+                      )
+                        .map(
+                          listing =>
+                            listing.ozon_product_id
+                        )
+                        .filter(
+                          value =>
+                            value !==
+                              null
+                            &&
+                            value !==
+                              undefined
+                        )
+                        .map(
+                          value =>
+                            String(
+                              value
+                            )
+                        )
+                    )
+                  )
                     .join(
                       ", "
                     );
@@ -758,6 +802,15 @@ export default function OzonProductsTableClient({
 
                         </button>
 
+                      </TableCell>
+
+
+                      <TableCell>
+                        {
+                          skus
+                          ||
+                          "—"
+                        }
                       </TableCell>
 
 
