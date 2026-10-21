@@ -113,8 +113,20 @@ function StockAlertIcon() {
       viewBox="0 0 24 24"
       aria-hidden="true"
     >
-      <path d="M12 6.5v7" />
-      <path d="M12 17.5h.01" />
+      <path
+        className="stock-alert-triangle"
+        d="M12 4 20.2 19H3.8Z"
+      />
+      <path
+        className="stock-alert-mark"
+        d="M12 9v4.5"
+      />
+      <circle
+        className="stock-alert-dot"
+        cx="12"
+        cy="16.25"
+        r="1.15"
+      />
     </svg>
   );
 }

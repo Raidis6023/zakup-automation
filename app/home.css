@@ -2412,3 +2412,30 @@ html[data-theme="dark"] .home-header-sync-notification-icon--alert {
   height: 23px;
   stroke-width: 3;
 }
+
+
+/* Критичное уведомление в topbar: раздельно читаемые треугольник и ! */
+.home-header-sync-notification-icon--alert svg {
+  width: 25px;
+  height: 25px;
+}
+
+.home-header-sync-notification-icon--alert .stock-alert-triangle {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.home-header-sync-notification-icon--alert .stock-alert-mark {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.45;
+  stroke-linecap: round;
+}
+
+.home-header-sync-notification-icon--alert .stock-alert-dot {
+  fill: currentColor;
+  stroke: none;
+}
