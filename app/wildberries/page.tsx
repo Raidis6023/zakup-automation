@@ -1392,6 +1392,12 @@ export default async function WildberriesPage() {
                 </section>
 
 
+                <section className="section">
+                  <h2 className="section-title">Финансовая аналитика Wildberries</h2>
+                  <p>Детализация реализации и рекламной статистики по артикулам. Пока без себестоимости и итоговой прибыли.</p>
+                  <Link href="/wildberries/financier" className="button">Открыть ИИ-финансиста →</Link>
+                </section>
+
                 {/* =================================================
                     INFO PANEL
                     ================================================= */}
