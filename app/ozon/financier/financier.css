@@ -72,3 +72,10 @@
 @media(max-width:1400px){.ozf-kpi-grid{grid-template-columns:repeat(4,minmax(140px,1fr))}}
 @media(max-width:700px){.ozf-kpi-grid{grid-template-columns:repeat(2,minmax(130px,1fr))}
 .ozf-financial-summary{padding:12px}.ozf-financial-scroll{max-height:67vh}}
+
+/* Unified KPI captions and values, without tiny explanatory subtitles. */
+.ozf-kpi{align-items:center;justify-content:center;text-align:center;gap:6px}
+.ozf-kpi>span,.ozf-kpi strong{display:block;width:100%;text-align:center}
+.ozf-kpi small{display:none}
+.ozf-missing-explainer td{color:#f4c576!important;background:rgba(174,122,34,.13)!important;white-space:normal!important;line-height:1.5}
+.ozf-financial-table td[title]{cursor:help}
