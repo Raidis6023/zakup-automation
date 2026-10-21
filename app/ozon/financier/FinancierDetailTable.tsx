@@ -16,6 +16,7 @@ export type FinancialRow = {
 type Data = {
   from:string;to:string;missing_days:string[];unallocated_amount:number;
   stock_as_of?:{ozon_at:string|null;main_at:string|null;ox_at:string|null}|null;
+  crossdock_as_of?:string|null;
   unallocated_details?:Array<{name:string;amount:number}>;
   ads_covered?:boolean;ads_covered_days?:number;ads_performance_total?:number|null;
   ads_jobs?:Array<{status:string;last_error:string|null;date_from:string;date_to:string}>;
