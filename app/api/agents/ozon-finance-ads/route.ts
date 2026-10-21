@@ -99,7 +99,10 @@ async function token():Promise<string>{
 async function campaigns(tokenValue:string,job:Job):Promise<string[]>{
  const selected=new Set<string>();
  for(let page=1;page<=20;page++){
-  const url="/api/client/campaign?advObjectType=SKU&page="+page+"&pageSize=100";
+  // Match the verified working Performance-check request exactly.
+  // Filtering advObjectType on this endpoint returned HTTP 429 for the
+  // service account even though plain campaign list authorization works.
+  const url="/api/client/campaign?page="+page+"&pageSize=100";
   const r=await api(tokenValue,url);
   const raw=await r.json() as {list?:Campaign[]|Campaign;campaigns?:Campaign[]};
   const list=Array.isArray(raw.list)?raw.list:
@@ -107,7 +110,11 @@ async function campaigns(tokenValue:string,job:Job):Promise<string[]>{
   if(!Array.isArray(list))throw new Error("Unexpected Ozon campaigns pagination response");
   for(const c of list){
    if(c.id==null)continue;
-   if(c.advObjectType&&c.advObjectType!=="SKU")continue;
+   // Keep only product-level paid campaigns; ignore banners and media.
+   // Unlike query-side filtering, this is safe with unknown API enum values.
+   if(c.advObjectType &&
+     !["SKU","PRODUCT_CPC","CPC","STENCILS","PRODUCT"].includes(c.advObjectType))
+     continue;
    if(c.fromDate && c.fromDate>job.date_to)continue;
    if(c.toDate && c.toDate<job.date_from)continue;
    selected.add(String(c.id));
@@ -154,7 +161,7 @@ export async function GET(request:NextRequest){
   .select("id,date_from,date_to,status,last_error")
   .eq("account_key","main")
   .in("status",["pending","running","failed"])
-  .order("date_from",{ascending:true}).limit(1).maybeSingle();
+  .order("date_from",{ascending:false}).limit(1).maybeSingle();
  if(error)return response({ok:false,error:error.message},503);
  if(!job)return response({ok:true,status:"idle"});
  const taskJob=job as Job;

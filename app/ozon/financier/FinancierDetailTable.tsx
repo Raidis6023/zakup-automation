@@ -10,7 +10,7 @@ export type FinancialRow = {
   in_china:number|null;in_crossdock:number|null;in_transit:number|null;
   transit_revenue:number|null;transit_drr:number|null;mayak_expense:number|null;
   cogs:number|null;unit_cost:number|null;mayak_unit:number|null;
-  discontinued:boolean;
+  discontinued:boolean; data_gaps:string[];
   details:Array<{type_id:string;name:string;amount:number;count:number;is_advertising?:boolean}>;
 };
 type Data = {
@@ -26,7 +26,7 @@ type SortKey =
   "master_code"|"manager"|"offer_id"|"estimated_result"|"revenue"|"ad"|"drr"|
   "storage"|"orders"|"cancelled"|"buyout"|"roas"|"transit"|"transit_revenue"|
   "transit_drr"|"ozon_stock"|"crossdock"|"main"|"ox"|"stock"|"margin"|
-  "price"|"mayak"|"china"|"abc"|"discontinued";
+  "mayak"|"china"|"abc"|"discontinued";
 const money=(v:number|null|undefined)=>v==null?"—":v.toLocaleString("ru-RU",{style:"currency",currency:"RUB"});
 const qty=(v:number|null|undefined)=>v==null?"—":v.toLocaleString("ru-RU");
 const pct=(v:number|null|undefined)=>v==null||!Number.isFinite(v)?"—":
@@ -77,7 +77,6 @@ function valueFor(r:FinancialRow,key:SortKey):number|string|null{
     case "crossdock":return r.in_crossdock;case "main":return r.main_stock;
     case "ox":return r.ox_stock;case "stock":return stock;
     case "margin":return r.buyout_units&&r.estimated_result!=null?r.estimated_result/r.buyout_units:null;
-    case "price":return r.buyout_units&&r.revenue!=null?r.revenue/r.buyout_units:null;
     case "mayak":return r.mayak_expense==null?null:-Math.abs(r.mayak_expense);
     case "china":return r.in_china;case "abc":return null;
     case "discontinued":return r.discontinued?1:0;
@@ -136,14 +135,11 @@ export default function FinancierDetailTable({
   const profitability=operatingProfit!=null&&sumRevenue!=null&&sumRevenue>0
     ?operatingProfit/sumRevenue:null;
   const kpis=[
-    {name:"Операционная прибыль",value:money(operatingProfit),tone:moneyTone(operatingProfit),
-     note:includeUnallocated?"Включает общий нераспределённый результат":"Без нераспределённых статей других КМ"},
+    {name:"Операционная прибыль",value:money(operatingProfit),tone:moneyTone(operatingProfit)},
     {name:"Выручка",value:money(sumRevenue),tone:moneyTone(sumRevenue)},
     {name:"Рентабельность",value:pct(profitability),tone:moneyTone(profitability)},
-    {name:"Реклама",value:money(adAmount),tone:adAmount==null?"":Math.abs(adAmount)>0?"ozf-bad":"ozf-good",
-     note:includeUnallocated?"Общие списания Seller API":"По КМ: сумма Seller API после распределения по артикулам"},
-    {name:"Платное хранение",value:money(storageAmount),tone:storageAmount==null?"":Math.abs(storageAmount)>0?"ozf-bad":"ozf-good",
-     note:"Только суммы, привязанные к SKU"},
+    {name:"Реклама",value:money(adAmount),tone:adAmount==null?"":Math.abs(adAmount)>0?"ozf-bad":"ozf-good"},
+    {name:"Платное хранение",value:money(storageAmount),tone:storageAmount==null?"":Math.abs(storageAmount)>0?"ozf-bad":"ozf-good"},
     {name:"Положительные позиции",value:qty(positionsPositive),tone:positionsPositive>0?"ozf-good":"ozf-bad"},
     {name:"Отрицательные позиции",value:qty(positionsNegative),tone:positionsNegative>0?"ozf-bad":"ozf-good"}
   ];
@@ -156,7 +152,7 @@ export default function FinancierDetailTable({
     ["transit_drr","ДРР с товарами в пути"],["ozon_stock","Остатки Ozon"],
     ["crossdock","В пути на склады"],["main","Аведэкс основной"],
     ["ox","Аведэкс ОХ"],["stock","Итого остатки"],
-    ["margin","Прибыль/ед."],["price","Цена реализации"],
+    ["margin","Прибыль/ед."],
     ["mayak","ТК Маяк, ₽"],["china","В пути из Китая"],["abc","ABC"],
     ["discontinued","Выведено из продажи"]
   ];
@@ -174,7 +170,7 @@ export default function FinancierDetailTable({
     </div><a href="#ozf-unallocated" className="ozf-btn ozf-jump">Нераспределённые расходы ↓</a></div>
     <div className="ozf-kpi-grid">{kpis.map(k=>
       <div key={k.name} className={"ozf-kpi "+k.tone}>
-        <span>{k.name}</span><strong>{k.value}</strong>{k.note?<small>{k.note}</small>:null}
+        <span>{k.name}</span><strong>{k.value}</strong>
       </div>)}
     </div>
     {!complete&&<p className="ozf-footnote">Часть артикулов без полной цены закупа или ТК Маяк. Прибыль по ним не рассчитана; итоги предварительные.</p>}
@@ -208,14 +204,18 @@ export default function FinancierDetailTable({
           const fig=rowFigures(r),stockValues=[r.ozon_stock,r.main_stock,r.ox_stock];
           const stockTotal=stockValues.every(v=>v!=null)?stockValues.reduce<number>((s,v)=>s+Number(v),0):null;
           const margin=r.buyout_units&&r.estimated_result!=null?r.estimated_result/r.buyout_units:null;
-          const price=r.buyout_units&&r.revenue!=null?r.revenue/r.buyout_units:null;
           const roasClass=fig.roas==null?"":fig.roas<1?"ozf-bad":"ozf-good";
           return <Fragment key={r.offer_id}><tr className={r.discontinued?"ozf-discontinued":""}>
             <td>{r.master_code??"—"}</td><td>{r.manager}</td>
             <td><button type="button" className="ozf-article-btn" aria-expanded={expanded===r.offer_id}
               onClick={()=>setExpanded(expanded===r.offer_id?null:r.offer_id)}>
               <span>{expanded===r.offer_id?"▾":"▸"}</span> {r.offer_id}</button></td>
-            <td className={moneyTone(r.estimated_result)}>{money(r.estimated_result)}</td>
+            <td className={moneyTone(r.estimated_result)}
+              title={r.estimated_result===null
+                ?(r.data_gaps?.length?r.data_gaps.join("; "):"Недостаточно данных для полного расчёта")
+                :undefined}>
+              {r.estimated_result===null?"Нет расчёта":money(r.estimated_result)}
+            </td>
             <td>{money(r.revenue)}</td>
             <td className={adTone(fig.drr)}>{money(fig.ad)}</td>
             <td className={adTone(fig.drr)}>{pct(fig.drr)}</td>
@@ -226,7 +226,6 @@ export default function FinancierDetailTable({
             <td>{pct(r.transit_drr)}</td><td>{qty(r.ozon_stock)}</td><td>{qty(r.in_crossdock)}</td>
             <td>{qty(r.main_stock)}</td><td>{qty(r.ox_stock)}</td><td>{qty(stockTotal)}</td>
             <td className={moneyTone(margin)}>{money(margin)}</td>
-            <td>{money(price)}</td>
             <td className={r.mayak_expense&&r.mayak_expense>0?"ozf-bad":""}>
               {r.mayak_expense==null?"—":money(-Math.abs(r.mayak_expense))}</td>
             <td>{qty(r.in_china)}</td><td>{abc.get(r.offer_id)??"—"}</td>
@@ -238,11 +237,17 @@ export default function FinancierDetailTable({
             </label></td>
           </tr>
           {expanded===r.offer_id&&<tr key={r.offer_id+"-detail"} className="ozf-expanded-row">
-            <td colSpan={26}>
+            <td colSpan={25}>
               <div className="ozf-expanded-content"><h3>{r.offer_id} · доходы и расходы Ozon</h3>
                 <table className="ozf-breakdown-table"><thead><tr>
                   <th>Статья</th><th>Категория</th><th>Операций</th><th>Сумма, ₽</th>
                 </tr></thead><tbody>
+                  {r.estimated_result===null&&<tr className="ozf-missing-explainer">
+                    <td colSpan={4}><strong>Почему не рассчитана прибыль:</strong>{" "}
+                      {(r.data_gaps?.length?r.data_gaps:[
+                        "Нет подтверждённой себестоимости или данных заказов"
+                      ]).join("; ")}. Исправь сведения в настройках финансиста.</td>
+                  </tr>}
                   {r.details.map((item,i)=>{
                     const category=item.type_id==="SALES"?"Выручка":
                       item.type_id==="COMMISSION"?"Комиссия":
@@ -277,7 +282,7 @@ export default function FinancierDetailTable({
           </tr>}
           </Fragment>;
         })}
-        {!display.length&&<tr><td colSpan={26} className="ozf-empty">Нет артикулов для выбранного фильтра.</td></tr>}
+        {!display.length&&<tr><td colSpan={25} className="ozf-empty">Нет артикулов для выбранного фильтра.</td></tr>}
         </tbody>
         <tfoot><tr>
           <td>Итого за период</td><td colSpan={2}>{qty(rows.length)} артикулов</td>
@@ -296,7 +301,7 @@ export default function FinancierDetailTable({
           <td>{qty(numericSum(rows,r=>r.in_crossdock))}</td>
           <td>{qty(numericSum(rows,r=>r.main_stock))}</td>
           <td>{qty(numericSum(rows,r=>r.ox_stock))}</td>
-          <td>—</td><td>—</td><td>—</td>
+          <td>—</td><td>—</td>
           <td>{money(numericSum(rows,r=>r.mayak_expense==null?null:-Math.abs(r.mayak_expense)))}</td>
           <td>{qty(numericSum(rows,r=>r.in_china))}</td><td>—</td><td>—</td>
         </tr></tfoot>

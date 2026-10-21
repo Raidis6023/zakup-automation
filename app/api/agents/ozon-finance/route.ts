@@ -253,7 +253,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     await Promise.all([
       db.from("ozon_finance_sync_days").select("day,record_count,synced_at").eq("account_key", ACCOUNT)
         .gte("day", from).lte("day", to),
-      db.rpc("ozon_finance_report_v2", { p_from: from, p_to: to, p_account_key: ACCOUNT }),
+      db.rpc("ozon_finance_report_v3", { p_from: from, p_to: to, p_account_key: ACCOUNT }),
       db.from("ozon_finance_sku_map").select("sku,offer_id,master_code").eq("account_key", ACCOUNT),
       db.from("ozon_finance_costs").select("master_code,valid_from,unit_cost_rub").lte("valid_from", to).order("valid_from"),
       db.from("ozon_finance_mayak").select("master_code,valid_from,unit_cost_rub").lte("valid_from", to).order("valid_from"),
@@ -282,7 +282,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
       db.from("products").select("id,offer_id,master_code,name").limit(2000),
       db.from("ozon_finance_page_jobs").select("day,status,pages_completed,rows_saved,last_error,updated_at")
         .eq("account_key",ACCOUNT).gte("day",from).lte("day",to).order("day"),
-      db.rpc("ozon_finance_unallocated_breakdown",{p_from:from,p_to:to,p_account:ACCOUNT}),
+      db.rpc("ozon_finance_unallocated_v3",{p_from:from,p_to:to,p_account:ACCOUNT}),
     ]);
   for (const item of [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, adJobsRes, itemizedRes, transitRes, crossdockRes, crossdockCurrentRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes]) {
     if (item.error) throw item.error;
@@ -441,13 +441,13 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     g.buyout_units = g.sold_units;
     if (salesWindowCovered && units && Number(units.net_orders)===Number(units.covered_cogs_units))
       g.cogs=round(Number(units.calculated_cogs));
-    if (salesWindowCovered && !units) g.cogs=0;
+    if (salesWindowCovered && (!units || Number(units.net_orders)===0)) g.cogs=0;
     if (salesWindowCovered && units && Number(units.net_orders)===Number(units.covered_mayak_units)){
       g.mayak_expense=round(Number(units.mayak_total));
       g.mayak_covered_units=Number(units.covered_mayak_units);
       totalMayak+=g.mayak_expense;
     }
-    if(salesWindowCovered && !units){
+    if(salesWindowCovered && (!units || Number(units.net_orders)===0)){
       g.mayak_expense=0;g.mayak_covered_units=0;
     }
     g.revenue=round(revenueByOffer.get(g.offer_id)??0);
@@ -471,13 +471,17 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     g.discontinued=!!(g.master_code && /выведен|выводится/i.test(articleStatus.get(g.master_code)||""));
     if(!g.master_code)g.data_gaps.push("Нет master_code");
     if(g.manager==="Не назначен")g.data_gaps.push("Не назначен КМ");
-    if(g.unit_cost===null)g.data_gaps.push("Нет цены закупа");
-    if(g.mayak_unit===null)g.data_gaps.push("Нет ТК Маяк");
+    // Missing rates are blockers only when at least one net FBO item
+    // requires multiplying by them; zero units imply zero direct costs.
+    if(g.unit_cost===null && (g.buyout_units??0)>0)g.data_gaps.push("Нет цены закупа");
+    if(g.mayak_unit===null && (g.buyout_units??0)>0)g.data_gaps.push("Нет ТК Маяк");
     if(!salesWindowCovered)g.data_gaps.push("Не подтверждена полнота заказов и отмен");
     if(g.cogs===null && salesWindowCovered)g.data_gaps.push("Не вся цена закупа известна");
     if(g.mayak_expense===null)g.data_gaps.push("Нет полного расчёта ТК Маяк");
-    if(g.master_code!==null && g.unit_cost!==null && g.mayak_unit!==null &&
-        g.cogs!==null && g.mayak_expense!==null) {
+    // An unassigned KM/master_code must not erase a valid financial result.
+    // Keep it in the exception register, but calculate whenever actual direct
+    // costs (including proven zero-unit costs) are known.
+    if(g.cogs!==null && g.mayak_expense!==null) {
       g.estimated_result=provisionalResult(g.ozon_amount,g.cogs,g.mayak_expense);
     }else g.estimated_result=null;
     g.details = g.details.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
