@@ -53,11 +53,13 @@ export async function GET(request: NextRequest) {
     }catch(error){console.warn("Ozon finance type dictionary unavailable",
       error instanceof Error?error.message:"Unknown error")}
   }
-  const today=new Date().toISOString().slice(0,10);
+  // The daily 05:00 KRAS plan includes local YESTERDAY even when UTC
+  // is still on that same calendar date. Do not postpone that day until 07:00.
+  const localToday=new Date(Date.now()+7*3600000).toISOString().slice(0,10);
   const {data,error}=await db.from("ozon_finance_page_jobs")
     .select("day,status,pages_completed,rows_saved,updated_at")
     .eq("account_key","main").neq("status","complete")
-    .lt("day",today).order("day",{ascending:true}).limit(14);
+    .lt("day",localToday).order("day",{ascending:true}).limit(14);
   if(error)return reply({ok:false,error:error.message},503);
   const pending=data??[];
   if(!pending.length) {
@@ -65,7 +67,7 @@ export async function GET(request: NextRequest) {
     // without reloading Ozon accruals or blocking interactive reports.
     const {data:complete,error:doneError}=await db.from("ozon_finance_sync_days")
       .select("day").eq("account_key","main")
-      .gte("day","2026-10-04").lt("day",today)
+      .gte("day",new Date(Date.parse(localToday+"T00:00:00Z")-62*86400000).toISOString().slice(0,10)).lt("day",localToday)
       .order("day",{ascending:true}).limit(365);
     if(doneError)return reply({ok:false,phase:"mapping_lookup",error:doneError.message},503);
     for(const candidate of complete??[]) {
