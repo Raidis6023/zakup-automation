@@ -1,4 +1,6 @@
 import WorkspaceDecoration from "./WorkspaceDecoration";
+import HomePandaAssistant from "./HomePandaAssistant";
+import styles from "./HomeDashboard.module.css";
 import HomeMarketplaceCards, {
   type HomeMarketplaceMetric,
 } from "./HomeMarketplaceCards";
@@ -146,6 +148,7 @@ export default function Home() {
 
   return (
     <section
+      className={styles.dashboard}
       aria-label=
         "Главная страница"
     >
@@ -172,6 +175,10 @@ export default function Home() {
           metrics
         }
       />
+
+      <div className={styles.assistantDock}>
+        <HomePandaAssistant />
+      </div>
     </section>
   );
 }
