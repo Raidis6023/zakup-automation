@@ -275,8 +275,9 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
       db.from("ved_orders").select("id,workflow_status,status").limit(500),
       db.from("ved_order_items").select("product_id,ved_order_id,status,order_quantity,quantity").limit(1500),
       db.from("product_article_statuses").select("master_code,status").limit(1500),
-      db.from("ozon_sales_sync_runs").select("date_from,date_to").eq("status", "success")
-        .lte("date_from", from).gte("date_to", to).limit(1),
+      db.from("ozon_sales_sync_runs").select("date_from,date_to").eq("status","success")
+        .lte("date_from",to).gte("date_to",from)
+        .order("created_at",{ascending:false}).limit(180),
       db.from("ozon_finance_types").select("type_id,description,name"),
       db.from("products").select("id,offer_id,master_code,name").limit(2000),
       db.from("ozon_finance_page_jobs").select("day,status,pages_completed,rows_saved,last_error,updated_at")
@@ -414,7 +415,11 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
   }
   // Financial accruals and posted-order units have different accounting dates.
   // Profit must remain "provisional" until reconciliation to settlement reports.
-  const salesWindowCovered = (salesRunsRes.data ?? []).length > 0;
+  // Daily Ozon sales are cached on rolling 28-day runs. A 31-day report
+  // is covered by their UNION, even if no single run spans all 31 days.
+  const salesRuns=salesRunsRes.data??[];
+  const salesWindowCovered=days.every(day=>salesRuns.some(run=>
+    run.date_from<=day && run.date_to>=day));
   let totalMayak = 0;
   for (const g of byOffer.values()) {
     g.ozon_amount = round(g.ozon_amount);
