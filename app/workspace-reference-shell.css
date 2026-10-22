@@ -1941,3 +1941,79 @@ html[data-theme="dark"] .home-theme-toggle button.active {
       transparent
     );
 }
+
+
+
+/* ============================================================
+   СЛУЖЕБНЫЕ ИКОНКИ: ЕДИНЫЙ ИЗУМРУДНЫЙ ЦВЕТ
+   ============================================================ */
+
+.home-shell {
+  --ws-utility-icon:
+    #11865d;
+
+  --ws-utility-soft:
+    #e0f2e8;
+
+  --ws-utility-border:
+    #b9dfcd;
+}
+
+
+html[data-theme="dark"]
+.home-shell {
+  --ws-utility-icon:
+    #37c98e;
+
+  --ws-utility-soft:
+    #15392d;
+
+  --ws-utility-border:
+    #355e49;
+}
+
+
+.home-workspace-link--utility:not(.home-workspace-link--active)
+.home-workspace-icon {
+  color:
+    var(--ws-utility-icon);
+}
+
+
+.home-topbar-right
+.home-icon-button {
+  color:
+    var(--ws-utility-icon);
+}
+
+
+.home-topbar-right
+.home-icon-button:hover,
+.home-topbar-right
+.home-icon-button.active {
+  background:
+    var(--ws-utility-soft);
+
+  border-color:
+    var(--ws-utility-border);
+
+  color:
+    var(--ws-utility-icon);
+}
+
+
+.home-topbar-right
+.home-theme-toggle
+button.active {
+  color:
+    var(--ws-utility-icon);
+
+  box-shadow:
+    0 1px 6px
+    color-mix(
+      in srgb,
+      var(--ws-utility-icon)
+      16%,
+      transparent
+    );
+}
