@@ -11,6 +11,9 @@ from "../ThemeToggle";
 import MarketplaceSuppliesPanel
 from "../MarketplaceSuppliesPanel";
 
+import WorkspaceCollapsiblePanel
+from "../WorkspaceCollapsiblePanel";
+
 import OzonUnifiedSyncClient from "./OzonUnifiedSyncClient";
 
 import OzonFboSupplyClient
@@ -1725,33 +1728,13 @@ export default async function OzonPage() {
             DAILY SALES
             =================================== */}
 
-        <section
-          className=
-            "section ozon-daily-section"
+        <WorkspaceCollapsiblePanel
+          tone="ozon"
+          icon="daily"
+          title="Продажи по дням"
+          subtitle="Контрольная сверка с кабинетом Ozon."
+          className="ozon-daily-section"
         >
-
-          <div
-            className=
-              "ozon-daily-header"
-          >
-
-            <h2
-              className=
-                "section-title"
-            >
-              Продажи по дням
-            </h2>
-
-
-            <div
-              className=
-                "reason-text"
-            >
-              Контрольная сверка с кабинетом Ozon.
-            </div>
-
-          </div>
-
 
           <div
             className=
@@ -1891,86 +1874,25 @@ export default async function OzonPage() {
 
           </div>
 
-        </section>
+        </WorkspaceCollapsiblePanel>
 
 
         {/* ===================================
             UNLINKED
             =================================== */}
 
-        <section
-          className=
-            "section ozon-unlinked-section"
+        <WorkspaceCollapsiblePanel
+          tone="ozon"
+          icon="unlinked"
+          title="Товары без ЕНОТ"
+          subtitle="Новые товары Ozon, которые система пока не смогла привязать к физическому товару."
+          meta={
+            unlinkedProducts.length > 0
+              ? `Требуют привязки: ${unlinkedProducts.length}`
+              : "Все товары привязаны"
+          }
+          className="ozon-unlinked-section"
         >
-
-          <div
-            className=
-              "ozon-unlinked-header"
-          >
-
-            <div>
-
-              <h2
-                className=
-                  "section-title"
-              >
-                Товары без master_code
-              </h2>
-
-
-              <div
-                className=
-                  "reason-text"
-              >
-                Новые товары Ozon, которые
-                система пока не смогла привязать
-                к физическому товару.
-              </div>
-
-
-              <div
-                className=
-                  "reason-text"
-              >
-                Они не останавливают общую
-                синхронизацию и не участвуют
-                в расчёте потребности до
-                ручной привязки.
-              </div>
-
-            </div>
-
-
-            <span
-              className={
-                unlinkedProducts.length >
-                0
-
-                  ? "ozon-unlinked-state ozon-unlinked-state--warning"
-
-                  : "ozon-unlinked-state ozon-unlinked-state--success"
-              }
-            >
-
-              <span
-                className=
-                  "ozon-status-dot"
-              />
-
-
-              {
-                unlinkedProducts.length >
-                0
-
-                  ? `Требуют привязки: ${unlinkedProducts.length}`
-
-                  : "Все товары привязаны"
-              }
-
-            </span>
-
-          </div>
-
 
           <div
             className=
@@ -2007,7 +1929,7 @@ export default async function OzonPage() {
 
           </div>
 
-        </section>
+        </WorkspaceCollapsiblePanel>
 
 
         {/* ===================================
