@@ -1199,7 +1199,7 @@ export default function WorkspaceShell({
                         "admin-tasks"
                       )
                   }
-                  className={navClass("admin-tasks")}
+                  className={`${navClass("admin-tasks")} home-workspace-link--utility`}
                   aria-current={
                     isNavActive("admin-tasks")
                       ? "page"
@@ -1257,7 +1257,7 @@ export default function WorkspaceShell({
                         "tasks"
                       )
                   }
-                  className={navClass("tasks")}
+                  className={`${navClass("tasks")} home-workspace-link--utility`}
                   aria-current={
                     isNavActive("tasks")
                       ? "page"
