@@ -343,8 +343,7 @@ strong {
     none;
 
   border-top:
-    1px solid
-    var(--ws-border);
+    0;
 
   border-radius:
     0;
