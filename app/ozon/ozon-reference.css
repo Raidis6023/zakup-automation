@@ -755,8 +755,7 @@ svg {
     auto;
 
   border-top:
-    1px solid
-    var(--ws-border);
+    0;
 }
 
 
