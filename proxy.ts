@@ -48,6 +48,9 @@ export async function proxy(
     ||
     pathname ===
     "/api/agents/ozon-finance-support-cron"
+    ||
+    pathname ===
+    "/api/agents/wb-finance-cron"
   ) {
 
     return NextResponse.next();
