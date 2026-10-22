@@ -1,5 +1,6 @@
 "use client";
 import {useCallback,useEffect,useMemo,useState} from "react";
+import WorkspaceCollapsiblePanel from "../WorkspaceCollapsiblePanel";
 type Product={article:string;name:string;quantity:number;activeQuantity:number;orders:string;classification:"new"|"review";masterCode:string|null;productId:string|null};
 type Result={ok?:boolean;rows?:Product[];error?:string;masterCode?:string;proposedCode?:string};
 type Filter="all"|"new"|"review";
@@ -52,9 +53,15 @@ export default function VedNewProductsClient(){
    setMessages(m=>({...m,[row.article]:message}));
   }finally{setBusy("");}
  }
- return <section className="sku-new-section" aria-label="Новые товары из заказов ВЭД">
-  <div className="sku-new-heading"><div><h2>Новые товары</h2><p>Товары из заказов ВЭД, пока не размещённые на маркетплейсах. Привязанные остаются здесь до появления на МП.</p></div>
-   <span className="sku-new-count">{loading?"Загрузка…":rows.length+" артикулов"}</span></div>
+ return <WorkspaceCollapsiblePanel
+  tone="general"
+  icon="newProducts"
+  title="Новые товары"
+  subtitle="Товары из заказов ВЭД, пока не размещённые на маркетплейсах. Привязанные остаются здесь до появления на МП."
+  meta={loading?"Загрузка…":rows.length+" артикулов"}
+  className="sku-new-section"
+ >
+  <div className="sku-new-content">
   <div className="sku-new-tabs">
    <button className={filter==="all"?"active":""} type="button" onClick={()=>setFilter("all")}>Все ({rows.length})</button>
    <button className={filter==="new"?"active":""} type="button" onClick={()=>setFilter("new")}>Новые ({newCount})</button>
@@ -96,5 +103,6 @@ export default function VedNewProductsClient(){
     </td>
    </tr>)}</tbody></table></div>}
   <p className="sku-new-footnote">Количество суммируется по заказам. Привязка ЕНОТ не меняет статус заказа и не прибавляет товар к складским остаткам.</p>
- </section>;
+  </div>
+ </WorkspaceCollapsiblePanel>;
 }

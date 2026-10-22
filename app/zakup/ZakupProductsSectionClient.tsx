@@ -241,8 +241,7 @@ export default function ZakupProductsSectionClient({
             className=
               "muted zakup-products-toggle-subtitle"
           >
-            Итоговые значения уже учитывают
-            ручные корректировки
+            Итоговые значения текущего расчёта
           </span>
 
         </span>

@@ -1,0 +1,403 @@
+.panel {
+  --collapsible-accent:
+    #11865d;
+
+  --collapsible-soft:
+    #e0f2e8;
+
+  margin-top:
+    18px;
+
+  padding:
+    0;
+
+  overflow:
+    hidden;
+}
+
+
+:global(.workspace-content--module)
+.panel:global(.section) {
+  padding:
+    0;
+}
+
+
+.tone_general {
+  --collapsible-accent:
+    #11865d;
+
+  --collapsible-soft:
+    #e0f2e8;
+}
+
+
+.tone_ozon {
+  --collapsible-accent:
+    #157dbc;
+
+  --collapsible-soft:
+    #e3f3ff;
+}
+
+
+.tone_wildberries {
+  --collapsible-accent:
+    #8231b4;
+
+  --collapsible-soft:
+    #f4e9fb;
+}
+
+
+.tone_yandex {
+  --collapsible-accent:
+    #b65a15;
+
+  --collapsible-soft:
+    #fff0e0;
+}
+
+
+.header {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    12px;
+
+  width:
+    100%;
+
+  min-height:
+    72px;
+
+  box-sizing:
+    border-box;
+
+  padding:
+    12px
+    14px;
+
+  background:
+    transparent;
+
+  color:
+    inherit;
+
+  cursor:
+    pointer;
+
+  transition:
+    background-color
+      0.12s
+      ease;
+}
+
+
+.header:hover {
+  background:
+    var(--ws-surface-hover);
+}
+
+
+.header:focus-visible {
+  outline:
+    2px solid
+    var(--collapsible-accent);
+
+  outline-offset:
+    -2px;
+}
+
+
+.icon {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    42px;
+
+  height:
+    42px;
+
+  flex:
+    0 0
+    42px;
+
+  border-radius:
+    10px;
+
+  color:
+    var(--collapsible-accent);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--collapsible-accent)
+      13%,
+      transparent
+    );
+}
+
+
+.tone_ozon
+.icon {
+  width:
+    38px;
+
+  height:
+    38px;
+
+  flex-basis:
+    38px;
+
+  border-radius:
+    9px;
+}
+
+
+.icon svg {
+  width:
+    23px;
+
+  height:
+    23px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+
+.tone_ozon
+.icon svg {
+  stroke-width:
+    1.7;
+}
+
+
+.copy {
+  display:
+    flex;
+
+  min-width:
+    0;
+
+  flex:
+    1;
+
+  flex-direction:
+    column;
+
+  gap:
+    3px;
+}
+
+
+.title {
+  overflow:
+    hidden;
+
+  color:
+    var(--ws-text);
+
+  font-size:
+    15px;
+
+  font-weight:
+    750;
+
+  line-height:
+    1.25;
+
+  text-overflow:
+    ellipsis;
+
+  white-space:
+    nowrap;
+}
+
+
+.subtitle {
+  overflow:
+    hidden;
+
+  color:
+    var(
+      --ws-text-muted,
+      #7f98ae
+    );
+
+  font-size:
+    11px;
+
+  line-height:
+    1.3;
+
+  text-overflow:
+    ellipsis;
+
+  white-space:
+    nowrap;
+}
+
+
+.meta {
+  flex:
+    0 0
+    auto;
+
+  padding:
+    5px
+    9px;
+
+  border:
+    1px solid
+    color-mix(
+      in srgb,
+      var(--collapsible-accent)
+      18%,
+      var(--ws-border)
+    );
+
+  border-radius:
+    999px;
+
+  background:
+    color-mix(
+      in srgb,
+      var(--collapsible-accent)
+      8%,
+      var(--ws-surface)
+    );
+
+  color:
+    var(--collapsible-accent);
+
+  font-size:
+    10px;
+
+  font-weight:
+    700;
+
+  white-space:
+    nowrap;
+}
+
+
+.action {
+  flex:
+    0 0
+    auto;
+
+  min-height:
+    36px;
+
+  white-space:
+    nowrap;
+}
+
+
+.body {
+  min-width:
+    0;
+
+  border-top:
+    1px solid
+    color-mix(
+      in srgb,
+      var(--collapsible-accent)
+      15%,
+      var(--ws-border)
+    );
+}
+
+
+html[data-theme="dark"]
+.tone_general {
+  --collapsible-accent:
+    #37c98e;
+}
+
+
+html[data-theme="dark"]
+.tone_ozon {
+  --collapsible-accent:
+    #75c4f2;
+}
+
+
+html[data-theme="dark"]
+.tone_wildberries {
+  --collapsible-accent:
+    #d7a0ef;
+}
+
+
+html[data-theme="dark"]
+.tone_yandex {
+  --collapsible-accent:
+    #ffb67b;
+}
+
+
+@media (
+  max-width:
+    760px
+) {
+
+  .header {
+    align-items:
+      flex-start;
+
+    flex-wrap:
+      wrap;
+  }
+
+
+  .copy {
+    min-width:
+      calc(
+        100%
+        -
+        54px
+      );
+  }
+
+
+  .meta {
+    margin-left:
+      54px;
+  }
+
+
+  .action {
+    width:
+      100%;
+
+    margin-left:
+      54px;
+  }
+
+}
