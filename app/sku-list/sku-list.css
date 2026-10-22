@@ -869,3 +869,14 @@ html[data-theme="dark"]
 .sku-new-proposal-label {font-size:11px;color:var(--ws-text-muted);}
 .sku-new-proposal-code {font:700 13px monospace;letter-spacing:.04em;color:#168c69;padding:5px 8px;border:1px solid var(--ws-border-soft);border-radius:6px;}
 .sku-new-proposal button:first-of-type {border-color:#168c69;}
+
+
+
+/* ============================================================
+   НОВЫЕ ТОВАРЫ — СОДЕРЖИМОЕ COLLAPSIBLE-БЛОКА
+   ============================================================ */
+
+.sku-new-content {
+  padding:
+    14px;
+}
