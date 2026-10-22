@@ -13,6 +13,9 @@ import {
 import ThemeToggle
 from "../ThemeToggle";
 
+import WorkspaceCollapsiblePanel
+from "../WorkspaceCollapsiblePanel";
+
 import "./ved-reference.css";
 
 
@@ -1477,48 +1480,16 @@ export default async function VedPage() {
             ЗАКАЗЫ ВЭД
             =================================== */}
 
-        <section
-          className="section ved-orders-section"
+        <WorkspaceCollapsiblePanel
+          tone="general"
+          icon="vedOrders"
+          title="Заказы ВЭД"
+          subtitle="Переданные, активные и завершённые заказы."
+          meta={
+            `Всего: ${orders.length}`
+          }
+          className="ved-orders-section"
         >
-
-          <div
-            className="section-header ved-orders-header"
-          >
-
-            <div
-              className="ved-orders-heading"
-            >
-
-              <h2
-                className="section-title"
-              >
-                Заказы ВЭД
-              </h2>
-
-
-              <div
-                className="muted"
-              >
-                Переданные, активные и завершённые заказы.
-              </div>
-
-            </div>
-
-
-            <div
-              className="ved-orders-count"
-            >
-              Всего:{" "}
-
-              <strong>
-                {
-                  orders.length
-                }
-              </strong>
-            </div>
-
-          </div>
-
 
           {
             orders.length ===
@@ -1860,7 +1831,7 @@ export default async function VedPage() {
               )
           }
 
-        </section>
+        </WorkspaceCollapsiblePanel>
 
 
         {/* ===================================
