@@ -11,6 +11,9 @@ import ThemeToggle
 import MarketplaceSuppliesPanel
   from "../MarketplaceSuppliesPanel";
 
+import WorkspaceCollapsiblePanel
+  from "../WorkspaceCollapsiblePanel";
+
 import YandexUnlinkedProductsClient
   from "./YandexUnlinkedProductsClient";
 
@@ -1687,18 +1690,15 @@ export default async function YandexMarketPage() {
             UNLINKED
             =================================== */}
 
-        <section className="section">
-
-          <h2 className="section-title">
-            Товары без ЕНОТ
-          </h2>
-
-
-          <div className="reason-text">
-            Новые товары Яндекс Маркета,
-            для которых пока не указан ЕНОТ.
-          </div>
-
+        <WorkspaceCollapsiblePanel
+          tone="yandex"
+          icon="unlinked"
+          title="Товары без ЕНОТ"
+          subtitle="Новые товары Яндекс Маркета, для которых пока не указан ЕНОТ."
+          meta={
+            `Непривязанных: ${unlinkedProducts.length}`
+          }
+        >
 
           {
             unlinkedProducts.length
@@ -1714,8 +1714,8 @@ export default async function YandexMarketPage() {
                   className="reason-text"
 
                   style={{
-                    marginTop:
-                      "14px",
+                    padding:
+                      "14px 18px 16px",
                   }}
                 >
                   Непривязанных товаров нет.
@@ -1723,7 +1723,7 @@ export default async function YandexMarketPage() {
               )
           }
 
-        </section>
+        </WorkspaceCollapsiblePanel>
 
 
         {/* ===================================
