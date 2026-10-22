@@ -960,8 +960,7 @@ tr:hover {
     auto;
 
   border-top:
-    1px solid
-    var(--ws-border);
+    0;
 }
 
 
@@ -1833,4 +1832,24 @@ html[data-theme="dark"]
       1fr;
   }
 
+}
+
+
+
+/* ============================================================
+   ФИНАНСОВАЯ АНАЛИТИКА — COLLAPSIBLE BODY
+   ============================================================ */
+
+.wb-finance-collapsible-body {
+  padding:
+    14px 18px 16px;
+
+  color:
+    var(--ws-text-secondary);
+
+  font-size:
+    12px;
+
+  line-height:
+    1.45;
 }
