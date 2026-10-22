@@ -8,6 +8,9 @@ import {
   useRouter,
 } from "next/navigation";
 
+import WorkspaceCollapsiblePanel
+from "./WorkspaceCollapsiblePanel";
+
 
 // ============================================================
 // TYPES
@@ -299,69 +302,16 @@ export default function WbUnmappedProductsTable({
 
   return (
 
-    <section
-      className=
-        "section wb-unmapped-section"
+    <WorkspaceCollapsiblePanel
+      tone="wildberries"
+      icon="unlinked"
+      title="Товары без ЕНОТ"
+      subtitle="Новые товары Wildberries, которые система пока не смогла привязать к физическому товару."
+      meta={
+        `Требуют привязки: ${rows.length}`
+      }
+      className="wb-unmapped-section"
     >
-
-      <div
-        className=
-          "wb-unmapped-header"
-      >
-
-        <div>
-
-          <h2
-            className=
-              "section-title"
-          >
-            Товары без ЕНОТ
-          </h2>
-
-
-          <div
-            className=
-              "muted"
-          >
-            Новые товары Wildberries,
-            которые система пока
-            не смогла привязать
-            к физическому товару.
-          </div>
-
-
-          <div
-            className=
-              "muted"
-          >
-            Они не участвуют
-            в расчёте закупки
-            до ручной привязки.
-          </div>
-
-        </div>
-
-
-        <div
-          className=
-            "wb-unmapped-badge"
-        >
-
-          <span
-            className=
-              "wb-unmapped-badge-dot"
-          />
-
-
-          Требуют привязки:{" "}
-          {
-            rows.length
-          }
-
-        </div>
-
-      </div>
-
 
       <div
         className=
@@ -681,7 +631,7 @@ export default function WbUnmappedProductsTable({
         таблице товаров.
       </div>
 
-    </section>
+    </WorkspaceCollapsiblePanel>
 
   );
 
