@@ -831,7 +831,7 @@ html[data-theme="dark"]
 }
 
 /* VED new-product registry lives below, not inside, the existing financial table. */
-.sku-new-section {margin:18px 0 30px;padding:14px;border:1px solid var(--ws-border-soft);border-radius:14px;background:var(--ws-surface);color:var(--ws-text);}
+.sku-new-section {margin:18px 0 30px;color:var(--ws-text);}
 .sku-new-heading {display:flex;align-items:center;justify-content:space-between;gap:16px;}
 .sku-new-heading h2 {margin:0 0 6px;font-size:18px;}
 .sku-new-heading p,.sku-new-footnote {margin:0;font-size:12px;line-height:1.5;color:var(--ws-text-muted);}
