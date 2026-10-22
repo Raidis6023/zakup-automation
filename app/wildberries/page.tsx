@@ -11,6 +11,9 @@ from "../ThemeToggle";
 import MarketplaceSuppliesPanel
 from "../MarketplaceSuppliesPanel";
 
+import WorkspaceCollapsiblePanel
+from "../WorkspaceCollapsiblePanel";
+
 import WbSyncClient
 from "../WbSyncClient";
 
@@ -1392,11 +1395,18 @@ export default async function WildberriesPage() {
                 </section>
 
 
-                <section className="section">
-                  <h2 className="section-title">Финансовая аналитика Wildberries</h2>
-                  <p>Детализация реализации и рекламной статистики по артикулам. Пока без себестоимости и итоговой прибыли.</p>
-                  <Link href="/wildberries/financier" className="button">Открыть ИИ-финансиста →</Link>
-                </section>
+                <WorkspaceCollapsiblePanel
+                  tone="wildberries"
+                  icon="finance"
+                  title="Финансовая аналитика Wildberries"
+                  subtitle="Детализация реализации и рекламной статистики по артикулам."
+                  actionHref="/wildberries/financier"
+                  actionLabel="Открыть ИИ-финансиста"
+                >
+                  <div className="wb-finance-collapsible-body">
+                    Пока без себестоимости и итоговой прибыли.
+                  </div>
+                </WorkspaceCollapsiblePanel>
 
                 {/* =================================================
                     INFO PANEL
