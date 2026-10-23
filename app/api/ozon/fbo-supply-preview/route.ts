@@ -1219,302 +1219,83 @@ async function POSTImpl() {
     });
   }
 
-  const initialBatches = makeDraftBatches(plan.clusters);
-  const queue = [...initialBatches];
-  const draftIds: number[] = [];
-  const slotCoverage = new Map<
-    string,
-    { slot: PreviewSlot; clusters: Set<number> }
-  >();
+  for (
+    const cluster
+    of plan.clusters
+  ) {
 
-  let lastDraftCreatedAt = 0;
-
-  while (queue.length > 0) {
-    const batch = queue.shift();
-    if (!batch || batch.length === 0) continue;
-
-    if (lastDraftCreatedAt > 0) {
-      const waitMs = Math.max(
-        0,
-        DRAFT_GAP_SECONDS * 1000 - (Date.now() - lastDraftCreatedAt)
+    const result =
+      clusterResults.get(
+        cluster.macrolocal_cluster_id
       );
-      if (waitMs > 0) await sleep(waitMs);
-    }
 
-    lastDraftCreatedAt = Date.now();
 
-    let draft: DraftCreateResponse;
-    try {
-      draft = await ozonPost<DraftCreateResponse>(
-        "/v1/draft/multi-cluster/create",
-        {
-          clusters_info: batch.map(cluster => ({
-            macrolocal_cluster_id: cluster.macrolocal_cluster_id,
-            items: cluster.draft_items,
-          })),
-          deletion_sku_mode: "PARTIAL",
-          delivery_info: {
-            type: "DROPOFF",
-            drop_off_warehouse: {
-              warehouse_id: dropOff.warehouse_id,
-              warehouse_type: dropOff.warehouse_type,
-            },
-            seller_warehouse_id: Number(MOSCOW_SELLER_WAREHOUSE_ID),
-          },
-        }
-      );
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : String(error);
+    if (!result) {
 
-      for (const cluster of batch) {
-        const result = clusterResults.get(cluster.macrolocal_cluster_id);
-        if (!result) continue;
-        result.status = "error";
-        result.error = message;
-      }
       continue;
+
     }
 
-    const createErrors = meaningfulErrors(draft.errors);
-    const draftId = toPositiveInteger(draft.draft_id);
+
+    const validItems =
+      cluster.draft_items.length;
+
 
     if (
-      draftId === null &&
-      errorHasCountLimit(draft.errors) &&
-      batch.length > 1
-    ) {
-      const middle = Math.ceil(batch.length / 2);
-      queue.unshift(batch.slice(middle));
-      queue.unshift(batch.slice(0, middle));
-      continue;
-    }
-
-    if (draftId === null) {
-      const message =
-        createErrors.length > 0
-          ? formatDraftErrors(createErrors)
-          : "Ozon не вернул draft_id";
-
-      for (const cluster of batch) {
-        const result = clusterResults.get(cluster.macrolocal_cluster_id);
-        if (!result) continue;
-        result.status = "error";
-        result.error = message;
-      }
-      continue;
-    }
-
-    draftIds.push(draftId);
-
-    const info = await waitForDraftInfo(draftId);
-    const infoErrors = meaningfulErrors(info.errors);
-
-    if (info.status !== "SUCCESS") {
-      const message =
-        infoErrors.length > 0
-          ? formatDraftErrors(infoErrors)
-          : `Ozon вернул статус черновика ${normalizeKey(info.status) || "UNKNOWN"}`;
-
-      for (const cluster of batch) {
-        const result = clusterResults.get(cluster.macrolocal_cluster_id);
-        if (!result) continue;
-        result.draft_id = draftId;
-        result.status = "error";
-        result.error = message;
-      }
-      continue;
-    }
-
-    const rejected = rejectedSkuMap([
-      ...(draft.errors ?? []),
-      ...(info.errors ?? []),
-    ]);
-
-    const selectedClusterWarehouses: Array<{
-      macrolocal_cluster_id: number;
-      storage_warehouse_id: number;
-    }> = [];
-
-    const selectedClusterIds: number[] = [];
-
-    for (const cluster of batch) {
-      const result = clusterResults.get(cluster.macrolocal_cluster_id);
-      if (!result) continue;
-
-      result.draft_id = draftId;
-
-      for (const article of result.articles) {
-        if (article.sku === null || article.final_quantity <= 0) continue;
-        const rejection = rejected.get(article.sku);
-        if (
-          rejection &&
-          (rejection.clusterIds.size === 0 ||
-            rejection.clusterIds.has(cluster.macrolocal_cluster_id))
-        ) {
-          article.ozon_rejected = true;
-          article.ozon_rejection_reasons = Array.from(rejection.reasons);
-        }
-      }
-
-      result.ozon_accepted_units = result.articles.reduce(
-        (sum, article) =>
-          sum +
-          (article.final_quantity > 0 && !article.ozon_rejected
-            ? article.final_quantity
-            : 0),
+      cluster.proposed_units >
         0
-      );
+      &&
+      validItems >
+        0
+    ) {
 
-      const selection = chooseWarehouse(
-        info,
-        cluster.macrolocal_cluster_id
-      );
+      result.status =
+        "available";
 
-      result.warehouses = selection.candidates
-        .map(mapWarehouse)
-        .filter((row): row is PreviewWarehouse => row !== null);
+      result.error =
+        null;
 
-      result.recommended_warehouse = selection.recommended
-        ? mapWarehouse(selection.recommended)
-        : null;
+    } else {
 
-      const hasFull = result.warehouses.some(
-        warehouse => warehouse.availability === "FULL_AVAILABLE"
-      );
-      const hasPartial = result.warehouses.some(
-        warehouse => warehouse.availability === "PARTIAL_AVAILABLE"
-      );
+      result.status =
+        "no_supply";
 
-      result.status = hasFull
-        ? result.ozon_accepted_units < result.proposed_units
-          ? "partial"
-          : "available"
-        : hasPartial
-          ? "partial"
-          : "not_available";
+      result.error =
+        cluster.proposed_units >
+          0
+          ? "В кластере нет валидных Ozon SKU с рассчитанным количеством к поставке."
+          : "После округления до коробов поставка не требуется.";
 
-      if (!result.recommended_warehouse) {
-        result.error =
-          "Ozon не предложил доступный склад размещения для этого состава.";
-        continue;
-      }
-
-      if (result.ozon_accepted_units <= 0) {
-        result.error = "Ozon отклонил весь товарный состав кластера.";
-        continue;
-      }
-
-      selectedClusterWarehouses.push({
-        macrolocal_cluster_id: cluster.macrolocal_cluster_id,
-        storage_warehouse_id: result.recommended_warehouse.warehouse_id,
-      });
-      selectedClusterIds.push(cluster.macrolocal_cluster_id);
     }
 
-    if (selectedClusterWarehouses.length === 0) continue;
-
-    let timeslots: TimeslotResponse;
-    try {
-      timeslots = await ozonPost<TimeslotResponse>(
-        "/v2/draft/timeslot/info",
-        {
-          date_from: windowDateFrom,
-          date_to: windowDateTo,
-          draft_id: draftId,
-          supply_type: "MULTI_CLUSTER",
-          selected_cluster_warehouses: selectedClusterWarehouses,
-        }
-      );
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : String(error);
-
-      for (const clusterId of selectedClusterIds) {
-        const result = clusterResults.get(clusterId);
-        if (result) {
-          result.error =
-            result.error ??
-            `Склады доступны, но таймслоты не удалось получить: ${message}`;
-        }
-      }
-      continue;
-    }
-
-    const errorReason = normalizeKey(timeslots.error_reason);
-    if (errorReason && errorReason !== "UNSPECIFIED") {
-      for (const clusterId of selectedClusterIds) {
-        const result = clusterResults.get(clusterId);
-        if (result) {
-          result.error =
-            result.error ??
-            `Ozon не вернул таймслоты: ${errorReason}`;
-        }
-      }
-      continue;
-    }
-
-    const slots = collectTimeslots(timeslots);
-
-    for (const clusterId of selectedClusterIds) {
-      const result = clusterResults.get(clusterId);
-      if (result) result.timeslots = slots;
-    }
-
-    for (const slot of slots) {
-      const key = slotKey(slot);
-      let coverage = slotCoverage.get(key);
-
-      if (!coverage) {
-        coverage = { slot, clusters: new Set<number>() };
-        slotCoverage.set(key, coverage);
-      }
-
-      for (const clusterId of selectedClusterIds) {
-        coverage.clusters.add(clusterId);
-      }
-    }
   }
 
-  const activeClusters = Array.from(clusterResults.values()).filter(
-    cluster =>
-      cluster.proposed_units > 0 &&
-      cluster.recommended_warehouse !== null
-  );
 
-  const timeslotCandidates = Array.from(slotCoverage.values())
-    .map(row => ({
-      ...row.slot,
-      cluster_count: row.clusters.size,
-      cluster_ids: Array.from(row.clusters).sort((a, b) => a - b),
-      coverage_percent:
-        activeClusters.length > 0
-          ? Math.round((row.clusters.size / activeClusters.length) * 100)
-          : 0,
-    }))
-    .sort((left, right) => {
-      if (right.cluster_count !== left.cluster_count) {
-        return right.cluster_count - left.cluster_count;
+  const draftIds:
+    number[] =
+    [];
+
+
+  const timeslotCandidates:
+    Array<
+      PreviewSlot
+      & {
+        cluster_count:
+          number;
+
+        cluster_ids:
+          number[];
+
+        coverage_percent:
+          number;
       }
+    > =
+    [];
 
-      const dateDiff =
-        slotPriority(left.date, formationDate) -
-        slotPriority(right.date, formationDate);
 
-      if (dateDiff !== 0) return dateDiff;
-      return Date.parse(left.from) - Date.parse(right.from);
-    });
+  const recommendedTimeslot =
+    null;
 
-  const recommendedTimeslot = timeslotCandidates[0] ?? null;
-
-  if (recommendedTimeslot) {
-    const covered = new Set(recommendedTimeslot.cluster_ids);
-    for (const cluster of clusterResults.values()) {
-      cluster.supports_common_timeslot = covered.has(
-        cluster.macrolocal_cluster_id
-      );
-    }
-  }
 
   const clusters = Array.from(clusterResults.values()).sort(
     (left, right) =>
@@ -1678,14 +1459,20 @@ async function POSTImpl() {
     recommended_timeslot: recommendedTimeslot,
     timeslot_candidates: timeslotCandidates.slice(0, 12),
     can_create_real:
-      totalProposed > 0 &&
-      plan.packaging.invalid_sku_items === 0 &&
-      technicalErrors === 0,
+      clusters.some(
+        cluster =>
+          cluster.status ===
+            "available"
+          &&
+          cluster.proposed_units >
+            0
+      ),
     draft_ids: draftIds,
     clusters,
     warnings: [
       "Реальные заявки Ozon не создавались.",
-      "Тест создаёт только технические draft_id, необходимые Ozon для проверки складов и таймслотов.",
+      "Тест показывает рассчитанную потребность и коробную кратность без создания draft в Ozon.",
+      "Конкретный склад размещения и таймслот определяются только при нажатии «Создать заявку» для выбранного кластера.",
       packagingBlockers > 0
         ? `Есть позиции без корректной вложимости/ЕНОТ: ${packagingBlockers}. Они не включены в текущий состав, но не блокируют создание остальных заявок.`
         : "",
