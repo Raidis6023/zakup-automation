@@ -2144,6 +2144,17 @@ export default function OzonFboSupplyClient({
       : [];
 
 
+  const canStartAll =
+    creatableClusterIds.length >
+      0
+    &&
+    !starting
+    &&
+    !processing
+    &&
+    !previewLoading;
+
+
   const problemRows =
     (
       status
@@ -3670,22 +3681,71 @@ export default function OzonFboSupplyClient({
 
 
               <div
-                className=
-                  "reason-text"
-
                 style={{
                   marginTop:
                     "16px",
 
-                  textAlign:
-                    "right",
+                  display:
+                    "flex",
+
+                  alignItems:
+                    "center",
+
+                  justifyContent:
+                    "flex-end",
+
+                  gap:
+                    "12px",
+
+                  flexWrap:
+                    "wrap",
                 }}
               >
+                <div
+                  className=
+                    "reason-text"
+                >
+                  {
+                    creatableClusterIds.length >
+                      0
+                      ? `Доступно к созданию: ${creatableClusterIds.length} кластеров. Можно выбрать заявки по одной или запустить все доступные.`
+                      : "Нет новых доступных кластеров для создания"
+                  }
+                </div>
+
+
                 {
                   creatableClusterIds.length >
                     0
-                    ? `Доступно к созданию: ${creatableClusterIds.length} кластеров. Создавай только нужные заявки кнопкой в строке кластера.`
-                    : "Нет новых доступных кластеров для создания"
+                    ? (
+                      <button
+                        type="button"
+
+                        className=
+                          "primary-button"
+
+                        disabled={
+                          !canStartAll
+                        }
+
+                        onClick={
+                          () => {
+                            void start(
+                              creatableClusterIds
+                            );
+                          }
+                        }
+                      >
+                        {
+                          starting
+                            ||
+                            processing
+                            ? "Создаём заявки..."
+                            : `Создать все заявки (${creatableClusterIds.length})`
+                        }
+                      </button>
+                    )
+                    : null
                 }
               </div>
 
