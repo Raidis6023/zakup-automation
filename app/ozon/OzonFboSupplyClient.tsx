@@ -2331,14 +2331,7 @@ export default function OzonFboSupplyClient({
                           ||
                           !clusterCanCreate
                           ||
-                          requestActive
-                          ||
-                          Boolean(
-                            request
-                            &&
-                            request.status ===
-                              "success"
-                          );
+                          requestActive;
 
 
                         return (
@@ -2568,7 +2561,7 @@ export default function OzonFboSupplyClient({
                                     &&
                                     request.status ===
                                       "success"
-                                      ? "Создана"
+                                      ? "Проверить / пересоздать"
 
                                       : request
                                         &&
