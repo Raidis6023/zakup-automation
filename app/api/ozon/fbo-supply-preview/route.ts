@@ -158,9 +158,8 @@ type PreviewArticle = {
   cartons: number;
   final_quantity: number;
   rule:
-    | "full_cartons_down"
-    | "one_carton_over_half"
-    | "zero_half_or_less"
+    | "full_cartons_rounded"
+    | "zero_less_than_one_carton"
     | "missing_pack"
     | "pack_conflict"
     | "missing_enot"
@@ -585,26 +584,19 @@ function getPackRule(rawNeed: number, pack: number | null) {
   }
 
   if (rawNeed < pack) {
-    if (rawNeed * 2 > pack) {
-      return {
-        cartons: 1,
-        finalQuantity: pack,
-        rule: "one_carton_over_half" as const,
-      };
-    }
-
     return {
       cartons: 0,
       finalQuantity: 0,
-      rule: "zero_half_or_less" as const,
+      rule: "zero_less_than_one_carton" as const,
     };
   }
 
-  const cartons = Math.floor(rawNeed / pack);
+  const cartons = Math.round(rawNeed / pack);
+
   return {
     cartons,
     finalQuantity: cartons * pack,
-    rule: "full_cartons_down" as const,
+    rule: "full_cartons_rounded" as const,
   };
 }
 
@@ -961,7 +953,7 @@ function buildPlan(
       ? { cartons: 0, finalQuantity: 0, rule: forcedRule }
       : getPackRule(aggregate.raw_need, pack);
 
-    if (rounded.rule === "zero_half_or_less") zeroHalfOrLessItems++;
+    if (rounded.rule === "zero_less_than_one_carton") zeroHalfOrLessItems++;
 
     const packagingPresence =
       enot
@@ -1663,7 +1655,7 @@ async function POSTImpl() {
     window_date_from: windowDateFrom,
     window_date_to: windowDateTo,
     rounding_rule:
-      "Полные короба вниз; если потребность меньше 1 короба, >50% вложимости = 1 короб, <=50% = 0.",
+      "Если потребность меньше 1 полного короба — 0. Начиная с 1 короба, количество коробов округляется математически до ближайшего целого.",
     drop_off: dropOff,
     summary: {
       clusters: clusters.length,
