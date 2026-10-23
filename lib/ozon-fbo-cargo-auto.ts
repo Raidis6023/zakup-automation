@@ -25,7 +25,6 @@ type ProductRow = {
   carton_width_mm: number | null;
   carton_height_mm: number | null;
   carton_weight_kg: number | null;
-  package_weight_g: number | null;
   transport_carton_volume_m3: number | null;
 };
 
@@ -214,7 +213,7 @@ async function getProducts() {
     const page = await supabaseGet<ProductRow[]>(
       [
         "products",
-        "?select=id,master_code,offer_id,units_per_carton,carton_length_mm,carton_width_mm,carton_height_mm,carton_weight_kg,package_weight_g,transport_carton_volume_m3",
+        "?select=id,master_code,offer_id,units_per_carton,carton_length_mm,carton_width_mm,carton_height_mm,carton_weight_kg,transport_carton_volume_m3",
         "&order=created_at.asc",
         `&limit=${SUPABASE_PAGE_SIZE}`,
         `&offset=${offset}`,
@@ -662,8 +661,8 @@ export async function buildCargoPlan(
           : null;
 
       const unitWeightKg =
-        toPositiveNumber(product.package_weight_g) !== null
-          ? (toPositiveNumber(product.package_weight_g) as number) / 1000
+        fullCartonWeightKg !== null
+          ? fullCartonWeightKg / pack
           : null;
 
       for (let index = 0; index < fullBoxCount; index++) {
