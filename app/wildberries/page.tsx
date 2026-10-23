@@ -28,6 +28,8 @@ import "./wb-reference.css";
 import "./wb-products-table.css";
 import "./wb-reference-top.css";
 import "./wb-page-header.css";
+import "./wb-fbw-supply.css";
+import WbFbwSupplyClient from "./WbFbwSupplyClient";
 
 
 export const dynamic =
@@ -1484,6 +1486,8 @@ export default async function WildberriesPage() {
                 {/* =================================================
                     УПРАВЛЕНИЕ ПОСТАВКАМИ
                     ================================================= */}
+
+                <WbFbwSupplyClient />
 
                 <MarketplaceSuppliesPanel
                   marketplace="wildberries"
