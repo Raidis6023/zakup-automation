@@ -1345,6 +1345,12 @@ export default function OzonFboSupplyClient({
               return (
                 !request
                 ||
+                request.status ===
+                  "failed"
+                ||
+                request.status ===
+                  "no_slot"
+                ||
                 (
                   !isTerminalRequestStatus(
                     request.status
@@ -2126,9 +2132,8 @@ export default function OzonFboSupplyClient({
                           Boolean(
                             request
                             &&
-                            isTerminalRequestStatus(
-                              request.status
-                            )
+                            request.status ===
+                              "success"
                           );
 
 
@@ -2365,13 +2370,13 @@ export default function OzonFboSupplyClient({
                                         &&
                                         request.status ===
                                           "no_slot"
-                                        ? "Нет слота"
+                                        ? "Повторить: нет слота"
 
                                         : request
                                           &&
                                           request.status ===
                                             "failed"
-                                          ? "Ошибка"
+                                          ? "Повторить заявку"
 
                                           : requestActive
                                             ? getStatusLabel(
