@@ -5334,14 +5334,21 @@ async function releaseRequest(
       : row.status;
 
 
+  const resetAttempts =
+    nextStatus !==
+      row.status
+    ||
+    values.error_message ===
+      null;
+
+
   await updateRequest(
     row.id,
     {
       ...values,
 
       ...(
-        nextStatus !==
-          row.status
+        resetAttempts
           ? {
               attempts:
                 0,
