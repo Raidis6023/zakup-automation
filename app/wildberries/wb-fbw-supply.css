@@ -1,0 +1,30 @@
+.wb-fbw-section { display:flex; flex-direction:column; gap:18px; }
+.wb-fbw-heading { display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; }
+.wb-fbw-heading h2 { margin:0 0 8px; }
+.wb-fbw-heading p { max-width:780px; margin:0; }
+.wb-fbw-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.wb-fbw-actions button, .wb-fbw-history button { cursor:pointer; padding:10px 14px; border-radius:10px; }
+.wb-fbw-actions button:disabled { opacity:.5; cursor:not-allowed; }
+.wb-fbw-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+.wb-fbw-kpis .card { padding:14px; display:flex; flex-direction:column; gap:9px; }
+.wb-fbw-kpis strong { font-size:26px; font-variant-numeric:tabular-nums; }
+.wb-fbw-scroll { max-width:100%; overflow-x:auto; border:1px solid var(--border-color,rgba(140,140,140,.2)); border-radius:12px; }
+.wb-fbw-table { width:100%; border-collapse:collapse; min-width:980px; font-size:13px; }
+.wb-fbw-table th, .wb-fbw-table td { padding:10px 12px; text-align:left; vertical-align:top; border-bottom:1px solid rgba(140,140,140,.18); }
+.wb-fbw-table th { background:rgba(140,140,140,.08); font-weight:650; }
+.wb-fbw-table td small { display:block; font-size:11px; opacity:.65; margin-top:3px; max-width:330px; overflow-wrap:anywhere; }
+.wb-fbw-table tr:last-child td { border-bottom:none; }
+.wb-fbw-table td:nth-child(n+3):nth-child(-n+8) { font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap; }
+.wb-fbw-table td:nth-child(2) { overflow-wrap:anywhere; }
+.wb-fbw-message { padding:12px 14px; border:1px solid rgba(130,130,130,.32); border-radius:10px; margin:0; overflow-wrap:anywhere; }
+.wb-fbw-warning { border-left:3px solid #d39b20; padding:10px 14px; margin:0; }
+.wb-fbw-bad { color:#dc665f; }
+.wb-fbw-note { color:inherit; }
+.wb-fbw-history { border-top:1px solid rgba(140,140,140,.2); padding-top:12px; }
+.wb-fbw-history-title { display:flex; gap:12px; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.wb-fbw-history-title h3 { font-size:16px; margin:0; }
+@media (max-width:820px) {
+  .wb-fbw-heading { flex-direction:column; }
+  .wb-fbw-actions { width:100%; }
+  .wb-fbw-actions button { flex:1; }
+}

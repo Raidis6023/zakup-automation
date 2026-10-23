@@ -1446,6 +1446,9 @@ export async function GET(
 
           barcode:
             string;
+
+          barcodes:
+            Set<string>;
         }
       >();
 
@@ -1490,11 +1493,18 @@ export async function GET(
 
           barcode:
             "",
+
+          barcodes:
+            new Set<string>(),
         };
 
 
       current.ordersCount +=
         1;
+
+      if (order.barcode?.trim()) {
+        current.barcodes.add(order.barcode.trim());
+      }
 
 
       if (
@@ -1709,6 +1719,11 @@ export async function GET(
               sales?.barcode
               ??
               "",
+
+            barcodeVariantCount:
+              sales?.barcodes.size
+              ??
+              0,
 
 
             sales: {
@@ -2307,6 +2322,10 @@ export async function GET(
           "Заказы WB допускаются возрастом до 3 часов, остатки до 1 часа. Заказы читаются с фиксированной сортировкой order_date + srid и сверяются с точными count Supabase. SKU вне полного stockType=wb snapshot считается с FBW-остатком 0. FBS / «Свой склад» не участвует.",
 
       },
+
+
+      allNeed:
+        skuWithNeed,
 
 
       topNeed:
