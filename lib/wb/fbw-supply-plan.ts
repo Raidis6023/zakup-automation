@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { createHash } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { GET as getFbwProcurement } from "@/app/api/wb/procurement-real/route";
 
@@ -37,6 +38,7 @@ export type FbwPlan = {
   calculatedAt: string;
   period: { start: string; end: string; days: number };
   stockSnapshotId: string | null;
+  fingerprint: string;
   items: FbwPlanItem[];
   summary: {
     demandedSku: number;
@@ -154,6 +156,11 @@ export async function buildFbwPlan(request: NextRequest): Promise<FbwPlan> {
     ok:true,scope:"WB FBW / вся Россия",calculatedAt:new Date().toISOString(),
     period:source.period,
     stockSnapshotId:source.freshness.stocks?.snapshotId || null,
+    fingerprint: createHash("sha256").update(JSON.stringify({
+      periodEnd:source.period.end,
+      stockSnapshotId:source.freshness.stocks?.snapshotId || null,
+      goods:eligible.map(x=>[x.sku,x.quantity]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))),
+    })).digest("hex"),
     items,
     summary:{
       demandedSku:items.length,eligibleSku:eligible.length,
