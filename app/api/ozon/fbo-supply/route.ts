@@ -2875,6 +2875,65 @@ async function parkSupplyRequests(
 }
 
 
+async function ozonOrderStillExists(
+  orderId:
+    number
+) {
+
+  try {
+
+    const response =
+      await ozonPost<{
+        orders?: Array<{
+          order_id?: string | number;
+        }>;
+      }>(
+        "/v3/supply-order/get",
+        {
+          order_ids: [
+            String(
+              orderId
+            ),
+          ],
+        }
+      );
+
+
+    return Boolean(
+      response.orders
+        ?.some(
+          order =>
+            Number(
+              order.order_id
+            ) ===
+            orderId
+        )
+    );
+
+  } catch (
+    error
+  ) {
+
+    if (
+      error instanceof
+        OzonApiError
+      &&
+      error.status ===
+        404
+    ) {
+
+      return false;
+
+    }
+
+
+    throw error;
+
+  }
+
+}
+
+
 async function activateSupplyRequests(
   runId:
     string,
@@ -2980,7 +3039,35 @@ async function activateSupplyRequests(
         "success"
     ) {
 
-      continue;
+      if (
+        !requested
+      ) {
+
+        continue;
+
+      }
+
+
+      const orderId =
+        toPositiveInteger(
+          row.ozon_order_id
+        );
+
+
+      const exists =
+        orderId !==
+          null
+        &&
+        await ozonOrderStillExists(
+          orderId
+        );
+
+
+      if (exists) {
+
+        continue;
+
+      }
 
     }
 
@@ -2990,7 +3077,10 @@ async function activateSupplyRequests(
         "failed"
       ||
       row.status ===
-        "no_slot";
+        "no_slot"
+      ||
+      row.status ===
+        "success";
 
     const existingOrderId =
       toPositiveInteger(
