@@ -357,7 +357,7 @@ function getStatusLabel(
       return "Черновик создан";
 
     case "draft_ready":
-      return "Склад выбран";
+      return "Кластер подтверждён";
 
     case "slot_selected":
       return "Таймслот выбран";
@@ -1639,7 +1639,7 @@ export default function OzonFboSupplyClient({
                 ? formatDate(
                     currentRun.target_date
                   )
-                : "после запуска +7 дней"
+                : "не раньше +3 суток"
             }
           </strong>
         </div>
@@ -2016,7 +2016,7 @@ export default function OzonFboSupplyClient({
                 }}
               >
                 <strong>
-                  Склад и таймслот определятся при создании заявки
+                  Кластер подтверждаем сейчас, склад внутри него выбирает Ozon
                 </strong>
 
                 <div
@@ -2025,9 +2025,10 @@ export default function OzonFboSupplyClient({
                 >
                   Потребность рассчитана на уровне кластера.
                   После нажатия «Создать заявку» backend создаёт
-                  cross-dock draft только для этого кластера,
-                  получает от Ozon доступный склад размещения
-                  внутри кластера и ищет ближайший доступный слот не раньше,
+                  cross-dock draft только для этого кластера.
+                  По текущему формату Ozon сам распределяет товар
+                  по доступным складам хранения внутри выбранного кластера.
+                  Мы ищем ближайший доступный слот не раньше,
                   чем через 3 суток от даты формирования.
                 </div>
               </div>
@@ -2076,7 +2077,7 @@ export default function OzonFboSupplyClient({
                     <span>Нужно</span>
                     <span>К поставке</span>
                     <span>Коробов</span>
-                    <span>Склад размещения</span>
+                    <span>Распределение Ozon</span>
                     <span>Таймслот</span>
                     <span>Состав</span>
                     <span>Заявка</span>
