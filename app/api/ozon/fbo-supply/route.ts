@@ -3412,12 +3412,6 @@ async function startSupplyRun(
         "success"
     ) {
 
-      const formationDate =
-        existingRun.formation_date
-        ||
-        getMoscowDate();
-
-
       await updateRun(
         existingRun.id,
         {
@@ -3432,19 +3426,19 @@ async function startSupplyRun(
 
           target_date:
             addDays(
-              formationDate,
+              existingRun.formation_date,
               MIN_TIMESLOT_LEAD_DAYS
             ),
 
           window_date_from:
             addDays(
-              formationDate,
+              existingRun.formation_date,
               MIN_TIMESLOT_LEAD_DAYS
             ),
 
           window_date_to:
             addDays(
-              formationDate,
+              existingRun.formation_date,
               TIMESLOT_SEARCH_HORIZON_DAYS
             ),
         }
@@ -5770,8 +5764,7 @@ async function storageWarehouseCandidates(
       const candidateType =
         normalizeKey(
           candidate.warehouse_type
-        )
-          .toUpperCase();
+        ).toUpperCase();
 
 
       if (
@@ -6337,16 +6330,18 @@ function chooseTimeslot(
     );
 
 
-  const candidates =
-    (
-      response
-        .result
-        ?.drop_off_warehouse_timeslots
-        ?.days
-      ??
-      []
-    )
-      .flatMap(
+  const days =
+    [
+      ...(
+        response
+          .result
+          ?.drop_off_warehouse_timeslots
+          ?.days
+        ??
+        []
+      ),
+    ]
+      .filter(
         day => {
 
           const date =
@@ -6358,42 +6353,12 @@ function chooseTimeslot(
             );
 
 
-          if (
-            !date
-            ||
-            date <
+          return Boolean(
+            date
+            &&
+            date >=
               minimumDate
-          ) {
-
-            return [];
-
-          }
-
-
-          return (
-            day.timeslots
-            ??
-            []
-          )
-            .filter(
-              slot =>
-                Boolean(
-                  slot.from_in_timezone
-                  &&
-                  slot.to_in_timezone
-                )
-            )
-            .map(
-              slot => ({
-                date,
-
-                from:
-                  slot.from_in_timezone as string,
-
-                to:
-                  slot.to_in_timezone as string,
-              })
-            );
+          );
 
         }
       )
@@ -6401,49 +6366,127 @@ function chooseTimeslot(
         (
           left,
           right
-        ) => {
-
-          const leftTime =
-            Date.parse(
-              left.from
-            );
-
-          const rightTime =
-            Date.parse(
-              right.from
-            );
-
-
-          if (
-            Number.isFinite(
-              leftTime
+        ) =>
+          normalizeKey(
+            left.date_in_timezone
+          ).localeCompare(
+            normalizeKey(
+              right.date_in_timezone
             )
-            &&
-            Number.isFinite(
-              rightTime
-            )
-          ) {
-
-            return leftTime
-            -
-            rightTime;
-
-          }
-
-
-          return left.from.localeCompare(
-            right.from
-          );
-
-        }
+          )
       );
 
 
-  return candidates[
-    0
-  ]
-  ??
-  null;
+  for (
+    const day
+    of days
+  ) {
+
+    const date =
+      normalizeKey(
+        day.date_in_timezone
+      ).slice(
+        0,
+        10
+      );
+
+
+    const slots =
+      [
+        ...(
+          day.timeslots
+          ??
+          []
+        ),
+      ]
+        .filter(
+          slot =>
+            Boolean(
+              slot.from_in_timezone
+              &&
+              slot.to_in_timezone
+            )
+        )
+        .sort(
+          (
+            left,
+            right
+          ) => {
+
+            const leftTime =
+              Date.parse(
+                left.from_in_timezone
+                ??
+                ""
+              );
+
+            const rightTime =
+              Date.parse(
+                right.from_in_timezone
+                ??
+                ""
+              );
+
+
+            if (
+              Number.isFinite(
+                leftTime
+              )
+              &&
+              Number.isFinite(
+                rightTime
+              )
+            ) {
+
+              return leftTime
+              -
+              rightTime;
+
+            }
+
+
+            return normalizeKey(
+              left.from_in_timezone
+            ).localeCompare(
+              normalizeKey(
+                right.from_in_timezone
+              )
+            );
+
+          }
+        );
+
+
+    const firstSlot =
+      slots[
+        0
+      ];
+
+
+    if (
+      firstSlot
+      &&
+      firstSlot.from_in_timezone
+      &&
+      firstSlot.to_in_timezone
+    ) {
+
+      return {
+        date,
+
+        from:
+          firstSlot.from_in_timezone,
+
+        to:
+          firstSlot.to_in_timezone,
+      };
+
+    }
+
+  }
+
+
+  return null;
 
 }
 
