@@ -6869,218 +6869,35 @@ async function processOne(
         }
 
 
-        const clusterInfo =
-          (
-            info.clusters
-            ??
-            []
-          ).find(
-            item =>
-              Number(
-                item.macrolocal_cluster_id
-              ) ===
-              macrolocalClusterId
-          );
-
-
-        const states =
-          (
-            clusterInfo
-              ?.warehouses
-            ??
-            []
-          ).map(
-            candidate => ({
-              state:
-                normalizeKey(
-                  candidate
-                    .availability_status
-                    ?.state
-                ),
-
-              reason:
-                normalizeKey(
-                  candidate
-                    .availability_status
-                    ?.invalid_reason
-                ),
-
-              has_storage_warehouse:
-                toPositiveInteger(
-                  candidate
-                    .storage_warehouse
-                    ?.warehouse_id
-                ) !==
-                  null,
-
-              bundle_id:
-                normalizeKey(
-                  candidate.bundle_id
-                )
-                ||
-                null,
-            })
-          );
-
-
-        const fallback =
-          await findStorageWarehouseByTimeslot(
-            row,
-            run,
-            draftId,
-            macrolocalClusterId
-          );
-
-
-        const fallbackStorageId =
-          toPositiveInteger(
-            fallback.warehouse
-              ?.warehouse_id
-          );
-
-
-        if (
-          fallback.warehouse
-          &&
-          fallbackStorageId !==
-            null
-        ) {
-
-          const fallbackName =
-            fallback.warehouse.name;
-
-          const fallbackAddress =
-            null;
-
-
-          if (
-            fallback.slot
-          ) {
-
-            await releaseRequest(
-              row,
-              {
-                status:
-                  "slot_selected",
-
-                storage_warehouse_id:
-                  fallbackStorageId,
-
-                storage_warehouse_name:
-                  fallbackName,
-
-                storage_warehouse_address:
-                  fallbackAddress,
-
-                timeslot_from:
-                  fallback.slot.from,
-
-                timeslot_to:
-                  fallback.slot.to,
-
-                raw_info:
-                  info,
-
-                raw_timeslots:
-                  {
-                    source:
-                      "cluster_v2_fulfillment_fallback",
-
-                    response:
-                      fallback.timeslots,
-
-                    diagnostics:
-                      fallback.diagnostics,
-                  },
-
-                next_attempt_at:
-                  new Date()
-                    .toISOString(),
-
-                error_message:
-                  null,
-              }
-            );
-
-
-            return Response.json(
-              await refreshAndSerializeRun(
-                runId
-              )
-            );
-
-          }
-
-
-          await releaseRequest(
-            row,
-            {
-              status:
-                "no_slot",
-
-              storage_warehouse_id:
-                fallbackStorageId,
-
-              storage_warehouse_name:
-                fallbackName,
-
-              storage_warehouse_address:
-                fallbackAddress,
-
-              raw_info:
-                info,
-
-              raw_timeslots:
-                {
-                  source:
-                    "cluster_v2_fulfillment_fallback",
-
-                  response:
-                    fallback.timeslots,
-
-                  diagnostics:
-                    fallback.diagnostics,
-                },
-
-              error_message:
-                `Склад ${fallbackName ?? fallbackStorageId} принят Ozon для draft, но в окне ${run.window_date_from} — ${run.window_date_to} нет таймслота.`,
-            }
-          );
-
-
-          return Response.json(
-            await refreshAndSerializeRun(
-              runId
-            )
-          );
-
-        }
-
-
+        // С апреля 2026 для CROSSDOCK Ozon работает
+        // на уровне кластера и сам распределяет товар по складам
+        // хранения внутри него. В таком сценарии
+        // storage_warehouse может быть null даже при FULL_AVAILABLE.
+        // Это не ошибка: дальше передаём только macrolocal_cluster_id.
         await releaseRequest(
           row,
           {
             status:
-              "failed",
+              "draft_ready",
+
+            storage_warehouse_id:
+              null,
+
+            storage_warehouse_name:
+              null,
+
+            storage_warehouse_address:
+              null,
 
             raw_info:
               info,
 
-            raw_timeslots:
-              {
-                source:
-                  "cluster_v2_fulfillment_fallback",
-
-                diagnostics:
-                  fallback.diagnostics,
-              },
+            next_attempt_at:
+              new Date()
+                .toISOString(),
 
             error_message:
-              `Ozon подтвердил состав, но не отдал storage_warehouse. Дополнительная проверка складов через /v2/cluster/list и /v2/draft/timeslot/info тоже не нашла подходящий склад. Доступность draft: ${JSON.stringify(
-                states
-              )}. Проверенные склады: ${JSON.stringify(
-                fallback.diagnostics
-              )}`,
+              null,
           }
         );
 
@@ -7089,6 +6906,16 @@ async function processOne(
           await refreshAndSerializeRun(
             runId
           )
+        );
+
+      }
+
+
+      await releaseRequest(
+        row,
+        {
+          status:
+            "draft_ready",   )
         );
 
       }
@@ -7166,13 +6993,10 @@ async function processOne(
       if (
         draftId ===
           null
-        ||
-        storageId ===
-          null
       ) {
 
         throw new Error(
-          "Для поиска таймслота отсутствует draft_id или storage_warehouse_id"
+          "Для поиска таймслота отсутствует draft_id"
         );
 
       }
@@ -7201,8 +7025,15 @@ async function processOne(
                 macrolocal_cluster_id:
                   macrolocalClusterId,
 
-                storage_warehouse_id:
-                  storageId,
+                ...(
+                  storageId !==
+                    null
+                    ? {
+                        storage_warehouse_id:
+                          storageId,
+                      }
+                    : {}
+                ),
               },
             ],
           }
@@ -7371,16 +7202,13 @@ async function processOne(
         draftId ===
           null
         ||
-        storageId ===
-          null
-        ||
         !row.timeslot_from
         ||
         !row.timeslot_to
       ) {
 
         throw new Error(
-          "Для создания заявки не хватает draft / warehouse / timeslot"
+          "Для создания заявки не хватает draft / timeslot"
         );
 
       }
@@ -7437,8 +7265,15 @@ async function processOne(
                   macrolocal_cluster_id:
                     macrolocalClusterId,
 
-                  storage_warehouse_id:
-                    storageId,
+                  ...(
+                    storageId !==
+                      null
+                      ? {
+                          storage_warehouse_id:
+                            storageId,
+                        }
+                      : {}
+                  ),
                 },
               ],
 
