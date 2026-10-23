@@ -36,12 +36,12 @@ function groupFinancial(lines:FinanceLine[]) {
     let x=byId.get(key);
     if(!x){x={nm_id:key,article,name,realization:0,to_transfer:0,delivery:0,storage_in_report:null,acceptance:0,penalty:0,deduction:0,rows:0,operations:{}};byId.set(key,x);}
     x.rows++;
-    const op=String(l.supplierOperName ?? l.docTypeName ?? "Неизвестная операция");
-    const transfer=num(l.ppvzForPay),sale=num(l.retailAmount), delivery=num(l.deliveryRub);
+    const op=String(l.sellerOperName ?? l.docTypeName ?? "Неизвестная операция");
+    const transfer=num(l.forPay),sale=num(l.retailAmount), delivery=num(l.deliveryAmount);
     x.realization+=sale; x.to_transfer+=transfer; x.delivery+=delivery;
-    if(l.storageFee!==undefined && l.storageFee!==null) x.storage_in_report=round((x.storage_in_report??0)+num(l.storageFee));x.acceptance+=num(l.acceptance);x.penalty+=num(l.penalty);x.deduction+=num(l.deduction);
+    if(l.paidStorage!==undefined && l.paidStorage!==null) x.storage_in_report=round((x.storage_in_report??0)+num(l.paidStorage));x.acceptance+=num(l.paidAcceptance);x.penalty+=num(l.penalty);x.deduction+=num(l.deduction);
     const prev=x.operations[op]??{amount:0,count:0,realization:0,delivery:0,storage:0,penalty:0,deduction:0};
-    x.operations[op]={amount:round(prev.amount+transfer),count:prev.count+1,realization:round(prev.realization+sale),delivery:round(prev.delivery+delivery),storage:round(prev.storage+num(l.storageFee)),penalty:round(prev.penalty+num(l.penalty)),deduction:round(prev.deduction+num(l.deduction))};
+    x.operations[op]={amount:round(prev.amount+transfer),count:prev.count+1,realization:round(prev.realization+sale),delivery:round(prev.delivery+delivery),storage:round(prev.storage+num(l.paidStorage)),penalty:round(prev.penalty+num(l.penalty)),deduction:round(prev.deduction+num(l.deduction))};
   }
   return [...byId.values()].map(x=>({...x,realization:round(x.realization),to_transfer:round(x.to_transfer),delivery:round(x.delivery),storage_in_report:x.storage_in_report==null?null:round(x.storage_in_report),acceptance:round(x.acceptance),penalty:round(x.penalty),deduction:round(x.deduction)}));
 }
@@ -125,7 +125,7 @@ export async function GET(request:NextRequest){
     return NextResponse.json({ok:false,error:"Выберите корректный период до 31 дня"},{status:400});
   const {data:latest,error:latestError}=await db.from("wb_finance_cache_jobs")
    .select("run_day,date_from,date_to,status,rows_saved,completed_at")
-   .eq("status","complete").lte("date_from",from).gte("date_to",to)
+   .lte("date_from",from).gte("date_to",to).gt("rows_saved",0)
    .order("run_day",{ascending:false}).limit(1).maybeSingle();
   if(latestError)throw latestError;
   if(!latest){
@@ -144,15 +144,15 @@ export async function GET(request:NextRequest){
     if(!data?.length)break;
     for(const rec of data){
       const line=rec.payload as FinanceLine;
-      const reportDate=String(line.rrdDt??line.rrdDate??line.saleDt??line.saleDate??"").slice(0,10);
+      const reportDate=String(line.rrDate??line.rrdDt??line.rrdDate??line.saleDt??"").slice(0,10);
       if(reportDate>=from&&reportDate<=to)lines.push(line);
     }
   }
   return NextResponse.json({ok:true,from,to,financial_rows:lines.length,
     rows:groupFinancial(lines),
     ads:{items:[],campaigns:0,coverage:"not_loaded",warning:"Рекламная статистика пока не загружена в кэш. Новые запросы к WB при смене фильтра не отправляются."},
-    coverage:{finance:"cached_complete",advertising:"not_loaded",paid_storage:"not_loaded",advertising_actual_charges:"not_loaded"},
-    cache:{runDay:latest.run_day,from:latest.date_from,to:latest.date_to,completedAt:latest.completed_at,rowsSaved:latest.rows_saved},
-    notice:"Отчёт сформирован из Supabase без обращения к WB. Хранение и реклама требуют отдельной фоновой синхронизации."});
+    coverage:{finance:latest.status==="complete"?"cached_complete":"cached_partial",advertising:"not_loaded",paid_storage:"not_loaded",advertising_actual_charges:"not_loaded"},
+    cache:{status:latest.status,runDay:latest.run_day,from:latest.date_from,to:latest.date_to,completedAt:latest.completed_at,rowsSaved:latest.rows_saved},
+    notice:latest.status==="complete"?"Отчёт загружен из Supabase. Хранение и реклама требуют отдельной фоновой синхронизации.":"ВНИМАНИЕ: финансовый кэш НЕПОЛНЫЙ, итоговые суммы непригодны для решений. Показаны только уже сохранённые строки. Реклама ещё не загружена."});
  }catch(e){return NextResponse.json({ok:false,error:e instanceof Error?e.message:String(e)},{status:500});}
 }
