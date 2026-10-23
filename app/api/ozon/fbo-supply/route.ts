@@ -3636,10 +3636,20 @@ async function startSupplyRun(
         0
       ];
 
+    const explicitSelection =
+      Boolean(
+        clusterIds
+        &&
+        clusterIds.length >
+          0
+      );
+
 
     if (
       existingRun.status !==
         "success"
+      ||
+      explicitSelection
     ) {
 
       await updateRun(
@@ -3672,6 +3682,13 @@ async function startSupplyRun(
               TIMESLOT_SEARCH_HORIZON_DAYS
             ),
         }
+      );
+
+
+      // Невыбранные queued-кластеры не должны самопроизвольно
+      // подхватываться общей очередью process_next.
+      await parkSupplyRequests(
+        existingRun.id
       );
 
 
