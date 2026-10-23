@@ -191,6 +191,42 @@ type StatusPayload = {
   next_action_at: string | null;
 };
 
+type CargoPayload = {
+  ok: boolean;
+  error?: string;
+  request_id?: string;
+  cluster_name?: string | null;
+  order_id?: number;
+  order_number?: string | null;
+  supply_count?: number;
+  total_boxes?: number;
+  blockers?: string[];
+  created?: boolean;
+  created_boxes?: number;
+  supplies?: Array<{
+    supply_id: number;
+    bundle_id: string;
+    state: string;
+    existing_cargoes: number;
+    box_count: number;
+    unit_count: number;
+    items: Array<{
+      sku: number;
+      offer_id: string;
+      quantity: number;
+      units_per_carton: number;
+      boxes: number;
+    }>;
+    blockers: string[];
+  }>;
+  created_supplies?: Array<{
+    supply_id: number;
+    cargo_ids: number[];
+    operations: string[];
+    rules: unknown;
+  }>;
+};
+
 
 function formatNumber(
   value:
@@ -633,6 +669,47 @@ export default function OzonFboSupplyClient({
       null
     >(
       null
+    );
+
+
+  const [
+    cargoLoadingId,
+    setCargoLoadingId,
+  ] =
+    useState<
+      string
+      |
+      null
+    >(
+      null
+    );
+
+
+  const [
+    cargoPlans,
+    setCargoPlans,
+  ] =
+    useState<
+      Record<
+        string,
+        CargoPayload
+      >
+    >(
+      {}
+    );
+
+
+  const [
+    cargoErrors,
+    setCargoErrors,
+  ] =
+    useState<
+      Record<
+        string,
+        string
+      >
+    >(
+      {}
     );
 
 
@@ -1165,6 +1242,130 @@ export default function OzonFboSupplyClient({
 
       setStarting(
         false
+      );
+
+    }
+
+  }
+
+
+  async function runCargoAction(
+    requestId:
+      string,
+
+    action:
+      "preview"
+      |
+      "create"
+  ) {
+
+    if (
+      cargoLoadingId
+    ) {
+
+      return;
+
+    }
+
+
+    setCargoLoadingId(
+      requestId
+    );
+
+
+    setCargoErrors(
+      current => ({
+        ...current,
+
+        [requestId]:
+          "",
+      })
+    );
+
+
+    try {
+
+      const response =
+        await fetch(
+          "/api/ozon/fbo-cargoes",
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify(
+                {
+                  action,
+
+                  request_id:
+                    requestId,
+                }
+              ),
+
+            cache:
+              "no-store",
+          }
+        );
+
+
+      const data =
+        await response
+          .json() as
+          CargoPayload;
+
+
+      if (
+        !response.ok
+        ||
+        data.ok !==
+          true
+      ) {
+
+        throw new Error(
+          data.error
+          ??
+          `HTTP ${response.status}`
+        );
+
+      }
+
+
+      setCargoPlans(
+        current => ({
+          ...current,
+
+          [requestId]:
+            data,
+        })
+      );
+
+    } catch (
+      cargoError
+    ) {
+
+      setCargoErrors(
+        current => ({
+          ...current,
+
+          [requestId]:
+            cargoError
+              instanceof Error
+              ? cargoError.message
+              : String(
+                  cargoError
+                ),
+        })
+      );
+
+    } finally {
+
+      setCargoLoadingId(
+        null
       );
 
     }
@@ -3130,48 +3331,347 @@ export default function OzonFboSupplyClient({
                     -8
                   )
                   .map(
-                    row => (
+                    row => {
 
-                      <div
-                        key={
+                      const cargoPlan =
+                        cargoPlans[
                           row.id
-                        }
+                        ];
 
-                        className=
-                          "ozon-fbo-supply-row"
-                      >
+                      const cargoError =
+                        cargoErrors[
+                          row.id
+                        ];
 
-                        <span>
-                          {
-                            row.cluster_name
-                            ??
-                            `Кластер ${row.macrolocal_cluster_id}`
+                      const cargoLoading =
+                        cargoLoadingId ===
+                        row.id;
+
+                      const existingCargoes =
+                        (
+                          cargoPlan
+                            ?.supplies
+                          ??
+                          []
+                        ).reduce(
+                          (
+                            sum,
+                            supply
+                          ) =>
+                            sum
+                            +
+                            supply.existing_cargoes,
+                          0
+                        );
+
+                      const cargoBlocked =
+                        (
+                          cargoPlan
+                            ?.blockers
+                          ??
+                          []
+                        ).length >
+                          0;
+
+
+                      return (
+                        <div
+                          key={
+                            row.id
                           }
-                        </span>
+                        >
+                          <div
+                            className=
+                              "ozon-fbo-supply-row ozon-fbo-supply-success-row"
+                          >
+
+                            <span>
+                              {
+                                row.cluster_name
+                                ??
+                                `Кластер ${row.macrolocal_cluster_id}`
+                              }
+                            </span>
 
 
-                        <span>
+                            <span>
+                              {
+                                row.ozon_order_id
+                                  ? `Ozon № ${row.ozon_order_id}`
+                                  : "Создана"
+                              }
+                            </span>
+
+
+                            <span>
+                              {
+                                row.timeslot_from
+                                  ? formatDateTime(
+                                      row.timeslot_from
+                                    )
+                                  : "—"
+                              }
+                            </span>
+
+
+                            <span>
+                              <button
+                                type="button"
+
+                                className=
+                                  "secondary-button"
+
+                                disabled={
+                                  cargoLoading
+                                }
+
+                                onClick={
+                                  () => {
+                                    void runCargoAction(
+                                      row.id,
+                                      "preview"
+                                    );
+                                  }
+                                }
+                              >
+                                {
+                                  cargoLoading
+                                    ? "Проверяем..."
+                                    : cargoPlan
+                                      ?.created
+                                      ? `Создано ${cargoPlan.created_boxes ?? cargoPlan.total_boxes ?? 0}`
+                                      : "Грузоместа"
+                                }
+                              </button>
+                            </span>
+
+                          </div>
+
+
                           {
-                            row.ozon_order_id
-                              ? `Ozon № ${row.ozon_order_id}`
-                              : "Создана"
+                            cargoError
+                              ? (
+                                <div
+                                  className=
+                                    "ozon-fbo-supply-error"
+
+                                  style={{
+                                    margin:
+                                      "8px 0 12px",
+                                  }}
+                                >
+                                  {cargoError}
+                                </div>
+                              )
+                              : null
                           }
-                        </span>
 
 
-                        <span>
                           {
-                            row.timeslot_from
-                              ? formatDateTime(
-                                  row.timeslot_from
-                                )
-                              : "—"
+                            cargoPlan
+                              ? (
+                                <div
+                                  className=
+                                    "reason-box"
+
+                                  style={{
+                                    margin:
+                                      "8px 0 14px",
+                                  }}
+                                >
+                                  <strong>
+                                    {
+                                      cargoPlan.created
+                                        ? "Грузоместа созданы"
+                                        : `План грузомест: ${cargoPlan.total_boxes ?? 0} коробов`
+                                    }
+                                  </strong>
+
+
+                                  <div
+                                    className=
+                                      "reason-text"
+
+                                    style={{
+                                      marginTop:
+                                        "6px",
+                                    }}
+                                  >
+                                    Ozon order:{" "}
+                                    <strong>
+                                      {
+                                        cargoPlan.order_id
+                                        ??
+                                        row.ozon_order_id
+                                        ??
+                                        "—"
+                                      }
+                                    </strong>
+
+                                    {" · "}
+
+                                    Поставок внутри заявки:{" "}
+                                    <strong>
+                                      {
+                                        cargoPlan.supply_count
+                                        ??
+                                        cargoPlan.supplies
+                                          ?.length
+                                        ??
+                                        0
+                                      }
+                                    </strong>
+                                  </div>
+
+
+                                  {
+                                    (
+                                      cargoPlan.supplies
+                                      ??
+                                      []
+                                    ).map(
+                                      supply => (
+                                        <div
+                                          key={
+                                            supply.supply_id
+                                          }
+
+                                          className=
+                                            "reason-text"
+
+                                          style={{
+                                            marginTop:
+                                              "6px",
+                                          }}
+                                        >
+                                          <strong>
+                                            Поставка {supply.supply_id}
+                                          </strong>
+
+                                          {" · "}
+
+                                          {supply.box_count} коробов
+
+                                          {" · "}
+
+                                          {formatNumber(
+                                            supply.unit_count
+                                          )} шт.
+
+                                          {
+                                            supply.existing_cargoes >
+                                              0
+                                              ? ` · уже есть ГМ: ${supply.existing_cargoes}`
+                                              : ""
+                                          }
+                                        </div>
+                                      )
+                                    )
+                                  }
+
+
+                                  {
+                                    (
+                                      cargoPlan.blockers
+                                      ??
+                                      []
+                                    ).map(
+                                      blocker => (
+                                        <div
+                                          key={
+                                            blocker
+                                          }
+
+                                          style={{
+                                            color:
+                                              "#b42318",
+
+                                            marginTop:
+                                              "5px",
+
+                                            fontSize:
+                                              "11px",
+                                          }}
+                                        >
+                                          {blocker}
+                                        </div>
+                                      )
+                                    )
+                                  }
+
+
+                                  {
+                                    !cargoPlan.created
+                                    &&
+                                    !cargoBlocked
+                                    &&
+                                    existingCargoes ===
+                                      0
+                                      ? (
+                                        <button
+                                          type="button"
+
+                                          className=
+                                            "primary-button"
+
+                                          style={{
+                                            marginTop:
+                                              "10px",
+                                          }}
+
+                                          disabled={
+                                            cargoLoading
+                                          }
+
+                                          onClick={
+                                            () => {
+                                              void runCargoAction(
+                                                row.id,
+                                                "create"
+                                              );
+                                            }
+                                          }
+                                        >
+                                          {
+                                            cargoLoading
+                                              ? "Создаём..."
+                                              : `Создать ${cargoPlan.total_boxes ?? 0} грузомест`
+                                          }
+                                        </button>
+                                      )
+                                      : null
+                                  }
+
+
+                                  {
+                                    !cargoPlan.created
+                                    &&
+                                    existingCargoes >
+                                      0
+                                      ? (
+                                        <div
+                                          className=
+                                            "reason-text"
+
+                                          style={{
+                                            marginTop:
+                                              "8px",
+                                          }}
+                                        >
+                                          В Ozon уже есть грузоместа. Автоматическая перезапись отключена, чтобы не сбить уже созданные cargo_id и этикетки.
+                                        </div>
+                                      )
+                                      : null
+                                  }
+
+                                </div>
+                              )
+                              : null
                           }
-                        </span>
+                        </div>
+                      );
 
-                      </div>
-
-                    )
+                    }
                   )
               }
 
