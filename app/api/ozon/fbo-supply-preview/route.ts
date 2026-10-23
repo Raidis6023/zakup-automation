@@ -1206,7 +1206,7 @@ async function POSTImpl() {
       ).length,
       missing_pack_count: missingPackCount,
       zero_after_rounding_count: cluster.articles.filter(
-        article => article.rule === "zero_half_or_less"
+        article => article.rule === "zero_less_than_one_carton"
       ).length,
       draft_id: null,
       status: cluster.proposed_units > 0 ? "not_available" : "no_supply",
