@@ -3228,6 +3228,37 @@ async function getSupplyRun(
 }
 
 
+async function getSupplyRequestById(
+  requestId:
+    string
+) {
+
+  const rows =
+    await supabaseGet<
+      SupplyRequestRow[]
+    >(
+      [
+        "ozon_fbo_supply_requests",
+        "?select=*",
+        `&id=eq.${encodeURIComponent(
+          requestId
+        )}`,
+        "&limit=1",
+      ].join(
+        ""
+      )
+    );
+
+
+  return rows[
+    0
+  ]
+  ??
+  null;
+
+}
+
+
 async function getSupplyRequests(
   runId:
     string
@@ -8232,6 +8263,264 @@ async function processOne(
 }
 
 
+async function resetCancelledRequest(
+  row:
+    SupplyRequestRow
+) {
+
+  await updateRequest(
+    row.id,
+    {
+      status:
+        "queued",
+
+      attempts:
+        0,
+
+      draft_id:
+        null,
+
+      storage_warehouse_id:
+        null,
+
+      storage_warehouse_name:
+        null,
+
+      storage_warehouse_address:
+        null,
+
+      timeslot_from:
+        null,
+
+      timeslot_to:
+        null,
+
+      ozon_order_id:
+        null,
+
+      next_attempt_at:
+        new Date()
+          .toISOString(),
+
+      is_processing:
+        false,
+
+      processing_started_at:
+        null,
+
+      raw_draft:
+        null,
+
+      raw_info:
+        null,
+
+      raw_timeslots:
+        null,
+
+      raw_create:
+        null,
+
+      raw_status:
+        null,
+
+      error_message:
+        null,
+    }
+  );
+
+
+  return refreshAndSerializeRun(
+    row.supply_run_id
+  );
+
+}
+
+
+async function cancelSupplyOrder(
+  requestId:
+    string
+) {
+
+  const row =
+    await getSupplyRequestById(
+      requestId
+    );
+
+
+  if (!row) {
+
+    return Response.json(
+      {
+        ok:
+          false,
+
+        error:
+          "Заявка сайта не найдена",
+      },
+      {
+        status:
+          404,
+      }
+    );
+
+  }
+
+
+  const orderId =
+    toPositiveInteger(
+      row.ozon_order_id
+    );
+
+
+  if (
+    orderId ===
+      null
+  ) {
+
+    return Response.json(
+      await resetCancelledRequest(
+        row
+      )
+    );
+
+  }
+
+
+  const exists =
+    await ozonOrderStillExists(
+      orderId
+    );
+
+
+  if (!exists) {
+
+    return Response.json(
+      await resetCancelledRequest(
+        row
+      )
+    );
+
+  }
+
+
+  const cancel =
+    await ozonPost<{
+      operation_id?: string;
+    }>(
+      "/v1/supply-order/cancel",
+      {
+        order_id:
+          orderId,
+      }
+    );
+
+
+  const operationId =
+    normalizeKey(
+      cancel.operation_id
+    );
+
+
+  if (!operationId) {
+
+    throw new Error(
+      "Ozon не вернул operation_id отмены заявки"
+    );
+
+  }
+
+
+  for (
+    let attempt = 0;
+    attempt < 30;
+    attempt++
+  ) {
+
+    const status =
+      await ozonPost<{
+        status?: string;
+        error_reasons?: string[];
+        result?: {
+          is_order_cancelled?: boolean;
+        };
+      }>(
+        "/v1/supply-order/cancel/status",
+        {
+          operation_id:
+            operationId,
+        }
+      );
+
+
+    if (
+      status.status ===
+        "SUCCESS"
+      &&
+      status.result
+        ?.is_order_cancelled ===
+        true
+    ) {
+
+      return Response.json(
+        await resetCancelledRequest(
+          row
+        )
+      );
+
+    }
+
+
+    if (
+      status.status ===
+        "ERROR"
+    ) {
+
+      const reasons =
+        (
+          status.error_reasons
+          ??
+          []
+        ).filter(
+          Boolean
+        );
+
+
+      throw new Error(
+        reasons.length >
+          0
+          ? `Ozon не отменил заявку: ${reasons.join(
+              ", "
+            )}`
+          : "Ozon не отменил заявку"
+      );
+
+    }
+
+
+    await sleep(
+      1200
+    );
+
+  }
+
+
+  return Response.json(
+    {
+      ok:
+        false,
+
+      error:
+        "Ozon принял отмену, но ещё не завершил её. Обновите страницу через несколько секунд.",
+    },
+    {
+      status:
+        202,
+    }
+  );
+
+}
+
+
 // ============================================================
 // GET / POST
 // ============================================================
@@ -8353,6 +8642,9 @@ export async function POST(
 
           cluster_ids?:
             unknown;
+
+          request_id?:
+            string;
         };
 
 
@@ -8460,6 +8752,43 @@ export async function POST(
 
       return startSupplyRun(
         clusterIds
+      );
+
+    }
+
+
+    if (
+      body.action ===
+      "cancel_order"
+    ) {
+
+      const requestId =
+        normalizeKey(
+          body.request_id
+        );
+
+
+      if (!requestId) {
+
+        return Response.json(
+          {
+            ok:
+              false,
+
+            error:
+              "Не передан request_id",
+          },
+          {
+            status:
+              400,
+          }
+        );
+
+      }
+
+
+      return cancelSupplyOrder(
+        requestId
       );
 
     }
