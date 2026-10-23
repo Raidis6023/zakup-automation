@@ -1179,9 +1179,9 @@ async function POSTImpl() {
   }
 
   const formationDate = getMoscowDate();
-  const targetDate = addDays(formationDate, 7);
-  const windowDateFrom = addDays(formationDate, 5);
-  const windowDateTo = addDays(formationDate, 9);
+  const targetDate = addDays(formationDate, 3);
+  const windowDateFrom = addDays(formationDate, 3);
+  const windowDateTo = addDays(formationDate, 30);
 
   const clusterResults = new Map<number, PreviewCluster>();
 
