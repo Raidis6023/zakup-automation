@@ -1825,34 +1825,16 @@ export default function OzonFboSupplyClient({
               await loadStatus();
 
 
-            const activeIds =
-              activeRequestClusterIds(
-                data.requests
-              );
-
-
             if (
-              activeIds.length ===
-                1
-              &&
-              data.run?.id
-            ) {
-
-              void processLoop(
-                data.run.id,
-                activeIds
-              );
-
-            } else if (
-              activeIds.length ===
-                0
-              &&
               calculationRunId
               &&
               pairsWithNeed >
                 0
             ) {
 
+              // При открытии страницы ничего не создаём и не продолжаем автоматически.
+              // Сначала всегда показываем все рассчитанные варианты,
+              // а запуск конкретной заявки остаётся явным действием пользователя.
               void runPreview();
 
             }
