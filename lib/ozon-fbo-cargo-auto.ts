@@ -800,7 +800,9 @@ export async function createNextAutomaticCargoBatch({
 
     const createdCargoes = totalExisting + batch.length;
     return {
-      done: createdCargoes >= plan.expected_cargoes,
+      // Даже последнюю пачку подтверждаем ещё одним проходом:
+      // сначала перечитываем фактические ГМ Ozon и проверяем cargoes/rules/get.
+      done: false,
       pending: false,
       created_cargoes: createdCargoes,
       expected_cargoes: plan.expected_cargoes,
