@@ -109,6 +109,25 @@ type OzonClusterResponse = {
   clusters?: OzonCluster[];
 };
 
+type OzonMacrolocalClusterV2Response = {
+  result?: Array<{
+    macrolocal_cluster_id?: string | number;
+    data?: {
+      fulfillments?: Array<{
+        name?: string;
+        warehouse_id?: string | number;
+      }>;
+      macrolocal_cluster?: {
+        name?: string;
+        country?: {
+          name?: string;
+          uid?: string;
+        };
+      };
+    };
+  }>;
+};
+
 type SellerWarehouse = {
   seller_warehouse_id?: string | number;
   seller_warehouse_name?: string;
@@ -1619,6 +1638,24 @@ async function getClusters(
         clusterType,
     })
   );
+
+}
+
+
+async function getMacrolocalClustersV2() {
+
+  const response =
+    await ozonPost<
+      OzonMacrolocalClusterV2Response
+    >(
+      "/v2/cluster/list",
+      {}
+    );
+
+
+  return response.result
+  ??
+  [];
 
 }
 
@@ -5506,344 +5543,108 @@ function choosePartialMatrixBundle(
 }
 
 
-function parseStringArray(
-  value:
-    unknown
-) {
+type StorageWarehouseCandidate = {
+  warehouse_id:
+    number;
 
-  if (
-    Array.isArray(
-      value
-    )
-  ) {
-
-    return value
-      .map(
-        item =>
-          normalizeKey(
-            item
-          )
-      )
-      .filter(
-        Boolean
-      );
-
-  }
-
-
-  if (
-    typeof value ===
-      "string"
-  ) {
-
-    try {
-
-      const parsed =
-        JSON.parse(
-          value
-        );
-
-
-      if (
-        Array.isArray(
-          parsed
-        )
-      ) {
-
-        return parsed
-          .map(
-            item =>
-              normalizeKey(
-                item
-              )
-          )
-          .filter(
-            Boolean
-          );
-
-      }
-
-    } catch {
-
-      const normalized =
-        normalizeKey(
-          value
-        );
-
-
-      return normalized
-        ? [
-            normalized,
-          ]
-        : [];
-
-    }
-
-  }
-
-
-  return [];
-
-}
-
-
-function storageSearchTerms(
-  row:
-    SupplyRequestRow
-) {
-
-  const result =
-    new Set<string>();
-
-
-  const clusterName =
-    normalizeKey(
-      row.cluster_name
-    );
-
-
-  if (
-    clusterName
-  ) {
-
-    result.add(
-      clusterName
-    );
-
-
-    const shortened =
-      clusterName
-        .replace(
-          /\s+и\s+СЗО.*$/i,
-          ""
-        )
-        .replace(
-          /\s+и\s+МО.*$/i,
-          ""
-        )
-        .replace(
-          /\s+и\s+область.*$/i,
-          ""
-        )
-        .trim();
-
-
-    if (
-      shortened
-      &&
-      shortened !==
-        clusterName
-    ) {
-
-      result.add(
-        shortened
-      );
-
-    }
-
-  }
-
-
-  for (
-    const sourceName
-    of parseStringArray(
-      row.source_cluster_names
-    )
-  ) {
-
-    result.add(
-      sourceName
-    );
-
-  }
-
-
-  return Array.from(
-    result
-  ).slice(
-    0,
-    8
-  );
-
-}
-
-
-function warehouseTypePriority(
-  value:
-    unknown
-) {
-
-  const type =
-    normalizeKey(
-      value
-    )
-      .toUpperCase();
-
-
-  if (
-    type.includes(
-      "FULL"
-    )
-    ||
-    type.includes(
-      "FULFILL"
-    )
-  ) {
-
-    return 0;
-
-  }
-
-
-  if (
-    type.includes(
-      "SORTING"
-    )
-  ) {
-
-    return 1;
-
-  }
-
-
-  if (
-    type.includes(
-      "CROSS"
-    )
-  ) {
-
-    return 2;
-
-  }
-
-
-  return 3;
-
-}
+  name:
+    string | null;
+};
 
 
 async function storageWarehouseCandidates(
-  row:
-    SupplyRequestRow,
-
-  run:
-    SupplyRunRow
+  macrolocalClusterId:
+    number
 ) {
+
+  const clusters =
+    await getMacrolocalClustersV2();
+
+
+  const cluster =
+    clusters.find(
+      item =>
+        toPositiveInteger(
+          item.macrolocal_cluster_id
+        ) ===
+        macrolocalClusterId
+    );
+
+
+  const candidates =
+    (
+      cluster
+        ?.data
+        ?.fulfillments
+      ??
+      []
+    )
+      .map(
+        fulfillment => {
+
+          const warehouseId =
+            toPositiveInteger(
+              fulfillment.warehouse_id
+            );
+
+
+          if (
+            warehouseId ===
+              null
+          ) {
+
+            return null;
+
+          }
+
+
+          return {
+            warehouse_id:
+              warehouseId,
+
+            name:
+              normalizeKey(
+                fulfillment.name
+              )
+              ||
+              null,
+          } satisfies
+            StorageWarehouseCandidate;
+
+        }
+      )
+      .filter(
+        (
+          candidate
+        ): candidate is StorageWarehouseCandidate =>
+          candidate !==
+            null
+      );
+
 
   const unique =
     new Map<
       number,
-      DropOffWarehouse
+      StorageWarehouseCandidate
     >();
 
 
   for (
-    const search
-    of storageSearchTerms(
-      row
-    )
+    const candidate
+    of candidates
   ) {
 
-    const rows =
-      await searchDropOff(
-        search
-      );
-
-
-    for (
-      const candidate
-      of rows
-    ) {
-
-      const warehouseId =
-        toPositiveInteger(
-          candidate.warehouse_id
-        );
-
-
-      const candidateType =
-        normalizeKey(
-          candidate.warehouse_type
-        ).toUpperCase();
-
-
-      if (
-        warehouseId ===
-          null
-        ||
-        warehouseId ===
-          toPositiveInteger(
-            run.drop_off_warehouse_id
-          )
-        ||
-        warehouseId ===
-          toPositiveInteger(
-            run.seller_warehouse_id
-          )
-        ||
-        candidateType ===
-          "WAREHOUSE_TYPE_ORDERS_RECEIVING_POINT"
-      ) {
-
-        continue;
-
-      }
-
-
-      unique.set(
-        warehouseId,
-        candidate
-      );
-
-    }
+    unique.set(
+      candidate.warehouse_id,
+      candidate
+    );
 
   }
 
 
   return Array.from(
     unique.values()
-  )
-    .sort(
-      (
-        left,
-        right
-      ) => {
-
-        const typeDiff =
-          warehouseTypePriority(
-            left.warehouse_type
-          )
-          -
-          warehouseTypePriority(
-            right.warehouse_type
-          );
-
-
-        if (
-          typeDiff !==
-            0
-        ) {
-
-          return typeDiff;
-
-        }
-
-
-        return normalizeKey(
-          left.name
-        ).localeCompare(
-          normalizeKey(
-            right.name
-          ),
-          "ru"
-        );
-
-      }
-    )
-    .slice(
-      0,
-      15
-    );
+  );
 
 }
 
@@ -5864,15 +5665,14 @@ async function findStorageWarehouseByTimeslot(
 
   const candidates =
     await storageWarehouseCandidates(
-      row,
-      run
+      macrolocalClusterId
     );
 
 
   let firstAccepted:
     {
       warehouse:
-        DropOffWarehouse;
+        StorageWarehouseCandidate;
 
       timeslots:
         TimeslotResponse;
@@ -5895,9 +5695,6 @@ async function findStorageWarehouseByTimeslot(
       name:
         string | null;
 
-      type:
-        string | null;
-
       result:
         string;
     }> =
@@ -5910,19 +5707,7 @@ async function findStorageWarehouseByTimeslot(
   ) {
 
     const warehouseId =
-      toPositiveInteger(
-        candidate.warehouse_id
-      );
-
-
-    if (
-      warehouseId ===
-        null
-    ) {
-
-      continue;
-
-    }
+      candidate.warehouse_id;
 
 
     try {
@@ -5976,18 +5761,7 @@ async function findStorageWarehouseByTimeslot(
             warehouseId,
 
           name:
-            normalizeKey(
-              candidate.name
-            )
-            ||
-            null,
-
-          type:
-            normalizeKey(
-              candidate.warehouse_type
-            )
-            ||
-            null,
+            candidate.name,
 
           result:
             errorReason,
@@ -6026,18 +5800,7 @@ async function findStorageWarehouseByTimeslot(
           warehouseId,
 
         name:
-          normalizeKey(
-            candidate.name
-          )
-          ||
-          null,
-
-        type:
-          normalizeKey(
-            candidate.warehouse_type
-          )
-          ||
-          null,
+          candidate.name,
 
         result:
           slot
@@ -6089,18 +5852,7 @@ async function findStorageWarehouseByTimeslot(
           warehouseId,
 
         name:
-          normalizeKey(
-            candidate.name
-          )
-          ||
-          null,
-
-        type:
-          normalizeKey(
-            candidate.warehouse_type
-          )
-          ||
-          null,
+          candidate.name,
 
         result:
           error instanceof
@@ -7195,17 +6947,9 @@ async function processOne(
         ) {
 
           const fallbackName =
-            normalizeKey(
-              fallback.warehouse.name
-            )
-            ||
-            null;
+            fallback.warehouse.name;
 
           const fallbackAddress =
-            normalizeKey(
-              fallback.warehouse.address
-            )
-            ||
             null;
 
 
@@ -7240,7 +6984,7 @@ async function processOne(
                 raw_timeslots:
                   {
                     source:
-                      "warehouse_fbo_list_fallback",
+                      "cluster_v2_fulfillment_fallback",
 
                     response:
                       fallback.timeslots,
@@ -7289,7 +7033,7 @@ async function processOne(
               raw_timeslots:
                 {
                   source:
-                    "warehouse_fbo_list_fallback",
+                    "cluster_v2_fulfillment_fallback",
 
                   response:
                     fallback.timeslots,
@@ -7325,14 +7069,14 @@ async function processOne(
             raw_timeslots:
               {
                 source:
-                  "warehouse_fbo_list_fallback",
+                  "cluster_v2_fulfillment_fallback",
 
                 diagnostics:
                   fallback.diagnostics,
               },
 
             error_message:
-              `Ozon подтвердил состав, но не отдал storage_warehouse. Дополнительная проверка складов через /v1/warehouse/fbo/list и /v2/draft/timeslot/info тоже не нашла подходящий склад. Доступность draft: ${JSON.stringify(
+              `Ozon подтвердил состав, но не отдал storage_warehouse. Дополнительная проверка складов через /v2/cluster/list и /v2/draft/timeslot/info тоже не нашла подходящий склад. Доступность draft: ${JSON.stringify(
                 states
               )}. Проверенные склады: ${JSON.stringify(
                 fallback.diagnostics
