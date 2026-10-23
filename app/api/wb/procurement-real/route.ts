@@ -2309,6 +2309,10 @@ export async function GET(
       },
 
 
+      allNeed:
+        skuWithNeed,
+
+
       topNeed:
         skuWithNeed.slice(
           0,
