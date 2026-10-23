@@ -1446,6 +1446,9 @@ export async function GET(
 
           barcode:
             string;
+
+          barcodes:
+            Set<string>;
         }
       >();
 
@@ -1490,11 +1493,18 @@ export async function GET(
 
           barcode:
             "",
+
+          barcodes:
+            new Set<string>(),
         };
 
 
       current.ordersCount +=
         1;
+
+      if (order.barcode?.trim()) {
+        current.barcodes.add(order.barcode.trim());
+      }
 
 
       if (
@@ -1709,6 +1719,11 @@ export async function GET(
               sales?.barcode
               ??
               "",
+
+            barcodeVariantCount:
+              sales?.barcodes.size
+              ??
+              0,
 
 
             sales: {
