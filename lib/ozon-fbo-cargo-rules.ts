@@ -44,6 +44,7 @@ export type CargoItem = {
 export type CartonUnit = CargoItem & {
   placement_zone: string;
   volume_litres: number;
+  weight_kg: number | null;
   dimensions: [number, number, number] | null;
 };
 
@@ -54,6 +55,9 @@ export type PlannedCargo = {
   items: CargoItem[];
   carton_count: number;
   volume_litres: number;
+  weight_kg: number | null;
+  packed_height_mm: number | null;
+  cartons: CartonUnit[];
 };
 
 type OrientedCarton = CartonUnit & {
@@ -310,6 +314,9 @@ function boxCargo(
     ],
     carton_count: 1,
     volume_litres: carton.volume_litres,
+    weight_kg: carton.weight_kg,
+    packed_height_mm: null,
+    cartons: [carton],
   };
 }
 
@@ -337,6 +344,16 @@ function palletCargo(
       (sum, carton) => sum + carton.volume_litres,
       0,
     ),
+    weight_kg: pallet.cartons.every(
+      (carton) => carton.weight_kg !== null,
+    )
+      ? pallet.cartons.reduce(
+          (sum, carton) => sum + (carton.weight_kg ?? 0),
+          0,
+        )
+      : null,
+    packed_height_mm: pallet.height + 145,
+    cartons: pallet.cartons,
   };
 }
 
@@ -415,4 +432,84 @@ export function planCargoesForZone({
   );
 
   return [...palletCargoes, ...boxCargoes];
+}
+
+
+export function summarizeCargoes(
+  cargoes: PlannedCargo[],
+) {
+  const palletGm = cargoes.filter(
+    (cargo) => cargo.type === "PALLET",
+  ).length;
+
+  const boxCargoes = cargoes.filter(
+    (cargo) => cargo.type === "BOX",
+  );
+
+  const allCartons = cargoes.flatMap(
+    (cargo) => cargo.cartons,
+  );
+
+  const totalVolumeLitres = allCartons.reduce(
+    (sum, carton) => sum + carton.volume_litres,
+    0,
+  );
+
+  const knownWeightKg = allCartons.reduce(
+    (sum, carton) => sum + (carton.weight_kg ?? 0),
+    0,
+  );
+
+  const missingWeightCartons = allCartons.filter(
+    (carton) => carton.weight_kg === null,
+  ).length;
+
+  const boxCartons = boxCargoes.flatMap(
+    (cargo) => cargo.cartons,
+  );
+
+  const transportPallets = packPallets(
+    boxCartons,
+  );
+
+  const transportPlacedBoxes = transportPallets.reduce(
+    (sum, pallet) => sum + pallet.cartons.length,
+    0,
+  );
+
+  const transportUnplacedBoxes =
+    boxCartons.length - transportPlacedBoxes;
+
+  const palletHeights = [
+    ...cargoes
+      .filter(
+        (cargo) =>
+          cargo.type === "PALLET" &&
+          cargo.packed_height_mm !== null,
+      )
+      .map(
+        (cargo) => cargo.packed_height_mm as number,
+      ),
+    ...transportPallets.map(
+      (pallet) => pallet.height + 145,
+    ),
+  ];
+
+  return {
+    pallet_gm: palletGm,
+    box_gm: boxCargoes.length,
+    transport_pallets_for_boxes: transportPallets.length,
+    total_volume_litres: totalVolumeLitres,
+    total_weight_kg:
+      missingWeightCartons === 0
+        ? knownWeightKg
+        : null,
+    known_weight_kg: knownWeightKg,
+    missing_weight_cartons: missingWeightCartons,
+    transport_unplaced_boxes: transportUnplacedBoxes,
+    max_height_mm:
+      palletHeights.length > 0
+        ? Math.max(...palletHeights)
+        : null,
+  };
 }
