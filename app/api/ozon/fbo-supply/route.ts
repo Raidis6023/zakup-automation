@@ -262,6 +262,17 @@ type DraftInfoResponse = {
   status?: string;
 };
 
+type BundleResponse = {
+  items?: Array<{
+    sku?: string | number;
+    quantity?: string | number;
+  }>;
+  total_count?: number;
+  has_next?: boolean;
+  last_id?: string;
+};
+
+
 type TimeslotResponse = {
   error_reason?: string;
   result?: {
@@ -2880,9 +2891,8 @@ async function activateSupplyRequests(
 
 
     if (
-      isTerminalRequestStatus(
-        row.status
-      )
+      row.status ===
+        "success"
     ) {
 
       continue;
@@ -2890,11 +2900,70 @@ async function activateSupplyRequests(
     }
 
 
+    const shouldReset =
+      row.status ===
+        "failed"
+      ||
+      row.status ===
+        "no_slot";
+
+
     await supabasePatch(
       `ozon_fbo_supply_requests?id=eq.${encodeURIComponent(
         row.id
       )}`,
       {
+        ...(
+          shouldReset
+            ? {
+                status:
+                  "queued",
+
+                draft_id:
+                  null,
+
+                storage_warehouse_id:
+                  null,
+
+                storage_warehouse_name:
+                  null,
+
+                storage_warehouse_address:
+                  null,
+
+                timeslot_from:
+                  null,
+
+                timeslot_to:
+                  null,
+
+                ozon_order_id:
+                  null,
+
+                is_processing:
+                  false,
+
+                processing_started_at:
+                  null,
+
+                raw_draft:
+                  null,
+
+                raw_info:
+                  null,
+
+                raw_timeslots:
+                  null,
+
+                raw_create:
+                  null,
+
+                raw_status:
+                  null,
+              }
+            : {}
+        ),
+
         next_attempt_at:
           now,
 
@@ -3333,9 +3402,24 @@ async function startSupplyRun(
 
 
     if (
-      existingRun.status ===
-        "running"
+      existingRun.status !==
+        "success"
     ) {
+
+      await updateRun(
+        existingRun.id,
+        {
+          status:
+            "running",
+
+          finished_at:
+            null,
+
+          last_error:
+            null,
+        }
+      );
+
 
       await activateSupplyRequests(
         existingRun.id,
@@ -5157,6 +5241,247 @@ async function updateRun(
 }
 
 
+async function getBundleSkuSet(
+  bundleId:
+    string
+) {
+
+  const result =
+    new Set<number>();
+
+
+  let lastId =
+    "";
+
+
+  for (
+    let page = 0;
+    page < 50;
+    page++
+  ) {
+
+    const response =
+      await ozonPost<
+        BundleResponse
+      >(
+        "/v1/supply-order/bundle",
+        {
+          bundle_ids: [
+            bundleId,
+          ],
+
+          is_asc:
+            true,
+
+          limit:
+            100,
+
+          sort_field:
+            "SKU",
+
+          ...(
+            lastId
+              ? {
+                  last_id:
+                    lastId,
+                }
+              : {}
+          ),
+        }
+      );
+
+
+    for (
+      const item
+      of response.items
+      ??
+      []
+    ) {
+
+      const sku =
+        toPositiveInteger(
+          item.sku
+        );
+
+
+      if (
+        sku !==
+        null
+      ) {
+
+        result.add(
+          sku
+        );
+
+      }
+
+    }
+
+
+    if (
+      !response.has_next
+    ) {
+
+      break;
+
+    }
+
+
+    const nextLastId =
+      normalizeKey(
+        response.last_id
+      );
+
+
+    if (
+      !nextLastId
+      ||
+      nextLastId ===
+        lastId
+    ) {
+
+      break;
+
+    }
+
+
+    lastId =
+      nextLastId;
+
+  }
+
+
+  return result;
+
+}
+
+
+function choosePartialMatrixBundle(
+  info:
+    DraftInfoResponse,
+
+  macrolocalClusterId:
+    number
+) {
+
+  const cluster =
+    (
+      info.clusters
+      ??
+      []
+    ).find(
+      item =>
+        Number(
+          item.macrolocal_cluster_id
+        ) ===
+        macrolocalClusterId
+    );
+
+
+  if (!cluster) {
+
+    return null;
+
+  }
+
+
+  return (
+    cluster.warehouses
+    ??
+    []
+  )
+    .filter(
+      warehouse => {
+
+        const state =
+          normalizeKey(
+            warehouse
+              .availability_status
+              ?.state
+          );
+
+        const reason =
+          normalizeKey(
+            warehouse
+              .availability_status
+              ?.invalid_reason
+          );
+
+        const bundleId =
+          normalizeKey(
+            warehouse
+              .bundle_id
+          );
+
+
+        return (
+          state ===
+            "PARTIAL_AVAILABLE"
+          &&
+          reason ===
+            "PARTIAL_MATRIX_AVAILABLE"
+          &&
+          Boolean(
+            bundleId
+          )
+        );
+
+      }
+    )
+    .sort(
+      (
+        left,
+        right
+      ) => {
+
+        const scoreDiff =
+          Number(
+            right.total_score
+            ??
+            0
+          )
+          -
+          Number(
+            left.total_score
+            ??
+            0
+          );
+
+
+        if (
+          scoreDiff !==
+          0
+        ) {
+
+          return scoreDiff;
+
+        }
+
+
+        return (
+          Number(
+            left.total_rank
+            ??
+            Number.MAX_SAFE_INTEGER
+          )
+          -
+          Number(
+            right.total_rank
+            ??
+            Number.MAX_SAFE_INTEGER
+          )
+        );
+
+      }
+    )[
+      0
+    ]
+    ??
+    null;
+
+}
+
+
 // ============================================================
 // ВЫБОР СКЛАДА РАЗМЕЩЕНИЯ
 // ============================================================
@@ -5963,6 +6288,210 @@ async function processOne(
           null
       ) {
 
+        const partialMatrix =
+          choosePartialMatrixBundle(
+            info,
+            macrolocalClusterId
+          );
+
+
+        const bundleId =
+          normalizeKey(
+            partialMatrix
+              ?.bundle_id
+          );
+
+
+        if (bundleId) {
+
+          const acceptedSkus =
+            await getBundleSkuSet(
+              bundleId
+            );
+
+
+          const filteredItems =
+            row.items.filter(
+              item => {
+
+                const sku =
+                  toPositiveInteger(
+                    item.sku
+                  );
+
+
+                return (
+                  sku !==
+                    null
+                  &&
+                  acceptedSkus.has(
+                    sku
+                  )
+                );
+
+              }
+            );
+
+
+          const sameComposition =
+            filteredItems.length ===
+              row.items.length
+            &&
+            row.items.every(
+              item => {
+
+                const sku =
+                  toPositiveInteger(
+                    item.sku
+                  );
+
+
+                return (
+                  sku !==
+                    null
+                  &&
+                  acceptedSkus.has(
+                    sku
+                  )
+                );
+
+              }
+            );
+
+
+          if (
+            filteredItems.length >
+              0
+            &&
+            !sameComposition
+          ) {
+
+            const totalUnits =
+              filteredItems.reduce(
+                (
+                  sum,
+                  item
+                ) =>
+                  sum
+                  +
+                  Number(
+                    item.quantity
+                  ),
+                0
+              );
+
+
+            await releaseRequest(
+              row,
+              {
+                status:
+                  "queued",
+
+                items:
+                  filteredItems,
+
+                sku_count:
+                  filteredItems.length,
+
+                total_units:
+                  totalUnits,
+
+                draft_id:
+                  null,
+
+                storage_warehouse_id:
+                  null,
+
+                storage_warehouse_name:
+                  null,
+
+                storage_warehouse_address:
+                  null,
+
+                timeslot_from:
+                  null,
+
+                timeslot_to:
+                  null,
+
+                raw_info:
+                  info,
+
+                next_attempt_at:
+                  new Date()
+                    .toISOString(),
+
+                error_message:
+                  `Ozon вернул PARTIAL_MATRIX_AVAILABLE. Состав автоматически сужен с ${row.items.length} до ${filteredItems.length} SKU по bundle_id и будет пересоздан.`,
+              }
+            );
+
+
+            return Response.json(
+              await refreshAndSerializeRun(
+                runId
+              )
+            );
+
+          }
+
+        }
+
+
+        const clusterInfo =
+          (
+            info.clusters
+            ??
+            []
+          ).find(
+            item =>
+              Number(
+                item.macrolocal_cluster_id
+              ) ===
+              macrolocalClusterId
+          );
+
+
+        const states =
+          (
+            clusterInfo
+              ?.warehouses
+            ??
+            []
+          ).map(
+            candidate => ({
+              state:
+                normalizeKey(
+                  candidate
+                    .availability_status
+                    ?.state
+                ),
+
+              reason:
+                normalizeKey(
+                  candidate
+                    .availability_status
+                    ?.invalid_reason
+                ),
+
+              has_storage_warehouse:
+                toPositiveInteger(
+                  candidate
+                    .storage_warehouse
+                    ?.warehouse_id
+                ) !==
+                  null,
+
+              bundle_id:
+                normalizeKey(
+                  candidate.bundle_id
+                )
+                ||
+                null,
+            })
+          );
+
+
         await releaseRequest(
           row,
           {
@@ -5973,7 +6502,9 @@ async function processOne(
               info,
 
             error_message:
-              "Ozon не вернул доступный склад размещения FULL_AVAILABLE / PARTIAL_AVAILABLE для кластера",
+              `Ozon не вернул конкретный storage_warehouse после проверки состава. Доступность: ${JSON.stringify(
+                states
+              )}`,
           }
         );
 
