@@ -9,6 +9,7 @@ type NeedRow = {
   vendorCode: string | null;
   productName: string | null;
   barcode: string;
+  barcodeVariantCount?: number;
   sales: { ordersCount: number; dailySales: number };
   stock: { stockCount: number };
   calculation: { needRaw: number; needRoundedUp: number; daysOfStock: number | null };
@@ -128,6 +129,7 @@ export async function buildFbwPlan(request: NextRequest): Promise<FbwPlan> {
     else if (distinctMaster.length !== 1) blockingReason = "Конфликт или отсутствие ЕНОТ";
     else if (!products.length || !active.length) blockingReason = "Товар ЕНОТ не найден или выведен из продажи";
     else if (!pack) blockingReason = packs.length > 1 ? "Конфликт вложимостей у ЕНОТ" : "Не заполнена вложимость транспортировочной коробки";
+    else if ((n.barcodeVariantCount || 0) > 1) blockingReason = "Один nmId имеет несколько баркодов; общий FBW-остаток нельзя распределить по вариантам";
     else if (!sku) blockingReason = "Нет баркода WB (sku), номер nmId не подходит";
 
     const representative = active.find(x => Number(x.units_per_carton) === pack);
