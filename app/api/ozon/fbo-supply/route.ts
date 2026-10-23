@@ -3087,6 +3087,13 @@ async function activateSupplyRequests(
         row.ozon_order_id
       );
 
+    const preserveExistingOrder =
+      existingOrderId !==
+        null
+      &&
+      row.status !==
+        "success";
+
 
     await supabasePatch(
       `ozon_fbo_supply_requests?id=eq.${encodeURIComponent(
@@ -3095,8 +3102,7 @@ async function activateSupplyRequests(
       {
         ...(
           shouldReset
-            ? existingOrderId !==
-                null
+            ? preserveExistingOrder
               ? {
                   status:
                     "creating",
@@ -3163,8 +3169,7 @@ async function activateSupplyRequests(
           now,
 
         error_message:
-          existingOrderId !==
-            null
+          preserveExistingOrder
             ? "AUTO_GM_RESUME: заявка Ozon уже существует; продолжаем только грузоместа."
             : null,
       }
