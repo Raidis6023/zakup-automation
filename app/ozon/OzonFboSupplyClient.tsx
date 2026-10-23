@@ -1415,6 +1415,143 @@ export default function OzonFboSupplyClient({
   }
 
 
+  async function recreateOrder(
+    requestId:
+      string,
+
+    clusterId:
+      number,
+
+    clusterName:
+      string
+  ) {
+
+    if (
+      cancelingRequestId
+      ||
+      starting
+      ||
+      processing
+    ) {
+
+      return;
+
+    }
+
+
+    if (
+      !window.confirm(
+        `Пересоздать заявку «${clusterName}»? Текущая заявка в Ozon будет отменена, после чего сразу создастся новая.`
+      )
+    ) {
+
+      return;
+
+    }
+
+
+    setCancelingRequestId(
+      requestId
+    );
+
+
+    setError(
+      ""
+    );
+
+
+    try {
+
+      const cancelResponse =
+        await fetch(
+          "/api/ozon/fbo-supply",
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify(
+                {
+                  action:
+                    "cancel_order",
+
+                  request_id:
+                    requestId,
+                }
+              ),
+
+            cache:
+              "no-store",
+          }
+        );
+
+
+      const cancelled =
+        await cancelResponse
+          .json() as
+          StatusPayload;
+
+
+      if (
+        !cancelResponse.ok
+        ||
+        cancelled.ok !==
+          true
+      ) {
+
+        throw new Error(
+          cancelled.error
+          ??
+          `HTTP ${cancelResponse.status}`
+        );
+
+      }
+
+
+      setStatus(
+        cancelled
+      );
+
+
+      setCancelingRequestId(
+        null
+      );
+
+
+      await start(
+        [
+          clusterId,
+        ]
+      );
+
+    } catch (
+      recreateError
+    ) {
+
+      setError(
+        recreateError
+          instanceof Error
+          ? recreateError.message
+          : String(
+              recreateError
+            )
+      );
+
+
+      setCancelingRequestId(
+        null
+      );
+
+    }
+
+  }
+
+
   async function cancelOrder(
     requestId:
       string,
@@ -2575,7 +2712,7 @@ export default function OzonFboSupplyClient({
                 </span>
 
                 <span>
-                  Меньше 1 короба → 0:{" "}
+                  ≤ 0,5 короба → 0:{" "}
                   <strong>
                     {
                       formatNumber(
@@ -2945,7 +3082,14 @@ export default function OzonFboSupplyClient({
                           ||
                           !clusterCanCreate
                           ||
-                          requestActive;
+                          requestActive
+                          ||
+                          (
+                            request
+                            &&
+                            cancelingRequestId ===
+                              request.id
+                          );
 
 
                         return (
@@ -3162,11 +3306,34 @@ export default function OzonFboSupplyClient({
 
                                   onClick={
                                     () => {
+
+                                      if (
+                                        request
+                                        &&
+                                        request.status ===
+                                          "success"
+                                      ) {
+
+                                        void recreateOrder(
+                                          request.id,
+                                          cluster.macrolocal_cluster_id,
+                                          cluster.cluster_name
+                                          ??
+                                          `Кластер ${cluster.macrolocal_cluster_id}`
+                                        );
+
+
+                                        return;
+
+                                      }
+
+
                                       void start(
                                         [
                                           cluster.macrolocal_cluster_id,
                                         ]
                                       );
+
                                     }
                                   }
                                 >
@@ -3175,7 +3342,7 @@ export default function OzonFboSupplyClient({
                                     &&
                                     request.status ===
                                       "success"
-                                      ? "Проверить / пересоздать"
+                                      ? "Пересоздать заявку"
 
                                       : request
                                         &&
@@ -3374,7 +3541,7 @@ export default function OzonFboSupplyClient({
                                               {
                                                 article.rule ===
                                                   "zero_less_than_one_carton"
-                                                  ? " · меньше 1 короба → 0"
+                                                  ? " · ≤ 0,5 короба → 0"
 
                                                   : article.rule ===
                                                       "missing_pack"
