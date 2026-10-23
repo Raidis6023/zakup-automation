@@ -68,6 +68,14 @@ type ReplenishmentItem = {
   calculated_need: number;
 };
 
+type ProductRow = {
+  id: string;
+  master_code: string | null;
+  offer_id: string | null;
+  name: string | null;
+  units_per_carton: number | null;
+};
+
 type LatestSync = {
   id: string;
   date_from: string;
@@ -625,6 +633,50 @@ number | null {
   )
     ? integer
     : null;
+
+}
+
+
+function getPackRule(
+  rawNeed:
+    number,
+
+  pack:
+    number
+) {
+
+  if (
+    rawNeed <
+    pack
+  ) {
+
+    return {
+      cartons:
+        0,
+
+      finalQuantity:
+        0,
+    };
+
+  }
+
+
+  const cartons =
+    Math.round(
+      rawNeed
+      /
+      pack
+    );
+
+
+  return {
+    cartons,
+
+    finalQuantity:
+      cartons
+      *
+      pack,
+  };
 
 }
 
@@ -1464,6 +1516,57 @@ async function getReplenishmentItems(
 }
 
 
+async function getProducts() {
+
+  const result:
+    ProductRow[] =
+    [];
+
+
+  for (
+    let offset = 0;
+    offset < 10000;
+    offset += SUPABASE_PAGE_SIZE
+  ) {
+
+    const page =
+      await supabaseGet<
+        ProductRow[]
+      >(
+        [
+          "products",
+          "?select=id,master_code,offer_id,name,units_per_carton",
+          "&order=created_at.asc",
+          `&limit=${SUPABASE_PAGE_SIZE}`,
+          `&offset=${offset}`,
+        ].join(
+          ""
+        )
+      );
+
+
+    result.push(
+      ...page
+    );
+
+
+    if (
+      page.length <
+      SUPABASE_PAGE_SIZE
+    ) {
+
+      break;
+
+    }
+
+  }
+
+
+  return result;
+
+}
+
+
 // ============================================================
 // КЛАСТЕРЫ И МАРШРУТ
 // ============================================================
@@ -1776,12 +1879,87 @@ function buildSupplyPlan(
   rows:
     ReplenishmentItem[],
 
+  products:
+    ProductRow[],
+
   allowedClusters:
     OzonCluster[],
 
   excludedCisClusterIds:
     Set<string>
 ) {
+
+  const productById =
+    new Map(
+      products.map(
+        product => [
+          product.id,
+          product,
+        ]
+      )
+    );
+
+
+  const packValuesByEnot =
+    new Map<
+      string,
+      Set<number>
+    >();
+
+
+  for (
+    const product
+    of products
+  ) {
+
+    const enot =
+      normalizeKey(
+        product.master_code
+      );
+
+    const pack =
+      toPositiveInteger(
+        product.units_per_carton
+      );
+
+
+    if (
+      !enot
+      ||
+      pack ===
+        null
+    ) {
+
+      continue;
+
+    }
+
+
+    let values =
+      packValuesByEnot.get(
+        enot
+      );
+
+
+    if (!values) {
+
+      values =
+        new Set<number>();
+
+      packValuesByEnot.set(
+        enot,
+        values
+      );
+
+    }
+
+
+    values.add(
+      pack
+    );
+
+  }
+
 
   const clusterMap =
     new Map<
@@ -1860,6 +2038,43 @@ function buildSupplyPlan(
   }
 
 
+  type Aggregate = {
+    clusterType:
+      ClusterType;
+
+    macrolocalClusterId:
+      number;
+
+    clusterName:
+      string;
+
+    sourceClusterIds:
+      Set<string>;
+
+    sourceClusterNames:
+      Set<string>;
+
+    masterCode:
+      string | null;
+
+    offerId:
+      string | null;
+
+    sku:
+      number;
+
+    rawNeed:
+      number;
+  };
+
+
+  const aggregates =
+    new Map<
+      string,
+      Aggregate
+    >();
+
+
   const unresolved:
     Array<{
       cluster_id:
@@ -1874,29 +2089,27 @@ function buildSupplyPlan(
     [];
 
 
-  const macroMap =
-    new Map<
-      string,
-      {
-        cluster_type:
-          ClusterType;
+  const skipped:
+    Array<{
+      cluster_id:
+        string;
 
-        macrolocal_cluster_id:
-          number;
+      offer_id:
+        string | null;
 
-        cluster_names:
-          Set<string>;
+      master_code:
+        string | null;
 
-        source_cluster_ids:
-          Set<string>;
+      sku:
+        number | null;
 
-        source_cluster_names:
-          Set<string>;
+      raw_need:
+        number;
 
-        items:
-          Map<number, number>;
-      }
-    >();
+      reason:
+        string;
+    }> =
+    [];
 
 
   let excludedUnits =
@@ -1908,7 +2121,7 @@ function buildSupplyPlan(
     of rows
   ) {
 
-    const quantity =
+    const rawNeed =
       toPositiveInteger(
         row.calculated_need
       );
@@ -1920,7 +2133,7 @@ function buildSupplyPlan(
 
 
     if (
-      quantity ===
+      rawNeed ===
       null
     ) {
 
@@ -1948,7 +2161,7 @@ function buildSupplyPlan(
     ) {
 
       excludedUnits +=
-        quantity;
+        rawNeed;
 
 
       continue;
@@ -2032,13 +2245,312 @@ function buildSupplyPlan(
     }
 
 
+    const product =
+      productById.get(
+        row.product_id
+      );
+
+
+    const masterCode =
+      normalizeKey(
+        product?.master_code
+      )
+      ||
+      null;
+
+
     const key =
-      `${cluster.clusterType}:${cluster.macrolocalClusterId}`;
+      [
+        cluster.clusterType,
+        cluster.macrolocalClusterId,
+        masterCode
+        ??
+        row.product_id,
+        sku,
+      ].join(
+        ":"
+      );
+
+
+    let aggregate =
+      aggregates.get(
+        key
+      );
+
+
+    if (!aggregate) {
+
+      aggregate = {
+        clusterType:
+          cluster.clusterType,
+
+        macrolocalClusterId:
+          cluster.macrolocalClusterId,
+
+        clusterName:
+          cluster.clusterName,
+
+        sourceClusterIds:
+          new Set<string>(),
+
+        sourceClusterNames:
+          new Set<string>(),
+
+        masterCode,
+
+        offerId:
+          row.offer_id
+          ??
+          product?.offer_id
+          ??
+          null,
+
+        sku,
+
+        rawNeed:
+          0,
+      };
+
+
+      aggregates.set(
+        key,
+        aggregate
+      );
+
+    }
+
+
+    aggregate.rawNeed +=
+      rawNeed;
+
+
+    aggregate
+      .sourceClusterIds
+      .add(
+        clusterId
+      );
+
+
+    const sourceName =
+      normalizeKey(
+        row.cluster_name
+      );
+
+
+    if (sourceName) {
+
+      aggregate
+        .sourceClusterNames
+        .add(
+          sourceName
+        );
+
+    }
+
+  }
+
+
+  const macroMap =
+    new Map<
+      string,
+      {
+        cluster_type:
+          ClusterType;
+
+        macrolocal_cluster_id:
+          number;
+
+        cluster_names:
+          Set<string>;
+
+        source_cluster_ids:
+          Set<string>;
+
+        source_cluster_names:
+          Set<string>;
+
+        items:
+          Map<number, number>;
+      }
+    >();
+
+
+  for (
+    const aggregate
+    of aggregates.values()
+  ) {
+
+    const packValues =
+      aggregate.masterCode
+        ? packValuesByEnot.get(
+            aggregate.masterCode
+          )
+        : undefined;
+
+
+    if (
+      !aggregate.masterCode
+    ) {
+
+      skipped.push({
+        cluster_id:
+          Array.from(
+            aggregate.sourceClusterIds
+          )[0]
+          ??
+          "",
+
+        offer_id:
+          aggregate.offerId,
+
+        master_code:
+          null,
+
+        sku:
+          aggregate.sku,
+
+        raw_need:
+          aggregate.rawNeed,
+
+        reason:
+          "missing_enot",
+      });
+
+
+      continue;
+
+    }
+
+
+    if (
+      !packValues
+      ||
+      packValues.size ===
+        0
+    ) {
+
+      skipped.push({
+        cluster_id:
+          Array.from(
+            aggregate.sourceClusterIds
+          )[0]
+          ??
+          "",
+
+        offer_id:
+          aggregate.offerId,
+
+        master_code:
+          aggregate.masterCode,
+
+        sku:
+          aggregate.sku,
+
+        raw_need:
+          aggregate.rawNeed,
+
+        reason:
+          "missing_pack",
+      });
+
+
+      continue;
+
+    }
+
+
+    if (
+      packValues.size >
+      1
+    ) {
+
+      skipped.push({
+        cluster_id:
+          Array.from(
+            aggregate.sourceClusterIds
+          )[0]
+          ??
+          "",
+
+        offer_id:
+          aggregate.offerId,
+
+        master_code:
+          aggregate.masterCode,
+
+        sku:
+          aggregate.sku,
+
+        raw_need:
+          aggregate.rawNeed,
+
+        reason:
+          "pack_conflict",
+      });
+
+
+      continue;
+
+    }
+
+
+    const pack =
+      Array.from(
+        packValues
+      )[
+        0
+      ];
+
+
+    const rounded =
+      getPackRule(
+        aggregate.rawNeed,
+        pack
+      );
+
+
+    if (
+      rounded.finalQuantity <=
+      0
+    ) {
+
+      skipped.push({
+        cluster_id:
+          Array.from(
+            aggregate.sourceClusterIds
+          )[0]
+          ??
+          "",
+
+        offer_id:
+          aggregate.offerId,
+
+        master_code:
+          aggregate.masterCode,
+
+        sku:
+          aggregate.sku,
+
+        raw_need:
+          aggregate.rawNeed,
+
+        reason:
+          "less_than_one_carton",
+      });
+
+
+      continue;
+
+    }
+
+
+    const macroKey =
+      `${aggregate.clusterType}:${aggregate.macrolocalClusterId}`;
 
 
     let macro =
       macroMap.get(
-        key
+        macroKey
       );
 
 
@@ -2046,10 +2558,10 @@ function buildSupplyPlan(
 
       macro = {
         cluster_type:
-          cluster.clusterType,
+          aggregate.clusterType,
 
         macrolocal_cluster_id:
-          cluster.macrolocalClusterId,
+          aggregate.macrolocalClusterId,
 
         cluster_names:
           new Set<string>(),
@@ -2066,7 +2578,7 @@ function buildSupplyPlan(
 
 
       macroMap.set(
-        key,
+        macroKey,
         macro
       );
 
@@ -2074,53 +2586,57 @@ function buildSupplyPlan(
 
 
     if (
-      cluster.clusterName
+      aggregate.clusterName
     ) {
 
       macro
         .cluster_names
         .add(
-          cluster.clusterName
+          aggregate.clusterName
         );
 
     }
 
 
-    macro
-      .source_cluster_ids
-      .add(
-        clusterId
-      );
+    for (
+      const id
+      of aggregate.sourceClusterIds
+    ) {
+
+      macro
+        .source_cluster_ids
+        .add(
+          id
+        );
+
+    }
 
 
-    const sourceName =
-      normalizeKey(
-        row.cluster_name
-      );
-
-
-    if (sourceName) {
+    for (
+      const name
+      of aggregate.sourceClusterNames
+    ) {
 
       macro
         .source_cluster_names
         .add(
-          sourceName
+          name
         );
 
     }
 
 
     macro.items.set(
-      sku,
+      aggregate.sku,
       (
         macro.items.get(
-          sku
+          aggregate.sku
         )
         ??
         0
       )
       +
-      quantity
+      rounded.finalQuantity
     );
 
   }
@@ -2191,6 +2707,11 @@ function buildSupplyPlan(
 
         }
       )
+      .filter(
+        cluster =>
+          cluster.items.length >
+          0
+      )
       .sort(
         (
           left,
@@ -2205,6 +2726,7 @@ function buildSupplyPlan(
   return {
     clusters,
     unresolved,
+    skipped,
     excludedUnits,
   };
 
@@ -2707,6 +3229,7 @@ async function startSupplyRun() {
     cisClusters,
     sellerWarehouses,
     dropOff,
+    products,
   ] =
     await Promise.all([
       getClusters(
@@ -2717,6 +3240,7 @@ async function startSupplyRun() {
       ),
       getSellerWarehouses(),
       resolveDropOff(),
+      getProducts(),
     ]);
 
 
@@ -2772,6 +3296,7 @@ async function startSupplyRun() {
   const plan =
     buildSupplyPlan(
       replenishmentItems,
+      products,
       [
         ...russianClusters,
         ...belarusClusters,
@@ -3333,6 +3858,7 @@ async function previewSupplyPlan() {
     cisClusters,
     sellerWarehouses,
     dropOff,
+    products,
   ] =
     await Promise.all([
       getClusters(
@@ -3346,6 +3872,7 @@ async function previewSupplyPlan() {
       getSellerWarehouses(),
 
       resolveDropOff(),
+      getProducts(),
     ]);
 
 
@@ -3379,6 +3906,7 @@ async function previewSupplyPlan() {
   const plan =
     buildSupplyPlan(
       replenishmentItems,
+      products,
       [
         ...russianClusters,
         ...belarusClusters,
