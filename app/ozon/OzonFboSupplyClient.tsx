@@ -76,9 +76,8 @@ type PreviewArticle = {
   cartons: number;
   final_quantity: number;
   rule:
-    | "full_cartons_down"
-    | "one_carton_over_half"
-    | "zero_half_or_less"
+    | "full_cartons_rounded"
+    | "zero_less_than_one_carton"
     | "missing_pack"
     | "pack_conflict"
     | "missing_enot"
@@ -138,7 +137,22 @@ type PreviewPayload = {
     invalid_sku_items: number;
     zero_half_or_less_items: number;
     technical_errors: number;
+    packaging_attention_items?: number;
   };
+  packaging_attention?: Array<{
+    master_code: string | null;
+    offer_id: string | null;
+    product_name: string | null;
+    sku: number | null;
+    raw_need: number;
+    final_quantity: number;
+    missing_fields: string[];
+    clusters: string[];
+    missing_pack: boolean;
+    pack_conflict: boolean;
+    missing_enot: boolean;
+    included_in_request: boolean;
+  }>;
   recommended_timeslot?: {
     date: string;
     from: string;
@@ -1470,9 +1484,10 @@ export default function OzonFboSupplyClient({
                   "reason-text"
               >
                 Расчёт количества привязан к ЕНОТ и вложимости
-                в 1 транспортную коробку. Полные короба округляются
-                вниз. Если потребность меньше одного короба,
-                больше 50% вложимости даёт 1 короб, 50% и меньше — 0.
+                в 1 транспортную коробку. Если потребность меньше
+                одного полного короба — к поставке 0. Начиная
+                с одного короба, количество коробов округляется
+                математически до ближайшего целого.
               </div>
 
 
@@ -1525,7 +1540,7 @@ export default function OzonFboSupplyClient({
                 </span>
 
                 <span>
-                  ≤ 50% короба → 0:{" "}
+                  Меньше 1 короба → 0:{" "}
                   <strong>
                     {
                       formatNumber(
@@ -1535,6 +1550,240 @@ export default function OzonFboSupplyClient({
                   </strong>
                 </span>
               </div>
+
+
+              {
+                (
+                  preview.packaging_attention
+                  ??
+                  []
+                ).length >
+                  0
+                  ? (
+                    <div
+                      className=
+                        "reason-box"
+
+                      style={{
+                        marginTop:
+                          "14px",
+                      }}
+                    >
+                      <strong>
+                        Нужно дозаполнить упаковочные данные
+                      </strong>
+
+                      <div
+                        className=
+                          "reason-text"
+
+                        style={{
+                          marginTop:
+                            "6px",
+                        }}
+                      >
+                        Отсутствие размеров или веса не блокирует
+                        расчёт и создание заявки. Если вложимость
+                        известна, позиция уже включается с расчётным
+                        количеством. Без вложимости позиция остаётся
+                        в потребности, но временно не включается
+                        в заявку, потому что коробную кратность
+                        посчитать нельзя.
+                      </div>
+
+                      <div
+                        style={{
+                          marginTop:
+                            "10px",
+
+                          overflowX:
+                            "auto",
+                        }}
+                      >
+                        <div
+                          style={{
+                            minWidth:
+                              "980px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display:
+                                "grid",
+
+                              gridTemplateColumns:
+                                "0.7fr 1.1fr 1.8fr 1.1fr 0.7fr 0.8fr",
+
+                              gap:
+                                "10px",
+
+                              padding:
+                                "7px 0",
+
+                              borderBottom:
+                                "1px solid var(--ws-border)",
+
+                              fontSize:
+                                "10px",
+
+                              fontWeight:
+                                700,
+                            }}
+                          >
+                            <span>ЕНОТ</span>
+                            <span>Артикул</span>
+                            <span>Товар</span>
+                            <span>Не хватает</span>
+                            <span>Потребность</span>
+                            <span>В заявку</span>
+                          </div>
+
+                          {
+                            (
+                              preview.packaging_attention
+                              ??
+                              []
+                            ).map(
+                              (
+                                row,
+                                index
+                              ) => {
+
+                                const missing = [
+                                  ...row.missing_fields,
+                                  row.missing_pack
+                                    ? "вложимость"
+                                    : "",
+                                  row.pack_conflict
+                                    ? "конфликт вложимости"
+                                    : "",
+                                  row.missing_enot
+                                    ? "ЕНОТ"
+                                    : "",
+                                ].filter(
+                                  Boolean
+                                );
+
+
+                                return (
+                                  <div
+                                    key={
+                                      [
+                                        row.master_code,
+                                        row.sku,
+                                        row.offer_id,
+                                        index,
+                                      ].join(
+                                        ":"
+                                      )
+                                    }
+
+                                    style={{
+                                      display:
+                                        "grid",
+
+                                      gridTemplateColumns:
+                                        "0.7fr 1.1fr 1.8fr 1.1fr 0.7fr 0.8fr",
+
+                                      gap:
+                                        "10px",
+
+                                      padding:
+                                        "7px 0",
+
+                                      borderBottom:
+                                        "1px solid var(--ws-border)",
+
+                                      fontSize:
+                                        "10px",
+
+                                      alignItems:
+                                        "start",
+                                    }}
+                                  >
+                                    <span>
+                                      <strong>
+                                        {
+                                          row.master_code
+                                          ??
+                                          "—"
+                                        }
+                                      </strong>
+                                    </span>
+
+                                    <span>
+                                      {
+                                        row.offer_id
+                                        ??
+                                        "—"
+                                      }
+                                    </span>
+
+                                    <span>
+                                      {
+                                        row.product_name
+                                        ??
+                                        "—"
+                                      }
+                                    </span>
+
+                                    <span>
+                                      {
+                                        missing.length >
+                                          0
+                                          ? missing.join(
+                                              ", "
+                                            )
+                                          : "—"
+                                      }
+                                    </span>
+
+                                    <span>
+                                      {
+                                        formatNumber(
+                                          row.raw_need
+                                        )
+                                      }
+                                    </span>
+
+                                    <span>
+                                      <strong>
+                                        {
+                                          formatNumber(
+                                            row.final_quantity
+                                          )
+                                        }
+                                      </strong>
+
+                                      <br />
+
+                                      <small
+                                        style={{
+                                          color:
+                                            row.included_in_request
+                                              ? "#16794b"
+                                              : "#b42318",
+                                        }}
+                                      >
+                                        {
+                                          row.included_in_request
+                                            ? "не блокирует"
+                                            : "ждёт вложимость"
+                                        }
+                                      </small>
+                                    </span>
+                                  </div>
+                                );
+
+                              }
+                            )
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  )
+                  : null
+              }
 
 
               {
@@ -2044,15 +2293,11 @@ export default function OzonFboSupplyClient({
 
                                               {
                                                 article.rule ===
-                                                  "one_carton_over_half"
-                                                  ? " · >50% → 1 короб"
+                                                  "zero_less_than_one_carton"
+                                                  ? " · меньше 1 короба → 0"
 
                                                   : article.rule ===
-                                                      "zero_half_or_less"
-                                                    ? " · ≤50% → 0"
-
-                                                    : article.rule ===
-                                                        "missing_pack"
+                                                      "missing_pack"
                                                       ? " · нет вложимости"
 
                                                       : article.rule ===
