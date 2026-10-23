@@ -4,6 +4,7 @@ import {
   type CartonUnit,
   type PlannedCargo,
   planCargoesForZone,
+  summarizeCargoes,
   thresholdForCluster,
 } from "./ozon-fbo-cargo-rules";
 
@@ -23,6 +24,7 @@ type ProductRow = {
   carton_length_mm: number | null;
   carton_width_mm: number | null;
   carton_height_mm: number | null;
+  carton_weight_kg: number | null;
   transport_carton_volume_m3: number | null;
 };
 
@@ -211,7 +213,7 @@ async function getProducts() {
     const page = await supabaseGet<ProductRow[]>(
       [
         "products",
-        "?select=id,master_code,offer_id,units_per_carton,carton_length_mm,carton_width_mm,carton_height_mm,transport_carton_volume_m3",
+        "?select=id,master_code,offer_id,units_per_carton,carton_length_mm,carton_width_mm,carton_height_mm,carton_weight_kg,transport_carton_volume_m3",
         "&order=created_at.asc",
         `&limit=${SUPABASE_PAGE_SIZE}`,
         `&offset=${offset}`,
@@ -409,7 +411,7 @@ function validateRules(response: CargoRulesResponse) {
 }
 
 
-async function buildCargoPlan(
+export async function buildCargoPlan(
   calculationRunId: string,
   orderId: number,
   clusterName: string,
@@ -475,6 +477,7 @@ async function buildCargoPlan(
     Map<string, [number, number, number]>
   >();
   const volumeByMaster = new Map<string, Set<number>>();
+  const weightByMaster = new Map<string, Set<number>>();
 
   for (const product of products) {
     const master = normalizeKey(product.master_code);
@@ -511,6 +514,13 @@ async function buildCargoPlan(
       const values = volumeByMaster.get(master) ?? new Set<number>();
       values.add(volume);
       volumeByMaster.set(master, values);
+    }
+
+    const weight = toPositiveNumber(product.carton_weight_kg);
+    if (weight !== null) {
+      const values = weightByMaster.get(master) ?? new Set<number>();
+      values.add(weight);
+      weightByMaster.set(master, values);
     }
   }
 
@@ -609,6 +619,14 @@ async function buildCargoPlan(
       const perCartonLitres = totalLitres / boxCount;
 
       for (let index = 0; index < boxCount; index++) {
+        const weights =
+          master ? weightByMaster.get(master) : undefined;
+
+        const weightKg =
+          weights?.size === 1
+            ? Array.from(weights)[0]
+            : null;
+
         cartons.push({
           sku,
           offer_id: offerId,
@@ -617,6 +635,7 @@ async function buildCargoPlan(
           quant,
           placement_zone: zone,
           volume_litres: perCartonLitres,
+          weight_kg: weightKg,
           dimensions,
         });
       }
@@ -663,6 +682,13 @@ async function buildCargoPlan(
     });
   }
 
+  const physicalSummary =
+    summarizeCargoes(
+      supplyPlans.flatMap(
+        (supply) => supply.cargoes,
+      ),
+    );
+
   return {
     ready: true as const,
     threshold_litres: thresholdLitres,
@@ -679,6 +705,7 @@ async function buildCargoPlan(
       (sum, supply) => sum + supply.box_count,
       0,
     ),
+    physical_summary: physicalSummary,
   };
 }
 
