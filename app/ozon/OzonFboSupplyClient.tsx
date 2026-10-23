@@ -2027,9 +2027,6 @@ export default function OzonFboSupplyClient({
               </div>
 
 
-              }
-
-
               <div
                 style={{
                   marginTop:
