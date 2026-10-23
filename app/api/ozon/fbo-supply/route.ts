@@ -7749,7 +7749,7 @@ async function processOne(
       ) {
 
         const continueExisting =
-          /^AUTO_GM: создано \d+\/\d+ коробов/.test(
+          /^AUTO_GM:/.test(
             normalizeKey(
               row.error_message
             )
