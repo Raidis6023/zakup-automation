@@ -1041,6 +1041,8 @@ export default async function WildberriesPage() {
             <ThemeToggle />
 
 
+            <Link href="/wildberries/fbw-supplies" className="secondary-button wb-navigation-button">Поставки FBW · маршруты</Link>
+
             <Link
               href="/stock-import"
               className="secondary-button wb-navigation-button"
