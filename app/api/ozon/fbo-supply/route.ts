@@ -37,6 +37,12 @@ const MAX_PROCESS_ATTEMPTS =
 const SUPABASE_PAGE_SIZE =
   1000;
 
+const MIN_TIMESLOT_LEAD_DAYS =
+  3;
+
+const TIMESLOT_SEARCH_HORIZON_DAYS =
+  30;
+
 const PARKED_NEXT_ATTEMPT_AT =
   "9999-12-31T23:59:59.000Z";
 
@@ -3406,6 +3412,12 @@ async function startSupplyRun(
         "success"
     ) {
 
+      const formationDate =
+        existingRun.formation_date
+        ||
+        getMoscowDate();
+
+
       await updateRun(
         existingRun.id,
         {
@@ -3417,6 +3429,24 @@ async function startSupplyRun(
 
           last_error:
             null,
+
+          target_date:
+            addDays(
+              formationDate,
+              MIN_TIMESLOT_LEAD_DAYS
+            ),
+
+          window_date_from:
+            addDays(
+              formationDate,
+              MIN_TIMESLOT_LEAD_DAYS
+            ),
+
+          window_date_to:
+            addDays(
+              formationDate,
+              TIMESLOT_SEARCH_HORIZON_DAYS
+            ),
         }
       );
 
@@ -3761,19 +3791,19 @@ async function startSupplyRun(
   const targetDate =
     addDays(
       formationDate,
-      7
+      MIN_TIMESLOT_LEAD_DAYS
     );
 
   const windowDateFrom =
     addDays(
       formationDate,
-      5
+      MIN_TIMESLOT_LEAD_DAYS
     );
 
   const windowDateTo =
     addDays(
       formationDate,
-      9
+      TIMESLOT_SEARCH_HORIZON_DAYS
     );
 
 
@@ -4355,19 +4385,19 @@ async function previewSupplyPlan() {
   const targetDate =
     addDays(
       formationDate,
-      7
+      MIN_TIMESLOT_LEAD_DAYS
     );
 
   const windowDateFrom =
     addDays(
       formationDate,
-      5
+      MIN_TIMESLOT_LEAD_DAYS
     );
 
   const windowDateTo =
     addDays(
       formationDate,
-      9
+      TIMESLOT_SEARCH_HORIZON_DAYS
     );
 
 
@@ -5737,6 +5767,13 @@ async function storageWarehouseCandidates(
         );
 
 
+      const candidateType =
+        normalizeKey(
+          candidate.warehouse_type
+        )
+          .toUpperCase();
+
+
       if (
         warehouseId ===
           null
@@ -5750,6 +5787,9 @@ async function storageWarehouseCandidates(
           toPositiveInteger(
             run.seller_warehouse_id
           )
+        ||
+        candidateType ===
+          "WAREHOUSE_TYPE_ORDERS_RECEIVING_POINT"
       ) {
 
         continue;
@@ -6290,152 +6330,120 @@ function chooseTimeslot(
     string
 ) {
 
-  const days =
-    response
-      .result
-      ?.drop_off_warehouse_timeslots
-      ?.days
-    ??
-    [];
+  const minimumDate =
+    addDays(
+      formationDate,
+      MIN_TIMESLOT_LEAD_DAYS
+    );
 
 
-  const preferredDates =
-    [
-      addDays(
-        formationDate,
-        7
-      ),
-      addDays(
-        formationDate,
-        6
-      ),
-      addDays(
-        formationDate,
-        8
-      ),
-      addDays(
-        formationDate,
-        5
-      ),
-      addDays(
-        formationDate,
-        9
-      ),
-    ];
+  const candidates =
+    (
+      response
+        .result
+        ?.drop_off_warehouse_timeslots
+        ?.days
+      ??
+      []
+    )
+      .flatMap(
+        day => {
+
+          const date =
+            normalizeKey(
+              day.date_in_timezone
+            ).slice(
+              0,
+              10
+            );
 
 
-  for (
-    const date
-    of preferredDates
-  ) {
+          if (
+            !date
+            ||
+            date <
+              minimumDate
+          ) {
 
-    const day =
-      days.find(
-        candidate =>
-          normalizeKey(
-            candidate.date_in_timezone
-          ).slice(
-            0,
-            10
-          ) ===
-          date
+            return [];
+
+          }
+
+
+          return (
+            day.timeslots
+            ??
+            []
+          )
+            .filter(
+              slot =>
+                Boolean(
+                  slot.from_in_timezone
+                  &&
+                  slot.to_in_timezone
+                )
+            )
+            .map(
+              slot => ({
+                date,
+
+                from:
+                  slot.from_in_timezone as string,
+
+                to:
+                  slot.to_in_timezone as string,
+              })
+            );
+
+        }
+      )
+      .sort(
+        (
+          left,
+          right
+        ) => {
+
+          const leftTime =
+            Date.parse(
+              left.from
+            );
+
+          const rightTime =
+            Date.parse(
+              right.from
+            );
+
+
+          if (
+            Number.isFinite(
+              leftTime
+            )
+            &&
+            Number.isFinite(
+              rightTime
+            )
+          ) {
+
+            return leftTime
+            -
+            rightTime;
+
+          }
+
+
+          return left.from.localeCompare(
+            right.from
+          );
+
+        }
       );
 
 
-    const slots =
-      (
-        day?.timeslots
-        ??
-        []
-      )
-        .filter(
-          slot =>
-            Boolean(
-              slot.from_in_timezone
-              &&
-              slot.to_in_timezone
-            )
-        )
-        .sort(
-          (
-            left,
-            right
-          ) => {
-
-            const leftTime =
-              Date.parse(
-                left.from_in_timezone
-                ??
-                ""
-              );
-
-            const rightTime =
-              Date.parse(
-                right.from_in_timezone
-                ??
-                ""
-              );
-
-
-            if (
-              Number.isFinite(
-                leftTime
-              )
-              &&
-              Number.isFinite(
-                rightTime
-              )
-            ) {
-
-              return leftTime
-              -
-              rightTime;
-
-            }
-
-
-            return normalizeKey(
-              left.from_in_timezone
-            ).localeCompare(
-              normalizeKey(
-                right.from_in_timezone
-              )
-            );
-
-          }
-        );
-
-
-    const firstSlot =
-      slots[
-        0
-      ];
-
-
-    if (
-      firstSlot
-      &&
-      firstSlot.from_in_timezone
-      &&
-      firstSlot.to_in_timezone
-    ) {
-
-      return {
-        date,
-
-        from:
-          firstSlot.from_in_timezone,
-
-        to:
-          firstSlot.to_in_timezone,
-      };
-
-    }
-
-  }
-
-
-  return null;
+  return candidates[
+    0
+  ]
+  ??
+  null;
 
 }
 
@@ -7349,7 +7357,7 @@ async function processOne(
 
 
     // ========================================================
-    // 3. ТАЙМСЛОТ +5..+9, ПРИОРИТЕТ +7
+    // 3. ТАЙМСЛОТ: НЕ РАНЬШЕ +3 СУТОК, ДАЛЬШЕ БЛИЖАЙШИЙ
     // ========================================================
 
     if (
@@ -7470,7 +7478,7 @@ async function processOne(
               timeslots,
 
             error_message:
-              `Нет доступного таймслота в диапазоне ${run.window_date_from} — ${run.window_date_to}`,
+              `Нет доступного таймслота начиная с ${run.window_date_from} в текущем горизонте поиска до ${run.window_date_to}`,
           }
         );
 
