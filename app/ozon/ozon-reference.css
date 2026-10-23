@@ -2940,6 +2940,28 @@ strong {
 }
 
 .ozon-reference-page
+.ozon-fbo-supply-success-row {
+  grid-template-columns:
+    minmax(
+      180px,
+      1.1fr
+    )
+    minmax(
+      120px,
+      0.7fr
+    )
+    minmax(
+      180px,
+      1fr
+    )
+    minmax(
+      130px,
+      0.7fr
+    );
+}
+
+
+.ozon-reference-page
 .ozon-fbo-supply-row:last-child {
   padding-bottom:
     0;
