@@ -6915,16 +6915,6 @@ async function processOne(
         row,
         {
           status:
-            "draft_ready",   )
-        );
-
-      }
-
-
-      await releaseRequest(
-        row,
-        {
-          status:
             "draft_ready",
 
           storage_warehouse_id:
