@@ -37,7 +37,7 @@ const SUPPLY_GAP_SECONDS =
   32;
 
 const MAX_PROCESS_ATTEMPTS =
-  20;
+  80;
 
 const SUPABASE_PAGE_SIZE =
   1000;
@@ -2992,6 +2992,11 @@ async function activateSupplyRequests(
       row.status ===
         "no_slot";
 
+    const existingOrderId =
+      toPositiveInteger(
+        row.ozon_order_id
+      );
+
 
     await supabasePatch(
       `ozon_fbo_supply_requests?id=eq.${encodeURIComponent(
@@ -3000,60 +3005,78 @@ async function activateSupplyRequests(
       {
         ...(
           shouldReset
-            ? {
-                status:
-                  "queued",
+            ? existingOrderId !==
+                null
+              ? {
+                  status:
+                    "creating",
 
-                draft_id:
-                  null,
+                  is_processing:
+                    false,
 
-                storage_warehouse_id:
-                  null,
+                  processing_started_at:
+                    null,
+                }
+              : {
+                  status:
+                    "queued",
 
-                storage_warehouse_name:
-                  null,
+                  draft_id:
+                    null,
 
-                storage_warehouse_address:
-                  null,
+                  storage_warehouse_id:
+                    null,
 
-                timeslot_from:
-                  null,
+                  storage_warehouse_name:
+                    null,
 
-                timeslot_to:
-                  null,
+                  storage_warehouse_address:
+                    null,
 
-                ozon_order_id:
-                  null,
+                  timeslot_from:
+                    null,
 
-                is_processing:
-                  false,
+                  timeslot_to:
+                    null,
 
-                processing_started_at:
-                  null,
+                  ozon_order_id:
+                    null,
 
-                raw_draft:
-                  null,
+                  is_processing:
+                    false,
 
-                raw_info:
-                  null,
+                  processing_started_at:
+                    null,
 
-                raw_timeslots:
-                  null,
+                  raw_draft:
+                    null,
 
-                raw_create:
-                  null,
+                  raw_info:
+                    null,
 
-                raw_status:
-                  null,
-              }
+                  raw_timeslots:
+                    null,
+
+                  raw_create:
+                    null,
+
+                  raw_status:
+                    null,
+                }
             : {}
         ),
+
+        attempts:
+          0,
 
         next_attempt_at:
           now,
 
         error_message:
-          null,
+          existingOrderId !==
+            null
+            ? "AUTO_GM_RESUME: заявка Ozon уже существует; продолжаем только грузоместа."
+            : null,
       }
     );
 
@@ -5304,10 +5327,27 @@ async function releaseRequest(
     Record<string, unknown>
 ) {
 
+  const nextStatus =
+    typeof values.status ===
+      "string"
+      ? values.status
+      : row.status;
+
+
   await updateRequest(
     row.id,
     {
       ...values,
+
+      ...(
+        nextStatus !==
+          row.status
+          ? {
+              attempts:
+                0,
+            }
+          : {}
+      ),
 
       is_processing:
         false,
@@ -6700,6 +6740,167 @@ async function processOne(
         "SUCCESS"
       ) {
 
+        const rejectedSkus =
+          new Set<number>();
+
+
+        for (
+          const error
+          of info.errors
+          ??
+          []
+        ) {
+
+          for (
+            const validation
+            of error.items_validation
+            ??
+            []
+          ) {
+
+            for (
+              const rejected
+              of validation.rejected_items
+              ??
+              []
+            ) {
+
+              const sku =
+                toPositiveInteger(
+                  rejected.sku
+                );
+
+
+              if (
+                sku !==
+                  null
+              ) {
+
+                rejectedSkus.add(
+                  sku
+                );
+
+              }
+
+            }
+
+          }
+
+        }
+
+
+        if (
+          rejectedSkus.size >
+            0
+        ) {
+
+          const filteredItems =
+            row.items.filter(
+              item => {
+
+                const sku =
+                  toPositiveInteger(
+                    item.sku
+                  );
+
+
+                return (
+                  sku !==
+                    null
+                  &&
+                  !rejectedSkus.has(
+                    sku
+                  )
+                );
+
+              }
+            );
+
+
+          if (
+            filteredItems.length >
+              0
+            &&
+            filteredItems.length <
+              row.items.length
+          ) {
+
+            const totalUnits =
+              filteredItems.reduce(
+                (
+                  sum,
+                  item
+                ) =>
+                  sum
+                  +
+                  Number(
+                    item.quantity
+                  ),
+                0
+              );
+
+
+            await releaseRequest(
+              row,
+              {
+                status:
+                  "queued",
+
+                items:
+                  filteredItems,
+
+                sku_count:
+                  filteredItems.length,
+
+                total_units:
+                  totalUnits,
+
+                draft_id:
+                  null,
+
+                storage_warehouse_id:
+                  null,
+
+                storage_warehouse_name:
+                  null,
+
+                storage_warehouse_address:
+                  null,
+
+                timeslot_from:
+                  null,
+
+                timeslot_to:
+                  null,
+
+                raw_info:
+                  info,
+
+                next_attempt_at:
+                  new Date()
+                    .toISOString(),
+
+                error_message:
+                  `Ozon отклонил ${rejectedSkus.size} SKU на этапе ITEMS_VALIDATION (${Array.from(
+                    rejectedSkus
+                  ).join(
+                    ", "
+                  )}). Они исключены только из этого кластера; draft будет пересоздан с оставшимся составом.`,
+              }
+            );
+
+
+            return Response.json(
+              await refreshAndSerializeRun(
+                runId
+              )
+            );
+
+          }
+
+        }
+
+
         const errors =
           meaningfulErrors(
             info.errors
@@ -7556,6 +7757,11 @@ async function processOne(
 
               orderId,
 
+              clusterName:
+                row.cluster_name
+                ??
+                `Кластер ${row.macrolocal_cluster_id}`,
+
               continueExisting,
             }
           );
@@ -7586,6 +7792,9 @@ async function processOne(
             {
               status:
                 "creating",
+
+              attempts:
+                0,
 
               next_attempt_at:
                 laterIso(
