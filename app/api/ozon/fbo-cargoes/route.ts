@@ -1363,21 +1363,6 @@ async function buildPlan(
         ];
 
 
-      if (
-        quantity %
-        pack !==
-          0
-      ) {
-
-        blockers.push(
-          `SKU ${sku}: Ozon распределил ${quantity} шт., вложимость ${pack}; остаток ${quantity % pack} шт.`
-        );
-
-        continue;
-
-      }
-
-
       const offerId =
         normalizeKey(
           item.offer_id
@@ -1399,10 +1384,27 @@ async function buildPlan(
       }
 
 
-      const boxCount =
+      const fullBoxCount =
+        Math.floor(
+          quantity
+          /
+          pack
+        );
+
+      const remainder =
         quantity
-        /
+        %
         pack;
+
+      const boxCount =
+        fullBoxCount
+        +
+        (
+          remainder >
+            0
+            ? 1
+            : 0
+        );
 
       const quant =
         toPositiveInteger(
@@ -1437,7 +1439,7 @@ async function buildPlan(
 
       for (
         let boxIndex = 1;
-        boxIndex <= boxCount;
+        boxIndex <= fullBoxCount;
         boxIndex++
       ) {
 
@@ -1462,6 +1464,39 @@ async function buildPlan(
 
           quantity:
             pack,
+
+          quant,
+        });
+
+      }
+
+
+      if (
+        remainder >
+          0
+      ) {
+
+        boxes.push({
+          key:
+            [
+              "fbo",
+              orderId,
+              supply.supply_id,
+              sku,
+              "partial",
+            ].join(
+              "-"
+            ),
+
+          sku,
+
+          offer_id:
+            offerId,
+
+          barcode,
+
+          quantity:
+            remainder,
 
           quant,
         });
