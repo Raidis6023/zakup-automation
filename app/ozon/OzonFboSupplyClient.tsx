@@ -1833,6 +1833,18 @@ export default function OzonFboSupplyClient({
 
             if (
               activeIds.length ===
+                1
+              &&
+              data.run?.id
+            ) {
+
+              void processLoop(
+                data.run.id,
+                activeIds
+              );
+
+            } else if (
+              activeIds.length ===
                 0
               &&
               calculationRunId
