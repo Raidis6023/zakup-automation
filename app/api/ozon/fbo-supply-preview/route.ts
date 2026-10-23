@@ -583,7 +583,10 @@ function getPackRule(rawNeed: number, pack: number | null) {
     };
   }
 
-  if (rawNeed < pack) {
+  if (
+    rawNeed <=
+    pack * 0.5
+  ) {
     return {
       cartons: 0,
       finalQuantity: 0,
