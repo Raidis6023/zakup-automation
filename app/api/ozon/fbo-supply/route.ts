@@ -727,8 +727,10 @@ function getPackRule(
 ) {
 
   if (
-    rawNeed <
+    rawNeed <=
     pack
+    *
+    0.5
   ) {
 
     return {
