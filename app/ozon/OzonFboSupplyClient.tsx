@@ -1403,6 +1403,42 @@ export default function OzonFboSupplyClient({
     );
 
 
+  const parkedRows =
+    (
+      status
+        ?.requests
+      ??
+      []
+    ).filter(
+      row =>
+        !isTerminalRequestStatus(
+          row.status
+        )
+        &&
+        isParkedRequest(
+          row
+        )
+    );
+
+
+  const activeRows =
+    (
+      status
+        ?.requests
+      ??
+      []
+    ).filter(
+      row =>
+        !isTerminalRequestStatus(
+          row.status
+        )
+        &&
+        !isParkedRequest(
+          row
+        )
+    );
+
+
   return (
 
     <section
@@ -1429,9 +1465,10 @@ export default function OzonFboSupplyClient({
             className=
               "reason-text"
           >
-            Один запуск создаёт отдельную
-            cross-dock заявку Ozon
-            для каждого макрокластера.
+            Сначала тест показывает потребность,
+            короба, склад и таймслоты по кластерам.
+            Реальные cross-dock заявки запускаются
+            отдельно по кластеру или сразу все.
           </div>
 
 
@@ -2836,9 +2873,18 @@ export default function OzonFboSupplyClient({
 
                 <strong>
                   {
-                    getRunLabel(
-                      currentRun.status
-                    )
+                    currentRun.status ===
+                      "running"
+                    &&
+                    activeRows.length ===
+                      0
+                    &&
+                    parkedRows.length >
+                      0
+                      ? "Ожидает запуска кластеров"
+                      : getRunLabel(
+                          currentRun.status
+                        )
                   }
                 </strong>
 
@@ -2884,7 +2930,17 @@ export default function OzonFboSupplyClient({
                   В работе:{" "}
                   <strong>
                     {
-                      status.progress.in_progress
+                      activeRows.length
+                    }
+                  </strong>
+                </span>
+
+
+                <span>
+                  Ожидают запуска:{" "}
+                  <strong>
+                    {
+                      parkedRows.length
                     }
                   </strong>
                 </span>
