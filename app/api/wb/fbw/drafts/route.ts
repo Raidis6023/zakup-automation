@@ -78,7 +78,7 @@ export async function POST(request:NextRequest) {
       if (grouped.has(item.sku)) {
         return NextResponse.json({ok:false,error:"Баркод "+item.sku+" встречается в нескольких строках; устраните дубликаты до создания"},{status:409});
       }
-      if (!Number.isSafeInteger(item.quantity) || item.quantity <= 0 || !Number.isSafeInteger(item.pack) || item.quantity % item.pack !== 0) {
+      if (!Number.isSafeInteger(item.quantity) || item.quantity <= 0 || typeof item.pack !== "number" || !Number.isSafeInteger(item.pack) || item.quantity % item.pack !== 0) {
         throw new Error("Некратное вложимости количество: "+item.article);
       }
       grouped.set(item.sku,item.quantity);
