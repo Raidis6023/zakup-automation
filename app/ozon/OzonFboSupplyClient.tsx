@@ -1899,6 +1899,69 @@ export default function OzonFboSupplyClient({
   );
 
 
+  useEffect(
+    () => {
+
+      const timer =
+        window.setInterval(
+          () => {
+
+            if (
+              !mountedRef.current
+              ||
+              loopRef.current
+              ||
+              document.visibilityState !==
+                "visible"
+            ) {
+
+              return;
+
+            }
+
+
+            void loadStatus()
+              .catch(
+                syncError => {
+
+                  if (
+                    mountedRef.current
+                  ) {
+
+                    setError(
+                      syncError
+                        instanceof Error
+                        ? syncError.message
+                        : String(
+                            syncError
+                          )
+                    );
+
+                  }
+
+                }
+              );
+
+          },
+          15000
+        );
+
+
+      return () => {
+
+        window.clearInterval(
+          timer
+        );
+
+      };
+
+      // Автосверка наличия заявок в Ozon.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    []
+  );
+
+
   const summarySignature =
     (
       status
@@ -2184,6 +2247,8 @@ export default function OzonFboSupplyClient({
             короба, склад и таймслоты по кластерам.
             Реальные cross-dock заявки запускаются
             отдельно по кластеру или сразу все.
+            Статусы существующих заявок автоматически
+            сверяются с Ozon каждые 15 секунд.
           </div>
 
 
