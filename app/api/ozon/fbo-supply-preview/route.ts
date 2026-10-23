@@ -1439,7 +1439,7 @@ async function POSTImpl() {
     window_date_from: windowDateFrom,
     window_date_to: windowDateTo,
     rounding_rule:
-      "Если потребность меньше 1 полного короба — 0. Начиная с 1 короба, количество коробов округляется математически до ближайшего целого.",
+      "Если потребность не превышает 0,5 короба — 0. Если больше 0,5 короба, количество коробов округляется математически до ближайшего целого.",
     drop_off: dropOff,
     summary: {
       clusters: clusters.length,
