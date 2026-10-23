@@ -441,11 +441,8 @@ function canCreatePreviewCluster(
     cluster.proposed_units >
       0
     &&
-    cluster.ozon_accepted_units >
+    cluster.articles_to_supply >
       0
-    &&
-    cluster.recommended_warehouse !==
-      null
     &&
     (
       cluster.status ===
@@ -1533,8 +1530,8 @@ export default function OzonFboSupplyClient({
           >
             {
               previewLoading
-                ? "Ozon проверяет короба, склады и таймслоты..."
-                : "Тест: состав, склады и таймслот"
+                ? "Считаем потребность и короба..."
+                : "Тест: потребность по кластерам"
             }
           </button>
 
@@ -1551,10 +1548,9 @@ export default function OzonFboSupplyClient({
                 "11px",
             }}
           >
-            Сначала выполните тест. После него
-            реальную заявку можно создать отдельно
-            по каждому кластеру или одной кнопкой
-            для всех доступных кластеров.
+            Тест только считает потребность и короба.
+            Склад размещения и таймслот Ozon определяем
+            уже при создании конкретной заявки.
           </div>
 
         </div>
@@ -2004,89 +2000,33 @@ export default function OzonFboSupplyClient({
               }
 
 
-              {
-                preview.recommended_timeslot
-                  ? (
+              <div
+                className=
+                  "reason-box"
 
-                    <div
-                      className=
-                        "reason-box"
+                style={{
+                  marginTop:
+                    "14px",
+                }}
+              >
+                <strong>
+                  Склад и таймслот определятся при создании заявки
+                </strong>
 
-                      style={{
-                        marginTop:
-                          "14px",
-                      }}
-                    >
-                      <strong>
-                        Рекомендуемый общий таймслот
-                      </strong>
+                <div
+                  className=
+                    "reason-text"
+                >
+                  Потребность рассчитана на уровне кластера.
+                  После нажатия «Создать заявку» backend создаёт
+                  cross-dock draft только для этого кластера,
+                  получает от Ozon доступный склад размещения
+                  внутри кластера и ищет слот в окне +5…+9 дней
+                  с приоритетом +7.
+                </div>
+              </div>
 
-                      <div
-                        className=
-                          "reason-text"
-                      >
-                        {
-                          formatDateTime(
-                            preview.recommended_timeslot.from
-                          )
-                        }
 
-                        {" → "}
-
-                        {
-                          formatDateTime(
-                            preview.recommended_timeslot.to
-                          )
-                        }
-
-                        {" · подходит для "}
-
-                        <strong>
-                          {
-                            preview.recommended_timeslot.cluster_count
-                          }
-                        </strong>
-
-                        {" кластеров ("}
-
-                        <strong>
-                          {
-                            preview.recommended_timeslot.coverage_percent
-                          }%
-                        </strong>
-
-                        {")"}
-                      </div>
-
-                      <div
-                        className=
-                          "reason-text"
-                      >
-                        Приоритет выбора: максимальное количество
-                        кластеров, затем близость к +7 дням
-                        с порядком +7, +6, +8, +5, +9.
-                      </div>
-                    </div>
-
-                  )
-                  : (
-
-                    <div
-                      className=
-                        "ozon-fbo-supply-error"
-                    >
-                      <strong>
-                        Общий таймслот пока не найден
-                      </strong>
-
-                      <div>
-                        Склады и состав показаны ниже.
-                        Ozon не вернул единый доступный слот
-                        в окне +5…+9 дней.
-                      </div>
-                    </div>
-
-                  )
               }
 
 
@@ -2133,8 +2073,8 @@ export default function OzonFboSupplyClient({
                     <span>Нужно</span>
                     <span>К поставке</span>
                     <span>Коробов</span>
-                    <span>Рекомендуемый склад</span>
-                    <span>Общий слот</span>
+                    <span>Склад размещения</span>
+                    <span>Таймслот</span>
                     <span>Состав</span>
                     <span>Заявка</span>
                   </div>
@@ -2340,18 +2280,19 @@ export default function OzonFboSupplyClient({
                                     )
                                     : (
                                       <small
-                                        style={{
-                                          color:
-                                            cluster.proposed_units >
-                                              0
-                                              ? "#b42318"
-                                              : undefined,
-                                        }}
+                                        className=
+                                          "reason-text"
                                       >
                                         {
-                                          cluster.error
-                                          ??
-                                          "—"
+                                          cluster.proposed_units >
+                                            0
+                                            &&
+                                          cluster.status ===
+                                            "available"
+                                            ? "Определится при создании заявки"
+                                            : cluster.error
+                                              ??
+                                              "—"
                                         }
                                       </small>
                                     )
@@ -2360,12 +2301,13 @@ export default function OzonFboSupplyClient({
 
                               <span>
                                 {
-                                  cluster.supports_common_timeslot
-                                    ? "Да"
-                                    : cluster.proposed_units <=
-                                        0
-                                      ? "Не нужен"
-                                      : "Нет"
+                                  cluster.proposed_units <=
+                                    0
+                                    ? "Не нужен"
+                                    : cluster.status ===
+                                        "available"
+                                      ? "Ищем при создании"
+                                      : "—"
                                 }
                               </span>
 
