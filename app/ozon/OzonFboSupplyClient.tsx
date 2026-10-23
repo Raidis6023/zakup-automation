@@ -4069,11 +4069,49 @@ export default function OzonFboSupplyClient({
 
 
                       <span>
-                        {
-                          row.error_message
-                          ??
-                          "—"
-                        }
+                        <div>
+                          {
+                            row.error_message
+                            ??
+                            "—"
+                          }
+                        </div>
+
+                        <button
+                          type="button"
+
+                          className=
+                            "secondary-button"
+
+                          style={{
+                            marginTop:
+                              "8px",
+                          }}
+
+                          disabled={
+                            starting
+                            ||
+                            processing
+                          }
+
+                          onClick={
+                            () => {
+                              void start(
+                                [
+                                  Number(
+                                    row.macrolocal_cluster_id
+                                  ),
+                                ]
+                              );
+                            }
+                          }
+                        >
+                          {
+                            row.ozon_order_id
+                              ? "Повторить грузоместа"
+                              : "Повторить заявку"
+                          }
+                        </button>
                       </span>
 
                     </div>
