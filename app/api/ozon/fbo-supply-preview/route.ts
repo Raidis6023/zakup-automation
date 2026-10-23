@@ -42,6 +42,10 @@ type ProductRow = {
   offer_id: string | null;
   name: string | null;
   units_per_carton: number | null;
+  carton_length_mm: number | null;
+  carton_width_mm: number | null;
+  carton_height_mm: number | null;
+  carton_weight_kg: number | null;
 };
 
 type LatestSync = {
@@ -163,6 +167,7 @@ type PreviewArticle = {
     | "invalid_sku";
   ozon_rejected: boolean;
   ozon_rejection_reasons: string[];
+  missing_packaging_fields: string[];
 };
 
 type PreviewWarehouse = {
@@ -463,7 +468,7 @@ async function getProducts() {
     const page = await supabaseGet<ProductRow[]>(
       [
         "products",
-        "?select=id,master_code,offer_id,name,units_per_carton",
+        "?select=id,master_code,offer_id,name,units_per_carton,carton_length_mm,carton_width_mm,carton_height_mm,carton_weight_kg",
         "&order=created_at.asc",
         `&limit=${SUPABASE_PAGE_SIZE}`,
         `&offset=${offset}`,
@@ -766,17 +771,59 @@ function buildPlan(
   const productById = new Map(products.map(row => [row.id, row]));
 
   const packValuesByEnot = new Map<string, Set<number>>();
+  const packagingPresenceByEnot = new Map<
+    string,
+    {
+      length: boolean;
+      width: boolean;
+      height: boolean;
+      weight: boolean;
+    }
+  >();
+
   for (const product of products) {
     const enot = normalizeKey(product.master_code);
-    const pack = toPositiveInteger(product.units_per_carton);
-    if (!enot || pack === null) continue;
+    if (!enot) continue;
 
-    let values = packValuesByEnot.get(enot);
-    if (!values) {
-      values = new Set<number>();
-      packValuesByEnot.set(enot, values);
+    const pack = toPositiveInteger(product.units_per_carton);
+    if (pack !== null) {
+      let values = packValuesByEnot.get(enot);
+      if (!values) {
+        values = new Set<number>();
+        packValuesByEnot.set(enot, values);
+      }
+      values.add(pack);
     }
-    values.add(pack);
+
+    const current =
+      packagingPresenceByEnot.get(enot) ?? {
+        length: false,
+        width: false,
+        height: false,
+        weight: false,
+      };
+
+    current.length =
+      current.length ||
+      (Number.isFinite(Number(product.carton_length_mm)) &&
+        Number(product.carton_length_mm) > 0);
+
+    current.width =
+      current.width ||
+      (Number.isFinite(Number(product.carton_width_mm)) &&
+        Number(product.carton_width_mm) > 0);
+
+    current.height =
+      current.height ||
+      (Number.isFinite(Number(product.carton_height_mm)) &&
+        Number(product.carton_height_mm) > 0);
+
+    current.weight =
+      current.weight ||
+      (Number.isFinite(Number(product.carton_weight_kg)) &&
+        Number(product.carton_weight_kg) > 0);
+
+    packagingPresenceByEnot.set(enot, current);
   }
 
   const clusterMap = new Map<
@@ -916,6 +963,18 @@ function buildPlan(
 
     if (rounded.rule === "zero_half_or_less") zeroHalfOrLessItems++;
 
+    const packagingPresence =
+      enot
+        ? packagingPresenceByEnot.get(enot)
+        : undefined;
+
+    const missingPackagingFields = [
+      !packagingPresence?.length ? "длина" : "",
+      !packagingPresence?.width ? "ширина" : "",
+      !packagingPresence?.height ? "высота" : "",
+      !packagingPresence?.weight ? "вес" : "",
+    ].filter(Boolean);
+
     const article: PlanArticle = {
       cluster_type: aggregate.cluster_type,
       macrolocal_cluster_id: aggregate.macrolocal_cluster_id,
@@ -932,6 +991,7 @@ function buildPlan(
       rule: rounded.rule,
       ozon_rejected: false,
       ozon_rejection_reasons: [],
+      missing_packaging_fields: missingPackagingFields,
     };
 
     const clusterKey = `${aggregate.cluster_type}:${aggregate.macrolocal_cluster_id}`;
@@ -1486,6 +1546,104 @@ async function POSTImpl() {
     0
   );
 
+  const packagingAttentionMap = new Map<
+    string,
+    {
+      master_code: string | null;
+      offer_id: string | null;
+      product_name: string | null;
+      sku: number | null;
+      raw_need: number;
+      final_quantity: number;
+      missing_fields: Set<string>;
+      clusters: Set<string>;
+      missing_pack: boolean;
+      pack_conflict: boolean;
+      missing_enot: boolean;
+    }
+  >();
+
+  for (const cluster of clusters) {
+    for (const article of cluster.articles) {
+      const hasPackagingGap =
+        article.missing_packaging_fields.length > 0 ||
+        article.rule === "missing_pack" ||
+        article.rule === "pack_conflict" ||
+        article.rule === "missing_enot";
+
+      if (!hasPackagingGap) continue;
+
+      const key =
+        article.master_code ??
+        String(article.sku ?? article.offer_id ?? article.product_name ?? "unknown");
+
+      let row = packagingAttentionMap.get(key);
+
+      if (!row) {
+        row = {
+          master_code: article.master_code,
+          offer_id: article.offer_id,
+          product_name: article.product_name,
+          sku: article.sku,
+          raw_need: 0,
+          final_quantity: 0,
+          missing_fields: new Set<string>(),
+          clusters: new Set<string>(),
+          missing_pack: false,
+          pack_conflict: false,
+          missing_enot: false,
+        };
+        packagingAttentionMap.set(key, row);
+      }
+
+      row.raw_need += article.raw_need;
+      row.final_quantity += article.final_quantity;
+
+      for (const field of article.missing_packaging_fields) {
+        row.missing_fields.add(field);
+      }
+
+      row.clusters.add(
+        cluster.cluster_name ??
+          `Кластер ${cluster.macrolocal_cluster_id}`
+      );
+
+      if (article.rule === "missing_pack") row.missing_pack = true;
+      if (article.rule === "pack_conflict") row.pack_conflict = true;
+      if (article.rule === "missing_enot") row.missing_enot = true;
+    }
+  }
+
+  const packagingAttention = Array.from(packagingAttentionMap.values())
+    .map(row => ({
+      master_code: row.master_code,
+      offer_id: row.offer_id,
+      product_name: row.product_name,
+      sku: row.sku,
+      raw_need: row.raw_need,
+      final_quantity: row.final_quantity,
+      missing_fields: Array.from(row.missing_fields),
+      clusters: Array.from(row.clusters).sort(),
+      missing_pack: row.missing_pack,
+      pack_conflict: row.pack_conflict,
+      missing_enot: row.missing_enot,
+      included_in_request:
+        row.final_quantity > 0 &&
+        !row.missing_pack &&
+        !row.pack_conflict &&
+        !row.missing_enot,
+    }))
+    .sort((left, right) => {
+      const leftBlocked = left.included_in_request ? 0 : 1;
+      const rightBlocked = right.included_in_request ? 0 : 1;
+
+      if (rightBlocked !== leftBlocked) {
+        return rightBlocked - leftBlocked;
+      }
+
+      return right.raw_need - left.raw_need;
+    });
+
   const packagingBlockers =
     plan.packaging.missing_pack_items +
     plan.packaging.conflicting_pack_items +
@@ -1522,11 +1680,13 @@ async function POSTImpl() {
       invalid_sku_items: plan.packaging.invalid_sku_items,
       zero_half_or_less_items: plan.packaging.zero_half_or_less_items,
       technical_errors: technicalErrors,
+      packaging_attention_items: packagingAttention.length,
     },
+    packaging_attention: packagingAttention,
     recommended_timeslot: recommendedTimeslot,
     timeslot_candidates: timeslotCandidates.slice(0, 12),
     can_create_real:
-      packagingBlockers === 0 &&
+      totalProposed > 0 &&
       plan.packaging.invalid_sku_items === 0 &&
       technicalErrors === 0,
     draft_ids: draftIds,
@@ -1535,7 +1695,10 @@ async function POSTImpl() {
       "Реальные заявки Ozon не создавались.",
       "Тест создаёт только технические draft_id, необходимые Ozon для проверки складов и таймслотов.",
       packagingBlockers > 0
-        ? `Есть позиции без корректной вложимости/ЕНОТ: ${packagingBlockers}. Они показаны в составе с количеством к поставке 0 и блокируют боевое создание.`
+        ? `Есть позиции без корректной вложимости/ЕНОТ: ${packagingBlockers}. Они не включены в текущий состав, но не блокируют создание остальных заявок.`
+        : "",
+      packagingAttention.some(row => row.missing_fields.length > 0)
+        ? `Есть позиции с потребностью без полного размера/веса: ${packagingAttention.filter(row => row.missing_fields.length > 0).length}. Они могут быть включены в заявку, если вложимость известна; данные нужно дозаполнить до этапа грузомест.`
         : "",
       plan.issues.length > 0
         ? `Есть несопоставленные строки: ${plan.issues.length}.`
