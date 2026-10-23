@@ -216,6 +216,13 @@ function getToken() {
 }
 
 
+class WbRateLimitError extends Error {
+  constructor(public retryAfter: string | null) {
+    super("Wildberries временно ограничил запросы поставок (HTTP 429). Не обновляйте страницу многократно.");
+    this.name = "WbRateLimitError";
+  }
+}
+
 async function wbRequest<T>(
   path:
     string,
@@ -257,9 +264,11 @@ Promise<T> {
 
   if (!response.ok) {
 
-    throw new Error(
-      `Wildberries ${path}: HTTP ${response.status}: ${text}`
-    );
+    if (response.status === 429) {
+      const retry = response.headers.get("X-RateLimit-Retry") ?? response.headers.get("Retry-After");
+      throw new WbRateLimitError(retry);
+    }
+    throw new Error(`Wildberries HTTP ${response.status}: ${text.slice(0, 400)}`);
 
   }
 
@@ -1039,6 +1048,7 @@ export async function GET(
     );
 
 
+    const limited = error instanceof WbRateLimitError;
     return Response.json(
       {
         ok:
@@ -1054,6 +1064,7 @@ export async function GET(
         supplies:
           [],
 
+        retryAfter: limited ? error.retryAfter : null,
         error:
           error instanceof Error
             ? error.message
@@ -1063,7 +1074,8 @@ export async function GET(
       },
       {
         status:
-          500,
+          limited ? 429 : 500,
+        headers: { "Cache-Control": "private, no-store", ...(limited && error.retryAfter ? { "Retry-After": error.retryAfter } : {}) },
       }
     );
 
