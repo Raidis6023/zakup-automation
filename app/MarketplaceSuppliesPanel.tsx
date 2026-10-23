@@ -572,7 +572,10 @@ export default function MarketplaceSuppliesPanel({
     useState(
       ""
     );
+  const [wbRateLimited, setWbRateLimited] = useState(false);
 
+
+  const [wbLoadedOnce, setWbLoadedOnce] = useState(false);
 
   const [
     panelExpanded,
@@ -635,6 +638,7 @@ export default function MarketplaceSuppliesPanel({
         setError(
           ""
         );
+        if (marketplace === "wildberries") setWbRateLimited(false);
 
 
         try {
@@ -657,6 +661,8 @@ export default function MarketplaceSuppliesPanel({
               .json() as
               SupplyListResponse;
 
+
+          if (marketplace === "wildberries" && response.status === 429) setWbRateLimited(true);
 
           if (
             !response.ok
@@ -706,7 +712,7 @@ export default function MarketplaceSuppliesPanel({
 
       },
       [
-        endpoint,
+        endpoint, marketplace,
       ]
     );
 
@@ -714,13 +720,21 @@ export default function MarketplaceSuppliesPanel({
   useEffect(
     () => {
 
-      void loadOverview();
+      if (marketplace !== "wildberries") void loadOverview();
 
     },
     [
-      loadOverview,
+      loadOverview, marketplace,
     ]
   );
+
+
+  useEffect(() => {
+    if (marketplace === "wildberries" && panelExpanded && !wbLoadedOnce) {
+      setWbLoadedOnce(true);
+      void loadOverview();
+    }
+  }, [marketplace, panelExpanded, wbLoadedOnce, loadOverview]);
 
 
   async function loadDetail(
@@ -1175,6 +1189,7 @@ export default function MarketplaceSuppliesPanel({
             loading
             ||
             refreshing
+            || (marketplace === "wildberries" && wbRateLimited)
           }
 
           onClick={
@@ -1224,6 +1239,7 @@ export default function MarketplaceSuppliesPanel({
               <span>
                 {error}
               </span>
+              {marketplace === "wildberries" && wbRateLimited ? <span>Повторный запрос временно заблокирован до перезагрузки страницы. Дождитесь окончания лимита WB.</span> : null}
             </div>
 
           )
