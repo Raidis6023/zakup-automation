@@ -1825,28 +1825,23 @@ export default function OzonFboSupplyClient({
               await loadStatus();
 
 
+            const activeIds =
+              activeRequestClusterIds(
+                data.requests
+              );
+
+
             if (
-              data.run?.status ===
-                "running"
+              activeIds.length ===
+                0
+              &&
+              calculationRunId
+              &&
+              pairsWithNeed >
+                0
             ) {
 
-              const activeIds =
-                activeRequestClusterIds(
-                  data.requests
-                );
-
-
-              if (
-                activeIds.length >
-                  0
-              ) {
-
-                void processLoop(
-                  data.run.id,
-                  activeIds
-                );
-
-              }
+              void runPreview();
 
             }
 
@@ -2137,21 +2132,6 @@ export default function OzonFboSupplyClient({
       : [];
 
 
-  const canStartAll =
-    Boolean(
-      calculationRunId
-      &&
-      creatableClusterIds.length >
-        0
-      &&
-      !starting
-      &&
-      !processing
-      &&
-      !previewLoading
-    );
-
-
   const problemRows =
     (
       status
@@ -2245,8 +2225,9 @@ export default function OzonFboSupplyClient({
           >
             Сначала тест показывает потребность,
             короба, склад и таймслоты по кластерам.
-            Реальные cross-dock заявки запускаются
-            отдельно по кластеру или сразу все.
+            Сначала автоматически показываем все варианты
+            с расчётом потребности. Реальная cross-dock заявка
+            создаётся только по кнопке выбранного кластера.
             Статусы существующих заявок автоматически
             сверяются с Ozon каждые 15 секунд.
           </div>
@@ -2257,9 +2238,8 @@ export default function OzonFboSupplyClient({
               "reason-text"
           >
             Маршрут: МСК ФБС → Внуково →
-            склад размещения кластера.
-            Цель таймслота: +7 дней,
-            допустимо от +5 до +9 дней.
+            кластер размещения. Таймслот ищем
+            не раньше +3 суток и берём ближайший доступный.
           </div>
 
         </div>
@@ -3047,8 +3027,9 @@ export default function OzonFboSupplyClient({
                   по доступным складам хранения внутри выбранного кластера.
                   Мы ищем ближайший доступный слот не раньше,
                   чем через 3 суток от даты формирования.
-                  После бронирования заявки грузоместа BOX
-                  создаются автоматически по транспортным коробам.
+                  После бронирования заявки грузоместа BOX/PALLET
+                  создаются автоматически по зоне размещения, литражу
+                  и фактическому составу Ozon.
                 </div>
               </div>
 
@@ -3677,66 +3658,23 @@ export default function OzonFboSupplyClient({
 
 
               <div
+                className=
+                  "reason-text"
+
                 style={{
                   marginTop:
                     "16px",
 
-                  display:
-                    "flex",
-
-                  justifyContent:
-                    "flex-end",
-
-                  alignItems:
-                    "center",
-
-                  gap:
-                    "12px",
+                  textAlign:
+                    "right",
                 }}
               >
-                <div
-                  className=
-                    "reason-text"
-
-                  style={{
-                    textAlign:
-                      "right",
-                  }}
-                >
-                  {
-                    creatableClusterIds.length >
-                      0
-                      ? `Готово к созданию: ${creatableClusterIds.length} кластеров`
-                      : "Нет новых доступных кластеров для создания"
-                  }
-                </div>
-
-                <button
-                  type="button"
-
-                  className=
-                    "primary-button"
-
-                  disabled={
-                    !canStartAll
-                  }
-
-                  onClick={
-                    () => {
-                      void start(
-                        creatableClusterIds
-                      );
-                    }
-                  }
-                >
-                  {
-                    starting
-                      ? "Запускаем заявки..."
-                      : processing
-                        ? "Заявки создаются..."
-                        : "Создать все заявки"
-                  }
-                </button>
+                {
+                  creatableClusterIds.length >
+                    0
+                    ? `Доступно к созданию: ${creatableClusterIds.length} кластеров. Создавай только нужные заявки кнопкой в строке кластера.`
+                    : "Нет новых доступных кластеров для создания"
+                }
               </div>
 
 
