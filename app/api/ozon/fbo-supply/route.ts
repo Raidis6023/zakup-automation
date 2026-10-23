@@ -8265,6 +8265,262 @@ async function processOne(
 }
 
 
+async function resetMissingOzonOrder(
+  row:
+    SupplyRequestRow
+) {
+
+  await updateRequest(
+    row.id,
+    {
+      status:
+        "queued",
+
+      attempts:
+        0,
+
+      draft_id:
+        null,
+
+      storage_warehouse_id:
+        null,
+
+      storage_warehouse_name:
+        null,
+
+      storage_warehouse_address:
+        null,
+
+      timeslot_from:
+        null,
+
+      timeslot_to:
+        null,
+
+      ozon_order_id:
+        null,
+
+      next_attempt_at:
+        new Date()
+          .toISOString(),
+
+      is_processing:
+        false,
+
+      processing_started_at:
+        null,
+
+      raw_draft:
+        null,
+
+      raw_info:
+        null,
+
+      raw_timeslots:
+        null,
+
+      raw_create:
+        null,
+
+      raw_status:
+        null,
+
+      error_message:
+        null,
+    }
+  );
+
+}
+
+
+async function syncOrdersWithOzon(
+  runId:
+    string
+) {
+
+  const requests =
+    await getSupplyRequests(
+      runId
+    );
+
+
+  const withOrder =
+    requests.filter(
+      row =>
+        toPositiveInteger(
+          row.ozon_order_id
+        ) !==
+          null
+    );
+
+
+  if (
+    withOrder.length ===
+      0
+  ) {
+
+    return;
+
+  }
+
+
+  const byOrderId =
+    new Map<
+      number,
+      SupplyRequestRow
+    >();
+
+
+  for (
+    const row
+    of withOrder
+  ) {
+
+    const orderId =
+      toPositiveInteger(
+        row.ozon_order_id
+      );
+
+
+    if (
+      orderId !==
+        null
+    ) {
+
+      byOrderId.set(
+        orderId,
+        row
+      );
+
+    }
+
+  }
+
+
+  const existingIds =
+    new Set<number>();
+
+
+  for (
+    const batch
+    of chunkArray(
+      Array.from(
+        byOrderId.keys()
+      ),
+      50
+    )
+  ) {
+
+    const response =
+      await ozonPost<{
+        orders?: Array<{
+          order_id?: string | number;
+          state?: string;
+        }>;
+      }>(
+        "/v3/supply-order/get",
+        {
+          order_ids:
+            batch.map(
+              String
+            ),
+        }
+      );
+
+
+    for (
+      const order
+      of response.orders
+      ??
+      []
+    ) {
+
+      const orderId =
+        toPositiveInteger(
+          order.order_id
+        );
+
+
+      if (
+        orderId ===
+          null
+      ) {
+
+        continue;
+
+      }
+
+
+      const state =
+        normalizeKey(
+          order.state
+        )
+          .toUpperCase();
+
+
+      if (
+        state.includes(
+          "CANCEL"
+        )
+        ||
+        state.includes(
+          "DELET"
+        )
+      ) {
+
+        continue;
+
+      }
+
+
+      existingIds.add(
+        orderId
+      );
+
+    }
+
+  }
+
+
+  const missingRows =
+    Array.from(
+      byOrderId.entries()
+    )
+      .filter(
+        (
+          [
+            orderId,
+          ]
+        ) =>
+          !existingIds.has(
+            orderId
+          )
+      )
+      .map(
+        (
+          [
+            ,
+            row,
+          ]
+        ) =>
+          row
+      );
+
+
+  for (
+    const row
+    of missingRows
+  ) {
+
+    await resetMissingOzonOrder(
+      row
+    );
+
+  }
+
+}
+
+
 async function resetCancelledRequest(
   row:
     SupplyRequestRow
@@ -8587,6 +8843,26 @@ export async function GET(
           next_action_at:
             null,
         }
+      );
+
+    }
+
+
+    try {
+
+      await syncOrdersWithOzon(
+        run.id
+      );
+
+    } catch (
+      syncError
+    ) {
+
+      // Не превращаем временный сбой Ozon в ложное удаление заявки.
+      // Возвращаем последнее известное состояние из Supabase.
+      console.error(
+        "Ozon FBO order sync failed",
+        syncError
       );
 
     }
