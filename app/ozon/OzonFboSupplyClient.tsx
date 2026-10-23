@@ -226,6 +226,28 @@ type CargoPayload = {
     rules: unknown;
   }>;
 };
+type SupplySummaryPayload = {
+  ok: boolean;
+  error?: string;
+  applications_count?: number;
+  total_orders_found?: number;
+  pallet_gm?: number;
+  box_gm?: number;
+  transport_pallets_for_boxes?: number;
+  total_volume_m3?: number;
+  total_weight_kg?: number | null;
+  known_weight_kg?: number;
+  missing_weight_cartons?: number;
+  transport_unplaced_boxes?: number;
+  max_height_cm?: number | null;
+  errors?: Array<{
+    request_id: string;
+    cluster_name: string | null;
+    error: string;
+  }>;
+};
+
+
 
 
 function formatNumber(
@@ -713,6 +735,50 @@ export default function OzonFboSupplyClient({
     );
 
 
+  const [
+    summary,
+    setSummary,
+  ] =
+    useState<
+      SupplySummaryPayload
+      |
+      null
+    >(
+      null
+    );
+
+
+  const [
+    summaryLoading,
+    setSummaryLoading,
+  ] =
+    useState(
+      false
+    );
+
+
+  const [
+    summaryError,
+    setSummaryError,
+  ] =
+    useState(
+      ""
+    );
+
+
+  const [
+    cancelingRequestId,
+    setCancelingRequestId,
+  ] =
+    useState<
+      string
+      |
+      null
+    >(
+      null
+    );
+
+
   const mountedRef =
     useRef(
       true
@@ -774,6 +840,106 @@ export default function OzonFboSupplyClient({
 
 
     return data;
+
+  }
+
+
+  async function loadSummary(
+    runId:
+      string
+  ) {
+
+    setSummaryLoading(
+      true
+    );
+
+
+    setSummaryError(
+      ""
+    );
+
+
+    try {
+
+      const response =
+        await fetch(
+          `/api/ozon/fbo-supply-summary?run_id=${encodeURIComponent(
+            runId
+          )}`,
+          {
+            method:
+              "GET",
+
+            cache:
+              "no-store",
+          }
+        );
+
+
+      const data =
+        await response
+          .json() as
+          SupplySummaryPayload;
+
+
+      if (
+        !response.ok
+        ||
+        data.ok !==
+          true
+      ) {
+
+        throw new Error(
+          data.error
+          ??
+          `HTTP ${response.status}`
+        );
+
+      }
+
+
+      if (
+        mountedRef.current
+      ) {
+
+        setSummary(
+          data
+        );
+
+      }
+
+    } catch (
+      summaryRequestError
+    ) {
+
+      if (
+        mountedRef.current
+      ) {
+
+        setSummaryError(
+          summaryRequestError
+            instanceof Error
+            ? summaryRequestError.message
+            : String(
+                summaryRequestError
+              )
+        );
+
+      }
+
+    } finally {
+
+      if (
+        mountedRef.current
+      ) {
+
+        setSummaryLoading(
+          false
+        );
+
+      }
+
+    }
 
   }
 
@@ -1249,6 +1415,139 @@ export default function OzonFboSupplyClient({
   }
 
 
+  async function cancelOrder(
+    requestId:
+      string,
+
+    clusterName:
+      string
+  ) {
+
+    if (
+      cancelingRequestId
+    ) {
+
+      return;
+
+    }
+
+
+    if (
+      !window.confirm(
+        `Удалить заявку «${clusterName}» в Ozon? После подтверждения её можно будет создать заново.`
+      )
+    ) {
+
+      return;
+
+    }
+
+
+    setCancelingRequestId(
+      requestId
+    );
+
+
+    setError(
+      ""
+    );
+
+
+    try {
+
+      const response =
+        await fetch(
+          "/api/ozon/fbo-supply",
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify(
+                {
+                  action:
+                    "cancel_order",
+
+                  request_id:
+                    requestId,
+                }
+              ),
+
+            cache:
+              "no-store",
+          }
+        );
+
+
+      const data =
+        await response
+          .json() as
+          StatusPayload;
+
+
+      if (
+        !response.ok
+        ||
+        data.ok !==
+          true
+      ) {
+
+        throw new Error(
+          data.error
+          ??
+          `HTTP ${response.status}`
+        );
+
+      }
+
+
+      setStatus(
+        data
+      );
+
+
+      if (
+        data.run?.id
+      ) {
+
+        void loadSummary(
+          data.run.id
+        );
+
+      }
+
+
+      router.refresh();
+
+    } catch (
+      cancelError
+    ) {
+
+      setError(
+        cancelError
+          instanceof Error
+          ? cancelError.message
+          : String(
+              cancelError
+            )
+      );
+
+    } finally {
+
+      setCancelingRequestId(
+        null
+      );
+
+    }
+
+  }
+
+
   async function runCargoAction(
     requestId:
       string,
@@ -1460,6 +1759,76 @@ export default function OzonFboSupplyClient({
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
     []
+  );
+
+
+  const summarySignature =
+    (
+      status
+        ?.requests
+      ??
+      []
+    )
+      .filter(
+        row =>
+          Boolean(
+            row.ozon_order_id
+          )
+      )
+      .map(
+        row =>
+          [
+            row.id,
+            row.status,
+            row.ozon_order_id,
+          ].join(
+            ":"
+          )
+      )
+      .sort()
+      .join(
+        "|"
+      );
+
+
+  useEffect(
+    () => {
+
+      const runId =
+        status
+          ?.run
+          ?.id;
+
+
+      if (
+        !runId
+        ||
+        !summarySignature
+      ) {
+
+        setSummary(
+          null
+        );
+
+
+        return;
+
+      }
+
+
+      void loadSummary(
+        runId
+      );
+
+      // Сводка зависит только от состава созданных заявок.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [
+      status
+        ?.run
+        ?.id,
+      summarySignature,
+    ]
   );
 
 
@@ -1847,6 +2216,251 @@ export default function OzonFboSupplyClient({
 
       </div>
 
+
+      {
+        summaryLoading
+        ||
+        summary
+        ||
+        summaryError
+          ? (
+            <div
+              className=
+                "reason-box"
+
+              style={{
+                marginBottom:
+                  "16px",
+              }}
+            >
+              <strong>
+                Итог по созданным заявкам
+              </strong>
+
+
+              {
+                summaryLoading
+                  ? (
+                    <div
+                      className=
+                        "reason-text"
+
+                      style={{
+                        marginTop:
+                          "8px",
+                      }}
+                    >
+                      Считаем грузоместа, транспортные паллеты, объём и вес...
+                    </div>
+                  )
+                  : null
+              }
+
+
+              {
+                summary
+                  ? (
+                    <div
+                      style={{
+                        display:
+                          "grid",
+
+                        gridTemplateColumns:
+                          "repeat(6, minmax(120px, 1fr))",
+
+                        gap:
+                          "10px",
+
+                        marginTop:
+                          "10px",
+                      }}
+                    >
+                      <div className="ozon-fbo-supply-fact">
+                        <span>PALLET ГМ</span>
+                        <strong>{formatNumber(summary.pallet_gm)}</strong>
+                      </div>
+
+                      <div className="ozon-fbo-supply-fact">
+                        <span>BOX ГМ</span>
+                        <strong>{formatNumber(summary.box_gm)}</strong>
+                      </div>
+
+                      <div className="ozon-fbo-supply-fact">
+                        <span>Паллеты с BOX</span>
+                        <strong>{formatNumber(summary.transport_pallets_for_boxes)}</strong>
+                      </div>
+
+                      <div className="ozon-fbo-supply-fact">
+                        <span>Объём</span>
+                        <strong>
+                          {
+                            summary.total_volume_m3 !==
+                              undefined
+                              ? `${summary.total_volume_m3.toLocaleString(
+                                  "ru-RU",
+                                  {
+                                    maximumFractionDigits:
+                                      3,
+                                  }
+                                )} м³`
+                              : "—"
+                          }
+                        </strong>
+                      </div>
+
+                      <div className="ozon-fbo-supply-fact">
+                        <span>Вес</span>
+                        <strong>
+                          {
+                            summary.total_weight_kg !==
+                              null
+                            &&
+                            summary.total_weight_kg !==
+                              undefined
+                              ? `${summary.total_weight_kg.toLocaleString(
+                                  "ru-RU",
+                                  {
+                                    maximumFractionDigits:
+                                      1,
+                                  }
+                                )} кг`
+                              : `${(
+                                  summary.known_weight_kg
+                                  ??
+                                  0
+                                ).toLocaleString(
+                                  "ru-RU",
+                                  {
+                                    maximumFractionDigits:
+                                      1,
+                                  }
+                                )} кг + пропуски`
+                          }
+                        </strong>
+                      </div>
+
+                      <div className="ozon-fbo-supply-fact">
+                        <span>Макс. высота</span>
+                        <strong>
+                          {
+                            summary.max_height_cm !==
+                              null
+                            &&
+                            summary.max_height_cm !==
+                              undefined
+                              ? `${summary.max_height_cm.toLocaleString(
+                                  "ru-RU",
+                                  {
+                                    maximumFractionDigits:
+                                      1,
+                                  }
+                                )} см`
+                              : "—"
+                          }
+                        </strong>
+                      </div>
+                    </div>
+                  )
+                  : null
+              }
+
+
+              {
+                summary
+                &&
+                (
+                  (
+                    summary.missing_weight_cartons
+                    ??
+                    0
+                  ) >
+                    0
+                  ||
+                  (
+                    summary.transport_unplaced_boxes
+                    ??
+                    0
+                  ) >
+                    0
+                  ||
+                  (
+                    summary.errors
+                    ?.length
+                    ??
+                    0
+                  ) >
+                    0
+                )
+                  ? (
+                    <div
+                      className=
+                        "reason-text"
+
+                      style={{
+                        marginTop:
+                          "8px",
+                      }}
+                    >
+                      {
+                        (
+                          summary.missing_weight_cartons
+                          ??
+                          0
+                        ) >
+                          0
+                          ? `Без веса: ${summary.missing_weight_cartons} коробов. `
+                          : ""
+                      }
+
+                      {
+                        (
+                          summary.transport_unplaced_boxes
+                          ??
+                          0
+                        ) >
+                          0
+                          ? `Не удалось уложить на транспортные паллеты: ${summary.transport_unplaced_boxes} BOX. `
+                          : ""
+                      }
+
+                      {
+                        (
+                          summary.errors
+                          ?.length
+                          ??
+                          0
+                        ) >
+                          0
+                          ? `Не посчитано заявок: ${summary.errors?.length ?? 0}.`
+                          : ""
+                      }
+                    </div>
+                  )
+                  : null
+              }
+
+
+              {
+                summaryError
+                  ? (
+                    <div
+                      className=
+                        "ozon-fbo-supply-error"
+
+                      style={{
+                        marginTop:
+                          "8px",
+                      }}
+                    >
+                      {summaryError}
+                    </div>
+                  )
+                  : null
+              }
+            </div>
+          )
+          : null
+      }
 
 
       {
@@ -3410,34 +4024,85 @@ export default function OzonFboSupplyClient({
 
 
                             <span>
-                              <button
-                                type="button"
+                              <div
+                                style={{
+                                  display:
+                                    "flex",
 
-                                className=
-                                  "secondary-button"
+                                  flexDirection:
+                                    "column",
 
-                                disabled={
-                                  cargoLoading
-                                }
-
-                                onClick={
-                                  () => {
-                                    void runCargoAction(
-                                      row.id,
-                                      "preview"
-                                    );
-                                  }
-                                }
+                                  gap:
+                                    "6px",
+                                }}
                               >
-                                {
-                                  cargoLoading
-                                    ? "Проверяем..."
-                                    : cargoPlan
-                                      ?.created
-                                      ? `Создано ${cargoPlan.created_boxes ?? cargoPlan.total_boxes ?? 0}`
-                                      : "Грузоместа"
-                                }
-                              </button>
+                                <button
+                                  type="button"
+
+                                  className=
+                                    "secondary-button"
+
+                                  disabled={
+                                    cargoLoading
+                                  }
+
+                                  onClick={
+                                    () => {
+                                      void runCargoAction(
+                                        row.id,
+                                        "preview"
+                                      );
+                                    }
+                                  }
+                                >
+                                  {
+                                    cargoLoading
+                                      ? "Проверяем..."
+                                      : cargoPlan
+                                        ?.created
+                                        ? `Создано ${cargoPlan.created_boxes ?? cargoPlan.total_boxes ?? 0}`
+                                        : "Грузоместа"
+                                  }
+                                </button>
+
+                                <button
+                                  type="button"
+
+                                  className=
+                                    "secondary-button"
+
+                                  style={{
+                                    borderColor:
+                                      "#b42318",
+
+                                    color:
+                                      "#b42318",
+                                  }}
+
+                                  disabled={
+                                    cancelingRequestId ===
+                                      row.id
+                                  }
+
+                                  onClick={
+                                    () => {
+                                      void cancelOrder(
+                                        row.id,
+                                        row.cluster_name
+                                        ??
+                                        `Кластер ${row.macrolocal_cluster_id}`
+                                      );
+                                    }
+                                  }
+                                >
+                                  {
+                                    cancelingRequestId ===
+                                      row.id
+                                      ? "Удаляем..."
+                                      : "Удалить заявку"
+                                  }
+                                </button>
+                              </div>
                             </span>
 
                           </div>
