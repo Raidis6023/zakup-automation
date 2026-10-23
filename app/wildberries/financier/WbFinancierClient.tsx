@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 type Row={nm_id:string;article:string;name:string;realization:number;to_transfer:number;delivery:number;storage_in_report:number|null;acceptance:number;penalty:number;deduction:number;rows:number;operations:Record<string,{amount:number;count:number;realization:number;delivery:number;storage:number;penalty:number;deduction:number}>};
 type Ad={nm_id:number;date:string;campaign_id:number;spend:number;views:number;clicks:number;orders:number;sum_price:number};
-type Data={ok:boolean;from:string;to:string;financial_rows:number;rows:Row[];ads:{items:Ad[];campaigns:number;coverage:string;warning:string|null};coverage:Record<string,string>;notice:string};
+type Data={ok:boolean;from:string;to:string;financial_rows:number;rows:Row[];cache?:{status:string;rowsSaved:number};ads:{items:Ad[];campaigns:number;coverage:string;warning:string|null};coverage:Record<string,string>;notice:string};
 const money=(v:number|null)=>v==null?"—":v.toLocaleString("ru-RU",{minimumFractionDigits:2,maximumFractionDigits:2});
 const day=(offset:number)=>{const d=new Date();d.setUTCDate(d.getUTCDate()+offset);return d.toISOString().slice(0,10);};
 export default function WbFinancierClient(){
@@ -40,6 +40,7 @@ return <div className="ozf-layout">
 <div className="ozf-metrics" style={{marginTop:14}}>
 {[["Реализация",sum(r=>r.realization)],["К перечислению WB",sum(r=>r.to_transfer)],["Логистика",sum(r=>r.delivery)],["Штрафы и удержания",sum(r=>r.penalty+r.deduction)]].map(([label,value])=><div className="ozf-panel" key={String(label)}><span>{label}</span><strong>{money(Number(value))} ₽</strong></div>)}
 </div>
+{data.cache?.status!=="complete"&&<p className="ozf-error" role="alert">НЕПОЛНАЯ ВЫГРУЗКА: сохранено {data.cache?.rowsSaved?.toLocaleString("ru-RU")??"?"} строк. Финансовые итоги предварительные и не пригодны для решений.</p>}
 <p className="ozf-notice" style={{marginTop:16}}>Не рассчитана прибыль: нет себестоимости и ТК «Маяк». Платное хранение не загружено отдельным отчётом. {data.ads.warning}</p>
 <div className="ozf-toolbar" style={{marginTop:18}}><input placeholder="Поиск по артикулу, nmId или товару" value={filter} onChange={e=>setFilter(e.target.value)}/><span>Артикулов: {rows.length} · Финансовых операций: {data.financial_rows}</span></div>
 <div className="ozf-financial-scroll"><table className="ozf-table ozf-financial-table" style={{minWidth:1900}}>
