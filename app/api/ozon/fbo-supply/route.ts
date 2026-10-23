@@ -1,3 +1,8 @@
+import {
+  createNextAutomaticCargoBatch,
+} from "@/lib/ozon-fbo-cargo-auto";
+
+
 export const runtime =
   "nodejs";
 
@@ -7524,6 +7529,90 @@ async function processOne(
       "creating"
     ) {
 
+      const orderId =
+        toPositiveInteger(
+          row.ozon_order_id
+        );
+
+
+      if (
+        orderId !==
+          null
+      ) {
+
+        const continueExisting =
+          /^AUTO_GM: создано \d+\/\d+ коробов/.test(
+            normalizeKey(
+              row.error_message
+            )
+          );
+
+
+        const cargoResult =
+          await createNextAutomaticCargoBatch(
+            {
+              calculationRunId:
+                row.calculation_run_id,
+
+              orderId,
+
+              continueExisting,
+            }
+          );
+
+
+        if (
+          cargoResult.done
+        ) {
+
+          await releaseRequest(
+            row,
+            {
+              status:
+                "success",
+
+              next_attempt_at:
+                null,
+
+              error_message:
+                null,
+            }
+          );
+
+        } else {
+
+          await releaseRequest(
+            row,
+            {
+              status:
+                "creating",
+
+              next_attempt_at:
+                laterIso(
+                  cargoResult.pending
+                    ? 5
+                    : 2
+                ),
+
+              error_message:
+                cargoResult.pending
+                  ? `AUTO_GM_WAIT: ${cargoResult.message}`
+                  : cargoResult.message,
+            }
+          );
+
+        }
+
+
+        return Response.json(
+          await refreshAndSerializeRun(
+            runId
+          )
+        );
+
+      }
+
+
       const draftId =
         toPositiveInteger(
           row.draft_id
@@ -7595,7 +7684,7 @@ async function processOne(
             row,
             {
               status:
-                "success",
+                "creating",
 
               ozon_order_id:
                 orderId,
@@ -7604,10 +7693,12 @@ async function processOne(
                 status,
 
               next_attempt_at:
-                null,
+                laterIso(
+                  2
+                ),
 
               error_message:
-                null,
+                "AUTO_GM_START: заявка создана; ждём supply_id / bundle_id и сразу создаём грузоместа.",
             }
           );
 
