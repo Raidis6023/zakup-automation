@@ -441,14 +441,19 @@ function canCreatePreviewCluster(
     cluster.proposed_units >
       0
     &&
-    cluster.status ===
-      "available"
+    cluster.ozon_accepted_units >
+      0
     &&
     cluster.recommended_warehouse !==
       null
     &&
-    cluster.ozon_accepted_units ===
-      cluster.proposed_units
+    (
+      cluster.status ===
+        "available"
+      ||
+      cluster.status ===
+        "partial"
+    )
   );
 
 }
