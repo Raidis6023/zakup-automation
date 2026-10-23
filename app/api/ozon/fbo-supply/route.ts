@@ -7282,6 +7282,72 @@ async function processOne(
 
       } catch (error) {
 
+        if (
+          error instanceof
+            OzonApiError
+        ) {
+
+          if (
+            error.status ===
+              429
+            ||
+            error.transient
+          ) {
+
+            await releaseRequest(
+              {
+                ...row,
+                status:
+                  "creating",
+              },
+              {
+                status:
+                  "slot_selected",
+
+                next_attempt_at:
+                  laterIso(
+                    error.retryAfterSeconds
+                    ??
+                    30
+                  ),
+
+                error_message:
+                  `Ozon временно не принял создание заявки: ${error.message}. Повторим /v2/draft/supply/create.`,
+              }
+            );
+
+          } else {
+
+            await releaseRequest(
+              {
+                ...row,
+                status:
+                  "creating",
+              },
+              {
+                status:
+                  "failed",
+
+                next_attempt_at:
+                  null,
+
+                error_message:
+                  `Ozon отклонил /v2/draft/supply/create: ${error.message}`,
+              }
+            );
+
+          }
+
+
+          return Response.json(
+            await refreshAndSerializeRun(
+              runId
+            )
+          );
+
+        }
+
+
         await releaseRequest(
           {
             ...row,
@@ -7294,16 +7360,11 @@ async function processOne(
 
             next_attempt_at:
               laterIso(
-                error instanceof
-                  OzonApiError
-                  ? error.retryAfterSeconds
-                    ??
-                    15
-                  : 15
+                15
               ),
 
             error_message:
-              "Ответ создания заявки не подтверждён. Следующий проход проверит статус по draft_id.",
+              "Соединение оборвалось во время /v2/draft/supply/create. Результат неоднозначен, проверяем статус по draft_id.",
           }
         );
 
@@ -7624,6 +7685,51 @@ async function processOne(
     );
 
   } catch (error) {
+
+    const noActiveCreationProcess =
+      row.status ===
+        "creating"
+      &&
+      error instanceof
+        OzonApiError
+      &&
+      error.status ===
+        404
+      &&
+      error.message.includes(
+        "no active order creation process"
+      );
+
+
+    if (
+      noActiveCreationProcess
+    ) {
+
+      await releaseRequest(
+        row,
+        {
+          status:
+            "slot_selected",
+
+          next_attempt_at:
+            laterIso(
+              5
+            ),
+
+          error_message:
+            "Ozon не нашёл активный процесс создания по draft_id. Возвращаемся к /v2/draft/supply/create и повторяем создание.",
+        }
+      );
+
+
+      return Response.json(
+        await refreshAndSerializeRun(
+          runId
+        )
+      );
+
+    }
+
 
     const transient =
       error instanceof
