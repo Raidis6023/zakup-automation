@@ -560,6 +560,43 @@ function normalizeKey(
 }
 
 
+function toOzonLocalDateTime(
+  value:
+    string
+) {
+
+  const normalized =
+    normalizeKey(
+      value
+    )
+      .replace(
+        " ",
+        "T"
+      );
+
+
+  const match =
+    normalized.match(
+      /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})/
+    );
+
+
+  if (!match) {
+
+    throw new Error(
+      `Некорректный формат таймслота для Ozon: ${value}`
+    );
+
+  }
+
+
+  return match[
+    1
+  ];
+
+}
+
+
 function normalizeSearchText(
   value:
     unknown
@@ -7269,10 +7306,14 @@ async function processOne(
 
               timeslot: {
                 from_in_timezone:
-                  row.timeslot_from,
+                  toOzonLocalDateTime(
+                    row.timeslot_from
+                  ),
 
                 to_in_timezone:
-                  row.timeslot_to,
+                  toOzonLocalDateTime(
+                    row.timeslot_to
+                  ),
               },
 
               supply_type:
