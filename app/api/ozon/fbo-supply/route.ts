@@ -37,6 +37,9 @@ const MAX_PROCESS_ATTEMPTS =
 const SUPABASE_PAGE_SIZE =
   1000;
 
+const PARKED_NEXT_ATTEMPT_AT =
+  "9999-12-31T23:59:59.000Z";
+
 
 // ============================================================
 // ТИПЫ
@@ -2733,6 +2736,184 @@ function buildSupplyPlan(
 }
 
 
+function isTerminalRequestStatus(
+  status:
+    SupplyRequestStatus
+) {
+
+  return (
+    status ===
+      "success"
+    ||
+    status ===
+      "no_slot"
+    ||
+    status ===
+      "failed"
+  );
+
+}
+
+
+async function parkSupplyRequests(
+  runId:
+    string
+) {
+
+  await supabasePatch(
+    [
+      "ozon_fbo_supply_requests",
+      `?supply_run_id=eq.${encodeURIComponent(
+        runId
+      )}`,
+      "&status=eq.queued",
+    ].join(
+      ""
+    ),
+    {
+      next_attempt_at:
+        PARKED_NEXT_ATTEMPT_AT,
+    }
+  );
+
+}
+
+
+async function activateSupplyRequests(
+  runId:
+    string,
+
+  clusterIds:
+    number[]
+    |
+    null
+) {
+
+  const requests =
+    await getSupplyRequests(
+      runId
+    );
+
+
+  const requested =
+    clusterIds
+    &&
+    clusterIds.length >
+      0
+      ? new Set(
+          clusterIds
+        )
+      : null;
+
+
+  if (requested) {
+
+    const existingIds =
+      new Set(
+        requests.map(
+          row =>
+            Number(
+              row.macrolocal_cluster_id
+            )
+        )
+      );
+
+
+    const missing =
+      Array.from(
+        requested
+      ).filter(
+        clusterId =>
+          !existingIds.has(
+            clusterId
+          )
+      );
+
+
+    if (
+      missing.length >
+      0
+    ) {
+
+      throw new Error(
+        `Не найдены кластеры для запуска: ${missing.join(
+          ", "
+        )}`
+      );
+
+    }
+
+  }
+
+
+  const now =
+    new Date()
+      .toISOString();
+
+
+  let activated =
+    0;
+
+
+  for (
+    const row
+    of requests
+  ) {
+
+    const clusterId =
+      Number(
+        row.macrolocal_cluster_id
+      );
+
+
+    if (
+      requested
+      &&
+      !requested.has(
+        clusterId
+      )
+    ) {
+
+      continue;
+
+    }
+
+
+    if (
+      isTerminalRequestStatus(
+        row.status
+      )
+    ) {
+
+      continue;
+
+    }
+
+
+    await supabasePatch(
+      `ozon_fbo_supply_requests?id=eq.${encodeURIComponent(
+        row.id
+      )}`,
+      {
+        next_attempt_at:
+          now,
+
+        error_message:
+          null,
+      }
+    );
+
+
+    activated++;
+
+  }
+
+
+  return activated;
+
+}
+
+
 // ============================================================
 // RUN STATUS
 // ============================================================
@@ -3092,7 +3273,12 @@ Promise<StatusPayload> {
 // START
 // ============================================================
 
-async function startSupplyRun() {
+async function startSupplyRun(
+  clusterIds:
+    number[]
+    |
+    null
+) {
 
   const run =
     await getLatestReplenishmentRun();
@@ -3140,11 +3326,28 @@ async function startSupplyRun() {
     ]
   ) {
 
+    const existingRun =
+      existing[
+        0
+      ];
+
+
+    if (
+      existingRun.status ===
+        "running"
+    ) {
+
+      await activateSupplyRequests(
+        existingRun.id,
+        clusterIds
+      );
+
+    }
+
+
     return Response.json(
       await refreshAndSerializeRun(
-        existing[
-          0
-        ].id
+        existingRun.id
       )
     );
 
@@ -3358,6 +3561,57 @@ async function startSupplyRun() {
   }
 
 
+  if (
+    clusterIds
+    &&
+    clusterIds.length >
+      0
+  ) {
+
+    const plannedClusterIds =
+      new Set(
+        plan.clusters.map(
+          cluster =>
+            cluster.macrolocal_cluster_id
+        )
+      );
+
+
+    const missingClusterIds =
+      clusterIds.filter(
+        clusterId =>
+          !plannedClusterIds.has(
+            clusterId
+          )
+      );
+
+
+    if (
+      missingClusterIds.length >
+      0
+    ) {
+
+      return Response.json(
+        {
+          ok:
+            false,
+
+          error:
+            `Выбранные кластеры отсутствуют в текущем расчёте: ${missingClusterIds.join(
+              ", "
+            )}`,
+        },
+        {
+          status:
+            409,
+        }
+      );
+
+    }
+
+  }
+
+
   const tooLarge =
     plan.clusters.find(
       cluster =>
@@ -3489,6 +3743,17 @@ async function startSupplyRun() {
           plan.clusters,
       }
     );
+
+
+  await parkSupplyRequests(
+    supplyRunId
+  );
+
+
+  await activateSupplyRequests(
+    supplyRunId,
+    clusterIds
+  );
 
 
   return Response.json(
@@ -6604,6 +6869,9 @@ export async function POST(
 
           run_id?:
             string;
+
+          cluster_ids?:
+            unknown;
         };
 
 
@@ -6622,7 +6890,96 @@ export async function POST(
       "start"
     ) {
 
-      return startSupplyRun();
+      const rawClusterIds =
+        body.cluster_ids;
+
+
+      let clusterIds:
+        number[]
+        |
+        null =
+        null;
+
+
+      if (
+        rawClusterIds !==
+          undefined
+      ) {
+
+        if (
+          !Array.isArray(
+            rawClusterIds
+          )
+          ||
+          rawClusterIds.length ===
+            0
+        ) {
+
+          return Response.json(
+            {
+              ok:
+                false,
+
+              error:
+                "cluster_ids должен быть непустым массивом",
+            },
+            {
+              status:
+                400,
+            }
+          );
+
+        }
+
+
+        const parsed =
+          rawClusterIds.map(
+            value =>
+              toPositiveInteger(
+                value
+              )
+          );
+
+
+        if (
+          parsed.some(
+            value =>
+              value ===
+              null
+          )
+        ) {
+
+          return Response.json(
+            {
+              ok:
+                false,
+
+              error:
+                "cluster_ids содержит некорректный идентификатор кластера",
+            },
+            {
+              status:
+                400,
+            }
+          );
+
+        }
+
+
+        clusterIds =
+          Array.from(
+            new Set(
+              parsed as
+                number[]
+            )
+          );
+
+      }
+
+
+      return startSupplyRun(
+        clusterIds
+      );
 
     }
 
