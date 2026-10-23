@@ -5482,6 +5482,634 @@ function choosePartialMatrixBundle(
 }
 
 
+function parseStringArray(
+  value:
+    unknown
+) {
+
+  if (
+    Array.isArray(
+      value
+    )
+  ) {
+
+    return value
+      .map(
+        item =>
+          normalizeKey(
+            item
+          )
+      )
+      .filter(
+        Boolean
+      );
+
+  }
+
+
+  if (
+    typeof value ===
+      "string"
+  ) {
+
+    try {
+
+      const parsed =
+        JSON.parse(
+          value
+        );
+
+
+      if (
+        Array.isArray(
+          parsed
+        )
+      ) {
+
+        return parsed
+          .map(
+            item =>
+              normalizeKey(
+                item
+              )
+          )
+          .filter(
+            Boolean
+          );
+
+      }
+
+    } catch {
+
+      const normalized =
+        normalizeKey(
+          value
+        );
+
+
+      return normalized
+        ? [
+            normalized,
+          ]
+        : [];
+
+    }
+
+  }
+
+
+  return [];
+
+}
+
+
+function storageSearchTerms(
+  row:
+    SupplyRequestRow
+) {
+
+  const result =
+    new Set<string>();
+
+
+  const clusterName =
+    normalizeKey(
+      row.cluster_name
+    );
+
+
+  if (
+    clusterName
+  ) {
+
+    result.add(
+      clusterName
+    );
+
+
+    const shortened =
+      clusterName
+        .replace(
+          /\s+и\s+СЗО.*$/i,
+          ""
+        )
+        .replace(
+          /\s+и\s+МО.*$/i,
+          ""
+        )
+        .replace(
+          /\s+и\s+область.*$/i,
+          ""
+        )
+        .trim();
+
+
+    if (
+      shortened
+      &&
+      shortened !==
+        clusterName
+    ) {
+
+      result.add(
+        shortened
+      );
+
+    }
+
+  }
+
+
+  for (
+    const sourceName
+    of parseStringArray(
+      row.source_cluster_names
+    )
+  ) {
+
+    result.add(
+      sourceName
+    );
+
+  }
+
+
+  return Array.from(
+    result
+  ).slice(
+    0,
+    8
+  );
+
+}
+
+
+function warehouseTypePriority(
+  value:
+    unknown
+) {
+
+  const type =
+    normalizeKey(
+      value
+    )
+      .toUpperCase();
+
+
+  if (
+    type.includes(
+      "FULL"
+    )
+    ||
+    type.includes(
+      "FULFILL"
+    )
+  ) {
+
+    return 0;
+
+  }
+
+
+  if (
+    type.includes(
+      "SORTING"
+    )
+  ) {
+
+    return 1;
+
+  }
+
+
+  if (
+    type.includes(
+      "CROSS"
+    )
+  ) {
+
+    return 2;
+
+  }
+
+
+  return 3;
+
+}
+
+
+async function storageWarehouseCandidates(
+  row:
+    SupplyRequestRow,
+
+  run:
+    SupplyRunRow
+) {
+
+  const unique =
+    new Map<
+      number,
+      DropOffWarehouse
+    >();
+
+
+  for (
+    const search
+    of storageSearchTerms(
+      row
+    )
+  ) {
+
+    const rows =
+      await searchDropOff(
+        search
+      );
+
+
+    for (
+      const candidate
+      of rows
+    ) {
+
+      const warehouseId =
+        toPositiveInteger(
+          candidate.warehouse_id
+        );
+
+
+      if (
+        warehouseId ===
+          null
+        ||
+        warehouseId ===
+          toPositiveInteger(
+            run.drop_off_warehouse_id
+          )
+        ||
+        warehouseId ===
+          toPositiveInteger(
+            run.seller_warehouse_id
+          )
+      ) {
+
+        continue;
+
+      }
+
+
+      unique.set(
+        warehouseId,
+        candidate
+      );
+
+    }
+
+  }
+
+
+  return Array.from(
+    unique.values()
+  )
+    .sort(
+      (
+        left,
+        right
+      ) => {
+
+        const typeDiff =
+          warehouseTypePriority(
+            left.warehouse_type
+          )
+          -
+          warehouseTypePriority(
+            right.warehouse_type
+          );
+
+
+        if (
+          typeDiff !==
+            0
+        ) {
+
+          return typeDiff;
+
+        }
+
+
+        return normalizeKey(
+          left.name
+        ).localeCompare(
+          normalizeKey(
+            right.name
+          ),
+          "ru"
+        );
+
+      }
+    )
+    .slice(
+      0,
+      15
+    );
+
+}
+
+
+async function findStorageWarehouseByTimeslot(
+  row:
+    SupplyRequestRow,
+
+  run:
+    SupplyRunRow,
+
+  draftId:
+    number,
+
+  macrolocalClusterId:
+    number
+) {
+
+  const candidates =
+    await storageWarehouseCandidates(
+      row,
+      run
+    );
+
+
+  let firstAccepted:
+    {
+      warehouse:
+        DropOffWarehouse;
+
+      timeslots:
+        TimeslotResponse;
+
+      slot:
+        ReturnType<
+          typeof chooseTimeslot
+        >;
+    }
+    |
+    null =
+    null;
+
+
+  const diagnostics:
+    Array<{
+      warehouse_id:
+        number | null;
+
+      name:
+        string | null;
+
+      type:
+        string | null;
+
+      result:
+        string;
+    }> =
+    [];
+
+
+  for (
+    const candidate
+    of candidates
+  ) {
+
+    const warehouseId =
+      toPositiveInteger(
+        candidate.warehouse_id
+      );
+
+
+    if (
+      warehouseId ===
+        null
+    ) {
+
+      continue;
+
+    }
+
+
+    try {
+
+      const timeslots =
+        await ozonPost<
+          TimeslotResponse
+        >(
+          "/v2/draft/timeslot/info",
+          {
+            date_from:
+              run.window_date_from,
+
+            date_to:
+              run.window_date_to,
+
+            draft_id:
+              draftId,
+
+            supply_type:
+              "CROSSDOCK",
+
+            selected_cluster_warehouses: [
+              {
+                macrolocal_cluster_id:
+                  macrolocalClusterId,
+
+                storage_warehouse_id:
+                  warehouseId,
+              },
+            ],
+          }
+        );
+
+
+      const errorReason =
+        normalizeKey(
+          timeslots.error_reason
+        );
+
+
+      if (
+        errorReason
+        &&
+        errorReason !==
+          "UNSPECIFIED"
+      ) {
+
+        diagnostics.push({
+          warehouse_id:
+            warehouseId,
+
+          name:
+            normalizeKey(
+              candidate.name
+            )
+            ||
+            null,
+
+          type:
+            normalizeKey(
+              candidate.warehouse_type
+            )
+            ||
+            null,
+
+          result:
+            errorReason,
+        });
+
+
+        await sleep(
+          650
+        );
+
+
+        continue;
+
+      }
+
+
+      const slot =
+        chooseTimeslot(
+          timeslots,
+          run.formation_date
+        );
+
+
+      const accepted = {
+        warehouse:
+          candidate,
+
+        timeslots,
+
+        slot,
+      };
+
+
+      diagnostics.push({
+        warehouse_id:
+          warehouseId,
+
+        name:
+          normalizeKey(
+            candidate.name
+          )
+          ||
+          null,
+
+        type:
+          normalizeKey(
+            candidate.warehouse_type
+          )
+          ||
+          null,
+
+        result:
+          slot
+            ? "accepted_with_slot"
+            : "accepted_without_slot",
+      });
+
+
+      if (
+        slot
+      ) {
+
+        return {
+          ...accepted,
+
+          diagnostics,
+        };
+
+      }
+
+
+      if (
+        !firstAccepted
+      ) {
+
+        firstAccepted =
+          accepted;
+
+      }
+
+    } catch (
+      error
+    ) {
+
+      if (
+        error instanceof
+          OzonApiError
+        &&
+        error.transient
+      ) {
+
+        throw error;
+
+      }
+
+
+      diagnostics.push({
+        warehouse_id:
+          warehouseId,
+
+        name:
+          normalizeKey(
+            candidate.name
+          )
+          ||
+          null,
+
+        type:
+          normalizeKey(
+            candidate.warehouse_type
+          )
+          ||
+          null,
+
+        result:
+          error instanceof
+            Error
+            ? error.message
+            : String(
+                error
+              ),
+      });
+
+    }
+
+
+    await sleep(
+      650
+    );
+
+  }
+
+
+  return firstAccepted
+    ? {
+        ...firstAccepted,
+
+        diagnostics,
+      }
+    : {
+        warehouse:
+          null,
+
+        timeslots:
+          null,
+
+        slot:
+          null,
+
+        diagnostics,
+      };
+
+}
+
+
 // ============================================================
 // ВЫБОР СКЛАДА РАЗМЕЩЕНИЯ
 // ============================================================
@@ -6492,6 +7120,148 @@ async function processOne(
           );
 
 
+        const fallback =
+          await findStorageWarehouseByTimeslot(
+            row,
+            run,
+            draftId,
+            macrolocalClusterId
+          );
+
+
+        const fallbackStorageId =
+          toPositiveInteger(
+            fallback.warehouse
+              ?.warehouse_id
+          );
+
+
+        if (
+          fallback.warehouse
+          &&
+          fallbackStorageId !==
+            null
+        ) {
+
+          const fallbackName =
+            normalizeKey(
+              fallback.warehouse.name
+            )
+            ||
+            null;
+
+          const fallbackAddress =
+            normalizeKey(
+              fallback.warehouse.address
+            )
+            ||
+            null;
+
+
+          if (
+            fallback.slot
+          ) {
+
+            await releaseRequest(
+              row,
+              {
+                status:
+                  "slot_selected",
+
+                storage_warehouse_id:
+                  fallbackStorageId,
+
+                storage_warehouse_name:
+                  fallbackName,
+
+                storage_warehouse_address:
+                  fallbackAddress,
+
+                timeslot_from:
+                  fallback.slot.from,
+
+                timeslot_to:
+                  fallback.slot.to,
+
+                raw_info:
+                  info,
+
+                raw_timeslots:
+                  {
+                    source:
+                      "warehouse_fbo_list_fallback",
+
+                    response:
+                      fallback.timeslots,
+
+                    diagnostics:
+                      fallback.diagnostics,
+                  },
+
+                next_attempt_at:
+                  new Date()
+                    .toISOString(),
+
+                error_message:
+                  null,
+              }
+            );
+
+
+            return Response.json(
+              await refreshAndSerializeRun(
+                runId
+              )
+            );
+
+          }
+
+
+          await releaseRequest(
+            row,
+            {
+              status:
+                "no_slot",
+
+              storage_warehouse_id:
+                fallbackStorageId,
+
+              storage_warehouse_name:
+                fallbackName,
+
+              storage_warehouse_address:
+                fallbackAddress,
+
+              raw_info:
+                info,
+
+              raw_timeslots:
+                {
+                  source:
+                    "warehouse_fbo_list_fallback",
+
+                  response:
+                    fallback.timeslots,
+
+                  diagnostics:
+                    fallback.diagnostics,
+                },
+
+              error_message:
+                `Склад ${fallbackName ?? fallbackStorageId} принят Ozon для draft, но в окне ${run.window_date_from} — ${run.window_date_to} нет таймслота.`,
+            }
+          );
+
+
+          return Response.json(
+            await refreshAndSerializeRun(
+              runId
+            )
+          );
+
+        }
+
+
         await releaseRequest(
           row,
           {
@@ -6501,9 +7271,20 @@ async function processOne(
             raw_info:
               info,
 
+            raw_timeslots:
+              {
+                source:
+                  "warehouse_fbo_list_fallback",
+
+                diagnostics:
+                  fallback.diagnostics,
+              },
+
             error_message:
-              `Ozon не вернул конкретный storage_warehouse после проверки состава. Доступность: ${JSON.stringify(
+              `Ozon подтвердил состав, но не отдал storage_warehouse. Дополнительная проверка складов через /v1/warehouse/fbo/list и /v2/draft/timeslot/info тоже не нашла подходящий склад. Доступность draft: ${JSON.stringify(
                 states
+              )}. Проверенные склады: ${JSON.stringify(
+                fallback.diagnostics
               )}`,
           }
         );
