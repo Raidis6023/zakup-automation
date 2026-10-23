@@ -8945,87 +8945,73 @@ export async function POST(
         body.cluster_ids;
 
 
-      let clusterIds:
-        number[]
-        |
-        null =
-        null;
+      if (
+        !Array.isArray(
+          rawClusterIds
+        )
+        ||
+        rawClusterIds.length ===
+          0
+      ) {
+
+        return Response.json(
+          {
+            ok:
+              false,
+
+            error:
+              "Для создания заявки нужно явно выбрать хотя бы один кластер",
+          },
+          {
+            status:
+              400,
+          }
+        );
+
+      }
+
+
+      const parsed =
+        rawClusterIds.map(
+          value =>
+            toPositiveInteger(
+              value
+            )
+        );
 
 
       if (
-        rawClusterIds !==
-          undefined
+        parsed.some(
+          value =>
+            value ===
+            null
+        )
       ) {
 
-        if (
-          !Array.isArray(
-            rawClusterIds
-          )
-          ||
-          rawClusterIds.length ===
-            0
-        ) {
+        return Response.json(
+          {
+            ok:
+              false,
 
-          return Response.json(
-            {
-              ok:
-                false,
-
-              error:
-                "cluster_ids должен быть непустым массивом",
-            },
-            {
-              status:
-                400,
-            }
-          );
-
-        }
-
-
-        const parsed =
-          rawClusterIds.map(
-            value =>
-              toPositiveInteger(
-                value
-              )
-          );
-
-
-        if (
-          parsed.some(
-            value =>
-              value ===
-              null
-          )
-        ) {
-
-          return Response.json(
-            {
-              ok:
-                false,
-
-              error:
-                "cluster_ids содержит некорректный идентификатор кластера",
-            },
-            {
-              status:
-                400,
-            }
-          );
-
-        }
-
-
-        clusterIds =
-          Array.from(
-            new Set(
-              parsed as
-                number[]
-            )
-          );
+            error:
+              "cluster_ids содержит некорректный идентификатор кластера",
+          },
+          {
+            status:
+              400,
+          }
+        );
 
       }
+
+
+      const clusterIds =
+        Array.from(
+          new Set(
+            parsed as
+              number[]
+          )
+        );
 
 
       return startSupplyRun(
