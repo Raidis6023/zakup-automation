@@ -25,6 +25,7 @@ type ProductRow = {
   carton_width_mm: number | null;
   carton_height_mm: number | null;
   carton_weight_kg: number | null;
+  package_weight_g: number | null;
   transport_carton_volume_m3: number | null;
 };
 
@@ -213,7 +214,7 @@ async function getProducts() {
     const page = await supabaseGet<ProductRow[]>(
       [
         "products",
-        "?select=id,master_code,offer_id,units_per_carton,carton_length_mm,carton_width_mm,carton_height_mm,carton_weight_kg,transport_carton_volume_m3",
+        "?select=id,master_code,offer_id,units_per_carton,carton_length_mm,carton_width_mm,carton_height_mm,carton_weight_kg,package_weight_g,transport_carton_volume_m3",
         "&order=created_at.asc",
         `&limit=${SUPABASE_PAGE_SIZE}`,
         `&offset=${offset}`,
@@ -569,11 +570,6 @@ export async function buildCargoPlan(
       }
 
       const pack = Array.from(packs)[0];
-      if (quantity % pack !== 0) {
-        throw new Error(
-          `SKU ${sku}: Ozon распределил ${quantity} шт., вложимость ${pack}; остаток ${quantity % pack} шт. ГМ автоматически не создаём.`,
-        );
-      }
 
       const offerId =
         normalizeKey(item.offer_id) ||
@@ -582,7 +578,22 @@ export async function buildCargoPlan(
         throw new Error(`SKU ${sku}: отсутствует offer_id`);
       }
 
-      const boxCount = quantity / pack;
+      const fullBoxCount =
+        Math.floor(
+          quantity / pack
+        );
+
+      const remainder =
+        quantity % pack;
+
+      const cargoBoxCount =
+        fullBoxCount +
+        (
+          remainder > 0
+            ? 1
+            : 0
+        );
+
       const totalLitres =
         toPositiveNumber(item.total_volume_in_litres) ??
         (
@@ -594,7 +605,7 @@ export async function buildCargoPlan(
         (() => {
           const volumes = master ? volumeByMaster.get(master) : undefined;
           if (!volumes || volumes.size !== 1) return null;
-          return Array.from(volumes)[0] * 1000 * boxCount;
+          return Array.from(volumes)[0] * 1000 * cargoBoxCount;
         })();
 
       if (totalLitres === null) {
@@ -616,17 +627,46 @@ export async function buildCargoPlan(
 
       const barcode = normalizeKey(item.barcode) || null;
       const quant = toPositiveInteger(item.quant) ?? 1;
-      const perCartonLitres = totalLitres / boxCount;
 
-      for (let index = 0; index < boxCount; index++) {
-        const weights =
-          master ? weightByMaster.get(master) : undefined;
+      const volumes =
+        master ? volumeByMaster.get(master) : undefined;
 
-        const weightKg =
-          weights?.size === 1
-            ? Array.from(weights)[0]
-            : null;
+      const physicalCartonLitres =
+        volumes?.size === 1
+          ? Array.from(volumes)[0] * 1000
+          : null;
 
+      const ozonUnitLitres =
+        toPositiveNumber(item.volume_in_litres) ??
+        (
+          toPositiveNumber(item.total_volume_in_litres) !== null
+            ? (toPositiveNumber(item.total_volume_in_litres) as number) /
+              quantity
+            : null
+        );
+
+      const fullCartonLitres =
+        physicalCartonLitres ??
+        (
+          ozonUnitLitres !== null
+            ? ozonUnitLitres * pack
+            : totalLitres / cargoBoxCount
+        );
+
+      const weights =
+        master ? weightByMaster.get(master) : undefined;
+
+      const fullCartonWeightKg =
+        weights?.size === 1
+          ? Array.from(weights)[0]
+          : null;
+
+      const unitWeightKg =
+        toPositiveNumber(product.package_weight_g) !== null
+          ? (toPositiveNumber(product.package_weight_g) as number) / 1000
+          : null;
+
+      for (let index = 0; index < fullBoxCount; index++) {
         cartons.push({
           sku,
           offer_id: offerId,
@@ -634,8 +674,37 @@ export async function buildCargoPlan(
           quantity: pack,
           quant,
           placement_zone: zone,
-          volume_litres: perCartonLitres,
-          weight_kg: weightKg,
+          volume_litres: fullCartonLitres,
+          weight_kg: fullCartonWeightKg,
+          dimensions,
+        });
+      }
+
+      if (remainder > 0) {
+        const partialWeightKg =
+          unitWeightKg !== null
+            ? unitWeightKg * remainder
+            : fullCartonWeightKg !== null
+              ? fullCartonWeightKg * (remainder / pack)
+              : null;
+
+        const partialLitres =
+          physicalCartonLitres ??
+          (
+            ozonUnitLitres !== null
+              ? ozonUnitLitres * remainder
+              : fullCartonLitres
+          );
+
+        cartons.push({
+          sku,
+          offer_id: offerId,
+          barcode,
+          quantity: remainder,
+          quant,
+          placement_zone: zone,
+          volume_litres: partialLitres,
+          weight_kg: partialWeightKg,
           dimensions,
         });
       }
