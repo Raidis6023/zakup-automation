@@ -379,6 +379,113 @@ function getStatusLabel(
 }
 
 
+function isTerminalRequestStatus(
+  status:
+    SupplyRequestStatus
+) {
+
+  return (
+    status ===
+      "success"
+    ||
+    status ===
+      "no_slot"
+    ||
+    status ===
+      "failed"
+  );
+
+}
+
+
+function isParkedRequest(
+  row:
+    SupplyRequest
+) {
+
+  if (
+    !row.next_attempt_at
+  ) {
+
+    return false;
+
+  }
+
+
+  const time =
+    Date.parse(
+      row.next_attempt_at
+    );
+
+
+  return (
+    Number.isFinite(
+      time
+    )
+    &&
+    time >=
+      Date.parse(
+        "2100-01-01T00:00:00.000Z"
+      )
+  );
+
+}
+
+
+function canCreatePreviewCluster(
+  cluster:
+    PreviewCluster
+) {
+
+  return (
+    cluster.proposed_units >
+      0
+    &&
+    cluster.status ===
+      "available"
+    &&
+    cluster.recommended_warehouse !==
+      null
+    &&
+    cluster.ozon_accepted_units ===
+      cluster.proposed_units
+  );
+
+}
+
+
+function activeRequestClusterIds(
+  requests:
+    SupplyRequest[]
+) {
+
+  return requests
+    .filter(
+      row =>
+        !isTerminalRequestStatus(
+          row.status
+        )
+        &&
+        !isParkedRequest(
+          row
+        )
+    )
+    .map(
+      row =>
+        Number(
+          row.macrolocal_cluster_id
+        )
+    )
+    .filter(
+      value =>
+        Number.isFinite(
+          value
+        )
+    );
+
+}
+
+
 function getRunLabel(
   status:
     SupplyRun[
@@ -594,7 +701,12 @@ export default function OzonFboSupplyClient({
 
   async function processLoop(
     runId:
-      string
+      string,
+
+    targetClusterIds:
+      number[]
+      =
+      []
   ) {
 
     if (
@@ -698,6 +810,50 @@ export default function OzonFboSupplyClient({
 
 
         if (
+          targetClusterIds.length >
+            0
+        ) {
+
+          const targets =
+            new Set(
+              targetClusterIds
+            );
+
+
+          const targetRows =
+            data.requests.filter(
+              row =>
+                targets.has(
+                  Number(
+                    row.macrolocal_cluster_id
+                  )
+                )
+            );
+
+
+          const allTargetsFinished =
+            targetRows.length ===
+              targets.size
+            &&
+            targetRows.every(
+              row =>
+                isTerminalRequestStatus(
+                  row.status
+                )
+            );
+
+
+          if (
+            allTargetsFinished
+          ) {
+
+            router.refresh();
+
+            break;
+
+          }
+
+        } else if (
           !data.run
           ||
           data.run.status !==
@@ -884,7 +1040,10 @@ export default function OzonFboSupplyClient({
   }
 
 
-  async function start() {
+  async function start(
+    clusterIds:
+      number[]
+  ) {
 
     if (
       starting
@@ -894,6 +1053,9 @@ export default function OzonFboSupplyClient({
       !calculationRunId
       ||
       pairsWithNeed <=
+        0
+      ||
+      clusterIds.length ===
         0
     ) {
 
@@ -931,6 +1093,9 @@ export default function OzonFboSupplyClient({
                 {
                   action:
                     "start",
+
+                  cluster_ids:
+                    clusterIds,
                 }
               ),
 
@@ -973,7 +1138,8 @@ export default function OzonFboSupplyClient({
       ) {
 
         void processLoop(
-          data.run.id
+          data.run.id,
+          clusterIds
         );
 
       } else {
@@ -1025,9 +1191,23 @@ export default function OzonFboSupplyClient({
                 "running"
             ) {
 
-              void processLoop(
-                data.run.id
-              );
+              const activeIds =
+                activeRequestClusterIds(
+                  data.requests
+                );
+
+
+              if (
+                activeIds.length >
+                  0
+              ) {
+
+                void processLoop(
+                  data.run.id,
+                  activeIds
+                );
+
+              }
 
             }
 
@@ -1104,15 +1284,6 @@ export default function OzonFboSupplyClient({
     "running";
 
 
-  const currentCalculationDone =
-    sameCalculation
-    &&
-    currentRun
-    &&
-    currentRun.status !==
-      "running";
-
-
   const previewMatchesCurrentCalculation =
     Boolean(
       preview
@@ -1125,34 +1296,81 @@ export default function OzonFboSupplyClient({
     );
 
 
-  const previewAllowsRealCreation =
-    Boolean(
-      previewMatchesCurrentCalculation
-      &&
-      preview
-        ?.can_create_real ===
-        true
+  const previewClusters =
+    preview
+      ?.clusters
+    ??
+    [];
+
+
+  const requestByCluster =
+    new Map(
+      (
+        status
+          ?.requests
+        ??
+        []
+      ).map(
+        row => [
+          Number(
+            row.macrolocal_cluster_id
+          ),
+          row,
+        ]
+      )
     );
 
 
-  const canStart =
+  const creatableClusterIds =
+    previewMatchesCurrentCalculation
+      ? previewClusters
+          .filter(
+            canCreatePreviewCluster
+          )
+          .map(
+            cluster =>
+              cluster.macrolocal_cluster_id
+          )
+          .filter(
+            clusterId => {
+
+              const request =
+                requestByCluster.get(
+                  clusterId
+                );
+
+
+              return (
+                !request
+                ||
+                (
+                  !isTerminalRequestStatus(
+                    request.status
+                  )
+                  &&
+                  isParkedRequest(
+                    request
+                  )
+                )
+              );
+
+            }
+          )
+      : [];
+
+
+  const canStartAll =
     Boolean(
       calculationRunId
       &&
-      pairsWithNeed >
+      creatableClusterIds.length >
         0
-      &&
-      !runIsRunning
-      &&
-      !currentCalculationDone
       &&
       !starting
       &&
       !processing
       &&
       !previewLoading
-      &&
-      previewAllowsRealCreation
     );
 
 
@@ -1279,49 +1497,6 @@ export default function OzonFboSupplyClient({
           </button>
 
 
-          <button
-            type="button"
-
-            className=
-              "primary-button"
-
-            disabled={
-              !canStart
-            }
-
-            onClick={
-              () => {
-                void start();
-              }
-            }
-          >
-
-            {
-              loading
-                ? "Проверяем состояние..."
-
-                : starting
-                  ? "Формируем очередь..."
-
-                  : runIsRunning
-                    ? "Заявки создаются..."
-
-                    : currentCalculationDone
-                      ? "Текущий расчёт обработан"
-
-                      : pairsWithNeed <=
-                          0
-                        ? "Поставка не требуется"
-
-                        : !previewAllowsRealCreation
-                          ? "Сначала выполните тест"
-
-                          : "Создать реальные заявки"
-            }
-
-          </button>
-
-
           <div
             className=
               "reason-text"
@@ -1334,9 +1509,10 @@ export default function OzonFboSupplyClient({
                 "11px",
             }}
           >
-            Тест создаёт только технические
-            черновики Ozon. Метод создания
-            реальной заявки не вызывается.
+            Сначала выполните тест. После него
+            реальную заявку можно создать отдельно
+            по каждому кластеру или одной кнопкой
+            для всех доступных кластеров.
           </div>
 
         </div>
@@ -1893,7 +2069,7 @@ export default function OzonFboSupplyClient({
                         "grid",
 
                       gridTemplateColumns:
-                        "1.25fr 0.65fr 0.65fr 0.55fr 1.7fr 0.8fr 0.75fr",
+                        "1.25fr 0.65fr 0.65fr 0.55fr 1.55fr 0.65fr 0.65fr 1fr",
 
                       gap:
                         "12px",
@@ -1918,6 +2094,7 @@ export default function OzonFboSupplyClient({
                     <span>Рекомендуемый склад</span>
                     <span>Общий слот</span>
                     <span>Состав</span>
+                    <span>Заявка</span>
                   </div>
 
 
@@ -1932,6 +2109,48 @@ export default function OzonFboSupplyClient({
                         const expanded =
                           expandedPreviewCluster ===
                           cluster.macrolocal_cluster_id;
+
+                        const request =
+                          requestByCluster.get(
+                            cluster.macrolocal_cluster_id
+                          );
+
+                        const requestActive =
+                          Boolean(
+                            request
+                            &&
+                            !isTerminalRequestStatus(
+                              request.status
+                            )
+                            &&
+                            !isParkedRequest(
+                              request
+                            )
+                          );
+
+                        const clusterCanCreate =
+                          canCreatePreviewCluster(
+                            cluster
+                          );
+
+                        const clusterButtonDisabled =
+                          starting
+                          ||
+                          processing
+                          ||
+                          previewLoading
+                          ||
+                          !clusterCanCreate
+                          ||
+                          requestActive
+                          ||
+                          Boolean(
+                            request
+                            &&
+                            isTerminalRequestStatus(
+                              request.status
+                            )
+                          );
 
 
                         return (
@@ -1948,7 +2167,7 @@ export default function OzonFboSupplyClient({
                                   "grid",
 
                                 gridTemplateColumns:
-                                  "1.25fr 0.65fr 0.65fr 0.55fr 1.7fr 0.8fr 0.75fr",
+                                  "1.25fr 0.65fr 0.65fr 0.55fr 1.55fr 0.65fr 0.65fr 1fr",
 
                                 gap:
                                   "12px",
@@ -2129,6 +2348,70 @@ export default function OzonFboSupplyClient({
                                     expanded
                                       ? "Скрыть"
                                       : `${cluster.article_count} поз.`
+                                  }
+                                </button>
+                              </span>
+
+                              <span>
+                                <button
+                                  type="button"
+
+                                  className=
+                                    "primary-button"
+
+                                  disabled={
+                                    clusterButtonDisabled
+                                  }
+
+                                  onClick={
+                                    () => {
+                                      void start(
+                                        [
+                                          cluster.macrolocal_cluster_id,
+                                        ]
+                                      );
+                                    }
+                                  }
+                                >
+                                  {
+                                    request
+                                    &&
+                                    request.status ===
+                                      "success"
+                                      ? "Создана"
+
+                                      : request
+                                        &&
+                                        request.status ===
+                                          "no_slot"
+                                        ? "Нет слота"
+
+                                        : request
+                                          &&
+                                          request.status ===
+                                            "failed"
+                                          ? "Ошибка"
+
+                                          : requestActive
+                                            ? getStatusLabel(
+                                                request!.status
+                                              )
+
+                                            : !clusterCanCreate
+                                              ? cluster.proposed_units <=
+                                                  0
+                                                ? "Не требуется"
+
+                                                : cluster.status ===
+                                                    "partial"
+                                                  ? "Есть отклонения"
+
+                                                  : "Недоступна"
+
+                                              : starting
+                                                ? "Запускаем..."
+
+                                                : "Создать заявку"
                                   }
                                 </button>
                               </span>
@@ -2361,6 +2644,70 @@ export default function OzonFboSupplyClient({
                     )
                   }
                 </div>
+              </div>
+
+
+              <div
+                style={{
+                  marginTop:
+                    "16px",
+
+                  display:
+                    "flex",
+
+                  justifyContent:
+                    "flex-end",
+
+                  alignItems:
+                    "center",
+
+                  gap:
+                    "12px",
+                }}
+              >
+                <div
+                  className=
+                    "reason-text"
+
+                  style={{
+                    textAlign:
+                      "right",
+                  }}
+                >
+                  {
+                    creatableClusterIds.length >
+                      0
+                      ? `Готово к созданию: ${creatableClusterIds.length} кластеров`
+                      : "Нет новых доступных кластеров для создания"
+                  }
+                </div>
+
+                <button
+                  type="button"
+
+                  className=
+                    "primary-button"
+
+                  disabled={
+                    !canStartAll
+                  }
+
+                  onClick={
+                    () => {
+                      void start(
+                        creatableClusterIds
+                      );
+                    }
+                  }
+                >
+                  {
+                    starting
+                      ? "Запускаем заявки..."
+                      : processing
+                        ? "Заявки создаются..."
+                        : "Создать все заявки"
+                  }
+                </button>
               </div>
 
 
@@ -2652,9 +2999,26 @@ export default function OzonFboSupplyClient({
 
                       onClick={
                         () => {
-                          void processLoop(
-                            currentRun.id
-                          );
+                          const activeIds =
+                            activeRequestClusterIds(
+                              status
+                                ?.requests
+                              ??
+                              []
+                            );
+
+
+                          if (
+                            activeIds.length >
+                              0
+                          ) {
+
+                            void processLoop(
+                              currentRun.id,
+                              activeIds
+                            );
+
+                          }
                         }
                       }
                     >
