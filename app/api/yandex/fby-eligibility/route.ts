@@ -68,7 +68,7 @@ function status(value: string): EligibilityValue | null {
   return null;
 }
 
-function headersByRow(sheet: ExcelJS.Worksheet): {row: number;skuCol: number;warehouseCols: Array<{col:number;id:number;name:string}>} | null {
+function headersByRow(sheet: ExcelJS.Worksheet): {row: number;skuCol: number;warehouseCols: Array<{col:number;id:number;name:string}>;unknownColumns:string[]} | null {
   for(let rowNum=1;rowNum<=Math.min(sheet.rowCount,15);rowNum++){
     const row=sheet.getRow(rowNum);
     let skuCol=0;
@@ -78,15 +78,20 @@ function headersByRow(sheet: ExcelJS.Worksheet): {row: number;skuCol: number;war
     if(!skuCol)continue;
     const warehouseCols:Array<{col:number;id:number;name:string}>=[];
     const seen=new Set<number>();
+    const unknownColumns:string[]=[];
+    const standard=new Set(["ваш sku","наименование","штрихкод","общее кол-во для поставки","как привезти товар?"]);
     for(let col=skuCol+1;col<=Math.min(Math.max(30,sheet.columnCount),100);col++){
       const label=cellString(row.getCell(col).value);
       const warehouse=mapWarehouseColumn(label);
-      if(!warehouse)continue;
+      if(!warehouse){
+        if(col>=6&&label&&!standard.has(normalizeHeader(label)))unknownColumns.push(label);
+        continue;
+      }
       if(seen.has(warehouse.id))throw new Error("Повторный столбец склада "+label);
       warehouseCols.push({col,id:warehouse.id,name:warehouse.name});
       seen.add(warehouse.id);
     }
-    if(warehouseCols.length>0)return {row:rowNum,skuCol,warehouseCols};
+    if(warehouseCols.length>0)return {row:rowNum,skuCol,warehouseCols,unknownColumns};
   }
   return null;
 }
@@ -146,7 +151,7 @@ export async function GET(request:Request) {
       activeOffers:current.size,matchedOffers:matched,missingOffers:current.size-matched,
       missingSamples:unknown,headers:snapshot?.headers||[],
       extraOffers:snapshot?.unknown_offers||[],
-      ready:Boolean(snapshot&&matched===current.size&&snapshot.headers.length>0)
+      ready:Boolean(snapshot&&matched>0&&snapshot.headers.length>0)
     });
   }catch(error){
     return Response.json({ok:false,error:error instanceof Error?error.message:"Ошибка чтения матрицы"}, {status:500});
@@ -174,6 +179,10 @@ export async function POST(request:Request){
     if(!sheet||!matchedHeader)
       return Response.json({ok:false,error:"Не найдена матрица Яндекса: нужны столбцы «Ваш SKU» и «да/нет» с названиями складов. Обычный шаблон с четырьмя полями не подойдёт."},{status:422});
     const header=matchedHeader;
+    if(header.unknownColumns.length){
+      return Response.json({ok:false,error:"Не удалось сопоставить склады в Excel: "+header.unknownColumns.join(", ")
+        +". Расчёт заблокирован, чтобы не принять запрет за разрешение или наоборот."},{status:422});
+    }
     const mapping:Record<string,Record<string,EligibilityValue>>=Object.create(null);
     const offerIds=new Set<string>();
     const products=await activeProducts();
@@ -219,7 +228,7 @@ export async function POST(request:Request){
     if(!response.ok)throw new Error("Не удалось сохранить матрицу в Supabase: HTTP "+response.status+" "+(await response.text()).slice(0,200));
     return Response.json({ok:true,checked,activeOffers:knownOffers.size,
       missing:Math.max(0,knownOffers.size-checked),warehouses:header.warehouseCols.length,
-      unknownOffers:unknownOffers.length,ready:checked===knownOffers.size
+      unknownOffers:unknownOffers.length,ready:checked>0
     });
   }catch(error){
     return Response.json({ok:false,error:error instanceof Error?error.message:"Ошибка Excel"},{status:422});
