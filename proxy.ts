@@ -19,6 +19,9 @@ export async function proxy(
     request.nextUrl.pathname;
 
 
+  // Temporary raw Yandex export checks its own expiring capability before any work.
+  if (pathname === "/api/agents/yandex-finance-raw") return NextResponse.next();
+
   // Финансовые агентские API проходят собственную серверную авторизацию
   // и проверку роли администратора. Не дублируем 3 сетевых RPC в proxy:
   // при медленном Supabase это блокировало даже начало импорта.
