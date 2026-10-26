@@ -68,7 +68,7 @@ export default function FbwSupplyWizard(){
 
  const [typeOverride,setTypeOverride]=useState<"auto"|"box"|"mono"|"piece">("auto");
  const selected=useMemo(()=>demand?.rows.filter(x=>selection.includes(x.sku)&&x.status==="ready")??[],[selection,demand]);
- const type: "box"|"mono"|"piece"=typeOverride==="auto"?(selected.length>0&&selected.length<=3?"mono":"box"):typeOverride;
+ const type: "box"|"mono"|"piece"=(typeOverride==="auto"||(typeOverride==="mono"&&selected.length>3))?(selected.length>0&&selected.length<=3?"mono":"box"):typeOverride;
  const totals=selected.reduce((a,r)=>({units:a.units+r.quantity,boxes:a.boxes+r.boxes}),{units:0,boxes:0});
  const packing=useMemo(()=>{
    try{
@@ -233,7 +233,7 @@ export default function FbwSupplyWizard(){
            <span>Объём {p.volumeM3} м³ · Вес коробов {p.cargoWeightKg??"нет данных"} кг</span>
            <span>Вес с поддоном: {p.totalWeightKg!==null?num(p.totalWeightKg)+" кг":"часть весов неизвестна"}</span>
            <span>Состав: {p.contents.map(x=>x.sku+" × "+x.boxes+" кор.").join(", ")}</span>
-           <span className={p.validHeight?styles.ok:styles.warning}>{p.validHeight?"Высота соответствует правилу":"Высота вне разрешённого диапазона"}</span>
+           <span className={p.validHeight?styles.ok:styles.warning}>{type==="mono"?(p.validHeight?"Высота монопаллеты допустима":"Высота монопаллеты вне 50–180 см"):"Предварительная укладка, проверить высоту кузова"}</span>
          </div>)}
        </div>}
      </div>}
