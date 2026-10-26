@@ -24,7 +24,27 @@ async function wb(path:string, method:"GET"|"POST"="GET",body?:unknown,rate=fals
  }
  return response.json();
 }
+
+const wbCallsCache = new Map<string,{expires:number;value?:unknown;failure?:string}>();
+async function cachedWb(key:string,ttl:number,get:()=>Promise<unknown>):Promise<unknown>{
+  const existing=wbCallsCache.get(key);
+  if(existing&&Date.now()<existing.expires){
+    if(existing.failure)throw new Error(existing.failure);
+    return existing.value;
+  }
+  try{
+    const value=await get();
+    wbCallsCache.set(key,{expires:Date.now()+ttl,value});
+    return value;
+  }catch(error){
+    const message=error instanceof Error?error.message:"Ошибка WB";
+    // Known disabled methods and rate-limit errors should not be hammered by the UI.
+    wbCallsCache.set(key,{expires:Date.now()+Math.min(ttl,1800000),failure:message});
+    throw error;
+  }
+}
 const cache=new Map<string,{time:number;data:object}>();
+
 export async function POST(request:NextRequest){
  const auth=await createClient();const {data:{user}}=await auth.auth.getUser();
  if(!user)return resp({ok:false,error:"Войдите на сайт"},401);
@@ -45,9 +65,9 @@ export async function POST(request:NextRequest){
  if(saved&&Date.now()-saved.time<180000)return resp({...saved.data,cache:true});
  try{
    const [warehousesResult,optionsResult,ratesResult]=await Promise.allSettled([
-     wb("/api/v1/warehouses"),
-     wb("/api/v1/acceptance/options","POST",items.map(x=>({barcode:x.barcode,quantity:x.quantity}))),
-     wb("/api/tariffs/v1/acceptance/coefficients","GET",undefined,true),
+     cachedWb("fbw-warehouses",12*3600000,()=>wb("/api/v1/warehouses")),
+     cachedWb("fbw-options:"+key,20*60000,()=>wb("/api/v1/acceptance/options","POST",items.map(x=>({barcode:x.barcode,quantity:x.quantity})))),
+     cachedWb("fbw-rates",60*60000,()=>wb("/api/tariffs/v1/acceptance/coefficients","GET",undefined,true)),
    ]);
    const errors:string[]=[];
    if(warehousesResult.status==="rejected")errors.push("Справочник точек WB недоступен: "+String(warehousesResult.reason));
