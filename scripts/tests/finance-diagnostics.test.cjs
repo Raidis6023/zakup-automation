@@ -31,6 +31,16 @@ test("does not mistake absent cost for proven loss", () => {
   assert.match(signals[0].title, /Себестоимость/);
 });
 
+test("zero or negative unit costs require source verification", () => {
+  for (const unit_cost of [0, -100]) {
+    const signals = buildFinanceDiagnostics(complete, [
+      row({ unit_cost, estimated_result: -800 }),
+    ]);
+    assert.equal(signals.length, 1);
+    assert.equal(signals[0].severity, "blocking");
+  }
+});
+
 test("zero estimated result is not an anomaly", () => {
   assert.deepEqual(buildFinanceDiagnostics(complete, [row({ estimated_result: 0 })]), []);
 });
