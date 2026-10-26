@@ -503,7 +503,7 @@ export async function POST(request: Request) {
     return new Response(new Uint8Array(buffer) as BodyInit, {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": 'attachment; filename="yandex-' + (input.mode === "upload" ? "upload" : "cluster-plan") + "-" + date + ".xlsx"',
+        "Content-Disposition": 'attachment; filename="yandex-' + (input.mode === "upload" ? "upload" : "cluster-plan") + "-" + date + '.xlsx"',
         "Cache-Control": "no-store"
       }
     });
