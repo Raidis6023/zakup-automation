@@ -72,6 +72,12 @@ export default function YandexFbySupplyPlanner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, version]);
 
+  useEffect(() => {
+    const onCheck = () => setVersion(v => v + 1);
+    window.addEventListener("yandex-eligibility-updated", onCheck);
+    return () => window.removeEventListener("yandex-eligibility-updated", onCheck);
+  }, []);
+
   const selectedSet = useMemo(() => new Set(selected || []), [selected]);
 
   function toggleCluster(name: string) {
