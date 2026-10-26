@@ -591,8 +591,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
       reconciliation_status: accounting.unknownTypeOperations > 0
         ? "requires_type_review" : "not_checked_against_performance",
     },
-    ads_campaigns_total:new Set((adTasksRes.data??[]).map(x=>String(x.job_id)+":"+x.day+":"+x.date_to+":"+String(x.status))).size===0
-      ?0:(adTasksRes.data??[]).length,
+    ads_campaigns_total:(adTasksRes.data??[]).length,
     ads_campaigns_complete:(adTasksRes.data??[]).filter(x=>x.status==="complete").length,
     ads_partial_spend:round([...adByOffer.values()].reduce((a,b)=>a+b,0)),
     ads_partial_skus:adByOffer.size,
