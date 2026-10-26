@@ -198,12 +198,14 @@ async function buildPlan(ids: number[] | null): Promise<PlanResult> {
   const allOffers = new Map(products.map(p => [p.offer_id, p]));
   const items: NeedRow[] = [];
   const blocked: NeedRow[] = [];
+  let rawNeedAll = 0;
   for (const [offerId, data] of aggregated) {
     if (data.rawNeed <= 0) continue;
     const product = allOffers.get(offerId);
     const masterCode = normal(product?.master_code) || null;
     const packInfo = masterCode ? packByMaster.get(masterCode) : undefined;
     if (packInfo?.discontinued || product?.is_active === false) continue;
+    rawNeedAll += data.rawNeed;
     const errors: string[] = [];
     if (!product) errors.push("Нет товара в справочнике ЯМ");
     if (!masterCode) errors.push("Не задан ЕНОТ / master_code");
@@ -240,7 +242,7 @@ async function buildPlan(ids: number[] | null): Promise<PlanResult> {
       articles: items.length, blocked: blocked.length,
       units: items.reduce((n, p) => n + p.quantity, 0),
       cartons: items.reduce((n, p) => n + p.cartonCount, 0),
-      rawNeed: items.reduce((n, p) => n + p.rawNeed, 0) + blocked.reduce((n, p) => n + p.rawNeed, 0)
+      rawNeed: rawNeedAll
     },
     notice: "Excel содержит ОБЩЕЕ количество по выбранным складам. Яндекс распределит его по кластерам после загрузки. Настройте кластеры в кабинете Маркета и проверьте незавершённые поставки."
   };
