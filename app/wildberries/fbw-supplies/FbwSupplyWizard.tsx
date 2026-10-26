@@ -63,6 +63,9 @@ export default function FbwSupplyWizard(){
  const [draftBusy,setDraftBusy]=useState(false);
  const [draft,setDraft]=useState<{draftId:string;url:string}|null>(null);
  const [draftError,setDraftError]=useState("");
+ const [draftsLoading,setDraftsLoading]=useState(false);
+ const [draftsError,setDraftsError]=useState("");
+ const [draftList,setDraftList]=useState<Array<{draftId:string;createdAt:string|null;skuQuantity:number;itemQuantity:number}>|null>(null);
  const [palletTareKg,setPalletTareKg]=useState("");
 
  const [typeOverride,setTypeOverride]=useState<"auto"|"box">("auto");
@@ -122,6 +125,19 @@ export default function FbwSupplyWizard(){
      if(!res.ok||!data.ok)throw Error(data.error??"Ошибка проверки WB");
      setChoice(data);
    }catch(e){setError(e instanceof Error?e.message:"Ошибка связи с WB");}finally{setFinding(false);}
+ }
+ async function checkDrafts(){
+   setDraftsLoading(true);setDraftsError("");
+   try{
+     const response=await fetch("/api/wb/fbw/drafts",{cache:"no-store"});
+     const json=await response.json() as {
+       ok:boolean;error?:string;
+       drafts?:Array<{draftId:string;createdAt:string|null;skuQuantity:number;itemQuantity:number}>;
+     };
+     if(!response.ok||!json.ok||!Array.isArray(json.drafts))throw Error(json.error??"WB не вернул список черновиков");
+     setDraftList(json.drafts);
+   }catch(error){setDraftsError(error instanceof Error?error.message:"Сбой загрузки");}
+   finally{setDraftsLoading(false);}
  }
  async function createDraft(){
    if(!point||!selected.length||!demand?.fresh||draftBusy)return;
@@ -259,6 +275,21 @@ export default function FbwSupplyWizard(){
            </button>
            {draftError&&<p role="alert" className={styles.error}>{draftError}</p>}
          </>}
+         <div className={styles.draftAudit}>
+           <button type="button" disabled={draftsLoading} onClick={checkDrafts}>
+             {draftsLoading?"Запрашиваю список WB...":"Проверить список черновиков через API WB"}
+           </button>
+           {draftsError&&<p role="alert" className={styles.error}>{draftsError}</p>}
+           {draftList&&<div className={styles.draftAuditList}>
+             <small>WB вернул {draftList.length} черновиков из первых 30. Это официальный GET /api/supplies/v1/drafts.</small>
+             {draftList.length===0?<p>Черновиков пока нет.</p>:draftList.slice(0,30).map(item=><div key={item.draftId} className={styles.draftAuditRow}>
+               <span>№ {item.draftId}</span>
+               <span>{item.skuQuantity} SKU · {item.itemQuantity} шт.</span>
+               <span>{item.createdAt?new Date(item.createdAt).toLocaleString("ru-RU"):"Без даты"}</span>
+               {draft?.draftId===item.draftId&&<strong className={styles.ok}>Создан нами</strong>}
+             </div>)}
+           </div>}
+         </div>
        </div>}
 
      </>}
