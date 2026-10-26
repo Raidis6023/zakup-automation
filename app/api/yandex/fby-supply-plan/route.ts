@@ -51,6 +51,15 @@ type NeedRow = {
 type WarehouseSummary = {
   id: number; name: string; rawNeed: number; articles: number; sales28: number;
 };
+type ClusterAllocation = {
+  cluster: string; offerId: string; name: string; masterCode: string | null;
+  sales28: number; stock: number; rawNeed: number; pack: number | null;
+  cartons: number; quantity: number; errors: string[];
+};
+type ClusterSummary = {
+  name: string; rawNeed: number; proposedUnits: number; cartons: number;
+  articles: number; sales28: number; stock: number; warehouseIds: number[];
+};
 type PlanResult = {
   calculatedAt: string;
   salesPeriod: string;
@@ -58,7 +67,10 @@ type PlanResult = {
   stale: boolean;
   staleReasons: string[];
   warehouses: WarehouseSummary[];
-  selectedWarehouseIds: number[];
+  clusters: ClusterSummary[];
+  allocations: ClusterAllocation[];
+  selectedClusters: string[];
+  unmappedWarehouses: string[];
   items: NeedRow[];
   blocked: NeedRow[];
   totals: { articles: number; blocked: number; units: number; cartons: number; rawNeed: number };
@@ -116,7 +128,16 @@ function validBarcodes(product: YandexProduct): string {
   return [...new Set(values.map(normal).filter(v => v && !/[\s_;]/.test(v)))].join(", ");
 }
 
-async function buildPlan(ids: number[] | null): Promise<PlanResult> {
+const CLUSTER_BY_WAREHOUSE: Record<number, string | null> = {
+  172: "Москва", 304: "Москва", 308: "Москва",
+  313: "Санкт-Петербург", 301: "Санкт-Петербург",
+  314: "Казань", 305: "Ростов-на-Дону", 147: "Ростов-на-Дону",
+  300: "Екатеринбург", 302: "Самара",
+  501: null // возвратный склад, не склад FBY для новой поставки
+};
+// Сопоставление известных складов по текущей базе. Названия/ID не считаем
+// универсальным справочником Маркета: новые ID должны пройти проверку.
+async function buildPlan(clusterNames: string[] | null): Promise<PlanResult> {
   const [salesRuns, stockRuns, products, packing] = await Promise.all([
     dbRows<SalesRun>("yandex_sales_sync_runs", "id,date_from,date_to,created_at", { status: "eq.success", order: "created_at.desc", limit: "1" }),
     dbRows<StockRun>("yandex_stock_sync_runs", "id,snapshot_date,created_at", { status: "eq.success", order: "created_at.desc", limit: "1" }),
@@ -161,7 +182,7 @@ async function buildPlan(ids: number[] | null): Promise<PlanResult> {
 
   const metrics = new Map<string, OfferMetrics>();
   const warehouseData = new Map<number, WarehouseSummary>();
-  const validIds = ids ? new Set(ids) : null;
+  const unmappedWarehouses = new Set<string>();
   function accumulate(offer: string, warehouseId: number | null, warehouseName: string | null, kind: "sale" | "stock", amount: number) {
     if (warehouseId === null || !Number.isSafeInteger(warehouseId) || warehouseId <= 0) return;
     if (!warehouseData.has(warehouseId)) warehouseData.set(warehouseId, { id: warehouseId, name: normal(warehouseName) || "Склад " + warehouseId, rawNeed: 0, articles: 0, sales28: 0 });
@@ -174,38 +195,64 @@ async function buildPlan(ids: number[] | null): Promise<PlanResult> {
   for (const row of sales) accumulate(row.shop_sku, row.warehouse_id, row.warehouse_name, "sale", int(row.sales_quantity));
   for (const row of stocks) accumulate(row.offer_id, row.warehouse_id, row.warehouse_name, "stock", int(row.available));
 
-  // Отдельный сырой план каждого склада нужен только как вход в мультипоставку.
-  // Кратность коробам применяем ПОСЛЕ суммирования потребности всех складов.
-  const aggregated = new Map<string, { rawNeed: number; sales28: number; stock: number }>();
+  // Сначала суммируем остатки/продажи складов ОДНОГО кластера.
+  // Затем вычисляем потребность и округляем коробки на уровне кластера.
+  // Сложение отдельных складских потребностей давало неверный результат.
+  const clusterMetrics = new Map<string, { offerId: string; cluster: string; sale: number; stock: number }>();
+  const allClusterNames = new Set<string>();
+  const clusterToWarehouses = new Map<string, Set<number>>();
   for (const [key, m] of metrics.entries()) {
-    const delimiter = key.lastIndexOf("\u0000");
-    const offerId = key.slice(0, delimiter);
-    const warehouseId = Number(key.slice(delimiter + 1));
-    const need = coverageNeed(m.sale, m.stock);
-    const wh = warehouseData.get(warehouseId)!;
-    wh.rawNeed += need;
-    if (need > 0) wh.articles++;
-    // Сводку показываем по всем складам, но итоговый Excel строим
-    // только по выбранным в интерфейсе.
-    if (validIds && !validIds.has(warehouseId)) continue;
-    const current = aggregated.get(offerId) || { rawNeed: 0, sales28: 0, stock: 0 };
-    current.rawNeed += need;
-    current.sales28 += m.sale;
-    current.stock += m.stock;
-    aggregated.set(offerId, current);
+    const at = key.lastIndexOf("\u0000");
+    const offerId = key.slice(0, at);
+    const whId = Number(key.slice(at + 1));
+    const wh = warehouseData.get(whId)!;
+    wh.rawNeed += coverageNeed(m.sale, m.stock);
+    if (coverageNeed(m.sale, m.stock) > 0) wh.articles += 1;
+    if (!(whId in CLUSTER_BY_WAREHOUSE)) {
+      if (m.sale > 0 || m.stock > 0) unmappedWarehouses.add(wh.name + " (#" + whId + ")");
+      continue;
+    }
+    const cluster = CLUSTER_BY_WAREHOUSE[whId];
+    if (!cluster) continue;
+    allClusterNames.add(cluster);
+    if (!clusterToWarehouses.has(cluster)) clusterToWarehouses.set(cluster, new Set());
+    clusterToWarehouses.get(cluster)!.add(whId);
+    const k = offerId + "\u0000" + cluster;
+    const existing = clusterMetrics.get(k) || { offerId, cluster, sale: 0, stock: 0 };
+    existing.sale += m.sale;
+    existing.stock += m.stock;
+    clusterMetrics.set(k, existing);
+  }
+  const selectedSet = clusterNames === null ? allClusterNames : new Set(clusterNames);
+  if (clusterNames?.some(name => !allClusterNames.has(name))) throw new Error("Выбран неизвестный кластер ЯМ");
+  const allOffers = new Map(products.map(p => [p.offer_id, p]));
+  const clusterTotals = new Map<string, ClusterSummary>();
+  for (const cluster of allClusterNames) {
+    clusterTotals.set(cluster, {
+      name: cluster, rawNeed: 0, proposedUnits: 0, cartons: 0,
+      articles: 0, sales28: 0, stock: 0,
+      warehouseIds: [...(clusterToWarehouses.get(cluster) || [])].sort((a, b) => a - b)
+    });
   }
 
-  const allOffers = new Map(products.map(p => [p.offer_id, p]));
-  const items: NeedRow[] = [];
-  const blocked: NeedRow[] = [];
+  const allocations: ClusterAllocation[] = [];
+  const blockedMap = new Map<string, NeedRow>();
+  const itemMap = new Map<string, NeedRow>();
   let rawNeedAll = 0;
-  for (const [offerId, data] of aggregated) {
-    if (data.rawNeed <= 0) continue;
-    const product = allOffers.get(offerId);
+  for (const m of clusterMetrics.values()) {
+    const product = allOffers.get(m.offerId);
     const masterCode = normal(product?.master_code) || null;
     const packInfo = masterCode ? packByMaster.get(masterCode) : undefined;
     if (packInfo?.discontinued || product?.is_active === false) continue;
-    rawNeedAll += data.rawNeed;
+    const rawNeed = coverageNeed(m.sale, m.stock);
+    const cluster = clusterTotals.get(m.cluster)!;
+    cluster.sales28 += m.sale;
+    cluster.stock += m.stock;
+    cluster.rawNeed += rawNeed;
+    if (rawNeed > 0) cluster.articles++;
+    if (!selectedSet.has(m.cluster) || rawNeed === 0) continue;
+    rawNeedAll += rawNeed;
+
     const errors: string[] = [];
     if (!product) errors.push("Нет товара в справочнике ЯМ");
     if (!masterCode) errors.push("Не задан ЕНОТ / master_code");
@@ -216,27 +263,57 @@ async function buildPlan(ids: number[] | null): Promise<PlanResult> {
     if (!barcode) errors.push("Нет штрихкода");
     const name = normal(product?.raw_data?.offer?.name) || normal(product?.raw_data?.mapping?.marketSkuName);
     if (!name) errors.push("Нет наименования");
-    if (offerId.length > 80) errors.push("Артикул длиннее 80 символов");
-    // В точности как в текущем Ozon: половина короба или меньше = 0.
-    const cartons = pack && data.rawNeed > pack / 2 ? Math.round(data.rawNeed / pack) : 0;
-    const row: NeedRow = {
-      offerId, name, masterCode, barcode, pack: pack || null,
-      rawNeed: data.rawNeed, quantity: cartons * (pack || 0),
-      cartonCount: cartons, sales28: data.sales28, stock: data.stock, errors
+    if (m.offerId.length > 80) errors.push("Артикул длиннее 80 символов");
+
+    // Не округляем суммарную потребность РФ: иначе теряется география.
+    const cartons = pack && rawNeed > pack * 0.5 ? Math.round(rawNeed / pack) : 0;
+    const quantity = errors.length ? 0 : cartons * (pack || 0);
+    allocations.push({
+      cluster: m.cluster, offerId: m.offerId, name, masterCode,
+      sales28: m.sale, stock: m.stock, rawNeed, pack: pack || null,
+      cartons: errors.length ? 0 : cartons, quantity, errors
+    });
+    if (errors.length > 0) {
+      const existing = blockedMap.get(m.offerId) || {
+        offerId: m.offerId, name, masterCode, barcode,
+        pack: pack || null, rawNeed: 0, quantity: 0, cartonCount: 0,
+        sales28: 0, stock: 0, errors
+      };
+      existing.rawNeed += rawNeed;
+      existing.sales28 += m.sale;
+      existing.stock += m.stock;
+      blockedMap.set(m.offerId, existing);
+      continue;
+    }
+    cluster.proposedUnits += quantity;
+    cluster.cartons += cartons;
+    if (quantity === 0) continue;
+    const existing = itemMap.get(m.offerId) || {
+      offerId: m.offerId, name, masterCode, barcode,
+      pack: pack || null, rawNeed: 0, quantity: 0, cartonCount: 0,
+      sales28: 0, stock: 0, errors: []
     };
-    if (errors.length) blocked.push(row);
-    else if (row.quantity > 0) items.push(row);
+    existing.rawNeed += rawNeed;
+    existing.quantity += quantity;
+    existing.cartonCount += cartons;
+    existing.sales28 += m.sale;
+    existing.stock += m.stock;
+    itemMap.set(m.offerId, existing);
   }
-  items.sort((a, b) => b.quantity - a.quantity || a.offerId.localeCompare(b.offerId));
-  blocked.sort((a, b) => b.rawNeed - a.rawNeed);
+  const items = [...itemMap.values()].sort((a, b) => b.quantity - a.quantity || a.offerId.localeCompare(b.offerId));
+  const blocked = [...blockedMap.values()].sort((a, b) => b.rawNeed - a.rawNeed);
+  const clusters = [...clusterTotals.values()].sort((a, b) => b.rawNeed - a.rawNeed || a.name.localeCompare(b.name));
+  allocations.sort((a, b) => a.cluster.localeCompare(b.cluster, "ru") || b.rawNeed - a.rawNeed);
   const warehouses = [...warehouseData.values()].sort((a, b) => b.rawNeed - a.rawNeed);
-  const selectedWarehouseIds = validIds ? [...validIds] : warehouses.map(w => w.id);
+  if (unmappedWarehouses.size) staleReasons.push("Найдены склады без подтверждённой привязки к кластеру");
   return {
     calculatedAt: new Date().toISOString(),
     salesPeriod: salesRun.date_from + " — " + salesRun.date_to,
     stockDate: stockRun.snapshot_date,
     stale: staleReasons.length > 0,
-    staleReasons, warehouses, selectedWarehouseIds,
+    staleReasons, warehouses, clusters, allocations,
+    selectedClusters: [...selectedSet],
+    unmappedWarehouses: [...unmappedWarehouses],
     items, blocked,
     totals: {
       articles: items.length, blocked: blocked.length,
@@ -244,21 +321,23 @@ async function buildPlan(ids: number[] | null): Promise<PlanResult> {
       cartons: items.reduce((n, p) => n + p.cartonCount, 0),
       rawNeed: rawNeedAll
     },
-    notice: "Excel содержит ОБЩЕЕ количество по выбранным складам. Яндекс распределит его по кластерам после загрузки. Настройте кластеры в кабинете Маркета и проверьте незавершённые поставки."
+    notice: "Потребность рассчитана отдельно по каждому кластеру через складские продажи и остатки. Распределение в XLSX справочное: шаблон мультипоставки ЯМ импортирует только ОБЩЕЕ количество, а распределение Яндекс нужно сверить/исправить после загрузки."
   };
 }
 
-function parseIds(value: unknown): number[] | null {
+function parseClusters(value: unknown): string[] | null {
   if (value === undefined || value === null) return null;
-  if (!Array.isArray(value) || value.length > 200 || value.some(x => !Number.isSafeInteger(x) || x <= 0)) throw new Error("Неверный список складов");
-  return [...new Set(value as number[])];
+  if (!Array.isArray(value) || value.length > 50 || value.some(x => typeof x !== "string" || !x.trim() || x.length > 100)) {
+    throw new Error("Неверный список кластеров");
+  }
+  return [...new Set((value as string[]).map(x => x.trim()))];
 }
 
 export async function GET(request: Request) {
   try {
     const params = new URL(request.url).searchParams;
-    const ids = params.has("warehouses") ? parseIds(params.get("warehouses")?.split(",").filter(Boolean).map(Number)) : null;
-    return Response.json({ ok: true, plan: await buildPlan(ids) });
+    const clusters = params.has("clusters") ? parseClusters(params.get("clusters")?.split(",").filter(Boolean)) : null;
+    return Response.json({ ok: true, plan: await buildPlan(clusters) });
   } catch (e) {
     return Response.json({ ok: false, error: e instanceof Error ? e.message : "Ошибка расчёта" }, { status: 500 });
   }
@@ -266,8 +345,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const input = await request.json() as { warehouseIds?: number[]; allowPartial?: boolean; allowStale?: boolean };
-    const plan = await buildPlan(parseIds(input.warehouseIds));
+    const input = await request.json() as { clusterNames?: string[]; allowPartial?: boolean; allowStale?: boolean; mode?: "plan" | "upload" };
+    const plan = await buildPlan(parseClusters(input.clusterNames));
     if (plan.stale && input.allowStale !== true) {
       return Response.json({ ok: false, error: "Данные устарели. Сначала обновите продажи и остатки ЯМ или подтвердите тестовый экспорт." }, { status: 409 });
     }
