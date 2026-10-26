@@ -108,7 +108,7 @@ export default function YandexFbySupplyPlanner() {
     }
   }
 
-  const hasBlockingIssues = Boolean(plan && (plan.blocked.length > 0 && !allowPartial || plan.stale && !allowStale));
+  const hasBlockingIssues = Boolean(plan && (plan.unmappedWarehouses.length > 0 || (plan.blocked.length > 0 && !allowPartial) || (plan.stale && !allowStale)));
   const noRows = !plan || plan.items.length === 0;
   const disabled = loading || downloading || noRows || !selected?.length || hasBlockingIssues;
 
