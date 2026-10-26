@@ -128,8 +128,9 @@ export default function FbwSupplyWizard(){
    const haystack=(x.name+" "+x.address+" "+x.city+" "+x.region+" "+x.type).toLocaleLowerCase("ru");
    return haystack.includes(search.trim().toLocaleLowerCase("ru"))
      &&(kind==="all"||x.type.toLocaleLowerCase("ru").includes(kind))
+     &&(type!=="mono"||x.type.toLocaleLowerCase("ru").includes("сц"))
      &&(!onlyConfirmed||x.status==="confirmed");
- })??[],[choice,search,kind,onlyConfirmed]);
+ })??[],[choice,search,kind,onlyConfirmed,type]);
  const clearManualForm=()=>{setManualDate("");setWbSupplyNumber("");setManualConfirmed(false);setSaveMessage("");};
  const resetFollowing=()=>{setChoice(null);setPointId(null);setSupplyDate("");setOnlyConfirmed(false);clearManualForm();setDraft(null);setDraftError("");};
  function pickPoint(id:number){setPointId(id);setSupplyDate("");setDraft(null);setDraftError("");clearManualForm();window.setTimeout(()=>calendarRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),120);}
@@ -257,6 +258,7 @@ export default function FbwSupplyWizard(){
        "Монопаллета: 50–180 см включительно, максимум 3 баркода на одной паллете.":
        "Короб: физический план укладки по принципу Ozon, не отдельные паллетные грузоместа WB."}
        Вес поддонов зависит от фактически используемых поддонов.</p>
+       {type==="box"&&packing.result?.volumeM3!==null&&packing.result?.volumeM3!==undefined&&packing.result.volumeM3>1&&<p className={styles.warningText}>Для прямой поставки коробами в СЦ при объёме более 1 м³ WB требует разместить короба на паллетах. Количество паллет показано выше.</p>}
        <div className={styles.palletTare}>
          <label>Вес одного пустого поддона, кг (вводится вручную)
            <input type="number" inputMode="decimal" min="0.1" step="0.1" value={palletTareKg}
@@ -308,6 +310,7 @@ export default function FbwSupplyWizard(){
          {!x.hasLiveId&&<small className={styles.warningText}>ID для проверки даты отсутствует</small>}
        </button>)}
        {!points.length&&<p className={styles.hint}>Нет точек по выбранным фильтрам. Сбрось поиск или выключи фильтр подтверждения.</p>}</div>
+       {type==="mono"&&<p className={styles.warningText}>По правилам WB монопаллеты отгружают только в СЦ. Остальные пункты скрыты.</p>}
        <p className={styles.hint}>В СЦ Wildberries может самостоятельно распределить товар по складам хранения. Это не транзитная поставка с выбранным тобой складом назначения.</p>
        {point&&<div className={styles.draftPanel}>
          <h3>Подготовить заявку в WB</h3>
