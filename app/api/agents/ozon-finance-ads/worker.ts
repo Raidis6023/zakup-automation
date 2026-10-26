@@ -112,7 +112,7 @@ function reportCsvFiles(binary:Buffer,expectedCampaigns:string[]):Map<string,str
  const centralOffset=binary.readUInt32LE(end+16);
  if(total<expectedCampaigns.length||total>20 ||
    centralOffset+centralSize>binary.length)throw new Error("Invalid ZIP central directory");
- const expected=new Set(expectedCampaigns),out=new Map<string,string>();
+ const expected=new Set(expectedCampaigns),out=new Map<string,string>(),seenFilenames:string[]=[];
  let p=centralOffset,totalBytes=0;
  const crcTable=new Uint32Array(256);
  for(let i=0;i<256;i++){
@@ -135,6 +135,7 @@ function reportCsvFiles(binary:Buffer,expectedCampaigns:string[]):Map<string,str
    if(p+46+nameLength+extra+comment>binary.length)
      throw new Error("Truncated ZIP directory entry");
    const filename=binary.subarray(p+46,p+46+nameLength).toString("utf8");
+   seenFilenames.push(filename.slice(0,100));
    p+=46+nameLength+extra+comment;
    const campaignId=filename.match(/(?:^|\/)(\d{4,20})\.csv$/i)?.[1];
    if(!campaignId||!expected.has(campaignId))continue;
@@ -154,8 +155,8 @@ function reportCsvFiles(binary:Buffer,expectedCampaigns:string[]):Map<string,str
    totalBytes+=data.length;out.set(campaignId,data.toString("utf8"));
  }
  if(out.size!==expectedCampaigns.length)
-   throw new Error("ZIP missing "+(expectedCampaigns.length-out.size)+
-     " campaign CSVs; refusing partial save");
+   throw new Error("ZIP_MISSING: "+(expectedCampaigns.length-out.size)+
+     " missing; ZIP entries: "+seenFilenames.slice(0,8).join(", "));
  return out;
 }
 async function token():Promise<string>{
@@ -361,11 +362,12 @@ export async function runHistoricalAdvertising(request:NextRequest){
     // Account-level concurrency stays ONE report. Inside it Ozon supports
     // up to ten campaign CSVs packed into a single verified ZIP archive.
     // Group only identical report periods so day attribution remains valid.
+    const forceSingle=task.last_error==="FORCE_SINGLE_AFTER_ZIP_MISSING";
     const batchQuery=await db.from("ozon_finance_ad_campaign_tasks")
       .select("id,job_id,campaign_id,day,date_to,status,report_uuid,last_error")
       .eq("job_id",selected.id).eq("status","pending")
       .eq("day",task.day).eq("date_to",task.date_to)
-      .order("campaign_id",{ascending:true}).limit(10);
+      .order("campaign_id",{ascending:true}).limit(forceSingle?1:10);
     if(batchQuery.error)throw batchQuery.error;
     const batch=(batchQuery.data??[]) as Task[];
     if(!batch.length)throw new Error("Pending batch disappeared");
@@ -412,7 +414,30 @@ export async function runHistoricalAdvertising(request:NextRequest){
   const csvResponse=await api(access,"/api/client/statistics/report?UUID="+
     encodeURIComponent(task.report_uuid));
   const archive=Buffer.from(await csvResponse.arrayBuffer());
-  const files=reportCsvFiles(archive,batch.map(x=>x.campaign_id));
+  let files:Map<string,string>;
+  try{
+    files=reportCsvFiles(archive,batch.map(x=>x.campaign_id));
+  }catch(err){
+    if(batch.length>1 && message(err).startsWith("ZIP_MISSING:")){
+      // Ozon omitted expected campaign files or provided unexpected names.
+      // Do not spin on the same irreconcilable ZIP; reuse proven single-CSV
+      // path for every campaign in this batch, preserving accounting.
+      const recovered=await db.from("ozon_finance_ad_campaign_tasks")
+        .update({status:"pending",report_uuid:null,
+          last_error:"FORCE_SINGLE_AFTER_ZIP_MISSING",
+          updated_at:new Date().toISOString()})
+        .eq("job_id",selected.id).eq("status","requested")
+        .eq("report_uuid",task.report_uuid)
+        .in("id",batch.map(x=>x.id)).select("id");
+      if(recovered.error||recovered.data?.length!==batch.length)
+        throw new Error("Could not safely mark ZIP campaigns for single-file retry");
+      phase="fallback_to_individual_campaign_reports";
+      console.warn("Ozon Performance ZIP fallback",message(err).slice(0,250));
+      return json({ok:true,phase,campaigns_requeued:batch.length,
+        cause:message(err).slice(0,250)});
+    }
+    throw err;
+  }
   const allLines:Array<{account_key:string;day:string;sku:string;
     campaign_id:string;expense_rub:number}>=[];
   const perCampaign=new Map<number,number>();
