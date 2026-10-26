@@ -2,11 +2,14 @@
 
 import {useEffect,useMemo,useRef,useState} from "react";
 import styles from "./fbw-flow.module.css";
+import {estimateFbwPacking} from "../../../lib/wb/fbw-packing";
 
 type DemandRow={
   sku:string;name:string;masterCode:string|null;barcode:string|null;
   sales28Days:number;stock:number;days:number|null;rawNeed:number;unitsPerBox:number|null;
   boxes:number;quantity:number;status:string;
+  cartonLengthMm:number|null;cartonWidthMm:number|null;cartonHeightMm:number|null;
+  cartonWeightKg:number|null;cartonVolumeM3:number|null;packagingConflict:boolean;
 };
 type Demand={
   ok:boolean;error?:string;source:string;fresh:boolean;rows:DemandRow[];
@@ -82,6 +85,10 @@ export default function FbwSupplyWizard(){
  const [wbSupplyNumber,setWbSupplyNumber]=useState("");
  const [manualConfirmed,setManualConfirmed]=useState(false);
  const [savedSlot,setSavedSlot]=useState<ManualSlotRecord|null>(null);
+ const [draftBusy,setDraftBusy]=useState(false);
+ const [draft,setDraft]=useState<{draftId:string;url:string}|null>(null);
+ const [draftError,setDraftError]=useState("");
+
  const [saveMessage,setSaveMessage]=useState("");
  const [typeOverride,setTypeOverride]=useState<"auto"|"box">("auto");
  useEffect(()=>{
@@ -95,6 +102,17 @@ export default function FbwSupplyWizard(){
  const selected=useMemo(()=>demand?.rows.filter(x=>selection.includes(x.sku)&&x.status==="ready")??[],[selection,demand]);
  const type: "box"|"mono"=selected.length>0&&selected.length<=3&&typeOverride!=="box"?"mono":"box";
  const totals=selected.reduce((a,r)=>({units:a.units+r.quantity,boxes:a.boxes+r.boxes}),{units:0,boxes:0});
+ const packing=useMemo(()=>{
+   try{
+     return {result:estimateFbwPacking(selected.map(x=>({
+       sku:x.sku,barcode:x.barcode??"",boxes:x.boxes,unitsPerBox:x.unitsPerBox??0,
+       cartonLengthMm:x.packagingConflict?null:x.cartonLengthMm,
+       cartonWidthMm:x.packagingConflict?null:x.cartonWidthMm,
+       cartonHeightMm:x.packagingConflict?null:x.cartonHeightMm,
+       cartonWeightKg:x.packagingConflict?null:x.cartonWeightKg,
+     })),type),error:""};
+   }catch(e){return {result:null,error:e instanceof Error?e.message:"Ошибка паллетирования"};}
+ },[selected,type]);
  const today=dayInKrasnoyarsk();
  // No slot time from API: +6 calendar dates guarantees at least 120 hours have elapsed.
  const safeDay=addDays(today,6);
@@ -108,8 +126,8 @@ export default function FbwSupplyWizard(){
      &&(!onlyConfirmed||x.status==="confirmed");
  })??[],[choice,search,kind,onlyConfirmed]);
  const clearManualForm=()=>{setManualDate("");setWbSupplyNumber("");setManualConfirmed(false);setSaveMessage("");};
- const resetFollowing=()=>{setChoice(null);setPointId(null);setSupplyDate("");setOnlyConfirmed(false);clearManualForm();};
- function pickPoint(id:number){setPointId(id);setSupplyDate("");clearManualForm();window.setTimeout(()=>calendarRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),120);}
+ const resetFollowing=()=>{setChoice(null);setPointId(null);setSupplyDate("");setOnlyConfirmed(false);clearManualForm();setDraft(null);setDraftError("");};
+ function pickPoint(id:number){setPointId(id);setSupplyDate("");setDraft(null);setDraftError("");clearManualForm();window.setTimeout(()=>calendarRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),120);}
  async function calculate(){
    setLoading(true);setError("");setDemand(null);setSelection([]);resetFollowing();
    try{
@@ -139,6 +157,28 @@ export default function FbwSupplyWizard(){
  function selectDate(day:string,rate:Rate|undefined){
    if(day<safeDay||!rate?.available||point?.status!=="confirmed")return;
    setSupplyDate(day);
+ }
+ async function createDraft(){
+   if(!point||!selected.length||!demand?.fresh||draftBusy)return;
+   setDraftError("");setDraftBusy(true);
+   try{
+     if(type==="mono" && (!packing.result?.canUseMono||packing.result.missingWeight>0)){
+       throw Error("Монопаллета не проходит проверку высоты, габаритов или веса. Измени состав/тип или внеси данные.");
+     }
+     const response=await fetch("/api/wb/fbw/draft",{
+       method:"POST",headers:{"Content-Type":"application/json"},
+       body:JSON.stringify({
+         point:{id:point.id,name:point.name},type,
+         items:selected.map(x=>({sku:x.sku,barcode:x.barcode,
+           quantity:x.quantity,boxes:x.boxes,unitsPerBox:x.unitsPerBox})),
+       })
+     });
+     const data=await response.json() as {ok:boolean;draftId?:string;url?:string;error?:string};
+     if(!response.ok||!data.ok||!data.draftId)throw Error(data.error||"WB не подтвердил создание черновика");
+     setDraft({draftId:data.draftId,url:data.url??"https://seller.wildberries.ru/"});
+     window.setTimeout(()=>calendarRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),150);
+   }catch(e){setDraftError(e instanceof Error?e.message:"Ошибка создания черновика");}
+   finally{setDraftBusy(false);}
  }
  const currentRate=pointRates.find(r=>r.date===supplyDate);
  const unavailable=!!point&&(point.status!=="confirmed"||!choice?.ratesVerified||pointRates.length===0);
@@ -199,6 +239,30 @@ export default function FbwSupplyWizard(){
      <div className={styles.bar}><div><label><input type="checkbox" checked={typeOverride==="box"} onChange={e=>{setTypeOverride(e.target.checked?"box":"auto");resetFollowing();}}/> Использовать короба вместо монопаллеты</label></div><strong>{selected.length} SKU · {num(totals.boxes)} коробов · {num(totals.units)} шт.</strong></div>
      {selected.length<=3&&selected.length>0&&type==="mono"&&<p className={styles.warningText}>Монопаллета предлагается только по ограничению в 3 баркода. Высоту, вес и количество паллет необходимо проверить перед оформлением.</p>}
      <p className={styles.hint}>Поштучная паллета и суперсейф автоматически не выбираются: у нас нет подтверждённых признаков товара для этих схем.</p>
+     {selected.length>0&&<div className={styles.packingSummary}>
+       <h3>Физическая укладка: транспортировочные короба на европаллетах</h3>
+       <div className={styles.packingMetrics}>
+         <div><b>{totals.boxes}</b><span>Коробов</span></div>
+         <div><b>{packing.result?.volumeM3===null?"Нет данных":packing.result?.volumeM3??"—"}</b><span>Объём коробов, м³</span></div>
+         <div><b>{packing.result?.cargoWeightKg===null?"Нет данных":packing.result?.cargoWeightKg??"—"}</b><span>Вес коробов, кг (без поддонов)</span></div>
+         <div><b>{packing.result?.pallets.length??"—"}</b><span>Расчётных паллет</span></div>
+         <div><b>{packing.result?.maxHeightCm===null?"Нет данных":packing.result?.maxHeightCm??"—"}</b><span>Макс. высота, см (с поддоном)</span></div>
+       </div>
+       <p className={styles.hint}>Основание 120 × 80 см, поддон 14,5 см. {type==="mono"?
+       "Монопаллета: 50–180 см включительно, максимум 3 баркода на одной паллете.":
+       "Короб: физический план укладки по принципу Ozon, не отдельные паллетные грузоместа WB."}
+       Вес поддонов не задан, поэтому общий вес с поддонами не выдумываем.</p>
+       {packing.error&&<p className={styles.error}>{packing.error}</p>}
+       {packing.result?.warnings.map((w,i)=><p key={i} className={styles.warningText}>{w}</p>)}
+       {packing.result&&packing.result.pallets.length>0&&<div className={styles.palletGrid}>
+         {packing.result.pallets.map(p=><div key={p.index} className={styles.palletItem}>
+           <b>Паллета №{p.index}</b>
+           <span>{p.cartons} коробов · {p.skuCount} SKU · {p.heightCm} см с поддоном</span>
+           <span>Объём {p.volumeM3} м³ · Вес коробов {p.cargoWeightKg??"нет данных"} кг</span>
+           <span className={p.validHeight?styles.ok:styles.warning}>{p.validHeight?"Высота соответствует правилу":"Высота вне разрешённого диапазона"}</span>
+         </div>)}
+       </div>}
+     </div>}
    </section>
    <section className={styles.panel}>
      <header><span className={styles.number}>3</span><div><h2>Куда отгрузить товары</h2><p>Только прямая поставка. Показываем склады и сортировочные центры с адресами, затем проверяем возможность приёмки состава по WB API.</p></div></header>
@@ -233,55 +297,42 @@ export default function FbwSupplyWizard(){
        </button>)}
        {!points.length&&<p className={styles.hint}>Нет точек по выбранным фильтрам. Сбрось поиск или выключи фильтр подтверждения.</p>}</div>
        <p className={styles.hint}>В СЦ Wildberries может самостоятельно распределить товар по складам хранения. Это не транзитная поставка с выбранным тобой складом назначения.</p>
+       {point&&<div className={styles.draftPanel}>
+         <h3>Подготовить заявку в WB</h3>
+         <p>Создадим настоящий черновик FBW в кабинете Wildberries, заполним и повторно проверим состав. Тип, точку сдачи и слот API черновиков не закрепляет. Их понадобится подтвердить в кабинете.</p>
+         {draft?<p className={styles.ok}><strong>Черновик WB создан и проверен: {draft.draftId}</strong></p>:<>
+           <button className={styles.primary} type="button" onClick={createDraft}
+             disabled={draftBusy||!demand?.fresh||!selected.length||
+               (type==="mono"&&(!packing.result?.canUseMono||packing.result.missingWeight>0))}>
+             {draftBusy?"Создаю и проверяю черновик WB...":"Создать черновик WB с выбранными товарами"}
+           </button>
+           {draftError&&<p role="alert" className={styles.error}>{draftError}</p>}
+         </>}
+       </div>}
+
      </>}
    </section>
    <section className={styles.panel} ref={calendarRef}>
-     <header><span className={styles.number}>4</span><div><h2>Дата отгрузки</h2><p>Проверка официального календаря WB. При недоступности API можно перенести сюда уже оформленную в кабинете поставку.</p></div></header>
-     {!point?<p className={styles.hint}>Сначала выбери точку сдачи на шаге 3.</p>:<>
-       <p className={styles.hint}>Прямая сдача: <b>{point.name}</b>, {point.address||point.city}. Минимальная разрешённая дата для новой отгрузки: <b>{dateUTC(safeDay).toLocaleDateString("ru-RU",{day:"2-digit",month:"long",year:"numeric",timeZone:"UTC"})}</b>. Это консервативный порог в 5 полных суток.</p>
-       {unavailable?<div className={styles.slotFallback}>
-         <div className={styles.slotFallbackTitle}>Свободные даты через API WB сейчас недоступны</div>
-         <p>WB возвращает 404 для методов опций приёмки и/или тарифов. Склад в справочнике не означает свободный слот, а календарь ниже не может подтвердить бронирование. Поэтому не показываем 14 выдуманных дат с возможностью выбора.</p>
-         <a href="https://seller.wildberries.ru/" target="_blank" rel="noopener noreferrer" className={styles.sellerLink}>Открыть кабинет Wildberries ↗</a>
-         <p>В кабинете: <b>Поставки FBW → Новая поставка → состав → прямая поставка → точка сдачи → дата</b>. После фактического создания поставки занеси дату и её номер сюда. Тип и состав должны совпадать с выбранными на сайте.</p>
-         <div className={styles.manualInputs}>
-           <label>Дата, подтверждённая в кабинете WB
-             <input type="date" min={safeDay} value={manualDate} onChange={e=>{setManualDate(e.target.value);setSaveMessage("");}}/>
-           </label>
-           <label>Номер уже созданной поставки WB
-             <input type="text" maxLength={80} placeholder="Номер из кабинета продавца" value={wbSupplyNumber} onChange={e=>{setWbSupplyNumber(e.target.value);setSaveMessage("");}}/>
-           </label>
-         </div>
-         <label className={styles.manualAgreement}><input type="checkbox" checked={manualConfirmed} onChange={e=>setManualConfirmed(e.target.checked)}/>
-           Я действительно оформил(а) поставку на эту дату и в эту точку в кабинете WB. Понимаю, что этот сайт не бронирует её самостоятельно.
-         </label>
-         <button className={styles.primary} onClick={saveManualSlot} disabled={!manualConfirmed||!manualDate||!wbSupplyNumber.trim()||manualDate<safeDay}>Сохранить данные оформленной поставки</button>
-         {saveMessage&&<p className={styles.hint} role="status">{saveMessage}</p>}
-         <p className={styles.warningText}>Сохранение действует только в этом браузере. Номер и дата введены пользователем, не проверены API WB и не синхронизированы с общей базой сотрудников.</p>
-       </div>:<>
-         <div className={styles.calendar}>{cells.map(day=>{
-           const rate=pointRates.find(x=>x.date===day);
-           const allowed=point.status==="confirmed"&&day>=safeDay&&rate?.available===true;
-           return <button type="button" key={day} onClick={()=>selectDate(day,rate)} disabled={!allowed} className={[styles.date,allowed?styles.dateAvailable:"",supplyDate===day?styles.dateActive:""].join(" ")}>
-             <strong>{DATE_FMT.format(dateUTC(day))}</strong>
-             {day<safeDay?<span>Менее 5 полных суток</span>:!rate?<span>Нет данных WB</span>:!rate.available?<span>Приёмка недоступна</span>:<>
-               <span className={styles.ok}>WB: тариф доступен</span>
-               <span>Коэффициент: {rate.coefficient??"—"}</span>
-               <span>Логистика: {rate.deliveryCoef??"—"}%</span>
-               <span>Хранение: {rate.storageCoef??"—"}%</span>
-             </>}
-           </button>;
-         })}</div>
-         {supplyDate&&<div className={styles.confirm}><strong>Плановая дата: {point.name} · {supplyDate}</strong><span>{type==="mono"?"Монопаллета":"Короба"} · {selected.length} SKU · {num(totals.units)} шт. · коэффициент {currentRate?.coefficient??"—"}</span><span>Это тарифная доступность. Бронь в WB не создана.</span></div>}
-       </>}
+     <header><span className={styles.number}>4</span><div><h2>Выбрать дату и таймслот</h2><p>Переход в кабинет WB возможен после создания и проверки черновика товаров через API.</p></div></header>
+     {!point?<p className={styles.hint}>Сначала выбери пункт прямой сдачи на шаге 3.</p>:
+     !draft?<div className={styles.slotFallback}>
+       <div className={styles.slotFallbackTitle}>Черновик WB ещё не создан</div>
+       <p>Для продолжения нажми «Создать черновик WB с выбранными товарами» на шаге 3. Без этого ссылка в кабинет не означает, что товары загружены.</p>
+     </div>:<>
+       <div className={styles.confirm}>
+         <strong>Черновик № {draft.draftId} создан, состав товаров проверен WB</strong>
+         <span>Точка для выбора в кабинете: {point.name} · {point.address||point.city}</span>
+         <span>{selected.length} SKU · {totals.boxes} коробов · {totals.units} шт. · {type==="mono"?"Монопаллета":"Короб"}</span>
+       </div>
+       <div className={styles.slotFallback}>
+         <div className={styles.slotFallbackTitle}>Продолжить оформление в Wildberries</div>
+         <p>API позволяет создать только черновик с товарами. Он не может закрепить выбранную здесь точку сдачи, тип поставки и открыть непосредственно шаг календаря по draftId. В кабинете перейди в <b>Поставки и заказы → Поставки (FBW) → Черновики</b>, найди ID выше, выбери тип и точку сдачи, затем дату.</p>
+         <p>Дата не ранее <b>{dateUTC(safeDay).toLocaleDateString("ru-RU",{day:"2-digit",month:"long",year:"numeric",timeZone:"UTC"})}</b>: это гарантирует минимум 120 часов без точного времени слота.</p>
+         <a href={draft.url} target="_blank" rel="noopener noreferrer" className={styles.sellerLink}>Открыть WB → Черновики → Выбор даты ↗</a>
+         <p className={styles.warningText}>Открывается официальный кабинет продавца. Прямой адрес вкладки выбора времени для конкретного черновика WB не опубликован, поэтому адрес шага не подставляем наугад.</p>
+       </div>
      </>}
-     {savedSlot&&<div className={styles.savedSlot}>
-       <strong>Последняя запись из кабинета WB</strong>
-       <div>Поставка № {savedSlot.wbSupplyNumber} · {savedSlot.date} · {savedSlot.point.name}</div>
-       <small>{savedSlot.items.length} SKU · {num(savedSlot.units)} шт. · {num(savedSlot.boxes)} коробов. Реквизиты внесены вручную и не подтверждены API.</small>
-       <button type="button" onClick={()=>downloadManifest(savedSlot)}>Скачать состав в CSV</button>
-     </div>}
-     <p className={styles.warningText}>Официальный API WB пока не предоставляет подтверждённое бронирование даты и запись грузомест FBW. Данные из кабинета можно перенести на сайт вручную, не выдавая их за API-подтверждение.</p>
+     <p className={styles.warningText}>Черновик FBW ≠ подтверждённая поставка: бронирование слота и фактическое создание поставки завершаются на портале Wildberries.</p>
    </section>
    {error&&<p role="alert" className={styles.error}>{error}</p>}
  </div>;
