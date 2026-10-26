@@ -45,7 +45,7 @@ export async function GET() {
     if (barcodeRows.error) throw new Error(barcodeRows.error.message);
     if (ordersBarcodes.error) throw new Error(ordersBarcodes.error.message);
     const packByMaster = new Map<string,Set<number>>();
-    const dimensionByMaster=new Map<string,Set<string>>();
+    const dimensionByMaster=new Map<string,Array<Set<number>>>();
     for (const p of (packs.data ?? []) as Pack[]) {
       const key = (p.master_code ?? "").trim();
       const n = Number(p.units_per_carton);
@@ -53,11 +53,12 @@ export async function GET() {
       const set = packByMaster.get(key) ?? new Set<number>();
       set.add(n); packByMaster.set(key,set);
       const dims=[p.carton_length_mm,p.carton_width_mm,p.carton_height_mm,p.carton_weight_kg,p.transport_carton_volume_m3];
-      if(dims.some(x=>x!==null&&Number(x)>0)){
-        const dimensions=dimensionByMaster.get(key)??new Set<string>();
-        dimensions.add(JSON.stringify(dims.map(x=>x===null?null:Number(x))));
-        dimensionByMaster.set(key,dimensions);
-      }
+      const dimensions=dimensionByMaster.get(key)??Array.from({length:5},()=>new Set<number>());
+      dims.forEach((v,index)=>{
+        const n=Number(v);
+        if(v!==null&&Number.isFinite(n)&&n>0)dimensions[index].add(n);
+      });
+      dimensionByMaster.set(key,dimensions);
     }
     const barcodeByNm = new Map<number,Set<string>>();
     for (const b of ([...(barcodeRows.data??[]),...(ordersBarcodes.data??[])]) as SnapshotBarcode[]) {
@@ -77,8 +78,10 @@ export async function GET() {
       // <= 0.5 box -> zero; otherwise nearest full carton.
       const boxes = pack && need.need>pack*0.5 ? Math.round(need.need/pack) : 0;
       const quantity = boxes*(pack??0);
-      const found=dimensionByMaster.get(String(p.masterCode??"").trim())??new Set<string>();
-      const dims=found.size===1?JSON.parse([...found][0]) as Array<number|null>:null;
+      const found=dimensionByMaster.get(String(p.masterCode??"").trim())??Array.from({length:5},()=>new Set<number>());
+      // Different master-code records may each have complementary fields.
+      // Only mark a dimension unknown when that SPECIFIC field conflicts.
+      const dims=found.map(values=>values.size===1?[...values][0]:null);
       const codes = barcodeByNm.get(Number(p.nmId)) ?? new Set<string>();
       const barcode = codes.size===1 ? [...codes][0] : null;
       let status="ready";
@@ -93,7 +96,7 @@ export async function GET() {
         days:need.daysOfStock,rawNeed:need.need,unitsPerBox:pack,boxes,quantity,status,
         cartonLengthMm:dims?.[0]??null,cartonWidthMm:dims?.[1]??null,cartonHeightMm:dims?.[2]??null,
         cartonWeightKg:dims?.[3]??null,cartonVolumeM3:dims?.[4]??null,
-        packagingConflict:found.size>1,
+        packagingConflict:found.some(values=>values.size>1),
       };
     }).filter((x): x is NonNullable<typeof x> => x!==null);
     rows.sort((a,b)=>b.rawNeed-a.rawNeed);
