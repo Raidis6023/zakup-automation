@@ -8,7 +8,9 @@ const EXPIRES = Date.parse('2026-10-27T09:00:00Z');
 export async function POST(req: NextRequest) {
   if (Date.now() > EXPIRES || createHash('sha256').update(req.headers.get('x-export-access') || '').digest('hex') !== ACCESS_HASH) return NextResponse.json({error:'Unauthorized'}, {status:401});
   try {
-    const key = process.env.YANDEX_API_KEY_FULL?.trim();
+    const keys = [...new Set((process.env.YANDEX_API_KEY_FULL || '').split(/\r?\n/).map(x=>x.trim()).filter(Boolean))];
+    if(keys.length !== 1) throw new Error('Expected one unique Yandex credential');
+    const key = keys[0];
     if (!key) throw new Error('YANDEX_API_KEY_FULL is missing');
     const input = await req.json();
     const base = 'https://api.partner.market.yandex.ru';
@@ -33,5 +35,5 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(await call(`/v1/businesses/${businessId}/orders?${q}`, {dates:{creationDateFrom:'2026-10-01',creationDateTo:'2026-10-27'},fake:false}));
     }
     return NextResponse.json({error:'Unknown action'}, {status:400});
-  } catch (e) { return NextResponse.json({error:e instanceof Error ? e.message:'Export error'}, {status:502}); }
+  } catch (e) { return NextResponse.json({error:e instanceof Error ? e.message.replace(/ACMA:[^\s"\\]+/g, '[redacted]'):'Export error'}, {status:502}); }
 }
