@@ -2,7 +2,7 @@
 
 import {useMemo,useRef,useState} from "react";
 import styles from "./fbw-flow.module.css";
-import {estimateFbwPacking} from "../../../lib/wb/fbw-packing";
+import {estimateFbwPacking, PALLET_TARE_KG} from "../../../lib/wb/fbw-packing";
 
 type DemandRow={
   sku:string;name:string;masterCode:string|null;barcode:string|null;
@@ -58,7 +58,6 @@ export default function FbwSupplyWizard(){
  const [pointId,setPointId]=useState<number|null>(null);
  const [search,setSearch]=useState("");
  const [kind,setKind]=useState<"all"|"сц"|"лц">("all");
- const [onlyConfirmed,setOnlyConfirmed]=useState(false);
  const calendarRef=useRef<HTMLElement|null>(null);
  const [draftBusy,setDraftBusy]=useState(false);
  const [draft,setDraft]=useState<{draftId:string;url:string}|null>(null);
@@ -66,27 +65,23 @@ export default function FbwSupplyWizard(){
  const [draftsLoading,setDraftsLoading]=useState(false);
  const [draftsError,setDraftsError]=useState("");
  const [draftList,setDraftList]=useState<Array<{draftId:string;createdAt:string|null;skuQuantity:number;itemQuantity:number}>|null>(null);
- const [palletTareKg,setPalletTareKg]=useState("");
 
- const [typeOverride,setTypeOverride]=useState<"auto"|"box">("auto");
+ const [typeOverride,setTypeOverride]=useState<"auto"|"box"|"mono"|"piece">("auto");
  const selected=useMemo(()=>demand?.rows.filter(x=>selection.includes(x.sku)&&x.status==="ready")??[],[selection,demand]);
- const type: "box"|"mono"=selected.length>0&&selected.length<=3&&typeOverride!=="box"?"mono":"box";
+ const type: "box"|"mono"|"piece"=(typeOverride==="auto"||(typeOverride==="mono"&&selected.length>3))?(selected.length>0&&selected.length<=3?"mono":"box"):typeOverride;
  const totals=selected.reduce((a,r)=>({units:a.units+r.quantity,boxes:a.boxes+r.boxes}),{units:0,boxes:0});
  const packing=useMemo(()=>{
    try{
      return {result:estimateFbwPacking(selected.map(x=>({
        sku:x.sku,barcode:x.barcode??"",boxes:x.boxes,unitsPerBox:x.unitsPerBox??0,
-       cartonLengthMm:x.packagingConflict?null:x.cartonLengthMm,
-       cartonWidthMm:x.packagingConflict?null:x.cartonWidthMm,
-       cartonHeightMm:x.packagingConflict?null:x.cartonHeightMm,
-       cartonWeightKg:x.packagingConflict?null:x.cartonWeightKg,
-       cartonVolumeM3:x.packagingConflict?null:x.cartonVolumeM3,
+       cartonLengthMm:x.cartonLengthMm,
+       cartonWidthMm:x.cartonWidthMm,
+       cartonHeightMm:x.cartonHeightMm,
+       cartonWeightKg:x.cartonWeightKg,
+       cartonVolumeM3:x.cartonVolumeM3,
      })),type),error:""};
    }catch(e){return {result:null,error:e instanceof Error?e.message:"Ошибка паллетирования"};}
  },[selected,type]);
- const palletTareValue=palletTareKg.trim()?Number(palletTareKg):null;
- const grossWithPallets=packing.result?.cargoWeightKg!==null&&packing.result?.cargoWeightKg!==undefined&&packing.result?.missingDimensions===0&&packing.result.pallets.length>0&&palletTareValue!==null&&Number.isFinite(palletTareValue)&&palletTareValue>0
-   ?Number((packing.result.cargoWeightKg+packing.result.pallets.length*palletTareValue).toFixed(2)):null;
  const today=dayInKrasnoyarsk();
  // No slot time from API: +6 calendar dates guarantees at least 120 hours have elapsed.
  const safeDay=addDays(today,6);
@@ -95,10 +90,9 @@ export default function FbwSupplyWizard(){
    const haystack=(x.name+" "+x.address+" "+x.city+" "+x.region+" "+x.type).toLocaleLowerCase("ru");
    return haystack.includes(search.trim().toLocaleLowerCase("ru"))
      &&(kind==="all"||x.type.toLocaleLowerCase("ru").includes(kind))
-     &&(type!=="mono"||x.type.toLocaleLowerCase("ru").includes("сц"))
-     &&(!onlyConfirmed||x.status==="confirmed");
- })??[],[choice,search,kind,onlyConfirmed,type]);
- const resetFollowing=()=>{setChoice(null);setPointId(null);setOnlyConfirmed(false);setDraft(null);setDraftError("");};
+     &&((type!=="mono"&&type!=="piece")||x.type.toLocaleLowerCase("ru").includes("сц"));
+ })??[],[choice,search,kind,type]);
+ const resetFollowing=()=>{setChoice(null);setPointId(null);setDraft(null);setDraftError("");};
  function pickPoint(id:number){setPointId(id);setDraft(null);setDraftError("");window.setTimeout(()=>calendarRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),120);}
  async function calculate(){
    setLoading(true);setError("");setDemand(null);setSelection([]);resetFollowing();
@@ -188,34 +182,48 @@ export default function FbwSupplyWizard(){
    </section>
    <section className={styles.panel}>
      <header><span className={styles.number}>2</span><div><h2>Тип поставки</h2><p>Определяется из фактического состава выбранных SKU, а не из количества коробов.</p></div></header>
-     <div className={styles.two}>
-       <div className={[styles.typeCard,type==="box"?styles.active:""].join(" ")}><strong>Короб</strong><p>Один SKU в транспортировочном коробе. Основной вариант для состава более 3 SKU.</p><small>Тип WB: короба</small></div>
-       <div className={[styles.typeCard,type==="mono"?styles.active:""].join(" ")}><strong>Монопаллета</strong><p>Не более 3 разных баркодов. Требует проверки физической вместимости паллеты.</p><small>Тип WB: монопаллеты</small></div>
+     <div className={styles.supplyTypes}>
+       <button type="button" aria-pressed={type==="box"}
+         className={[styles.typeCard,type==="box"?styles.active:""].join(" ")}
+         onClick={()=>{setTypeOverride("box");resetFollowing();}}>
+         <strong>Короб</strong><p>Короба с одним баркодом. При сдаче в СЦ объёмом свыше 1 м³ размещаем на паллетах.</p><small>Поштучная приёмка</small>
+       </button>
+       <button type="button" aria-pressed={type==="mono"} disabled={selected.length>3}
+         className={[styles.typeCard,type==="mono"?styles.active:""].join(" ")}
+         onClick={()=>{setTypeOverride("mono");resetFollowing();}}>
+         <strong>Монопаллета</strong><p>Максимум 3 баркода, 50–180 см вместе с поддоном.</p><small>Паллетная приёмка</small>
+       </button>
+       <button type="button" aria-pressed={type==="piece"}
+         className={[styles.typeCard,type==="piece"?styles.active:""].join(" ")}
+         onClick={()=>{setTypeOverride("piece");resetFollowing();}}>
+         <strong>Поштучная паллета</strong><p>Короба на паллете, до 3 баркодов на одной паллете. Для крупных партий небольших товаров.</p><small>Поштучная приёмка, маркировка паллет</small>
+       </button>
      </div>
-     <div className={styles.bar}><div><label><input type="checkbox" checked={typeOverride==="box"} onChange={e=>{setTypeOverride(e.target.checked?"box":"auto");resetFollowing();}}/> Использовать короба вместо монопаллеты</label></div><strong>{selected.length} SKU · {num(totals.boxes)} коробов · {num(totals.units)} шт.</strong></div>
-     {selected.length<=3&&selected.length>0&&type==="mono"&&<p className={styles.warningText}>Монопаллета предлагается только по ограничению в 3 баркода. Высоту, вес и количество паллет необходимо проверить перед оформлением.</p>}
-     <p className={styles.hint}>Поштучная паллета и суперсейф автоматически не выбираются: у нас нет подтверждённых признаков товара для этих схем.</p>
+     <div className={styles.bar}><div><button onClick={()=>{setTypeOverride("auto");resetFollowing();}}>Выбрать автоматически</button></div>
+       <strong>{selected.length} SKU · {num(totals.boxes)} коробов · {num(totals.units)} шт.</strong>
+     </div>
+     {type==="piece"&&<p className={styles.hint}>Для поштучной паллеты WB проверяет габариты и вес товаров в индивидуальной упаковке. Эти сведения отдельно от размеров транспортировочного короба, поэтому окончательную пригодность подтвердит WB.</p>}
      {selected.length>0&&<div className={styles.packingSummary}>
        <h3>Физическая укладка: транспортировочные короба на европаллетах</h3>
        <div className={styles.packingMetrics}>
-         <div><b>{totals.boxes}</b><span>Коробов</span></div>
-         <div><b>{packing.result?.volumeM3===null?"Нет данных":packing.result?.volumeM3??"—"}</b><span>Объём коробов, м³</span></div>
-         <div><b>{packing.result?.cargoWeightKg===null?"Нет данных":packing.result?.cargoWeightKg??"—"}</b><span>Вес коробов, кг (без поддонов)</span></div>
-         <div><b>{packing.result?.pallets.length??"—"}</b><span>Расчётных паллет</span></div>
-         <div><b>{packing.result?.maxHeightCm===null?"Нет данных":packing.result?.maxHeightCm??"—"}</b><span>Макс. высота, см (с поддоном)</span></div>
+         <div><b>{num(totals.boxes)}</b><span>Коробов</span></div>
+         <div><b>{packing.result?num(packing.result.volumeM3)+" м³":"—"}</b>
+           <span>{packing.result?.volumeComplete?"Объём всех коробов":"Объём известных коробов (не полный)"}</span></div>
+         <div><b>{packing.result?num(packing.result.cargoWeightKg)+" кг":"—"}</b>
+           <span>{packing.result?.weightComplete?"Вес всех коробов":"Вес известных коробов (не полный)"}</span></div>
+         <div><b>{packing.result?.pallets.length??"—"}</b>
+           <span>{packing.result?.packingComplete?"Паллет":"Рассчитано паллет (без коробов без габаритов)"}</span></div>
+         <div><b>{packing.result?.maxHeightCm!==null&&packing.result?.maxHeightCm!==undefined?num(packing.result.maxHeightCm)+" см":"—"}</b>
+           <span>{packing.result?.packingComplete?"Макс. высота с поддоном":"Макс. высота рассчитанных паллет"}</span></div>
+         <div><b>{packing.result?num(packing.result.grossWeightKg)+" кг":"—"}</b>
+           <span>{packing.result?.packingComplete&&packing.result?.weightComplete?"Вес с поддонами (15 кг/шт.)":"Известный вес + рассчитанные поддоны (не полный)"}</span></div>
        </div>
-       <p className={styles.hint}>Основание 120 × 80 см, поддон 14,5 см. {type==="mono"?
-       "Монопаллета: 50–180 см включительно, максимум 3 баркода на одной паллете.":
-       "Короб: физический план укладки по принципу Ozon, не отдельные паллетные грузоместа WB."}
-       Вес поддонов зависит от фактически используемых поддонов.</p>
-       {type==="box"&&packing.result?.volumeM3!==null&&packing.result?.volumeM3!==undefined&&packing.result.volumeM3>1&&<p className={styles.warningText}>Для прямой поставки коробами в СЦ при объёме более 1 м³ WB требует разместить короба на паллетах. Количество паллет показано выше.</p>}
-       <div className={styles.palletTare}>
-         <label>Вес одного пустого поддона, кг (вводится вручную)
-           <input type="number" inputMode="decimal" min="0.1" step="0.1" value={palletTareKg}
-             placeholder="Не указан" onChange={e=>setPalletTareKg(e.target.value)}/>
-         </label>
-         <strong>Полный расчётный вес поставки с поддонами: {grossWithPallets===null?"Укажите вес поддона и недостающие веса коробов":num(grossWithPallets)+" кг"}</strong>
-       </div>
+       <p className={styles.hint}>Основание паллеты 120 × 80 см, высота поддона 14,5 см, <b>вес каждого поддона всегда {PALLET_TARE_KG} кг</b>. {type==="mono"?
+         "Монопаллета: общая высота от 50 до 180 см включительно.":
+         type==="piece"?"Поштучная паллета: лимита высоты 50–180 см нет; ограничение по кузову транспорта. План укладки предварительный.":
+         "Короб: план укладки по принципу Ozon. Грузоместами WB остаются короба."}</p>
+       {type==="box"&&packing.result&&packing.result.volumeM3>1&&
+         <p className={styles.warningText}>При сдаче коробами в СЦ, если общий объём превышает 1 м³, короба нужно разместить на паллетах.</p>}
        {packing.error&&<p className={styles.error}>{packing.error}</p>}
        {packing.result?.warnings.map((w,i)=><p key={i} className={styles.warningText}>{w}</p>)}
        {packing.result&&packing.result.pallets.length>0&&<div className={styles.palletGrid}>
@@ -223,9 +231,9 @@ export default function FbwSupplyWizard(){
            <b>Паллета №{p.index}</b>
            <span>{p.cartons} коробов · {p.skuCount} SKU · {p.heightCm} см с поддоном</span>
            <span>Объём {p.volumeM3} м³ · Вес коробов {p.cargoWeightKg??"нет данных"} кг</span>
-           <span>Вес с поддоном: {p.cargoWeightKg!==null&&palletTareValue!==null&&palletTareValue>0?num(p.cargoWeightKg+palletTareValue)+" кг":"неизвестен"}</span>
+           <span>Вес с поддоном: {p.totalWeightKg!==null?num(p.totalWeightKg)+" кг":"часть весов неизвестна"}</span>
            <span>Состав: {p.contents.map(x=>x.sku+" × "+x.boxes+" кор.").join(", ")}</span>
-           <span className={p.validHeight?styles.ok:styles.warning}>{p.validHeight?"Высота соответствует правилу":"Высота вне разрешённого диапазона"}</span>
+           <span className={p.validHeight?styles.ok:styles.warning}>{type==="mono"?(p.validHeight?"Высота монопаллеты допустима":"Высота монопаллеты вне 50–180 см"):"Предварительная укладка, проверить высоту кузова"}</span>
          </div>)}
        </div>}
      </div>}
@@ -242,15 +250,7 @@ export default function FbwSupplyWizard(){
          <button className={kind==="all"?styles.filterActive:""} onClick={()=>setKind("all")}>Все точки</button>
          <button className={kind==="сц"?styles.filterActive:""} onClick={()=>setKind("сц")}>Сортировочные центры</button>
          <button className={kind==="лц"?styles.filterActive:""} onClick={()=>setKind("лц")}>Склады / ЛЦ</button>
-         <label><input type="checkbox" checked={onlyConfirmed} onChange={e=>setOnlyConfirmed(e.target.checked)}/> Только подтверждённые WB</label>
        </div>
-       {choice.fallback?.used&&<div className={styles.notice}>
-         <b>Резервный справочник:</b> {choice.fallback.total} складов и СЦ, актуальность: {choice.fallback.updated}.
-         <div>Список содержит реальные адреса, но не означает, что WB сейчас принимает весь состав. ПВЗ здесь не представлены.</div>
-         <small>Источник: <a href="https://iseller.pro/otkrytye-dannye" target="_blank" rel="noreferrer">iseller.pro, открытые данные</a>.</small>
-       </div>}
-       {!choice.optionsVerified&&<p className={styles.warningText}>WB временно не подтверждает совместимость товаров: точки ниже справочные. После создания черновика окончательно проверь адрес и доступность даты в кабинете WB.</p>}
-       {choice.errors.map((e,i)=><p key={i} className={styles.warningText}>{e}</p>)}
        <div className={styles.locations}>{points.map(x=><button type="button" key={x.id} className={[styles.location,x.id===pointId?styles.locationActive:""].join(" ")} disabled={x.status==="not_compatible"} onClick={()=>pickPoint(x.id)}>
          <strong>{x.name} <small className={styles.locationType}>{x.type||"Склад"}</small></strong>
          <span>{[x.city,x.region].filter(Boolean).join(" · ")}</span>
@@ -262,8 +262,7 @@ export default function FbwSupplyWizard(){
          {!x.hasLiveId&&<small className={styles.warningText}>ID для проверки даты отсутствует</small>}
        </button>)}
        {!points.length&&<p className={styles.hint}>Нет точек по выбранным фильтрам. Сбрось поиск или выключи фильтр подтверждения.</p>}</div>
-       {type==="mono"&&<p className={styles.warningText}>По правилам WB монопаллеты отгружают только в СЦ. Остальные пункты скрыты.</p>}
-       <p className={styles.hint}>В СЦ Wildberries может самостоятельно распределить товар по складам хранения. Это не транзитная поставка с выбранным тобой складом назначения.</p>
+       {choice.fallback?.used&&<small className={styles.directoryCredit}>Адреса: <a href="https://iseller.pro/otkrytye-dannye" target="_blank" rel="noreferrer">iseller.pro</a>. Доступность складов подтверждается в WB.</small>}
        {point&&<div className={styles.draftPanel}>
          <h3>Подготовить заявку в WB</h3>
          <p>Создадим настоящий черновик FBW в кабинете Wildberries, заполним и повторно проверим состав. Тип, точку сдачи и слот API черновиков не закрепляет. Их понадобится подтвердить в кабинете.</p>
@@ -304,7 +303,7 @@ export default function FbwSupplyWizard(){
        <div className={styles.confirm}>
          <strong>Черновик № {draft.draftId} создан, состав товаров проверен WB</strong>
          <span>Точка для выбора в кабинете: {point.name} · {point.address||point.city}</span>
-         <span>{selected.length} SKU · {totals.boxes} коробов · {totals.units} шт. · {type==="mono"?"Монопаллета":"Короб"}</span>
+         <span>{selected.length} SKU · {totals.boxes} коробов · {totals.units} шт. · {type==="mono"?"Монопаллета":type==="piece"?"Поштучная паллета":"Короб"}</span>
        </div>
        <div className={styles.slotFallback}>
          <div className={styles.slotFallbackTitle}>Продолжить оформление в Wildberries</div>
