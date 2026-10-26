@@ -57,7 +57,7 @@ export async function POST(request:NextRequest){
    const optionsVerified=optionsResult.status==="fulfilled";
    const rates= ratesResult.status==="fulfilled" ? array(ratesResult.value) as RateRow[]:[];
    const options=optionsVerified?array(optionsResult.value) as OptionRow[]:[];
-   const byWarehouse=new Map<number,Map<string,OptionRow["warehouses"][number]>>();
+   const byWarehouse=new Map<number,Map<string,{warehouseID?:number;canBox?:boolean;canMonopallet?:boolean;isBoxOnPallet?:boolean}>>();
    for(const option of options){
      for(const w of option.warehouses??[]){
        const warehouse=Number(w.warehouseID);
@@ -75,6 +75,7 @@ export async function POST(request:NextRequest){
      const id=Number(rate.warehouseID);
      if(Number.isSafeInteger(id)&&id>0&&!known.has(id))known.set(id,{ID:id,name:String(rate.warehouseName??"Склад "+id)});
    }
+   const order=(s:string)=>s==="confirmed"?0:s==="unverified"?1:2;
    const points=[...known.entries()].map(([id,w])=>{
      const barcodeMap=byWarehouse.get(id);
      const eligible=optionsVerified && items.every(item=>{
@@ -89,7 +90,7 @@ export async function POST(request:NextRequest){
        status:eligible?"confirmed":rejected?"not_compatible":"unverified",
        acceptedCount:count, totalCount:items.length,
      };
-   }).filter(p=>p.isActive).sort((a,b)=>({confirmed:0,unverified:1,not_compatible:2}[a.status]-{confirmed:0,unverified:1,not_compatible:2}[b.status])||a.name.localeCompare(b.name,"ru"));
+   }).filter(p=>p.isActive).sort((a,b)=>(order(a.status)-order(b.status))||a.name.localeCompare(b.name,"ru"));
    const dates=rates.filter(row=>{
      if(!row.date||!Number.isFinite(Number(row.warehouseID)))return false;
      const type=Number(row.boxTypeID);
