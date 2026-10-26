@@ -26,6 +26,7 @@ export default function YandexEligibilityPrecheck() {
   const [error, setError] = useState("");
   const [result, setResult] = useState("");
   const [version, setVersion] = useState(0);
+  const [phase, setPhase] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -64,6 +65,7 @@ export default function YandexEligibilityPrecheck() {
   async function upload() {
     if (!file) return;
     setBusy(true);
+    setPhase("Проверяю разрешённые и запрещённые артикулы…");
     setResult("");
     setError("");
     try {
@@ -72,14 +74,37 @@ export default function YandexEligibilityPrecheck() {
       const response = await fetch("/api/yandex/fby-eligibility", {method:"POST",body});
       const data = await response.json() as {ok:boolean;error?:string;checked?:number;activeOffers?:number;warehouses?:number;missing?:number};
       if (!data.ok || !response.ok) throw new Error(data.error || "Не удалось проверить матрицу");
-      setResult("Импортировано: " + data.checked + " из " + data.activeOffers + " SKU; складов: " + data.warehouses +
-        ". Непроверенных SKU: " + data.missing + ". " + (data.missing ? "Выгрузка поставки будет заблокирована до полной проверки." : "Допуски сохранены."));
       setFile(null);
       setVersion(v=>v+1);
       window.dispatchEvent(new Event("yandex-eligibility-updated"));
+      setPhase("Сопоставляю ответы Яндекса с продажами, остатками и потребностью каждого кластера…");
+      const planResponse = await fetch("/api/yandex/fby-supply-plan", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ mode: "plan", allowPartial: true, allowStale: true })
+      });
+      if (!planResponse.ok) {
+        const detail = await planResponse.json().catch(() => ({})) as {error?:string};
+        setResult("Матрица сохранена ("+data.checked+" SKU, "+data.warehouses+" складов), но Excel пока не сформирован: "
+          +(detail.error || "Ошибка расчёта")+". Исправь исходные данные в панели ниже.");
+        return;
+      }
+      const blob = await planResponse.blob();
+      const link = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = link;
+      a.download = "yandex-fby-plan-checked-" + new Date().toISOString().slice(0,10) + ".xlsx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(link), 60000);
+      setResult("Сверено "+data.checked+" SKU по "+data.warehouses+" складам. Excel с потребностью по кластерам, разрешёнными, запрещёнными и непроверенными товарами скачан. "
+        + (data.missing ? "В каталоге ещё "+data.missing+" артикулов без проверки, они отдельно проверяются на наличие потребности." : "")
+        + " Для загрузки в ЯМ используется отдельная кнопка «Excel для загрузки в ЯМ» ниже, она доступна только после проверки актуальности и отсутствия ошибок.");
+
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка загрузки Excel");
-    } finally { setBusy(false); }
+    } finally { setBusy(false); setPhase(""); }
   }
 
   return (
@@ -87,8 +112,8 @@ export default function YandexEligibilityPrecheck() {
       <div className={styles.heading}>
         <div>
           <div className={styles.tag}>ШАГ 1 · ПРОВЕРКА ДО РАСЧЁТА ПОТРЕБНОСТИ</div>
-          <h2>Допуск всех SKU на склады Яндекс Маркета</h2>
-          <p>Проверяем матрицу «да / нет» по каждому артикулу и складу. Остатки не подтверждают допуск: проверка производится по файлу из Яндекс Селлера.</p>
+          <h2>Загрузить проверку ЯМ → получить Excel по кластерам</h2>
+          <p>Загружаешь файл с «да/нет» по складам, сайт сверяет его с потребностью и сразу скачивает расчётный Excel. Не надо отдельно запускать сопоставление.</p>
         </div>
         <button type="button" className={styles.secondary} onClick={()=>setVersion(v=>v+1)}>Обновить проверку</button>
       </div>
@@ -100,12 +125,12 @@ export default function YandexEligibilityPrecheck() {
         <div><span>Складов с ответом</span><strong>{status.headers.length}</strong></div>
       </div>}
 
-      {status?.ready && !status.stale && <p className={styles.info}>Проверка по всему каталогу есть. Теперь можно рассчитывать потребность только для разрешённых сочетаний товар / склад.</p>}
-      {status && (!status.ready || status.stale) &&
+      {status?.ready && !status.stale && <p className={styles.info}>Матрица Яндекс Маркета загружена. Непроверенные сочетания SKU и кластеров с потребностью будут показаны отдельно, в загрузочный Excel они не попадут.</p>}
+      {status && (!status.ready || status.stale || status.missingOffers>0) &&
         <div className={styles.alertWarning}>
-          <strong>{!status.verified ? "Матрица допусков пока не загружена." : !status.ready ? "Не все товары проверены." : "Матрица устарела."}</strong>
-          {" "}До полной проверки сайт не будет выдавать поставку как подтверждённую.
-          {status.missingSamples.length>0 && status.verified && <p>Примеры непроверенных артикулов: {status.missingSamples.slice(0,6).join(", ")}</p>}
+          <strong>{!status.verified ? "Матрица допусков пока не загружена." : status.stale ? "Последняя проверка старше 48 часов." : "Проверен не весь ассортимент."}</strong>
+          {" "}Допускается файл только с товарами из текущей потребности. Если у SKU с потребностью нет подтверждения, он попадёт в «Не прошли проверку», а не в готовую поставку.
+          {status.missingSamples.length>0 && status.verified && <p>Примеры без подтверждения: {status.missingSamples.slice(0,6).join(", ")}</p>}
         </div>
       }
 
@@ -115,9 +140,9 @@ export default function YandexEligibilityPrecheck() {
       {status?.headers && status.headers.length > 0 && <p className={styles.meta}>Проверенные склады: {status.headers.map(h=>h.name).join("; ")}</p>}
 
       <div className={styles.info}>
-        <strong>Как получить проверку:</strong> скачай проверочный Excel со всеми SKU, загрузи в Яндекс Селлер при создании мультипоставки,
-        получи таблицу, где Яндекс выставил «да / нет» напротив каждого склада, и загрузи <strong>этот проверенный файл</strong> сюда.
-        В проверочном файле стоит 1 шт. только для оценки доступности: <strong>не подтверждай эту тестовую поставку в Яндексе.</strong>
+        <strong>Как работает:</strong> скачай список SKU (или используй уже выгруженный из ЯМ файл по товарам на поставку), загрузи в Яндекс Селлер и получи отметки «да/нет» по складам.
+        Верни проверенную таблицу сюда. Сайт сразу скачает Excel с итогами по кластерам и отдельными листами проблемных товаров.
+        Проверочный файл с 1 шт. предназначен только для получения ограничений: <strong>не подтверждай тестовую поставку в Яндексе.</strong>
       </div>
       <div className={styles.footer}>
         <button type="button" className={styles.secondary} onClick={()=>void catalog()} disabled={busy}>
@@ -125,15 +150,17 @@ export default function YandexEligibilityPrecheck() {
         </button>
         <div className={styles.actions}>
           <input
+            key={version}
             aria-label="Проверенный Excel от Яндекс Маркета"
             type="file" accept=".xlsx" disabled={busy}
             onChange={e=>setFile(e.target.files?.[0] || null)}
           />
           <button type="button" className={styles.primary} disabled={!file||busy} onClick={()=>void upload()}>
-            {busy ? "Обрабатываем…" : "Загрузить проверенную матрицу"}
+            {busy ? "Проверяю и считаю…" : "Загрузить и получить Excel"}
           </button>
         </div>
       </div>
+      {phase && <p aria-live="polite" className={styles.meta}>{phase}</p>}
       {result && <p className={styles.info}>{result}</p>}
       {error && <p role="alert" className={styles.alertDanger}>{error}</p>}
     </section>

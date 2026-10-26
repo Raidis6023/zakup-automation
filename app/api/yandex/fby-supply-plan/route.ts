@@ -80,7 +80,7 @@ type PlanResult = {
   totals: { articles: number; blocked: number; units: number; cartons: number; rawNeed: number };
   notice: string;
   eligibility: { source: string; checkedAt: string; excludedCount: number; unknownCount: number; stale: boolean };
-  excluded: Array<{ offerId: string; cluster: string; reason: string }>;
+  excluded: Array<{ offerId: string; cluster: string; reason: string; rawNeed: number; sales28: number; stock: number }>;
 };
 
 function config() {
@@ -153,14 +153,9 @@ async function buildPlan(clusterNames: string[] | null): Promise<PlanResult> {
   ]);
   const sellerEligibility = eligRows[0];
   if (!sellerEligibility) throw new Error("Сначала загрузите проверочную матрицу Яндекс Маркета с колонками «да/нет» по складам. Проверять возможность поставки по остаткам нельзя.");
-  const active = products.filter(p => p.is_active);
-  const missingEligibility = active
-    .filter(p => sellerEligibility.mapping[normal(p.offer_id)] === undefined)
-    .map(p => p.offer_id);
-  if (missingEligibility.length) {
-    throw new Error("Матрица ЯМ неполная: проверено " + (active.length - missingEligibility.length) + " из " + active.length
-      + " активных SKU. Сначала проверьте весь каталог. Нет: " + missingEligibility.slice(0, 8).join(", "));
-  }
+  // Допускается файл ЯМ только с кандидатами на поставку.
+  // Если для товара с реальной потребностью нет ответа ЯМ, это НЕ «нет»:
+  // он попадёт в список непроверенных и не сможет попасть в загрузочный Excel.
   const salesRun = salesRuns[0], stockRun = stockRuns[0];
   if (!salesRun || !stockRun) throw new Error("Нет успешной синхронизации продаж или остатков ЯМ");
 
@@ -254,7 +249,7 @@ async function buildPlan(clusterNames: string[] | null): Promise<PlanResult> {
   }
 
   const allocations: ClusterAllocation[] = [];
-  const excluded: Array<{ offerId: string; cluster: string; reason: string }> = [];
+  const excluded: Array<{ offerId: string; cluster: string; reason: string; rawNeed: number; sales28: number; stock: number }> = [];
   let unknownCount = 0;
   const blockedMap = new Map<string, NeedRow>();
   const itemMap = new Map<string, NeedRow>();
@@ -265,13 +260,17 @@ async function buildPlan(clusterNames: string[] | null): Promise<PlanResult> {
     const packInfo = masterCode ? packByMaster.get(masterCode) : undefined;
     if (packInfo?.discontinued || product?.is_active === false) continue;
     if (!selectedSet.has(m.cluster)) continue;
-    const check = eligibleOnCluster(sellerEligibility, m.offerId, m.cluster);
-    if (check === "no") {
-      excluded.push({ offerId: m.offerId, cluster: m.cluster, reason: "Яндекс Маркет: нет допуска на склады этого кластера" });
-      continue;
-    }
     const rawNeed = coverageNeed(m.sale, m.stock);
     if (rawNeed <= 0) continue;
+    const check = eligibleOnCluster(sellerEligibility, m.offerId, m.cluster);
+    if (check === "no") {
+      excluded.push({
+        offerId: m.offerId, cluster: m.cluster,
+        reason: "Яндекс Маркет: нет допуска на проверенные склады этого кластера",
+        rawNeed, sales28: m.sale, stock: m.stock
+      });
+      continue;
+    }
     const cluster = clusterTotals.get(m.cluster)!;
     cluster.sales28 += m.sale;
     cluster.stock += m.stock;
@@ -360,7 +359,7 @@ async function buildPlan(clusterNames: string[] | null): Promise<PlanResult> {
       stale: eligibilityIsStale(sellerEligibility)
     },
     excluded,
-    notice: "Перед расчётом проверено разрешение SKU на складах по матрице Яндекс Маркета. «Нет» исключены из поставки, «неизвестно» блокируется. Шаблон мультипоставки ЯМ не импортирует распределение по кластерам: после загрузки проверьте раскладку вручную."
+    notice: "Сверка файла ЯМ с потребностью по кластерам: «да» включены, «нет» исключены, отсутствующие ответы выделены как непроверенные. Плановый Excel включает все проблемы, а загрузочный содержит только подтверждённые позиции. Распределение по кластерам ЯМ потребуется сверить после импорта."
   };
 }
 
@@ -386,7 +385,7 @@ export async function POST(request: Request) {
   try {
     const input = await request.json() as { clusterNames?: string[]; allowPartial?: boolean; allowStale?: boolean; mode?: "plan" | "upload" };
     const plan = await buildPlan(parseClusters(input.clusterNames));
-    if (plan.unmappedWarehouses.length > 0) {
+    if (input.mode === "upload" && plan.unmappedWarehouses.length > 0) {
       return Response.json({ ok: false, error: "Есть склады ЯМ без проверенного кластера. Экспорт заблокирован, пока не настроено сопоставление: " + plan.unmappedWarehouses.join(", ") }, { status: 409 });
     }
     if (plan.stale && input.allowStale !== true) {
@@ -395,7 +394,10 @@ export async function POST(request: Request) {
     if (plan.blocked.length > 0 && input.allowPartial !== true) {
       return Response.json({ ok: false, error: "В плане есть позиции без штрихкода/вложимости/наименования. Исправьте данные или явно разрешите частичный экспорт." }, { status: 409 });
     }
-    if (!plan.items.length) return Response.json({ ok: false, error: "Нет корректных товаров для экспорта" }, { status: 409 });
+    if (!plan.items.length && input.mode === "upload") return Response.json({ ok: false, error: "Нет проверенных товаров для поставки" }, { status: 409 });
+    if (!plan.items.length && !plan.excluded.length && !plan.blocked.length) {
+      return Response.json({ ok: false, error: "По проверенному ассортименту нет потребности в поставке" }, { status: 409 });
+    }
 
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Поставка");
@@ -546,6 +548,28 @@ export async function POST(request: Request) {
       }
       summary.addRow({ cluster: "ИТОГО", qty: control, cartons: plan.totals.cartons, need: plan.totals.rawNeed });
       summary.getRow(summary.rowCount).font = { bold: true };
+      const rejections = workbook.addWorksheet("Недоступно на складах");
+      rejections.columns = [
+        { header: "Кластер", key: "cluster", width: 24 },
+        { header: "Ваш SKU", key: "sku", width: 45 },
+        { header: "Нужно", key: "need", width: 18 },
+        { header: "Продано за 28 дней", key: "sales", width: 24 },
+        { header: "Остаток", key: "stock", width: 17 },
+        { header: "Причина", key: "reason", width: 75 }
+      ];
+      rejections.getRow(1).font = { bold: true };
+      for (const x of plan.excluded) rejections.addRow({ cluster: x.cluster, sku: x.offerId, need: x.rawNeed, sales: x.sales28, stock: x.stock, reason: x.reason });
+      const unconfirmed = workbook.addWorksheet("Не прошли проверку");
+      unconfirmed.columns = [
+        { header: "Кластер", key: "cluster", width: 24 },
+        { header: "Ваш SKU", key: "sku", width: 45 },
+        { header: "Нужно", key: "need", width: 18 },
+        { header: "Причины", key: "errors", width: 88 }
+      ];
+      unconfirmed.getRow(1).font = { bold: true };
+      for (const x of plan.allocations.filter(x => x.errors.length > 0)) {
+        unconfirmed.addRow({ cluster: x.cluster, sku: x.offerId, need: x.rawNeed, errors: x.errors.join("; ") });
+      }
       const note = workbook.addWorksheet("Как использовать");
       note.getColumn(1).width = 115;
       [
@@ -556,7 +580,10 @@ export async function POST(request: Request) {
         "Для загрузки в кабинет ЯМ скачайте отдельный «Excel для загрузки» из сайта.",
         "Официальный шаблон ЯМ не умеет принимать заданные количества по кластерам: Яндекс пересчитает распределение.",
         "После загрузки сравните распределение Яндекса с нашим планом и исправьте его вручную.",
-        "Кластеры определены по складам отгрузки, а не по регионам покупателей; для точной географии нужна отдельная выгрузка ЯМ."
+        "Кластеры определены по складам отгрузки, а не по регионам покупателей; для точной географии нужна отдельная выгрузка ЯМ.",
+        "Лист «Недоступно на складах»: спрос есть, но Яндекс подтвердил запрет на проверенные склады.",
+        "Лист «Не прошли проверку»: спрос есть, но нет полного подтверждения допуска/реквизитов.",
+        "Доступность в проверочном файле может отличаться от фактической приёмки при другом количестве или дате. Перепроверьте после загрузки реальной поставки."
       ].forEach((value, idx) => note.getCell(idx + 1, 1).value = value);
       note.getRow(1).font = { bold: true, color: { argb: "FFD8463D" } };
     }
