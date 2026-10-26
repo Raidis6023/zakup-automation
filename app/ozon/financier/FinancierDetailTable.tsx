@@ -19,6 +19,8 @@ type Data = {
   crossdock_as_of?:string|null;
   unallocated_details?:Array<{name:string;amount:number}>;
   ads_covered?:boolean;ads_covered_days?:number;ads_performance_total?:number|null;
+  ads_campaigns_total?:number;ads_campaigns_complete?:number;
+  ads_partial_spend?:number;ads_partial_skus?:number;
   ads_jobs?:Array<{status:string;last_error:string|null;date_from:string;date_to:string}>;
   advertising?:{finance_total:number;finance_unallocated:number};
 };
@@ -138,7 +140,8 @@ export default function FinancierDetailTable({
     {name:"Операционная прибыль",value:money(operatingProfit),tone:moneyTone(operatingProfit)},
     {name:"Выручка",value:money(sumRevenue),tone:moneyTone(sumRevenue)},
     {name:"Рентабельность",value:pct(profitability),tone:moneyTone(profitability)},
-    {name:"Реклама",value:money(adAmount),tone:adAmount==null?"":Math.abs(adAmount)>0?"ozf-bad":"ozf-good"},
+    {name:data?.ads_covered?"Реклама":"Реклама"+(includeUnallocated?"":" (часть)"),
+      value:money(adAmount),tone:adAmount==null?"":Math.abs(adAmount)>0?"ozf-bad":"ozf-good"},
     {name:"Платное хранение",value:money(storageAmount),tone:storageAmount==null?"":Math.abs(storageAmount)>0?"ozf-bad":"ozf-good"},
     {name:"Положительные позиции",value:qty(positionsPositive),tone:positionsPositive>0?"ozf-good":"ozf-bad"},
     {name:"Отрицательные позиции",value:qty(positionsNegative),tone:positionsNegative>0?"ozf-bad":"ozf-good"}
@@ -178,10 +181,19 @@ export default function FinancierDetailTable({
       Рекламные начисления Seller API учтены в общих результатах, но пока не распределены по КМ.
       При выборе отдельного менеджера его прибыль предварительная до завершения рекламной детализации.
       Расходы на рекламу по SKU пока не подтверждены Performance API за весь период.
-      ДРР показывается прочерком, пока все выбранные даты не подтверждены.
-      Исторические отчёты загружаются последовательно, по одному на кампанию,
-      и сохраняются в Supabase. Лимит Ozon: один формируемый отчёт на кабинет.
-      Покрыто {data?.ads_covered_days??0} дней.
+      Уже полученные расходы из Performance API показываются по SKU в столбце «Реклама, ₽».
+      Пока загружены не все кампании, суммы по артикулам и ДРР <strong>неполные</strong>,
+      а прибыль КМ предварительная. Это не дополнительное списание сверх начислений Seller API.
+      {data?.ads_campaigns_total?<>
+        {" "}Обработано кампаний: <strong>{data.ads_campaigns_complete??0}
+        {" / "}{data.ads_campaigns_total}</strong>.
+      </>:null}
+      {(data?.ads_campaigns_complete??0)>0?<>
+        {" "}Получено из загруженных кампаний: <strong>
+        {money(data?.ads_partial_spend??0)}</strong>
+        {" "}по {data?.ads_partial_skus??0} артикулам.
+      </>:null}
+      {" "}Полных дней покрытия: {data?.ads_covered_days??0}.
       {data?.ads_jobs?.some(x=>x.status==="pending"||x.status==="running")?
         " Идёт обработка очереди рекламы; при HTTP 429 следующий запрос откладывается." :
         data?.ads_jobs?.find(x=>x.status==="failed")?.last_error?
