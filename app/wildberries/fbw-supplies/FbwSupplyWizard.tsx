@@ -82,7 +82,7 @@ export default function FbwSupplyWizard(){
    }catch(e){return {result:null,error:e instanceof Error?e.message:"Ошибка паллетирования"};}
  },[selected,type]);
  const palletTareValue=palletTareKg.trim()?Number(palletTareKg):null;
- const grossWithPallets=packing.result?.cargoWeightKg!==null&&packing.result?.cargoWeightKg!==undefined&&palletTareValue!==null&&Number.isFinite(palletTareValue)&&palletTareValue>0
+ const grossWithPallets=packing.result?.cargoWeightKg!==null&&packing.result?.cargoWeightKg!==undefined&&packing.result?.missingDimensions===0&&packing.result.pallets.length>0&&palletTareValue!==null&&Number.isFinite(palletTareValue)&&palletTareValue>0
    ?Number((packing.result.cargoWeightKg+packing.result.pallets.length*palletTareValue).toFixed(2)):null;
  const today=dayInKrasnoyarsk();
  // No slot time from API: +6 calendar dates guarantees at least 120 hours have elapsed.
