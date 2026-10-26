@@ -16,7 +16,7 @@ type WbRow = {
 };
 type SnapshotBarcode = { nm_id: number; barcode: string | null };
 type Pack = { master_code: string | null; units_per_carton: number | null };
-type Sync = { ordersLastSuccessAt?: string | null; stocksLastSuccessAt?: string | null; stockSnapshotId?: string | null };
+type Sync = { ordersLastSuccessAt?: string | null; stocksLastSuccessAt?: string | null; stocksAndSalesLastSuccessAt?: string | null; stockSnapshotId?: string | null };
 const json = (data: object, status = 200) => NextResponse.json(data, {status, headers:{"Cache-Control":"private, no-store"}});
 const isFresh = (t: string | null | undefined) => {
   const n = Date.parse(t ?? "");
@@ -31,15 +31,19 @@ export async function GET() {
     const {data:dash,error:dashboardError} = await db.rpc("get_wb_sync_dashboard");
     if (dashboardError || !dash?.ok) throw new Error(dashboardError?.message || "Нет успешного расчёта WB");
     const sync = (dash.status ?? {}) as Sync;
-    const fresh = isFresh(sync.ordersLastSuccessAt) && isFresh(sync.stocksLastSuccessAt);
-    const [packs,barcodeRows] = await Promise.all([
+    const reportTime=sync.stocksAndSalesLastSuccessAt??sync.stocksLastSuccessAt;
+    const fresh = isFresh(reportTime);
+    const [packs,barcodeRows,ordersBarcodes] = await Promise.all([
       db.from("products").select("master_code,units_per_carton").not("master_code","is",null).range(0,9999),
-      sync.stockSnapshotId
-        ? db.from("wb_stock_snapshots").select("nm_id,barcode").eq("snapshot_id",sync.stockSnapshotId).range(0,9999)
-        : Promise.resolve({data:[] as SnapshotBarcode[],error:null}),
+      // The current WB product snapshot has no barcode column. The legacy
+      // detailed stock snapshot still contains barcode mappings.
+      db.from("wb_stock_snapshots").select("nm_id,barcode").not("barcode","is",null).range(0,9999),
+      db.from("wb_orders").select("nm_id,barcode").not("barcode","is",null)
+        .order("synced_at",{ascending:false}).range(0,999),
     ]);
     if (packs.error) throw new Error(packs.error.message);
     if (barcodeRows.error) throw new Error(barcodeRows.error.message);
+    if (ordersBarcodes.error) throw new Error(ordersBarcodes.error.message);
     const packByMaster = new Map<string,Set<number>>();
     for (const p of (packs.data ?? []) as Pack[]) {
       const key = (p.master_code ?? "").trim();
@@ -49,7 +53,7 @@ export async function GET() {
       set.add(n); packByMaster.set(key,set);
     }
     const barcodeByNm = new Map<number,Set<string>>();
-    for (const b of (barcodeRows.data ?? []) as SnapshotBarcode[]) {
+    for (const b of ([...(barcodeRows.data??[]),...(ordersBarcodes.data??[])]) as SnapshotBarcode[]) {
       const value=String(b.barcode??"").trim(); if (!value) continue;
       const set=barcodeByNm.get(Number(b.nm_id)) ?? new Set<string>();
       set.add(value);barcodeByNm.set(Number(b.nm_id),set);
@@ -83,7 +87,7 @@ export async function GET() {
     rows.sort((a,b)=>b.rawNeed-a.rawNeed);
     return json({
       ok:true,source:"WB: общий остаток РФ / 28 дней / короб Ozon",
-      syncedAt:sync.stocksLastSuccessAt??null,ordersSyncedAt:sync.ordersLastSuccessAt??null,
+      syncedAt:reportTime??null,ordersSyncedAt:reportTime??null,
       fresh, rows,
       summary:{
         skus:rows.length,ready:rows.filter(x=>x.status==="ready").length,
