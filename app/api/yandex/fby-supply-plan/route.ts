@@ -159,7 +159,6 @@ async function buildPlan(ids: number[] | null): Promise<PlanResult> {
     if (warehouseId === null || !Number.isSafeInteger(warehouseId) || warehouseId <= 0) return;
     if (!warehouseData.has(warehouseId)) warehouseData.set(warehouseId, { id: warehouseId, name: normal(warehouseName) || "Склад " + warehouseId, rawNeed: 0, articles: 0, sales28: 0 });
     if (kind === "sale") warehouseData.get(warehouseId)!.sales28 += amount;
-    if (validIds && !validIds.has(warehouseId)) return;
     const key = offer + "\u0000" + warehouseId;
     const current = metrics.get(key) || { sale: 0, stock: 0 };
     current[kind] += amount;
@@ -179,6 +178,9 @@ async function buildPlan(ids: number[] | null): Promise<PlanResult> {
     const wh = warehouseData.get(warehouseId)!;
     wh.rawNeed += need;
     if (need > 0) wh.articles++;
+    // Сводку показываем по всем складам, но итоговый Excel строим
+    // только по выбранным в интерфейсе.
+    if (validIds && !validIds.has(warehouseId)) continue;
     const current = aggregated.get(offerId) || { rawNeed: 0, sales28: 0, stock: 0 };
     current.rawNeed += need;
     current.sales28 += m.sale;
