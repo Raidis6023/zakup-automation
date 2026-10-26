@@ -164,7 +164,7 @@ export async function POST(request:Request){
     if(!/\.xlsx$/i.test(file.name)||file.size>12*1024*1024||file.size<100)
       return Response.json({ok:false,error:"Допустим только Excel .xlsx до 12 МБ"},{status:400});
     const wb=new ExcelJS.Workbook();
-    await wb.xlsx.load(Buffer.from(await file.arrayBuffer()));
+    await wb.xlsx.load(Buffer.from(await file.arrayBuffer()) as never);
     let matchedHeader:ReturnType<typeof headersByRow>=null;
     let sheet:ExcelJS.Worksheet|undefined;
     for(const currentSheet of wb.worksheets){
