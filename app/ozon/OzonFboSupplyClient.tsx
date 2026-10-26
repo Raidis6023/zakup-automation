@@ -2479,6 +2479,290 @@ export default function OzonFboSupplyClient({
       </div>
 
 
+      <FboNestedDisclosure
+        title="Кластер подтверждаем сейчас, склад внутри него выбирает Ozon"
+      >
+
+                <div
+                  className=
+                    "reason-text"
+                >
+                  Потребность рассчитана на уровне кластера.
+                  После нажатия «Создать заявку» backend создаёт
+                  cross-dock draft только для этого кластера.
+                  По текущему формату Ozon сам распределяет товар
+                  по доступным складам хранения внутри выбранного кластера.
+                  Мы ищем ближайший доступный слот не раньше,
+                  чем через 3 суток от даты формирования.
+                  После бронирования заявки грузоместа BOX/PALLET
+                  создаются автоматически по зоне размещения, литражу
+                  и фактическому составу Ozon.
+                </div>
+      </FboNestedDisclosure>
+
+
+      <FboNestedDisclosure
+        title="Нужно дозаполнить упаковочные данные"
+      >
+
+        <div
+          className=
+            "reason-text"
+        >
+          Отсутствие размеров или веса не блокирует
+          расчёт и создание заявки. Если вложимость
+          известна, позиция уже включается с расчётным
+          количеством. Без вложимости позиция остаётся
+          в потребности, но временно не включается
+          в заявку, потому что коробную кратность
+          посчитать нельзя.
+        </div>
+
+
+        {
+          preview
+          &&
+          preview.ok
+          &&
+          preview.summary
+            ? (
+              (
+                preview.packaging_attention
+                ??
+                []
+              ).length >
+                0
+                ? (
+                  <div
+                    className=
+                      "ozon-fbo-packaging-attention-content"
+                  >
+                    <div
+                      style={{
+                        marginTop:
+                          "10px",
+
+                          overflowX:
+                            "auto",
+                        }}
+                      >
+                        <div
+                          style={{
+                            minWidth:
+                              "980px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display:
+                                "grid",
+
+                              gridTemplateColumns:
+                                "0.7fr 1.1fr 1.8fr 1.1fr 0.7fr 0.8fr",
+
+                              gap:
+                                "10px",
+
+                              padding:
+                                "7px 0",
+
+                              borderBottom:
+                                "1px solid var(--ws-border)",
+
+                              fontSize:
+                                "10px",
+
+                              fontWeight:
+                                700,
+                            }}
+                          >
+                            <span>ЕНОТ</span>
+                            <span>Артикул</span>
+                            <span>Товар</span>
+                            <span>Не хватает</span>
+                            <span>Потребность</span>
+                            <span>В заявку</span>
+                          </div>
+
+                          {
+                            (
+                              preview.packaging_attention
+                              ??
+                              []
+                            ).map(
+                              (
+                                row,
+                                index
+                              ) => {
+
+                                const missing = [
+                                  ...row.missing_fields,
+                                  row.missing_pack
+                                    ? "вложимость"
+                                    : "",
+                                  row.pack_conflict
+                                    ? "конфликт вложимости"
+                                    : "",
+                                  row.missing_enot
+                                    ? "ЕНОТ"
+                                    : "",
+                                ].filter(
+                                  Boolean
+                                );
+
+
+                                return (
+                                  <div
+                                    key={
+                                      [
+                                        row.master_code,
+                                        row.sku,
+                                        row.offer_id,
+                                        index,
+                                      ].join(
+                                        ":"
+                                      )
+                                    }
+
+                                    style={{
+                                      display:
+                                        "grid",
+
+                                      gridTemplateColumns:
+                                        "0.7fr 1.1fr 1.8fr 1.1fr 0.7fr 0.8fr",
+
+                                      gap:
+                                        "10px",
+
+                                      padding:
+                                        "7px 0",
+
+                                      borderBottom:
+                                        "1px solid var(--ws-border)",
+
+                                      fontSize:
+                                        "10px",
+
+                                      alignItems:
+                                        "start",
+                                    }}
+                                  >
+                                    <span>
+                                      <strong>
+                                        {
+                                          row.master_code
+                                          ??
+                                          "—"
+                                        }
+                                      </strong>
+                                    </span>
+
+                                    <span>
+                                      {
+                                        row.offer_id
+                                        ??
+                                        "—"
+                                      }
+                                    </span>
+
+                                    <span>
+                                      {
+                                        row.product_name
+                                        ??
+                                        "—"
+                                      }
+                                    </span>
+
+                                    <span>
+                                      {
+                                        missing.length >
+                                          0
+                                          ? missing.join(
+                                              ", "
+                                            )
+                                          : "—"
+                                      }
+                                    </span>
+
+                                    <span>
+                                      {
+                                        formatNumber(
+                                          row.raw_need
+                                        )
+                                      }
+                                    </span>
+
+                                    <span>
+                                      <strong>
+                                        {
+                                          formatNumber(
+                                            row.final_quantity
+                                          )
+                                        }
+                                      </strong>
+
+                                      <br />
+
+                                      <small
+                                        style={{
+                                          color:
+                                            row.included_in_request
+                                              ? "#16794b"
+                                              : "#b42318",
+                                        }}
+                                      >
+                                        {
+                                          row.included_in_request
+                                            ? "не блокирует"
+                                            : "ждёт вложимость"
+                                        }
+                                      </small>
+                                    </span>
+                                  </div>
+                                );
+
+                              }
+                            )
+                          }
+                        </div>
+                      </div>
+                  </div>
+                )
+                : (
+                  <div
+                    className=
+                      "reason-text"
+
+                    style={{
+                      marginTop:
+                        "10px",
+                    }}
+                  >
+                    По текущему расчёту товаров, требующих
+                    дозаполнения упаковочных данных, нет.
+                  </div>
+                )
+            )
+            : (
+              <div
+                className=
+                  "reason-text"
+
+                style={{
+                  marginTop:
+                    "10px",
+                }}
+              >
+                После запуска теста здесь появится список
+                товаров, для которых нужно дозаполнить
+                упаковочные данные.
+              </div>
+            )
+        }
+
+      </FboNestedDisclosure>
+
+
       {
         summaryLoading
         ||
@@ -2849,251 +3133,7 @@ export default function OzonFboSupplyClient({
               </div>
 
 
-              {
-                (
-                  preview.packaging_attention
-                  ??
-                  []
-                ).length >
-                  0
-                  ? (
-                    <FboNestedDisclosure
-                      title="Нужно дозаполнить упаковочные данные"
-                    >
 
-                      <div
-                        className=
-                          "reason-text"
-
-                        style={{
-                          marginTop:
-                            "6px",
-                        }}
-                      >
-                        Отсутствие размеров или веса не блокирует
-                        расчёт и создание заявки. Если вложимость
-                        известна, позиция уже включается с расчётным
-                        количеством. Без вложимости позиция остаётся
-                        в потребности, но временно не включается
-                        в заявку, потому что коробную кратность
-                        посчитать нельзя.
-                      </div>
-
-                      <div
-                        style={{
-                          marginTop:
-                            "10px",
-
-                          overflowX:
-                            "auto",
-                        }}
-                      >
-                        <div
-                          style={{
-                            minWidth:
-                              "980px",
-                          }}
-                        >
-                          <div
-                            style={{
-                              display:
-                                "grid",
-
-                              gridTemplateColumns:
-                                "0.7fr 1.1fr 1.8fr 1.1fr 0.7fr 0.8fr",
-
-                              gap:
-                                "10px",
-
-                              padding:
-                                "7px 0",
-
-                              borderBottom:
-                                "1px solid var(--ws-border)",
-
-                              fontSize:
-                                "10px",
-
-                              fontWeight:
-                                700,
-                            }}
-                          >
-                            <span>ЕНОТ</span>
-                            <span>Артикул</span>
-                            <span>Товар</span>
-                            <span>Не хватает</span>
-                            <span>Потребность</span>
-                            <span>В заявку</span>
-                          </div>
-
-                          {
-                            (
-                              preview.packaging_attention
-                              ??
-                              []
-                            ).map(
-                              (
-                                row,
-                                index
-                              ) => {
-
-                                const missing = [
-                                  ...row.missing_fields,
-                                  row.missing_pack
-                                    ? "вложимость"
-                                    : "",
-                                  row.pack_conflict
-                                    ? "конфликт вложимости"
-                                    : "",
-                                  row.missing_enot
-                                    ? "ЕНОТ"
-                                    : "",
-                                ].filter(
-                                  Boolean
-                                );
-
-
-                                return (
-                                  <div
-                                    key={
-                                      [
-                                        row.master_code,
-                                        row.sku,
-                                        row.offer_id,
-                                        index,
-                                      ].join(
-                                        ":"
-                                      )
-                                    }
-
-                                    style={{
-                                      display:
-                                        "grid",
-
-                                      gridTemplateColumns:
-                                        "0.7fr 1.1fr 1.8fr 1.1fr 0.7fr 0.8fr",
-
-                                      gap:
-                                        "10px",
-
-                                      padding:
-                                        "7px 0",
-
-                                      borderBottom:
-                                        "1px solid var(--ws-border)",
-
-                                      fontSize:
-                                        "10px",
-
-                                      alignItems:
-                                        "start",
-                                    }}
-                                  >
-                                    <span>
-                                      <strong>
-                                        {
-                                          row.master_code
-                                          ??
-                                          "—"
-                                        }
-                                      </strong>
-                                    </span>
-
-                                    <span>
-                                      {
-                                        row.offer_id
-                                        ??
-                                        "—"
-                                      }
-                                    </span>
-
-                                    <span>
-                                      {
-                                        row.product_name
-                                        ??
-                                        "—"
-                                      }
-                                    </span>
-
-                                    <span>
-                                      {
-                                        missing.length >
-                                          0
-                                          ? missing.join(
-                                              ", "
-                                            )
-                                          : "—"
-                                      }
-                                    </span>
-
-                                    <span>
-                                      {
-                                        formatNumber(
-                                          row.raw_need
-                                        )
-                                      }
-                                    </span>
-
-                                    <span>
-                                      <strong>
-                                        {
-                                          formatNumber(
-                                            row.final_quantity
-                                          )
-                                        }
-                                      </strong>
-
-                                      <br />
-
-                                      <small
-                                        style={{
-                                          color:
-                                            row.included_in_request
-                                              ? "#16794b"
-                                              : "#b42318",
-                                        }}
-                                      >
-                                        {
-                                          row.included_in_request
-                                            ? "не блокирует"
-                                            : "ждёт вложимость"
-                                        }
-                                      </small>
-                                    </span>
-                                  </div>
-                                );
-
-                              }
-                            )
-                          }
-                        </div>
-                      </div>
-                    </FboNestedDisclosure>
-                  )
-                  : null
-              }
-
-
-              <FboNestedDisclosure
-                title="Кластер подтверждаем сейчас, склад внутри него выбирает Ozon"
-              >
-
-                <div
-                  className=
-                    "reason-text"
-                >
-                  Потребность рассчитана на уровне кластера.
-                  После нажатия «Создать заявку» backend создаёт
-                  cross-dock draft только для этого кластера.
-                  По текущему формату Ozon сам распределяет товар
-                  по доступным складам хранения внутри выбранного кластера.
-                  Мы ищем ближайший доступный слот не раньше,
-                  чем через 3 суток от даты формирования.
-                  После бронирования заявки грузоместа BOX/PALLET
-                  создаются автоматически по зоне размещения, литражу
-                  и фактическому составу Ozon.
-                </div>
-              </FboNestedDisclosure>
 
 
               <div
