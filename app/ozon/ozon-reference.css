@@ -2600,6 +2600,13 @@ html[data-theme="dark"]
 .ozon-reference-page
 .ozon-fbo-supply-section {
   padding:
+    0;
+}
+
+
+.ozon-reference-page
+.ozon-fbo-supply-content {
+  padding:
     18px;
 }
 
@@ -2627,6 +2634,117 @@ html[data-theme="dark"]
   min-width:
     235px;
 }
+
+.ozon-reference-page
+.ozon-fbo-nested-disclosure {
+  margin-top:
+    14px;
+
+  overflow:
+    hidden;
+
+  border:
+    1px solid
+    var(--ws-border);
+
+  border-radius:
+    10px;
+
+  background:
+    var(--ws-surface);
+}
+
+
+.ozon-reference-page
+.ozon-fbo-nested-toggle {
+  display:
+    block;
+
+  width:
+    100%;
+
+  min-height:
+    42px;
+
+  padding:
+    10px
+    13px;
+
+  border:
+    0;
+
+  background:
+    transparent;
+
+  color:
+    var(--ws-text);
+
+  text-align:
+    left;
+
+  font:
+    inherit;
+
+  font-size:
+    12px;
+
+  font-weight:
+    700;
+
+  cursor:
+    pointer;
+
+  transition:
+    background-color
+      0.12s
+      ease,
+    color
+      0.12s
+      ease;
+}
+
+
+.ozon-reference-page
+.ozon-fbo-nested-toggle:hover {
+  background:
+    var(--ws-surface-hover);
+
+  color:
+    var(--ws-blue);
+}
+
+
+.ozon-reference-page
+.ozon-fbo-nested-toggle:focus-visible {
+  outline:
+    2px solid
+    var(--ws-blue);
+
+  outline-offset:
+    -2px;
+}
+
+
+.ozon-reference-page
+.ozon-fbo-nested-body {
+  padding:
+    0
+    13px
+    13px;
+
+  border-top:
+    1px solid
+    var(--ws-border-soft);
+}
+
+
+.ozon-reference-page
+.ozon-fbo-nested-body
+> .reason-text:first-child {
+  margin-top:
+    10px;
+}
+
 
 .ozon-reference-page
 .ozon-fbo-supply-facts {
