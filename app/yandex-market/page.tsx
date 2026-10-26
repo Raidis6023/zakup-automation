@@ -26,6 +26,9 @@ import YandexProductsSectionClient
 import YandexFbySupplyPlanner
   from "./YandexFbySupplyPlanner";
 
+import YandexEligibilityPrecheck
+  from "./YandexEligibilityPrecheck";
+
 import YandexProductsTableClient, {
   type YandexProductsTableItem,
 } from "./YandexProductsTableClient";
@@ -1681,6 +1684,8 @@ export default async function YandexMarketPage() {
         {/* ===================================
             УПРАВЛЕНИЕ ПОСТАВКАМИ
             =================================== */}
+
+        <YandexEligibilityPrecheck />
 
         <YandexFbySupplyPlanner />
 
