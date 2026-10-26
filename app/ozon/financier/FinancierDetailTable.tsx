@@ -178,15 +178,14 @@ export default function FinancierDetailTable({
       Рекламные начисления Seller API учтены в общих результатах, но пока не распределены по КМ.
       При выборе отдельного менеджера его прибыль предварительная до завершения рекламной детализации.
       Расходы на рекламу по SKU пока не подтверждены Performance API за весь период.
-      ДРР отмечается прочерком, а не нулём. Исторический запрос через
-      /statistics/products/sku отклонён Ozon: этот метод принимает только сегодня или вчера.
-      Для выбранных дат нужен исторический отчёт с отдельным созданием и получением результата.
+      ДРР показывается прочерком, пока все выбранные даты не подтверждены.
+      Исторические отчёты загружаются последовательно, по одному на кампанию,
+      и сохраняются в Supabase. Лимит Ozon: один формируемый отчёт на кабинет.
       Покрыто {data?.ads_covered_days??0} дней.
-      {data?.ads_jobs?.some(x=>x.status==="failed")?<strong className="ozf-bad">
-        Ошибка Performance API: {data.ads_jobs.find(x=>x.status==="failed")?.last_error}
-      </strong>:null}
       {data?.ads_jobs?.some(x=>x.status==="pending"||x.status==="running")?
-        " Загрузка рекламной детализации ожидает выполнения." : null}
+        " Идёт обработка очереди рекламы; при HTTP 429 следующий запрос откладывается." :
+        data?.ads_jobs?.find(x=>x.status==="failed")?.last_error?
+          " Последняя ошибка: "+data.ads_jobs.find(x=>x.status==="failed")?.last_error : ""}
     </p>}
     <div className="ozf-section-tools">
       <input placeholder="Поиск по артикулу, коду или КМ" aria-label="Поиск товаров" value={search}

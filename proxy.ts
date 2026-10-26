@@ -50,6 +50,9 @@ export async function proxy(
     "/api/agents/ozon-finance-support-cron"
     ||
     pathname ===
+    "/api/agents/ozon-finance-ads"
+    ||
+    pathname ===
     "/api/agents/wb-finance-cron"
   ) {
 
