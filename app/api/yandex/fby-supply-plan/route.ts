@@ -385,7 +385,7 @@ export async function POST(request: Request) {
   try {
     const input = await request.json() as { clusterNames?: string[]; allowPartial?: boolean; allowStale?: boolean; mode?: "plan" | "upload" };
     const plan = await buildPlan(parseClusters(input.clusterNames));
-    if (plan.unmappedWarehouses.length > 0) {
+    if (input.mode === "upload" && plan.unmappedWarehouses.length > 0) {
       return Response.json({ ok: false, error: "Есть склады ЯМ без проверенного кластера. Экспорт заблокирован, пока не настроено сопоставление: " + plan.unmappedWarehouses.join(", ") }, { status: 409 });
     }
     if (plan.stale && input.allowStale !== true) {
@@ -394,7 +394,10 @@ export async function POST(request: Request) {
     if (plan.blocked.length > 0 && input.allowPartial !== true) {
       return Response.json({ ok: false, error: "В плане есть позиции без штрихкода/вложимости/наименования. Исправьте данные или явно разрешите частичный экспорт." }, { status: 409 });
     }
-    if (!plan.items.length) return Response.json({ ok: false, error: "Нет корректных товаров для экспорта" }, { status: 409 });
+    if (!plan.items.length && input.mode === "upload") return Response.json({ ok: false, error: "Нет проверенных товаров для поставки" }, { status: 409 });
+    if (!plan.items.length && !plan.excluded.length && !plan.blocked.length) {
+      return Response.json({ ok: false, error: "По проверенному ассортименту нет потребности в поставке" }, { status: 409 });
+    }
 
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Поставка");
