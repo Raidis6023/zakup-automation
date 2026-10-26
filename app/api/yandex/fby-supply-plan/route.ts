@@ -1,4 +1,8 @@
 import ExcelJS from "exceljs";
+import {
+  eligibleOnCluster, eligibilityIsStale,
+  type EligibilitySnapshot
+} from "@/lib/yandex-fby-eligibility";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -75,6 +79,8 @@ type PlanResult = {
   blocked: NeedRow[];
   totals: { articles: number; blocked: number; units: number; cartons: number; rawNeed: number };
   notice: string;
+  eligibility: { source: string; checkedAt: string; excludedCount: number; unknownCount: number; stale: boolean };
+  excluded: Array<{ offerId: string; cluster: string; reason: string }>;
 };
 
 function config() {
@@ -138,12 +144,23 @@ const CLUSTER_BY_WAREHOUSE: Record<number, string | null> = {
 // Сопоставление известных складов по текущей базе. Названия/ID не считаем
 // универсальным справочником Маркета: новые ID должны пройти проверку.
 async function buildPlan(clusterNames: string[] | null): Promise<PlanResult> {
-  const [salesRuns, stockRuns, products, packing] = await Promise.all([
+  const [eligRows, salesRuns, stockRuns, products, packing] = await Promise.all([
+    dbRows<EligibilitySnapshot>("yandex_fby_eligibility_snapshots", "id,created_at,source_file,offers_count,warehouse_count,mapping,headers,unknown_offers", { order: "created_at.desc", limit: "1" }),
     dbRows<SalesRun>("yandex_sales_sync_runs", "id,date_from,date_to,created_at", { status: "eq.success", order: "created_at.desc", limit: "1" }),
     dbRows<StockRun>("yandex_stock_sync_runs", "id,snapshot_date,created_at", { status: "eq.success", order: "created_at.desc", limit: "1" }),
     dbRows<YandexProduct>("yandex_products", "offer_id,master_code,is_active,raw_data"),
     dbRows<OzonProduct>("products", "master_code,units_per_carton,is_discontinued")
   ]);
+  const sellerEligibility = eligRows[0];
+  if (!sellerEligibility) throw new Error("Сначала загрузите проверочную матрицу Яндекс Маркета с колонками «да/нет» по складам. Проверять возможность поставки по остаткам нельзя.");
+  const active = products.filter(p => p.is_active);
+  const missingEligibility = active
+    .filter(p => sellerEligibility.mapping[normal(p.offer_id)] === undefined)
+    .map(p => p.offer_id);
+  if (missingEligibility.length) {
+    throw new Error("Матрица ЯМ неполная: проверено " + (active.length - missingEligibility.length) + " из " + active.length
+      + " активных SKU. Сначала проверьте весь каталог. Нет: " + missingEligibility.slice(0, 8).join(", "));
+  }
   const salesRun = salesRuns[0], stockRun = stockRuns[0];
   if (!salesRun || !stockRun) throw new Error("Нет успешной синхронизации продаж или остатков ЯМ");
 
@@ -161,6 +178,7 @@ async function buildPlan(clusterNames: string[] | null): Promise<PlanResult> {
   }
 
   const staleReasons: string[] = [];
+  if (eligibilityIsStale(sellerEligibility)) staleReasons.push("Матрица доступности SKU по складам ЯМ старше 48 часов");
   if (Date.now() - Date.parse(salesRun.created_at) > 48 * 3600000) staleReasons.push("Продажи синхронизированы более 48 часов назад");
   if (Date.now() - Date.parse(stockRun.created_at) > 48 * 3600000) staleReasons.push("Остатки синхронизированы более 48 часов назад");
   if (Date.now() - Date.parse(salesRun.date_to + "T23:59:59Z") > 72 * 3600000) staleReasons.push("Последний день продаж старше трёх суток");
@@ -236,6 +254,8 @@ async function buildPlan(clusterNames: string[] | null): Promise<PlanResult> {
   }
 
   const allocations: ClusterAllocation[] = [];
+  const excluded: Array<{ offerId: string; cluster: string; reason: string }> = [];
+  let unknownCount = 0;
   const blockedMap = new Map<string, NeedRow>();
   const itemMap = new Map<string, NeedRow>();
   let rawNeedAll = 0;
@@ -244,16 +264,27 @@ async function buildPlan(clusterNames: string[] | null): Promise<PlanResult> {
     const masterCode = normal(product?.master_code) || null;
     const packInfo = masterCode ? packByMaster.get(masterCode) : undefined;
     if (packInfo?.discontinued || product?.is_active === false) continue;
+    if (!selectedSet.has(m.cluster)) continue;
+    const check = eligibleOnCluster(sellerEligibility, m.offerId, m.cluster);
+    if (check === "no") {
+      excluded.push({ offerId: m.offerId, cluster: m.cluster, reason: "Яндекс Маркет: нет допуска на склады этого кластера" });
+      continue;
+    }
     const rawNeed = coverageNeed(m.sale, m.stock);
+    if (rawNeed <= 0) continue;
     const cluster = clusterTotals.get(m.cluster)!;
     cluster.sales28 += m.sale;
     cluster.stock += m.stock;
     cluster.rawNeed += rawNeed;
-    if (rawNeed > 0) cluster.articles++;
-    if (!selectedSet.has(m.cluster) || rawNeed === 0) continue;
+    cluster.articles++;
+
     rawNeedAll += rawNeed;
 
     const errors: string[] = [];
+    if (check === "unknown") {
+      errors.push("Нет подтверждения допуска ЯМ для складов этого кластера");
+      unknownCount++;
+    }
     if (!product) errors.push("Нет товара в справочнике ЯМ");
     if (!masterCode) errors.push("Не задан ЕНОТ / master_code");
     if (!packInfo || packInfo.packs.size === 0) errors.push("Не задана вложимость короба");
@@ -321,7 +352,15 @@ async function buildPlan(clusterNames: string[] | null): Promise<PlanResult> {
       cartons: items.reduce((n, p) => n + p.cartonCount, 0),
       rawNeed: rawNeedAll
     },
-    notice: "Потребность рассчитана отдельно по каждому кластеру через складские продажи и остатки. Распределение в XLSX справочное: шаблон мультипоставки ЯМ импортирует только ОБЩЕЕ количество, а распределение Яндекс нужно сверить/исправить после загрузки."
+    eligibility: {
+      source: sellerEligibility.source_file,
+      checkedAt: sellerEligibility.created_at,
+      excludedCount: excluded.length,
+      unknownCount,
+      stale: eligibilityIsStale(sellerEligibility)
+    },
+    excluded,
+    notice: "Перед расчётом проверено разрешение SKU на складах по матрице Яндекс Маркета. «Нет» исключены из поставки, «неизвестно» блокируется. Шаблон мультипоставки ЯМ не импортирует распределение по кластерам: после загрузки проверьте раскладку вручную."
   };
 }
 
