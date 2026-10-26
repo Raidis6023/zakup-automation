@@ -358,16 +358,36 @@ export async function runHistoricalAdvertising(request:NextRequest){
   }
   const task=q.data[0] as Task;
   if(task.status==="pending"){
+    // Account-level concurrency stays ONE report. Inside it Ozon supports
+    // up to ten campaign CSVs packed into a single verified ZIP archive.
+    // Group only identical report periods so day attribution remains valid.
+    const batchQuery=await db.from("ozon_finance_ad_campaign_tasks")
+      .select("id,job_id,campaign_id,day,date_to,status,report_uuid,last_error")
+      .eq("job_id",selected.id).eq("status","pending")
+      .eq("day",task.day).eq("date_to",task.date_to)
+      .order("campaign_id",{ascending:true}).limit(10);
+    if(batchQuery.error)throw batchQuery.error;
+    const batch=(batchQuery.data??[]) as Task[];
+    if(!batch.length)throw new Error("Pending batch disappeared");
+    const campaigns=batch.map(x=>x.campaign_id);
     const created=await api(access,"/api/client/statistics",{
       method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({campaigns:[task.campaign_id],
+      body:JSON.stringify({campaigns,
         dateFrom:task.day,dateTo:task.date_to,groupBy:"DATE"})});
     const raw=await created.json() as {UUID?:string;uuid?:string};
     const uuid=String(raw.UUID??raw.uuid??"");
     if(!/^[A-Fa-f0-9-]{36}$/.test(uuid))throw new Error("Statistics returned no report UUID");
-    await markTask(db,task.id,{status:"requested",report_uuid:uuid,last_error:null});
+    const updated=await db.from("ozon_finance_ad_campaign_tasks")
+      .update({status:"requested",report_uuid:uuid,last_error:null,
+        updated_at:new Date().toISOString()})
+      .eq("job_id",selected.id).eq("status","pending")
+      .in("id",batch.map(x=>x.id)).select("id");
+    if(updated.error)throw updated.error;
+    if(updated.data?.length!==batch.length)
+      throw new Error("Batch UUID was not persisted to every campaign");
     phase="report_requested";delay=2*60*1000;
-    return json({ok:true,phase,task_id:task.id,period:task.day+".."+task.date_to});
+    return json({ok:true,phase,uuid,batch_size:campaigns.length,
+      campaigns,period:task.day+".."+task.date_to});
   }
   if(!task.report_uuid)throw new Error("Missing UUID for pending report");
   const ready=await api(access,"/api/client/statistics/"+encodeURIComponent(task.report_uuid));
@@ -380,35 +400,58 @@ export async function runHistoricalAdvertising(request:NextRequest){
     phase="report_processing";delay=3*60*1000;
     return json({ok:true,phase,task_id:task.id,state:report.state});
   }
+  const grouped=await db.from("ozon_finance_ad_campaign_tasks")
+    .select("id,job_id,campaign_id,day,date_to,status,report_uuid,last_error")
+    .eq("job_id",selected.id).eq("status","requested")
+    .eq("report_uuid",task.report_uuid).order("campaign_id");
+  if(grouped.error)throw grouped.error;
+  const batch=(grouped.data??[]) as Task[];
+  if(!batch.length||batch.length>10)throw new Error("Missing or oversized UUID batch");
+  if(batch.some(x=>x.day!==task.day||x.date_to!==task.date_to))
+    throw new Error("Mixed date windows in campaign batch");
   const csvResponse=await api(access,"/api/client/statistics/report?UUID="+
-   encodeURIComponent(task.report_uuid));
-  const csv=await csvResponse.text();
-  let parsed:Parsed[];
-  try{
-    parsed=parseHistoricCSV(csv,task.day,task.date_to);
-  }catch(error){
-    if(message(error).startsWith("CSV_NO_DAILY_DATE")&&task.day!==task.date_to){
-      await splitTask(db,task);
-      phase="split_into_daily_reports";
-      return json({ok:true,phase,campaign_id:task.campaign_id,
-        period:task.day+".."+task.date_to});
+    encodeURIComponent(task.report_uuid));
+  const archive=Buffer.from(await csvResponse.arrayBuffer());
+  const files=reportCsvFiles(archive,batch.map(x=>x.campaign_id));
+  const allLines:Array<{account_key:string;day:string;sku:string;
+    campaign_id:string;expense_rub:number}>=[];
+  const perCampaign=new Map<number,number>();
+  for(const item of batch){
+    let parsed:Parsed[];
+    try{
+      parsed=parseHistoricCSV(files.get(item.campaign_id)!,item.day,item.date_to);
+    }catch(error){
+      if(message(error).startsWith("CSV_NO_DAILY_DATE")&&item.day!==item.date_to){
+        // Discard every partial result of this ZIP and create independently
+        // verifiable day tasks. Never mark a batch complete on partial data.
+        for(const original of batch)await splitTask(db,original);
+        phase="split_into_daily_reports";
+        return json({ok:true,phase,batch_size:batch.length,
+          period:item.day+".."+item.date_to});
+      }
+      throw error;
     }
-    throw error;
+    perCampaign.set(item.id,parsed.length);
+    allLines.push(...parsed.map(x=>({account_key:"main",day:x.day,sku:x.sku,
+      campaign_id:item.campaign_id,expense_rub:x.expense})));
   }
-  const lines=parsed.map(x=>({account_key:"main",day:x.day,sku:x.sku,
-    campaign_id:task.campaign_id,expense_rub:x.expense}));
-  for(let i=0;i<lines.length;i+=200){
+  for(let i=0;i<allLines.length;i+=200){
     const {error}=await db.from("ozon_finance_ad_sku_daily")
-      .upsert(lines.slice(i,i+200),{onConflict:"account_key,day,sku,campaign_id"});
+      .upsert(allLines.slice(i,i+200),{onConflict:"account_key,day,sku,campaign_id"});
     if(error)throw new Error("Advertising SKU cache error: "+error.message);
   }
-  await markTask(db,task.id,{status:"complete",rows_saved:lines.length,last_error:null});
+  // Publish batch completion only after ALL ten CSVs validate and every
+  // Ozon SKU/day/campaign row has been stored in the database.
+  for(const item of batch)
+    await markTask(db,item.id,{status:"complete",
+      rows_saved:perCampaign.get(item.id)??0,last_error:null});
   await db.from("ozon_finance_ad_sync_jobs")
     .update({status:"running",last_error:null,updated_at:new Date().toISOString()})
     .eq("id",selected.id);
   phase="report_saved";
-  return json({ok:true,phase,task_id:task.id,sku_day_rows:lines.length,
-    spend_rub:Math.round(lines.reduce((s,r)=>s+r.expense_rub,0)*100)/100});
+  return json({ok:true,phase,batch_size:batch.length,
+    campaigns:batch.map(x=>x.campaign_id),sku_day_rows:allLines.length,
+    spend_rub:Math.round(allLines.reduce((sum,row)=>sum+row.expense_rub,0)*100)/100});
  }catch(error){
   failure=message(error).slice(0,350);
   delay=/HTTP 429/.test(failure)?60*60*1000:15*60*1000;
