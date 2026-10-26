@@ -1,6 +1,6 @@
 "use client";
 
-import {useEffect,useMemo,useRef,useState} from "react";
+import {useMemo,useRef,useState} from "react";
 import styles from "./fbw-flow.module.css";
 import {estimateFbwPacking} from "../../../lib/wb/fbw-packing";
 
@@ -32,7 +32,6 @@ type Choices={
   fallback?:{used:boolean;source:string;updated:string;total:number;note:string};
 };
 const num=(v:number)=>new Intl.NumberFormat("ru-RU",{maximumFractionDigits:1}).format(v);
-const DATE_FMT=new Intl.DateTimeFormat("ru-RU",{day:"numeric",month:"short",weekday:"short",timeZone:"UTC"});
 const dateUTC=(iso:string)=>new Date(iso+"T12:00:00Z");
 function dayInKrasnoyarsk(){
  const pieces=new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Krasnoyarsk",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
@@ -44,25 +43,6 @@ function addDays(day:string,increment:number){
  return d.toISOString().slice(0,10);
 }
 
-type ManualSlotRecord = {
-  savedAt:string;date:string;wbSupplyNumber:string;
-  point:{id:number;name:string;address:string};
-  supplyType:"box"|"mono";source:"seller-manual";
-  items:Array<{sku:string;name:string;barcode:string;quantity:number;boxes:number;unitsPerBox:number}>;
-  units:number;boxes:number;
-};
-const SLOT_STORAGE_KEY="wb-fbw-manual-booking-v1";
-function csvField(value:string|number){
-  return '"'+String(value).replace(/"/g,'""')+'"';
-}
-function downloadManifest(record:ManualSlotRecord){
-  const header=["Артикул WB","Наименование","Баркод","Количество","Вложимость","Коробов"];
-  const rows=record.items.map(x=>[x.sku,x.name,x.barcode,x.quantity,x.unitsPerBox,x.boxes]);
-  const csv="\uFEFF"+[header,...rows].map(row=>row.map(csvField).join(";")).join("\r\n");
-  const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
-  const link=document.createElement("a");link.href=url;link.download="WB-FBW-"+record.wbSupplyNumber+".csv";
-  document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
-}
 const reasons:Record<string,string>={
  missing_master:"Нет мастер-кода",missing_pack:"Нет вложимости",
  pack_conflict:"Конфликт вложимости",missing_barcode:"Нет баркода WB",
@@ -80,26 +60,12 @@ export default function FbwSupplyWizard(){
  const [kind,setKind]=useState<"all"|"сц"|"лц">("all");
  const [onlyConfirmed,setOnlyConfirmed]=useState(false);
  const calendarRef=useRef<HTMLElement|null>(null);
- const [supplyDate,setSupplyDate]=useState("");
- const [manualDate,setManualDate]=useState("");
- const [wbSupplyNumber,setWbSupplyNumber]=useState("");
- const [manualConfirmed,setManualConfirmed]=useState(false);
- const [savedSlot,setSavedSlot]=useState<ManualSlotRecord|null>(null);
  const [draftBusy,setDraftBusy]=useState(false);
  const [draft,setDraft]=useState<{draftId:string;url:string}|null>(null);
  const [draftError,setDraftError]=useState("");
  const [palletTareKg,setPalletTareKg]=useState("");
 
- const [saveMessage,setSaveMessage]=useState("");
  const [typeOverride,setTypeOverride]=useState<"auto"|"box">("auto");
- useEffect(()=>{
-   try{
-     const saved=window.localStorage.getItem(SLOT_STORAGE_KEY);
-     if(saved){const data=JSON.parse(saved) as ManualSlotRecord;
-       if(data.source==="seller-manual"&&Array.isArray(data.items))setSavedSlot(data);
-     }
-   }catch{/* Storage may be disabled by browser privacy settings */}
- },[]);
  const selected=useMemo(()=>demand?.rows.filter(x=>selection.includes(x.sku)&&x.status==="ready")??[],[selection,demand]);
  const type: "box"|"mono"=selected.length>0&&selected.length<=3&&typeOverride!=="box"?"mono":"box";
  const totals=selected.reduce((a,r)=>({units:a.units+r.quantity,boxes:a.boxes+r.boxes}),{units:0,boxes:0});
@@ -121,9 +87,7 @@ export default function FbwSupplyWizard(){
  const today=dayInKrasnoyarsk();
  // No slot time from API: +6 calendar dates guarantees at least 120 hours have elapsed.
  const safeDay=addDays(today,6);
- const cells=Array.from({length:14},(_,i)=>addDays(today,i));
  const point=choice?.points.find(x=>x.id===pointId);
- const pointRates=(choice?.dates??[]).filter(x=>point?.ids.includes(x.warehouseId));
  const points=useMemo(()=>choice?.points.filter(x=>{
    const haystack=(x.name+" "+x.address+" "+x.city+" "+x.region+" "+x.type).toLocaleLowerCase("ru");
    return haystack.includes(search.trim().toLocaleLowerCase("ru"))
@@ -131,9 +95,8 @@ export default function FbwSupplyWizard(){
      &&(type!=="mono"||x.type.toLocaleLowerCase("ru").includes("сц"))
      &&(!onlyConfirmed||x.status==="confirmed");
  })??[],[choice,search,kind,onlyConfirmed,type]);
- const clearManualForm=()=>{setManualDate("");setWbSupplyNumber("");setManualConfirmed(false);setSaveMessage("");};
- const resetFollowing=()=>{setChoice(null);setPointId(null);setSupplyDate("");setOnlyConfirmed(false);clearManualForm();setDraft(null);setDraftError("");};
- function pickPoint(id:number){setPointId(id);setSupplyDate("");setDraft(null);setDraftError("");clearManualForm();window.setTimeout(()=>calendarRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),120);}
+ const resetFollowing=()=>{setChoice(null);setPointId(null);setOnlyConfirmed(false);setDraft(null);setDraftError("");};
+ function pickPoint(id:number){setPointId(id);setDraft(null);setDraftError("");window.setTimeout(()=>calendarRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),120);}
  async function calculate(){
    setLoading(true);setError("");setDemand(null);setSelection([]);resetFollowing();
    try{
@@ -160,10 +123,6 @@ export default function FbwSupplyWizard(){
      setChoice(data);
    }catch(e){setError(e instanceof Error?e.message:"Ошибка связи с WB");}finally{setFinding(false);}
  }
- function selectDate(day:string,rate:Rate|undefined){
-   if(day<safeDay||!rate?.available||point?.status!=="confirmed")return;
-   setSupplyDate(day);
- }
  async function createDraft(){
    if(!point||!selected.length||!demand?.fresh||draftBusy)return;
    setDraftError("");setDraftBusy(true);
@@ -186,31 +145,6 @@ export default function FbwSupplyWizard(){
    }catch(e){setDraftError(e instanceof Error?e.message:"Ошибка создания черновика");}
    finally{setDraftBusy(false);}
  }
- const currentRate=pointRates.find(r=>r.date===supplyDate);
- const unavailable=!!point&&(point.status!=="confirmed"||!choice?.ratesVerified||pointRates.length===0);
- function saveManualSlot(){
-   setSaveMessage("");
-   if(!point||!selected.length){setSaveMessage("Выбери товары и точку сдачи.");return;}
-   if(!/^\d{4}-\d{2}-\d{2}$/.test(manualDate)||manualDate<safeDay){
-     setSaveMessage("Выбранная в WB дата должна быть не раньше "+safeDay+" (минимум 5 полных суток).");return;
-   }
-   const number=wbSupplyNumber.trim();
-   if(number.length<3||number.length>80){setSaveMessage("Укажи номер реально созданной поставки WB.");return;}
-   if(!manualConfirmed){setSaveMessage("Подтверди, что дата и точка уже выбраны в кабинете WB.");return;}
-   const record:ManualSlotRecord={
-     savedAt:new Date().toISOString(),date:manualDate,wbSupplyNumber:number,
-     point:{id:point.id,name:point.name,address:point.address},
-     supplyType:type,source:"seller-manual",
-     items:selected.map(row=>({sku:row.sku,name:row.name,barcode:row.barcode??"",
-       quantity:row.quantity,boxes:row.boxes,unitsPerBox:row.unitsPerBox??0})),
-     units:totals.units,boxes:totals.boxes,
-   };
-   try{
-     window.localStorage.setItem(SLOT_STORAGE_KEY,JSON.stringify(record));
-     setSavedSlot(record);setSaveMessage("Состав и реквизиты записаны в этом браузере. В WB ничего не создавалось.");
-   }catch{setSaveMessage("Браузер запретил хранение данных. Состав не сохранён.");}
- }
-
  return <div className={styles.wizard}>
    <div className={styles.hero}>
      <div><div className={styles.eyebrow}>ЗАКУП / WILDBERRIES / FBW</div><h1>Формирование поставки FBW</h1>
