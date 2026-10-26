@@ -1,6 +1,6 @@
 "use client";
 
-import {useMemo,useState} from "react";
+import {useMemo,useRef,useState} from "react";
 import styles from "./fbw-flow.module.css";
 
 type DemandRow={
@@ -16,6 +16,8 @@ type Demand={
 type Point={
   id:number;name:string;address:string;type:string;status:"confirmed"|"not_compatible"|"unverified";
   acceptedCount:number|null;totalCount:number;
+  ids:number[];city:string;region:string;hours:string;lat:number|null;lon:number|null;
+  source:"public"|"wb";url:string;hasLiveId:boolean;
 };
 type Rate={
   warehouseId:number;date:string;coefficient:number|null;available:boolean;
@@ -24,6 +26,7 @@ type Rate={
 type Choices={
   ok:boolean;error?:string;points:Point[];dates:Rate[];
   optionsVerified:boolean;ratesVerified:boolean;errors:string[];fetchedAt:string;
+  fallback?:{used:boolean;source:string;updated:string;total:number;note:string};
 };
 const num=(v:number)=>new Intl.NumberFormat("ru-RU",{maximumFractionDigits:1}).format(v);
 const DATE_FMT=new Intl.DateTimeFormat("ru-RU",{day:"numeric",month:"short",weekday:"short",timeZone:"UTC"});
@@ -51,6 +54,9 @@ export default function FbwSupplyWizard(){
  const [choice,setChoice]=useState<Choices|null>(null);
  const [pointId,setPointId]=useState<number|null>(null);
  const [search,setSearch]=useState("");
+ const [kind,setKind]=useState<"all"|"сц"|"лц">("all");
+ const [onlyConfirmed,setOnlyConfirmed]=useState(false);
+ const calendarRef=useRef<HTMLElement|null>(null);
  const [supplyDate,setSupplyDate]=useState("");
  const [typeOverride,setTypeOverride]=useState<"auto"|"box">("auto");
  const selected=useMemo(()=>demand?.rows.filter(x=>selection.includes(x.sku)&&x.status==="ready")??[],[selection,demand]);
@@ -61,11 +67,15 @@ export default function FbwSupplyWizard(){
  const safeDay=addDays(today,6);
  const cells=Array.from({length:14},(_,i)=>addDays(today,i));
  const point=choice?.points.find(x=>x.id===pointId);
- const pointRates=(choice?.dates??[]).filter(x=>x.warehouseId===pointId);
- const points=useMemo(()=>choice?.points.filter(x=>(
-    x.name+" "+x.address+" "+x.type
-   ).toLocaleLowerCase("ru").includes(search.toLocaleLowerCase("ru")))??[],[choice,search]);
- const resetFollowing=()=>{setChoice(null);setPointId(null);setSupplyDate("");};
+ const pointRates=(choice?.dates??[]).filter(x=>point?.ids.includes(x.warehouseId));
+ const points=useMemo(()=>choice?.points.filter(x=>{
+   const haystack=(x.name+" "+x.address+" "+x.city+" "+x.region+" "+x.type).toLocaleLowerCase("ru");
+   return haystack.includes(search.trim().toLocaleLowerCase("ru"))
+     &&(kind==="all"||x.type.toLocaleLowerCase("ru").includes(kind))
+     &&(!onlyConfirmed||x.status==="confirmed");
+ })??[],[choice,search,kind,onlyConfirmed]);
+ const resetFollowing=()=>{setChoice(null);setPointId(null);setSupplyDate("");setOnlyConfirmed(false);};
+ function pickPoint(id:number){setPointId(id);setSupplyDate("");window.setTimeout(()=>calendarRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),120);}
  async function calculate(){
    setLoading(true);setError("");setDemand(null);setSelection([]);resetFollowing();
    try{
@@ -133,26 +143,47 @@ export default function FbwSupplyWizard(){
      <p className={styles.hint}>Поштучная паллета и суперсейф автоматически не выбираются: у нас нет подтверждённых признаков товара для этих схем.</p>
    </section>
    <section className={styles.panel}>
-     <header><span className={styles.number}>3</span><div><h2>Куда отгрузить товары</h2><p>Сначала проверяем весь выбранный состав через API «Опции приёмки». После этого показываем доступные точки и ограничения.</p></div></header>
+     <header><span className={styles.number}>3</span><div><h2>Куда отгрузить товары</h2><p>Только прямая поставка. Показываем склады и сортировочные центры с адресами, затем проверяем возможность приёмки состава по WB API.</p></div></header>
      <button className={styles.primary} onClick={find} disabled={!demand?.fresh||!selected.length||finding}>{finding?"Проверяю WB...":"Найти точки приёмки для выбранных товаров"}</button>
-     {choice&&<><div className={styles.bar}><strong>Точки WB: {choice.points.length}</strong><input className={styles.search} placeholder="Поиск по названию и адресу" value={search} onChange={e=>setSearch(e.target.value)}/></div>
-       {!choice.optionsVerified&&<p className={styles.error}>WB не подтвердил совместимость товара с точками. Список ниже справочный, эти точки нельзя считать свободными для данного состава.</p>}
+     {choice&&<>
+       <div className={styles.bar}>
+         <strong>Точки отгрузки: {points.length} из {choice.points.length}</strong>
+         <input className={styles.search} placeholder="Город, склад, СЦ или адрес" value={search} onChange={e=>setSearch(e.target.value)}/>
+       </div>
+       <div className={styles.filters}>
+         <button className={kind==="all"?styles.filterActive:""} onClick={()=>setKind("all")}>Все точки</button>
+         <button className={kind==="сц"?styles.filterActive:""} onClick={()=>setKind("сц")}>Сортировочные центры</button>
+         <button className={kind==="лц"?styles.filterActive:""} onClick={()=>setKind("лц")}>Склады / ЛЦ</button>
+         <label><input type="checkbox" checked={onlyConfirmed} onChange={e=>setOnlyConfirmed(e.target.checked)}/> Только подтверждённые WB</label>
+       </div>
+       {choice.fallback?.used&&<div className={styles.notice}>
+         <b>Резервный справочник:</b> {choice.fallback.total} складов и СЦ, актуальность: {choice.fallback.updated}.
+         <div>Список содержит реальные адреса, но не означает, что WB сейчас принимает весь состав. ПВЗ здесь не представлены.</div>
+         <small>Источник: <a href="https://iseller.pro/otkrytye-dannye" target="_blank" rel="noreferrer">iseller.pro, открытые данные</a>.</small>
+       </div>}
+       {!choice.optionsVerified&&<p className={styles.warningText}>WB временно не подтверждает совместимость товаров: выбирай нужный склад из справочника. Шаг 4 покажет доступность даты, если WB вернёт её.</p>}
        {choice.errors.map((e,i)=><p key={i} className={styles.warningText}>{e}</p>)}
-       <div className={styles.locations}>{points.map(x=><button type="button" key={x.id} className={[styles.location,x.id===pointId?styles.locationActive:""].join(" ")} disabled={x.status==="not_compatible"} onClick={()=>{setPointId(x.id);setSupplyDate("");}}>
-         <strong>{x.name}</strong><span>{x.address||x.type||"Точка WB"}</span><small className={x.status==="confirmed"?styles.ok:x.status==="not_compatible"?styles.warning:styles.unknown}>
-          {x.status==="confirmed"?"WB: принимает все баркоды":x.status==="not_compatible"?"WB: часть/все баркоды не принимаются":"Доступность состава не подтверждена"}
+       <div className={styles.locations}>{points.map(x=><button type="button" key={x.id} className={[styles.location,x.id===pointId?styles.locationActive:""].join(" ")} disabled={x.status==="not_compatible"} onClick={()=>pickPoint(x.id)}>
+         <strong>{x.name} <small className={styles.locationType}>{x.type||"Склад"}</small></strong>
+         <span>{[x.city,x.region].filter(Boolean).join(" · ")}</span>
+         <span className={styles.locationAddress}>{x.address||"Адрес не указан в справочнике"}</span>
+         {x.hours&&<span>Часы: {x.hours}</span>}
+         <small className={x.status==="confirmed"?styles.ok:x.status==="not_compatible"?styles.warning:styles.unknown}>
+          {x.status==="confirmed"?"✓ WB подтвердил все баркоды":x.status==="not_compatible"?"✕ WB не принимает весь состав":"? Приёмка ещё не подтверждена"}
          </small>
+         {!x.hasLiveId&&<small className={styles.warningText}>ID для проверки даты отсутствует</small>}
        </button>)}
-       {!points.length&&<p className={styles.hint}>WB не вернул подходящих точек. Ничего не подставляем вручную.</p>}</div>
-       <p className={styles.hint}>В СЦ Wildberries сам распределяет товары по складам хранения. Склад назначения при сдаче в СЦ не выбирается.</p>
+       {!points.length&&<p className={styles.hint}>Нет точек по выбранным фильтрам. Сбрось поиск или выключи фильтр подтверждения.</p>}</div>
+       <p className={styles.hint}>В СЦ Wildberries может самостоятельно распределить товар по складам хранения. Это не транзитная поставка с выбранным тобой складом назначения.</p>
      </>}
    </section>
-   <section className={styles.panel}>
+   <section className={styles.panel} ref={calendarRef}>
      <header><span className={styles.number}>4</span><div><h2>Дата отгрузки</h2><p>Ищем приёмку по тарифам WB для выбранной точки, не раньше пяти полных суток от формирования поставки.</p></div></header>
      {!point?<p className={styles.hint}>Сначала выбери точку на шаге 3.</p>:<>
-       <p className={styles.hint}>Точка сдачи: <b>{point.name}</b>. Чтобы гарантировать 120 часов без точного времени слота, календарь разрешает дату с <b>{dateUTC(safeDay).toLocaleDateString("ru-RU",{day:"2-digit",month:"long",year:"numeric",timeZone:"UTC"})}</b>.</p>
+       <p className={styles.hint}>Прямая сдача: <b>{point.name}</b>, {point.address||point.city}. Чтобы гарантировать 120 часов без точного времени слота, календарь разрешает дату с <b>{dateUTC(safeDay).toLocaleDateString("ru-RU",{day:"2-digit",month:"long",year:"numeric",timeZone:"UTC"})}</b>.</p>
        {point.status!=="confirmed"&&<p className={styles.error}>WB не подтвердил приёмку всего состава в этой точке. Дату нельзя выбрать, даже если тариф на этот день доступен.</p>}
-       {!choice?.ratesVerified&&<p className={styles.error}>Тарифы WB недоступны. Даты не подтверждены, выбор блокирован.</p>}
+       {!point.hasLiveId&&<p className={styles.error}>Склад есть в справочнике, но его ID неизвестен. Даты через API для него не сопоставить.</p>}
+       {!choice?.ratesVerified&&<p className={styles.error}>WB не вернул календарь коэффициентов (404). Выбрать реальный таймслот через API пока невозможно. Сайт не будет подменять его ручной датой.</p>}
        <div className={styles.calendar}>{cells.map(day=>{
          const rate=pointRates.find(x=>x.date===day);
          const allowed=point.status==="confirmed"&&day>=safeDay&&rate?.available===true;
