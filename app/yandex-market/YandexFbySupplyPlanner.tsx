@@ -29,6 +29,8 @@ type Plan = {
   blocked: Item[];
   totals: { articles: number; blocked: number; units: number; cartons: number; rawNeed: number };
   notice: string;
+  eligibility: {source:string;checkedAt:string;excludedCount:number;unknownCount:number;stale:boolean};
+  excluded: Array<{offerId:string;cluster:string;reason:string}>;
 };
 
 const endpoint = "/api/yandex/fby-supply-plan";
@@ -144,6 +146,21 @@ export default function YandexFbySupplyPlanner() {
 
           <p className={styles.meta}>Продажи: {plan.salesPeriod} (28 дней). Остатки: {plan.stockDate}. Рассчитано: {new Date(plan.calculatedAt).toLocaleString("ru-RU")}.</p>
           <p className={styles.info}>{plan.notice}</p>
+          <p className={styles.meta}>Матрица допуска: {plan.eligibility.source} · {new Date(plan.eligibility.checkedAt).toLocaleString("ru-RU")} · исключено сочетаний SKU / кластер: {plan.eligibility.excludedCount} · без подтверждения: {plan.eligibility.unknownCount}</p>
+          {plan.excluded.length > 0 && (
+            <div className={styles.alertWarning}>
+              <strong>Яндекс не принимает {plan.excluded.length} сочетаний «артикул / кластер».</strong> Они исключены из рассчитанной поставки до определения потребности.
+              <div className={styles.tableWrapper}>
+                <table>
+                  <thead><tr><th>Кластер</th><th>Артикул</th><th>Причина</th></tr></thead>
+                  <tbody>{plan.excluded.slice(0,80).map((x,i)=>(
+                    <tr key={x.cluster+x.offerId+i}><td>{x.cluster}</td><td>{x.offerId}</td><td>{x.reason}</td></tr>
+                  ))}</tbody>
+                </table>
+                {plan.excluded.length>80&&<p className={styles.meta}>Показаны первые 80 исключений.</p>}
+              </div>
+            </div>
+          )}
 
           <div className={styles.selectionBar}>
             <div><strong>Кластеры: {selected?.length || 0} из {plan.clusters.length}</strong><small>Кластерные группы определены по складам FBY. Регион доставки покупателя может отличаться от региона склада.</small></div>
