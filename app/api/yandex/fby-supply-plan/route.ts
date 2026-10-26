@@ -386,13 +386,124 @@ export async function POST(request: Request) {
     description.addRow(["Общее кол-во для поставки", "Общее количество для мультипоставки", "Положительное целое число единиц товара.", "3", "Обязательное"]);
     description.getRow(2).font = { bold: true };
     for (let i = 2; i <= 6; i++) description.getRow(i).alignment = { wrapText: true, vertical: "top" };
-    // Отдельный лист с региональным планом не добавляем: Маркет принимает стандартный шаблон.
+    // Плановый Excel включает распределение; файл для импорта содержит
+    // только два листа исходного шаблона (Яндекс не импортирует кластеры).
+    if (input.mode !== "upload") {
+      const clusterNames = plan.clusters
+        .filter(c => plan.selectedClusters.includes(c.name))
+        .map(c => c.name);
+      const matrix = workbook.addWorksheet("По кластерам");
+      const baseHeaders = ["Ваш SKU", "Наименование", "ЕНОТ", "Вложимость", "Нужно без округления"];
+      const header = [...baseHeaders, ...clusterNames, "ИТОГО к поставке"];
+      matrix.addRow(header);
+      const bg = { type: "pattern", pattern: "solid", fgColor: { argb: "FF204966" } } as const;
+      matrix.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+      matrix.getRow(1).eachCell(cell => { cell.fill = bg; cell.alignment = { wrapText: true, vertical: "middle" }; });
+      matrix.getRow(1).height = 38;
+      matrix.getColumn(1).width = 34;
+      matrix.getColumn(2).width = 60;
+      matrix.getColumn(3).width = 19;
+      matrix.getColumn(4).width = 17;
+      matrix.getColumn(5).width = 22;
+      for (let i = 6; i <= header.length; i++) matrix.getColumn(i).width = 20;
+      const allocationByOffer = new Map<string, Map<string, ClusterAllocation>>();
+      for (const allocation of plan.allocations) {
+        if (!allocationByOffer.has(allocation.offerId)) allocationByOffer.set(allocation.offerId, new Map());
+        allocationByOffer.get(allocation.offerId)!.set(allocation.cluster, allocation);
+      }
+      for (const item of plan.items) {
+        const qtyByCluster = allocationByOffer.get(item.offerId);
+        const values = clusterNames.map(cluster => qtyByCluster?.get(cluster)?.quantity || 0);
+        const excelRow = matrix.addRow([
+          item.offerId, item.name, item.masterCode, item.pack,
+          item.rawNeed, ...values, item.quantity
+        ]);
+        excelRow.getCell(header.length).font = { bold: true };
+        excelRow.getCell(1).numFmt = "@";
+      }
+      matrix.views = [{ state: "frozen", ySplit: 1, xSplit: 2 }];
+      matrix.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: header.length } };
+      const last = matrix.rowCount + 1;
+      const total = matrix.addRow(["ИТОГО", "", "", "", plan.totals.rawNeed, ...clusterNames.map(c => plan.clusters.find(x => x.name === c)?.proposedUnits || 0), plan.totals.units]);
+      total.eachCell(cell => { cell.font = { bold: true }; cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDBEAF5" } }; });
+      // Проверяем итоги при построении, чтобы количество в шаблоне и по кластерам совпадало.
+      const control = clusterNames.reduce((sum, cluster) =>
+        sum + (plan.clusters.find(c => c.name === cluster)?.proposedUnits || 0), 0);
+      if (control !== plan.totals.units || plan.items.reduce((sum, x) => sum + x.quantity, 0) !== control) {
+        throw new Error("Ошибка согласования: сумма по кластерам не совпадает с общим количеством");
+      }
+      const detail = workbook.addWorksheet("Расчёт по кластерам");
+      detail.columns = [
+        { header: "Кластер", key: "cluster", width: 23 },
+        { header: "Ваш SKU", key: "sku", width: 32 },
+        { header: "Товар", key: "product", width: 52 },
+        { header: "ЕНОТ", key: "master", width: 18 },
+        { header: "Продано за 28 дней", key: "sold", width: 24 },
+        { header: "Остаток", key: "stock", width: 18 },
+        { header: "Дней запаса", key: "days", width: 18 },
+        { header: "Потребность", key: "need", width: 19 },
+        { header: "Вложимость", key: "pack", width: 19 },
+        { header: "Коробов", key: "cartons", width: 17 },
+        { header: "К поставке", key: "qty", width: 18 },
+        { header: "Проблема", key: "error", width: 52 }
+      ];
+      detail.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+      detail.getRow(1).eachCell(cell => { cell.fill = bg; cell.alignment = { wrapText: true }; });
+      detail.getRow(1).height = 30;
+      for (const x of plan.allocations) {
+        detail.addRow({
+          cluster: x.cluster, sku: x.offerId, product: x.name, master: x.masterCode,
+          sold: x.sales28, stock: x.stock,
+          days: x.sales28 > 0 ? +(x.stock / (x.sales28 / 28)).toFixed(2) : null,
+          need: x.rawNeed, pack: x.pack,
+          cartons: x.cartons, qty: x.quantity, error: x.errors.join("; ")
+        });
+      }
+      detail.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 12 } };
+      detail.views = [{ state: "frozen", ySplit: 1, xSplit: 2 }];
+      const summary = workbook.addWorksheet("Итоги кластеров");
+      summary.columns = [
+        { header: "Кластер", key: "cluster", width: 27 },
+        { header: "Продажи за 28 дней", key: "sales", width: 27 },
+        { header: "Остаток", key: "stock", width: 17 },
+        { header: "Нужно", key: "need", width: 19 },
+        { header: "К поставке", key: "qty", width: 20 },
+        { header: "Коробов", key: "cartons", width: 17 },
+        { header: "Позиций с потребностью", key: "articles", width: 28 },
+        { header: "Склады в кластере (ID)", key: "warehouses", width: 33 }
+      ];
+      summary.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+      summary.getRow(1).eachCell(cell => { cell.fill = bg; cell.alignment = { wrapText: true }; });
+      summary.getRow(1).height = 32;
+      for (const c of plan.clusters.filter(x => plan.selectedClusters.includes(x.name))) {
+        summary.addRow({
+          cluster: c.name, sales: c.sales28, stock: c.stock, need: c.rawNeed,
+          qty: c.proposedUnits, cartons: c.cartons, articles: c.articles,
+          warehouses: c.warehouseIds.join(", ")
+        });
+      }
+      summary.addRow({ cluster: "ИТОГО", qty: control, cartons: plan.totals.cartons, need: plan.totals.rawNeed });
+      summary.getRow(summary.rowCount).font = { bold: true };
+      const note = workbook.addWorksheet("Как использовать");
+      note.getColumn(1).width = 115;
+      [
+        "ПЛАНОВЫЙ ФАЙЛ, НЕ ПРЕДНАЗНАЧЕН ДЛЯ ЗАГРУЗКИ В ЯНДЕКС МАРКЕТ.",
+        "«Поставка» содержит общую сумму товаров из всех выбранных кластеров.",
+        "«По кластерам» показывает количество каждого товара по конкретным кластерам.",
+        "«Расчёт по кластерам» показывает продажи за 28 дней, остатки, покрытие и округление до коробов.",
+        "Для загрузки в кабинет ЯМ скачайте отдельный «Excel для загрузки» из сайта.",
+        "Официальный шаблон ЯМ не умеет принимать заданные количества по кластерам: Яндекс пересчитает распределение.",
+        "После загрузки сравните распределение Яндекса с нашим планом и исправьте его вручную.",
+        "Кластеры определены по складам отгрузки, а не по регионам покупателей; для точной географии нужна отдельная выгрузка ЯМ."
+      ].forEach((value, idx) => note.getCell(idx + 1, 1).value = value);
+      note.getRow(1).font = { bold: true, color: { argb: "FFD8463D" } };
+    }
     const buffer = await workbook.xlsx.writeBuffer();
     const date = new Date().toISOString().slice(0, 10);
     return new Response(new Uint8Array(buffer) as BodyInit, {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": 'attachment; filename="yandex-multisupply-' + date + '.xlsx"',
+        "Content-Disposition": 'attachment; filename="yandex-' + (input.mode === "upload" ? "upload" : "cluster-plan") + "-" + date + ".xlsx"',
         "Cache-Control": "no-store"
       }
     });
