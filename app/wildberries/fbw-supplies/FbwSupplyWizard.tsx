@@ -88,6 +88,7 @@ export default function FbwSupplyWizard(){
  const [draftBusy,setDraftBusy]=useState(false);
  const [draft,setDraft]=useState<{draftId:string;url:string}|null>(null);
  const [draftError,setDraftError]=useState("");
+ const [palletTareKg,setPalletTareKg]=useState("");
 
  const [saveMessage,setSaveMessage]=useState("");
  const [typeOverride,setTypeOverride]=useState<"auto"|"box">("auto");
@@ -114,6 +115,9 @@ export default function FbwSupplyWizard(){
      })),type),error:""};
    }catch(e){return {result:null,error:e instanceof Error?e.message:"Ошибка паллетирования"};}
  },[selected,type]);
+ const palletTareValue=palletTareKg.trim()?Number(palletTareKg):null;
+ const grossWithPallets=packing.result?.cargoWeightKg!==null&&packing.result?.cargoWeightKg!==undefined&&palletTareValue!==null&&Number.isFinite(palletTareValue)&&palletTareValue>0
+   ?Number((packing.result.cargoWeightKg+packing.result.pallets.length*palletTareValue).toFixed(2)):null;
  const today=dayInKrasnoyarsk();
  // No slot time from API: +6 calendar dates guarantees at least 120 hours have elapsed.
  const safeDay=addDays(today,6);
@@ -252,7 +256,14 @@ export default function FbwSupplyWizard(){
        <p className={styles.hint}>Основание 120 × 80 см, поддон 14,5 см. {type==="mono"?
        "Монопаллета: 50–180 см включительно, максимум 3 баркода на одной паллете.":
        "Короб: физический план укладки по принципу Ozon, не отдельные паллетные грузоместа WB."}
-       Вес поддонов не задан, поэтому общий вес с поддонами не выдумываем.</p>
+       Вес поддонов зависит от фактически используемых поддонов.</p>
+       <div className={styles.palletTare}>
+         <label>Вес одного пустого поддона, кг (вводится вручную)
+           <input type="number" inputMode="decimal" min="0.1" step="0.1" value={palletTareKg}
+             placeholder="Не указан" onChange={e=>setPalletTareKg(e.target.value)}/>
+         </label>
+         <strong>Полный расчётный вес поставки с поддонами: {grossWithPallets===null?"Укажите вес поддона и недостающие веса коробов":num(grossWithPallets)+" кг"}</strong>
+       </div>
        {packing.error&&<p className={styles.error}>{packing.error}</p>}
        {packing.result?.warnings.map((w,i)=><p key={i} className={styles.warningText}>{w}</p>)}
        {packing.result&&packing.result.pallets.length>0&&<div className={styles.palletGrid}>
