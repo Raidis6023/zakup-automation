@@ -15,7 +15,7 @@ type WbRow = {
   fbwStock: number;
 };
 type SnapshotBarcode = { nm_id: number; barcode: string | null };
-type Pack = { master_code: string | null; units_per_carton: number | null };
+type Pack = { master_code: string | null; units_per_carton: number | null; carton_length_mm:number|null;carton_width_mm:number|null;carton_height_mm:number|null;carton_weight_kg:number|null;transport_carton_volume_m3:number|null };
 type Sync = { ordersLastSuccessAt?: string | null; stocksLastSuccessAt?: string | null; stocksAndSalesLastSuccessAt?: string | null; stockSnapshotId?: string | null };
 const json = (data: object, status = 200) => NextResponse.json(data, {status, headers:{"Cache-Control":"private, no-store"}});
 const isFresh = (t: string | null | undefined) => {
@@ -34,7 +34,7 @@ export async function GET() {
     const reportTime=sync.stocksAndSalesLastSuccessAt??sync.stocksLastSuccessAt;
     const fresh = isFresh(reportTime);
     const [packs,barcodeRows,ordersBarcodes] = await Promise.all([
-      db.from("products").select("master_code,units_per_carton").not("master_code","is",null).range(0,9999),
+      db.from("products").select("master_code,units_per_carton,carton_length_mm,carton_width_mm,carton_height_mm,carton_weight_kg,transport_carton_volume_m3").not("master_code","is",null).range(0,9999),
       // The current WB product snapshot has no barcode column. The legacy
       // detailed stock snapshot still contains barcode mappings.
       db.from("wb_stock_snapshots").select("nm_id,barcode").not("barcode","is",null).range(0,9999),
@@ -45,12 +45,19 @@ export async function GET() {
     if (barcodeRows.error) throw new Error(barcodeRows.error.message);
     if (ordersBarcodes.error) throw new Error(ordersBarcodes.error.message);
     const packByMaster = new Map<string,Set<number>>();
+    const dimensionByMaster=new Map<string,Set<string>>();
     for (const p of (packs.data ?? []) as Pack[]) {
       const key = (p.master_code ?? "").trim();
       const n = Number(p.units_per_carton);
       if (!key || !Number.isSafeInteger(n) || n <= 0) continue;
       const set = packByMaster.get(key) ?? new Set<number>();
       set.add(n); packByMaster.set(key,set);
+      const dims=[p.carton_length_mm,p.carton_width_mm,p.carton_height_mm,p.carton_weight_kg,p.transport_carton_volume_m3];
+      if(dims.some(x=>x!==null&&Number(x)>0)){
+        const dimensions=dimensionByMaster.get(key)??new Set<string>();
+        dimensions.add(JSON.stringify(dims.map(x=>x===null?null:Number(x))));
+        dimensionByMaster.set(key,dimensions);
+      }
     }
     const barcodeByNm = new Map<number,Set<string>>();
     for (const b of ([...(barcodeRows.data??[]),...(ordersBarcodes.data??[])]) as SnapshotBarcode[]) {
@@ -70,6 +77,8 @@ export async function GET() {
       // <= 0.5 box -> zero; otherwise nearest full carton.
       const boxes = pack && need.need>pack*0.5 ? Math.round(need.need/pack) : 0;
       const quantity = boxes*(pack??0);
+      const found=dimensionByMaster.get(String(p.masterCode??"").trim())??new Set<string>();
+      const dims=found.size===1?JSON.parse([...found][0]) as Array<number|null>:null;
       const codes = barcodeByNm.get(Number(p.nmId)) ?? new Set<string>();
       const barcode = codes.size===1 ? [...codes][0] : null;
       let status="ready";
@@ -82,6 +91,9 @@ export async function GET() {
         sku:String(p.nmId), name:p.productName??p.sellerArticle??String(p.nmId),
         masterCode:p.masterCode,barcode,sales28Days:sales,stock,
         days:need.daysOfStock,rawNeed:need.need,unitsPerBox:pack,boxes,quantity,status,
+        cartonLengthMm:dims?.[0]??null,cartonWidthMm:dims?.[1]??null,cartonHeightMm:dims?.[2]??null,
+        cartonWeightKg:dims?.[3]??null,cartonVolumeM3:dims?.[4]??null,
+        packagingConflict:found.size>1,
       };
     }).filter((x): x is NonNullable<typeof x> => x!==null);
     rows.sort((a,b)=>b.rawNeed-a.rawNeed);
