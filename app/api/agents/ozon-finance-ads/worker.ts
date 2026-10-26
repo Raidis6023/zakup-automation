@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { inflateRawSync } from "node:zlib";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 
 export const runtime="nodejs";
@@ -90,6 +91,72 @@ export function parseHistoricCSV(text:string,from:string,to:string):Parsed[] {
  return [...sums].map(([key,expense])=>({
    day:key.slice(0,10),sku:key.slice(11),expense:Math.round(expense*10000)/10000
  }));
+}
+/** Ozon returns a ZIP with one campaignId.csv per campaign when
+ * requesting 2-10 campaigns. Decode central directory, verify CRC and
+ * require all expected CSVs before marking any campaign complete.
+ * Never extract ZIP filenames to disk or trust paths from the archive. */
+function reportCsvFiles(binary:Buffer,expectedCampaigns:string[]):Map<string,string>{
+ if(expectedCampaigns.length<1||expectedCampaigns.length>10)
+   throw new Error("Invalid Ozon campaign batch size");
+ if(expectedCampaigns.length===1 && binary.subarray(0,2).toString("utf8")!=="PK")
+   return new Map([[expectedCampaigns[0],binary.toString("utf8")]]);
+ if(binary.length<22||binary.readUInt32LE(0)!==0x04034b50)
+   throw new Error("Ozon returned no ZIP for multiple campaigns");
+ let end=-1;
+ for(let i=binary.length-22;i>=Math.max(0,binary.length-65557);i--){
+   if(binary.readUInt32LE(i)===0x06054b50){end=i;break}
+ }
+ if(end<0)throw new Error("ZIP end-of-directory not found");
+ const total=binary.readUInt16LE(end+10),centralSize=binary.readUInt32LE(end+12);
+ const centralOffset=binary.readUInt32LE(end+16);
+ if(total<expectedCampaigns.length||total>20 ||
+   centralOffset+centralSize>binary.length)throw new Error("Invalid ZIP central directory");
+ const expected=new Set(expectedCampaigns),out=new Map<string,string>();
+ let p=centralOffset,totalBytes=0;
+ const crcTable=new Uint32Array(256);
+ for(let i=0;i<256;i++){
+   let x=i;for(let j=0;j<8;j++)x=(x&1)?(0xedb88320^(x>>>1)):(x>>>1);
+   crcTable[i]=x>>>0;
+ }
+ const crc32=(bytes:Buffer)=>{
+   let crc=0xffffffff;
+   for(const byte of bytes)crc=crcTable[(crc^byte)&255]^(crc>>>8);
+   return (crc^0xffffffff)>>>0;
+ };
+ for(let i=0;i<total;i++){
+   if(p+46>binary.length||binary.readUInt32LE(p)!==0x02014b50)
+     throw new Error("Invalid ZIP file directory entry");
+   const flags=binary.readUInt16LE(p+8),method=binary.readUInt16LE(p+10);
+   const checksum=binary.readUInt32LE(p+16),compressed=binary.readUInt32LE(p+20);
+   const uncompressed=binary.readUInt32LE(p+24),nameLength=binary.readUInt16LE(p+28);
+   const extra=binary.readUInt16LE(p+30),comment=binary.readUInt16LE(p+32);
+   const localOffset=binary.readUInt32LE(p+42);
+   if(p+46+nameLength+extra+comment>binary.length)
+     throw new Error("Truncated ZIP directory entry");
+   const filename=binary.subarray(p+46,p+46+nameLength).toString("utf8");
+   p+=46+nameLength+extra+comment;
+   const campaignId=filename.match(/(?:^|\/)(\d{4,20})\.csv$/i)?.[1];
+   if(!campaignId||!expected.has(campaignId))continue;
+   if(out.has(campaignId))throw new Error("Duplicate campaign in ZIP: "+campaignId);
+   if(flags&1||![0,8].includes(method)||compressed>20*1024*1024||
+      uncompressed>25*1024*1024||totalBytes+uncompressed>80*1024*1024)
+      throw new Error("Unsafe or oversized ZIP campaign report");
+   if(localOffset+30>binary.length||binary.readUInt32LE(localOffset)!==0x04034b50)
+      throw new Error("Invalid local ZIP file header");
+   const start=localOffset+30+binary.readUInt16LE(localOffset+26)+
+     binary.readUInt16LE(localOffset+28);
+   if(start+compressed>binary.length)throw new Error("Truncated ZIP CSV");
+   const compressedData=binary.subarray(start,start+compressed);
+   const data=method===8?inflateRawSync(compressedData):compressedData;
+   if(data.length!==uncompressed||crc32(data)!==checksum)
+      throw new Error("ZIP CRC or uncompressed length mismatch for "+campaignId);
+   totalBytes+=data.length;out.set(campaignId,data.toString("utf8"));
+ }
+ if(out.size!==expectedCampaigns.length)
+   throw new Error("ZIP missing "+(expectedCampaigns.length-out.size)+
+     " campaign CSVs; refusing partial save");
+ return out;
 }
 async function token():Promise<string>{
  const id=process.env.OZON_PERFORMANCE_CLIENT_ID;
@@ -291,16 +358,36 @@ export async function runHistoricalAdvertising(request:NextRequest){
   }
   const task=q.data[0] as Task;
   if(task.status==="pending"){
+    // Account-level concurrency stays ONE report. Inside it Ozon supports
+    // up to ten campaign CSVs packed into a single verified ZIP archive.
+    // Group only identical report periods so day attribution remains valid.
+    const batchQuery=await db.from("ozon_finance_ad_campaign_tasks")
+      .select("id,job_id,campaign_id,day,date_to,status,report_uuid,last_error")
+      .eq("job_id",selected.id).eq("status","pending")
+      .eq("day",task.day).eq("date_to",task.date_to)
+      .order("campaign_id",{ascending:true}).limit(10);
+    if(batchQuery.error)throw batchQuery.error;
+    const batch=(batchQuery.data??[]) as Task[];
+    if(!batch.length)throw new Error("Pending batch disappeared");
+    const campaigns=batch.map(x=>x.campaign_id);
     const created=await api(access,"/api/client/statistics",{
       method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({campaigns:[task.campaign_id],
+      body:JSON.stringify({campaigns,
         dateFrom:task.day,dateTo:task.date_to,groupBy:"DATE"})});
     const raw=await created.json() as {UUID?:string;uuid?:string};
     const uuid=String(raw.UUID??raw.uuid??"");
     if(!/^[A-Fa-f0-9-]{36}$/.test(uuid))throw new Error("Statistics returned no report UUID");
-    await markTask(db,task.id,{status:"requested",report_uuid:uuid,last_error:null});
+    const updated=await db.from("ozon_finance_ad_campaign_tasks")
+      .update({status:"requested",report_uuid:uuid,last_error:null,
+        updated_at:new Date().toISOString()})
+      .eq("job_id",selected.id).eq("status","pending")
+      .in("id",batch.map(x=>x.id)).select("id");
+    if(updated.error)throw updated.error;
+    if(updated.data?.length!==batch.length)
+      throw new Error("Batch UUID was not persisted to every campaign");
     phase="report_requested";delay=2*60*1000;
-    return json({ok:true,phase,task_id:task.id,period:task.day+".."+task.date_to});
+    return json({ok:true,phase,uuid,batch_size:campaigns.length,
+      campaigns,period:task.day+".."+task.date_to});
   }
   if(!task.report_uuid)throw new Error("Missing UUID for pending report");
   const ready=await api(access,"/api/client/statistics/"+encodeURIComponent(task.report_uuid));
@@ -313,35 +400,58 @@ export async function runHistoricalAdvertising(request:NextRequest){
     phase="report_processing";delay=3*60*1000;
     return json({ok:true,phase,task_id:task.id,state:report.state});
   }
+  const grouped=await db.from("ozon_finance_ad_campaign_tasks")
+    .select("id,job_id,campaign_id,day,date_to,status,report_uuid,last_error")
+    .eq("job_id",selected.id).eq("status","requested")
+    .eq("report_uuid",task.report_uuid).order("campaign_id");
+  if(grouped.error)throw grouped.error;
+  const batch=(grouped.data??[]) as Task[];
+  if(!batch.length||batch.length>10)throw new Error("Missing or oversized UUID batch");
+  if(batch.some(x=>x.day!==task.day||x.date_to!==task.date_to))
+    throw new Error("Mixed date windows in campaign batch");
   const csvResponse=await api(access,"/api/client/statistics/report?UUID="+
-   encodeURIComponent(task.report_uuid));
-  const csv=await csvResponse.text();
-  let parsed:Parsed[];
-  try{
-    parsed=parseHistoricCSV(csv,task.day,task.date_to);
-  }catch(error){
-    if(message(error).startsWith("CSV_NO_DAILY_DATE")&&task.day!==task.date_to){
-      await splitTask(db,task);
-      phase="split_into_daily_reports";
-      return json({ok:true,phase,campaign_id:task.campaign_id,
-        period:task.day+".."+task.date_to});
+    encodeURIComponent(task.report_uuid));
+  const archive=Buffer.from(await csvResponse.arrayBuffer());
+  const files=reportCsvFiles(archive,batch.map(x=>x.campaign_id));
+  const allLines:Array<{account_key:string;day:string;sku:string;
+    campaign_id:string;expense_rub:number}>=[];
+  const perCampaign=new Map<number,number>();
+  for(const item of batch){
+    let parsed:Parsed[];
+    try{
+      parsed=parseHistoricCSV(files.get(item.campaign_id)!,item.day,item.date_to);
+    }catch(error){
+      if(message(error).startsWith("CSV_NO_DAILY_DATE")&&item.day!==item.date_to){
+        // Discard every partial result of this ZIP and create independently
+        // verifiable day tasks. Never mark a batch complete on partial data.
+        for(const original of batch)await splitTask(db,original);
+        phase="split_into_daily_reports";
+        return json({ok:true,phase,batch_size:batch.length,
+          period:item.day+".."+item.date_to});
+      }
+      throw error;
     }
-    throw error;
+    perCampaign.set(item.id,parsed.length);
+    allLines.push(...parsed.map(x=>({account_key:"main",day:x.day,sku:x.sku,
+      campaign_id:item.campaign_id,expense_rub:x.expense})));
   }
-  const lines=parsed.map(x=>({account_key:"main",day:x.day,sku:x.sku,
-    campaign_id:task.campaign_id,expense_rub:x.expense}));
-  for(let i=0;i<lines.length;i+=200){
+  for(let i=0;i<allLines.length;i+=200){
     const {error}=await db.from("ozon_finance_ad_sku_daily")
-      .upsert(lines.slice(i,i+200),{onConflict:"account_key,day,sku,campaign_id"});
+      .upsert(allLines.slice(i,i+200),{onConflict:"account_key,day,sku,campaign_id"});
     if(error)throw new Error("Advertising SKU cache error: "+error.message);
   }
-  await markTask(db,task.id,{status:"complete",rows_saved:lines.length,last_error:null});
+  // Publish batch completion only after ALL ten CSVs validate and every
+  // Ozon SKU/day/campaign row has been stored in the database.
+  for(const item of batch)
+    await markTask(db,item.id,{status:"complete",
+      rows_saved:perCampaign.get(item.id)??0,last_error:null});
   await db.from("ozon_finance_ad_sync_jobs")
     .update({status:"running",last_error:null,updated_at:new Date().toISOString()})
     .eq("id",selected.id);
   phase="report_saved";
-  return json({ok:true,phase,task_id:task.id,sku_day_rows:lines.length,
-    spend_rub:Math.round(lines.reduce((s,r)=>s+r.expense_rub,0)*100)/100});
+  return json({ok:true,phase,batch_size:batch.length,
+    campaigns:batch.map(x=>x.campaign_id),sku_day_rows:allLines.length,
+    spend_rub:Math.round(allLines.reduce((sum,row)=>sum+row.expense_rub,0)*100)/100});
  }catch(error){
   failure=message(error).slice(0,350);
   delay=/HTTP 429/.test(failure)?60*60*1000:15*60*1000;
