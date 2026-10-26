@@ -93,7 +93,7 @@ export default function FbwSupplyWizard(){
    }catch(e){setError(e instanceof Error?e.message:"Ошибка связи с WB");}finally{setFinding(false);}
  }
  function selectDate(day:string,rate:Rate|undefined){
-   if(day<safeDay||!rate?.available)return;
+   if(day<safeDay||!rate?.available||point?.status!=="confirmed")return;
    setSupplyDate(day);
  }
  const currentRate=pointRates.find(r=>r.date===supplyDate);
@@ -151,10 +151,11 @@ export default function FbwSupplyWizard(){
      <header><span className={styles.number}>4</span><div><h2>Дата отгрузки</h2><p>Ищем приёмку по тарифам WB для выбранной точки, не раньше пяти полных суток от формирования поставки.</p></div></header>
      {!point?<p className={styles.hint}>Сначала выбери точку на шаге 3.</p>:<>
        <p className={styles.hint}>Точка сдачи: <b>{point.name}</b>. Чтобы гарантировать 120 часов без точного времени слота, календарь разрешает дату с <b>{dateUTC(safeDay).toLocaleDateString("ru-RU",{day:"2-digit",month:"long",year:"numeric",timeZone:"UTC"})}</b>.</p>
+       {point.status!=="confirmed"&&<p className={styles.error}>WB не подтвердил приёмку всего состава в этой точке. Дату нельзя выбрать, даже если тариф на этот день доступен.</p>}
        {!choice?.ratesVerified&&<p className={styles.error}>Тарифы WB недоступны. Даты не подтверждены, выбор блокирован.</p>}
        <div className={styles.calendar}>{cells.map(day=>{
          const rate=pointRates.find(x=>x.date===day);
-         const allowed=day>=safeDay&&rate?.available===true;
+         const allowed=point.status==="confirmed"&&day>=safeDay&&rate?.available===true;
          return <button key={day} onClick={()=>selectDate(day,rate)} disabled={!allowed} className={[styles.date,allowed?styles.dateAvailable:"",supplyDate===day?styles.dateActive:""].join(" ")}>
            <strong>{DATE_FMT.format(dateUTC(day))}</strong>
            {day<safeDay?<span>Менее 5 суток</span>:!rate?<span>Нет данных WB</span>:!rate.available?<span>Приёмка недоступна</span>:<>
