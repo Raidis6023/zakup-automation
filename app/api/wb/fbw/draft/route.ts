@@ -40,6 +40,13 @@ export async function POST(req:NextRequest){
     unique.add(x.barcode);
   }
   const db=createAdminClient();
+  const {data:access,error:accessError}=await db.from("app_user_access")
+    .select("admin_level,is_blocked").eq("user_id",user.id).maybeSingle();
+  if(accessError||!access||access.is_blocked||
+     !["admin","senior_admin"].includes(access.admin_level??""))
+    return respond({ok:false,error:"Недостаточно прав для создания поставок WB"},403);
+  if(!process.env.WB_SUPPLIES_API_TOKEN?.trim())
+    return respond({ok:false,error:"В Vercel не настроен WB_SUPPLIES_API_TOKEN"},503);
   // Validate against live demand, not browser-supplied values.
   const {data:dash,error:dashError}=await db.rpc("get_wb_sync_dashboard");
   if(dashError||!dash?.ok)return respond({ok:false,error:"Расчёт WB недоступен: "+(dashError?.message??"нет данных")},503);
