@@ -1,5 +1,6 @@
 "use client";
 import FinancierDetailTable from "./FinancierDetailTable";
+import FinanceDiagnosticsPanel from "./FinanceDiagnosticsPanel";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type Detail = { type_id: string; name: string; amount: number; count: number };
@@ -368,6 +369,7 @@ export default function FinancierClient() {
           const row=rows.find(r=>r.master_code===masterCode && r.offer_id===offerId);
           if(row)return toggleDiscontinued(row,checked);
         }}/>
+      <FinanceDiagnosticsPanel report={data} rows={rows} />
       <div className="ozf-panel ozf-missing-report">
         <div className="ozf-toolbar">
           <div><h2>Контроль незаполненных данных · {missingRows.length} размещений</h2>
