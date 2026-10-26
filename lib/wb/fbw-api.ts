@@ -26,6 +26,7 @@ async function request<T>(path: string, options: { method?: "GET" | "POST" | "DE
     },
     ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
     cache: "no-store",
+    signal: AbortSignal.timeout(20000),
   });
   const raw = await response.text();
   if (!response.ok) {
@@ -55,6 +56,8 @@ export const wbFbw = {
   // Mutating operations deliberately NOT exposed through public HTTP routes.
   // Never call without verified user authorization and duplicate-draft guards.
   createEmptyDraft: () => request<unknown>("/api/supplies/v1/drafts", { method: "POST" }),
+  addDraftItems: (draftId: string, items: Array<{sku:string;quantity:number}>) =>
+    request<unknown>("/api/supplies/v1/drafts/" + encodeURIComponent(draftId) + "/items", {method:"POST",body:{items}}),
   deleteDraft: (draftId: string) =>
     request<unknown>("/api/supplies/v1/drafts/" + encodeURIComponent(draftId), { method: "DELETE" }),
 };
