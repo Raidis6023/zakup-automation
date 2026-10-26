@@ -4,11 +4,15 @@ import {
   useEffect,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
 
 import {
   useRouter,
 } from "next/navigation";
+
+import WorkspaceCollapsiblePanel
+from "../WorkspaceCollapsiblePanel";
 
 
 type SupplyRequestStatus =
@@ -570,6 +574,73 @@ function getRunLabel(
       return "Создание завершилось ошибкой";
 
   }
+
+}
+
+
+function FboNestedDisclosure({
+  title,
+  children,
+}: {
+  title:
+    string;
+
+  children:
+    ReactNode;
+}) {
+
+  const [
+    expanded,
+    setExpanded,
+  ] =
+    useState(
+      false
+    );
+
+
+  return (
+    <div
+      className=
+        "ozon-fbo-nested-disclosure"
+    >
+
+      <button
+        type="button"
+
+        className=
+          "ozon-fbo-nested-toggle"
+
+        aria-expanded={
+          expanded
+        }
+
+        onClick={
+          () =>
+            setExpanded(
+              current =>
+                !current
+            )
+        }
+      >
+        {title}
+      </button>
+
+
+      {
+        expanded
+          ? (
+            <div
+              className=
+                "ozon-fbo-nested-body"
+            >
+              {children}
+            </div>
+          )
+          : null
+      }
+
+    </div>
+  );
 
 }
 
@@ -2204,30 +2275,34 @@ export default function OzonFboSupplyClient({
 
   return (
 
-    <section
+    <WorkspaceCollapsiblePanel
+      tone="ozon"
+      icon="supply"
+      title="Автосоздание поставок FBO"
+      subtitle="Потребность, короба, склад и таймслоты по кластерам."
+      initialExpanded={
+        false
+      }
       className=
-        "section ozon-fbo-supply-section"
+        "ozon-fbo-supply-section"
     >
 
       <div
         className=
-          "ozon-fbo-supply-head"
+          "ozon-fbo-supply-content"
       >
 
-        <div>
+        <div
+          className=
+            "ozon-fbo-supply-head"
+        >
 
-          <h2
-            className=
-              "section-title"
-          >
-            Автосоздание поставок FBO
-          </h2>
+          <div>
 
-
-          <div
-            className=
-              "reason-text"
-          >
+            <div
+              className=
+                "reason-text"
+            >
             Сначала тест показывает потребность,
             короба, склад и таймслоты по кластерам.
             Сначала автоматически показываем все варианты
@@ -2782,18 +2857,9 @@ export default function OzonFboSupplyClient({
                 ).length >
                   0
                   ? (
-                    <div
-                      className=
-                        "reason-box"
-
-                      style={{
-                        marginTop:
-                          "14px",
-                      }}
+                    <FboNestedDisclosure
+                      title="Нужно дозаполнить упаковочные данные"
                     >
-                      <strong>
-                        Нужно дозаполнить упаковочные данные
-                      </strong>
 
                       <div
                         className=
@@ -3002,24 +3068,15 @@ export default function OzonFboSupplyClient({
                           }
                         </div>
                       </div>
-                    </div>
+                    </FboNestedDisclosure>
                   )
                   : null
               }
 
 
-              <div
-                className=
-                  "reason-box"
-
-                style={{
-                  marginTop:
-                    "14px",
-                }}
+              <FboNestedDisclosure
+                title="Кластер подтверждаем сейчас, склад внутри него выбирает Ozon"
               >
-                <strong>
-                  Кластер подтверждаем сейчас, склад внутри него выбирает Ozon
-                </strong>
 
                 <div
                   className=
@@ -3036,7 +3093,7 @@ export default function OzonFboSupplyClient({
                   создаются автоматически по зоне размещения, литражу
                   и фактическому составу Ozon.
                 </div>
-              </div>
+              </FboNestedDisclosure>
 
 
               <div
@@ -4603,7 +4660,9 @@ export default function OzonFboSupplyClient({
           : null
       }
 
-    </section>
+      </div>
+
+    </WorkspaceCollapsiblePanel>
 
   );
 
