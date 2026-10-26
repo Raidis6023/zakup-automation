@@ -279,7 +279,7 @@ export default function FbwSupplyWizard(){
          <div className={styles.slotFallbackTitle}>Продолжить оформление в Wildberries</div>
          <p>API позволяет создать только черновик с товарами. Он не может закрепить выбранную здесь точку сдачи, тип поставки и открыть непосредственно шаг календаря по draftId. В кабинете перейди в <b>Поставки и заказы → Поставки (FBW) → Черновики</b>, найди ID выше, выбери тип и точку сдачи, затем дату.</p>
          <p>Дата не ранее <b>{dateUTC(safeDay).toLocaleDateString("ru-RU",{day:"2-digit",month:"long",year:"numeric",timeZone:"UTC"})}</b>: это гарантирует минимум 120 часов без точного времени слота.</p>
-         <a href={draft.url} target="_blank" rel="noopener noreferrer" className={styles.sellerLink}>Открыть WB → Черновики → Выбор даты ↗</a>
+         <a href={draft.url} target="_blank" rel="noopener noreferrer" className={styles.sellerLink}>Открыть кабинет WB и продолжить оформление черновика ↗</a>
          <p className={styles.warningText}>Открывается официальный кабинет продавца. Прямой адрес вкладки выбора времени для конкретного черновика WB не опубликован, поэтому адрес шага не подставляем наугад.</p>
        </div>
      </>}
