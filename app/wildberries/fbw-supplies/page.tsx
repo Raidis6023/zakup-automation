@@ -1,5 +1,11 @@
 import Link from "next/link";
-import FbwPreview from "./FbwPreview";
-import FbwLocationPicker from "./FbwLocationPicker";
-export const dynamic = "force-dynamic";
-export default function Page(){return <main style={{minHeight:"100vh",background:"#f1f2f5",padding:"16px"}}><nav style={{maxWidth:950,margin:"auto"}}><Link href="/wildberries">← Wildberries</Link></nav><FbwPreview/><FbwLocationPicker/></main>;}
+import FbwSupplyWizard from "./FbwSupplyWizard";
+export const dynamic="force-dynamic";
+export default function Page(){
+  return <main style={{minHeight:"100vh",background:"#130f19"}}>
+    <nav style={{padding:"20px 30px",borderBottom:"1px solid #38264a"}}>
+      <Link href="/wildberries" style={{color:"#c69bed",fontSize:14}}>← Вернуться в Wildberries</Link>
+    </nav>
+    <FbwSupplyWizard/>
+  </main>;
+}
