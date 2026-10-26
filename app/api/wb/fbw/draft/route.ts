@@ -122,12 +122,17 @@ export async function POST(req:NextRequest){
     const add=await wbFbw.addDraftItems(draftId,sorted.map(x=>({sku:x.barcode,quantity:x.quantity}))) as {results?:Array<{sku:string;error?:unknown}>};
     if(!add||!Array.isArray(add.results)||add.results.length>0)
       throw new Error("WB не принял весь состав черновика: "+JSON.stringify(add?.results??add).slice(0,400));
-    await pause(2100);
-    const verified=await wbFbw.listDraftItems(draftId) as {items?:Array<{sku:string;quantity:number}>};
-    if(!verified||!Array.isArray(verified.items))throw new Error("WB не подтвердил товарный состав черновика");
-    const actual=new Map(verified.items.map(x=>[String(x.sku),Number(x.quantity)]));
-    if(sorted.length!==actual.size||sorted.some(x=>actual.get(x.barcode)!==x.quantity))
-      throw new Error("Товары в черновике WB не совпадают с рассчитанной потребностью");
+    let verified:{items?:Array<{sku:string;quantity:number}>}|null=null;
+    let match=false;
+    for(let attempt=0;attempt<3;attempt++){
+      await pause(2100);
+      verified=await wbFbw.listDraftItems(draftId) as {items?:Array<{sku:string;quantity:number}>};
+      if(!verified||!Array.isArray(verified.items))continue;
+      const actual=new Map(verified.items.map(x=>[String(x.sku),Number(x.quantity)]));
+      match=sorted.length===actual.size&&sorted.every(x=>actual.get(x.barcode)===x.quantity);
+      if(match)break;
+    }
+    if(!match)throw new Error("WB не подтвердил точный товарный состав черновика");
     const saved=await db.from("wb_fbw_draft_runs").update({status:"ready",error_message:null,updated_at:new Date().toISOString()}).eq("id",inserted.data.id);
     if(saved.error)throw new Error("Черновик WB проверен, но не сохранился статус сайта: "+saved.error.message);
     return respond({ok:true,draftId,status:"ready",url:sellerUrl,
