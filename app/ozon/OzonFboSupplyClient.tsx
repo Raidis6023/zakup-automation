@@ -2498,539 +2498,6 @@ export default function OzonFboSupplyClient({
                   создаются автоматически по зоне размещения, литражу
                   и фактическому составу Ozon.
                 </div>
-      </FboNestedDisclosure>
-
-
-      <FboNestedDisclosure
-        title="Нужно дозаполнить упаковочные данные"
-      >
-
-        <div
-          className=
-            "reason-text"
-        >
-          Отсутствие размеров или веса не блокирует
-          расчёт и создание заявки. Если вложимость
-          известна, позиция уже включается с расчётным
-          количеством. Без вложимости позиция остаётся
-          в потребности, но временно не включается
-          в заявку, потому что коробную кратность
-          посчитать нельзя.
-        </div>
-
-
-        {
-          preview
-          &&
-          preview.ok
-          &&
-          preview.summary
-            ? (
-              (
-                preview.packaging_attention
-                ??
-                []
-              ).length >
-                0
-                ? (
-                  <div
-                    className=
-                      "ozon-fbo-packaging-attention-content"
-                  >
-                    <div
-                      style={{
-                        marginTop:
-                          "10px",
-
-                          overflowX:
-                            "auto",
-                        }}
-                      >
-                        <div
-                          style={{
-                            minWidth:
-                              "980px",
-                          }}
-                        >
-                          <div
-                            style={{
-                              display:
-                                "grid",
-
-                              gridTemplateColumns:
-                                "0.7fr 1.1fr 1.8fr 1.1fr 0.7fr 0.8fr",
-
-                              gap:
-                                "10px",
-
-                              padding:
-                                "7px 0",
-
-                              borderBottom:
-                                "1px solid var(--ws-border)",
-
-                              fontSize:
-                                "10px",
-
-                              fontWeight:
-                                700,
-                            }}
-                          >
-                            <span>ЕНОТ</span>
-                            <span>Артикул</span>
-                            <span>Товар</span>
-                            <span>Не хватает</span>
-                            <span>Потребность</span>
-                            <span>В заявку</span>
-                          </div>
-
-                          {
-                            (
-                              preview.packaging_attention
-                              ??
-                              []
-                            ).map(
-                              (
-                                row,
-                                index
-                              ) => {
-
-                                const missing = [
-                                  ...row.missing_fields,
-                                  row.missing_pack
-                                    ? "вложимость"
-                                    : "",
-                                  row.pack_conflict
-                                    ? "конфликт вложимости"
-                                    : "",
-                                  row.missing_enot
-                                    ? "ЕНОТ"
-                                    : "",
-                                ].filter(
-                                  Boolean
-                                );
-
-
-                                return (
-                                  <div
-                                    key={
-                                      [
-                                        row.master_code,
-                                        row.sku,
-                                        row.offer_id,
-                                        index,
-                                      ].join(
-                                        ":"
-                                      )
-                                    }
-
-                                    style={{
-                                      display:
-                                        "grid",
-
-                                      gridTemplateColumns:
-                                        "0.7fr 1.1fr 1.8fr 1.1fr 0.7fr 0.8fr",
-
-                                      gap:
-                                        "10px",
-
-                                      padding:
-                                        "7px 0",
-
-                                      borderBottom:
-                                        "1px solid var(--ws-border)",
-
-                                      fontSize:
-                                        "10px",
-
-                                      alignItems:
-                                        "start",
-                                    }}
-                                  >
-                                    <span>
-                                      <strong>
-                                        {
-                                          row.master_code
-                                          ??
-                                          "—"
-                                        }
-                                      </strong>
-                                    </span>
-
-                                    <span>
-                                      {
-                                        row.offer_id
-                                        ??
-                                        "—"
-                                      }
-                                    </span>
-
-                                    <span>
-                                      {
-                                        row.product_name
-                                        ??
-                                        "—"
-                                      }
-                                    </span>
-
-                                    <span>
-                                      {
-                                        missing.length >
-                                          0
-                                          ? missing.join(
-                                              ", "
-                                            )
-                                          : "—"
-                                      }
-                                    </span>
-
-                                    <span>
-                                      {
-                                        formatNumber(
-                                          row.raw_need
-                                        )
-                                      }
-                                    </span>
-
-                                    <span>
-                                      <strong>
-                                        {
-                                          formatNumber(
-                                            row.final_quantity
-                                          )
-                                        }
-                                      </strong>
-
-                                      <br />
-
-                                      <small
-                                        style={{
-                                          color:
-                                            row.included_in_request
-                                              ? "#16794b"
-                                              : "#b42318",
-                                        }}
-                                      >
-                                        {
-                                          row.included_in_request
-                                            ? "не блокирует"
-                                            : "ждёт вложимость"
-                                        }
-                                      </small>
-                                    </span>
-                                  </div>
-                                );
-
-                              }
-                            )
-                          }
-                        </div>
-                      </div>
-                  </div>
-                )
-                : (
-                  <div
-                    className=
-                      "reason-text"
-
-                    style={{
-                      marginTop:
-                        "10px",
-                    }}
-                  >
-                    По текущему расчёту товаров, требующих
-                    дозаполнения упаковочных данных, нет.
-                  </div>
-                )
-            )
-            : (
-              <div
-                className=
-                  "reason-text"
-
-                style={{
-                  marginTop:
-                    "10px",
-                }}
-              >
-                После запуска теста здесь появится список
-                товаров, для которых нужно дозаполнить
-                упаковочные данные.
-              </div>
-            )
-        }
-
-      </FboNestedDisclosure>
-
-
-      {
-        summaryLoading
-        ||
-        summary
-        ||
-        summaryError
-          ? (
-            <div
-              className=
-                "reason-box"
-
-              style={{
-                marginBottom:
-                  "16px",
-              }}
-            >
-              <strong>
-                Итог по созданным заявкам
-              </strong>
-
-
-              {
-                summaryLoading
-                  ? (
-                    <div
-                      className=
-                        "reason-text"
-
-                      style={{
-                        marginTop:
-                          "8px",
-                      }}
-                    >
-                      Считаем грузоместа, транспортные паллеты, объём и вес...
-                    </div>
-                  )
-                  : null
-              }
-
-
-              {
-                summary
-                  ? (
-                    <div
-                      style={{
-                        display:
-                          "grid",
-
-                        gridTemplateColumns:
-                          "repeat(6, minmax(120px, 1fr))",
-
-                        gap:
-                          "10px",
-
-                        marginTop:
-                          "10px",
-                      }}
-                    >
-                      <div className="ozon-fbo-supply-fact">
-                        <span>PALLET ГМ</span>
-                        <strong>{formatNumber(summary.pallet_gm)}</strong>
-                      </div>
-
-                      <div className="ozon-fbo-supply-fact">
-                        <span>BOX ГМ</span>
-                        <strong>{formatNumber(summary.box_gm)}</strong>
-                      </div>
-
-                      <div className="ozon-fbo-supply-fact">
-                        <span>Паллеты с BOX</span>
-                        <strong>{formatNumber(summary.transport_pallets_for_boxes)}</strong>
-                      </div>
-
-                      <div className="ozon-fbo-supply-fact">
-                        <span>Объём</span>
-                        <strong>
-                          {
-                            summary.total_volume_m3 !==
-                              undefined
-                              ? `${summary.total_volume_m3.toLocaleString(
-                                  "ru-RU",
-                                  {
-                                    maximumFractionDigits:
-                                      3,
-                                  }
-                                )} м³`
-                              : "—"
-                          }
-                        </strong>
-                      </div>
-
-                      <div className="ozon-fbo-supply-fact">
-                        <span>Вес</span>
-                        <strong>
-                          {
-                            summary.total_weight_kg !==
-                              null
-                            &&
-                            summary.total_weight_kg !==
-                              undefined
-                              ? `${summary.total_weight_kg.toLocaleString(
-                                  "ru-RU",
-                                  {
-                                    maximumFractionDigits:
-                                      1,
-                                  }
-                                )} кг`
-                              : `${(
-                                  summary.known_weight_kg
-                                  ??
-                                  0
-                                ).toLocaleString(
-                                  "ru-RU",
-                                  {
-                                    maximumFractionDigits:
-                                      1,
-                                  }
-                                )} кг + пропуски`
-                          }
-                        </strong>
-                      </div>
-
-                      <div className="ozon-fbo-supply-fact">
-                        <span>Макс. высота</span>
-                        <strong>
-                          {
-                            summary.max_height_cm !==
-                              null
-                            &&
-                            summary.max_height_cm !==
-                              undefined
-                              ? `${summary.max_height_cm.toLocaleString(
-                                  "ru-RU",
-                                  {
-                                    maximumFractionDigits:
-                                      1,
-                                  }
-                                )} см`
-                              : "—"
-                          }
-                        </strong>
-                      </div>
-                    </div>
-                  )
-                  : null
-              }
-
-
-              {
-                summary
-                &&
-                (
-                  (
-                    summary.missing_weight_cartons
-                    ??
-                    0
-                  ) >
-                    0
-                  ||
-                  (
-                    summary.transport_unplaced_boxes
-                    ??
-                    0
-                  ) >
-                    0
-                  ||
-                  (
-                    summary.errors
-                    ?.length
-                    ??
-                    0
-                  ) >
-                    0
-                )
-                  ? (
-                    <div
-                      className=
-                        "reason-text"
-
-                      style={{
-                        marginTop:
-                          "8px",
-                      }}
-                    >
-                      {
-                        (
-                          summary.missing_weight_cartons
-                          ??
-                          0
-                        ) >
-                          0
-                          ? `Без веса: ${summary.missing_weight_cartons} коробов. `
-                          : ""
-                      }
-
-                      {
-                        (
-                          summary.transport_unplaced_boxes
-                          ??
-                          0
-                        ) >
-                          0
-                          ? `Не удалось уложить на транспортные паллеты: ${summary.transport_unplaced_boxes} BOX. `
-                          : ""
-                      }
-
-                      {
-                        (
-                          summary.errors
-                          ?.length
-                          ??
-                          0
-                        ) >
-                          0
-                          ? `Не посчитано заявок: ${summary.errors?.length ?? 0}.`
-                          : ""
-                      }
-                    </div>
-                  )
-                  : null
-              }
-
-
-              {
-                summaryError
-                  ? (
-                    <div
-                      className=
-                        "ozon-fbo-supply-error"
-
-                      style={{
-                        marginTop:
-                          "8px",
-                      }}
-                    >
-                      {summaryError}
-                    </div>
-                  )
-                  : null
-              }
-            </div>
-          )
-          : null
-      }
-
-
-      {
-        previewError
-          ? (
-
-            <div
-              className=
-                "ozon-fbo-supply-error"
-            >
-              <strong>
-                Тест поставки не прошёл
-              </strong>
-
-              <div>
-                {
-                  previewError
-                }
-              </div>
-            </div>
-
-          )
-          : null
-      }
 
 
       {
@@ -3929,6 +3396,540 @@ export default function OzonFboSupplyClient({
                 )
               }
 
+            </div>
+
+          )
+          : null
+      }
+
+      </FboNestedDisclosure>
+
+
+      <FboNestedDisclosure
+        title="Нужно дозаполнить упаковочные данные"
+      >
+
+        <div
+          className=
+            "reason-text"
+        >
+          Отсутствие размеров или веса не блокирует
+          расчёт и создание заявки. Если вложимость
+          известна, позиция уже включается с расчётным
+          количеством. Без вложимости позиция остаётся
+          в потребности, но временно не включается
+          в заявку, потому что коробную кратность
+          посчитать нельзя.
+        </div>
+
+
+        {
+          preview
+          &&
+          preview.ok
+          &&
+          preview.summary
+            ? (
+              (
+                preview.packaging_attention
+                ??
+                []
+              ).length >
+                0
+                ? (
+                  <div
+                    className=
+                      "ozon-fbo-packaging-attention-content"
+                  >
+                    <div
+                      style={{
+                        marginTop:
+                          "10px",
+
+                          overflowX:
+                            "auto",
+                        }}
+                      >
+                        <div
+                          style={{
+                            minWidth:
+                              "980px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display:
+                                "grid",
+
+                              gridTemplateColumns:
+                                "0.7fr 1.1fr 1.8fr 1.1fr 0.7fr 0.8fr",
+
+                              gap:
+                                "10px",
+
+                              padding:
+                                "7px 0",
+
+                              borderBottom:
+                                "1px solid var(--ws-border)",
+
+                              fontSize:
+                                "10px",
+
+                              fontWeight:
+                                700,
+                            }}
+                          >
+                            <span>ЕНОТ</span>
+                            <span>Артикул</span>
+                            <span>Товар</span>
+                            <span>Не хватает</span>
+                            <span>Потребность</span>
+                            <span>В заявку</span>
+                          </div>
+
+                          {
+                            (
+                              preview.packaging_attention
+                              ??
+                              []
+                            ).map(
+                              (
+                                row,
+                                index
+                              ) => {
+
+                                const missing = [
+                                  ...row.missing_fields,
+                                  row.missing_pack
+                                    ? "вложимость"
+                                    : "",
+                                  row.pack_conflict
+                                    ? "конфликт вложимости"
+                                    : "",
+                                  row.missing_enot
+                                    ? "ЕНОТ"
+                                    : "",
+                                ].filter(
+                                  Boolean
+                                );
+
+
+                                return (
+                                  <div
+                                    key={
+                                      [
+                                        row.master_code,
+                                        row.sku,
+                                        row.offer_id,
+                                        index,
+                                      ].join(
+                                        ":"
+                                      )
+                                    }
+
+                                    style={{
+                                      display:
+                                        "grid",
+
+                                      gridTemplateColumns:
+                                        "0.7fr 1.1fr 1.8fr 1.1fr 0.7fr 0.8fr",
+
+                                      gap:
+                                        "10px",
+
+                                      padding:
+                                        "7px 0",
+
+                                      borderBottom:
+                                        "1px solid var(--ws-border)",
+
+                                      fontSize:
+                                        "10px",
+
+                                      alignItems:
+                                        "start",
+                                    }}
+                                  >
+                                    <span>
+                                      <strong>
+                                        {
+                                          row.master_code
+                                          ??
+                                          "—"
+                                        }
+                                      </strong>
+                                    </span>
+
+                                    <span>
+                                      {
+                                        row.offer_id
+                                        ??
+                                        "—"
+                                      }
+                                    </span>
+
+                                    <span>
+                                      {
+                                        row.product_name
+                                        ??
+                                        "—"
+                                      }
+                                    </span>
+
+                                    <span>
+                                      {
+                                        missing.length >
+                                          0
+                                          ? missing.join(
+                                              ", "
+                                            )
+                                          : "—"
+                                      }
+                                    </span>
+
+                                    <span>
+                                      {
+                                        formatNumber(
+                                          row.raw_need
+                                        )
+                                      }
+                                    </span>
+
+                                    <span>
+                                      <strong>
+                                        {
+                                          formatNumber(
+                                            row.final_quantity
+                                          )
+                                        }
+                                      </strong>
+
+                                      <br />
+
+                                      <small
+                                        style={{
+                                          color:
+                                            row.included_in_request
+                                              ? "#16794b"
+                                              : "#b42318",
+                                        }}
+                                      >
+                                        {
+                                          row.included_in_request
+                                            ? "не блокирует"
+                                            : "ждёт вложимость"
+                                        }
+                                      </small>
+                                    </span>
+                                  </div>
+                                );
+
+                              }
+                            )
+                          }
+                        </div>
+                      </div>
+                  </div>
+                )
+                : (
+                  <div
+                    className=
+                      "reason-text"
+
+                    style={{
+                      marginTop:
+                        "10px",
+                    }}
+                  >
+                    По текущему расчёту товаров, требующих
+                    дозаполнения упаковочных данных, нет.
+                  </div>
+                )
+            )
+            : (
+              <div
+                className=
+                  "reason-text"
+
+                style={{
+                  marginTop:
+                    "10px",
+                }}
+              >
+                После запуска теста здесь появится список
+                товаров, для которых нужно дозаполнить
+                упаковочные данные.
+              </div>
+            )
+        }
+
+      </FboNestedDisclosure>
+
+
+      {
+        summaryLoading
+        ||
+        summary
+        ||
+        summaryError
+          ? (
+            <div
+              className=
+                "reason-box"
+
+              style={{
+                marginBottom:
+                  "16px",
+              }}
+            >
+              <strong>
+                Итог по созданным заявкам
+              </strong>
+
+
+              {
+                summaryLoading
+                  ? (
+                    <div
+                      className=
+                        "reason-text"
+
+                      style={{
+                        marginTop:
+                          "8px",
+                      }}
+                    >
+                      Считаем грузоместа, транспортные паллеты, объём и вес...
+                    </div>
+                  )
+                  : null
+              }
+
+
+              {
+                summary
+                  ? (
+                    <div
+                      style={{
+                        display:
+                          "grid",
+
+                        gridTemplateColumns:
+                          "repeat(6, minmax(120px, 1fr))",
+
+                        gap:
+                          "10px",
+
+                        marginTop:
+                          "10px",
+                      }}
+                    >
+                      <div className="ozon-fbo-supply-fact">
+                        <span>PALLET ГМ</span>
+                        <strong>{formatNumber(summary.pallet_gm)}</strong>
+                      </div>
+
+                      <div className="ozon-fbo-supply-fact">
+                        <span>BOX ГМ</span>
+                        <strong>{formatNumber(summary.box_gm)}</strong>
+                      </div>
+
+                      <div className="ozon-fbo-supply-fact">
+                        <span>Паллеты с BOX</span>
+                        <strong>{formatNumber(summary.transport_pallets_for_boxes)}</strong>
+                      </div>
+
+                      <div className="ozon-fbo-supply-fact">
+                        <span>Объём</span>
+                        <strong>
+                          {
+                            summary.total_volume_m3 !==
+                              undefined
+                              ? `${summary.total_volume_m3.toLocaleString(
+                                  "ru-RU",
+                                  {
+                                    maximumFractionDigits:
+                                      3,
+                                  }
+                                )} м³`
+                              : "—"
+                          }
+                        </strong>
+                      </div>
+
+                      <div className="ozon-fbo-supply-fact">
+                        <span>Вес</span>
+                        <strong>
+                          {
+                            summary.total_weight_kg !==
+                              null
+                            &&
+                            summary.total_weight_kg !==
+                              undefined
+                              ? `${summary.total_weight_kg.toLocaleString(
+                                  "ru-RU",
+                                  {
+                                    maximumFractionDigits:
+                                      1,
+                                  }
+                                )} кг`
+                              : `${(
+                                  summary.known_weight_kg
+                                  ??
+                                  0
+                                ).toLocaleString(
+                                  "ru-RU",
+                                  {
+                                    maximumFractionDigits:
+                                      1,
+                                  }
+                                )} кг + пропуски`
+                          }
+                        </strong>
+                      </div>
+
+                      <div className="ozon-fbo-supply-fact">
+                        <span>Макс. высота</span>
+                        <strong>
+                          {
+                            summary.max_height_cm !==
+                              null
+                            &&
+                            summary.max_height_cm !==
+                              undefined
+                              ? `${summary.max_height_cm.toLocaleString(
+                                  "ru-RU",
+                                  {
+                                    maximumFractionDigits:
+                                      1,
+                                  }
+                                )} см`
+                              : "—"
+                          }
+                        </strong>
+                      </div>
+                    </div>
+                  )
+                  : null
+              }
+
+
+              {
+                summary
+                &&
+                (
+                  (
+                    summary.missing_weight_cartons
+                    ??
+                    0
+                  ) >
+                    0
+                  ||
+                  (
+                    summary.transport_unplaced_boxes
+                    ??
+                    0
+                  ) >
+                    0
+                  ||
+                  (
+                    summary.errors
+                    ?.length
+                    ??
+                    0
+                  ) >
+                    0
+                )
+                  ? (
+                    <div
+                      className=
+                        "reason-text"
+
+                      style={{
+                        marginTop:
+                          "8px",
+                      }}
+                    >
+                      {
+                        (
+                          summary.missing_weight_cartons
+                          ??
+                          0
+                        ) >
+                          0
+                          ? `Без веса: ${summary.missing_weight_cartons} коробов. `
+                          : ""
+                      }
+
+                      {
+                        (
+                          summary.transport_unplaced_boxes
+                          ??
+                          0
+                        ) >
+                          0
+                          ? `Не удалось уложить на транспортные паллеты: ${summary.transport_unplaced_boxes} BOX. `
+                          : ""
+                      }
+
+                      {
+                        (
+                          summary.errors
+                          ?.length
+                          ??
+                          0
+                        ) >
+                          0
+                          ? `Не посчитано заявок: ${summary.errors?.length ?? 0}.`
+                          : ""
+                      }
+                    </div>
+                  )
+                  : null
+              }
+
+
+              {
+                summaryError
+                  ? (
+                    <div
+                      className=
+                        "ozon-fbo-supply-error"
+
+                      style={{
+                        marginTop:
+                          "8px",
+                      }}
+                    >
+                      {summaryError}
+                    </div>
+                  )
+                  : null
+              }
+            </div>
+          )
+          : null
+      }
+
+
+      {
+        previewError
+          ? (
+
+            <div
+              className=
+                "ozon-fbo-supply-error"
+            >
+              <strong>
+                Тест поставки не прошёл
+              </strong>
+
+              <div>
+                {
+                  previewError
+                }
+              </div>
             </div>
 
           )
