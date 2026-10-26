@@ -39,14 +39,15 @@ export function eligibleOnCluster(
   offerId: string,
   cluster: string
 ): "yes" | "no" | "unknown" {
-  const knownForCluster = new Set(FBY_WAREHOUSES.filter(w => w.cluster === cluster).map(w => w.id));
-  const idsInOfficialFile = snapshot.headers
-    .map(w => w.id)
-    .filter(id => knownForCluster.has(id as typeof FBY_WAREHOUSES[number]["id"]));
-  if (idsInOfficialFile.length === 0) return "unknown";
-  const statuses = idsInOfficialFile.map(id => snapshot.mapping[normalizeOfferId(offerId)]?.[String(id)]);
+  const allWarehouseIds = FBY_WAREHOUSES.filter(w => w.cluster === cluster).map(w => w.id);
+  if (allWarehouseIds.length === 0) return "unknown";
+  const checkedIds = new Set(snapshot.headers.map(w => w.id));
+  const statuses = allWarehouseIds.map(id =>
+    checkedIds.has(id) ? snapshot.mapping[normalizeOfferId(offerId)]?.[String(id)] : undefined
+  );
   if (statuses.includes("yes")) return "yes";
-  // Если хотя бы один склад не проверен, считать "нет" нельзя.
+  // Признать кластер запрещённым можно только если КАЖДЫЙ его склад
+  // проверен в файле и каждый ответил «нет». Иначе «неизвестно».
   if (statuses.every(s => s === "no")) return "no";
   return "unknown";
 }
