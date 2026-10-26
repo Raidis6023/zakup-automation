@@ -1,6 +1,6 @@
 "use client";
 
-import {useMemo,useRef,useState} from "react";
+import {useEffect,useMemo,useRef,useState} from "react";
 import styles from "./fbw-flow.module.css";
 
 type DemandRow={
@@ -40,6 +40,26 @@ function addDays(day:string,increment:number){
  const d=new Date(day+"T00:00:00Z");d.setUTCDate(d.getUTCDate()+increment);
  return d.toISOString().slice(0,10);
 }
+
+type ManualSlotRecord = {
+  savedAt:string;date:string;wbSupplyNumber:string;
+  point:{id:number;name:string;address:string};
+  supplyType:"box"|"mono";source:"seller-manual";
+  items:Array<{sku:string;name:string;barcode:string;quantity:number;boxes:number;unitsPerBox:number}>;
+  units:number;boxes:number;
+};
+const SLOT_STORAGE_KEY="wb-fbw-manual-booking-v1";
+function csvField(value:string|number){
+  return '"'+String(value).replace(/"/g,'""')+'"';
+}
+function downloadManifest(record:ManualSlotRecord){
+  const header=["Артикул WB","Наименование","Баркод","Количество","Вложимость","Коробов"];
+  const rows=record.items.map(x=>[x.sku,x.name,x.barcode,x.quantity,x.unitsPerBox,x.boxes]);
+  const csv="\uFEFF"+[header,...rows].map(row=>row.map(csvField).join(";")).join("\r\n");
+  const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  const link=document.createElement("a");link.href=url;link.download="WB-FBW-"+record.wbSupplyNumber+".csv";
+  document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+}
 const reasons:Record<string,string>={
  missing_master:"Нет мастер-кода",missing_pack:"Нет вложимости",
  pack_conflict:"Конфликт вложимости",missing_barcode:"Нет баркода WB",
@@ -58,7 +78,20 @@ export default function FbwSupplyWizard(){
  const [onlyConfirmed,setOnlyConfirmed]=useState(false);
  const calendarRef=useRef<HTMLElement|null>(null);
  const [supplyDate,setSupplyDate]=useState("");
+ const [manualDate,setManualDate]=useState("");
+ const [wbSupplyNumber,setWbSupplyNumber]=useState("");
+ const [manualConfirmed,setManualConfirmed]=useState(false);
+ const [savedSlot,setSavedSlot]=useState<ManualSlotRecord|null>(null);
+ const [saveMessage,setSaveMessage]=useState("");
  const [typeOverride,setTypeOverride]=useState<"auto"|"box">("auto");
+ useEffect(()=>{
+   try{
+     const saved=window.localStorage.getItem(SLOT_STORAGE_KEY);
+     if(saved){const data=JSON.parse(saved) as ManualSlotRecord;
+       if(data.source==="seller-manual"&&Array.isArray(data.items))setSavedSlot(data);
+     }
+   }catch{/* Storage may be disabled by browser privacy settings */}
+ },[]);
  const selected=useMemo(()=>demand?.rows.filter(x=>selection.includes(x.sku)&&x.status==="ready")??[],[selection,demand]);
  const type: "box"|"mono"=selected.length>0&&selected.length<=3&&typeOverride!=="box"?"mono":"box";
  const totals=selected.reduce((a,r)=>({units:a.units+r.quantity,boxes:a.boxes+r.boxes}),{units:0,boxes:0});
@@ -74,8 +107,9 @@ export default function FbwSupplyWizard(){
      &&(kind==="all"||x.type.toLocaleLowerCase("ru").includes(kind))
      &&(!onlyConfirmed||x.status==="confirmed");
  })??[],[choice,search,kind,onlyConfirmed]);
- const resetFollowing=()=>{setChoice(null);setPointId(null);setSupplyDate("");setOnlyConfirmed(false);};
- function pickPoint(id:number){setPointId(id);setSupplyDate("");window.setTimeout(()=>calendarRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),120);}
+ const clearManualForm=()=>{setManualDate("");setWbSupplyNumber("");setManualConfirmed(false);setSaveMessage("");};
+ const resetFollowing=()=>{setChoice(null);setPointId(null);setSupplyDate("");setOnlyConfirmed(false);clearManualForm();};
+ function pickPoint(id:number){setPointId(id);setSupplyDate("");clearManualForm();window.setTimeout(()=>calendarRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),120);}
  async function calculate(){
    setLoading(true);setError("");setDemand(null);setSelection([]);resetFollowing();
    try{
@@ -107,6 +141,30 @@ export default function FbwSupplyWizard(){
    setSupplyDate(day);
  }
  const currentRate=pointRates.find(r=>r.date===supplyDate);
+ const unavailable=!!point&&(point.status!=="confirmed"||!choice?.ratesVerified||pointRates.length===0);
+ function saveManualSlot(){
+   setSaveMessage("");
+   if(!point||!selected.length){setSaveMessage("Выбери товары и точку сдачи.");return;}
+   if(!/^\d{4}-\d{2}-\d{2}$/.test(manualDate)||manualDate<safeDay){
+     setSaveMessage("Выбранная в WB дата должна быть не раньше "+safeDay+" (минимум 5 полных суток).");return;
+   }
+   const number=wbSupplyNumber.trim();
+   if(number.length<3||number.length>80){setSaveMessage("Укажи номер реально созданной поставки WB.");return;}
+   if(!manualConfirmed){setSaveMessage("Подтверди, что дата и точка уже выбраны в кабинете WB.");return;}
+   const record:ManualSlotRecord={
+     savedAt:new Date().toISOString(),date:manualDate,wbSupplyNumber:number,
+     point:{id:point.id,name:point.name,address:point.address},
+     supplyType:type,source:"seller-manual",
+     items:selected.map(row=>({sku:row.sku,name:row.name,barcode:row.barcode??"",
+       quantity:row.quantity,boxes:row.boxes,unitsPerBox:row.unitsPerBox??0})),
+     units:totals.units,boxes:totals.boxes,
+   };
+   try{
+     window.localStorage.setItem(SLOT_STORAGE_KEY,JSON.stringify(record));
+     setSavedSlot(record);setSaveMessage("Состав и реквизиты записаны в этом браузере. В WB ничего не создавалось.");
+   }catch{setSaveMessage("Браузер запретил хранение данных. Состав не сохранён.");}
+ }
+
  return <div className={styles.wizard}>
    <div className={styles.hero}>
      <div><div className={styles.eyebrow}>ЗАКУП / WILDBERRIES / FBW</div><h1>Формирование поставки FBW</h1>
@@ -178,28 +236,52 @@ export default function FbwSupplyWizard(){
      </>}
    </section>
    <section className={styles.panel} ref={calendarRef}>
-     <header><span className={styles.number}>4</span><div><h2>Дата отгрузки</h2><p>Ищем приёмку по тарифам WB для выбранной точки, не раньше пяти полных суток от формирования поставки.</p></div></header>
-     {!point?<p className={styles.hint}>Сначала выбери точку на шаге 3.</p>:<>
-       <p className={styles.hint}>Прямая сдача: <b>{point.name}</b>, {point.address||point.city}. Чтобы гарантировать 120 часов без точного времени слота, календарь разрешает дату с <b>{dateUTC(safeDay).toLocaleDateString("ru-RU",{day:"2-digit",month:"long",year:"numeric",timeZone:"UTC"})}</b>.</p>
-       {point.status!=="confirmed"&&<p className={styles.error}>WB не подтвердил приёмку всего состава в этой точке. Дату нельзя выбрать, даже если тариф на этот день доступен.</p>}
-       {!point.hasLiveId&&<p className={styles.error}>Склад есть в справочнике, но его ID неизвестен. Даты через API для него не сопоставить.</p>}
-       {!choice?.ratesVerified&&<p className={styles.error}>WB не вернул календарь коэффициентов (404). Выбрать реальный таймслот через API пока невозможно. Сайт не будет подменять его ручной датой.</p>}
-       <div className={styles.calendar}>{cells.map(day=>{
-         const rate=pointRates.find(x=>x.date===day);
-         const allowed=point.status==="confirmed"&&day>=safeDay&&rate?.available===true;
-         return <button key={day} onClick={()=>selectDate(day,rate)} disabled={!allowed} className={[styles.date,allowed?styles.dateAvailable:"",supplyDate===day?styles.dateActive:""].join(" ")}>
-           <strong>{DATE_FMT.format(dateUTC(day))}</strong>
-           {day<safeDay?<span>Менее 5 суток</span>:!rate?<span>Нет данных WB</span>:!rate.available?<span>Приёмка недоступна</span>:<>
-             <span className={styles.ok}>Приёмка доступна</span>
-             <span>Коэффициент: {rate.coefficient??"—"}</span>
-             <span>Логистика: {rate.deliveryCoef??"—"}%</span>
-             <span>Хранение: {rate.storageCoef??"—"}%</span>
-           </>}
-         </button>;
-       })}</div>
-       {supplyDate&&<div className={styles.confirm}><strong>План: {point.name} · {supplyDate}</strong><span>Тип: {type==="mono"?"монопаллета":"короб"} · {selected.length} SKU · {num(totals.units)} шт. · коэффициент {currentRate?.coefficient??"—"}</span></div>}
+     <header><span className={styles.number}>4</span><div><h2>Дата отгрузки</h2><p>Проверка официального календаря WB. При недоступности API можно перенести сюда уже оформленную в кабинете поставку.</p></div></header>
+     {!point?<p className={styles.hint}>Сначала выбери точку сдачи на шаге 3.</p>:<>
+       <p className={styles.hint}>Прямая сдача: <b>{point.name}</b>, {point.address||point.city}. Минимальная разрешённая дата для новой отгрузки: <b>{dateUTC(safeDay).toLocaleDateString("ru-RU",{day:"2-digit",month:"long",year:"numeric",timeZone:"UTC"})}</b>. Это консервативный порог в 5 полных суток.</p>
+       {unavailable?<div className={styles.slotFallback}>
+         <div className={styles.slotFallbackTitle}>Свободные даты через API WB сейчас недоступны</div>
+         <p>WB возвращает 404 для методов опций приёмки и/или тарифов. Склад в справочнике не означает свободный слот, а календарь ниже не может подтвердить бронирование. Поэтому не показываем 14 выдуманных дат с возможностью выбора.</p>
+         <a href="https://seller.wildberries.ru/" target="_blank" rel="noopener noreferrer" className={styles.sellerLink}>Открыть кабинет Wildberries ↗</a>
+         <p>В кабинете: <b>Поставки FBW → Новая поставка → состав → прямая поставка → точка сдачи → дата</b>. После фактического создания поставки занеси дату и её номер сюда. Тип и состав должны совпадать с выбранными на сайте.</p>
+         <div className={styles.manualInputs}>
+           <label>Дата, подтверждённая в кабинете WB
+             <input type="date" min={safeDay} value={manualDate} onChange={e=>{setManualDate(e.target.value);setSaveMessage("");}}/>
+           </label>
+           <label>Номер уже созданной поставки WB
+             <input type="text" maxLength={80} placeholder="Номер из кабинета продавца" value={wbSupplyNumber} onChange={e=>{setWbSupplyNumber(e.target.value);setSaveMessage("");}}/>
+           </label>
+         </div>
+         <label className={styles.manualAgreement}><input type="checkbox" checked={manualConfirmed} onChange={e=>setManualConfirmed(e.target.checked)}/>
+           Я действительно оформил(а) поставку на эту дату и в эту точку в кабинете WB. Понимаю, что этот сайт не бронирует её самостоятельно.
+         </label>
+         <button className={styles.primary} onClick={saveManualSlot} disabled={!manualConfirmed||!manualDate||!wbSupplyNumber.trim()||manualDate<safeDay}>Сохранить данные оформленной поставки</button>
+         {saveMessage&&<p className={styles.hint} role="status">{saveMessage}</p>}
+         <p className={styles.warningText}>Сохранение действует только в этом браузере. Номер и дата введены пользователем, не проверены API WB и не синхронизированы с общей базой сотрудников.</p>
+       </div>:<>
+         <div className={styles.calendar}>{cells.map(day=>{
+           const rate=pointRates.find(x=>x.date===day);
+           const allowed=point.status==="confirmed"&&day>=safeDay&&rate?.available===true;
+           return <button type="button" key={day} onClick={()=>selectDate(day,rate)} disabled={!allowed} className={[styles.date,allowed?styles.dateAvailable:"",supplyDate===day?styles.dateActive:""].join(" ")}>
+             <strong>{DATE_FMT.format(dateUTC(day))}</strong>
+             {day<safeDay?<span>Менее 5 полных суток</span>:!rate?<span>Нет данных WB</span>:!rate.available?<span>Приёмка недоступна</span>:<>
+               <span className={styles.ok}>WB: тариф доступен</span>
+               <span>Коэффициент: {rate.coefficient??"—"}</span>
+               <span>Логистика: {rate.deliveryCoef??"—"}%</span>
+               <span>Хранение: {rate.storageCoef??"—"}%</span>
+             </>}
+           </button>;
+         })}</div>
+         {supplyDate&&<div className={styles.confirm}><strong>Плановая дата: {point.name} · {supplyDate}</strong><span>{type==="mono"?"Монопаллета":"Короба"} · {selected.length} SKU · {num(totals.units)} шт. · коэффициент {currentRate?.coefficient??"—"}</span><span>Это тарифная доступность. Бронь в WB не создана.</span></div>}
+       </>}
      </>}
-     <p className={styles.warningText}>Доступная приёмка по тарифам ещё не равна забронированному таймслоту. Подтверждение даты и создание готовой FBW-поставки через публичный API не реализованы.</p>
+     {savedSlot&&<div className={styles.savedSlot}>
+       <strong>Последняя запись из кабинета WB</strong>
+       <div>Поставка № {savedSlot.wbSupplyNumber} · {savedSlot.date} · {savedSlot.point.name}</div>
+       <small>{savedSlot.items.length} SKU · {num(savedSlot.units)} шт. · {num(savedSlot.boxes)} коробов. Реквизиты внесены вручную и не подтверждены API.</small>
+       <button type="button" onClick={()=>downloadManifest(savedSlot)}>Скачать состав в CSV</button>
+     </div>}
+     <p className={styles.warningText}>Официальный API WB пока не предоставляет подтверждённое бронирование даты и запись грузомест FBW. Данные из кабинета можно перенести на сайт вручную, не выдавая их за API-подтверждение.</p>
    </section>
    {error&&<p role="alert" className={styles.error}>{error}</p>}
  </div>;
