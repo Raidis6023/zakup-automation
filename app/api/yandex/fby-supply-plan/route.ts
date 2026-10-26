@@ -134,9 +134,16 @@ async function buildPlan(ids: number[] | null): Promise<PlanResult> {
     dbRows<StockRow>("yandex_stock_snapshots", "offer_id,warehouse_id,warehouse_name,available", { sync_run_id: "eq." + stockRun.id })
   ]);
 
+  if (sales.some(row => row.warehouse_id === null && int(row.sales_quantity) > 0)
+    || stocks.some(row => row.warehouse_id === null && int(row.available) > 0)) {
+    throw new Error("Есть продажи или остатки ЯМ без идентификатора склада. Экспорт заблокирован во избежание потерь потребности.");
+  }
+
   const staleReasons: string[] = [];
   if (Date.now() - Date.parse(salesRun.created_at) > 48 * 3600000) staleReasons.push("Продажи синхронизированы более 48 часов назад");
   if (Date.now() - Date.parse(stockRun.created_at) > 48 * 3600000) staleReasons.push("Остатки синхронизированы более 48 часов назад");
+  if (Date.now() - Date.parse(salesRun.date_to + "T23:59:59Z") > 72 * 3600000) staleReasons.push("Последний день продаж старше трёх суток");
+  if (Date.now() - Date.parse(stockRun.snapshot_date + "T23:59:59Z") > 72 * 3600000) staleReasons.push("Дата снимка остатков старше трёх суток");
   if (stockRun.snapshot_date < salesRun.date_to) staleReasons.push("Снимок остатков старше периода продаж");
 
   const packByMaster = new Map<string, { packs: Set<number>; discontinued: boolean }>();
