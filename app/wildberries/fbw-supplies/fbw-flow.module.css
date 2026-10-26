@@ -113,3 +113,13 @@
 .palletTare label{display:flex;flex-direction:column;gap:7px;color:#cbb8d6;font-size:12px}
 .palletTare input{background:#23182e;border:1px solid #81609b;color:#fff;padding:9px;border-radius:7px;width:160px}
 .palletTare strong{font-size:13px;color:#f8eaff}
+
+
+.draftAudit{margin-top:18px;padding-top:14px;border-top:1px solid #694b7e}
+.draftAudit>button{color:#e6d5f6;background:#30203e;border:1px solid #8560a5;border-radius:8px;padding:10px 14px;cursor:pointer}
+.draftAudit>button:disabled{opacity:.55;cursor:default}
+.draftAuditList{margin-top:14px;max-height:340px;overflow:auto;border:1px solid #5b4470;border-radius:9px}
+.draftAuditList>small{display:block;color:#bfabd0;padding:12px;font-size:12px}
+.draftAuditList>p{padding:0 12px}
+.draftAuditRow{display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:11px 13px;border-top:1px solid #4d375d;font-size:12px;color:#e6daef;overflow-wrap:anywhere}
+.draftAuditRow span:first-child{font-weight:650}
