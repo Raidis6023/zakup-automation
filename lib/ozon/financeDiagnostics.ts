@@ -62,7 +62,7 @@ export function buildFinanceDiagnostics(
 
   const canDiscussResult = !hasMissingDays && report.actual_buyouts_covered;
   for (const row of rows) {
-    const missingCost = row.unit_cost == null || !Number.isFinite(row.unit_cost);
+    const missingCost = row.unit_cost == null || !Number.isFinite(row.unit_cost) || row.unit_cost <= 0;
     const dataGaps = Array.isArray(row.data_gaps) ? row.data_gaps : [];
     const name = row.name || row.offer_id;
 
@@ -73,7 +73,7 @@ export function buildFinanceDiagnostics(
         productName: name,
         severity: "blocking",
         title: "Себестоимость не подтверждена",
-        explanation: "Для товара нет корректной цены закупки. Убыток и минимальную рентабельную цену определять нельзя.",
+        explanation: "Для товара нет подтверждённой положительной цены закупки. Убыток и минимальную рентабельную цену определять нельзя.",
       });
       continue;
     }
