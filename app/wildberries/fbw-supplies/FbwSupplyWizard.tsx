@@ -110,6 +110,7 @@ export default function FbwSupplyWizard(){
        cartonWidthMm:x.packagingConflict?null:x.cartonWidthMm,
        cartonHeightMm:x.packagingConflict?null:x.cartonHeightMm,
        cartonWeightKg:x.packagingConflict?null:x.cartonWeightKg,
+       cartonVolumeM3:x.packagingConflict?null:x.cartonVolumeM3,
      })),type),error:""};
    }catch(e){return {result:null,error:e instanceof Error?e.message:"Ошибка паллетирования"};}
  },[selected,type]);
