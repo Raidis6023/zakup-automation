@@ -4,7 +4,7 @@ import {NextRequest,NextResponse} from "next/server";
 import {createClient} from "../../../../../lib/supabase/server";
 import {createAdminClient} from "../../../../../lib/supabase/admin";
 import {calculateNeed} from "../../../../../lib/wb/procurement";
-import {wbFbw} from "../../../../../lib/wb/fbw-api";
+import {wbFbw,WbFbwApiError} from "../../../../../lib/wb/fbw-api";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -16,6 +16,13 @@ const respond=(data:object,status=200)=>NextResponse.json(data,{status,headers:{
 const hash=(str:string)=>createHash("sha256").update(str).digest("hex");
 const sellerUrl="https://seller.wildberries.ru/";
 const pause=(ms:number)=>new Promise(resolve=>setTimeout(resolve,ms));
+// A 403 returned by POST /drafts means WB rejected the request BEFORE creating
+// a draft. Only such failed attempts (and no recorded draft ID) may be retried.
+// Other network/5xx/timeouts remain locked: a draft could exist remotely.
+const knownWriteRejection=(status:string,draftId:string|null,errorMessage:string|null)=>
+  status==="failed" && !draftId &&
+  (/^WB FBW HTTP 403\b/.test(errorMessage??"") ||
+   (errorMessage??"").startsWith("WB_WRITE_ACCESS_REQUIRED:"));
 
 export async function POST(req:NextRequest){
   const auth=await createClient();
@@ -92,13 +99,10 @@ export async function POST(req:NextRequest){
   const sorted=[...items].sort((a,b)=>a.barcode.localeCompare(b.barcode));
   const fingerprint=hash(JSON.stringify([sorted,body.type,body.point.id,syncTime]));
   const requestKey=hash(user.id+"|"+fingerprint);
-  const {data:prior}=await db.from("wb_fbw_draft_runs").select("status,draft_id,error_message")
+  const {data:prior,error:lookupError}=await db.from("wb_fbw_draft_runs")
+    .select("id,status,draft_id,error_message")
     .eq("request_key",requestKey).maybeSingle();
-  if(prior)return respond({
-    ok:prior.status==="ready",reused:true,status:prior.status,draftId:prior.draft_id,
-    error:prior.status==="ready"?undefined:"Эта попытка уже зафиксирована. Не создаём дубль. "+(prior.error_message??"Проверьте черновики WB."),
-    url:sellerUrl,
-  },prior.status==="ready"?200:409);
+  if(lookupError)return respond({ok:false,error:"Не удалось проверить прошлые попытки создания заявки"},500);
 
   const payload={
     request_key:requestKey,fingerprint,period_end:new Date(stamp).toISOString().slice(0,10),
@@ -107,17 +111,42 @@ export async function POST(req:NextRequest){
     cartons:sorted.reduce((a,b)=>a+b.boxes,0),
     items:sorted.map(x=>({...x,pointId:body.point!.id,type:body.type})),
   };
-  const inserted=await db.from("wb_fbw_draft_runs").insert(payload).select("id").single();
-  if(inserted.error){
-    if(inserted.error.code==="23505")return respond({ok:false,error:"Создание уже запущено в другой вкладке. Проверьте состояние черновика."},409);
-    return respond({ok:false,error:"Не удалось зафиксировать создание: "+inserted.error.message},500);
+
+  let runId:string;
+  if(prior){
+    if(!knownWriteRejection(prior.status,prior.draft_id,prior.error_message))
+      return respond({
+        ok:prior.status==="ready",reused:true,status:prior.status,draftId:prior.draft_id,
+        error:prior.status==="ready"?undefined:
+          "Попытка уже зафиксирована. Автоматический повтор заблокирован, потому что черновик мог быть создан. "+(prior.error_message??"Проверьте черновики WB."),
+        url:sellerUrl,
+      },prior.status==="ready"?200:409);
+
+    // Atomic compare-and-swap on the failed 403 row:
+    // only one concurrent retry can claim it, without dropping the unique key.
+    const {data:claimed,error:claimError}=await db.from("wb_fbw_draft_runs")
+      .update({status:"creating",error_message:null,updated_at:new Date().toISOString()})
+      .eq("id",prior.id).eq("status","failed").is("draft_id",null)
+      .eq("error_message",prior.error_message)
+      .select("id").maybeSingle();
+    if(claimError)return respond({ok:false,error:"Не удалось разрешить повтор после замены токена"},500);
+    if(!claimed)return respond({ok:false,error:"Повторный запрос уже начат в другой вкладке. Не создаём дубль."},409);
+    runId=claimed.id;
+  }else{
+    const inserted=await db.from("wb_fbw_draft_runs").insert(payload).select("id").single();
+    if(inserted.error){
+      if(inserted.error.code==="23505")
+        return respond({ok:false,error:"Создание уже запущено в другой вкладке. Проверьте состояние черновика."},409);
+      return respond({ok:false,error:"Не удалось зафиксировать создание: "+inserted.error.message},500);
+    }
+    runId=inserted.data.id;
   }
   let draftId:string|null=null;
   try{
     const draft=await wbFbw.createEmptyDraft() as {draftId?:string};
     draftId=String(draft?.draftId??"");
     if(!/^[0-9a-f-]{32,36}$/i.test(draftId))throw new Error("WB создал черновик, но не вернул корректный draftId");
-    await db.from("wb_fbw_draft_runs").update({draft_id:draftId,status:"draft_created",updated_at:new Date().toISOString()}).eq("id",inserted.data.id);
+    await db.from("wb_fbw_draft_runs").update({draft_id:draftId,status:"draft_created",updated_at:new Date().toISOString()}).eq("id",runId);
     await pause(2100); // official WB minimum interval for draft operations
     const add=await wbFbw.addDraftItems(draftId,sorted.map(x=>({sku:x.barcode,quantity:x.quantity}))) as {results?:Array<{sku:string;error?:unknown}>};
     if(!add||!Array.isArray(add.results)||add.results.length>0)
@@ -133,19 +162,26 @@ export async function POST(req:NextRequest){
       if(match)break;
     }
     if(!match)throw new Error("WB не подтвердил точный товарный состав черновика");
-    const saved=await db.from("wb_fbw_draft_runs").update({status:"ready",error_message:null,updated_at:new Date().toISOString()}).eq("id",inserted.data.id);
+    const saved=await db.from("wb_fbw_draft_runs").update({status:"ready",error_message:null,updated_at:new Date().toISOString()}).eq("id",runId);
     if(saved.error)throw new Error("Черновик WB проверен, но не сохранился статус сайта: "+saved.error.message);
     return respond({ok:true,draftId,status:"ready",url:sellerUrl,
       message:"Черновик FBW создан, товары и количества проверены. Выбор точки, типа и таймслота нужно завершить в кабинете WB."});
   }catch(error){
+    const isReadOnly=error instanceof WbFbwApiError && error.status===403 &&
+      /read-only token/i.test(error.message);
     const message=error instanceof Error?error.message:"Сбой WB";
+    const publicMessage=isReadOnly
+      ? "Токен WB ограничен режимом «Только чтение». Для POST /api/supplies/v1/drafts нужен токен категории «Поставки» с возможностью записи. Создайте такой токен в WB Seller, замените WB_SUPPLIES_API_TOKEN в Production Vercel и выполните Redeploy."
+      :message;
+    const savedMessage=isReadOnly?"WB_WRITE_ACCESS_REQUIRED: "+publicMessage:message;
     await db.from("wb_fbw_draft_runs").update({
-      status:"failed",draft_id:draftId||null,error_message:message.slice(0,600),
+      status:"failed",draft_id:draftId||null,error_message:savedMessage.slice(0,600),
       updated_at:new Date().toISOString(),
-    }).eq("id",inserted.data.id);
+    }).eq("id",runId);
     return respond({ok:false,status:"failed",draftId,
-      error:(draftId?"Черновик "+draftId+" уже мог быть создан. ":"")+message+
-        ". Повторное создание автоматически заблокировано, чтобы не плодить дубликаты.",
-      url:sellerUrl},502);
+      error:(draftId?"Черновик "+draftId+" уже мог быть создан. ":"")+publicMessage+
+        (draftId?". Повторное создание заблокировано, чтобы не плодить дубликаты.":""),
+      retrySafeAfterTokenChange:isReadOnly&&!draftId,
+      url:sellerUrl},isReadOnly?403:502);
   }
 }
