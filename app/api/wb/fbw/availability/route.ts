@@ -85,10 +85,10 @@ export async function POST(request:NextRequest){
   const auth=await createClient();
   const {data:{user}}=await auth.auth.getUser();
   if(!user)return reply({ok:false,error:"Необходим вход на сайт"},401);
-  let body:{items?:Item[];type?:"box"|"mono"};
+  let body:{items?:Item[];type?:"box"|"mono"|"piece"};
   try{body=await request.json();}catch{return reply({ok:false,error:"Некорректный JSON"},400);}
   const items=body.items;
-  if(!Array.isArray(items)||items.length===0||items.length>300||!(body.type==="box"||body.type==="mono"))
+  if(!Array.isArray(items)||items.length===0||items.length>300||!(body.type==="box"||body.type==="mono"||body.type==="piece"))
     return reply({ok:false,error:"Выберите товары и тип поставки"},400);
   const barcodes=new Set<string>();
   for(const item of items){
