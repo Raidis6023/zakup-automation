@@ -14,24 +14,24 @@ type Layer={height:number;usedDepth:number;rows:Row[]};
 export type Pallet={
   index:number;cartons:number;skuCount:number;
   heightCm:number;cargoWeightKg:number|null;
-  // Pallet tare is not available in products table. Do not fake gross weight.
-  totalWeightKg:null;volumeM3:number;contents:Array<{sku:string;boxes:number}>;
+  // Fixed pallet tare 15 kg. Unknown carton weights do not get silently zeroed.
+  totalWeightKg:number|null;volumeM3:number;contents:Array<{sku:string;boxes:number}>;
   validHeight:boolean;
 };
 export type PackingResult={
   totalCartons:number;knownCartons:number;missingDimensions:number;missingWeight:number;missingVolume:number;
-  volumeM3:number|null;cargoWeightKg:number|null;
-  // Gross shipment weight is unknown until pallet tare weights are entered.
-  grossWeightKg:null;
+  volumeM3:number;cargoWeightKg:number;grossWeightKg:number;
+  volumeComplete:boolean;weightComplete:boolean;packingComplete:boolean;
   pallets:Pallet[];maxHeightCm:number|null;warnings:string[];
   canUseMono:boolean;
 };
 const PALLET_WIDTH=1200;
 const PALLET_DEPTH=800;
 const PALLET_TARE_HEIGHT=145;
+export const PALLET_TARE_KG=15;
 const MONO_MAX_TOTAL=1800;
 const MONO_MIN_TOTAL=500;
-const BOX_MAX_TOTAL=2200; // Ozon physical-planning constraint.
+const BOX_MAX_TOTAL=2200; // Logistics planning limit only, not a WB rule for piece pallets.
 const EPS=1e-8;
 const valid=(x:number|null)=>x!==null&&Number.isFinite(x)&&x>0;
 const round=(v:number,p=3)=>Number(v.toFixed(p));
@@ -67,7 +67,7 @@ function fit(layer:Layer,box:Carton):boolean{
   }
   return false;
 }
-export function estimateFbwPacking(items:PackingSku[],type:"box"|"mono"):PackingResult {
+export function estimateFbwPacking(items:PackingSku[],type:"box"|"mono"|"piece"):PackingResult {
   const warnings:string[]=[];
   let totalCartons=0,missingDimensions=0,missingWeight=0,missingVolume=0,volume=0,weight=0;
   const boxes:Carton[]=[];
@@ -109,7 +109,7 @@ export function estimateFbwPacking(items:PackingSku[],type:"box"|"mono"):Packing
   for(const box of usable){
     let done=false;
     for(const pallet of pallets){
-      if(type==="mono"&&!pallet.barcodes.has(box.barcode)&&pallet.barcodes.size>=3)continue;
+      if((type==="mono"||type==="piece")&&!pallet.barcodes.has(box.barcode)&&pallet.barcodes.size>=3)continue;
       for(const layer of pallet.layers){
         if(box.h<=layer.height&&fit(layer,box)){
           pallet.cartons.push(box);pallet.barcodes.add(box.barcode);done=true;break;
@@ -137,16 +137,17 @@ export function estimateFbwPacking(items:PackingSku[],type:"box"|"mono"):Packing
       heightCm:round((p.height+PALLET_TARE_HEIGHT)/10,1),
       cargoWeightKg:p.cartons.every(x=>x.weightKg!==null)
         ?round(p.cartons.reduce((a,b)=>a+(b.weightKg??0),0),2):null,
-      totalWeightKg:null,
+      totalWeightKg:p.cartons.every(x=>x.weightKg!==null)
+        ?round(p.cartons.reduce((a,b)=>a+(b.weightKg??0),PALLET_TARE_KG),2):null,
       volumeM3:round(p.cartons.reduce((a,b)=>a+b.dimensions[0]*b.dimensions[1]*b.dimensions[2]/1e9,0),4),
       contents:[...map].map(([sku,count])=>({sku,boxes:count})),
       validHeight:p.height+PALLET_TARE_HEIGHT<=maxHeight+EPS&&
         (type!=="mono"||p.height+PALLET_TARE_HEIGHT>=MONO_MIN_TOTAL-EPS)
     };
   });
-  if(missingDimensions)warnings.push("У "+missingDimensions+" коробов нет полных габаритов: объём, высота и размещение неполные.");
-  if(missingWeight)warnings.push("У "+missingWeight+" коробов отсутствует вес: общий вес груза неизвестен.");
-  if(missingVolume)warnings.push("У "+missingVolume+" коробов не указан объём: общий объём неизвестен.");
+  if(missingDimensions)warnings.push("У "+missingDimensions+" коробов нет полных габаритов: высота и размещение посчитаны только по остальным коробам.");
+  if(missingWeight)warnings.push("У "+missingWeight+" коробов отсутствует вес: приведён известный вес, НЕ полный вес поставки.");
+  if(missingVolume)warnings.push("У "+missingVolume+" коробов не указан объём: приведён известный объём, НЕ полный объём поставки.");
   if(unplaced.length)warnings.push(unplaced.length+" коробов не помещаются на европаллету при заданной высоте.");
   if(type==="mono"&&result.some(x=>!x.validHeight)){
     warnings.push("Монопаллета должна иметь высоту от 50 до 180 см ВКЛЮЧАЯ поддон 14,5 см. Некоторые паллеты ниже минимума.");
@@ -157,10 +158,13 @@ export function estimateFbwPacking(items:PackingSku[],type:"box"|"mono"):Packing
   return {
     totalCartons,knownCartons:boxes.length-unplaced.length,
     missingDimensions:missingDimensions+unplaced.length,
-    missingWeight,missingVolume,volumeM3:missingVolume?null:round(volume,4),
-    cargoWeightKg:missingWeight?null:round(weight,2),
-    grossWeightKg:null,pallets:result,
-    maxHeightCm:missingDimensions||unplaced.length||!result.length?null:Math.max(...result.map(x=>x.heightCm)),
+    missingWeight,missingVolume,volumeM3:round(volume,4),
+    cargoWeightKg:round(weight,2),
+    grossWeightKg:round(weight+result.length*PALLET_TARE_KG,2),
+    volumeComplete:missingVolume===0,weightComplete:missingWeight===0,
+    packingComplete:missingDimensions===0&&unplaced.length===0,
+    pallets:result,
+    maxHeightCm:result.length?Math.max(...result.map(x=>x.heightCm)):null,
     warnings,canUseMono:type==="mono"&&missingDimensions===0&&unplaced.length===0&&
       result.length>0&&result.every(x=>x.validHeight&&x.skuCount<=3)
       &&new Set(items.filter(x=>x.boxes>0).map(x=>x.barcode)).size<=3,
