@@ -233,7 +233,7 @@ export default function FbwSupplyWizard(){
          <div>Список содержит реальные адреса, но не означает, что WB сейчас принимает весь состав. ПВЗ здесь не представлены.</div>
          <small>Источник: <a href="https://iseller.pro/otkrytye-dannye" target="_blank" rel="noreferrer">iseller.pro, открытые данные</a>.</small>
        </div>}
-       {!choice.optionsVerified&&<p className={styles.warningText}>WB временно не подтверждает совместимость товаров: выбирай нужный склад из справочника. Шаг 4 покажет доступность даты, если WB вернёт её.</p>}
+       {!choice.optionsVerified&&<p className={styles.warningText}>WB временно не подтверждает совместимость товаров: точки ниже справочные. После создания черновика окончательно проверь адрес и доступность даты в кабинете WB.</p>}
        {choice.errors.map((e,i)=><p key={i} className={styles.warningText}>{e}</p>)}
        <div className={styles.locations}>{points.map(x=><button type="button" key={x.id} className={[styles.location,x.id===pointId?styles.locationActive:""].join(" ")} disabled={x.status==="not_compatible"} onClick={()=>pickPoint(x.id)}>
          <strong>{x.name} <small className={styles.locationType}>{x.type||"Склад"}</small></strong>
