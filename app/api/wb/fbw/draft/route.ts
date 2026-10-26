@@ -10,7 +10,7 @@ export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=60;
 type Item={sku:string;barcode:string;quantity:number;boxes:number;unitsPerBox:number};
-type Input={items?:Item[];point?:{id:number;name:string};type?:"box"|"mono"};
+type Input={items?:Item[];point?:{id:number;name:string};type?:"box"|"mono"|"piece"};
 type Row={nmId:number;masterCode:string|null;sales28Days:number;fbwStock:number};
 const respond=(data:object,status=200)=>NextResponse.json(data,{status,headers:{"Cache-Control":"private, no-store"}});
 const hash=(str:string)=>createHash("sha256").update(str).digest("hex");
@@ -25,11 +25,11 @@ export async function POST(req:NextRequest){
   try{body=await req.json();}catch{return respond({ok:false,error:"Неверный формат запроса"},400);}
   const items=body.items;
   if(!Array.isArray(items)||items.length<1||items.length>300||
-     (body.type!=="box"&&body.type!=="mono")||!body.point||
+     (body.type!=="box"&&body.type!=="mono"&&body.type!=="piece")||!body.point||
      !Number.isSafeInteger(body.point.id)||!body.point.name?.trim())
     return respond({ok:false,error:"Укажите состав, тип поставки и точку сдачи"},400);
   if(body.type==="mono"&&items.length>3)
-    return respond({ok:false,error:"Для монопаллеты максимум три баркода"},400);
+    return respond({ok:false,error:"Для выбранной монопаллеты максимум три баркода; для большого состава используйте поштучные паллеты (до 3 баркодов на КАЖДОЙ паллете) или короба"},400);
   const unique=new Set<string>();
   for(const x of items){
     if(!/^[0-9]{5,20}$/.test(x.barcode)||!/^[0-9]{1,20}$/.test(x.sku)||
@@ -46,7 +46,7 @@ export async function POST(req:NextRequest){
      !["admin","senior_admin"].includes(access.admin_level??""))
     return respond({ok:false,error:"Недостаточно прав для создания поставок WB"},403);
   if(!process.env.WB_SUPPLIES_API_TOKEN?.trim())
-    return respond({ok:false,error:"В Vercel не настроен WB_SUPPLIES_API_TOKEN"},503);
+    return respond({ok:false,error:"Для создания черновика настройте в Vercel Production переменную WB_SUPPLIES_API_TOKEN. Нужен токен WB с правами записи в категории «Поставки»; текущий WB_READ_TOKEN для синхронизации не заменяет этот токен."},503);
   // Validate against live demand, not browser-supplied values.
   const {data:dash,error:dashError}=await db.rpc("get_wb_sync_dashboard");
   if(dashError||!dash?.ok)return respond({ok:false,error:"Расчёт WB недоступен: "+(dashError?.message??"нет данных")},503);
