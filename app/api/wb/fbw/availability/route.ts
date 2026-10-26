@@ -1,132 +1,194 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "../../../../../lib/supabase/server";
-export const runtime="nodejs";
-export const dynamic="force-dynamic";
+import directory from "../../../../../lib/wb/public-warehouses-directory.json";
 
-type Item={barcode:string;quantity:number};
-type AnyRow=Record<string,unknown>;
-type WbWarehouse={ID?:number;id?:number;name?:string;warehouseName?:string;address?:string;isActive?:boolean;isTransitActive?:boolean;warehouseType?:string};
-type OptionRow={barcode?:string;isError?:boolean;warehouses?:Array<{warehouseID?:number;canBox?:boolean;canMonopallet?:boolean;isBoxOnPallet?:boolean}>};
-type RateRow={date?:string;coefficient?:number;warehouseID?:number;warehouseName?:string;allowUnload?:boolean;boxTypeID?:number;boxTypeName?:string;deliveryCoef?:string|number;storageCoef?:string|number};
-const BASE="https://supplies-api.wildberries.ru", RATE_BASE="https://common-api.wildberries.ru";
-const resp=(data:object,status=200)=>NextResponse.json(data,{status,headers:{"Cache-Control":"private, no-store"}});
-function array(value:unknown):AnyRow[]{if(Array.isArray(value))return value as AnyRow[];if(value&&typeof value==="object"){const obj=value as AnyRow;for(const key of ["data","result","warehouses","items"]){if(Array.isArray(obj[key]))return obj[key] as AnyRow[];}}return [];}
-async function wb(path:string, method:"GET"|"POST"="GET",body?:unknown,rate=false):Promise<unknown>{
- const token=(process.env.WB_SUPPLIES_API_TOKEN||process.env.WB_READ_TOKEN||"").trim();
- if(!token)throw new Error("Добавьте WB_SUPPLIES_API_TOKEN в Production Environment Variables Vercel");
- const response=await fetch((rate?RATE_BASE:BASE)+path,{
-   method,headers:{Authorization:token,Accept:"application/json",...(body!==undefined?{"Content-Type":"application/json"}:{})},
-   ...(body!==undefined?{body:JSON.stringify(body)}:{}),cache:"no-store",signal:AbortSignal.timeout(15000),
- });
- if(!response.ok){
-   const retry=response.headers.get("X-RateLimit-Retry")||response.headers.get("Retry-After");
-   throw new Error("WB HTTP "+response.status+(retry?" (повторить через "+retry+")":""));
- }
- return response.json();
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+type Item = { barcode: string; quantity: number };
+type WbWarehouse = { ID?: number; id?: number; name?: string; warehouseName?: string; address?: string; isActive?: boolean; warehouseType?: string };
+type WbOptionWarehouse = { warehouseID?: number; canBox?: boolean; canMonopallet?: boolean };
+type WbOption = { barcode?: string; isError?: boolean; warehouses?: WbOptionWarehouse[] };
+type WbRate = { date?: string; warehouseID?: number; warehouseName?: string; boxTypeID?: number; boxTypeName?: string; coefficient?: number; allowUnload?: boolean; deliveryCoef?: string|number; storageCoef?: string|number };
+type SourcePoint = { id: number; ids: number[]; name: string; address: string; type: string; city: string; region: string; hours: string; lat: number|null; lon: number|null; origin: "directory"|"wb"; hasLiveId: boolean; enabled: boolean; url: string };
+const WB_BASE = "https://supplies-api.wildberries.ru";
+const RATE_BASE = "https://common-api.wildberries.ru";
+
+const reply=(body:object,status=200)=>NextResponse.json(body,{status,headers:{"Cache-Control":"private, no-store"}});
+
+function asArray(v:unknown):Record<string,unknown>[] {
+  if(Array.isArray(v))return v.filter(x=>x&&typeof x==="object");
+  if(v&&typeof v==="object")for(const key of ["data","result","warehouses","items"]){
+    const part=(v as Record<string,unknown>)[key];
+    if(Array.isArray(part))return part.filter(x=>x&&typeof x==="object");
+  }
+  return [];
+}
+function errorText(e:unknown):string{
+  const s=e instanceof Error?e.message:String(e);
+  if(s.includes("HTTP 404"))return "WB временно не предоставляет метод (404)";
+  if(s.includes("HTTP 429"))return "Превышен лимит WB (429), используются сохранённые данные";
+  if(s.includes("HTTP 401")||s.includes("HTTP 403"))return "Нет доступа к API WB (проверьте категорию токена)";
+  return s.slice(0,180);
+}
+async function wb(path:string,category:"fbw"|"rates",method:"GET"|"POST"="GET",body?:unknown):Promise<unknown> {
+  // Supply token is needed for FBW. Tariff token accepts any category, but a
+  // valid integration token must be configured; never expose it client-side.
+  const token=(category==="rates"
+    ?(process.env.WB_READ_TOKEN||process.env.WB_SUPPLIES_API_TOKEN)
+    :(process.env.WB_SUPPLIES_API_TOKEN||process.env.WB_READ_TOKEN))?.trim();
+  if(!token)throw new Error("Не настроен токен WB в Vercel");
+  const http=await fetch((category==="fbw"?WB_BASE:RATE_BASE)+path,{
+    method,headers:{Authorization:token,Accept:"application/json",...(body===undefined?{}:{"Content-Type":"application/json"})},
+    ...(body===undefined?{}:{body:JSON.stringify(body)}),
+    cache:"no-store",signal:AbortSignal.timeout(15000),
+  });
+  if(!http.ok){
+    const retry=http.headers.get("X-RateLimit-Retry")||http.headers.get("Retry-After");
+    throw new Error("WB HTTP "+http.status+(retry?", повтор через "+retry:""));
+  }
+  return http.json();
 }
 
-const wbCallsCache = new Map<string,{expires:number;value?:unknown;failure?:string}>();
-async function cachedWb(key:string,ttl:number,get:()=>Promise<unknown>):Promise<unknown>{
-  const existing=wbCallsCache.get(key);
-  if(existing&&Date.now()<existing.expires){
-    if(existing.failure)throw new Error(existing.failure);
-    return existing.value;
+// Negative cache is important: WB temporarily disabled FBW GET warehouses/options
+// and repeated clicks must not spam WB's 6/minute quota.
+const requestCache=new Map<string,{until:number;value?:unknown;error?:string}>();
+async function cached<T>(key:string,ttl:number,run:()=>Promise<T>):Promise<T>{
+  const cachedEntry=requestCache.get(key);
+  if(cachedEntry&&cachedEntry.until>Date.now()){
+    if(cachedEntry.error)throw new Error(cachedEntry.error);
+    return cachedEntry.value as T;
   }
   try{
-    const value=await get();
-    wbCallsCache.set(key,{expires:Date.now()+ttl,value});
+    const value=await run();
+    requestCache.set(key,{until:Date.now()+ttl,value});
     return value;
-  }catch(error){
-    const message=error instanceof Error?error.message:"Ошибка WB";
-    // Known disabled methods and rate-limit errors should not be hammered by the UI.
-    wbCallsCache.set(key,{expires:Date.now()+Math.min(ttl,1800000),failure:message});
-    throw error;
+  }catch(e){
+    const message=errorText(e);
+    requestCache.set(key,{until:Date.now()+Math.min(ttl,30*60000),error:message});
+    throw new Error(message);
   }
 }
-const cache=new Map<string,{time:number;data:object}>();
+
+function offlinePoints():SourcePoint[]{
+  return directory.rows.map((x,index)=>{
+    const ids=[...new Set(String(x.wb_ids).split(/\s+/).filter(v=>/^\d+$/.test(v)).map(Number).filter(n=>Number.isSafeInteger(n)&&n>0))];
+    return {
+      id:ids[0]??(-index-1),ids,name:x.name,address:x.address,city:x.city,region:x.region,
+      type:x.type,hours:x.work_time,lat:x.lat,lon:x.lon,url:x.url,
+      enabled:true,origin:"directory" as const,hasLiveId:ids.length>0,
+    };
+  });
+}
 
 export async function POST(request:NextRequest){
- const auth=await createClient();const {data:{user}}=await auth.auth.getUser();
- if(!user)return resp({ok:false,error:"Войдите на сайт"},401);
- let body:{items?:Item[];type?:"box"|"mono"};
- try{body=await request.json();}catch{return resp({ok:false,error:"Неверный JSON"},400);}
- const items=body.items;
- if(!Array.isArray(items)||items.length<1||items.length>300||!["box","mono"].includes(body.type??""))
- return resp({ok:false,error:"Требуется состав 1–300 баркодов и тип поставки"},400);
- const unique=new Set<string>();
- for(const item of items) {
-   if(typeof item.barcode!=="string"||!/^\d{5,20}$/.test(item.barcode)||!Number.isSafeInteger(item.quantity)||item.quantity<1||item.quantity>999999||unique.has(item.barcode))
-   return resp({ok:false,error:"Неверный или повторяющийся баркод/количество"},400);
-   unique.add(item.barcode);
- }
- if(body.type==="mono"&&items.length>3)return resp({ok:false,error:"Монопаллета: максимум три разных баркода"},400);
- const key=JSON.stringify([body.type,items.slice().sort((a,b)=>a.barcode.localeCompare(b.barcode))]);
- const saved=cache.get(key);
- if(saved&&Date.now()-saved.time<180000)return resp({...saved.data,cache:true});
- try{
-   const [warehousesResult,optionsResult,ratesResult]=await Promise.allSettled([
-     cachedWb("fbw-warehouses",12*3600000,()=>wb("/api/v1/warehouses")),
-     cachedWb("fbw-options:"+key,20*60000,()=>wb("/api/v1/acceptance/options","POST",items.map(x=>({barcode:x.barcode,quantity:x.quantity})))),
-     cachedWb("fbw-rates",60*60000,()=>wb("/api/tariffs/v1/acceptance/coefficients","GET",undefined,true)),
-   ]);
-   const errors:string[]=[];
-   if(warehousesResult.status==="rejected")errors.push("Справочник точек WB недоступен: "+String(warehousesResult.reason));
-   if(optionsResult.status==="rejected")errors.push("WB не подтвердил совместимость выбранных баркодов: "+String(optionsResult.reason));
-   if(ratesResult.status==="rejected")errors.push("Календарь тарифов WB недоступен: "+String(ratesResult.reason));
-   const wareRaw=warehousesResult.status==="fulfilled"?array(warehousesResult.value):[];
-   const optionsVerified=optionsResult.status==="fulfilled";
-   const rates= ratesResult.status==="fulfilled" ? array(ratesResult.value) as RateRow[]:[];
-   const options=optionsVerified?array(optionsResult.value) as OptionRow[]:[];
-   const byWarehouse=new Map<number,Map<string,{warehouseID?:number;canBox?:boolean;canMonopallet?:boolean;isBoxOnPallet?:boolean}>>();
-   for(const option of options){
-     for(const w of option.warehouses??[]){
-       const warehouse=Number(w.warehouseID);
-       if(!Number.isFinite(warehouse))continue;
-       const map=byWarehouse.get(warehouse)??new Map();
-       map.set(String(option.barcode??""),w);byWarehouse.set(warehouse,map);
-     }
-   }
-   const known=new Map<number,WbWarehouse>();
-   for(const raw of wareRaw){
-     const w=raw as WbWarehouse, id=Number(w.ID??w.id);
-     if(Number.isSafeInteger(id)&&id>0)known.set(id,w);
-   }
-   for(const rate of rates){
-     const id=Number(rate.warehouseID);
-     if(Number.isSafeInteger(id)&&id>0&&!known.has(id))known.set(id,{ID:id,name:String(rate.warehouseName??"Склад "+id)});
-   }
-   const order=(s:string)=>s==="confirmed"?0:s==="unverified"?1:2;
-   const points=[...known.entries()].map(([id,w])=>{
-     const barcodeMap=byWarehouse.get(id);
-     const eligible=optionsVerified && items.every(item=>{
-       const opt=barcodeMap?.get(item.barcode);
-       return body.type==="mono"?opt?.canMonopallet===true:opt?.canBox===true;
-     });
-     const rejected=optionsVerified && !eligible;
-     const count=optionsVerified?items.filter(item=>{const opt=barcodeMap?.get(item.barcode);return body.type==="mono"?opt?.canMonopallet===true:opt?.canBox===true;}).length:null;
-     return {
-       id,name:String(w.name??w.warehouseName??"Склад №"+id),address:String(w.address??""),
-       type:String(w.warehouseType??""),isActive:w.isActive!==false,
-       status:eligible?"confirmed":rejected?"not_compatible":"unverified",
-       acceptedCount:count, totalCount:items.length,
-     };
-   }).filter(p=>p.isActive).sort((a,b)=>(order(a.status)-order(b.status))||a.name.localeCompare(b.name,"ru"));
-   const dates=rates.filter(row=>{
-     if(!row.date||!Number.isFinite(Number(row.warehouseID)))return false;
-     const type=Number(row.boxTypeID);
-     return type===(body.type==="mono"?5:2) ||
-       (!Number.isFinite(type) && String(row.boxTypeName??"").toLowerCase().includes(body.type==="mono"?"паллет":"короб"));
-   }).map(row=>({
-     warehouseId:Number(row.warehouseID),date:String(row.date).slice(0,10),
-     coefficient:row.coefficient===null||row.coefficient===undefined?null:Number(row.coefficient),
-     available:row.allowUnload===true && row.coefficient!==undefined && Number(row.coefficient)!==-1,
-     deliveryCoef:row.deliveryCoef??null,storageCoef:row.storageCoef??null
-   }));
-   const data={ok:true,points,dates,optionsVerified,ratesVerified:ratesResult.status==="fulfilled",errors,
-     fetchedAt:new Date().toISOString(),note:"Свободный слот не забронирован. Совместимость состава подтверждается только методом options."};
-   cache.set(key,{time:Date.now(),data});if(cache.size>25)cache.delete(cache.keys().next().value??"");
-   return resp(data);
- }catch(error){
-   return resp({ok:false,error:error instanceof Error?error.message:"Сбой WB"},502);
- }
+  const auth=await createClient();
+  const {data:{user}}=await auth.auth.getUser();
+  if(!user)return reply({ok:false,error:"Необходим вход на сайт"},401);
+  let body:{items?:Item[];type?:"box"|"mono"};
+  try{body=await request.json();}catch{return reply({ok:false,error:"Некорректный JSON"},400);}
+  const items=body.items;
+  if(!Array.isArray(items)||items.length===0||items.length>300||!(body.type==="box"||body.type==="mono"))
+    return reply({ok:false,error:"Выберите товары и тип поставки"},400);
+  const barcodes=new Set<string>();
+  for(const item of items){
+    if(typeof item.barcode!=="string"||!/^[0-9]{5,20}$/.test(item.barcode)
+      ||!Number.isSafeInteger(item.quantity)||item.quantity<1||item.quantity>999999||barcodes.has(item.barcode))
+      return reply({ok:false,error:"Некорректный/дублирующийся баркод или количество"},400);
+    barcodes.add(item.barcode);
+  }
+  if(body.type==="mono"&&items.length>3)return reply({ok:false,error:"Монопаллета не допускает более 3 разных баркодов"},400);
+  const signature=JSON.stringify([body.type,...items.slice().sort((a,b)=>a.barcode.localeCompare(b.barcode))]);
+  const [warehouseResult,optionsResult,tariffResult]=await Promise.allSettled([
+    cached("fbw-warehouses",12*3600000,()=>wb("/api/v1/warehouses","fbw")),
+    cached("fbw-options:"+signature,20*60000,()=>wb("/api/v1/acceptance/options","fbw","POST",items)),
+    cached("fbw-coefficients",60*60000,()=>wb("/api/tariffs/v1/acceptance/coefficients","rates")),
+  ]);
+  const warnings:string[]=[];
+  if(warehouseResult.status==="rejected")warnings.push("Официальный список складов: "+errorText(warehouseResult.reason));
+  if(optionsResult.status==="rejected")warnings.push("Проверка совместимости товаров: "+errorText(optionsResult.reason));
+  if(tariffResult.status==="rejected")warnings.push("Календарь приёмки: "+errorText(tariffResult.reason));
+
+  const points=offlinePoints();
+  const pointByID=new Map<number,SourcePoint>();
+  for(const p of points)for(const id of p.ids)if(!pointByID.has(id))pointByID.set(id,p);
+
+  const warehouses=warehouseResult.status==="fulfilled"?asArray(warehouseResult.value) as WbWarehouse[]:[];
+  const extra:SourcePoint[]=[];
+  for(const row of warehouses){
+    const id=Number(row.ID??row.id);
+    if(!Number.isSafeInteger(id)||id<=0)continue;
+    const existing=pointByID.get(id);
+    if(existing){
+      // Official WB may provide a newer address and warehouse activity flag.
+      if(row.address)existing.address=row.address;
+      if(!existing.name&&(row.name||row.warehouseName))existing.name=String(row.name??row.warehouseName);
+      existing.enabled=row.isActive!==false;
+      continue;
+    }
+    const point:SourcePoint={id,ids:[id],name:String(row.name??row.warehouseName??"Склад №"+id),
+      address:row.address??"",type:row.warehouseType??"Склад",city:"",region:"",hours:"",
+      lat:null,lon:null,url:"",enabled:row.isActive!==false,hasLiveId:true,origin:"wb"};
+    extra.push(point);pointByID.set(id,point);
+  }
+
+  const optionsVerified=optionsResult.status==="fulfilled";
+  const optionRows=optionsVerified?asArray(optionsResult.value) as WbOption[]:[];
+  // Keep track of explicit WB results, not merely the existence of an HTTP 200.
+  const optionsById=new Map<number,Map<string,boolean>>();
+  for(const option of optionRows){
+    const barcode=String(option.barcode??"");
+    for(const wh of option.warehouses??[]){
+      const id=Number(wh.warehouseID);
+      if(!Number.isSafeInteger(id)||id<=0)continue;
+      const map=optionsById.get(id)??new Map<string,boolean>();
+      const value=body.type==="mono"?wh.canMonopallet:wh.canBox;
+      if(typeof value==="boolean")map.set(barcode,value);
+      optionsById.set(id,map);
+    }
+  }
+  const status=(p:SourcePoint)=>{
+    if(!optionsVerified)return "unverified" as const;
+    // If none of this warehouse's IDs has a matching explicit WB response,
+    // its availability is unknown rather than falsely negative.
+    let observed=0, accepted=0;
+    for(const item of items){
+      let result: boolean|undefined;
+      for(const id of p.ids){const v=optionsById.get(id)?.get(item.barcode);if(v!==undefined){result=v;break;}}
+      if(result!==undefined){observed++;if(result)accepted++;}
+    }
+    if(observed===0)return "unverified" as const;
+    if(observed!==items.length)return "unverified" as const;
+    return accepted===items.length?"confirmed" as const:"not_compatible" as const;
+  };
+  const resultPoints=[...points,...extra].filter(p=>p.enabled).map(p=>({
+    ...p,status:status(p),source:p.origin==="wb"?"wb":"public",
+    acceptedCount:null as number|null,totalCount:items.length,
+  })).sort((a,b)=>{
+    const rank=(s:string)=>s==="confirmed"?0:s==="unverified"?1:2;
+    return rank(a.status)-rank(b.status)||a.name.localeCompare(b.name,"ru");
+  });
+
+  const rates=tariffResult.status==="fulfilled"?asArray(tariffResult.value) as WbRate[]:[];
+  const dates=rates.filter(row=>{
+    if(!row.date||!Number.isSafeInteger(Number(row.warehouseID)))return false;
+    const id=Number(row.boxTypeID);
+    if(Number.isFinite(id))return id===(body.type==="mono"?5:2);
+    return String(row.boxTypeName??"").toLowerCase().includes(body.type==="mono"?"паллет":"короб");
+  }).map(row=>({
+    warehouseId:Number(row.warehouseID),
+    date:String(row.date).slice(0,10),
+    coefficient:typeof row.coefficient==="number"?row.coefficient:null,
+    available:row.allowUnload===true&&typeof row.coefficient==="number"&&row.coefficient!==-1,
+    deliveryCoef:row.deliveryCoef??null,storageCoef:row.storageCoef??null,
+  }));
+
+  return reply({
+    ok:true,points:resultPoints,dates,
+    optionsVerified,ratesVerified:tariffResult.status==="fulfilled",
+    errors:warnings,fetchedAt:new Date().toISOString(),
+    fallback:{used:warehouseResult.status!=="fulfilled",source:directory.source,updated:directory.updated,total:directory.rows.length,
+      note:"Открытый справочник, не живые свободные слоты WB. Содержит склады и СЦ, но не полный список ПВЗ."},
+    note:"Сначала выбирается точка прямой сдачи, затем дата. Опции приёмки и доступность даты требуют подтверждения API WB.",
+  });
 }
