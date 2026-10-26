@@ -1,0 +1,10 @@
+const assert=require('node:assert/strict');
+const {calculate}=require('../.testbuild/lib/yandex/finance.js');
+const line={source:'income',sheet:'orders',row:1,article:'A',name:'A',orderId:'1',orderDate:'2026-10-01',serviceDate:'',status:'Доставлен покупателю',quantity:10,price:1000,amount:10000,allocation:'sku'};
+const exp={...line,source:'expense',sheet:'Подписки',orderId:'',serviceDate:'2026-10-12',amount:699000,allocation:'subscription'};
+let r=calculate([line,{...line,article:'B',quantity:990},exp],'2026-10-01','2026-10-26');assert.equal(r.rows.find(x=>x.article==='A').expenses['Подписки'],6990);assert.equal(r.totals.allocated,699000);
+r=calculate([line,{...line,row:2,status:'Возврат принят',quantity:2},{...line,row:3,status:'Отменён',quantity:1},{...line,row:4,status:'Невыкуп отправлен',quantity:1}],'2026-10-01','2026-10-26');assert.equal(r.totals.income,6000);assert.equal(r.totals.buyouts,6);
+r=calculate([line,{...line,row:2,status:'Возврат принят',quantity:null}],'2026-10-01','2026-10-26');assert.equal(r.warnings.length,1);assert.equal(r.totals.income,10000);
+r=calculate([{...line,orderDate:'2026-09-30'},{...exp,allocation:'sku',orderId:'old',orderDate:'2026-09-30'},{...exp,amount:100}],'2026-10-01','2026-10-26');assert.equal(r.excluded.length,2);assert.equal(r.totals.common,100);
+r=calculate([{...line,quantity:1},{...line,article:'B',quantity:1},{...line,article:'C',quantity:1},{...exp,amount:100}],'2026-10-01','2026-10-26');assert.equal(r.totals.allocated,100);assert.equal(r.rows.find(x=>x.article==='A').expenses['Подписки'],34);
+console.log('PASS: subscription proportion and cents, status signs, missing V warning, date cohort, no-buyout fallback');

@@ -1432,6 +1432,8 @@ export default async function YandexMarketPage() {
 
             <ThemeToggle />
 
+            <Link href="/yandex-market/financier" className="secondary-button navigation-button ym-navigation-button">ИИ-финансист</Link>
+
 
             <Link
               href="/stock-import"
