@@ -347,6 +347,9 @@ export async function POST(request: Request) {
   try {
     const input = await request.json() as { clusterNames?: string[]; allowPartial?: boolean; allowStale?: boolean; mode?: "plan" | "upload" };
     const plan = await buildPlan(parseClusters(input.clusterNames));
+    if (plan.unmappedWarehouses.length > 0) {
+      return Response.json({ ok: false, error: "Есть склады ЯМ без проверенного кластера. Экспорт заблокирован, пока не настроено сопоставление: " + plan.unmappedWarehouses.join(", ") }, { status: 409 });
+    }
     if (plan.stale && input.allowStale !== true) {
       return Response.json({ ok: false, error: "Данные устарели. Сначала обновите продажи и остатки ЯМ или подтвердите тестовый экспорт." }, { status: 409 });
     }
@@ -394,7 +397,7 @@ export async function POST(request: Request) {
         .map(c => c.name);
       const matrix = workbook.addWorksheet("По кластерам");
       const baseHeaders = ["Ваш SKU", "Наименование", "ЕНОТ", "Вложимость", "Нужно без округления"];
-      const header = [...baseHeaders, ...clusterNames, "ИТОГО к поставке"];
+      const header = [...baseHeaders, ...clusterNames.flatMap(c => [c + " — нужно", c + " — к поставке"]), "ИТОГО к поставке"];
       matrix.addRow(header);
       const bg = { type: "pattern", pattern: "solid", fgColor: { argb: "FF204966" } } as const;
       matrix.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
@@ -411,20 +414,40 @@ export async function POST(request: Request) {
         if (!allocationByOffer.has(allocation.offerId)) allocationByOffer.set(allocation.offerId, new Map());
         allocationByOffer.get(allocation.offerId)!.set(allocation.cluster, allocation);
       }
-      for (const item of plan.items) {
-        const qtyByCluster = allocationByOffer.get(item.offerId);
-        const values = clusterNames.map(cluster => qtyByCluster?.get(cluster)?.quantity || 0);
+      const groupedOffers = new Map<string, ClusterAllocation[]>();
+      for (const allocation of plan.allocations) {
+        if (!groupedOffers.has(allocation.offerId)) groupedOffers.set(allocation.offerId, []);
+        groupedOffers.get(allocation.offerId)!.push(allocation);
+      }
+      for (const [offerId, entries] of [...groupedOffers.entries()].sort((a, b) => b[1].reduce((n, x) => n + x.rawNeed, 0) - a[1].reduce((n, x) => n + x.rawNeed, 0))) {
+        const sample = entries[0];
+        const byCluster = allocationByOffer.get(offerId);
+        const quantity = entries.reduce((n, x) => n + x.quantity, 0);
+        const rawNeed = entries.reduce((n, x) => n + x.rawNeed, 0);
         const excelRow = matrix.addRow([
-          item.offerId, item.name, item.masterCode, item.pack,
-          item.rawNeed, ...values, item.quantity
+          offerId, sample.name, sample.masterCode, sample.pack, rawNeed,
+          ...clusterNames.flatMap(cluster => [
+            byCluster?.get(cluster)?.rawNeed || 0,
+            byCluster?.get(cluster)?.quantity || 0
+          ]),
+          quantity
         ]);
         excelRow.getCell(header.length).font = { bold: true };
         excelRow.getCell(1).numFmt = "@";
+        if (entries.some(x => x.errors.length > 0)) {
+          excelRow.eachCell(cell => cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFE5DA" } });
+        }
       }
       matrix.views = [{ state: "frozen", ySplit: 1, xSplit: 2 }];
       matrix.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: header.length } };
-      const last = matrix.rowCount + 1;
-      const total = matrix.addRow(["ИТОГО", "", "", "", plan.totals.rawNeed, ...clusterNames.map(c => plan.clusters.find(x => x.name === c)?.proposedUnits || 0), plan.totals.units]);
+      const total = matrix.addRow([
+        "ИТОГО", "", "", "", plan.totals.rawNeed,
+        ...clusterNames.flatMap(cluster => {
+          const c = plan.clusters.find(x => x.name === cluster);
+          return [c?.rawNeed || 0, c?.proposedUnits || 0];
+        }),
+        plan.totals.units
+      ]);
       total.eachCell(cell => { cell.font = { bold: true }; cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDBEAF5" } }; });
       // Проверяем итоги при построении, чтобы количество в шаблоне и по кластерам совпадало.
       const control = clusterNames.reduce((sum, cluster) =>
