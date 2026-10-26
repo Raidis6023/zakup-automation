@@ -273,6 +273,8 @@ export default function FbwSupplyWizard(){
            <b>Паллета №{p.index}</b>
            <span>{p.cartons} коробов · {p.skuCount} SKU · {p.heightCm} см с поддоном</span>
            <span>Объём {p.volumeM3} м³ · Вес коробов {p.cargoWeightKg??"нет данных"} кг</span>
+           <span>Вес с поддоном: {p.cargoWeightKg!==null&&palletTareValue!==null&&palletTareValue>0?num(p.cargoWeightKg+palletTareValue)+" кг":"неизвестен"}</span>
+           <span>Состав: {p.contents.map(x=>x.sku+" × "+x.boxes+" кор.").join(", ")}</span>
            <span className={p.validHeight?styles.ok:styles.warning}>{p.validHeight?"Высота соответствует правилу":"Высота вне разрешённого диапазона"}</span>
          </div>)}
        </div>}
