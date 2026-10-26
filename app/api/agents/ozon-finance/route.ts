@@ -249,7 +249,7 @@ async function syncOneDay(db: ReturnType<typeof createAdminClient>, day: string)
 }
 async function buildReport(db: ReturnType<typeof createAdminClient>, from: string, to: string) {
   const days = dateRange(from, to);
-  const [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, adJobsRes, itemizedRes, transitRes, crossdockRes, crossdockCurrentRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes] =
+  const [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, adJobsRes, adTasksRes, itemizedRes, transitRes, crossdockRes, crossdockCurrentRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes] =
     await Promise.all([
       db.from("ozon_finance_sync_days").select("day,record_count,synced_at").eq("account_key", ACCOUNT)
         .gte("day", from).lte("day", to),
@@ -264,9 +264,11 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
       db.rpc("ozon_finance_ad_by_sku",{p_from:from,p_to:to,p_account:ACCOUNT}),
       db.from("ozon_finance_ad_coverage").select("day")
         .eq("account_key",ACCOUNT).gte("day",from).lte("day",to),
-      db.from("ozon_finance_ad_sync_jobs").select("status,last_error,date_from,date_to,updated_at")
+      db.from("ozon_finance_ad_sync_jobs").select("id,status,last_error,date_from,date_to,updated_at")
         .eq("account_key",ACCOUNT).lte("date_from",to).gte("date_to",from)
         .order("updated_at",{ascending:false}).limit(3),
+      db.from("ozon_finance_ad_campaign_tasks").select("job_id,status,day,date_to")
+        .lte("day",to).gte("date_to",from).limit(3000),
       db.rpc("ozon_finance_itemized_per_sku",{p_from:from,p_to:to,p_account:ACCOUNT}),
       db.rpc("ozon_finance_transit_totals",{p_account:ACCOUNT}),
       db.rpc("ozon_finance_crossdock_totals",{p_account:ACCOUNT}),
@@ -284,7 +286,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
         .eq("account_key",ACCOUNT).gte("day",from).lte("day",to).order("day"),
       db.rpc("ozon_finance_unallocated_v3",{p_from:from,p_to:to,p_account:ACCOUNT}),
     ]);
-  for (const item of [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, adJobsRes, itemizedRes, transitRes, crossdockRes, crossdockCurrentRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes]) {
+  for (const item of [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, adJobsRes, adTasksRes, itemizedRes, transitRes, crossdockRes, crossdockCurrentRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes]) {
     if (item.error) throw item.error;
   }
   const loaded = new Set((syncRes.data ?? []).map(r => r.day));
@@ -428,7 +430,12 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     g.advertising_amount = round(g.advertising_amount);
     // Performance SKU allocation is analytic ONLY. Financial Seller postings
     // and per-SKU profit are unchanged; no duplicate booking.
-    g.performance_ad_expense=adComplete ? round(adByOffer.get(g.offer_id)??0):null;
+    // Show already-cached expenses immediately while the remaining campaigns
+    // download. A missing SKU is unknown until EVERY campaign is finished.
+    // This is analytics only: unallocated Seller PPC stays in the full P&L
+    // until adComplete; partial Performance spending never changes profit.
+    g.performance_ad_expense=adByOffer.has(g.offer_id)
+      ?round(adByOffer.get(g.offer_id)??0):(adComplete?0:null);
     const costH = costHistory.get(g.master_code!) ?? [];
     const mayakH = mayakHistory.get(g.master_code!) ?? [];
     g.unit_cost = costH.length ? Number(costH.at(-1)!.unit_cost_rub) : null;
@@ -578,10 +585,16 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
       unknown_type_operations: accounting.unknownTypeOperations,
       performance_total: adComplete
         ?round([...adByOffer.values()].reduce((a,b)=>a+b,0)):null,
+      partial_performance_total:round([...adByOffer.values()].reduce((a,b)=>a+b,0)),
+      performance_complete:adComplete,
       discrepancy: null,
       reconciliation_status: accounting.unknownTypeOperations > 0
         ? "requires_type_review" : "not_checked_against_performance",
     },
+    ads_campaigns_total:(adTasksRes.data??[]).length,
+    ads_campaigns_complete:(adTasksRes.data??[]).filter(x=>x.status==="complete").length,
+    ads_partial_spend:round([...adByOffer.values()].reduce((a,b)=>a+b,0)),
+    ads_partial_skus:adByOffer.size,
     sales_window_covered: salesWindowCovered,
     actual_buyout_days: salesWindowCovered ? days.length : 0,
     actual_buyouts_covered: salesWindowCovered,
