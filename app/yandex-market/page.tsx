@@ -23,6 +23,9 @@ import YandexSyncActionsClient
 import YandexProductsSectionClient
   from "./YandexProductsSectionClient";
 
+import YandexFbySupplyPlanner
+  from "./YandexFbySupplyPlanner";
+
 import YandexProductsTableClient, {
   type YandexProductsTableItem,
 } from "./YandexProductsTableClient";
@@ -1678,6 +1681,8 @@ export default async function YandexMarketPage() {
         {/* ===================================
             УПРАВЛЕНИЕ ПОСТАВКАМИ
             =================================== */}
+
+        <YandexFbySupplyPlanner />
 
         <MarketplaceSuppliesPanel
           marketplace="yandex"
