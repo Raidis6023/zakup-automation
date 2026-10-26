@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 import { POST as mapFinanceSkus } from "../ozon-finance-map/route";
-import { GET as syncAdvertising } from "../ozon-finance-ads/route";
 import { GET as syncTransit } from "../ozon-finance-transit/route";
 import { GET as syncCrossdock } from "../ozon-finance-crossdock/route";
 
@@ -41,7 +40,6 @@ export async function GET(request:NextRequest) {
     // Each provider works independently, so a temporary HTTP 429 from
     // Performance must not starve stock or crossdock updates.
     for(const [name,handler] of [
-      ["advertising",syncAdvertising],
       ["transit",syncTransit],
       ["crossdock",syncCrossdock],
     ] as const) {
