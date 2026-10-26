@@ -74,11 +74,11 @@ export default function FbwSupplyWizard(){
    try{
      return {result:estimateFbwPacking(selected.map(x=>({
        sku:x.sku,barcode:x.barcode??"",boxes:x.boxes,unitsPerBox:x.unitsPerBox??0,
-       cartonLengthMm:x.packagingConflict?null:x.cartonLengthMm,
-       cartonWidthMm:x.packagingConflict?null:x.cartonWidthMm,
-       cartonHeightMm:x.packagingConflict?null:x.cartonHeightMm,
-       cartonWeightKg:x.packagingConflict?null:x.cartonWeightKg,
-       cartonVolumeM3:x.packagingConflict?null:x.cartonVolumeM3,
+       cartonLengthMm:x.cartonLengthMm,
+       cartonWidthMm:x.cartonWidthMm,
+       cartonHeightMm:x.cartonHeightMm,
+       cartonWeightKg:x.cartonWeightKg,
+       cartonVolumeM3:x.cartonVolumeM3,
      })),type),error:""};
    }catch(e){return {result:null,error:e instanceof Error?e.message:"Ошибка паллетирования"};}
  },[selected,type]);
