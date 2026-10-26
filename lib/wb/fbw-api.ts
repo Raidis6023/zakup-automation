@@ -58,6 +58,10 @@ export const wbFbw = {
   createEmptyDraft: () => request<unknown>("/api/supplies/v1/drafts", { method: "POST" }),
   addDraftItems: (draftId: string, items: Array<{sku:string;quantity:number}>) =>
     request<unknown>("/api/supplies/v1/drafts/" + encodeURIComponent(draftId) + "/items", {method:"POST",body:{items}}),
+  // Official FBW draft DELETE uses {skus:[barcode,...]}, not {items:[...]}.
+  // Only call for an explicit, authorized user action.
+  deleteDraftItems: (draftId: string, skus: string[]) =>
+    request<unknown>("/api/supplies/v1/drafts/" + encodeURIComponent(draftId) + "/items", {method:"DELETE",body:{skus}}),
   deleteDraft: (draftId: string) =>
     request<unknown>("/api/supplies/v1/drafts/" + encodeURIComponent(draftId), { method: "DELETE" }),
 };
