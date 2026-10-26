@@ -39,12 +39,15 @@ export function eligibleOnCluster(
   offerId: string,
   cluster: string
 ): "yes" | "no" | "unknown" {
-  const statuses = FBY_WAREHOUSES
-    .filter(w => w.cluster === cluster)
-    .map(w => snapshot.mapping[normalizeOfferId(offerId)]?.[String(w.id)])
-    .filter((x): x is EligibilityValue => x === "yes" || x === "no");
+  const knownForCluster = new Set(FBY_WAREHOUSES.filter(w => w.cluster === cluster).map(w => w.id));
+  const idsInOfficialFile = snapshot.headers
+    .map(w => w.id)
+    .filter(id => knownForCluster.has(id as typeof FBY_WAREHOUSES[number]["id"]));
+  if (idsInOfficialFile.length === 0) return "unknown";
+  const statuses = idsInOfficialFile.map(id => snapshot.mapping[normalizeOfferId(offerId)]?.[String(id)]);
   if (statuses.includes("yes")) return "yes";
-  if (statuses.length > 0 && statuses.every(s => s === "no")) return "no";
+  // Если хотя бы один склад не проверен, считать "нет" нельзя.
+  if (statuses.every(s => s === "no")) return "no";
   return "unknown";
 }
 
