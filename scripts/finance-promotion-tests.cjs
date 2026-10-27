@@ -1,0 +1,14 @@
+const assert=require('node:assert/strict'),XLSX=require('xlsx');
+const {parsePromotionWorkbook}=require('../.campaign-build/yandex/campaign-metrics');
+const {campaignMetrics,observedCampaignMetrics}=require('../.campaign-build/ozon/campaign-metrics');
+const workbook=rows=>{const b=XLSX.utils.book_new();XLSX.utils.book_append_sheet(b,XLSX.utils.aoa_to_sheet(rows),'Сводный отчет');return b;};
+const sales=workbook([['Ваш SKU','Показы товара с бустом, шт.','Клики по товару с бустом, шт.','Добавления в корзину товаров с бустом, шт.','Заказанные товары с бустом, шт.','Расходы на буст, ₽','Выручка с бустом, ₽','ID кампаний'],['TEST',1000,25,10,3,125,2500,'1,2']]);
+const rows=parsePromotionWorkbook(sales,'sales');assert.equal(rows.length,1);assert.equal(rows[0].offer_id,'TEST');assert.equal(campaignMetrics(rows[0]).cpc,5);assert.equal(campaignMetrics(rows[0]).drr,.05);assert.equal(campaignMetrics(rows[0]).ctr,.025);
+const shows=workbook([['OFFER_ID','SHOWS','CLICKS','CART_ADDITION','ORDERED_COUNT','COST','ORDERED_AMOUNT'],['TEST',500,10,3,1,45,900],['TEST',100,2,1,0,10,0]]);
+const s=parsePromotionWorkbook(shows,'shows');assert.equal(s.length,1);assert.equal(s[0].views,600);assert.equal(s[0].expense,55);assert.equal(s[0].clicks,12);
+const available={expense:100,views:200,clicks:10,carts:2,orders:1,revenue:1000,available:true};
+const missing={expense:0,views:null,clicks:null,carts:null,orders:null,revenue:null,available:false};
+const observed=observedCampaignMetrics([available,missing]);assert.equal(observed.ctr,.05);assert.equal(observed.cpc,10);assert.equal(observed.drr,.1);assert.equal(observedCampaignMetrics([missing]).views,null);
+assert.equal(campaignMetrics({...available,clicks:0}).cpc,null);assert.throws(()=>parsePromotionWorkbook(workbook([['wrong'],['test']]),'sales'),/Не найдены/);
+assert.equal(parsePromotionWorkbook(workbook([['OFFER_ID','SHOWS','CLICKS','COST']]),'shows').length,0);
+console.log('PASS: Yandex paid columns, grouped campaigns not duplicated, weighted CPC, partial-day totals, zero denominator and unknown report rejection');

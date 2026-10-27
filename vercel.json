@@ -35,6 +35,10 @@
     {
       "path": "/api/agents/ozon-finance-ads",
       "schedule": "*/2 * * * *"
+    },
+    {
+      "path": "/api/agents/yandex-finance-campaigns-cron",
+      "schedule": "1-59/2 * * * *"
     }
   ]
 }

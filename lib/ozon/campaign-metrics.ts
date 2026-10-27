@@ -1,6 +1,6 @@
 export type CampaignLine={sku:string;day:string;expense:number;views:number|null;clicks:number|null;carts:number|null;orders:number|null;revenue:number|null};
 export type MetricTotals={expense:number;views:number|null;clicks:number|null;carts:number|null;orders:number|null;revenue:number|null};
-export function campaignMetrics(x:MetricTotals){return {...x,drr:x.revenue!==null&&x.revenue>0?x.expense/x.revenue:null,ctr:x.views!==null&&x.views>0&&x.clicks!==null?x.clicks/x.views:null,cpm:x.views!==null&&x.views>0?x.expense/x.views*1000:null,cpo:x.orders!==null&&x.orders>0?x.expense/x.orders:null};}
+export function campaignMetrics(x:MetricTotals){return {...x,drr:x.revenue!==null&&x.revenue>0?x.expense/x.revenue:null,ctr:x.views!==null&&x.views>0&&x.clicks!==null?x.clicks/x.views:null,cpm:x.views!==null&&x.views>0?x.expense/x.views*1000:null,cpc:x.clicks!==null&&x.clicks>0?x.expense/x.clicks:null,cpo:x.orders!==null&&x.orders>0?x.expense/x.orders:null};}
 export function sumCampaignMetrics(rows:MetricTotals[]):MetricTotals{
  const total=(k:Exclude<keyof MetricTotals,'expense'>)=>rows.some(r=>r[k]===null)?null:rows.reduce((s,r)=>s+(r[k]??0),0);
  return {expense:rows.reduce((s,r)=>s+r.expense,0),views:total('views'),clicks:total('clicks'),carts:total('carts'),orders:total('orders'),revenue:total('revenue')};
@@ -29,3 +29,6 @@ export function parseCampaignCSV(text:string,from:string,to:string):CampaignLine
   groups.set(key,old?{sku:id,day,...sumCampaignMetrics([old,next])}:next);
  }return [...groups.values()];
 }
+
+/** Consistent observed-day totals; unknown source columns stay unknown. */
+export function observedCampaignMetrics<T extends MetricTotals & {available:boolean}>(rows:T[]){const known=rows.filter(x=>x.available);return campaignMetrics(known.length?sumCampaignMetrics(known):{expense:0,views:null,clicks:null,carts:null,orders:null,revenue:null});}

@@ -15,3 +15,15 @@
 Проверки: `tsc lib/ozon/campaign-metrics.ts lib/finance-totals.ts --outDir .campaign-build --rootDir lib --module commonjs --target es2020 --skipLibCheck`, затем `node scripts/finance-campaign-tests.cjs`.
 
 Проверены фактические заголовки дневного отчёта Ozon: «Продано товаров» — количество проданных через рекламу единиц для графика «Заказы»; «Продажи в продвижении, ₽» — рекламная выручка. Это количество товаров, а не уникальных номеров заказов. Заголовки сохраняются в закрытом кэше заданий для сверки.
+
+
+## October 27: consistent totals, CPC and chart controls
+The campaign summary and plots both use available daily observations. Missing days do not nullify known period totals and are not converted into zero activity. The progress notice identifies incomplete periods. CPC is sum(expense)/sum(clicks), with null for missing/zero clicks; it replaces CPO in the eight displayed metrics. Money display rounds only at rendering. Charts use a warm multicolor line, point tooltips, an automatic Y domain and an optional zero baseline; missing observations disconnect paths. Expanded layouts use the financial scroll container width.
+
+## Yandex Market promotion
+Official methods: POST /v2/reports/boost-consolidated/generate, POST /v2/reports/shows-boost/generate (attributionType CLICKS), GET /v2/reports/info/{reportId}. Request one FILE report per day and promotion type to obtain daily product metrics. The boost sales report uses ONLY WITH_FEE source columns (paid promotion), billedAmount and ordersGvmDeliveredWithFee. Shows boost uses cost (calculated attributed spend), NOT campaign realCost, which cannot be allocated to offers. The statistics do not add an extra expense to finance profit.
+Both product reports list multiple campaign IDs but do not allocate their SKU metrics between those IDs. UI therefore exposes sales boost and shows boost as separate combined campaign groups, without a combined default that would double count overlapping attribution. It does not manufacture per-campaign SKU metrics. The sales report revenue is delivered boosted revenue; shows boost revenue is ordered attributed revenue, as documented by Yandex.
+Queue via authenticated /api/agents/yandex-finance-campaigns POST; cache via GET. Cron /api/agents/yandex-finance-campaigns-cron advances the shared queue every two minutes, with a global lease, 125-second generation cooldown, one in-flight report and priority for existing finance report loading. Errors are exposed to the UI; failed jobs can be retried using the load button. Storage is service-role only with RLS and no anon/authenticated grants. No campaigns, bids or advertising settings are modified.
+Sources:
+https://yandex.ru/dev/market/partner-api/doc/ru/reference/reports/generateBoostConsolidatedReport
+https://yandex.ru/dev/market/partner-api/doc/ru/reference/reports/generateShowsBoostReport

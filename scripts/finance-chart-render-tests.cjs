@@ -5,3 +5,13 @@ const points=[0,1,2].map((_,i)=>({day:'2026-10-0'+(i+1),drr:i===1?null:.1+i/10,a
 const html=renderToStaticMarkup(React.createElement(m.exports.Trend,{metric:{key:'drr',name:'ДРР',unit:'%',color:'#A99BFF'},points,total:.2}));
 assert.ok(/20\s*%/.test(html));assert.ok(html.includes('01.10'));assert.ok(html.includes('03.10'));assert.ok(!html.includes('NaN'));assert.equal((html.match(/stroke-linejoin="round"/g)||[]).length,2);assert.ok(html.includes('tabindex="0"'));
 console.log('PASS: chart SSR, correct percentage scale, keyboard focus and disconnected missing days');
+let active=null,hook=0;const hookReact={...React,useId:()=>':test:',useState:initial=>{const index=hook++;return [index===0?active:initial,value=>{if(index===0)active=typeof value==='function'?value(active):value;}];}};
+const interactive={exports:{}};new Function('require','module','exports',code)(name=>name==='react'?hookReact:name.includes('campaign-metrics')?require('../.campaign-build/ozon/campaign-metrics'):require(name),interactive,interactive.exports);
+const metric={key:'drr',name:'ДРР',unit:'%',color:'#A99BFF'};
+const create=()=>{hook=0;return interactive.exports.Trend({metric,points,total:.2});};
+function find(node,type){if(!node||typeof node!=='object')return null;if(node.type===type)return node;const kids=React.Children.toArray(node.props?.children);for(const child of kids){const found=find(child,type);if(found)return found;}return null;}
+const svg=find(create(),'svg');svg.props.onPointerMove({clientX:820,currentTarget:{getBoundingClientRect:()=>({left:0,width:840})}});assert.equal(active,2);
+const tooltipHTML=renderToStaticMarkup(create());assert.ok(tooltipHTML.includes('ozf-chart-tooltip'));assert.ok(tooltipHTML.includes('03.10.2026'));assert.ok(/30\s*%/.test(tooltipHTML));
+svg.props.onPointerMove({clientX:446,currentTarget:{getBoundingClientRect:()=>({left:0,width:840})}});assert.equal(active,1);assert.ok(renderToStaticMarkup(create()).includes('02.10.2026'));
+assert.ok(!html.includes('Динамика по дням'));assert.ok(!html.includes('к первому дню'));
+console.log('PASS: pointer selects date/value tooltip, missing-day tooltip and removed chart captions');

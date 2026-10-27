@@ -32,6 +32,8 @@ export async function POST(req:NextRequest){
   async function update(patch:Record<string,unknown>){const {error}=await db!.from('yandex_finance_reports').update(patch).eq('id',id);if(error)throw error;Object.assign(job!,patch);}
   if(job.phase==='services_request'||job.phase==='orders_request'){
    if(job.next_request_at&&Date.parse(job.next_request_at)>Date.now())return NextResponse.json(job);
+   const promotion=await db.from('yandex_promotion_jobs').select('day').eq('status','requested').limit(1);if(promotion.error)throw promotion.error;if(promotion.data.length)return NextResponse.json({...job,waiting_for:'promotion_report'});
+   const control=await db.from('yandex_promotion_control').select('next_request_at').eq('id',1).maybeSingle();if(control.error)throw control.error;if(control.data?.next_request_at&&Date.parse(control.data.next_request_at)>Date.now())return NextResponse.json(job);
    const services=job.phase==='services_request';
    const campaign=await yandex('/v2/campaigns/'+process.env.YANDEX_CAMPAIGN_ID?.trim());const businessId=campaign.campaign?.business?.id;if(!businessId)throw new Error('Не найден businessId');
    const report=await yandex('/v2/reports/'+(services?'united-marketplace-services':'united-orders')+'/generate?format=FILE&language=RU',{businessId,dateFrom:job.date_from,dateTo:job.date_to});if(!report.result?.reportId)throw new Error('ЯМ не вернул reportId');

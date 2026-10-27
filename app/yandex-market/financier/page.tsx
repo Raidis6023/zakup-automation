@@ -5,6 +5,7 @@ import {readFinance} from '../../../lib/yandex/finance-cache';
 import YandexFinancierClient from './YandexFinancierClient';
 import '../../ozon/financier/financier.css';
 import './finance.css';
+import '../../ozon/financier/campaigns.css';
 export const dynamic='force-dynamic';
 export default async function Page(){
  let db;try{db=await financeAccess();}catch{redirect('/yandex-market');}
