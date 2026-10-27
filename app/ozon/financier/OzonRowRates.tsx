@@ -1,0 +1,17 @@
+'use client';
+import {useEffect,useState} from 'react';
+type Rate={master_code:string;valid_from:string;unit_cost_rub:number};
+export default function OzonRowRates({master,onSaved}:{master:string|null;onSaved:()=>void|Promise<void>}){
+ const [date,setDate]=useState(()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Krasnoyarsk',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())),[cost,setCost]=useState(''),[mayak,setMayak]=useState(''),[costs,setCosts]=useState<Rate[]>([]),[mayaks,setMayaks]=useState<Rate[]>([]),[manager,setManager]=useState(''),[loaded,setLoaded]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
+ useEffect(()=>{if(!master)return;setLoaded(false);let live=true;fetch('/api/agents/ozon-finance?mode=rateHistory&master_code='+encodeURIComponent(master),{cache:'no-store'}).then(async r=>{const data=await r.json();if(!r.ok||!data.ok)throw Error(data.error??'Не удалось загрузить тарифы');if(live){setCosts(data.costs);setMayaks(data.mayak);setManager(data.manager??'');setLoaded(true);}}).catch(e=>{if(live)setMessage(e.message);});return()=>{live=false}},[master]);
+ useEffect(()=>{const c=costs.find(x=>x.valid_from<=date),m=mayaks.find(x=>x.valid_from<=date);setCost(c?String(c.unit_cost_rub).replace('.',','):'');setMayak(m?String(m.unit_cost_rub).replace('.',','):'');},[costs,mayaks,date]);
+ async function save(){setBusy(true);setMessage('');try{
+  const body:Record<string,unknown>={action:'saveProduct',master_code:master,valid_from:date,manager};
+  for(const [key,value] of [['cost',cost],['mayak',mayak]])if(value.trim()!==''){if(!/^\d+(?:[.,]\d{1,2})?$/.test(value.trim()))throw Error('Тариф — неотрицательная сумма с двумя знаками после запятой');body[key]=Number(value.replace(',','.'));}
+  const r=await fetch('/api/agents/ozon-finance',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error??'Не удалось сохранить');if(typeof body.cost==='number')setCosts(old=>[{master_code:master!,valid_from:date,unit_cost_rub:body.cost as number},...old.filter(x=>x.valid_from!==date)].sort((a,b)=>b.valid_from.localeCompare(a.valid_from)));
+  if(typeof body.mayak==='number')setMayaks(old=>[{master_code:master!,valid_from:date,unit_cost_rub:body.mayak as number},...old.filter(x=>x.valid_from!==date)].sort((a,b)=>b.valid_from.localeCompare(a.valid_from)));
+  await onSaved();setMessage('Изменения сохранены.');
+ }catch(e){setMessage(e instanceof Error?e.message:'Ошибка сохранения');}finally{setBusy(false);}}
+ if(!master)return <p>Для редактирования тарифов сначала привяжите ЕНОТ в списке артикулов.</p>;
+ return <section className="ozf-row-rates"><h3>Цена закупа и ТК Маяк</h3><div className="ozf-edit"><label>Тарифы действуют с<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label><label>Цена закупа, руб<input inputMode="decimal" value={cost} onChange={e=>setCost(e.target.value)}/></label><label>ТК Маяк, ₽/шт<input inputMode="decimal" value={mayak} onChange={e=>setMayak(e.target.value)}/></label><label>КМ<input value={manager} maxLength={80} onChange={e=>setManager(e.target.value)}/></label><button className="ozf-btn ozf-primary" disabled={busy||!loaded} onClick={()=>void save()}>{busy?'Сохраняем…':!loaded?'Загружаем тарифы…':'Сохранить изменения'}</button></div><p role="status">{message}</p></section>;
+}

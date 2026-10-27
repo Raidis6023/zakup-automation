@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import {parseCampaignCSV,type CampaignLine} from "../../../../lib/ozon/campaign-metrics";
 import { inflateRawSync } from "node:zlib";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 
@@ -10,88 +11,14 @@ type Job={id:number;date_from:string;date_to:string;status:string;last_error:str
 type Task={id:number;job_id:number;campaign_id:string;day:string;date_to:string;
  status:string;report_uuid:string|null;last_error:string|null};
 type Db=ReturnType<typeof createAdminClient>;
-type Parsed={sku:string;day:string;expense:number};
+type Parsed=CampaignLine;
 const BASE="https://api-performance.ozon.ru";
 const json=(body:object,status=200)=>NextResponse.json(body,{status,
  headers:{"Cache-Control":"no-store"}});
 const message=(error:unknown)=>error instanceof Error?error.message:String(error);
 const following=(day:string)=>new Date(Date.parse(day+"T00:00:00Z")+86400000).toISOString().slice(0,10);
-const numeric=(s:string)=>{
- const compact=s.trim().replace(/[₽\s\u00a0]/g,"").replace(",",".");
- if(!/^-?\d+(?:\.\d+)?$/.test(compact))throw new Error("Unknown expense format: "+s.slice(0,32));
- const value=Number(compact);
- if(!Number.isFinite(value)||value<0)throw new Error("Invalid or negative advertising expense");
- return value;
-};
-function delimited(value:string):string[][] {
- const out:string[][]=[];let row:string[]=[],cell="",quoted=false;
- const input=value.replace(/^\uFEFF/,"");
- for(let i=0;i<input.length;i++){
-  const char=input[i];
-  if(char==='"'){
-   if(quoted&&input[i+1]==='"'){cell+='"';i++}else quoted=!quoted;
-  }else if(char===';'&&!quoted){row.push(cell.trim());cell="";}
-  else if((char==='\n'||char==='\r')&&!quoted){
-    if(char==='\r'&&input[i+1]==='\n')i++;
-    row.push(cell.trim());cell="";if(row.some(Boolean))out.push(row);row=[];
-  }else cell+=char;
- }
- if(quoted)throw new Error("Unterminated CSV quoted cell");
- row.push(cell.trim());if(row.some(Boolean))out.push(row);
- return out;
-}
-const norm=(value:string)=>value.toLocaleLowerCase("ru")
- .replace(/[ё]/g,"е").replace(/[^\p{L}\p{N}]+/gu," ").trim();
-function parsedDay(value:string):string|null {
- const v=value.trim();
- if(/^\d{4}-\d{2}-\d{2}$/.test(v))return v;
- const ru=v.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
- if(ru)return ru[3]+"-"+ru[2]+"-"+ru[1];
- return null;
-}
 /** Do not silently assign a month of costs to one arbitrary date. */
-export function parseHistoricCSV(text:string,from:string,to:string):Parsed[] {
- if(text.startsWith("PK"))throw new Error("Historical report is ZIP, not one-campaign CSV");
- const lines=delimited(text),max=Math.min(40,lines.length);
- let head=-1,skuCol=-1,costCol=-1,dateCol=-1;
- for(let i=0;i<max;i++){
-  const headers=lines[i].map(norm);
-  const sku=headers.findIndex(s=>s==="sku"||s==="озон sku"||s==="код sku");
-  const expense=headers.findIndex(s=>s.startsWith("расход")||
-    s==="spend"||s==="expense");
-  if(sku<0||expense<0)continue;
-  head=i;skuCol=sku;costCol=expense;
-  dateCol=headers.findIndex(s=>(s==="дата"||s==="день"||s==="date"||
-    s==="дата отчета"||s==="report date"));
-  break;
- }
- if(head<0)throw new Error("CSV does not contain SKU and advertising expense columns");
- const sums=new Map<string,number>();
- let paidRows=0;
- for(const row of lines.slice(head+1)){
-  const sku=String(row[skuCol]??"").trim();
-  if(!sku||/^(?:всего|итого|total|bcero)$/i.test(sku))continue;
-  const raw=String(row[costCol]??"").trim();
-  if(!raw||raw==="—"||raw==="-")continue;
-  const amount=numeric(raw);
-  if(!/^\d{5,25}$/.test(sku)){
-    if(amount>0)throw new Error("Non-SKU advertising row with positive expense");
-    continue;
-  }
-  if(amount===0)continue;
-  paidRows++;
-  let day=dateCol>=0?parsedDay(String(row[dateCol]??"")):null;
-  if(!day&&from!==to)throw new Error("CSV_NO_DAILY_DATE: report must be split by day");
-  day=day??from;
-  if(day<from||day>to)throw new Error("Advertising CSV contains date outside requested window");
-  const key=day+"|"+sku;
-  sums.set(key,(sums.get(key)??0)+amount);
- }
- if(paidRows>0&&!sums.size)throw new Error("Campaign CSV had spend but no SKU attribution");
- return [...sums].map(([key,expense])=>({
-   day:key.slice(0,10),sku:key.slice(11),expense:Math.round(expense*10000)/10000
- }));
-}
+export function parseHistoricCSV(text:string,from:string,to:string):Parsed[] {return parseCampaignCSV(text,from,to);}
 /** Ozon returns a ZIP with one campaignId.csv per campaign when
  * requesting 2-10 campaigns. Decode central directory, verify CRC and
  * require all expected CSVs before marking any campaign complete.
@@ -326,7 +253,10 @@ export async function runHistoricalAdvertising(request:NextRequest){
    .eq("account_key","main").gte("day",selected.date_from).lte("day",selected.date_to);
   if(covered.error)throw covered.error;
   const requiredDays=(Date.parse(selected.date_to)-Date.parse(selected.date_from))/86400000+1;
-  if((covered.data?.length??0)>=requiredDays){
+  const pendingMetrics=await db.from("ozon_finance_ad_campaign_tasks").select('id',{head:true,count:'exact'}).eq('job_id',selected.id).eq('metrics_ready',false);
+  if(pendingMetrics.error)throw pendingMetrics.error;
+  const taskCheck=await db.from('ozon_finance_ad_campaign_tasks').select('id',{head:true,count:'exact'}).eq('job_id',selected.id);if(taskCheck.error)throw taskCheck.error;
+  if((covered.data?.length??0)>=requiredDays && Number(taskCheck.count)>0 && pendingMetrics.count===0){
     await db.from("ozon_finance_ad_sync_jobs")
       .update({status:"complete",last_error:null,updated_at:new Date().toISOString()})
       .eq("id",selected.id);
@@ -345,6 +275,10 @@ export async function runHistoricalAdvertising(request:NextRequest){
     return json({ok:true,phase,campaigns:countCampaigns,
       reports:countCampaigns,period:selected.date_from+".."+selected.date_to});
   }
+  // Re-read existing completed reports to backfill metrics without charging another import.
+  const legacy=await db.from('ozon_finance_ad_campaign_tasks').select('id,report_uuid').eq('job_id',selected.id).eq('status','complete').eq('metrics_ready',false).limit(10);
+  if(legacy.error)throw legacy.error;
+  if(legacy.data?.length){for(const item of legacy.data)await markTask(db,item.id,{status:item.report_uuid?'requested':'pending',last_error:null});}
   // Only one UUID may be live for this account. Poll it before creating
   // another request, including after a Vercel function restart.
   const q=await db.from("ozon_finance_ad_campaign_tasks")
@@ -392,7 +326,8 @@ export async function runHistoricalAdvertising(request:NextRequest){
       campaigns,period:task.day+".."+task.date_to});
   }
   if(!task.report_uuid)throw new Error("Missing UUID for pending report");
-  const ready=await api(access,"/api/client/statistics/"+encodeURIComponent(task.report_uuid));
+  let ready:Response;
+  try{ready=await api(access,"/api/client/statistics/"+encodeURIComponent(task.report_uuid));}catch(error){if(message(error).includes('HTTP 404')){const reset=await db.from('ozon_finance_ad_campaign_tasks').update({status:'pending',report_uuid:null,last_error:null}).eq('job_id',selected.id).eq('report_uuid',task.report_uuid);if(reset.error)throw reset.error;phase='expired_report_requeued';return json({ok:true,phase});}throw error;}
   const report=await ready.json() as {state?:string;error?:string};
   if(report.state!=="OK"){
     if(report.state==="ERROR"||report.state==="FAILED")
@@ -439,7 +374,7 @@ export async function runHistoricalAdvertising(request:NextRequest){
     throw err;
   }
   const allLines:Array<{account_key:string;day:string;sku:string;
-    campaign_id:string;expense_rub:number}>=[];
+    campaign_id:string;expense_rub:number;views:number|null;clicks:number|null;carts:number|null;orders:number|null;revenue_rub:number|null;metrics_version:number}>=[];
   const perCampaign=new Map<number,number>();
   for(const item of batch){
     let parsed:Parsed[];
@@ -458,7 +393,7 @@ export async function runHistoricalAdvertising(request:NextRequest){
     }
     perCampaign.set(item.id,parsed.length);
     allLines.push(...parsed.map(x=>({account_key:"main",day:x.day,sku:x.sku,
-      campaign_id:item.campaign_id,expense_rub:x.expense})));
+      campaign_id:item.campaign_id,expense_rub:x.expense,views:x.views,clicks:x.clicks,carts:x.carts,orders:x.orders,revenue_rub:x.revenue,metrics_version:1})));
   }
   for(let i=0;i<allLines.length;i+=200){
     const {error}=await db.from("ozon_finance_ad_sku_daily")
@@ -469,7 +404,7 @@ export async function runHistoricalAdvertising(request:NextRequest){
   // Ozon SKU/day/campaign row has been stored in the database.
   for(const item of batch)
     await markTask(db,item.id,{status:"complete",
-      rows_saved:perCampaign.get(item.id)??0,last_error:null});
+      rows_saved:perCampaign.get(item.id)??0,metrics_ready:true,last_error:null});
   await db.from("ozon_finance_ad_sync_jobs")
     .update({status:"running",last_error:null,updated_at:new Date().toISOString()})
     .eq("id",selected.id);

@@ -16,6 +16,7 @@ type FinanceRow = {
   transit_revenue:number|null;transit_drr:number|null;discontinued:boolean;
 };
 type FinanceReport = {
+  cache_updated_at?:string|null;
   from: string; to: string; synced_days: number; total_days: number;
   missing_days: string[]; operation_count: number; ledger_amount: number;
   allocated_amount: number; unallocated_amount: number; total_mayak: number; sales_window_covered: boolean;
@@ -360,11 +361,12 @@ export default function FinancierClient() {
           onClick={()=>void formReport()}>{busy?"Формируем…":"Сформировать"}</button>
         <button className="ozf-btn" onClick={()=>void load()} disabled={loading||busy}>Обновить отчёт</button>
       </div>
+      {data&&<p>Показан период: <b>{data.from} — {data.to}</b> включительно. Кэш: {data.cache_updated_at?new Date(data.cache_updated_at).toLocaleString('ru-RU',{timeZone:'Asia/Krasnoyarsk'}):'—'} (Красноярск).</p>}
       {connectionStatus && <p className="ozf-progress" role="status">{connectionStatus}</p>}
       {error && <p className="ozf-error" role="alert">{error}</p>}
       {progress && <p className="ozf-progress" role="status">{progress}</p>}
       <FinancierDetailTable data={data} rows={rows}
-        includeUnallocated={managerFilter==="Все КМ"}
+        includeUnallocated={managerFilter==="Все КМ"} onSaved={load}
         onToggle={(masterCode,offerId,checked)=>{
           const row=rows.find(r=>r.master_code===masterCode && r.offer_id===offerId);
           if(row)return toggleDiscontinued(row,checked);

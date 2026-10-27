@@ -1,0 +1,25 @@
+import {NextRequest,NextResponse} from 'next/server';
+import {financeAccess} from '../../../../lib/yandex/finance-access';
+import {validDate} from '../../../../lib/yandex/finance';
+import {campaignMetrics,sumCampaignMetrics,type MetricTotals} from '../../../../lib/ozon/campaign-metrics';
+export const dynamic='force-dynamic';
+function period(from:string,to:string){if(!validDate(from)||!validDate(to)||from>to||Date.parse(to)-Date.parse(from)>90*86400000)throw Error('Выберите период до 91 дня');}
+export async function GET(req:NextRequest){try{
+ const db=await financeAccess(),u=new URL(req.url),from=u.searchParams.get('from')??'',to=u.searchParams.get('to')??'',offer=u.searchParams.get('offer_id')??'';period(from,to);if(!offer||offer.length>255)throw Error('Укажите артикул');
+ const mapping=await db.from('ozon_finance_sku_map').select('sku').eq('account_key','main').eq('offer_id',offer);if(mapping.error)throw mapping.error;
+ const skus=mapping.data.map(x=>x.sku);if(offer.startsWith('SKU:')&&/^\d+$/.test(offer.slice(4)))skus.push(offer.slice(4));
+ const rows:Array<{day:string;campaign_id:string;expense_rub:number;views:number|null;clicks:number|null;carts:number|null;orders:number|null;revenue_rub:number|null;metrics_version:number}>=[];
+ if(skus.length)for(let offset=0;;offset+=1000){const r=await db.from('ozon_finance_ad_sku_daily').select('day,campaign_id,expense_rub,views,clicks,carts,orders,revenue_rub,metrics_version').eq('account_key','main').in('sku',skus).gte('day',from).lte('day',to).order('day').order('campaign_id').order('sku').range(offset,offset+999);if(r.error)throw r.error;rows.push(...r.data);if(r.data.length<1000)break;}
+ const jobs=await db.from('ozon_finance_ad_sync_jobs').select('id,status').eq('account_key','main').lte('date_from',to).gte('date_to',from);if(jobs.error)throw jobs.error;
+ const tasks:Array<{campaign_id:string;day:string;date_to:string;metrics_ready:boolean;status:string}>=[];
+ if(jobs.data.length)for(let offset=0;;offset+=1000){const r=await db.from('ozon_finance_ad_campaign_tasks').select('campaign_id,day,date_to,metrics_ready,status').in('job_id',jobs.data.map(x=>x.id)).lte('day',to).gte('date_to',from).order('id').range(offset,offset+999);if(r.error)throw r.error;tasks.push(...r.data);if(r.data.length<1000)break;}
+ const days:string[]=[];for(let d=from;d<=to;d=new Date(Date.parse(d)+86400000).toISOString().slice(0,10))days.push(d);
+ const ids=[...new Set(rows.map(x=>x.campaign_id))].sort();const coverage=days.map(day=>{const active=tasks.filter(t=>t.day<=day&&t.date_to>=day);return {day,complete:active.length>0&&[...new Set(active.map(t=>t.campaign_id))].every(id=>active.some(t=>t.campaign_id===id&&t.status==='complete'&&t.metrics_ready))};});
+ const zero:MetricTotals={expense:0,views:0,clicks:0,carts:0,orders:0,revenue:0};const unknown:MetricTotals={expense:0,views:null,clicks:null,carts:null,orders:null,revenue:null};
+ const campaigns=ids.map(id=>{const own=rows.filter(x=>x.campaign_id===id);const daily=days.map(day=>{const found=own.filter(x=>x.day===day);const ready=coverage.find(x=>x.day===day)!.complete;const values=found.length?sumCampaignMetrics(found.map(x=>({expense:Number(x.expense_rub),views:x.views==null?null:Number(x.views),clicks:x.clicks==null?null:Number(x.clicks),carts:x.carts==null?null:Number(x.carts),orders:x.orders==null?null:Number(x.orders),revenue:x.revenue_rub==null?null:Number(x.revenue_rub)}))):ready?zero:unknown;return {day,...campaignMetrics(values),available:found.some(x=>x.metrics_version===1)||ready,complete:ready};});return {id,days:daily};});
+ return NextResponse.json({ok:true,from,to,offer,campaigns,coverage,complete:coverage.every(x=>x.complete),loading:jobs.data.some(x=>['pending','running','failed'].includes(x.status)),hasMapping:skus.length>0},{headers:{'Cache-Control':'private,no-store'}});
+ }catch(e){const error=e instanceof Error?e.message:'Не удалось загрузить РК';return NextResponse.json({ok:false,error},{status:error==='Требуется авторизация'?401:error.startsWith('Недостаточно прав')?403:400});}}
+export async function POST(req:NextRequest){try{const db=await financeAccess(),p=await req.json(),from=String(p.from??''),to=String(p.to??'');period(from,to);if(to>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Krasnoyarsk',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()))throw Error('Нельзя загружать будущие даты');
+ for(let start=from;start<=to;){const end=new Date(Math.min(Date.parse(start)+30*86400000,Date.parse(to))).toISOString().slice(0,10);const r=await db.from('ozon_finance_ad_sync_jobs').upsert({account_key:'main',date_from:start,date_to:end,status:'pending',last_error:null,updated_at:new Date().toISOString()},{onConflict:'account_key,date_from,date_to'});if(r.error)throw r.error;start=new Date(Date.parse(end)+86400000).toISOString().slice(0,10);}
+ return NextResponse.json({ok:true,message:'Загрузка РК поставлена в очередь'});
+ }catch(e){const error=e instanceof Error?e.message:'Ошибка загрузки';return NextResponse.json({ok:false,error},{status:error==='Требуется авторизация'?401:error.startsWith('Недостаточно прав')?403:400});}}

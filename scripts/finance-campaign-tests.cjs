@@ -1,0 +1,16 @@
+const assert=require('node:assert/strict');
+const {parseCampaignCSV,campaignMetrics,sumCampaignMetrics}=require('../.campaign-build/ozon/campaign-metrics');
+const {ratioTotal,uniqueStock}=require('../.campaign-build/finance-totals');
+const csv='sku;Дата;Расход, Р, с НДС;Показы;Клики;В корзину;Заказы;Выручка, Р\n123456;01.10.2026;100,50;1000;50;20;5;2010\n123456;02.10.2026;0;500;10;3;1;500\nВсего;;100,50;1500;60;23;6;2510';
+const rows=parseCampaignCSV(csv,'2026-10-01','2026-10-02');assert.equal(rows.length,2);assert.equal(rows[1].expense,0);assert.equal(rows[1].views,500);
+const total=campaignMetrics(sumCampaignMetrics(rows));assert.equal(total.views,1500);assert.equal(total.orders,6);assert.equal(total.ctr,.04);assert.equal(total.drr,100.5/2510);assert.equal(total.cpm,67);assert.equal(total.cpo,16.75);
+assert.equal(parseCampaignCSV('sku;Расход;Показы;Клики;В корзину;Заказы;Выручка\n123456;0;0;0;0;0;0','2026-10-01','2026-10-02').length,0);
+assert.notEqual(total.ctr,(.05+.02)/2);
+assert.equal(campaignMetrics({expense:0,views:0,clicks:0,carts:0,orders:0,revenue:0}).drr,null);
+const unknown=parseCampaignCSV('sku;Расход\n123456;10','2026-10-01','2026-10-01');assert.equal(unknown[0].views,null);assert.equal(campaignMetrics(unknown[0]).ctr,null);
+assert.throws(()=>parseCampaignCSV('sku;Расход\n123456;10','2026-10-01','2026-10-02'),/CSV_NO_DAILY_DATE/);
+assert.throws(()=>parseCampaignCSV(csv,'2026-10-02','2026-10-03'),/outside/);
+assert.equal(ratioTotal([{n:100,d:10},{n:100,d:100},{n:null,d:50}],r=>r.n,r=>r.d),200/110);
+assert.equal(ratioTotal([{n:0,d:0}],r=>r.n,r=>r.d),null);
+assert.equal(uniqueStock([{id:'A',v:10},{id:'A',v:10},{id:'B',v:5}],r=>r.id,r=>r.v),15);
+console.log('PASS: all eight campaign metrics, zero-spend activity, unknown fields, daily dates, weighted totals and deduplicated stock');

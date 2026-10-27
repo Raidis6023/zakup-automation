@@ -1,5 +1,9 @@
 "use client";
 import { Fragment, useMemo, useState } from "react";
+import dynamic from 'next/dynamic';
+import {knownSum,ratioTotal,uniqueStock} from '../../../lib/finance-totals';
+import OzonRowRates from './OzonRowRates';
+const CampaignCharts=dynamic(()=>import('./CampaignCharts'),{ssr:false});
 
 export type FinancialRow = {
   offer_id:string;master_code:string|null;manager:string;name:string|null;
@@ -85,9 +89,10 @@ function valueFor(r:FinancialRow,key:SortKey):number|string|null{
   }
 }
 export default function FinancierDetailTable({
-  data,rows,includeUnallocated,onToggle
+  data,rows,includeUnallocated,onToggle,onSaved
 }:{
   data:Data|null;rows:FinancialRow[];includeUnallocated:boolean;
+  onSaved:()=>void|Promise<void>;
   onToggle:(masterCode:string|null,offerId:string,checked:boolean)=>void|Promise<void>;
 }) {
   const [search,setSearch]=useState("");
@@ -135,6 +140,12 @@ export default function FinancierDetailTable({
   const positionsNegative=rows.filter(r=>r.estimated_result!=null&&r.estimated_result<0).length;
   const profitability=operatingProfit!=null&&sumRevenue!=null&&sumRevenue>0
     ?operatingProfit/sumRevenue:null;
+  const totalRoas=ratioTotal(rows,r=>advertising(r)===null?null:r.estimated_result,r=>{const ad=advertising(r);return ad===null?null:Math.abs(ad)});
+  const transitDrr=ratioTotal(rows,r=>{const ad=advertising(r);return ad===null?null:Math.abs(ad)},r=>r.transit_revenue);
+  const profitPerUnit=ratioTotal(rows,r=>r.estimated_result,r=>r.buyout_units);
+  const stockKey=(r:FinancialRow)=>r.master_code??r.offer_id;
+  const totalMain=uniqueStock(rows,stockKey,r=>r.main_stock),totalOx=uniqueStock(rows,stockKey,r=>r.ox_stock),totalChina=uniqueStock(rows,stockKey,r=>r.in_china);
+  const totalOzon=knownSum(rows,r=>r.ozon_stock),totalBalance=[totalMain,totalOx,totalOzon].every(x=>x!==null)?Number(totalMain)+Number(totalOx)+Number(totalOzon):null;
   const kpis=[
     {name:"Операционная прибыль",value:money(operatingProfit),tone:moneyTone(operatingProfit)},
     {name:"Выручка",value:money(sumRevenue),tone:moneyTone(sumRevenue)},
@@ -264,6 +275,8 @@ export default function FinancierDetailTable({
                     {money(r.estimated_result)}</td>
                   </tr>
                 </tbody></table>
+                <OzonRowRates master={r.master_code} onSaved={onSaved}/>
+                <CampaignCharts offer={r.offer_id} from={data?.from??''} to={data?.to??''}/>
               </div>
             </td>
           </tr>}
@@ -271,7 +284,7 @@ export default function FinancierDetailTable({
         })}
         {!display.length&&<tr><td colSpan={25} className="ozf-empty">Нет артикулов для выбранного фильтра.</td></tr>}
         </tbody>
-        <tfoot><tr>
+        <tfoot><tr title="Итоги по известным значениям. Проценты взвешены по соответствующим суммам; собственные остатки учтены один раз на ЕНОТ.">
           <td>Итого за период</td><td colSpan={2}>{qty(rows.length)} артикулов</td>
           <td className={moneyTone(operatingProfit)}>{money(operatingProfit)}</td>
           <td>{money(sumRevenue)}</td>
@@ -281,16 +294,16 @@ export default function FinancierDetailTable({
           <td>{qty(numericSum(rows,r=>r.order_count))}</td>
           <td>{qty(numericSum(rows,r=>r.cancelled_units))}</td>
           <td>{qty(numericSum(rows,r=>r.buyout_units))}</td>
-          <td>—</td>
+          <td title="Взвешенный ROAS по строкам с известной прибылью и рекламой">{pct(totalRoas)}</td>
           <td>{qty(numericSum(rows,r=>r.in_transit))}</td>
-          <td>{money(numericSum(rows,r=>r.transit_revenue))}</td><td>—</td>
+          <td>{money(numericSum(rows,r=>r.transit_revenue))}</td><td title="Реклама / выручка с товарами в пути по строкам с известными значениями">{pct(transitDrr)}</td>
           <td>{qty(numericSum(rows,r=>r.ozon_stock))}</td>
           <td>{qty(numericSum(rows,r=>r.in_crossdock))}</td>
-          <td>{qty(numericSum(rows,r=>r.main_stock))}</td>
-          <td>{qty(numericSum(rows,r=>r.ox_stock))}</td>
-          <td>—</td><td>—</td>
+          <td>{qty(totalMain)}</td>
+          <td>{qty(totalOx)}</td>
+          <td>{qty(totalBalance)}</td><td>{money(profitPerUnit)}</td>
           <td>{money(numericSum(rows,r=>r.mayak_expense==null?null:-Math.abs(r.mayak_expense)))}</td>
-          <td>{qty(numericSum(rows,r=>r.in_china))}</td><td>—</td><td>—</td>
+          <td>{qty(totalChina)}</td><td>—</td><td>{qty(rows.filter(r=>r.discontinued).length)}</td>
         </tr></tfoot>
       </table>
     </div>

@@ -567,6 +567,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
   // Performance statistics. Throw rather than publish silently doubled amounts.
   assertAdvertisingAccountingInvariant(accounting);
   return {
+    cache_updated_at:(syncRes.data??[]).map(x=>String(x.synced_at??'')).filter(Boolean).sort().at(-1)??null,
     from, to, synced_days: loaded.size, total_days: days.length, missing_days: missingDays,
     operation_count: operationCount, total_mayak: round(totalMayak),
     ledger_amount: fromKopecks(accounting.ledgerKopecks),
@@ -753,6 +754,13 @@ export async function GET(request: NextRequest) {
   if (!db) return fail("Доступ к финансовым данным разрешён только администраторам", 403);
   const url = new URL(request.url);
   try {
+    if(url.searchParams.get('mode')==='rateHistory'){
+      const master=url.searchParams.get('master_code')??'';
+      if(!/^[A-Za-zА-Яа-яЁё0-9._-]{1,80}$/.test(master))return fail('Некорректный ЕНОТ',400);
+      const [costs,mayak,manager]=await Promise.all([db.from('ozon_finance_costs').select('master_code,valid_from,unit_cost_rub').eq('master_code',master).order('valid_from',{ascending:false}),db.from('ozon_finance_mayak').select('master_code,valid_from,unit_cost_rub').eq('master_code',master).order('valid_from',{ascending:false}),db.from('ozon_finance_managers').select('manager_name').eq('master_code',master).maybeSingle()]);
+      for(const r of [costs,mayak,manager])if(r.error)throw r.error;
+      return NextResponse.json({ok:true,costs:costs.data,mayak:mayak.data,manager:manager.data?.manager_name??''},{headers:{'Cache-Control':'private,no-store'}});
+    }
     if (url.searchParams.get("mode") === "settings") {
       return NextResponse.json({ok: true, ...(await buildSettings(db))});
     }
