@@ -58,7 +58,7 @@ export function authenticated(request: NextRequest, scope: string): NextResponse
   }
   const scopes = (process.env.ONE_C_API_SCOPES || "finance,sales,products,stocks")
     .split(",").map((value) => value.trim());
-  if (!scopes.includes(scope)) {
+  if (scope !== "catalog" && !scopes.includes(scope)) {
     return failure(new ExportError(403, "FORBIDDEN", "У ключа нет разрешения на этот раздел"));
   }
   return null;
