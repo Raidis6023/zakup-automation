@@ -1041,13 +1041,6 @@ export default async function WildberriesPage() {
 
 
             <ButtonLink
-              href="/stock-import"
-            >
-              Остатки склада
-            </ButtonLink>
-
-
-            <ButtonLink
               href="/"
             >
               Главная
