@@ -31,7 +31,7 @@ export async function proxy(
 
   // 1C requests use a dedicated, fail-closed bearer token check in each
   // app/api/v1/1c/... route. Do not use the browser session here.
-  if (pathname.startsWith("/api/v1/1c/")) {
+  if (pathname === "/api/v1/1c/export") {
     return NextResponse.next();
   }
 
