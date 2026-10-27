@@ -111,3 +111,34 @@ div {
   }
 
 }
+
+
+/* Breadcrumbs occupy the former home-button slot, without changing the title's row. */
+.wb-reference-page .wb-title-wrap--text-only {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.wb-reference-page .wb-title-wrap--text-only > div {
+  min-width: 0;
+}
+
+.wb-reference-page .wb-page-subtitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wb-reference-page .wb-header-actions {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-left: auto;
+  margin-right: 5px;
+  flex-wrap: nowrap;
+}
+
+@media (max-width: 800px) {
+  .wb-reference-page .wb-header-actions {
+    flex-wrap: nowrap;
+  }
+}
