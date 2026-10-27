@@ -2,7 +2,7 @@ import type {
   ReactNode,
 } from "react";
 
-import ButtonLink from "../ui/ButtonLink";
+import Breadcrumbs from "../ui/Breadcrumbs";
 
 import ThemeToggle
 from "../ThemeToggle";
@@ -1040,11 +1040,12 @@ export default async function WildberriesPage() {
             <ThemeToggle />
 
 
-            <ButtonLink
-              href="/"
-            >
-              Главная
-            </ButtonLink>
+            <Breadcrumbs
+              items={[
+                { label: "Главная", href: "/" },
+                { label: "Wildberries", shortLabel: "WB", href: "/wildberries" },
+              ]}
+            />
 
           </div>
 
