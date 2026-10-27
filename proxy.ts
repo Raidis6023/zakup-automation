@@ -54,6 +54,8 @@ export async function proxy(
     ||
     pathname ===
     "/api/agents/wb-finance-cron"
+    ||
+    pathname === "/api/agents/yandex-finance-campaigns-cron"
   ) {
 
     return NextResponse.next();
