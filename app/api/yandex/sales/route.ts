@@ -2003,9 +2003,6 @@ function hasPreflightErrors(
     data.missingYandexProductSkus.length >
       0
     ||
-    data.unlinkedYandexProductSkus.length >
-      0
-    ||
     data.missingProductRowSkus.length >
       0
     ||
@@ -2297,10 +2294,6 @@ function buildOrderRows(
 
       if (
         !yp
-        ||
-        !product
-        ||
-        !yp.master_code
       ) {
 
         throw new Error(
@@ -2412,7 +2405,10 @@ function buildOrderRows(
             yp.id,
 
           product_id:
-            product.id,
+            product
+              ?.id
+            ??
+            null,
 
           shop_sku:
             shopSku,
@@ -2423,7 +2419,9 @@ function buildOrderRows(
             null,
 
           master_code:
-            yp.master_code,
+            yp.master_code
+            ??
+            null,
 
           offer_name:
             item.offerName
@@ -2664,10 +2662,6 @@ function buildReturnRows(
 
       if (
         !yp
-        ||
-        !product
-        ||
-        !yp.master_code
       ) {
 
         throw new Error(
@@ -2796,7 +2790,10 @@ function buildReturnRows(
             yp.id,
 
           product_id:
-            product.id,
+            product
+              ?.id
+            ??
+            null,
 
           shop_sku:
             shopSku,
@@ -2807,7 +2804,9 @@ function buildReturnRows(
             null,
 
           master_code:
-            yp.master_code,
+            yp.master_code
+            ??
+            null,
 
           quantity:
             Number(
@@ -3548,6 +3547,10 @@ export async function POST() {
 
         return_items_saved:
           returnItemsSaved,
+
+        unlinked_yandex_product_skus:
+          prepared
+            .unlinkedYandexProductSkus,
 
         unmatched_order_items:
           0,
