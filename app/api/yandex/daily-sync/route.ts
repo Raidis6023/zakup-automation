@@ -16,6 +16,7 @@ const RETRY_DELAY_MS =
 
 
 type StepName =
+  | "products"
   | "stocks"
   | "sales"
   | "sales_daily";
@@ -702,11 +703,12 @@ Promise<JsonObject> {
 }
 
 
-async function runInternalPost({
+async function runInternalRequest({
   baseUrl,
   triggerAuth,
   step,
   path,
+  method = "POST",
 }: {
   baseUrl:
     string;
@@ -719,6 +721,10 @@ async function runInternalPost({
 
   path:
     string;
+
+  method?:
+    "GET"
+    | "POST";
 }):
 Promise<StepResult> {
 
@@ -773,8 +779,7 @@ Promise<StepResult> {
         await fetch(
           `${baseUrl}${path}`,
           {
-            method:
-              "POST",
+            method,
 
             headers,
 
@@ -1029,8 +1034,29 @@ async function runDailySync(
       config.internalBaseUrl;
 
 
+    const productsResult =
+      await runInternalRequest({
+        baseUrl,
+        triggerAuth,
+
+        step:
+          "products",
+
+        path:
+          "/api/yandex/products/sync",
+
+        method:
+          "GET",
+      });
+
+
+    completedSteps.push(
+      productsResult
+    );
+
+
     const stocksResult =
-      await runInternalPost({
+      await runInternalRequest({
         baseUrl,
         triggerAuth,
 
@@ -1048,7 +1074,7 @@ async function runDailySync(
 
 
     const salesResult =
-      await runInternalPost({
+      await runInternalRequest({
         baseUrl,
         triggerAuth,
 
@@ -1098,7 +1124,7 @@ async function runDailySync(
 
 
     const dailyResult =
-      await runInternalPost({
+      await runInternalRequest({
         baseUrl,
         triggerAuth,
 
@@ -1236,6 +1262,9 @@ async function runDailySync(
           startedAtMs,
 
         steps: {
+          products:
+            productsResult,
+
           stocks:
             stocksResult,
 
