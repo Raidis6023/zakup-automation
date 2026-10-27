@@ -17,6 +17,7 @@ const CRON_API_ROUTES =
     "/api/ozon/daily-sync",
 
     "/api/yandex/daily-sync",
+    "/api/yandex/products/sync",
     "/api/yandex/stocks",
     "/api/yandex/sales",
     "/api/yandex/sales/daily-sync",
