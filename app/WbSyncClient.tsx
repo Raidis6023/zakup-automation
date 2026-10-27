@@ -1,5 +1,7 @@
 "use client";
 
+import Button from "./ui/Button";
+
 import {
   useEffect,
   useMemo,
@@ -1431,10 +1433,12 @@ export default function WbSyncClient({
           Всегда стоит в средней строке.
           ====================================================== */}
 
-      <button
+      <Button
         type="button"
 
-        className="wb-sync-hero-button"
+        fullWidth
+
+        aria-busy={loading}
 
         onClick={
           runSync
@@ -1522,7 +1526,7 @@ export default function WbSyncClient({
 
         </span>
 
-      </button>
+      </Button>
 
 
       {/* ======================================================

@@ -2,8 +2,7 @@ import type {
   ReactNode,
 } from "react";
 
-import Link
-from "next/link";
+import ButtonLink from "../ui/ButtonLink";
 
 import ThemeToggle
 from "../ThemeToggle";
@@ -995,7 +994,7 @@ export default async function WildberriesPage() {
   return (
 
     <main
-      className="page wb-reference-page"
+      className="page wb-reference-page workspace-ui"
     >
 
       <div
@@ -1041,22 +1040,20 @@ export default async function WildberriesPage() {
             <ThemeToggle />
 
 
-            <Link href="/wildberries/fbw-supplies" className="secondary-button wb-navigation-button">Поставки FBW · формирование</Link>
+            <ButtonLink href="/wildberries/fbw-supplies">Поставки FBW · формирование</ButtonLink>
 
-            <Link
+            <ButtonLink
               href="/stock-import"
-              className="secondary-button wb-navigation-button"
             >
               Остатки склада
-            </Link>
+            </ButtonLink>
 
 
-            <Link
+            <ButtonLink
               href="/"
-              className="secondary-button workspace-home-button wb-navigation-button"
             >
               Главная
-            </Link>
+            </ButtonLink>
 
           </div>
 
