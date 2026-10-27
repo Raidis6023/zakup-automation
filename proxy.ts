@@ -29,6 +29,12 @@ export async function proxy(
     return NextResponse.next();
   }
 
+  // 1C requests use a dedicated, fail-closed bearer token check in each
+  // app/api/v1/1c/... route. Do not use the browser session here.
+  if (pathname === "/api/v1/1c/export") {
+    return NextResponse.next();
+  }
+
   // ==========================================================
   // OZON DAILY CRON
   //
