@@ -151,8 +151,8 @@ export default function RatesEditorClient() {
         </tr></thead><tbody>
           {visible.map(r=><tr key={r.master_code} className={selected===r.master_code?"ozf-row-active":""} onClick={()=>choose(r)}>
             <td><b>{r.master_code}</b></td><td>{r.offer_id}<small>{r.name||""}</small></td>
-            <td>{r.manager}</td><td>{r.cost===null?"Не задана":r.cost.toLocaleString("ru-RU")}</td>
-            <td>{r.mayak===null?"Не задан":r.mayak.toLocaleString("ru-RU")}</td>
+            <td>{r.manager}</td><td>{r.cost===null?"Не задана":Math.round(r.cost).toLocaleString("ru-RU")}</td>
+            <td>{r.mayak===null?"Не задан":Math.round(r.mayak).toLocaleString("ru-RU")}</td>
             <td>{r.cost===null || r.mayak===null
               ? <span className="ozf-missing-tag">{[r.cost===null?"Себестоимость":null,r.mayak===null?"ТК Маяк":null].filter(Boolean).join(", ")}</span>
               : "Заполнено"}</td>

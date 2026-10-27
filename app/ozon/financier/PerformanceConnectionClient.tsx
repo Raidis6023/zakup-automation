@@ -42,7 +42,7 @@ export default function PerformanceConnectionClient() {
       <div className="ozf-toolbar">
         <div>
           <h2>Ozon Performance API · подключение</h2>
-          <p>Проверка авторизации и разрешения читать рекламные кампании. Никаких изменений в рекламе.</p>
+          
         </div>
         <button className="ozf-btn ozf-primary" disabled={checking} onClick={() => void verifyConnection()}>
           {checking ? "Проверяем…" : "Проверить подключение"}

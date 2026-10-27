@@ -474,8 +474,9 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     g.transit_revenue=transitSnapshotReady && g.revenue!==null &&
       (open?.money??(open?null:0))!==null
       ?round(g.revenue+Number(open?.money??0)):null;
-    const matchedAd=g.advertising_amount<0?-g.advertising_amount:0;
-    g.transit_drr=g.transit_revenue && g.transit_revenue>0 && g.advertising_amount<0
+    const matchedAd=g.advertising_amount!==0?Math.abs(g.advertising_amount):
+      g.performance_ad_expense!=null?Math.abs(g.performance_ad_expense):null;
+    g.transit_drr=g.transit_revenue!==null && g.transit_revenue>0 && matchedAd!==null
       ?matchedAd/g.transit_revenue:null;
     g.discontinued=!!(g.master_code && /выведен|выводится/i.test(articleStatus.get(g.master_code)||""));
     if(!g.master_code)g.data_gaps.push("Нет master_code");

@@ -31,7 +31,7 @@ type FinanceReport = {
 };
 const API = "/api/agents/ozon-finance";
 const currency = (v: number | null | undefined) =>
-  v == null ? "Нет данных" : v.toLocaleString("ru-RU", { style: "currency", currency: "RUB" });
+  v == null ? "Нет данных" : (Math.sign(v)*Math.round(Math.abs(v))||0).toLocaleString("ru-RU", { style: "currency", currency: "RUB", minimumFractionDigits: 0, maximumFractionDigits: 0 });
 function isoShift(delta: number): string {
   const d = new Date(); d.setUTCDate(d.getUTCDate() + delta);
   return d.toISOString().slice(0, 10);
@@ -45,7 +45,7 @@ function listDays(from: string, to: string) {
 }
 async function post(body: Record<string, unknown>) {
   const r = await fetch(API, { method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body), cache: "no-store" });
+    body: JSON.stringify(body), cache: "no-store", signal: body.action === 'analyze' ? AbortSignal.timeout(75000) : undefined });
   const data = await r.json();
   if (!r.ok || !data.ok) throw new Error(data.error || "Ошибка сервера");
   return data;
@@ -72,6 +72,7 @@ export default function FinancierClient() {
   const [editValidFrom, setEditValidFrom] = useState(() => isoShift(0));
   const [advice, setAdvice] = useState("");
   const [aiBusy, setAiBusy] = useState(false);
+  const [aiError,setAiError]=useState("");
   const load = useCallback(async () => {
     setError(""); setLoading(true);
     try {
@@ -327,11 +328,11 @@ export default function FinancierClient() {
     finally { setBusy(false); }
   }
   async function analyze() {
-    setAiBusy(true); setError(""); setAdvice("");
+    setAiBusy(true); setAiError(""); setAdvice("");
     try {
-      const result = await post({ action: "analyze", from, to });
+      const result = await post({ action: "analyze", from:appliedFrom, to:appliedTo });
       setAdvice(result.advice);
-    } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    } catch (e) { setAiError(e instanceof Error ? e.message : String(e)); }
     finally { setAiBusy(false); }
   }
   function exportCsv() {
@@ -339,8 +340,8 @@ export default function FinancierClient() {
       ["Артикул", "master_code", "КМ", "Начисления Ozon, ₽", "Продажи, шт (предварительно)",
         "Цена закупа, руб/шт", "ТК Маяк, ₽/шт", "ТК Маяк, расход, ₽", "Предварительный результат"].join(";"),
       ...rows.map(r => [r.offer_id, r.master_code ?? "", r.manager,
-        r.ozon_amount.toFixed(2).replace(".", ","),
-        r.sold_units ?? "", r.unit_cost ?? "", r.mayak_unit ?? "", r.mayak_expense ?? "", r.estimated_result ?? ""].map(x => '"' + String(x).replaceAll('"', '""') + '"').join(";")),
+        Math.round(r.ozon_amount),
+        r.sold_units ?? "", ...[r.unit_cost,r.mayak_unit,r.mayak_expense,r.estimated_result].map(v=>v==null?"":Math.round(v))].map(x => '"' + String(x).replaceAll('"', '""') + '"').join(";")),
     ].join("\r\n");
     const url = URL.createObjectURL(new Blob(["\ufeff" + content], { type: "text/csv;charset=utf-8" }));
     const a = document.createElement("a"); a.href = url;
@@ -387,9 +388,12 @@ export default function FinancierClient() {
         </table></div>
       </div>
       <div className="ozf-panel ozf-ai">
-        <div className="ozf-toolbar"><div><h2>ИИ-аудитор</h2><p>Ищет аномалии и предлагает проверки, но не пересчитывает суммы сам.</p></div>
+        <div className="ozf-toolbar"><div><h2>ИИ-аудитор</h2></div>
           <button className="ozf-btn ozf-primary" onClick={() => void analyze()} disabled={aiBusy || !data || data.missing_days.length > 0}>{aiBusy ? "Анализ…" : "Проанализировать начисления"}</button></div>
-        {advice ? <div className="ozf-advice">{advice}</div> : <p className="ozf-footnote">Для анализа потребуется отдельный ключ OpenAI API в серверных настройках. Без него отчёт и импорт работают.</p>}
+        {aiBusy&&<p role="status" className="ozf-progress">Анализируем начисления…</p>}
+        {aiError&&<p role="alert" className="ozf-error">{aiError}</p>}
+        {!aiBusy&&(!data||data.missing_days.length>0)&&<p role="status">{!data?'Сначала сформируйте отчёт.':'Дождитесь загрузки всех дней выбранного периода.'}</p>}
+        {advice&&<div role="status" className="ozf-advice">{advice}</div>}
       </div>
       {!!data?.unallocated_details.length && <div className="ozf-panel" id="ozf-unallocated">
         <h2>Нераспределённые расходы</h2>

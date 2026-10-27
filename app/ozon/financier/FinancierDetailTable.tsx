@@ -29,7 +29,7 @@ type SortKey =
   "storage"|"orders"|"cancelled"|"buyout"|"roas"|"transit"|"transit_revenue"|
   "transit_drr"|"ozon_stock"|"crossdock"|"main"|"ox"|"stock"|"margin"|
   "mayak"|"china"|"abc"|"discontinued";
-const money=(v:number|null|undefined)=>v==null?"—":v.toLocaleString("ru-RU",{style:"currency",currency:"RUB"});
+const money=(v:number|null|undefined)=>v==null?"—":(Math.sign(v)*Math.round(Math.abs(v))||0).toLocaleString("ru-RU",{style:"currency",currency:"RUB",minimumFractionDigits:0,maximumFractionDigits:0});
 const qty=(v:number|null|undefined)=>v==null?"—":v.toLocaleString("ru-RU");
 const pct=(v:number|null|undefined)=>v==null||!Number.isFinite(v)?"—":
   (v*100).toLocaleString("ru-RU",{maximumFractionDigits:2})+"%";
@@ -53,7 +53,7 @@ function adTone(share:number|null):string{
   if(share==null)return "";
   if(share>0.11)return "ozf-bad";
   if(share>=0.10)return "ozf-caution";
-  return "ozf-good";
+  return "";
 }
 function storage(r:FinancialRow):number|null{
   const types=r.details.filter(d=>/хранени|размещени/i.test(d.name));
@@ -117,7 +117,6 @@ export default function FinancierDetailTable({
     }),[rows,search,sort,abc]);
 
   // The summary is scoped to the selected KM, not the free-text search.
-  const complete=rows.every(r=>r.estimated_result!=null);
   const sumProfit=numericSum(rows,r=>r.estimated_result);
   const globalAdjustment=includeUnallocated?Number(data?.unallocated_amount??0):0;
   const operatingProfit=sumProfit==null?null:round(sumProfit+globalAdjustment);
@@ -169,36 +168,13 @@ export default function FinancierDetailTable({
   return <div className="ozf-panel ozf-financial-summary" id="ozf-items">
     <div className="ozf-section-heading"><div>
       <h2>Результаты по артикулам</h2>
-      <p>Данные на {data?.to??"—"} включительно. Нажми на артикул, чтобы раскрыть статьи доходов и расходов.</p>
+      
     </div><a href="#ozf-unallocated" className="ozf-btn ozf-jump">Нераспределённые расходы ↓</a></div>
     <div className="ozf-kpi-grid">{kpis.map(k=>
       <div key={k.name} className={"ozf-kpi "+k.tone}>
         <span>{k.name}</span><strong>{k.value}</strong>
       </div>)}
     </div>
-    {!complete&&<p className="ozf-footnote">Часть артикулов без полной цены закупа или ТК Маяк. Прибыль по ним не рассчитана; итоги предварительные.</p>}
-    {!data?.ads_covered&&<p className="ozf-footnote ozf-ad-warning">
-      Рекламные начисления Seller API учтены в общих результатах, но пока не распределены по КМ.
-      При выборе отдельного менеджера его прибыль предварительная до завершения рекламной детализации.
-      Расходы на рекламу по SKU пока не подтверждены Performance API за весь период.
-      Уже полученные расходы из Performance API показываются по SKU в столбце «Реклама, ₽».
-      Пока загружены не все кампании, суммы по артикулам и ДРР <strong>неполные</strong>,
-      а прибыль КМ предварительная. Это не дополнительное списание сверх начислений Seller API.
-      {data?.ads_campaigns_total?<>
-        {" "}Обработано кампаний: <strong>{data.ads_campaigns_complete??0}
-        {" / "}{data.ads_campaigns_total}</strong>.
-      </>:null}
-      {(data?.ads_campaigns_complete??0)>0?<>
-        {" "}Получено из загруженных кампаний: <strong>
-        {money(data?.ads_partial_spend??0)}</strong>
-        {" "}по {data?.ads_partial_skus??0} артикулам.
-      </>:null}
-      {" "}Полных дней покрытия: {data?.ads_covered_days??0}.
-      {data?.ads_jobs?.some(x=>x.status==="pending"||x.status==="running")?
-        " Идёт обработка очереди рекламы; при HTTP 429 следующий запрос откладывается." :
-        data?.ads_jobs?.find(x=>x.status==="failed")?.last_error?
-          " Последняя ошибка: "+data.ads_jobs.find(x=>x.status==="failed")?.last_error : ""}
-    </p>}
     <div className="ozf-section-tools">
       <input placeholder="Поиск по артикулу, коду или КМ" aria-label="Поиск товаров" value={search}
         onChange={e=>setSearch(e.target.value)} />
@@ -237,7 +213,7 @@ export default function FinancierDetailTable({
             <td>{pct(r.transit_drr)}</td><td>{qty(r.ozon_stock)}</td><td>{qty(r.in_crossdock)}</td>
             <td>{qty(r.main_stock)}</td><td>{qty(r.ox_stock)}</td><td>{qty(stockTotal)}</td>
             <td className={moneyTone(margin)}>{money(margin)}</td>
-            <td className={r.mayak_expense&&r.mayak_expense>0?"ozf-bad":""}>
+            <td>
               {r.mayak_expense==null?"—":money(-Math.abs(r.mayak_expense))}</td>
             <td>{qty(r.in_china)}</td><td>{abc.get(r.offer_id)??"—"}</td>
             <td className="ozf-checkbox-cell"><label className="ozf-inline-checkbox">
@@ -276,7 +252,7 @@ export default function FinancierDetailTable({
                   {r.mayak_expense!=null&&<tr>
                     <td>ТК Маяк × заказанные единицы</td><td>Внешний расход</td>
                     <td>{qty(r.order_count)}</td>
-                    <td className="ozf-bad">{money(-Math.abs(r.mayak_expense))}</td>
+                    <td>{money(-Math.abs(r.mayak_expense))}</td>
                   </tr>}
                   {r.performance_ad_expense!=null&&<tr className="ozf-info-only">
                     <td>Реклама по SKU (Performance API, справочно)</td>
@@ -325,9 +301,6 @@ export default function FinancierDetailTable({
         {" "} = <strong className={moneyTone(operatingProfit)}>{money(operatingProfit)}</strong>.
       </>:<>. Общие начисления без привязки к КМ не включены в результат конкретного менеджера.</>}
     </div>
-    <p className="ozf-footnote">ДРР и реклама по SKU поступают из Performance API только для аналитики.
-      В прибыль списания рекламы уже включены в начисления Ozon Seller. Выкупы = заказы − отмены.
-      Складские остатки берутся по последним подтверждённым снимкам, а не на дату финансового периода.
-      Неучтённые значения отмечены прочерком. Маркетплейсы WB и ЯМ финансово не объединены с Ozon.</p>
+
   </div>;
 }
