@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {parseCampaignCSV,type CampaignLine} from "../../../../lib/ozon/campaign-metrics";
+import {parseCampaignCSV,campaignHeaders,type CampaignLine} from "../../../../lib/ozon/campaign-metrics";
 import { inflateRawSync } from "node:zlib";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 
@@ -404,7 +404,7 @@ export async function runHistoricalAdvertising(request:NextRequest){
   // Ozon SKU/day/campaign row has been stored in the database.
   for(const item of batch)
     await markTask(db,item.id,{status:"complete",
-      rows_saved:perCampaign.get(item.id)??0,metrics_ready:true,last_error:null});
+      rows_saved:perCampaign.get(item.id)??0,metrics_ready:true,source_headers:campaignHeaders(files.get(item.campaign_id)!),last_error:null});
   await db.from("ozon_finance_ad_sync_jobs")
     .update({status:"running",last_error:null,updated_at:new Date().toISOString()})
     .eq("id",selected.id);

@@ -3,6 +3,7 @@ const {parseCampaignCSV,campaignMetrics,sumCampaignMetrics}=require('../.campaig
 const {ratioTotal,uniqueStock}=require('../.campaign-build/finance-totals');
 const csv='sku;Дата;Расход, Р, с НДС;Показы;Клики;В корзину;Заказы;Выручка, Р\n123456;01.10.2026;100,50;1000;50;20;5;2010\n123456;02.10.2026;0;500;10;3;1;500\nВсего;;100,50;1500;60;23;6;2510';
 const rows=parseCampaignCSV(csv,'2026-10-01','2026-10-02');assert.equal(rows.length,2);assert.equal(rows[1].expense,0);assert.equal(rows[1].views,500);
+const units=parseCampaignCSV(csv.replace('Заказы;Выручка, Р','Заказы, шт.;Продажи, ₽'),'2026-10-01','2026-10-02');assert.equal(units[0].orders,5);assert.equal(units[0].revenue,2010);
 const total=campaignMetrics(sumCampaignMetrics(rows));assert.equal(total.views,1500);assert.equal(total.orders,6);assert.equal(total.ctr,.04);assert.equal(total.drr,100.5/2510);assert.equal(total.cpm,67);assert.equal(total.cpo,16.75);
 assert.equal(parseCampaignCSV('sku;Расход;Показы;Клики;В корзину;Заказы;Выручка\n123456;0;0;0;0;0;0','2026-10-01','2026-10-02').length,0);
 assert.notEqual(total.ctr,(.05+.02)/2);

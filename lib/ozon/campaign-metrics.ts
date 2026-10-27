@@ -5,15 +5,16 @@ export function sumCampaignMetrics(rows:MetricTotals[]):MetricTotals{
  const total=(k:Exclude<keyof MetricTotals,'expense'>)=>rows.some(r=>r[k]===null)?null:rows.reduce((s,r)=>s+(r[k]??0),0);
  return {expense:rows.reduce((s,r)=>s+r.expense,0),views:total('views'),clicks:total('clicks'),carts:total('carts'),orders:total('orders'),revenue:total('revenue')};
 }
-const norm=(s:string)=>s.toLocaleLowerCase('ru').replace(/ё/g,'е').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+const norm=(s:string)=>s.toLocaleLowerCase('ru').replace(/ё/g,'е').replace(/₽/g,' руб ').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 function csv(text:string){const out:string[][]=[];let row:string[]=[],cell='',quote=false;for(let i=0;i<text.length;i++){const c=text[i];if(c==='"'){if(quote&&text[i+1]==='"'){cell+='"';i++;}else quote=!quote;}else if(c===';'&&!quote){row.push(cell.trim());cell='';}else if((c==='\r'||c==='\n')&&!quote){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cell.trim());if(row.some(Boolean))out.push(row);row=[];cell='';}else cell+=c;}if(quote)throw Error('Unterminated campaign CSV');row.push(cell.trim());if(row.some(Boolean))out.push(row);return out;}
 const number=(s:string):number|null=>{const v=s.trim().replace(/[₽\s\u00a0]/g,'').replace(',','.');if(!v||v==='-'||v==='—')return null;if(!/^\d+(?:\.\d+)?$/.test(v))throw Error('Некорректная метрика рекламного отчёта');return Number(v);};
+export function campaignHeaders(text:string){return csv(text.replace(/^\uFEFF/,'')).slice(0,40).find(row=>{const h=row.map(norm);return h.some(x=>['sku','озон sku','код sku'].includes(x))&&h.some(x=>x.startsWith('расход')||['spend','expense'].includes(x));})??[];}
 export function parseCampaignCSV(text:string,from:string,to:string):CampaignLine[]{
  const lines=csv(text.replace(/^\uFEFF/,''));let head=-1,sku=-1,cost=-1;
  for(let i=0;i<Math.min(40,lines.length);i++){const a=lines[i].map(norm);sku=a.findIndex(x=>['sku','озон sku','код sku'].includes(x));cost=a.findIndex(x=>x.startsWith('расход')||['spend','expense'].includes(x));if(sku>=0&&cost>=0){head=i;break;}}
  if(head<0)throw Error('CSV does not contain SKU and advertising expense columns');
  const headers=lines[head].map(norm),find=(names:string[])=>headers.findIndex(s=>names.includes(s));
- const cols={views:find(['показы','views','impressions']),clicks:find(['клики','clicks']),carts:find(['в корзину','добавления в корзину','корзина','to cart','tocart']),orders:find(['заказы','orders']),revenue:headers.findIndex(s=>s==='revenue'||s.startsWith('выручка')&&!s.includes('модел'))};
+ const cols={views:find(['показы','views','impressions']),clicks:find(['клики','clicks']),carts:find(['в корзину','добавления в корзину','корзина','to cart','tocart']),orders:headers.findIndex(s=>s==='orders'||/^(заказы|заказано товаров|покупки)( |$)/.test(s)&&!s.includes('модел')),revenue:headers.findIndex(s=>s==='revenue'||/^(выручка|сумма заказов|заказано на сумму|продажи р|продажи руб)( |$)/.test(s)&&!s.includes('модел'))};
  const dateCol=find(['дата','день','date','дата отчета','report date']);const groups=new Map<string,CampaignLine>();
  for(const row of lines.slice(head+1)){
   const id=String(row[sku]??'').trim();if(!id||/^(всего|итого|total|bcero)$/i.test(id))continue;

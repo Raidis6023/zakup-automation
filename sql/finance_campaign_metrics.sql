@@ -10,3 +10,4 @@ revoke all on public.yandex_finance_managers from anon,authenticated;
 grant all on public.yandex_finance_managers to service_role;
 insert into public.yandex_finance_managers(master_key,manager_name)
  select distinct coalesce(master_code,'article:'||offer_id),'Ольга' from public.yandex_products on conflict do nothing;
+alter table public.ozon_finance_ad_campaign_tasks add column source_headers text[];
