@@ -55,7 +55,7 @@ export default function AdminPage() {
           GET /api/v1/1c/export?dataset=products
         </code>
         <p style={{ marginTop: 10, fontSize: 13, opacity: 0.72 }}>
-          Программисты 1С передают dataset, дополнительные параметры и секретный Bearer-ключ.
+          Программисты 1С передают dataset, дополнительные параметры, секретный Bearer-ключ и заголовок x-vercel-protection-bypass.
           Никакого доступа к внутренним таблицам Supabase.
         </p>
         <div style={{
