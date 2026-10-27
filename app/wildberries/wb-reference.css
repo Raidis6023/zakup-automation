@@ -118,25 +118,6 @@ img {
 }
 
 
-.wb-reference-page
-.wb-navigation-button {
-  display:
-    inline-flex;
-
-  align-items:
-    center;
-
-  justify-content:
-    center;
-
-  text-decoration:
-    none;
-
-  white-space:
-    nowrap;
-}
-
-
 /* ============================================================
    ERROR
    ============================================================ */

@@ -6,6 +6,7 @@ import type {
 import WorkspaceRouteFrame from "./WorkspaceRouteFrame";
 
 import "./globals.css";
+import "./ui/tokens.css";
 
 // ============================================================
 // МЕТАДАННЫЕ
