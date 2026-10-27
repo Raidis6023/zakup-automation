@@ -112,6 +112,15 @@ export default function FinancierClient() {
     }catch(error){setError(error instanceof Error?error.message:String(error))}
     finally{setBusy(false)}
   }
+  async function queueFinance(){
+    setBusy(true);setError('');try{
+      if(!from||!to||from>to)throw Error('Проверь даты периода');
+      const result=await post({action:'queuePeriod',from,to});
+      setManagerFilter(pendingManager);setAppliedFrom(from);setAppliedTo(to);
+      setProgress(result.queued_days>0?'Загрузка поставлена в очередь: '+result.queued_days+' дней. Уже загружено: '+result.completed_days+'. Прогресс сохраняется.':'Все дни выбранного периода уже загружены.');
+      if(appliedFrom===from&&appliedTo===to)await load();
+    }catch(e){setError(e instanceof Error?e.message:'Ошибка загрузки');}finally{setBusy(false);}
+  }
   async function toggleDiscontinued(r:FinanceRow,checked:boolean) {
     if(!r.master_code)return;
     try {
@@ -359,7 +368,7 @@ export default function FinancierClient() {
         </select></label>
         <button className="ozf-btn ozf-primary" disabled={busy||loading}
           onClick={()=>void formReport()}>{busy?"Формируем…":"Сформировать"}</button>
-        <button className="ozf-btn" onClick={()=>void load()} disabled={loading||busy}>Обновить отчёт</button>
+        <button className="ozf-btn" onClick={()=>void queueFinance()} disabled={loading||busy}>Загрузить / продолжить из Ozon</button>
       </div>
       {data&&<p>Показан период: <b>{data.from} — {data.to}</b> включительно. Кэш: {data.cache_updated_at?new Date(data.cache_updated_at).toLocaleString('ru-RU',{timeZone:'Asia/Krasnoyarsk'}):'—'} (Красноярск).</p>}
       {connectionStatus && <p className="ozf-progress" role="status">{connectionStatus}</p>}

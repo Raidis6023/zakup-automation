@@ -14,7 +14,7 @@ export function parseCampaignCSV(text:string,from:string,to:string):CampaignLine
  for(let i=0;i<Math.min(40,lines.length);i++){const a=lines[i].map(norm);sku=a.findIndex(x=>['sku','озон sku','код sku'].includes(x));cost=a.findIndex(x=>x.startsWith('расход')||['spend','expense'].includes(x));if(sku>=0&&cost>=0){head=i;break;}}
  if(head<0)throw Error('CSV does not contain SKU and advertising expense columns');
  const headers=lines[head].map(norm),find=(names:string[])=>headers.findIndex(s=>names.includes(s));
- const cols={views:find(['показы','views','impressions']),clicks:find(['клики','clicks']),carts:find(['в корзину','добавления в корзину','корзина','to cart','tocart']),orders:headers.findIndex(s=>s==='orders'||/^(заказы|заказано товаров|покупки)( |$)/.test(s)&&!s.includes('модел')),revenue:headers.findIndex(s=>s==='revenue'||/^(выручка|сумма заказов|заказано на сумму|продажи р|продажи руб)( |$)/.test(s)&&!s.includes('модел'))};
+ const cols={views:find(['показы','views','impressions']),clicks:find(['клики','clicks']),carts:find(['в корзину','добавления в корзину','корзина','to cart','tocart']),orders:headers.findIndex(s=>s==='orders'||/^(заказы|заказано товаров|продано товаров|покупки)( |$)/.test(s)&&!s.includes('модел')),revenue:headers.findIndex(s=>s==='revenue'||/^(выручка|сумма заказов|заказано на сумму|продажи в продвижении|продажи р|продажи руб)( |$)/.test(s)&&!s.includes('модел'))};
  const dateCol=find(['дата','день','date','дата отчета','report date']);const groups=new Map<string,CampaignLine>();
  for(const row of lines.slice(head+1)){
   const id=String(row[sku]??'').trim();if(!id||/^(всего|итого|total|bcero)$/i.test(id))continue;
