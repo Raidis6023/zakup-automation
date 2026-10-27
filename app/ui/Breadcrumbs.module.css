@@ -1,0 +1,111 @@
+.root {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  min-height: var(--ui-control-height-compact, 38px);
+  padding: 0 11px;
+  border: 1px solid var(--ws-border, #d8e7f4);
+  border-radius: 10px;
+  background: var(--ws-surface-soft, #f3f8fd);
+  color: var(--ws-text-secondary, #496985);
+}
+
+.list {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  flex: 0 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.chevron {
+  display: block;
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+  margin: 0 6px;
+  fill: none;
+  stroke: var(--ws-text-muted, #8294a6);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.link {
+  display: block;
+  min-width: 0;
+  padding: 5px 3px;
+  border-radius: 5px;
+  overflow: hidden;
+  color: inherit;
+  font-size: var(--ui-font-size-compact, 12px);
+  font-weight: var(--ui-font-weight-secondary, 600);
+  line-height: 1.25;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link:hover {
+  background: var(--ws-surface-hover, #edf6f1);
+  color: var(--ws-text, #132d49);
+}
+
+.link:focus-visible {
+  outline: var(--ui-focus-width, 2px) solid var(--ws-blue, #11865d);
+  outline-offset: 1px;
+}
+
+.current .link {
+  color: var(--ws-blue, #11865d);
+  font-weight: 700;
+}
+
+.fullLabel {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shortLabel {
+  display: none;
+}
+
+@media (max-width: 1100px) {
+  .item:not(:first-child):not(:last-child) {
+    display: none;
+  }
+}
+
+@media (max-width: 800px) {
+  .item:last-child .fullLabel:has(+ .shortLabel) {
+    display: none;
+  }
+
+  .item:last-child .shortLabel {
+    display: block;
+  }
+}
+
+@media (max-width: 420px) {
+  .root { padding: 0 5px; }
+  .link { padding-left: 1px; padding-right: 1px; }
+  .chevron { margin: 0 3px; }
+}
