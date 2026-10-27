@@ -101,6 +101,14 @@
   margin: 0;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
 .body {
   min-width: 0;
   border-top: 1px solid color-mix(in srgb, var(--supplies-accent) 15%, var(--ws-border, #e5e7eb));
@@ -433,9 +441,14 @@
     min-width: calc(100% - 54px);
   }
 
-  .header button {
-    width: 100%;
+  .headerActions {
+    width: calc(100% - 54px);
     margin-left: 54px;
+    flex-wrap: wrap;
+  }
+
+  .headerActions > * {
+    flex: 1 1 190px;
   }
 
   .summary {

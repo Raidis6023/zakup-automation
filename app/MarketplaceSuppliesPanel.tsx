@@ -7,6 +7,8 @@ import {
   useState,
 } from "react";
 
+import ButtonLink from "./ui/ButtonLink";
+
 import styles
 from "./MarketplaceSuppliesPanel.module.css";
 
@@ -523,6 +525,7 @@ export default function MarketplaceSuppliesPanel({
   marketplace,
   endpoint,
   title,
+  headerLink,
 }: {
   marketplace:
     Marketplace;
@@ -532,6 +535,11 @@ export default function MarketplaceSuppliesPanel({
 
   title:
     string;
+
+  headerLink?: {
+    href: string;
+    label: string;
+  };
 }) {
 
   const [
@@ -1118,6 +1126,9 @@ export default function MarketplaceSuppliesPanel({
         onKeyDown={
           event => {
 
+            // Keep keyboard activation on nested links/buttons independent.
+            if (event.target !== event.currentTarget) return;
+
             if (
               event.key ===
                 "Enter"
@@ -1179,37 +1190,48 @@ export default function MarketplaceSuppliesPanel({
         </div>
 
 
-        <button
-          type="button"
+        <div className={styles.headerActions}>
+          {headerLink ? (
+            <ButtonLink
+              href={headerLink.href}
+              onClick={event => event.stopPropagation()}
+            >
+              {headerLink.label}
+            </ButtonLink>
+          ) : null}
 
-          className=
-            "secondary-button"
+          <button
+            type="button"
 
-          disabled={
-            loading
-            ||
-            refreshing
-            || (marketplace === "wildberries" && wbRateLimited)
-          }
+            className=
+              "secondary-button"
 
-          onClick={
-            event => {
-
-              event.stopPropagation();
-
-              void loadOverview(
-                true
-              );
-
+            disabled={
+              loading
+              ||
+              refreshing
+              || (marketplace === "wildberries" && wbRateLimited)
             }
-          }
-        >
-          {
-            refreshing
-              ? "Обновляем..."
-              : "Обновить поставки"
-          }
-        </button>
+
+            onClick={
+              event => {
+
+                event.stopPropagation();
+
+                void loadOverview(
+                  true
+                );
+
+              }
+            }
+          >
+            {
+              refreshing
+                ? "Обновляем..."
+                : "Обновить поставки"
+            }
+          </button>
+        </div>
 
       </div>
 

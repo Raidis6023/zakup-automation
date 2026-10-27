@@ -1040,8 +1040,6 @@ export default async function WildberriesPage() {
             <ThemeToggle />
 
 
-            <ButtonLink href="/wildberries/fbw-supplies">Поставки FBW · формирование</ButtonLink>
-
             <ButtonLink
               href="/stock-import"
             >
@@ -1488,6 +1486,7 @@ export default async function WildberriesPage() {
                   marketplace="wildberries"
                   endpoint="/api/wb/supplies"
                   title="Поставки Wildberries"
+                  headerLink={{ href: "/wildberries/fbw-supplies", label: "Сформировать поставку" }}
                 />
 
 
