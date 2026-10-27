@@ -136,7 +136,9 @@ type NegativeGroup = {
 type ClassifiedRow = {
   order_id: string;
 
-  product_id: string;
+  product_id:
+    string
+    | null;
 
   yandex_product_id:
     number | null;
@@ -169,7 +171,9 @@ type ClassifiedRow = {
 
 
 type DailyRow = {
-  product_id: string;
+  product_id:
+    string
+    | null;
 
   yandex_product_id:
     number | null;
@@ -520,14 +524,40 @@ function makeSkuKey(
 
 
 function makeDailyKey(
-  productId: string,
-  saleDate: string,
+  productId:
+    string
+    | null,
+
+  yandexProductId:
+    number
+    | null,
+
+  shopSku:
+    string,
+
+  saleDate:
+    string,
+
   warehouseId:
-    number | null
+    number
+    | null
 ) {
 
+  const entityKey =
+    productId
+    ??
+    (
+      yandexProductId !==
+      null
+
+        ? `yandex:${yandexProductId}`
+
+        : `sku:${shopSku}`
+    );
+
+
   return [
-    productId,
+    entityKey,
     saleDate,
 
     warehouseId === null
@@ -1193,8 +1223,8 @@ export async function GET(
 
       if (
         !orderGroup.productId
-        ||
-        !orderGroup.masterCode
+        &&
+        !orderGroup.yandexProductId
       ) {
 
         missingProductGroups.push(
@@ -1463,6 +1493,8 @@ export async function GET(
       const key =
         makeDailyKey(
           row.product_id,
+          row.yandex_product_id,
+          row.shop_sku,
           row.sale_date,
           row.warehouse_id
         );
