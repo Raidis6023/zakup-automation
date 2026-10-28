@@ -57,9 +57,14 @@
   white-space: nowrap;
 }
 
-.item:first-child,
-.item:last-child {
+.item:first-child {
   flex-shrink: 0;
+}
+
+/* Long current-page labels may shrink rather than displacing the header. */
+.item:last-child {
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .chevron {
