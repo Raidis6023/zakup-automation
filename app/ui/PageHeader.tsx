@@ -95,7 +95,11 @@ export default function PageHeader({
         <div className={styles.copy}>
           {eyebrow ? <div className="small-label">{eyebrow}</div> : null}
           <h1 className={config.heading}>{title}</h1>
-          <p className={classNames(config.description, styles.description)}>
+          <p className={classNames(
+            config.description,
+            styles.description,
+            ["default", "sku-list", "ved", "zakup"].includes(variant) ? styles.descriptionWrap : "",
+          )}>
             {description}
           </p>
         </div>
