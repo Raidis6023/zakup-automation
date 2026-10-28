@@ -1,0 +1,123 @@
+/* Same unlinked-product table geometry used by Ozon and Wildberries.
+   Keep Yandex mapping logic and column data intact. */
+.yandex-unlinked-client {
+  padding: 0 18px 18px;
+  min-width: 0;
+  color: var(--ws-text);
+}
+.yandex-unlinked-empty {
+  margin: 0 18px 18px;
+  padding: 14px 15px;
+  border: 1px solid var(--ws-border);
+  border-radius: 9px;
+  background: var(--ws-surface-soft);
+  color: var(--ws-text-secondary);
+  font-size: 12px;
+}
+.yandex-unlinked-table-shell {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  border: 1px solid var(--ws-border);
+  border-radius: 9px;
+}
+.yandex-unlinked-table {
+  width: 100%;
+  min-width: 1180px;
+  border-collapse: collapse;
+  color: var(--ws-text);
+}
+.yandex-unlinked-table th {
+  padding: var(--ui-table-compact-header-padding-block) var(--ui-table-compact-header-padding-inline);
+  border-bottom: 1px solid var(--ws-border);
+  background: var(--ws-surface-soft);
+  color: var(--ws-text-muted);
+  font-size: var(--ui-table-compact-header-font-size);
+  font-weight: 650;
+  text-align: left;
+  white-space: nowrap;
+}
+.yandex-unlinked-table td {
+  padding: var(--ui-table-compact-cell-padding-block) var(--ui-table-compact-cell-padding-inline);
+  border-bottom: 1px solid var(--ws-border-soft);
+  color: var(--ws-text);
+  font-size: var(--ui-table-body-font-size);
+  line-height: 1.4;
+  vertical-align: top;
+}
+.yandex-unlinked-table tbody tr:last-child td { border-bottom: 0; }
+.yandex-unlinked-table tbody tr:hover { background: var(--ws-surface-hover); }
+.yandex-unlinked-table td:first-child {
+  min-width: 155px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.yandex-unlinked-table td:nth-child(2) { min-width: 150px; white-space: nowrap; }
+.yandex-unlinked-product {
+  min-width: 260px;
+  max-width: 520px;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.yandex-unlinked-table td:nth-child(4) { min-width: 190px; }
+.yandex-unlinked-table td:nth-child(5) { min-width: 128px; white-space: nowrap; }
+.yandex-unlinked-master-wrap { min-width: 170px; }
+.yandex-unlinked-input {
+  width: 100%;
+  min-height: 36px;
+  box-sizing: border-box;
+  padding: 8px 9px;
+  outline: none;
+  border: 1px solid var(--ws-border);
+  border-radius: 7px;
+  background: var(--ws-surface);
+  color: var(--ws-text);
+  font: inherit;
+  font-size: var(--ui-table-body-font-size);
+}
+.yandex-unlinked-input::placeholder { color: var(--ws-text-muted); }
+.yandex-unlinked-input:focus-visible {
+  border-color: var(--ws-blue);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ws-blue) 10%, transparent);
+}
+.yandex-unlinked-input:disabled { opacity: .6; cursor: not-allowed; }
+.yandex-unlinked-error {
+  margin-top: 5px;
+  color: #d34f5f;
+  font-size: 10px;
+  line-height: 1.35;
+  white-space: normal;
+}
+.yandex-unlinked-button {
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid var(--ws-blue);
+  border-radius: 7px;
+  background: var(--ws-blue);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+}
+.yandex-unlinked-button:hover:not(:disabled) {
+  background: var(--ws-blue-hover);
+  border-color: var(--ws-blue-hover);
+  text-decoration: none;
+}
+.yandex-unlinked-button:focus-visible {
+  outline: var(--ui-focus-width) solid var(--ws-blue);
+  outline-offset: var(--ui-focus-offset);
+}
+.yandex-unlinked-button:disabled { opacity: .46; cursor: not-allowed; }
+.yandex-unlinked-hint {
+  margin-top: 10px;
+  color: var(--ws-text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+@media (max-width: 580px) {
+  .yandex-unlinked-client { padding: 0 12px 12px; }
+  .yandex-unlinked-empty { margin: 0 12px 12px; }
+}

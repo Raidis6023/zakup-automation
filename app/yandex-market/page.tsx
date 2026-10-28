@@ -33,6 +33,7 @@ import YandexProductsTableClient, {
 
 import "./yandex-reference-top.css";
 import "./yandex-products-table.css";
+import "./yandex-unlinked-products.css";
 
 
 export const dynamic =
