@@ -30,7 +30,7 @@ import HomeRightPanel
 import WorkspaceDecoration
   from "./WorkspaceDecoration";
 
-import Breadcrumbs from "./ui/Breadcrumbs";
+import FixedWorkspaceBrand from "./FixedWorkspaceBrand";
 import { workspaceBreadcrumbs } from "./ui/workspace-breadcrumb-routes";
 
 import WorkspaceCompanyLogo
@@ -1350,29 +1350,7 @@ export default function WorkspaceShell({
           }
         >
 
-          {
-            module
-
-              ? (
-
-                <div
-                  className=
-                    "workspace-corner-decoration"
-                >
-                  <WorkspaceDecoration />
-                </div>
-
-              )
-
-              : null
-          }
-
-
-          {module && (
-            <div className="workspace-global-breadcrumbs">
-              <Breadcrumbs items={workspaceBreadcrumbs(pathname, vedOrderSource)} />
-            </div>
-          )}
+          {module&&<FixedWorkspaceBrand items={workspaceBreadcrumbs(pathname,vedOrderSource)}/>}
 
 
           {

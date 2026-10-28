@@ -13,8 +13,9 @@ export function amounts(d:Report,market:string,offer?:string,offers?:string[]):V
 
 export function percentageComposition(v:Values):Record<string,number|null>{
  const keys=['marketplace','inbound','advertising','profit'] as const;
- if(v.revenue===null||v.revenue<=0||keys.some(k=>v[k]===null))return Object.fromEntries(keys.map(k=>[k,null]));
- return Object.fromEntries(keys.map(k=>[k,v[k]!/v.revenue!*100]));
+ if(keys.some(k=>v[k]===null))return Object.fromEntries(keys.map(k=>[k,null]));
+ const total=keys.reduce((sum,k)=>sum+Math.abs(v[k]!),0);
+ return Object.fromEntries(keys.map(k=>[k,total>0?v[k]!/total*100:null]));
 }
 export function dailyChanges(reports:Array<{day:string;report:Report}>,market:string,offer?:string,offers?:string[]):FinancePoint[]{
  let prev:Values={orders:0,buyouts:0,revenue:0,profit:0,marketplace:0,advertising:0,inbound:0};

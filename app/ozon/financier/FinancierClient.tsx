@@ -85,7 +85,6 @@ export default function FinancierClient() {
       if (!response.ok || !json.ok) throw new Error(json.error || "Ошибка получения отчёта");
       if(json.missing_days?.length)throw Error('Период ещё не загружен полностью: '+json.missing_days.join(', '));
       clearFinanceSeries();
-      await prepareFinanceSeries('ozon',appliedFrom,appliedTo,json.cache_updated_at??'');
       setData(json as FinanceReport);
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setLoading(false); }
@@ -115,7 +114,6 @@ export default function FinancierClient() {
       const report=await response.json();if(!response.ok||!report.ok)throw Error(report.error??'Ошибка отчёта');
       if(report.missing_days?.length)throw Error('Период загружен не полностью. Не хватает дней: '+report.missing_days.join(', ')+'. Нажмите «Загрузить / продолжить из Ozon».');
       setProgress('Подготавливаем таблицу и все дни графиков…');
-      await prepareFinanceSeries('ozon',from,to,report.cache_updated_at??'');
       setAppliedFrom(requested.from);setAppliedTo(requested.to);setManagerFilter(requested.manager);setData(report);setSelected('');setProgress('');
     }catch(error){setError(error instanceof Error?error.message:String(error))}
     finally{setBusy(false)}
