@@ -1,7 +1,5 @@
+import PageHeader from "../ui/PageHeader";
 import { redirect } from "next/navigation";
-
-import ThemeToggle
-  from "../ThemeToggle";
 
 import StockImportClient
   from "../StockImportClient";
@@ -157,39 +155,12 @@ export default async function StockImportPage({
       <div className="container">
 
 
-        <header className="header">
-
-          <div>
-
-            <div className="small-label">
-              СИСТЕМА ЗАКУПА
-            </div>
-
-
-            <h1 className="title">
-              Загрузка остатков АВЕДЭКС
-            </h1>
-
-
-            <p className="subtitle">
-              Предварительная проверка
-              Excel перед записью
-              в Supabase.
-            </p>
-
-          </div>
-
-
-          <div className="header-actions">
-
-            <ThemeToggle />
-
-
-
-
-          </div>
-
-        </header>
+        <PageHeader
+          title="Загрузка остатков АВЕДЭКС"
+          eyebrow="СИСТЕМА ЗАКУПА"
+          description="Предварительная проверка Excel перед записью в Supabase."
+          showThemeToggle
+        />
 
 
         <section className="section">
