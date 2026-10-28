@@ -35,6 +35,11 @@
   --ui-metric-tile-size: var(--ui-metric-icon-size);
   --ui-metric-svg-size: 24px;
   --ui-summary-icon-svg-size: 22px;
+  --ui-sync-status-height: 64px;
+  --ui-sync-status-icon-size: 40px;
+  --ui-sync-status-radius: 11px;
+  --ui-sync-status-title-size: 14px;
+  --ui-sync-status-hint-size: 12px;
   --ui-metric-icon-size: 42px;
   --ui-metric-icon-size-large: 48px;
   --ui-enot-table-min-width: 1180px;

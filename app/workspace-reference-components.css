@@ -1999,3 +1999,81 @@ html[data-theme="dark"]
   outline: var(--ui-focus-width, 2px) solid var(--ui-accent, var(--ws-blue));
   outline-offset: var(--ui-focus-offset, 3px);
 }
+ 
+/* SYNC STATUS PANELS, shared by Wildberries and Yandex Market.
+   Warning/error colors, spinner and each module's layout remain local. */
+:is(.wb-sync-status-card,
+    .yandex-reference-page .ym-sync-status-card) {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--ui-sync-status-height);
+  border: 1px solid transparent;
+  border-radius: var(--ui-sync-status-radius);
+}
+:is(.wb-sync-status-card--success,
+    .yandex-reference-page .ym-sync-status-card--success,
+    .yandex-reference-page .ym-sync-status-card--loading) {
+  border-color: rgba(16,185,129,.20);
+  background: rgba(16,185,129,.08);
+}
+:is(.wb-sync-status-card__icon,
+    .yandex-reference-page .ym-sync-status-card__icon) {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ui-sync-status-icon-size);
+  height: var(--ui-sync-status-icon-size);
+  flex: 0 0 var(--ui-sync-status-icon-size);
+  border-radius: 50%;
+  font-size: 23px;
+  font-weight: 800;
+  line-height: 1;
+}
+:is(.wb-sync-status-card--success .wb-sync-status-card__icon,
+    .yandex-reference-page .ym-sync-status-card--success .ym-sync-status-card__icon,
+    .yandex-reference-page .ym-sync-status-card--loading .ym-sync-status-card__icon) {
+  color: #064e3b;
+  background: #34d399;
+}
+:is(.wb-sync-status-card__content,
+    .yandex-reference-page .ym-sync-status-card__content) {
+  min-width: 0;
+  text-align: left;
+}
+:is(.wb-sync-status-card__title,
+    .yandex-reference-page .ym-sync-status-card__title) {
+  color: #059669;
+  font-size: var(--ui-sync-status-title-size);
+  font-weight: 800;
+}
+:is(.wb-sync-status-card__hint,
+    .yandex-reference-page .ym-sync-status-card__hint) {
+  font-size: var(--ui-sync-status-hint-size);
+  font-weight: 500;
+}
+html[data-theme="dark"]
+:is(.wb-sync-status-card--success,
+    .yandex-reference-page .ym-sync-status-card--success) {
+  border-color: rgba(52,211,153,.18);
+  background: rgba(16,185,129,.11);
+}
+html[data-theme="dark"]
+:is(.wb-sync-status-card--success .wb-sync-status-card__title,
+    .yandex-reference-page .ym-sync-status-card--success .ym-sync-status-card__title) {
+  color: #34d399;
+}
+
+/* Shared keyboard focus for operational controls. */
+:is(.unit-button,.unit-external,
+  .unit-market-tabs button,.unit-model-tabs button,.unit-gear,
+  .unit-editor button,.unit-toolbar-right input,
+  .unit-editor input,.unit-editor select,
+  .sku-new-tabs button,.sku-new-action button,.sku-new-controls input):focus-visible {
+  outline: var(--ui-focus-width) solid var(--ws-blue);
+  outline-offset: var(--ui-focus-offset);
+}
+
