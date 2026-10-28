@@ -187,10 +187,10 @@ export default function FinancierDetailTable({
     </div><a href="#ozf-unallocated" className="ozf-btn ozf-jump">Нераспределённые расходы ↓</a></div>
     <div className="ozf-kpi-grid">{kpis.map(k=>
       <div key={k.name} className={"ozf-kpi "+k.tone}>
-        {['Выручка','Операционная прибыль'].includes(k.name)?<button className="ozf-kpi-link" onClick={()=>setGraphMetric(k.name==='Выручка'?'revenue':'profit')}>{k.name}</button>:<span>{k.name}</span>}<strong>{k.value}</strong>
+        {['Выручка','Операционная прибыль'].includes(k.name)?<button type="button" className="ozf-kpi-link" onClick={()=>setGraphMetric(k.name==='Выручка'?'revenue':'profit')}>{k.name}</button>:<span>{k.name}</span>}<strong>{k.value}</strong>
       </div>)}
     </div>
-    <FinanceDynamics marketplace="ozon" revision={data?.cache_updated_at??''} from={data?.from??''} to={data?.to??''} offers={includeUnallocated?undefined:rows.map(r=>r.offer_id)} selected={graphMetric}/><div className="ozf-section-tools">
+    <FinanceDynamics key={graphMetric} marketplace="ozon" revision={data?.cache_updated_at??''} from={data?.from??''} to={data?.to??''} offers={includeUnallocated?undefined:rows.map(r=>r.offer_id)} selected={graphMetric}/><div className="ozf-section-tools">
       <input placeholder="Поиск по артикулу, коду или КМ" aria-label="Поиск товаров" value={search}
         onChange={e=>setSearch(e.target.value)} />
       <span>Сортировка: {defs.find(d=>d[0]===sort.key)?.[1]} {sort.dir===-1?"↓":"↑"}</span>
