@@ -1768,3 +1768,11 @@ html[data-theme="dark"]
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+/* Shared text in information panels instead of a one-off CSS module. */
+.ws-panel-message {
+  padding: 14px 18px 16px;
+  color: var(--ws-text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}

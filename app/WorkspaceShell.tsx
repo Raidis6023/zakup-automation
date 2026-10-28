@@ -27,9 +27,6 @@ import {
 import HomeRightPanel
   from "./HomeRightPanel";
 
-import WorkspaceDecoration
-  from "./WorkspaceDecoration";
-
 import FixedWorkspaceBrand from "./FixedWorkspaceBrand";
 import { workspaceBreadcrumbs } from "./ui/workspace-breadcrumb-routes";
 

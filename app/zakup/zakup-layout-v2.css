@@ -109,31 +109,6 @@
 }
 
 
-.zakup-reference-page
-.zakup-v2-home-button {
-  position:
-    relative;
-
-  z-index:
-    3;
-
-  display:
-    inline-flex;
-
-  align-items:
-    center;
-
-  justify-content:
-    center;
-
-  text-decoration:
-    none;
-
-  white-space:
-    nowrap;
-}
-
-
 /* ============================================================
    ОСНОВНАЯ СЕТКА
    ============================================================ */
