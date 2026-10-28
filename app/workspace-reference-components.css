@@ -2044,8 +2044,8 @@ html[data-theme="dark"]
   min-width: 0;
   text-align: left;
 }
-:is(.wb-sync-status-card__title,
-    .yandex-reference-page .ym-sync-status-card__title) {
+:where(.wb-sync-status-card__title,
+       .yandex-reference-page .ym-sync-status-card__title) {
   color: #059669;
   font-size: var(--ui-sync-status-title-size);
   font-weight: 800;
