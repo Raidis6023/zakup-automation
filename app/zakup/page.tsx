@@ -1,5 +1,4 @@
-import Link
-from "next/link";
+import Breadcrumbs from "../ui/Breadcrumbs";
 
 import {
   runChinaCalculation,
@@ -845,21 +844,13 @@ export default async function Home() {
           </div>
 
 
-          <div
-            className=
-              "zakup-v2-header-actions"
-          >
-            <Link href="/stocks" className="secondary-button navigation-button">Остатки</Link>
-
-            <Link
-              href="/"
-
-              className=
-                "secondary-button workspace-home-button zakup-v2-home-button"
-            >
-              Главная
-            </Link>
-
+          <div className="zakup-v2-header-actions">
+            <Breadcrumbs
+              items={[
+                { label: "Главная", href: "/" },
+                { label: "Закуп", href: "/zakup" },
+              ]}
+            />
           </div>
 
         </header>
