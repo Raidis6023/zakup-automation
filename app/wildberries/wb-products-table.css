@@ -65,62 +65,7 @@
    COLLAPSE BUTTON
    ============================================================ */
 
-.wb-reference-page
-.wb-products-toggle {
-  display:
-    flex;
-
-  align-items:
-    center;
-
-  gap:
-    12px;
-
-  width:
-    100%;
-
-  min-height:
-    72px;
-
-  box-sizing:
-    border-box;
-
-  padding:
-    12px
-    14px;
-
-  border:
-    none;
-
-  background:
-    transparent;
-
-  color:
-    inherit;
-
-  font:
-    inherit;
-
-  text-align:
-    left;
-
-  cursor:
-    pointer;
-
-  transition:
-    background-color
-    0.12s
-    ease;
-}
-
-
-.wb-reference-page
-.wb-products-toggle:hover {
-  background:
-    var(--ws-surface-hover);
-}
-
-
+.wb-reference-page .wb-products-toggle { color: inherit; font: inherit; transition: background-color 0.12s ease; }
 .wb-reference-page
 .wb-products-toggle:focus-visible {
   outline:
@@ -168,93 +113,13 @@
 }
 
 
-.wb-reference-page
-.wb-products-toggle-icon
-svg {
-  width:
-    23px;
-
-  height:
-    23px;
-
-  fill:
-    none;
-
-  stroke:
-    currentColor;
-
-  stroke-width:
-    1.9;
-
-  stroke-linecap:
-    round;
-
-  stroke-linejoin:
-    round;
-}
-
-
 /* ============================================================
    SECTION COPY
    ============================================================ */
 
-.wb-reference-page
-.wb-products-toggle-copy {
-  display:
-    flex;
-
-  flex-direction:
-    column;
-
-  min-width:
-    0;
-
-  flex:
-    1;
-}
-
-
-.wb-reference-page
-.wb-products-toggle-title {
-  color:
-    var(--ws-text);
-
-  font-size:
-    15px;
-
-  font-weight:
-    750;
-
-  line-height:
-    1.25;
-}
-
-
-.wb-reference-page
-.wb-products-toggle-subtitle {
-  margin-top:
-    3px;
-
-  overflow:
-    hidden;
-
-  color:
-    var(--ws-text-muted);
-
-  font-size:
-    11px;
-
-  line-height:
-    1.3;
-
-  white-space:
-    nowrap;
-
-  text-overflow:
-    ellipsis;
-}
-
-
+.wb-reference-page .wb-products-toggle-copy { flex: 1; }
+.wb-reference-page .wb-products-toggle-title { line-height: 1.25; }
+.wb-reference-page .wb-products-toggle-subtitle { margin-top: 3px; overflow: hidden; color: var(--ws-text-muted); line-height: 1.3; white-space: nowrap; text-overflow: ellipsis; }
 /* ============================================================
    CHEVRON
    ============================================================ */

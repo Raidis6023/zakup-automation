@@ -1271,21 +1271,7 @@ html[data-theme="dark"]
 
 /* WB-like product section with a single expandable header. */
 .ozon-reference-page .ozon-products-collapsible { width: 100%; }
-.ozon-reference-page .ozon-products-toggle {
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  width: 100%;
-  min-height: 72px;
-  gap: 12px;
-  padding: 12px 14px;
-  border: 0;
-  background: transparent;
-  color: var(--ws-text);
-  cursor: pointer;
-  text-align: left;
-}
-.ozon-reference-page .ozon-products-toggle:hover { background: var(--ws-surface-hover); }
+.ozon-reference-page .ozon-products-toggle { color: var(--ws-text); }
 .ozon-reference-page .ozon-products-toggle:focus-visible {
   outline: 2px solid var(--ws-blue);
   outline-offset: -2px;
@@ -1301,24 +1287,8 @@ html[data-theme="dark"]
   color: var(--ws-icon);
   background: color-mix(in srgb, var(--ws-icon) 13%, transparent);
 }
-.ozon-reference-page .ozon-products-toggle-icon svg { width: 23px; height: 23px; }
-.ozon-reference-page .ozon-products-toggle-copy {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  flex-direction: column;
-  gap: 4px;
-}
-.ozon-reference-page .ozon-products-toggle-copy strong {
-  color: var(--ws-text);
-  font-size: 15px;
-  font-weight: 750;
-}
-.ozon-reference-page .ozon-products-toggle-copy > span {
-  color: var(--ws-text-muted);
-  font-size: 11px;
-  line-height: 1.35;
-}
+.ozon-reference-page .ozon-products-toggle-copy { flex: 1; gap: 4px; }
+.ozon-reference-page .ozon-products-toggle-copy > span { color: var(--ws-text-muted); line-height: 1.35; }
 .ozon-reference-page .ozon-products-toggle-chevron {
   flex: 0 0 22px;
   color: var(--ws-text-muted);

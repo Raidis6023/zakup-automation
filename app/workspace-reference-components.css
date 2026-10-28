@@ -1810,3 +1810,65 @@ html[data-theme="dark"]
   font-size: 12px;
   line-height: 1.45;
 }
+
+/* Shared disclosure geometry and typography. Brand accents and special
+   layout rules remain local. Edit --ui-panel-* tokens to update all three. */
+:is(.ozon-reference-page .ozon-products-toggle,
+    .wb-reference-page .wb-products-toggle,
+    .zakup-reference-page .zakup-products-toggle) {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: var(--ui-panel-header-gap);
+  width: 100%;
+  min-height: var(--ui-panel-header-height);
+  padding: var(--ui-panel-header-padding-block) var(--ui-panel-header-padding-inline);
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+:is(.ozon-reference-page .ozon-products-toggle:hover,
+    .wb-reference-page .wb-products-toggle:hover,
+    .zakup-reference-page .zakup-products-toggle:hover) {
+  background: var(--ws-surface-hover);
+}
+
+:is(.ozon-reference-page .ozon-products-toggle-copy,
+    .wb-reference-page .wb-products-toggle-copy,
+    .zakup-reference-page .zakup-products-toggle-copy) {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+:is(.ozon-reference-page .ozon-products-toggle-copy strong,
+    .wb-reference-page .wb-products-toggle-title,
+    .zakup-reference-page .zakup-products-toggle-title) {
+  color: var(--ws-text);
+  font-size: var(--ui-panel-title-size);
+  font-weight: 750;
+}
+
+:is(.ozon-reference-page .ozon-products-toggle-copy > span,
+    .wb-reference-page .wb-products-toggle-subtitle,
+    .zakup-reference-page .zakup-products-toggle-subtitle) {
+  font-size: var(--ui-panel-caption-size);
+}
+
+:is(.ozon-reference-page .ozon-products-toggle-icon svg,
+    .wb-reference-page .wb-products-toggle-icon svg,
+    .zakup-reference-page .zakup-products-icon svg) {
+  width: var(--ui-panel-icon-svg-size);
+  height: var(--ui-panel-icon-svg-size);
+}
+
+:is(.wb-reference-page .wb-products-toggle-icon svg,
+    .zakup-reference-page .zakup-products-icon svg) {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
