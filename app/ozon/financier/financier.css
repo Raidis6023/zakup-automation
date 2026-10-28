@@ -301,3 +301,12 @@ html[data-theme="dark"] .ozf-page {
   color: var(--ozf-muted);
   background: var(--ozf-soft);
 }
+/* Smaller breakdown tables share theme-compatible column headings too.
+   In particular Yandex previously pinned a dark #1b2b47 header on light mode. */
+.ozf-page .ozf-breakdown-table thead th,
+.ozf-page.ymf .ozf-breakdown-table thead th,
+.ozf-page .ozf-table:not(.ozf-financial-table) thead th {
+  color: var(--ozf-ink);
+  background: var(--ozf-soft);
+  opacity: 1;
+}
