@@ -1,7 +1,5 @@
+import PageHeader from "../ui/PageHeader";
 
-
-import ThemeToggle
-  from "../ThemeToggle";
 
 import ResponsibleStorageImportClient
   from "../ResponsibleStorageImportClient";
@@ -16,36 +14,12 @@ export default function ResponsibleStorageImportPage() {
       <div className="container">
 
 
-        <header className="header">
-
-          <div>
-
-            <div className="small-label">
-              СИСТЕМА ЗАКУПА
-            </div>
-
-
-            <h1 className="title">
-              Ответственное хранение
-            </h1>
-
-
-            <p className="subtitle">
-
-              Импорт остатков ОХ
-              с сохранением владельца товара.
-
-            </p>
-
-          </div>
-
-
-          <div className="header-actions">
-            <ThemeToggle />
-            
-          </div>
-
-        </header>
+        <PageHeader
+          title="Ответственное хранение"
+          eyebrow="СИСТЕМА ЗАКУПА"
+          description="Импорт остатков ОХ с сохранением владельца товара."
+          showThemeToggle
+        />
 
 
         <section className="summary-grid">
