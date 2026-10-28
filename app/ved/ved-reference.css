@@ -3,6 +3,7 @@
    ============================================================ */
 
 .ved-reference-page {
+  --ui-metric-card-gap: var(--ui-metric-card-gap-ved);
   --ui-metric-card-min-height: 94px;
   --ui-metric-card-padding: 15px;
   --ui-metric-tile-size: var(--ui-metric-icon-size-large);
@@ -82,7 +83,6 @@
 }
 
 
-.ved-reference-page .ved-summary-card { gap: var(--ui-metric-card-gap-ved); min-height: 94px; padding: 15px; }
 .ved-reference-page
 .ved-summary-icon--blue {
   background:
