@@ -83,3 +83,230 @@
 .ozf-page .ozf-breakdown-table th,.ozf-page .ozf-breakdown-table td,.ymf .ozf-breakdown-table td:last-child{text-align:left!important}.ozf-pinned-article{position:sticky;top:38px;z-index:4;background:#172137;border-bottom:1px solid #61769b;padding:12px;display:flex;align-items:center;gap:12px}.ozf-copy{margin-left:9px;background:transparent;color:#9bbcff;border:1px solid #60769b66;border-radius:5px;padding:3px 6px;cursor:pointer;font-size:10px}.ozf-kpi-link{font:inherit;color:inherit;background:none;border:0;padding:0;text-align:left;cursor:pointer}.ozf-dynamics{margin:24px 0;padding:20px;border:1px solid #667b9f55;background:#22263b;border-radius:16px;white-space:normal}.ozf-dynamics-controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}.ozf-dynamics-controls [aria-pressed=true]{background:#355eb8}.ozf-dynamics small{opacity:.65}.ozf-flow-legend{display:flex;gap:20px;flex-wrap:wrap;margin:18px 0}.ozf-dynamics svg{display:block;width:100%;min-height:240px}.ozf-dynamics-date{text-align:center;color:#ffd079}.ozf-expanded-content details>summary{cursor:pointer;padding:15px 0;color:#a4c3ff}
 
 .ymf .ozf-expanded-content{overflow:visible}.ozf-page .ozf-campaigns .ozf-breakdown-table th,.ozf-page .ozf-campaigns .ozf-breakdown-table td,.ymf .ozf-breakdown-table th,.ymf .ozf-breakdown-table td{text-align:left!important}.ozf-expanded-content .ozf-trend-heading{align-items:center;text-align:center}.ozf-pinned-article{top:40px}
+
+/* FINANCE THEME AND STICKY GRID REPAIR, 2026-10-28.
+   Ozon and Yandex finance share this CSS. All interactive finance surfaces
+   inherit Workspace colors and respond immediately to html[data-theme]. */
+.ozf-page {
+  --ozf-ink: var(--ws-text, var(--text));
+  --ozf-muted: var(--ws-text-secondary, var(--text-secondary));
+  --ozf-faint: var(--ws-text-muted, var(--text-muted));
+  --ozf-surface: var(--ws-surface, var(--surface));
+  --ozf-soft: var(--ws-surface-soft, var(--surface-soft));
+  --ozf-hover: var(--ws-surface-hover, var(--surface-strong));
+  --ozf-border: var(--ws-border, var(--border));
+  --ozf-subtle-border: var(--ws-border-soft, var(--border-soft));
+  --ozf-accent: var(--ws-blue, #157dbc);
+  --ozf-accent-hover: var(--ws-blue-hover, #0b6295);
+  --ozf-footer: color-mix(in srgb, var(--ozf-accent) 10%, var(--ozf-surface));
+  --ozf-disabled: color-mix(in srgb, var(--ozf-muted) 8%, var(--ozf-surface));
+  --ozf-positive: #0b7853;
+  --ozf-negative: #af3c51;
+  --ozf-warning: #86611c;
+  color: var(--ozf-ink);
+}
+html[data-theme="dark"] .ozf-page {
+  --ozf-positive: #64d8a3;
+  --ozf-negative: #ff8e8e;
+  --ozf-warning: #f1d17c;
+}
+.ozf-page .ozf-panel,
+.ozf-page .ozf-job,
+.ozf-page .ozf-kpi,
+.ozf-page .ozf-trend-card,
+.ozf-page .ozf-dynamics,
+.ozf-page .bi-card {
+  background: var(--ozf-surface) !important;
+  color: var(--ozf-ink);
+  border-color: var(--ozf-border) !important;
+}
+.ozf-page .ozf-kpi { background: var(--ozf-soft) !important; }
+.ozf-page .ozf-kpi.ozf-good,
+.ozf-page .ozf-good {
+  color: var(--ozf-positive) !important;
+  background: color-mix(in srgb, var(--ozf-positive) 12%, var(--ozf-surface)) !important;
+}
+.ozf-page .ozf-kpi.ozf-bad,
+.ozf-page .ozf-bad {
+  color: var(--ozf-negative) !important;
+  background: color-mix(in srgb, var(--ozf-negative) 11%, var(--ozf-surface)) !important;
+}
+.ozf-page .ozf-caution {
+  color: var(--ozf-warning) !important;
+  background: color-mix(in srgb, var(--ozf-warning) 11%, var(--ozf-surface)) !important;
+}
+.ozf-page .ozf-error,
+.ozf-page .ozf-missing-explainer td {
+  color: var(--ozf-negative) !important;
+  background: color-mix(in srgb, var(--ozf-negative) 8%, var(--ozf-surface)) !important;
+}
+.ozf-page .ozf-progress,
+.ozf-page .ozf-back,
+.ozf-page .ozf-eyebrow,
+.ozf-page .ozf-section-tools > span,
+.ozf-page .ozf-sort-hint,
+.ozf-page .ozf-checkbox-caption,
+.ozf-page .ozf-trend-heading small,
+.ozf-page .ozf-trend-detail,
+.ozf-page .ozf-job small { color: var(--ozf-muted); }
+
+.ozf-page input,
+.ozf-page select,
+.ozf-page .ozf-filters select,
+.ozf-page.ymf .ymf-rate-fields input,
+.ozf-page.ymf .ozf-section-tools input,
+.ozf-page.ymf .ymf-controls input,
+.ozf-page.ymf .ymf-controls button {
+  color: var(--ozf-ink);
+  background: var(--ozf-soft);
+  border-color: var(--ozf-border);
+}
+.ozf-page .ozf-btn:not(.ozf-primary),
+.ozf-page .ozf-market-tabs button,
+.ozf-page .ozf-scale,
+.ozf-page .ozf-copy {
+  color: var(--ozf-ink);
+  background: var(--ozf-soft);
+  border-color: var(--ozf-border);
+}
+.ozf-page .ozf-market-tabs button.active,
+.ozf-page .bi-switches button[aria-pressed="true"] {
+  color: #fff;
+  background: var(--ozf-accent);
+  border-color: var(--ozf-accent);
+}
+.ozf-page .ozf-article-btn,
+.ozf-page .ozf-sort-control,
+.ozf-page .ozf-expanded-content details > summary,
+.ozf-page .ozf-copy:hover { color: var(--ozf-accent); }
+.ozf-page .ozf-sort-control:hover,
+.ozf-page .ozf-article-btn:hover { color: var(--ozf-accent-hover); }
+
+.ozf-page .ozf-financial-scroll {
+  background: var(--ozf-surface);
+  border-color: var(--ozf-border);
+  scrollbar-gutter: stable;
+}
+.ozf-page .ozf-table th,
+.ozf-page .ozf-table td,
+.ozf-page .ozf-breakdown-table th,
+.ozf-page .ozf-breakdown-table td { border-bottom-color: var(--ozf-subtle-border); }
+
+/* The financial grid keeps column names at top and the article at left,
+   including where horizontal and vertical scrolling meet. */
+.ozf-page .ozf-financial-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  opacity: 1;
+  color: var(--ozf-ink);
+  background: var(--ozf-soft) !important;
+  box-shadow: 0 1px 0 var(--ozf-border);
+}
+.ozf-page .ozf-financial-table thead th:first-child { left: 0; z-index: 8; }
+.ozf-page .ozf-financial-table tbody td:first-child {
+  position: sticky; left: 0; z-index: 3; background: var(--ozf-surface);
+}
+.ozf-page .ozf-financial-table tfoot td {
+  background: var(--ozf-footer) !important;
+  border-top-color: var(--ozf-accent);
+}
+.ozf-page .ozf-financial-table tfoot td:first-child {
+  position: sticky; left: 0; z-index: 7;
+}
+.ozf-page .ozf-financial-table tbody tr:hover > td,
+.ozf-page .ozf-row-active > td { background: var(--ozf-hover); }
+.ozf-page .ozf-financial-table tbody tr.ozf-discontinued > td {
+  color: var(--ozf-muted);
+  background: var(--ozf-disabled) !important;
+}
+.ozf-page .ozf-financial-table tbody tr.ozf-discontinued:hover > td {
+  background: var(--ozf-hover) !important;
+}
+.ozf-page .ozf-expanded-row > td {
+  color: var(--ozf-ink);
+  background: var(--ozf-soft) !important;
+}
+.ozf-page .ozf-expanded-content,
+.ozf-page .ozf-pinned-article,
+.ozf-page .ozf-reconcile-line {
+  color: var(--ozf-ink);
+  background: var(--ozf-soft);
+  border-color: var(--ozf-border);
+}
+
+/* Missing reference registry in the recording was scrolling the entire page,
+   losing its header. Give this *specific* long registry an inner scrollport.
+   Other small reports are deliberately left at natural height. */
+.ozf-page .ozf-missing-report .ozf-table-scroll {
+  position: relative;
+  max-height: min(68vh, 720px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  border: 1px solid var(--ozf-border);
+  border-radius: 8px;
+  background: var(--ozf-surface);
+}
+.ozf-page .ozf-missing-report .ozf-table,
+.ozf-page .ozf-rates-scroll .ozf-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.ozf-page .ozf-missing-report .ozf-table thead th,
+.ozf-page .ozf-rates-scroll .ozf-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  opacity: 1;
+  color: var(--ozf-ink);
+  background: var(--ozf-soft);
+  box-shadow: 0 1px 0 var(--ozf-border);
+}
+.ozf-page .ozf-rates-scroll { overscroll-behavior: contain; }
+
+/* Chart library styles historically forced dark backgrounds with !important.
+   These scoped rules have greater specificity, retaining chart geometry. */
+.ozf-page .bi-chart-canvas svg,
+.ozf-page .bi-title,
+.ozf-page .bi-legend,
+.ozf-page .ozf-trend-heading,
+.ozf-page .ozf-expanded-content h3 { color: var(--ozf-ink) !important; }
+.ozf-page .bi-axis { fill: var(--ozf-muted); }
+.ozf-page .bi-legend,
+.ozf-page .bi-note,
+.ozf-page .bi-title small,
+.ozf-page .bi-switches button,
+.ozf-page .ozf-trend-axis,
+.ozf-page .ozf-trend-heading small { color: var(--ozf-muted) !important; }
+.ozf-page .bi-switches {
+  background: var(--ozf-soft);
+  border-color: var(--ozf-border);
+}
+.ozf-page .bi-switches button[aria-pressed="true"] {
+  color: #fff !important; background: var(--ozf-accent);
+}
+.ozf-page .bi-tooltip,
+.ozf-page .ozf-chart-tooltip {
+  color: var(--ozf-ink);
+  background: var(--ozf-surface);
+  border-color: var(--ozf-border);
+  box-shadow: var(--ws-shadow-popup, 0 6px 25px #0002);
+}
+.ozf-page .bi-tooltip time { color: var(--ozf-muted); }
+.ozf-page .ozf-trend-heading > b,
+.ozf-page .ozf-chart-tooltip strong,
+.ozf-page .ozf-dynamics-date { color: var(--ozf-accent) !important; }
+.ozf-page .bi-skeleton {
+  color: var(--ozf-muted);
+  background: var(--ozf-soft);
+}
+/* Smaller breakdown tables share theme-compatible column headings too.
+   In particular Yandex previously pinned a dark #1b2b47 header on light mode. */
+.ozf-page .ozf-breakdown-table thead th,
+.ozf-page.ymf .ozf-breakdown-table thead th,
+.ozf-page .ozf-table:not(.ozf-financial-table) thead th {
+  color: var(--ozf-ink);
+  background: var(--ozf-soft);
+  opacity: 1;
+}
