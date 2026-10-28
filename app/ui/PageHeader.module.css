@@ -1,15 +1,24 @@
-/* Shared single-row geometry for module titles and breadcrumb navigation. */
+/* Shared structural styling for headings. Existing module variants
+   provide brand-specific colors and typography until those are tokenized. */
 .titleArea {
   flex: 1 1 auto;
   min-width: 0;
   align-self: center;
 }
-.titleArea > div { min-width: 0; }
-.titleArea :global(.subtitle) {
+
+.copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.description {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .actions {
   flex: 0 1 auto;
   min-width: 0;

@@ -1,3 +1,4 @@
+import PageHeader from "../ui/PageHeader";
 
 
 import {
@@ -814,41 +815,11 @@ export default async function Home() {
             HEADER
             =================================== */}
 
-        <header
-          className=
-            "zakup-v2-header"
-        >
-
-          <div
-            className=
-              "zakup-v2-title"
-          >
-<h1
-              className=
-                "title"
-            >
-              Китай — расчёт потребности
-            </h1>
-
-
-            <p
-              className=
-                "subtitle"
-            >
-              Тестовый режим.
-              Формируется внутренний черновик ВЭД.
-              Внешний заказ поставщику автоматически
-              не отправляется.
-            </p>
-
-          </div>
-
-
-          <div className="zakup-v2-header-actions">
-            
-          </div>
-
-        </header>
+        <PageHeader
+          variant="zakup"
+          title="Китай — расчёт потребности"
+          description="Тестовый режим. Формируется внутренний черновик ВЭД. Внешний заказ поставщику автоматически не отправляется."
+        />
 
 
         {/* ===================================

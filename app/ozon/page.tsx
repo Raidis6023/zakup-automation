@@ -1,13 +1,10 @@
+import PageHeader from "../ui/PageHeader";
 import type {
   ReactNode,
 } from "react";
 
 
-import headerStyles from "../ui/BreadcrumbHeader.module.css";
 import MarketplaceFinancePanel from "../MarketplaceFinancePanel";
-
-import ThemeToggle
-from "../ThemeToggle";
 
 import MarketplaceSuppliesPanel
 from "../MarketplaceSuppliesPanel";
@@ -1334,31 +1331,11 @@ export default async function OzonPage() {
             HEADER
             =================================== */}
 
-        <header
-          className=
-            "header ozon-header"
-        >
-
-          <div className={`ozon-title-wrap ozon-title-wrap--text-only ${headerStyles.titleArea}`}>
-            <div>
-              <h1 className="title ozon-page-title">Ozon</h1>
-              <p className="subtitle ozon-page-subtitle">FBO-продажи, отмены и доступные остатки Ozon.</p>
-            </div>
-          </div>
-
-
-          <div
-            className=
-              {`header-actions ozon-header-actions ${headerStyles.actions}`}
-          >
-
-            <ThemeToggle />
-
-            
-
-          </div>
-
-        </header>
+        <PageHeader
+          variant="ozon"
+          title="Ozon"
+          description="FBO-продажи, отмены и доступные остатки Ozon."
+        />
 
 
         {/* ===================================

@@ -1,13 +1,10 @@
+import PageHeader from "../ui/PageHeader";
 import {
   type ReactNode,
 } from "react";
 
 
-import headerStyles from "../ui/BreadcrumbHeader.module.css";
 import MarketplaceFinancePanel from "../MarketplaceFinancePanel";
-
-import ThemeToggle
-  from "../ThemeToggle";
 
 import MarketplaceSuppliesPanel
   from "../MarketplaceSuppliesPanel";
@@ -1406,38 +1403,11 @@ export default async function YandexMarketPage() {
             HEADER
             =================================== */}
 
-        <header
-          className=
-            "header ym-header"
-        >
-
-          <div className={headerStyles.titleArea}>
-
-            <h1 className="title">
-              Яндекс Маркет
-            </h1>
-
-
-            <p className="subtitle">
-              Продажи, возвраты и доступные
-              FBY-остатки Яндекс Маркета.
-            </p>
-
-          </div>
-
-
-          <div
-            className=
-              {`header-actions ym-header-actions ${headerStyles.actions}`}
-          >
-
-            <ThemeToggle />
-
-            
-
-          </div>
-
-        </header>
+        <PageHeader
+          variant="yandex-market"
+          title="Яндекс Маркет"
+          description="Продажи, возвраты и доступные FBY-остатки Яндекс Маркета."
+        />
 
 
         {/* ===================================

@@ -1,11 +1,9 @@
+import PageHeader from "../ui/PageHeader";
 import type {
   ReactNode,
 } from "react";
 
 
-
-import ThemeToggle
-from "../ThemeToggle";
 
 import MarketplaceSuppliesPanel
 from "../MarketplaceSuppliesPanel";
@@ -1004,46 +1002,11 @@ export default async function WildberriesPage() {
             ЗАКРЕПЛЁННАЯ ШАПКА WB
             ===================================================== */}
 
-        <header
-          className="header wb-header wb-page-header-sticky"
-        >
-
-          <div
-            className="wb-title-wrap wb-title-wrap--text-only"
-          >
-
-            <div>
-
-              <h1
-                className="title wb-page-title"
-              >
-                Wildberries
-              </h1>
-
-
-              <p
-                className="subtitle wb-page-subtitle"
-              >
-                Продажи, аналитические отмены и доступные FBW-остатки Wildberries.
-              </p>
-
-            </div>
-
-          </div>
-
-
-          <div
-            className="header-actions wb-header-actions"
-          >
-
-            <ThemeToggle />
-
-
-            
-
-          </div>
-
-        </header>
+        <PageHeader
+          variant="wildberries"
+          title="Wildberries"
+          description="Продажи, аналитические отмены и доступные FBW-остатки Wildberries."
+        />
 
 
         {/* =====================================================
