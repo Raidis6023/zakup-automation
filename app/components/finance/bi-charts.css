@@ -40,5 +40,4 @@
 .ozf-kpi{position:relative}
 .ozf-kpi-link::after{content:"";position:absolute;inset:0;z-index:1;border-radius:inherit;cursor:pointer}
 .ozf-kpi-link:focus-visible::after{outline:2px solid currentColor;outline-offset:2px}
-.ozf-page .ozf-financial-table thead th{position:static!important;top:auto!important}
 

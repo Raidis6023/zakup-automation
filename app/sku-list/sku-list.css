@@ -425,7 +425,7 @@
   padding: 0;
   border-right: 1px solid var(--sku-ozon-grid);
   border-bottom: 1px solid var(--sku-ozon-grid);
-  background: var(--ws-surface-soft);
+  background: var(--ui-table-header-background, var(--ws-surface-soft));
   color: var(--ws-text-muted);
   vertical-align: middle;
 }
@@ -842,7 +842,7 @@ html[data-theme="dark"]
 .sku-new-empty {min-height:90px;display:flex;align-items:center;justify-content:center;color:var(--ws-text-muted);}
 .sku-new-scroll {max-height:440px;overflow:auto;border:1px solid var(--ws-border-soft);border-radius:9px;}
 .sku-new-table {border-collapse:separate;border-spacing:0;width:100%;min-width:1100px;font-size:12px;}
-.sku-new-table th {position:sticky;top:0;z-index:1;text-align:left;white-space:nowrap;background:var(--ws-surface-soft);border-bottom:1px solid var(--ws-border-soft);padding:9px;}
+.sku-new-table th {position:sticky;top:0;z-index:1;text-align:left;white-space:nowrap;background:var(--ui-table-header-background, var(--ws-surface-soft));border-bottom:1px solid var(--ws-border-soft);padding:9px;}
 .sku-new-table td {background:var(--ws-surface);border-bottom:1px solid var(--ws-border-soft);padding:9px;vertical-align:middle;}
 .sku-new-table tr:hover td {background:var(--ws-surface-soft);}
 .sku-new-enot {font:700 12px monospace;color:#199b72;white-space:nowrap;}
