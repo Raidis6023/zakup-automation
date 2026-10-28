@@ -1,7 +1,5 @@
+import PageHeader from "../ui/PageHeader";
 
-
-import ThemeToggle
-  from "../ThemeToggle";
 
 import LogisticsImportClient
   from "../LogisticsImportClient";
@@ -20,36 +18,12 @@ export default function LogisticsImportPage() {
       <div className="container">
 
 
-        <header className="header">
-
-          <div>
-
-            <div className="small-label">
-              СИСТЕМА ЗАКУПА
-            </div>
-
-
-            <h1 className="title">
-              Импорт логистики
-            </h1>
-
-
-            <p className="subtitle">
-
-              Вложимость и объём
-              транспортных коробок.
-
-            </p>
-
-          </div>
-
-
-          <div className="header-actions">
-            <ThemeToggle />
-            
-          </div>
-
-        </header>
+        <PageHeader
+          title="Импорт логистики"
+          eyebrow="СИСТЕМА ЗАКУПА"
+          description="Вложимость и объём транспортных коробок."
+          showThemeToggle
+        />
 
 
         <section className="summary-grid">
