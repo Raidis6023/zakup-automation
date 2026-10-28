@@ -1,3 +1,4 @@
+import PageHeader from "../ui/PageHeader";
 import VedNewProductsClient from "./VedNewProductsClient";
 
 import {
@@ -813,28 +814,11 @@ export default async function SkuListPage() {
         className=
           "container sku-list-container"
       >
-        <header
-          className=
-            "header sku-list-header"
-        >
-          <div>
-<h1>
-              Список артикулов
-            </h1>
-
-            <p>
-              Финансовые показатели по артикулам
-              маркетплейсов с привязкой к ЕНОТ.
-            </p>
-          </div>
-
-          <div
-            className=
-              "header-actions sku-list-header-actions"
-          >
-
-          </div>
-        </header>
+        <PageHeader
+            variant="sku-list"
+            title="Список артикулов"
+            description="Финансовые показатели по артикулам маркетплейсов с привязкой к ЕНОТ."
+          />
 
         <SkuListTabsClient
           ozonRows={
