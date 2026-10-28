@@ -5,40 +5,36 @@
       "schedule": "0 22 * * *"
     },
     {
+      "path": "/api/agents/ozon-finance-cron",
+      "schedule": "10 22 * * *"
+    },
+    {
+      "path": "/api/agents/ozon-finance-plan",
+      "schedule": "20 22 * * *"
+    },
+    {
+      "path": "/api/agents/ozon-finance-support-cron",
+      "schedule": "30 22 * * *"
+    },
+    {
+      "path": "/api/agents/ozon-finance-ads",
+      "schedule": "40 22 * * *"
+    },
+    {
       "path": "/api/wb/daily-sync",
       "schedule": "0 23 * * *"
+    },
+    {
+      "path": "/api/agents/wb-finance-cron",
+      "schedule": "10 23 * * *"
     },
     {
       "path": "/api/yandex/daily-sync",
       "schedule": "0 0 * * *"
     },
     {
-      "path": "/api/agents/ozon-finance-cron",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/agents/ozon-finance-plan",
-      "schedule": "0 22 * * *"
-    },
-    {
-      "path": "/api/agents/ozon-finance-support-cron",
-      "schedule": "7,22,37,52 * * * *"
-    },
-    {
-      "path": "/api/agents/wb-finance-cron",
-      "schedule": "0 23 * * *"
-    },
-    {
-      "path": "/api/agents/wb-finance-cron",
-      "schedule": "2-57/5 * * * *"
-    },
-    {
-      "path": "/api/agents/ozon-finance-ads",
-      "schedule": "*/2 * * * *"
-    },
-    {
       "path": "/api/agents/yandex-finance-campaigns-cron",
-      "schedule": "1-59/2 * * * *"
+      "schedule": "10 0 * * *"
     }
   ]
 }
