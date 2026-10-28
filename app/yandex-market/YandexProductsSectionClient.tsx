@@ -1,5 +1,7 @@
 "use client";
 
+import { useWorkspaceDisclosure } from "../ui/useWorkspaceDisclosure";
+
 import {
   useEffect,
   useState,
@@ -66,13 +68,7 @@ export default function YandexProductsSectionClient({
     ReactNode;
 }) {
 
-  const [
-    expanded,
-    setExpanded,
-  ] =
-    useState(
-      false
-    );
+  const { expanded, toggle: toggleExpanded } = useWorkspaceDisclosure();
 
 
   const [
@@ -98,9 +94,7 @@ export default function YandexProductsSectionClient({
   // TOGGLE
   // ==========================================================
 
-  function toggleExpanded() {
-    setExpanded(previous => !previous);
-  }
+
 
   return (
     <section

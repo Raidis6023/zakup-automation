@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import ButtonLink from "./ui/ButtonLink";
+import { useWorkspaceDisclosure } from "./ui/useWorkspaceDisclosure";
 
 import styles
 from "./MarketplaceSuppliesPanel.module.css";
@@ -585,13 +586,12 @@ export default function MarketplaceSuppliesPanel({
 
   const [wbLoadedOnce, setWbLoadedOnce] = useState(false);
 
-  const [
-    panelExpanded,
-    setPanelExpanded,
-  ] =
-    useState(
-      false
-    );
+  const {
+    expanded: panelExpanded,
+    contentId,
+    toggle: togglePanel,
+    onHeaderKeyDown,
+  } = useWorkspaceDisclosure();
 
 
   const [
@@ -1111,43 +1111,12 @@ export default function MarketplaceSuppliesPanel({
 
         tabIndex={0}
 
-        aria-expanded={
-          panelExpanded
-        }
+        aria-expanded={panelExpanded}
+        aria-controls={contentId}
 
-        onClick={
-          () =>
-            setPanelExpanded(
-              current =>
-                !current
-            )
-        }
+        onClick={togglePanel}
 
-        onKeyDown={
-          event => {
-
-            // Keep keyboard activation on nested links/buttons independent.
-            if (event.target !== event.currentTarget) return;
-
-            if (
-              event.key ===
-                "Enter"
-              ||
-              event.key ===
-                " "
-            ) {
-
-              event.preventDefault();
-
-              setPanelExpanded(
-                current =>
-                  !current
-              );
-
-            }
-
-          }
-        }
+        onKeyDown={onHeaderKeyDown}
       >
 
         <span
@@ -1240,9 +1209,8 @@ export default function MarketplaceSuppliesPanel({
         panelExpanded
           ? (
             <div
-              className={
-                styles.body
-              }
+              id={contentId}
+              className={styles.body}
             >
 
       {

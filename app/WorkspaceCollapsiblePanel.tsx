@@ -2,11 +2,8 @@
 
 import Link from "next/link";
 
-import {
-  useId,
-  useState,
-  type ReactNode,
-} from "react";
+import { type ReactNode } from "react";
+import { useWorkspaceDisclosure } from "./ui/useWorkspaceDisclosure";
 
 import styles
 from "./WorkspaceCollapsiblePanel.module.css";
@@ -183,8 +180,6 @@ export default function WorkspaceCollapsiblePanel({
   actionLabel,
   onAction,
   actionDisabled = false,
-  initialExpanded =
-    false,
   className,
   children,
 }: {
@@ -221,9 +216,6 @@ export default function WorkspaceCollapsiblePanel({
   actionDisabled?:
     boolean;
 
-  initialExpanded?:
-    boolean;
-
   className?:
     string;
 
@@ -231,32 +223,8 @@ export default function WorkspaceCollapsiblePanel({
     ReactNode;
 }) {
 
-  const [
-    expanded,
-    setExpanded,
-  ] =
-    useState(
-      initialExpanded
-    );
-
-
-  const id =
-    useId();
-
-
-  const contentId =
-    `workspace-collapsible-${id.replaceAll(":", "")}`;
-
-
-  function toggle() {
-
-    setExpanded(
-      current =>
-        !current
-    );
-
-  }
-
+  const { expanded, contentId, toggle, onHeaderKeyDown } =
+    useWorkspaceDisclosure();
 
   return (
     <section
@@ -299,25 +267,7 @@ export default function WorkspaceCollapsiblePanel({
           toggle
         }
 
-        onKeyDown={
-          event => {
-
-            if (
-              event.key ===
-                "Enter"
-              ||
-              event.key ===
-                " "
-            ) {
-
-              event.preventDefault();
-
-              toggle();
-
-            }
-
-          }
-        }
+        onKeyDown={onHeaderKeyDown}
       >
 
         <span
