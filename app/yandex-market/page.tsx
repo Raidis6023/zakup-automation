@@ -1428,7 +1428,7 @@ export default async function YandexMarketPage() {
 
           <div
             className=
-              `header-actions ym-header-actions ${headerStyles.actions}`
+              {`header-actions ym-header-actions ${headerStyles.actions}`}
           >
 
             <ThemeToggle />
