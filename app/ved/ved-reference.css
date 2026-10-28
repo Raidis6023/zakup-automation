@@ -929,23 +929,7 @@ html[data-theme="dark"]
 
 @media (
   max-width: 800px
-) {
-
-  .ved-reference-page
-  .ved-header {
-    align-items:
-      flex-start;
-  }
-
-
-  .ved-reference-page
-  .ved-header-actions {
-    flex-wrap:
-      wrap;
-  }
-
-
-  .ved-reference-page
+) {.ved-reference-page
   .ved-orders-header {
     align-items:
       flex-start;

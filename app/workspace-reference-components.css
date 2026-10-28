@@ -1098,6 +1098,40 @@ html[data-theme="dark"]
 .workspace-content--module .secondary-button:focus-visible { text-decoration: none; }
 
 
+/* One typography/geometry contract for marketplace page headers.
+   Both Ozon and WB render through PageHeader.tsx. Local page CSS no longer
+   owns duplicated text-only header rules; section accents come from the shell.
+   Extra scope intentionally wins over legacy generic title-wrap declarations. */
+.workspace-content--module :is(
+  .ozon-reference-page .ozon-title-wrap--text-only,
+  .wb-reference-page .wb-title-wrap--text-only
+) {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  align-items: center;
+  align-self: center;
+  gap: 0;
+}
+
+.workspace-content--module :is(
+  .ozon-reference-page .ozon-page-title,
+  .wb-reference-page .wb-page-title
+) {
+  margin: 0;
+  color: var(--ws-text);
+  line-height: 1.15;
+}
+
+.workspace-content--module :is(
+  .ozon-reference-page .ozon-page-subtitle,
+  .wb-reference-page .wb-page-subtitle
+) {
+  margin: 5px 0 0;
+  color: var(--ws-text-muted);
+  line-height: 1.3;
+}
+
 /* ============================================================
    WORKSPACE: SHARED MARKETPLACE STRUCTURE
    One rule for Ozon, WB, Yandex, procurement and VED.

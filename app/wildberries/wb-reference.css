@@ -938,23 +938,7 @@ html[data-theme="dark"]
 
 @media (
   max-width: 800px
-) {
-
-  .wb-reference-page
-  .wb-header {
-    align-items:
-      flex-start;
-  }
-
-
-  .wb-reference-page
-  .wb-header-actions {
-    flex-wrap:
-      wrap;
-  }
-
-
-  .wb-reference-page
+) {.wb-reference-page
   .wb-section-top,
   .wb-unmapped-header {
     flex-direction:

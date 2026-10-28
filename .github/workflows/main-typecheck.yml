@@ -58,3 +58,14 @@ jobs:
 
       - name: TypeScript check
         run: npx tsc --noEmit --pretty false
+
+      # A clean Next build also validates CSS imports and asset resolution,
+      # which TypeScript alone cannot detect. No Vercel quota consumed here.
+      - name: Next.js production build
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          # Non-production placeholders. No real Supabase credentials or URLs
+          # are used by GitHub Actions; Vercel has separate runtime values.
+          NEXT_PUBLIC_SUPABASE_URL: "https://supabase-ci.invalid"
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_ci_placeholder"
