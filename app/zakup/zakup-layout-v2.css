@@ -2093,3 +2093,55 @@ html[data-theme="dark"]
   }
 
 }
+
+
+/* Contextual links in the Products panel stay outside the collapsible button. */
+.zakup-reference-page .zakup-products-header {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 10px;
+}
+
+.zakup-reference-page .zakup-products-header .zakup-products-toggle {
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.zakup-reference-page .zakup-products-header-links {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  padding-right: 14px;
+}
+
+.zakup-reference-page .zakup-products-header-links .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.zakup-reference-page .zakup-products-header-links .secondary-button:hover,
+.zakup-reference-page .zakup-products-header-links .secondary-button:focus-visible {
+  text-decoration: none;
+}
+
+@media (max-width: 620px) {
+  .zakup-reference-page .zakup-products-header {
+    flex-wrap: wrap;
+    gap: 0;
+  }
+
+  .zakup-reference-page .zakup-products-header .zakup-products-toggle {
+    flex-basis: 100%;
+  }
+
+  .zakup-reference-page .zakup-products-header-links {
+    width: 100%;
+    padding: 0 14px 12px;
+    flex-wrap: wrap;
+  }
+}
