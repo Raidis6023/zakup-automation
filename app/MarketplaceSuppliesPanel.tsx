@@ -1117,7 +1117,6 @@ export default function MarketplaceSuppliesPanel({
         onClick={togglePanel}
 
         onKeyDown={onHeaderKeyDown}
-        }
       >
 
         <span
