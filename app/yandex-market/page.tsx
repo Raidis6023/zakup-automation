@@ -2,8 +2,9 @@ import {
   type ReactNode,
 } from "react";
 
-import Link
-  from "next/link";
+import Breadcrumbs from "../ui/Breadcrumbs";
+import headerStyles from "../ui/BreadcrumbHeader.module.css";
+import MarketplaceFinancePanel from "../MarketplaceFinancePanel";
 
 import ThemeToggle
   from "../ThemeToggle";
@@ -1410,7 +1411,7 @@ export default async function YandexMarketPage() {
             "header ym-header"
         >
 
-          <div>
+          <div className={headerStyles.titleArea}>
 
             <h1 className="title">
               Яндекс Маркет
@@ -1427,32 +1428,15 @@ export default async function YandexMarketPage() {
 
           <div
             className=
-              "header-actions ym-header-actions"
+              {`header-actions ym-header-actions ${headerStyles.actions}`}
           >
 
             <ThemeToggle />
 
-            <Link href="/yandex-market/financier" className="secondary-button navigation-button ym-navigation-button">ИИ-финансист</Link>
-
-
-            <Link
-              href="/stock-import"
-
-              className=
-                "secondary-button navigation-button ym-navigation-button"
-            >
-              Остатки склада
-            </Link>
-
-
-            <Link
-              href="/"
-
-              className=
-                "secondary-button workspace-home-button navigation-button ym-navigation-button"
-            >
-              Главная
-            </Link>
+            <Breadcrumbs items={[
+              { label: "Главная", href: "/" },
+              { label: "Яндекс Маркет", shortLabel: "ЯМ", href: "/yandex-market" },
+            ]} />
 
           </div>
 
@@ -1611,6 +1595,8 @@ export default async function YandexMarketPage() {
 
         </div>
 
+
+        <MarketplaceFinancePanel marketplace="yandex" />
 
         {/* ===================================
             INFO

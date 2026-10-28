@@ -2,8 +2,9 @@ import type {
   ReactNode,
 } from "react";
 
-import Link
-from "next/link";
+import Breadcrumbs from "../ui/Breadcrumbs";
+import headerStyles from "../ui/BreadcrumbHeader.module.css";
+import MarketplaceFinancePanel from "../MarketplaceFinancePanel";
 
 import ThemeToggle
 from "../ThemeToggle";
@@ -1338,7 +1339,7 @@ export default async function OzonPage() {
             "header ozon-header"
         >
 
-          <div className="ozon-title-wrap ozon-title-wrap--text-only">
+          <div className={`ozon-title-wrap ozon-title-wrap--text-only ${headerStyles.titleArea}`}>
             <div>
               <h1 className="title ozon-page-title">Ozon</h1>
               <p className="subtitle ozon-page-subtitle">FBO-продажи, отмены и доступные остатки Ozon.</p>
@@ -1348,37 +1349,15 @@ export default async function OzonPage() {
 
           <div
             className=
-              "header-actions ozon-header-actions"
+              {`header-actions ozon-header-actions ${headerStyles.actions}`}
           >
-
-            <Link
-              href="/ozon/financier"
-              className="secondary-button ozon-navigation-button"
-            >
-              ИИ-финансист
-            </Link>
 
             <ThemeToggle />
 
-
-            <Link
-              href="/stock-import"
-
-              className=
-                "secondary-button ozon-navigation-button"
-            >
-              Остатки склада
-            </Link>
-
-
-            <Link
-              href="/"
-
-              className=
-                "secondary-button workspace-home-button ozon-navigation-button"
-            >
-              Главная
-            </Link>
+            <Breadcrumbs items={[
+              { label: "Главная", href: "/" },
+              { label: "Ozon", href: "/ozon" },
+            ]} />
 
           </div>
 
@@ -1592,6 +1571,8 @@ export default async function OzonPage() {
 
         </section>
 
+
+        <MarketplaceFinancePanel marketplace="ozon" />
 
         {/* ===================================
             АВТОСОЗДАНИЕ ПОСТАВОК FBO
