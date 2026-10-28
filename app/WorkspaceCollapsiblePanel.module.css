@@ -199,6 +199,20 @@
 }
 
 
+.eyebrow {
+  color: var(--collapsible-accent);
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1.3;
+  letter-spacing: .05em;
+}
+
+.subtitleWrap {
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .title {
   overflow:
     hidden;

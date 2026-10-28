@@ -176,9 +176,13 @@ export default function WorkspaceCollapsiblePanel({
   icon,
   title,
   subtitle,
+  eyebrow,
+  wrapSubtitle = false,
   meta,
   actionHref,
   actionLabel,
+  onAction,
+  actionDisabled = false,
   initialExpanded =
     true,
   className,
@@ -196,6 +200,12 @@ export default function WorkspaceCollapsiblePanel({
   subtitle?:
     string;
 
+  eyebrow?:
+    string;
+
+  wrapSubtitle?:
+    boolean;
+
   meta?:
     string;
 
@@ -204,6 +214,12 @@ export default function WorkspaceCollapsiblePanel({
 
   actionLabel?:
     string;
+
+  onAction?:
+    () => void;
+
+  actionDisabled?:
+    boolean;
 
   initialExpanded?:
     boolean;
@@ -325,6 +341,10 @@ export default function WorkspaceCollapsiblePanel({
           }
         >
 
+          {eyebrow ? (
+            <span className={styles.eyebrow}>{eyebrow}</span>
+          ) : null}
+
           <strong
             className={
               styles.title
@@ -339,7 +359,10 @@ export default function WorkspaceCollapsiblePanel({
               ? (
                 <span
                   className={
-                    styles.subtitle
+                    [
+                      styles.subtitle,
+                      wrapSubtitle ? styles.subtitleWrap : "",
+                    ].filter(Boolean).join(" ")
                   }
                 >
                   {subtitle}
@@ -365,6 +388,25 @@ export default function WorkspaceCollapsiblePanel({
             : null
         }
 
+
+        {
+          onAction && actionLabel
+            ? (
+              <button
+                type="button"
+                className={`secondary-button ${styles.action}`}
+                disabled={actionDisabled}
+                onClick={event => {
+                  event.stopPropagation();
+                  onAction();
+                }}
+                onKeyDown={event => event.stopPropagation()}
+              >
+                {actionLabel}
+              </button>
+            )
+            : null
+        }
 
         {
           actionHref

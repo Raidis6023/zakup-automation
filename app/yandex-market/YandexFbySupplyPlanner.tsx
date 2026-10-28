@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import styles from "./YandexFbySupplyPlanner.module.css";
+import WorkspaceCollapsiblePanel from "../WorkspaceCollapsiblePanel";
 
 type Item = {
   offerId: string;
@@ -121,17 +122,19 @@ export default function YandexFbySupplyPlanner() {
   const disabled = loading || downloading || noRows || !selected?.length || hasBlockingIssues;
 
   return (
-    <section className={styles.panel}>
-      <div className={styles.heading}>
-        <div>
-          <div className={styles.tag}>ЯНДЕКС МАРКЕТ · FBY</div>
-          <h2>Мультипоставка по потребности</h2>
-          <p>Считаем потребность по каждому кластеру отдельно, затем формируем общую мультипоставку с точным разбором по регионам в Excel.</p>
-        </div>
-        <button type="button" className={styles.secondary} onClick={() => setVersion(v => v + 1)} disabled={loading}>
-          {loading ? "Считаем…" : "Пересчитать"}
-        </button>
-      </div>
+    <WorkspaceCollapsiblePanel
+      tone="yandex"
+      icon="supply"
+      eyebrow="ЯНДЕКС МАРКЕТ · FBY"
+      title="Мультипоставка по потребности"
+      subtitle="Считаем потребность по каждому кластеру отдельно, затем формируем общую мультипоставку с точным разбором по регионам в Excel."
+      wrapSubtitle
+      actionLabel={loading ? "Считаем…" : "Пересчитать"}
+      onAction={() => setVersion(v => v + 1)}
+      actionDisabled={loading}
+      className={styles.fbyPanel}
+    >
+      <div className={styles.content}>
 
       {error && <div role="alert" className={styles.alertDanger}>{error}</div>}
 
@@ -249,6 +252,7 @@ export default function YandexFbySupplyPlanner() {
       )}
 
       {!plan && loading && <p className={styles.meta}>Загружаем продажи, остатки и справочник вложимости…</p>}
-    </section>
+      </div>
+    </WorkspaceCollapsiblePanel>
   );
 }
