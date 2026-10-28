@@ -2280,9 +2280,6 @@ export default function OzonFboSupplyClient({
       icon="supply"
       title="Автосоздание поставок FBO"
       subtitle="Потребность, короба, склад и таймслоты по кластерам."
-      initialExpanded={
-        false
-      }
       className=
         "ozon-fbo-supply-section"
     >
