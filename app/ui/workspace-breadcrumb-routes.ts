@@ -22,6 +22,9 @@ const routes: Record<string, RouteSpec> = {
     label: "Импорт логистики", shortLabel: "Габариты", parent: "/zakup",
   },
   "/ved": { label: "ВЭД" },
+  "/unit-economics": { label: "Юнит-экономика" },
+  "/unit-economics/commissions": { label: "Комиссии", parent: "/unit-economics" },
+  "/unit-economics/logistics": { label: "Логистика и тарифы", parent: "/unit-economics" },
   "/ozon": { label: "Ozon" },
   "/ozon/financier": { label: "ИИ-финансист", parent: "/ozon" },
   "/ozon/financier/settings": {

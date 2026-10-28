@@ -1,0 +1,9 @@
+"use client";
+type Kind="list"|"box"|"globe"|"calculator"|"ozon"|"wb"|"ym";
+export default function EmeraldSidebarIcon({kind}:{kind:Kind}){
+ if(kind==="ozon"||kind==="wb"||kind==="ym")return <svg className="emerald-sidebar-glyph" viewBox="0 0 32 32" aria-hidden="true" fill="none"><rect x="3.3" y="3.3" width="25.4" height="25.4" rx="6" stroke="currentColor" strokeWidth="1.8"/><text x="16" y="19.7" textAnchor="middle" fill="currentColor" stroke="none" fontSize={kind==="ozon"?8.3:kind==="wb"?12:11} fontWeight="800" fontFamily="Arial, sans-serif">{kind==="ozon"?"OZON":kind==="wb"?"WB":"ЯМ"}</text></svg>;
+ if(kind==="list")return <svg className="emerald-sidebar-glyph" viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"><path d="M12 9h15M12 16h15M12 23h15"/><circle fill="currentColor" stroke="none" cx="6" cy="9" r="1.4"/><circle fill="currentColor" stroke="none" cx="6" cy="16" r="1.4"/><circle fill="currentColor" stroke="none" cx="6" cy="23" r="1.4"/></svg>;
+ if(kind==="box")return <svg className="emerald-sidebar-glyph" viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"><path d="M16 3 28 10 28 23 16 30 4 23 4 10Z"/><path d="M4 10 16 17 28 10M16 17v13"/></svg>;
+ if(kind==="globe")return <svg className="emerald-sidebar-glyph" viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="16" cy="16" r="13"/><path d="M3 16h26M16 3c-7 7-7 19 0 26M16 3c7 7 7 19 0 26"/></svg>;
+ return <svg className="emerald-sidebar-glyph" viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="5" y="2.7" width="22" height="26.6" rx="4"/><rect x="9" y="7" width="14" height="5.3" rx="1.1"/><path strokeLinecap="round" d="M10 17h2M17 17h2M23 17h.1M10 22h2M17 22h2M23 22h.1"/></svg>;
+}

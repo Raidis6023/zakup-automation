@@ -43,6 +43,8 @@ import {
   VedIcon,
 } from "./WorkspaceNavIcons";
 
+import EmeraldSidebarIcon from "./EmeraldSidebarIcon";
+
 import "./home.css";
 import "./workspace-shell.css";
 import "./sidebar-collapse.css";
@@ -50,6 +52,7 @@ import "./sidebar-visuals.css";
 import "./workspace-reference-shell.css";
 import "./workspace-reference-components.css";
 import "./workspace-theme-polish.css";
+import "./sidebar-emerald.css";
 
 
 // ============================================================
@@ -193,6 +196,7 @@ type WorkspaceNavKey =
   | "sku-list"
   | "procurement"
   | "ved"
+  | "unit-economics"
   | "ozon"
   | "wildberries"
   | "yandex-market";
@@ -536,6 +540,9 @@ export default function WorkspaceShell({
           )
         );
 
+
+      case "unit-economics":
+        return pathname === "/unit-economics" || pathname.startsWith("/unit-economics/");
 
       case "ozon":
 
@@ -906,12 +913,7 @@ export default function WorkspaceShell({
                   title="Список артикулов"
                 >
 
-                  <span
-                    className=
-                      "home-brand-icon"
-                  >
-                    <ArticleListIcon />
-                  </span>
+                  <span className="home-brand-icon"><EmeraldSidebarIcon kind="list" /></span>
 
 
                   <span
@@ -955,12 +957,7 @@ export default function WorkspaceShell({
                   title="Закуп"
                 >
 
-                  <span
-                    className=
-                      "home-brand-icon"
-                  >
-                    <ProcurementIcon />
-                  </span>
+                  <span className="home-brand-icon"><EmeraldSidebarIcon kind="box" /></span>
 
 
                   <span
@@ -1004,12 +1001,7 @@ export default function WorkspaceShell({
                   title="ВЭД"
                 >
 
-                  <span
-                    className=
-                      "home-brand-icon"
-                  >
-                    <VedIcon />
-                  </span>
+                  <span className="home-brand-icon"><EmeraldSidebarIcon kind="globe" /></span>
 
 
                   <span
@@ -1021,6 +1013,18 @@ export default function WorkspaceShell({
 
                 </Link>
 
+
+                <Link
+                  href="/unit-economics"
+                  onClick={event => handleNavClick(event, "unit-economics")}
+                  className={navClass("unit-economics")}
+                  aria-current={isNavActive("unit-economics") ? "page" : undefined}
+                  aria-label="Юнит-экономика"
+                  title="Юнит-экономика"
+                >
+                  <span className="home-brand-icon"><EmeraldSidebarIcon kind="calculator" /></span>
+                  <span className="home-workspace-label">Юнит-экономика</span>
+                </Link>
 
                 <Link
                   href="/ozon"
@@ -1054,14 +1058,7 @@ export default function WorkspaceShell({
                   title="Ozon"
                 >
 
-                  <span
-                    className=
-                      "home-brand-icon"
-                  >
-                    <WorkspaceMarketplaceLogo
-                      kind="ozon"
-                    />
-                  </span>
+                  <span className="home-brand-icon"><EmeraldSidebarIcon kind="ozon" /></span>
 
 
                   <span
@@ -1106,14 +1103,7 @@ export default function WorkspaceShell({
                   title="Wildberries"
                 >
 
-                  <span
-                    className=
-                      "home-brand-icon"
-                  >
-                    <WorkspaceMarketplaceLogo
-                      kind="wildberries"
-                    />
-                  </span>
+                  <span className="home-brand-icon"><EmeraldSidebarIcon kind="wb" /></span>
 
 
                   <span
@@ -1158,14 +1148,7 @@ export default function WorkspaceShell({
                   title="Яндекс Маркет"
                 >
 
-                  <span
-                    className=
-                      "home-brand-icon"
-                  >
-                    <WorkspaceMarketplaceLogo
-                      kind="yandex-market"
-                    />
-                  </span>
+                  <span className="home-brand-icon"><EmeraldSidebarIcon kind="ym" /></span>
 
 
                   <span
