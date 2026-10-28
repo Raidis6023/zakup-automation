@@ -1918,3 +1918,66 @@ html[data-theme="dark"]
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+/* All three sortable product tables share one interaction geometry.
+   Different column widths, alignment, header offsets and brand accents
+   stay in their modules. Ozon and SKU List have distinct compact layouts. */
+:is(.wb-reference-page .wb-products-sort-button,
+    .yandex-reference-page .ym-products-sort-button,
+    .zakup-reference-page .zakup-sort-button) {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--ui-table-header-height);
+  box-sizing: border-box;
+  padding: var(--ui-table-sort-padding-block) var(--ui-table-sort-padding-inline);
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: var(--ui-table-header-font-size);
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.12s ease, background-color 0.12s ease;
+}
+
+:is(.wb-reference-page .wb-products-sort-button > span:first-child,
+    .yandex-reference-page .ym-products-sort-button > span:first-child,
+    .zakup-reference-page .zakup-sort-button > span:first-child) {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+:is(.wb-reference-page .wb-products-sort-indicator,
+    .yandex-reference-page .ym-products-sort-indicator,
+    .zakup-reference-page .zakup-sort-indicator) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  min-width: 13px;
+  height: 16px;
+  flex: 0 0 13px;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 16px;
+}
+
+/* Visible keyboard focus across every marketplace sortable header
+   without changing mouse hover, sort direction or sticky positioning. */
+:is(.ozon-reference-page .ozon-products-sort-button,
+    .wb-reference-page .wb-products-sort-button,
+    .yandex-reference-page .ym-products-sort-button,
+    .zakup-reference-page .zakup-sort-button,
+    .sku-list-sort-button):focus-visible {
+  outline: 2px solid var(--ws-blue, #11865d);
+  outline-offset: -2px;
+}
