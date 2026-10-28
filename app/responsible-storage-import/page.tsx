@@ -1,5 +1,4 @@
-import Link
-  from "next/link";
+import Breadcrumbs from "../ui/Breadcrumbs";
 
 import ThemeToggle
   from "../ThemeToggle";
@@ -42,49 +41,15 @@ export default function ResponsibleStorageImportPage() {
 
 
           <div className="header-actions">
-
             <ThemeToggle />
-
-
-            <Link
-              href="/stocks"
-
-              className=
-                "secondary-button navigation-button"
-            >
-              Основной склад
-            </Link>
-
-
-            <Link
-              href="/logistics-import"
-
-              className=
-                "secondary-button navigation-button"
-            >
-              Логистика
-            </Link>
-
-
-            <Link
-              href="/ozon"
-
-              className=
-                "secondary-button navigation-button"
-            >
-              Ozon
-            </Link>
-
-
-            <Link
-              href="/stocks"
-
-              className=
-                "secondary-button navigation-button"
-            >
-              ← Остатки
-            </Link>
-
+            <Breadcrumbs
+              items={[
+                { label: "Главная", href: "/" },
+                { label: "Закуп", href: "/zakup" },
+                { label: "Остатки", href: "/stocks" },
+                { label: "Ответственное хранение", shortLabel: "ОХ", href: "/responsible-storage-import" },
+              ]}
+            />
           </div>
 
         </header>

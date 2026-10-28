@@ -1,5 +1,6 @@
 import Link
   from "next/link";
+import Breadcrumbs from "../ui/Breadcrumbs";
 
 import ThemeToggle
   from "../ThemeToggle";
@@ -66,14 +67,13 @@ export default function ChinaTransportPage() {
             </Link>
 
 
-            <Link
-              href="/"
-
-              className=
-                "secondary-button navigation-button"
-            >
-              ← Расчёт Китая
-            </Link>
+            <Breadcrumbs
+              items={[
+                { label: "Главная", href: "/" },
+                { label: "Закуп", href: "/zakup" },
+                { label: "Китай — транспорт", shortLabel: "Транспорт", href: "/china-transport" },
+              ]}
+            />
 
           </div>
 

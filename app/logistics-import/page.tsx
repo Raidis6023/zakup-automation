@@ -1,5 +1,4 @@
-import Link
-  from "next/link";
+import Breadcrumbs from "../ui/Breadcrumbs";
 
 import ThemeToggle
   from "../ThemeToggle";
@@ -46,39 +45,14 @@ export default function LogisticsImportPage() {
 
 
           <div className="header-actions">
-
             <ThemeToggle />
-
-
-            <Link
-              href="/stock-import"
-
-              className=
-                "secondary-button navigation-button"
-            >
-              Остатки склада
-            </Link>
-
-
-            <Link
-              href="/ozon"
-
-              className=
-                "secondary-button navigation-button"
-            >
-              Ozon
-            </Link>
-
-
-            <Link
-              href="/"
-
-              className=
-                "secondary-button navigation-button"
-            >
-              ← Расчёт Китая
-            </Link>
-
+            <Breadcrumbs
+              items={[
+                { label: "Главная", href: "/" },
+                { label: "Закуп", href: "/zakup" },
+                { label: "Импорт логистики", shortLabel: "Габариты", href: "/logistics-import" },
+              ]}
+            />
           </div>
 
         </header>

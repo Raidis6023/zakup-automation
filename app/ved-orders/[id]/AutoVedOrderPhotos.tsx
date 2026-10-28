@@ -1,25 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { refreshVedOrderPhotos } from "../../actions";
 
-// Avoid repeatedly calling Ozon if a card has no usable photo.
-// The next attempt happens when the order is revisited after this interval.
+// Keep background photo retrieval, without placing loading/error messages in the header.
 const RETRY_COOLDOWN_MS = 10 * 60 * 1000;
 
-export default function AutoVedOrderPhotos({
-  orderId,
-}: {
-  orderId: string;
-}) {
+export default function AutoVedOrderPhotos({ orderId }: { orderId: string }) {
   const started = useRef(false);
-  const [status, setStatus] = useState<"loading" | "idle" | "error">(
-    "idle"
-  );
-  const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    // Protect against duplicate effect execution in React Strict Mode.
     if (started.current) return;
     started.current = true;
 
@@ -28,68 +18,25 @@ export default function AutoVedOrderPhotos({
 
     try {
       const previous = Number(sessionStorage.getItem(storageKey) ?? 0);
-      if (Number.isFinite(previous) && now - previous < RETRY_COOLDOWN_MS) {
-        return;
-      }
+      if (Number.isFinite(previous) && now - previous < RETRY_COOLDOWN_MS) return;
       sessionStorage.setItem(storageKey, String(now));
     } catch {
-      // Session storage may be disabled; the in-memory guard still applies.
+      // Browser storage may be unavailable, so keep the ref guard.
     }
-
-    setStatus("loading");
-    setMessage("Загружаем недостающие фотографии Ozon…");
 
     void (async () => {
       try {
         const result = await refreshVedOrderPhotos(orderId);
-        const newlyLoaded =
-          result.loaded_from_ozon + result.copied_from_product;
-
-        if (newlyLoaded > 0) {
-          // Refresh the order detail and the server-side missing-photo check.
+        if (result.loaded_from_ozon + result.copied_from_product > 0) {
           window.location.reload();
-          return;
         }
-
-        setStatus("idle");
-
-        if (result.missing_in_ozon > 0) {
-          const details = result.ozon_fallback_error
-            ? ` Причина дополнительного запроса: ${result.ozon_fallback_error}`
-            : "";
-
-          setMessage(
-            `Ozon пока не предоставил фото для ${result.missing_in_ozon} позиций. ` +
-              "Повторная попытка при следующем открытии заказа, не чаще раза в 10 минут." +
-              details
-          );
-        } else {
-          setMessage(null);
-        }
+        // Missing photos remain visible in the order's own product rows;
+        // no technical status text is injected beside navigation links.
       } catch (cause) {
-        setStatus("error");
-        setMessage(
-          "Не удалось автоматически загрузить фотографии Ozon: " +
-            (cause instanceof Error ? cause.message : "неизвестная ошибка")
-        );
+        console.error("Не удалось автоматически загрузить фотографии заказа ВЭД:", cause);
       }
     })();
   }, [orderId]);
 
-  if (!message) return null;
-
-  return (
-    <span
-      role={status === "error" ? "alert" : "status"}
-      aria-live="polite"
-      style={{
-        display: "inline-block",
-        fontSize: "12px",
-        maxWidth: "400px",
-        opacity: 0.9,
-      }}
-    >
-      {message}
-    </span>
-  );
+  return null;
 }

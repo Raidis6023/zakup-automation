@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import {
   useEffect,
   useState,
@@ -194,59 +196,70 @@ export default function ZakupProductsSectionClient({
         "section zakup-products-section zakup-products-collapsible"
     >
 
-      <button
-        type="button"
-
-        className=
-          "zakup-products-toggle"
-
-        onClick={
-          toggleExpanded
-        }
-
-        aria-expanded={
-          expanded
-        }
-
-        aria-controls=
-          "zakup-products-table"
-      >
-
-        <span
+      <div className="zakup-products-header">
+        <button
+          type="button"
+  
           className=
-            "zakup-products-icon"
+            "zakup-products-toggle"
+  
+          onClick={
+            toggleExpanded
+          }
+  
+          aria-expanded={
+            expanded
+          }
+  
+          aria-controls=
+            "zakup-products-table"
         >
-
-          <ProductsTableIcon />
-
-        </span>
-
-
-        <span
-          className=
-            "zakup-products-toggle-copy"
-        >
-
-          <strong
-            className=
-              "zakup-products-toggle-title"
-          >
-            Товары ({
-              skuCount
-            })
-          </strong>
-
-
+  
           <span
             className=
-              "muted zakup-products-toggle-subtitle"
+              "zakup-products-icon"
           >
-            Итоговые значения текущего расчёта
+  
+            <ProductsTableIcon />
+  
           </span>
+  
+  
+          <span
+            className=
+              "zakup-products-toggle-copy"
+          >
+  
+            <strong
+              className=
+                "zakup-products-toggle-title"
+            >
+              Товары ({
+                skuCount
+              })
+            </strong>
+  
+  
+            <span
+              className=
+                "muted zakup-products-toggle-subtitle"
+            >
+              Итоговые значения текущего расчёта
+            </span>
+  
+          </span>
+  
+        </button>
 
-        </span>
-
-      </button>
+        <nav className="zakup-products-header-links" aria-label="Связанные разделы товаров">
+          <Link href="/stocks" className="secondary-button navigation-button">
+            Остатки
+          </Link>
+          <Link href="/logistics-import" className="secondary-button navigation-button">
+            Габариты
+          </Link>
+        </nav>
+      </div>
 
 
       {
