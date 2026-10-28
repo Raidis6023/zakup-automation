@@ -162,8 +162,7 @@
   margin-bottom:
     16px;
 
-  border-radius:
-    10px;
+  border-radius: var(--ui-surface-radius);
 }
 
 
@@ -189,21 +188,17 @@
 
 .workspace-content--module
 .summary-grid {
-  gap:
-    12px;
+  gap: var(--ui-surface-grid-gap);
 
-  margin-bottom:
-    18px;
+  margin-bottom: var(--ui-surface-section-gap);
 }
 
 
 .workspace-content--module
 .card {
-  padding:
-    16px;
+  padding: var(--ui-surface-card-padding);
 
-  border-radius:
-    10px;
+  border-radius: var(--ui-surface-radius);
 }
 
 
@@ -245,14 +240,11 @@
 
 .workspace-content--module
 .section {
-  padding:
-    18px;
+  padding: var(--ui-surface-section-padding);
 
-  margin-bottom:
-    18px;
+  margin-bottom: var(--ui-surface-section-gap);
 
-  border-radius:
-    10px;
+  border-radius: var(--ui-surface-radius);
 }
 
 
@@ -309,12 +301,9 @@
 
 .workspace-content--module
 .primary-button {
-  min-height:
-    38px;
+  min-height: var(--ui-control-height-compact);
 
-  padding:
-    9px
-    15px;
+  padding: var(--ui-control-padding-y-compact) var(--ui-button-primary-legacy-padding-inline);
 
   background:
     var(--ws-blue);
@@ -326,17 +315,14 @@
     1px solid
     var(--ws-blue);
 
-  border-radius:
-    8px;
+  border-radius: var(--ui-control-radius);
 
   box-shadow:
     none;
 
-  font-size:
-    12px;
+  font-size: var(--ui-font-size-compact);
 
-  font-weight:
-    650;
+  font-weight: var(--ui-button-primary-legacy-weight);
 
   transition:
     background-color
@@ -379,12 +365,9 @@
 
 .workspace-content--module
 .secondary-button {
-  min-height:
-    38px;
+  min-height: var(--ui-control-height-compact);
 
-  padding:
-    9px
-    14px;
+  padding: var(--ui-control-padding-y-compact) var(--ui-control-padding-x-compact);
 
   background:
     var(--ws-surface-soft);
@@ -396,17 +379,14 @@
     1px solid
     var(--ws-border);
 
-  border-radius:
-    8px;
+  border-radius: var(--ui-control-radius);
 
   box-shadow:
     none;
 
-  font-size:
-    12px;
+  font-size: var(--ui-font-size-compact);
 
-  font-weight:
-    600;
+  font-weight: var(--ui-font-weight-secondary);
 
   transition:
     background-color
@@ -1108,3 +1088,11 @@ html[data-theme="dark"]
   }
 
 }
+
+/* A navigation link styled as a button must never acquire an underline. */
+.workspace-content--module .primary-button,
+.workspace-content--module .primary-button:hover,
+.workspace-content--module .primary-button:focus-visible,
+.workspace-content--module .secondary-button,
+.workspace-content--module .secondary-button:hover,
+.workspace-content--module .secondary-button:focus-visible { text-decoration: none; }
