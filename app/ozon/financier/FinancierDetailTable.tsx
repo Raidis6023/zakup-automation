@@ -1,4 +1,6 @@
 "use client";
+import FinanceDynamics,{type FinanceMetric} from '../../components/finance/FinanceDynamics';
+import CopyArticle from '../../components/finance/CopyArticle';
 import { Fragment, useMemo, useState } from "react";
 import dynamic from 'next/dynamic';
 import {knownSum,ratioTotal,uniqueStock} from '../../../lib/finance-totals';
@@ -97,6 +99,7 @@ export default function FinancierDetailTable({
 }) {
   const [search,setSearch]=useState("");
   const [sort,setSort]=useState<{key:SortKey;dir:1|-1}>({key:"estimated_result",dir:-1});
+ const [graphMetric,setGraphMetric]=useState<FinanceMetric>('orders');
   const [expanded,setExpanded]=useState<string|null>(null);
   const [abcMetric]=useState("revenue");
 
@@ -183,10 +186,10 @@ export default function FinancierDetailTable({
     </div><a href="#ozf-unallocated" className="ozf-btn ozf-jump">Нераспределённые расходы ↓</a></div>
     <div className="ozf-kpi-grid">{kpis.map(k=>
       <div key={k.name} className={"ozf-kpi "+k.tone}>
-        <span>{k.name}</span><strong>{k.value}</strong>
+        {['Выручка','Операционная прибыль'].includes(k.name)?<button className="ozf-kpi-link" onClick={()=>setGraphMetric(k.name==='Выручка'?'revenue':'profit')}>{k.name}</button>:<span>{k.name}</span>}<strong>{k.value}</strong>
       </div>)}
     </div>
-    <div className="ozf-section-tools">
+    <FinanceDynamics marketplace="ozon" from={data?.from??''} to={data?.to??''} offers={includeUnallocated?undefined:rows.map(r=>r.offer_id)} selected={graphMetric}/><div className="ozf-section-tools">
       <input placeholder="Поиск по артикулу, коду или КМ" aria-label="Поиск товаров" value={search}
         onChange={e=>setSearch(e.target.value)} />
       <span>Сортировка: {defs.find(d=>d[0]===sort.key)?.[1]} {sort.dir===-1?"↓":"↑"}</span>
@@ -207,7 +210,7 @@ export default function FinancierDetailTable({
             <td>{r.master_code??"—"}</td><td>{r.manager}</td>
             <td><button type="button" className="ozf-article-btn" aria-expanded={expanded===r.offer_id}
               onClick={()=>setExpanded(expanded===r.offer_id?null:r.offer_id)}>
-              <span>{expanded===r.offer_id?"▾":"▸"}</span> {r.offer_id}</button></td>
+              <span>{expanded===r.offer_id?"▾":"▸"}</span> {r.offer_id}</button><CopyArticle article={r.offer_id}/></td>
             <td className={moneyTone(r.estimated_result)}
               title={r.estimated_result===null
                 ?(r.data_gaps?.length?r.data_gaps.join("; "):"Недостаточно данных для полного расчёта")
@@ -236,7 +239,7 @@ export default function FinancierDetailTable({
           </tr>
           {expanded===r.offer_id&&<tr key={r.offer_id+"-detail"} className="ozf-expanded-row">
             <td colSpan={25}>
-              <div className="ozf-expanded-content"><h3>{r.offer_id} · доходы и расходы Ozon</h3>
+              <div className="ozf-expanded-content"><div className="ozf-pinned-article"><strong>{r.offer_id}</strong><CopyArticle article={r.offer_id}/></div>
                 <table className="ozf-breakdown-table"><thead><tr>
                   <th>Статья</th><th>Категория</th><th>Операций</th><th>Сумма, ₽</th>
                 </tr></thead><tbody>
@@ -275,7 +278,7 @@ export default function FinancierDetailTable({
                     {money(r.estimated_result)}</td>
                   </tr>
                 </tbody></table>
-                <OzonRowRates master={r.master_code} onSaved={onSaved}/>
+                <details><summary>{r.offer_id} · КМ, себестоимость и ТК Маяк</summary><OzonRowRates master={r.master_code} onSaved={onSaved}/></details><FinanceDynamics marketplace="ozon" from={data?.from??''} to={data?.to??''} offer={r.offer_id}/>
                 <CampaignCharts offer={r.offer_id} from={data?.from??''} to={data?.to??''}/>
               </div>
             </td>

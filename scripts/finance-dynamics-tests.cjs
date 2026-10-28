@@ -1,0 +1,10 @@
+const fs=require('node:fs'),assert=require('node:assert/strict'),ts=require('typescript');
+const source=fs.readFileSync('app/components/finance/FinanceDynamics.tsx','utf8');const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2020}}).outputText;
+const m={exports:{}};new Function('require','module','exports',code)(require,m,m.exports);
+const {amounts}=m.exports;
+const oz={rows:[{offer_id:'a',revenue:1000,cogs:200,mayak_expense:50,estimated_result:400,advertising_amount:-100,order_count:5,buyout_units:4}],unallocated_amount:-30,advertising:{finance_total:-120}};
+const total=amounts(oz,'ozon');assert.equal(total.profit,370);assert.equal(total.advertising,120);assert.equal(total.inbound,250);assert.equal(total.revenue-total.marketplace-total.advertising-total.inbound,total.profit);
+const item=amounts(oz,'ozon','a');assert.equal(item.profit,400);assert.equal(item.advertising,100);assert.equal(item.orders,5);
+assert.equal(amounts({...oz,rows:[{...oz.rows[0],cogs:null,estimated_result:null}]},'ozon').profit,null);
+const ym=amounts({rows:[{article:'a',income:100000,cogs:20000,mayak:5000,result:40000,advertising:10000,orders:5,buyouts:4}],totals:{result:40000}},'yandex');assert.equal(ym.revenue,1000);assert.equal(ym.inbound,250);assert.equal(ym.orders,5);assert.equal(ym.revenue-ym.marketplace-ym.advertising-ym.inbound,ym.profit);
+console.log('PASS: finance series units, SKU scope, unallocated charges, unknown costs, no advertising double count');
