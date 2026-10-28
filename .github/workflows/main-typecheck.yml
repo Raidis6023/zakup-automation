@@ -58,3 +58,10 @@ jobs:
 
       - name: TypeScript check
         run: npx tsc --noEmit --pretty false
+
+      # A clean Next build also validates CSS imports and asset resolution,
+      # which TypeScript alone cannot detect. No Vercel quota consumed here.
+      - name: Next.js production build
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"

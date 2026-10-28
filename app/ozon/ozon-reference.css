@@ -1069,23 +1069,7 @@ html[data-theme="dark"]
 
 @media (
   max-width: 800px
-) {
-
-  .ozon-reference-page
-  .ozon-header {
-    align-items:
-      flex-start;
-  }
-
-
-  .ozon-reference-page
-  .ozon-header-actions {
-    flex-wrap:
-      wrap;
-  }
-
-
-  .ozon-reference-page
+) {.ozon-reference-page
   .ozon-section-top,
   .ozon-reference-page
   .ozon-unlinked-header,
@@ -1136,23 +1120,6 @@ html[data-theme="dark"]
    OZON | ЕДИНОЕ ОФОРМЛЕНИЕ С WILDBERRIES
    Сохранены данные и Ozon-голубая палитра.
    ============================================================ */
-
-.ozon-reference-page .ozon-title-wrap--text-only {
-  display: flex;
-  align-items: center;
-  align-self: center;
-  gap: 0;
-}
-.ozon-reference-page .ozon-page-title {
-  margin: 0;
-  color: var(--ws-text);
-  line-height: 1.15;
-}
-.ozon-reference-page .ozon-page-subtitle {
-  margin: 5px 0 0;
-  color: var(--ws-text-muted);
-  line-height: 1.3;
-}
 
 /* Four-quarter hero, matching the WB hierarchy. */
 .ozon-reference-page .ozon-sync-hero {

@@ -23,9 +23,6 @@ import WbProductsTableClient, {
 import "./wb-reference.css";
 import "./wb-products-table.css";
 import "./wb-reference-top.css";
-import "./wb-page-header.css";
-
-
 export const dynamic =
   "force-dynamic";
 

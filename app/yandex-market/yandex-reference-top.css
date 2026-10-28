@@ -1173,23 +1173,7 @@ html[data-theme="dark"]
 @media (
   max-width:
     800px
-) {
-
-  .yandex-reference-page
-  .ym-header {
-    align-items:
-      flex-start;
-  }
-
-
-  .yandex-reference-page
-  .ym-header-actions {
-    flex-wrap:
-      wrap;
-  }
-
-
-  .yandex-reference-page
+) {.yandex-reference-page
   .ym-summary-grid {
     grid-template-columns:
       repeat(
