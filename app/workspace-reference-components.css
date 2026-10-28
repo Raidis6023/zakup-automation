@@ -1096,3 +1096,675 @@ html[data-theme="dark"]
 .workspace-content--module .secondary-button,
 .workspace-content--module .secondary-button:hover,
 .workspace-content--module .secondary-button:focus-visible { text-decoration: none; }
+
+
+/* ============================================================
+   WORKSPACE: SHARED MARKETPLACE STRUCTURE
+   One rule for Ozon, WB, Yandex, procurement and VED.
+   Historical selectors are compatibility aliases; new pages use ws-*.
+   Brand colors and data layout remain in module-specific CSS.
+   ============================================================ */
+
+.ws-summary-grid { display: grid; }
+
+:is(
+  .ozon-reference-page .ozon-header,
+  .wb-reference-page .wb-header,
+  .yandex-reference-page .ym-header,
+  .zakup-reference-page .zakup-header,
+  .ved-reference-page .ved-header
+) {
+  align-items:
+    center;
+
+  margin-bottom:
+    18px;
+}
+
+:is(
+  .ozon-reference-page .ozon-title-wrap,
+  .wb-reference-page .wb-title-wrap
+) {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    13px;
+
+  min-width:
+    0;
+}
+
+:is(
+  .ozon-reference-page .ozon-title-icon,
+  .wb-reference-page .wb-title-icon
+) {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    46px;
+
+  height:
+    46px;
+
+  flex:
+    0 0
+    46px;
+
+  overflow:
+    hidden;
+
+  border-radius:
+    11px;
+}
+
+:is(
+  .ozon-reference-page .ozon-title-icon img,
+  .wb-reference-page .wb-title-icon img
+) {
+  display:
+    block;
+
+  width:
+    46px;
+
+  height:
+    46px;
+
+  object-fit:
+    contain;
+}
+
+:is(
+  .ozon-reference-page .ozon-header-actions,
+  .wb-reference-page .wb-header-actions,
+  .yandex-reference-page .ym-header-actions,
+  .zakup-reference-page .zakup-header-actions,
+  .ved-reference-page .ved-header-actions
+) {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    10px;
+}
+
+:is(
+  .ozon-reference-page .ozon-navigation-button,
+  .yandex-reference-page .ym-navigation-button
+) {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  text-decoration:
+    none;
+
+  white-space:
+    nowrap;
+}
+
+:is(
+  .ozon-reference-page .ozon-error-section,
+  .wb-reference-page .wb-error-section
+) {
+  padding:
+    15px
+    17px;
+
+  border-color:
+    rgba(
+      223,
+      90,
+      112,
+      0.32
+    );
+}
+
+:is(
+  .ozon-reference-page .ozon-error-title,
+  .wb-reference-page .wb-error-title
+) {
+  color:
+    var(--ws-text);
+
+  font-weight:
+    700;
+}
+
+:is(
+  .ozon-reference-page .ozon-sync-state-section,
+  .wb-reference-page .wb-sync-state-section
+) {
+  padding:
+    0;
+
+  overflow:
+    hidden;
+}
+
+:is(
+  .ozon-reference-page .ozon-section-top,
+  .wb-reference-page .wb-section-top
+) {
+  display:
+    flex;
+
+  align-items:
+    flex-start;
+
+  justify-content:
+    space-between;
+
+  gap:
+    16px;
+
+  padding:
+    16px
+    18px;
+}
+
+:is(
+  .ozon-reference-page .ozon-section-heading,
+  .wb-reference-page .wb-section-heading
+) {
+  min-width:
+    0;
+}
+
+:is(
+  .ws-status-badge,
+  .ozon-reference-page .ozon-status-badge,
+  .wb-reference-page .wb-status-badge
+) {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  gap:
+    7px;
+
+  min-height:
+    30px;
+
+  padding:
+    5px
+    10px;
+
+  flex:
+    0 0
+    auto;
+
+  border:
+    1px solid
+    transparent;
+
+  border-radius:
+    999px;
+
+  font-size:
+    11px;
+
+  font-weight:
+    700;
+
+  white-space:
+    nowrap;
+}
+
+:is(
+  .ws-status-dot,
+  .ozon-reference-page .ozon-status-dot,
+  .wb-reference-page .wb-status-dot,
+  .ved-reference-page .ved-status-dot
+) {
+  width:
+    8px;
+
+  height:
+    8px;
+
+  flex:
+    0 0
+    8px;
+
+  border-radius:
+    50%;
+
+  background:
+    currentColor;
+}
+
+:is(
+  .ozon-reference-page .ozon-sync-info-grid,
+  .wb-reference-page .wb-sync-info-grid
+) {
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap:
+    1px;
+
+  border-top:
+    1px solid
+    var(--ws-border);
+
+  background:
+    var(--ws-border);
+}
+
+:is(
+  .ws-info-card,
+  .ozon-reference-page .ozon-info-card,
+  .wb-reference-page .wb-info-card
+) {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap: var(--ui-summary-card-gap);
+
+  min-width:
+    0;
+
+  min-height:
+    86px;
+
+  padding:
+    14px
+    16px;
+
+  background:
+    var(--ws-surface);
+}
+
+:is(
+  .ozon-reference-page .ozon-info-icon svg,
+  .wb-reference-page .wb-info-icon svg
+) {
+  width:
+    21px;
+
+  height:
+    21px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+:is(
+  .ozon-reference-page .ozon-info-copy,
+  .wb-reference-page .wb-info-copy
+) {
+  min-width:
+    0;
+}
+
+:is(
+  .ozon-reference-page .ozon-info-value,
+  .wb-reference-page .wb-info-value
+) {
+  margin-top:
+    3px;
+
+  color:
+    var(--ws-text);
+
+  font-size:
+    15px;
+
+  font-weight:
+    700;
+
+  line-height:
+    1.3;
+}
+
+:is(
+  .ws-summary-grid,
+  .ozon-reference-page .ozon-summary-grid,
+  .wb-reference-page .wb-summary-grid
+) {
+  grid-template-columns:
+    repeat(
+      5,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap: var(--ui-summary-card-gap);
+}
+
+:is(
+  .ws-summary-card,
+  .ozon-reference-page .ozon-summary-card,
+  .wb-reference-page .wb-summary-card,
+  .yandex-reference-page .ym-summary-card
+) {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap: var(--ui-summary-card-gap);
+
+  min-height: var(--ui-summary-card-min-height);
+}
+
+:is(
+  .ws-summary-icon,
+  .ozon-reference-page .ozon-summary-icon,
+  .wb-reference-page .wb-summary-icon,
+  .yandex-reference-page .ym-summary-icon
+) {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    42px;
+
+  height:
+    42px;
+
+  flex:
+    0 0
+    42px;
+
+  border-radius:
+    10px;
+}
+
+:is(
+  .ws-summary-icon svg,
+  .ozon-reference-page .ozon-summary-icon svg,
+  .wb-reference-page .wb-summary-icon svg,
+  .yandex-reference-page .ym-summary-icon svg
+) {
+  width:
+    22px;
+
+  height:
+    22px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+:is(
+  .ws-summary-copy,
+  .ozon-reference-page .ozon-summary-copy,
+  .wb-reference-page .wb-summary-copy,
+  .yandex-reference-page .ym-summary-copy,
+  .ved-reference-page .ved-summary-copy
+) {
+  min-width:
+    0;
+}
+
+:is(
+  .ozon-reference-page .ozon-panel-icon svg,
+  .wb-reference-page .wb-panel-icon svg,
+  .yandex-reference-page .ym-panel-icon svg
+) {
+  width:
+    21px;
+
+  height:
+    21px;
+
+  fill:
+    none;
+
+  stroke:
+    currentColor;
+
+  stroke-width:
+    1.9;
+
+  stroke-linecap:
+    round;
+
+  stroke-linejoin:
+    round;
+}
+
+:is(
+  .ws-info-list,
+  .ozon-reference-page .ozon-info-list,
+  .wb-reference-page .wb-info-list,
+  .yandex-reference-page .ym-info-list
+) {
+  display:
+    grid;
+
+  gap:
+    4px;
+
+  margin-top:
+    7px;
+}
+
+:is(
+  .ozon-reference-page .ozon-daily-section,
+  .wb-reference-page .wb-daily-section
+) {
+  padding:
+    0;
+
+  overflow:
+    hidden;
+}
+
+:is(
+  .ozon-reference-page .ozon-daily-header,
+  .wb-reference-page .wb-daily-header
+) {
+  padding:
+    16px
+    18px;
+}
+
+:is(
+  .ws-daily-table,
+  .ozon-reference-page .ozon-daily-table,
+  .wb-reference-page .wb-daily-table
+) {
+  width:
+    100%;
+
+  min-width:
+    680px;
+
+  border-collapse:
+    collapse;
+}
+
+:is(
+  .ws-daily-table th,
+  .ozon-reference-page .ozon-daily-table th,
+  .wb-reference-page .wb-daily-table th
+) {
+  padding:
+    11px
+    14px;
+
+  background:
+    var(--ws-surface-soft);
+
+  color:
+    var(--ws-text-muted);
+
+  border-bottom:
+    1px solid
+    var(--ws-border);
+
+  font-size:
+    11px;
+
+  font-weight:
+    650;
+
+  white-space:
+    nowrap;
+}
+
+:is(
+  .ws-daily-table td,
+  .ozon-reference-page .ozon-daily-table td,
+  .wb-reference-page .wb-daily-table td
+) {
+  padding:
+    11px
+    14px;
+
+  color:
+    var(--ws-text);
+
+  border-bottom:
+    1px solid
+    var(--ws-border-soft);
+
+  font-size:
+    12px;
+
+  white-space:
+    nowrap;
+}
+
+:is(
+  .ws-daily-table tbody tr:last-child td,
+  .ozon-reference-page .ozon-daily-table tbody tr:last-child td,
+  .wb-reference-page .wb-daily-table tbody tr:last-child td
+) {
+  border-bottom:
+    none;
+}
+
+:is(
+  .ws-daily-table tbody tr:hover,
+  .ozon-reference-page .ozon-daily-table tbody tr:hover,
+  .wb-reference-page .wb-daily-table tbody tr:hover
+) {
+  background:
+    var(--ws-surface-hover);
+}
+
+:is(
+  .ws-products-section,
+  .ozon-reference-page .ozon-products-section,
+  .wb-reference-page .wb-products-section,
+  .zakup-reference-page .zakup-products-section
+) {
+  padding:
+    0;
+
+  overflow:
+    hidden;
+}
+
+:is(
+  .ozon-reference-page .ozon-safe-section,
+  .wb-reference-page .wb-safe-section
+) {
+  display:
+    flex;
+
+  align-items:
+    flex-start;
+
+  gap:
+    14px;
+
+  background:
+    rgba(
+      36,
+      182,
+      122,
+      0.055
+    );
+
+  border-color:
+    rgba(
+      36,
+      182,
+      122,
+      0.18
+    );
+}
+
+:is(
+  .ozon-reference-page .ozon-safe-icon svg,
+  .wb-reference-page .wb-safe-icon svg
+) {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

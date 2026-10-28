@@ -54,8 +54,6 @@ type Props = {
 // CONSTANTS
 // ============================================================
 
-const STORAGE_KEY =
-  "wb-products-expanded";
 
 
 const TEXT_SORT_KEYS =
@@ -454,91 +452,13 @@ export default function WbProductsTableClient({
   // LOCAL STORAGE
   // ==========================================================
 
-  useEffect(
-    () => {
-
-      const params =
-        new URLSearchParams(
-          window.location.search
-        );
-
-      const focus =
-        params.get(
-          "focusStockDays"
-        );
-
-      if (
-        focus
-      ) {
-
-        setExpanded(
-          true
-        );
-
-        setNotificationFocus(
-          focus
-        );
-
-        try {
-
-          window.localStorage.setItem(
-            STORAGE_KEY,
-            "1"
-          );
-
-        } catch {
-
-          // Storage may be unavailable.
-        }
-
-      } else {
-
-        try {
-
-          const stored =
-            window
-              .localStorage
-              .getItem(
-                STORAGE_KEY
-              );
-
-          if (
-            stored ===
-              "1"
-          ) {
-
-            setExpanded(
-              true
-            );
-
-          }
-
-          if (
-            stored ===
-              "0"
-          ) {
-
-            setExpanded(
-              false
-            );
-
-          }
-
-        } catch {
-
-          // Storage may be unavailable.
-        }
-
-      }
-
-      setStorageLoaded(
-        true
-      );
-
-    },
-    []
-  );
-
+  // Previous disclosure state is not restored. Explicit focus links wait
+  // until the user opens the collapsed product table.
+  useEffect(() => {
+    const focus = new URLSearchParams(window.location.search).get("focusStockDays");
+    if (focus) setNotificationFocus(focus);
+    setStorageLoaded(true);
+  }, []);
 
   // ==========================================================
   // SORTED ITEMS
@@ -706,42 +626,8 @@ export default function WbProductsTableClient({
   // ==========================================================
 
   function toggleExpanded() {
-
-    setExpanded(
-      previous => {
-
-        const next =
-          !previous;
-
-
-        try {
-
-          window
-            .localStorage
-            .setItem(
-              STORAGE_KEY,
-              next
-                ? "1"
-                : "0"
-            );
-
-        } catch {
-
-          /*
-           * Сама таблица продолжит работать
-           * даже без localStorage.
-           */
-
-        }
-
-
-        return next;
-
-      }
-    );
-
+    setExpanded(previous => !previous);
   }
-
 
   // ==========================================================
   // SORT CLICK

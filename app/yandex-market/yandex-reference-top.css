@@ -35,52 +35,6 @@
 
 
 /* ============================================================
-   HEADER
-   ============================================================ */
-
-.yandex-reference-page
-.ym-header {
-  align-items:
-    center;
-
-  margin-bottom:
-    18px;
-}
-
-
-.yandex-reference-page
-.ym-header-actions {
-  display:
-    flex;
-
-  align-items:
-    center;
-
-  gap:
-    10px;
-}
-
-
-.yandex-reference-page
-.ym-navigation-button {
-  display:
-    inline-flex;
-
-  align-items:
-    center;
-
-  justify-content:
-    center;
-
-  text-decoration:
-    none;
-
-  white-space:
-    nowrap;
-}
-
-
-/* ============================================================
    ERROR
    ============================================================ */
 
@@ -966,74 +920,6 @@ svg {
 
 
 .yandex-reference-page
-.ym-summary-card {
-  display:
-    flex;
-
-  align-items:
-    center;
-
-  gap:
-    12px;
-
-  min-height:
-    88px;
-}
-
-
-.yandex-reference-page
-.ym-summary-icon {
-  display:
-    inline-flex;
-
-  align-items:
-    center;
-
-  justify-content:
-    center;
-
-  width:
-    42px;
-
-  height:
-    42px;
-
-  flex:
-    0 0
-    42px;
-
-  border-radius:
-    10px;
-}
-
-
-.yandex-reference-page
-.ym-summary-icon
-svg {
-  width:
-    22px;
-
-  height:
-    22px;
-
-  fill:
-    none;
-
-  stroke:
-    currentColor;
-
-  stroke-width:
-    1.9;
-
-  stroke-linecap:
-    round;
-
-  stroke-linejoin:
-    round;
-}
-
-
-.yandex-reference-page
 .ym-summary-icon--green {
   color:
     var(--ym-green);
@@ -1092,12 +978,6 @@ svg {
     );
 }
 
-
-.yandex-reference-page
-.ym-summary-copy {
-  min-width:
-    0;
-}
 
 
 /* ============================================================
@@ -1165,45 +1045,6 @@ svg {
 
   background:
     var(--ym-accent-soft);
-}
-
-
-.yandex-reference-page
-.ym-panel-icon
-svg {
-  width:
-    21px;
-
-  height:
-    21px;
-
-  fill:
-    none;
-
-  stroke:
-    currentColor;
-
-  stroke-width:
-    1.9;
-
-  stroke-linecap:
-    round;
-
-  stroke-linejoin:
-    round;
-}
-
-
-.yandex-reference-page
-.ym-info-list {
-  display:
-    grid;
-
-  gap:
-    4px;
-
-  margin-top:
-    7px;
 }
 
 

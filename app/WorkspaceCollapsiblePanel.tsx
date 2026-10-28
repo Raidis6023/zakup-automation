@@ -184,7 +184,7 @@ export default function WorkspaceCollapsiblePanel({
   onAction,
   actionDisabled = false,
   initialExpanded =
-    true,
+    false,
   className,
   children,
 }: {

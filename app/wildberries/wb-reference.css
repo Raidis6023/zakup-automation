@@ -29,125 +29,6 @@
 }
 
 
-/* ============================================================
-   HEADER
-   ============================================================ */
-
-.wb-reference-page
-.wb-header {
-  align-items:
-    center;
-
-  margin-bottom:
-    18px;
-}
-
-
-.wb-reference-page
-.wb-title-wrap {
-  display:
-    flex;
-
-  align-items:
-    center;
-
-  gap:
-    13px;
-
-  min-width:
-    0;
-}
-
-
-.wb-reference-page
-.wb-title-icon {
-  display:
-    inline-flex;
-
-  align-items:
-    center;
-
-  justify-content:
-    center;
-
-  width:
-    46px;
-
-  height:
-    46px;
-
-  flex:
-    0 0
-    46px;
-
-  overflow:
-    hidden;
-
-  border-radius:
-    11px;
-}
-
-
-.wb-reference-page
-.wb-title-icon
-img {
-  display:
-    block;
-
-  width:
-    46px;
-
-  height:
-    46px;
-
-  object-fit:
-    contain;
-}
-
-
-.wb-reference-page
-.wb-header-actions {
-  display:
-    flex;
-
-  align-items:
-    center;
-
-  gap:
-    10px;
-}
-
-
-/* ============================================================
-   ERROR
-   ============================================================ */
-
-.wb-reference-page
-.wb-error-section {
-  padding:
-    15px
-    17px;
-
-  border-color:
-    rgba(
-      223,
-      90,
-      112,
-      0.32
-    );
-}
-
-
-.wb-reference-page
-.wb-error-title {
-  color:
-    var(--ws-text);
-
-  font-weight:
-    700;
-}
-
-
 .wb-reference-page
 .wb-error-text {
   margin-top:
@@ -155,107 +36,6 @@ img {
 
   color:
     var(--wb-red);
-}
-
-
-/* ============================================================
-   SYNC STATE
-   ============================================================ */
-
-.wb-reference-page
-.wb-sync-state-section {
-  padding:
-    0;
-
-  overflow:
-    hidden;
-}
-
-
-.wb-reference-page
-.wb-section-top {
-  display:
-    flex;
-
-  align-items:
-    flex-start;
-
-  justify-content:
-    space-between;
-
-  gap:
-    16px;
-
-  padding:
-    16px
-    18px;
-}
-
-
-.wb-reference-page
-.wb-section-heading {
-  min-width:
-    0;
-}
-
-
-.wb-reference-page
-.wb-status-badge {
-  display:
-    inline-flex;
-
-  align-items:
-    center;
-
-  gap:
-    7px;
-
-  min-height:
-    30px;
-
-  padding:
-    5px
-    10px;
-
-  flex:
-    0 0
-    auto;
-
-  border:
-    1px solid
-    transparent;
-
-  border-radius:
-    999px;
-
-  font-size:
-    11px;
-
-  font-weight:
-    700;
-
-  white-space:
-    nowrap;
-}
-
-
-.wb-reference-page
-.wb-status-dot {
-  width:
-    8px;
-
-  height:
-    8px;
-
-  flex:
-    0 0
-    8px;
-
-  border-radius:
-    50%;
-
-  background:
-    currentColor;
 }
 
 
@@ -305,62 +85,6 @@ img {
 }
 
 
-/* ============================================================
-   SYNC INFO
-   ============================================================ */
-
-.wb-reference-page
-.wb-sync-info-grid {
-  display:
-    grid;
-
-  grid-template-columns:
-    repeat(
-      4,
-      minmax(
-        0,
-        1fr
-      )
-    );
-
-  gap:
-    1px;
-
-  border-top:
-    1px solid
-    var(--ws-border);
-
-  background:
-    var(--ws-border);
-}
-
-
-.wb-reference-page
-.wb-info-card {
-  display:
-    flex;
-
-  align-items:
-    center;
-
-  gap:
-    12px;
-
-  min-width:
-    0;
-
-  min-height:
-    86px;
-
-  padding:
-    14px
-    16px;
-
-  background:
-    var(--ws-surface);
-}
-
-
 .wb-reference-page
 .wb-info-icon {
   display:
@@ -390,146 +114,6 @@ img {
 
   background:
     var(--wb-accent-soft);
-}
-
-
-.wb-reference-page
-.wb-info-icon
-svg {
-  width:
-    21px;
-
-  height:
-    21px;
-
-  fill:
-    none;
-
-  stroke:
-    currentColor;
-
-  stroke-width:
-    1.9;
-
-  stroke-linecap:
-    round;
-
-  stroke-linejoin:
-    round;
-}
-
-
-.wb-reference-page
-.wb-info-copy {
-  min-width:
-    0;
-}
-
-
-.wb-reference-page
-.wb-info-value {
-  margin-top:
-    3px;
-
-  color:
-    var(--ws-text);
-
-  font-size:
-    15px;
-
-  font-weight:
-    700;
-
-  line-height:
-    1.3;
-}
-
-
-/* ============================================================
-   KPI
-   ============================================================ */
-
-.wb-reference-page
-.wb-summary-grid {
-  grid-template-columns:
-    repeat(
-      5,
-      minmax(
-        0,
-        1fr
-      )
-    );
-
-  gap:
-    12px;
-}
-
-
-.wb-reference-page
-.wb-summary-card {
-  display:
-    flex;
-
-  align-items:
-    center;
-
-  gap:
-    12px;
-
-  min-height:
-    88px;
-}
-
-
-.wb-reference-page
-.wb-summary-icon {
-  display:
-    inline-flex;
-
-  align-items:
-    center;
-
-  justify-content:
-    center;
-
-  width:
-    42px;
-
-  height:
-    42px;
-
-  flex:
-    0 0
-    42px;
-
-  border-radius:
-    10px;
-}
-
-
-.wb-reference-page
-.wb-summary-icon
-svg {
-  width:
-    22px;
-
-  height:
-    22px;
-
-  fill:
-    none;
-
-  stroke:
-    currentColor;
-
-  stroke-width:
-    1.9;
-
-  stroke-linecap:
-    round;
-
-  stroke-linejoin:
-    round;
 }
 
 
@@ -608,12 +192,6 @@ svg {
 }
 
 
-.wb-reference-page
-.wb-summary-copy {
-  min-width:
-    0;
-}
-
 
 /* ============================================================
    INFO PANEL
@@ -681,67 +259,6 @@ svg {
 
 
 .wb-reference-page
-.wb-panel-icon
-svg {
-  width:
-    21px;
-
-  height:
-    21px;
-
-  fill:
-    none;
-
-  stroke:
-    currentColor;
-
-  stroke-width:
-    1.9;
-
-  stroke-linecap:
-    round;
-
-  stroke-linejoin:
-    round;
-}
-
-
-.wb-reference-page
-.wb-info-list {
-  display:
-    grid;
-
-  gap:
-    4px;
-
-  margin-top:
-    7px;
-}
-
-
-/* ============================================================
-   DAILY SALES
-   ============================================================ */
-
-.wb-reference-page
-.wb-daily-section {
-  padding:
-    0;
-
-  overflow:
-    hidden;
-}
-
-
-.wb-reference-page
-.wb-daily-header {
-  padding:
-    16px
-    18px;
-}
-
-
-.wb-reference-page
 .wb-daily-table-shell {
   overflow-x:
     auto;
@@ -749,88 +266,6 @@ svg {
   border-top:
     1px solid
     var(--ws-border);
-}
-
-
-.wb-reference-page
-.wb-daily-table {
-  width:
-    100%;
-
-  min-width:
-    680px;
-
-  border-collapse:
-    collapse;
-}
-
-
-.wb-reference-page
-.wb-daily-table
-th {
-  padding:
-    11px
-    14px;
-
-  background:
-    var(--ws-surface-soft);
-
-  color:
-    var(--ws-text-muted);
-
-  border-bottom:
-    1px solid
-    var(--ws-border);
-
-  font-size:
-    11px;
-
-  font-weight:
-    650;
-
-  white-space:
-    nowrap;
-}
-
-
-.wb-reference-page
-.wb-daily-table
-td {
-  padding:
-    11px
-    14px;
-
-  color:
-    var(--ws-text);
-
-  border-bottom:
-    1px solid
-    var(--ws-border-soft);
-
-  font-size:
-    12px;
-
-  white-space:
-    nowrap;
-}
-
-
-.wb-reference-page
-.wb-daily-table
-tbody
-tr:last-child
-td {
-  border-bottom:
-    none;
-}
-
-
-.wb-reference-page
-.wb-daily-table
-tbody
-tr:hover {
-  background:
-    var(--ws-surface-hover);
 }
 
 
@@ -936,24 +371,6 @@ tr:hover {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .wb-unmapped-product {
   min-width:
     300px;
@@ -987,12 +404,6 @@ tr:hover {
 }
 
 
-
-
-
-
-
-
 .wb-unmapped-error {
   max-width:
     220px;
@@ -1014,9 +425,6 @@ tr:hover {
 }
 
 
-
-
-
 .wb-unmapped-hint {
   padding:
     10px
@@ -1026,19 +434,6 @@ tr:hover {
 
 }
 
-
-/* ============================================================
-   PRODUCTS
-   ============================================================ */
-
-.wb-reference-page
-.wb-products-section {
-  padding:
-    0;
-
-  overflow:
-    hidden;
-}
 
 
 .wb-reference-page
@@ -1181,38 +576,6 @@ tr:hover {
 }
 
 
-/* ============================================================
-   SAFE MODE
-   ============================================================ */
-
-.wb-reference-page
-.wb-safe-section {
-  display:
-    flex;
-
-  align-items:
-    flex-start;
-
-  gap:
-    14px;
-
-  background:
-    rgba(
-      36,
-      182,
-      122,
-      0.055
-    );
-
-  border-color:
-    rgba(
-      36,
-      182,
-      122,
-      0.18
-    );
-}
-
 
 .wb-reference-page
 .wb-safe-icon {
@@ -1250,31 +613,6 @@ tr:hover {
     );
 }
 
-
-.wb-reference-page
-.wb-safe-icon
-svg {
-  width:
-    21px;
-
-  height:
-    21px;
-
-  fill:
-    none;
-
-  stroke:
-    currentColor;
-
-  stroke-width:
-    1.9;
-
-  stroke-linecap:
-    round;
-
-  stroke-linejoin:
-    round;
-}
 
 
 /* ============================================================

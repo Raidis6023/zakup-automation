@@ -26,19 +26,6 @@
 }
 
 
-/* ============================================================
-   HEADER
-   ============================================================ */
-
-.ved-reference-page
-.ved-header {
-  align-items:
-    center;
-
-  margin-bottom:
-    18px;
-}
-
 
 .ved-reference-page
 .ved-title-wrap {
@@ -46,18 +33,6 @@
     0;
 }
 
-
-.ved-reference-page
-.ved-header-actions {
-  display:
-    flex;
-
-  align-items:
-    center;
-
-  gap:
-    10px;
-}
 
 
 .ved-reference-page
@@ -231,12 +206,6 @@ svg {
     var(--ved-orange);
 }
 
-
-.ved-reference-page
-.ved-summary-copy {
-  min-width:
-    0;
-}
 
 
 .ved-reference-page
@@ -472,25 +441,6 @@ td {
     nowrap;
 }
 
-
-.ved-reference-page
-.ved-status-dot {
-  width:
-    8px;
-
-  height:
-    8px;
-
-  flex:
-    0 0
-    8px;
-
-  border-radius:
-    50%;
-
-  background:
-    currentColor;
-}
 
 
 /* WAITING */

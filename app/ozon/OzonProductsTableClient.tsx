@@ -110,7 +110,6 @@ type OzonSortKey = "master_code" | "ozon_product_id" | "product_name" | "offer_i
   | "average_sales_per_day" | "cancelled_28_days" | "stock_quantity" | "stock_days";
 type SortDirection = "asc" | "desc";
 const TEXT_SORT: ReadonlySet<OzonSortKey> = new Set(["master_code", "ozon_product_id", "product_name", "offer_id"]);
-const OZON_EXPANDED_KEY = "ozon-products-expanded";
 
 function sortValue(product: OzonProductRow, column: OzonSortKey): string | number | null {
   if (column === "offer_id") {
@@ -246,68 +245,13 @@ export default function OzonProductsTableClient({
   const [sortKey, setSortKey] = useState<OzonSortKey>("sales_28_days");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
-  useEffect(
-    () => {
-
-      const params =
-        new URLSearchParams(
-          window.location.search
-        );
-
-      const focus =
-        params.get(
-          "focusStockDays"
-        );
-
-      if (
-        focus
-      ) {
-
-        setExpanded(
-          true
-        );
-
-        setNotificationFocus(
-          focus
-        );
-
-        try {
-
-          window.localStorage.setItem(
-            OZON_EXPANDED_KEY,
-            "1"
-          );
-
-        } catch {
-
-          // Storage may be disabled.
-        }
-
-      } else {
-
-        try {
-
-          setExpanded(
-            window.localStorage.getItem(
-              OZON_EXPANDED_KEY
-            ) ===
-              "1"
-          );
-
-        } catch {
-
-          // Storage may be disabled.
-        }
-
-      }
-
-      setReady(
-        true
-      );
-
-    },
-    []
-  );
+  // The section is closed on every visit, even with a focusStockDays link.
+  // Keep the focus target queued until the visitor manually expands the table.
+  useEffect(() => {
+    const focus = new URLSearchParams(window.location.search).get("focusStockDays");
+    if (focus) setNotificationFocus(focus);
+    setReady(true);
+  }, []);
 
   const sortedProducts = useMemo(
     () => products.map((item, index) => ({ item, index }))
@@ -413,11 +357,7 @@ export default function OzonProductsTableClient({
   );
 
   function toggleTable() {
-    setExpanded(previous => {
-      const next = !previous;
-      try { window.localStorage.setItem(OZON_EXPANDED_KEY, next ? "1" : "0"); } catch {}
-      return next;
-    });
+    setExpanded(previous => !previous);
   }
 
   function SortHeading({ column, label, numeric = false }: {
