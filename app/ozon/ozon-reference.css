@@ -1357,9 +1357,7 @@ tr:hover {
 
 .ozon-products-table
 th {
-  padding:
-    10px
-    12px;
+  padding: var(--ui-table-compact-header-padding-block) var(--ui-table-compact-header-padding-inline);
 
   background:
     var(--ws-surface-soft);
@@ -1371,8 +1369,7 @@ th {
     1px solid
     var(--ws-border);
 
-  font-size:
-    10px;
+  font-size: var(--ui-table-compact-header-font-size);
 
   font-weight:
     650;
@@ -1384,9 +1381,7 @@ th {
 
 .ozon-products-table
 td {
-  padding:
-    11px
-    12px;
+  padding: var(--ui-table-compact-cell-padding-block) var(--ui-table-compact-cell-padding-inline);
 
   color:
     var(--ws-text);
@@ -1395,8 +1390,7 @@ td {
     1px solid
     var(--ws-border-soft);
 
-  font-size:
-    12px;
+  font-size: var(--ui-table-body-font-size);
 
   vertical-align:
     middle;

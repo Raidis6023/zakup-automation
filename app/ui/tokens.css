@@ -17,6 +17,36 @@
   --ui-motion-fast: 120ms;
   --ui-focus-width: 2px;
   --ui-focus-offset: 3px;
+  /* Central geometry. Original dimensions intentionally preserved. */
+  --ui-surface-card-padding: 16px;
+  --ui-surface-section-padding: 18px;
+  --ui-surface-radius: 10px;
+  --ui-surface-section-gap: 18px;
+  --ui-surface-grid-gap: 12px;
+  --ui-panel-header-height: 72px;
+  --ui-panel-header-gap: 12px;
+  --ui-panel-header-padding-block: 12px;
+  --ui-panel-header-padding-inline: 14px;
+  --ui-panel-icon-size: 42px;
+  --ui-panel-icon-radius: 10px;
+  --ui-panel-icon-size-compact: 38px;
+  --ui-panel-icon-radius-compact: 9px;
+  --ui-panel-icon-svg-size: 23px;
+  --ui-panel-title-size: 15px;
+  --ui-panel-caption-size: 11px;
+  --ui-table-header-height: 40px;
+  --ui-table-header-font-size: 12px;
+  --ui-table-compact-header-font-size: 10px;
+  --ui-table-body-font-size: 12px;
+  --ui-table-comfortable-font-size: 13px;
+  --ui-table-sort-padding-block: 12px;
+  --ui-table-sort-padding-inline: 10px;
+  --ui-table-compact-header-padding-block: 10px;
+  --ui-table-compact-header-padding-inline: 12px;
+  --ui-table-compact-cell-padding-block: 11px;
+  --ui-table-compact-cell-padding-inline: 12px;
+  --ui-button-primary-legacy-padding-inline: 15px;
+  --ui-button-primary-legacy-weight: 650;
 }
 
 .workspace-ui {

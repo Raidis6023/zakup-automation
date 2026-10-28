@@ -72,3 +72,8 @@
 @media (prefers-reduced-motion: reduce) {
   .control { transition: none; }
 }
+
+/* Hover, focus and active states never underline button text. */
+.control:hover,
+.control:focus-visible,
+.control:active { text-decoration: none; }
