@@ -432,92 +432,7 @@ th {
    SORT BUTTONS
    ============================================================ */
 
-.wb-reference-page
-.wb-products-sort-button {
-  display:
-    flex;
-
-  align-items:
-    center;
-
-  gap:
-    5px;
-
-  width:
-    100%;
-
-  min-width:
-    0;
-
-  min-height: var(--ui-table-header-height);
-
-  box-sizing:
-    border-box;
-
-  padding: var(--ui-table-sort-padding-block) var(--ui-table-sort-padding-inline);
-
-  overflow:
-    hidden;
-
-  border:
-    none;
-
-  background:
-    transparent;
-
-  color:
-    var(--ws-text-muted);
-
-  font:
-    inherit;
-
-  font-size: var(--ui-table-header-font-size);
-
-  font-weight:
-    700;
-
-  line-height:
-    1.2;
-
-  white-space:
-    nowrap;
-
-  cursor:
-    pointer;
-
-  transition:
-    color
-      0.12s
-      ease,
-    background-color
-      0.12s
-      ease;
-}
-
-
-.wb-reference-page
-.wb-products-sort-button
->
-span:first-child {
-  min-width:
-    0;
-
-  flex:
-    1
-    1
-    auto;
-
-  overflow:
-    hidden;
-
-  white-space:
-    nowrap;
-
-  text-overflow:
-    ellipsis;
-}
-
-
+.wb-reference-page .wb-products-sort-button { color: var(--ws-text-muted); }
 .wb-reference-page
 .wb-products-sort-button:hover {
   color:
@@ -622,47 +537,7 @@ span:first-child {
    SORT INDICATOR
    ============================================================ */
 
-.wb-reference-page
-.wb-products-sort-indicator {
-  display:
-    inline-flex;
-
-  align-items:
-    center;
-
-  justify-content:
-    center;
-
-  width:
-    13px;
-
-  min-width:
-    13px;
-
-  height:
-    16px;
-
-  flex:
-    0 0
-    13px;
-
-  overflow:
-    hidden;
-
-  color:
-    var(--wb-products-purple);
-
-  font-size:
-    13px;
-
-  font-weight:
-    800;
-
-  line-height:
-    16px;
-}
-
-
+.wb-reference-page .wb-products-sort-indicator { color: var(--wb-products-purple); }
 /* ============================================================
    CELLS
    ============================================================ */
