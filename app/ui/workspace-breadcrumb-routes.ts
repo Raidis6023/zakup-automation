@@ -21,9 +21,6 @@ const routes: Record<string, RouteSpec> = {
   "/logistics-import": {
     label: "Импорт логистики", shortLabel: "Габариты", parent: "/zakup",
   },
-  "/china-transport": {
-    label: "Китай — транспорт", shortLabel: "Транспорт", parent: "/zakup",
-  },
   "/ved": { label: "ВЭД" },
   "/ozon": { label: "Ozon" },
   "/ozon/financier": { label: "ИИ-финансист", parent: "/ozon" },
