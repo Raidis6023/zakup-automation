@@ -1,3 +1,4 @@
+import PageHeader from "../../ui/PageHeader";
 import VedTakeInWorkPanel
   from "../../VedTakeInWorkPanel";
 
@@ -298,45 +299,12 @@ export default async function VedOrderPage({
             ШАПКА С КОНТЕКСТНОЙ НАВИГАЦИЕЙ
             ==================================================== */}
 
-        <header
-          className="header"
-        >
-
-          <div>
-
-            <div
-              className="small-label"
-            >
-              СИСТЕМА ЗАКУПА
-            </div>
-
-
-            <h1
-              className="title"
-            >
-              Заказ в Китай
-            </h1>
-
-
-            <div
-              className="subtitle"
-            >
-              Формирование и контроль заказа ВЭД.
-            </div>
-
-          </div>
-
-
-          <div
-            className="header-actions"
-          >
-
-            {needsOzonPhotos ? <AutoVedOrderPhotos orderId={id} /> : null}
-
-
-          </div>
-
-        </header>
+        <PageHeader
+          title="Заказ в Китай"
+          eyebrow="СИСТЕМА ЗАКУПА"
+          description="Формирование и контроль заказа ВЭД."
+          actions={needsOzonPhotos ? <AutoVedOrderPhotos orderId={id} /> : null}
+        />
 
 
         {/* ====================================================
