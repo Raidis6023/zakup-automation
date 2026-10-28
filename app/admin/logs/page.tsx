@@ -1,3 +1,4 @@
+import PageHeader from "../../ui/PageHeader";
 export default function AdminLogsPage() {
 
   return (
@@ -7,25 +8,7 @@ export default function AdminLogsPage() {
         "История логов"
     >
 
-      <div
-        className=
-          "home-title-row"
-      >
-
-        <div>
-
-          <h1>
-            История логов
-          </h1>
-
-
-          <p>
-            Журнал административных действий в WorkSpace.
-          </p>
-
-        </div>
-
-      </div>
+      <PageHeader variant="home" title="История логов" description="Журнал административных действий в WorkSpace." />
 
 
       <section

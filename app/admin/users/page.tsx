@@ -1,3 +1,4 @@
+import PageHeader from "../../ui/PageHeader";
 import AdminUsersPanel
   from "./AdminUsersPanel";
 
@@ -17,27 +18,7 @@ export default function AdminUsersPage() {
         "Сотрудники"
     >
 
-      <div
-        className=
-          "admin-users-header"
-      >
-
-        <div>
-
-          <h1>
-            Сотрудники
-          </h1>
-
-
-          <p>
-            Пользователи WorkSpace,
-            их рабочие роли и
-            административные права
-          </p>
-
-        </div>
-
-      </div>
+      <PageHeader variant="admin-users" title="Сотрудники" description="Пользователи WorkSpace, их рабочие роли и административные права" />
 
 
       <AdminUsersPanel />

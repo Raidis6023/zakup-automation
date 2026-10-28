@@ -1,3 +1,4 @@
+import PageHeader from "../ui/PageHeader";
 import "./tasks.css";
 
 
@@ -10,25 +11,7 @@ export default function TasksPage() {
         "Задачи"
     >
 
-      <div
-        className=
-          "home-title-row"
-      >
-
-        <div>
-
-          <h1>
-            Задачи
-          </h1>
-
-
-          <p>
-            Задачи вашей рабочей роли и личные заметки.
-          </p>
-
-        </div>
-
-      </div>
+      <PageHeader variant="home" title="Задачи" description="Задачи вашей рабочей роли и личные заметки." />
 
 
       <section

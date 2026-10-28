@@ -1,3 +1,4 @@
+import PageHeader from "../../ui/PageHeader";
 export default function AdminTasksPage() {
 
   return (
@@ -7,25 +8,7 @@ export default function AdminTasksPage() {
         "Задачи администрирования"
     >
 
-      <div
-        className=
-          "home-title-row"
-      >
-
-        <div>
-
-          <h1>
-            Задачи
-          </h1>
-
-
-          <p>
-            Задачи администраторов и всех рабочих отделов.
-          </p>
-
-        </div>
-
-      </div>
+      <PageHeader variant="home" title="Задачи" description="Задачи администраторов и всех рабочих отделов." />
 
 
       <section

@@ -7,9 +7,13 @@ import styles from "./PageHeader.module.css";
  * Visual distinctions are expressed only as variants, not duplicated JSX.
  * Breadcrumbs and decorative stripes are rendered by WorkspaceShell.
  */
-type Variant = "default" | "sku-list" | "ved" | "ozon" | "wildberries" | "yandex-market" | "zakup";
+type Variant = "default" | "home" | "admin-users" | "profile" | "financier" | "sku-list" | "ved" | "ozon" | "wildberries" | "yandex-market" | "zakup";
 
 const variants = {
+  home: { root: "home-title-row", titleArea: "", heading: "", description: "", actions: "", showThemeToggle: false },
+  "admin-users": { root: "admin-users-header", titleArea: "", heading: "", description: "", actions: "", showThemeToggle: false },
+  profile: { root: "profile-header", titleArea: "", heading: "", description: "", actions: "", showThemeToggle: false },
+  financier: { root: "ozf-heading", titleArea: "", heading: "", description: "", actions: "", showThemeToggle: false },
   default: {
     root: "header",
     titleArea: "",
@@ -77,13 +81,15 @@ export default function PageHeader({
   title,
   description,
   eyebrow,
+  eyebrowClassName,
   showThemeToggle,
   actions,
 }: {
   variant?: Variant;
   title: string;
-  description: string;
+  description?: string;
   eyebrow?: string;
+  eyebrowClassName?: string;
   showThemeToggle?: boolean;
   actions?: ReactNode;
 }) {
@@ -93,22 +99,26 @@ export default function PageHeader({
     <header className={config.root}>
       <div className={classNames(config.titleArea, styles.titleArea)}>
         <div className={styles.copy}>
-          {eyebrow ? <div className="small-label">{eyebrow}</div> : null}
+          {eyebrow ? <div className={eyebrowClassName || "small-label"}>{eyebrow}</div> : null}
           <h1 className={config.heading}>{title}</h1>
-          <p className={classNames(
-            config.description,
-            styles.description,
-            ["default", "sku-list", "ved", "zakup"].includes(variant) ? styles.descriptionWrap : "",
-          )}>
-            {description}
-          </p>
+          {description ? (
+            <p className={classNames(
+              config.description,
+              styles.description,
+              !["ozon", "wildberries", "yandex-market"].includes(variant) ? styles.descriptionWrap : "",
+            )}>
+              {description}
+            </p>
+          ) : null}
         </div>
       </div>
 
-      <div className={classNames(config.actions, styles.actions)}>
-        {(showThemeToggle ?? config.showThemeToggle) ? <ThemeToggle /> : null}
-        {actions}
-      </div>
+      {((showThemeToggle ?? config.showThemeToggle) || actions) ? (
+        <div className={classNames(config.actions, styles.actions)}>
+          {(showThemeToggle ?? config.showThemeToggle) ? <ThemeToggle /> : null}
+          {actions}
+        </div>
+      ) : null}
     </header>
   );
 }

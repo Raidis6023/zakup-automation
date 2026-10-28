@@ -1,3 +1,4 @@
+import PageHeader from "../ui/PageHeader";
 // Admin layout already verifies a logged-in administrator.
 export const dynamic = "force-dynamic";
 
@@ -13,12 +14,7 @@ export default function AdminPage() {
 
   return (
     <section aria-label="Администрирование">
-      <div className="home-title-row">
-        <div>
-          <h1>Администрирование</h1>
-          <p>Управление сотрудниками, доступами и настройками WorkSpace</p>
-        </div>
-      </div>
+      <PageHeader variant="home" title="Администрирование" description="Управление сотрудниками, доступами и настройками WorkSpace" />
 
       <section
         aria-label="Наше API-хуяпи v1"
