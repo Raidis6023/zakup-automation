@@ -1,6 +1,4 @@
-import Link
-  from "next/link";
-
+import PageHeader from "../ui/PageHeader";
 import {
   redirect,
 } from "next/navigation";
@@ -190,32 +188,10 @@ export default async function ProfilePage() {
           "profile-container"
       >
 
-        <Link
-          href="/"
-
-          className=
-            "profile-back"
-        >
-          ← На главную
-        </Link>
+        
 
 
-        <header
-          className=
-            "profile-header"
-        >
-
-          <h1>
-            Мой профиль
-          </h1>
-
-
-          <p>
-            Основные данные вашей
-            учётной записи WorkSpace.
-          </p>
-
-        </header>
+        <PageHeader variant="profile" title="Мой профиль" description="Основные данные вашей учётной записи WorkSpace." />
 
 
         <section
