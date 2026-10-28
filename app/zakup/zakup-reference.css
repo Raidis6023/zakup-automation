@@ -302,7 +302,7 @@ svg {
     );
 
   gap:
-    12px;
+    var(--ui-metric-grid-gap);
 }
 
 
@@ -315,7 +315,7 @@ svg {
     center;
 
   gap:
-    13px;
+    var(--ui-metric-card-gap);
 
   min-height:
     86px;
@@ -338,14 +338,13 @@ svg {
     center;
 
   width:
-    42px;
+    var(--ui-metric-icon-size);
 
   height:
-    42px;
+    var(--ui-metric-icon-size);
 
   flex:
-    0 0
-    42px;
+    0 0 var(--ui-metric-icon-size);
 
   border-radius:
     10px;

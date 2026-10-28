@@ -1038,97 +1038,22 @@ tr:hover {
 }
 
 
-.ozon-unlinked-table-shell {
-  overflow-x:
-    auto;
-
-  border:
-    1px solid
-    var(--ws-border);
-
-  border-radius:
-    9px;
-}
 
 
-.ozon-unlinked-table {
-  width:
-    100%;
-
-  min-width:
-    1180px;
-
-  border-collapse:
-    collapse;
-}
 
 
-.ozon-unlinked-table
-th {
-  padding:
-    10px
-    12px;
-
-  background:
-    var(--ws-surface-soft);
-
-  color:
-    var(--ws-text-muted);
-
-  border-bottom:
-    1px solid
-    var(--ws-border);
-
-  font-size:
-    10px;
-
-  font-weight:
-    650;
-
-  text-align:
-    left;
-
-  white-space:
-    nowrap;
-}
 
 
-.ozon-unlinked-table
-td {
-  padding:
-    11px
-    12px;
-
-  color:
-    var(--ws-text);
-
-  border-bottom:
-    1px solid
-    var(--ws-border-soft);
-
-  font-size:
-    12px;
-
-  vertical-align:
-    top;
-}
 
 
-.ozon-unlinked-table
-tbody
-tr:last-child
-td {
-  border-bottom:
-    none;
-}
 
 
-.ozon-unlinked-table
-tbody
-tr:hover {
-  background:
-    var(--ws-surface-hover);
-}
+
+
+
+
+
+
 
 
 .ozon-unlinked-master-wrap {
@@ -1137,62 +1062,10 @@ tr:hover {
 }
 
 
-.ozon-unlinked-input {
-  width:
-    100%;
-
-  box-sizing:
-    border-box;
-
-  min-height:
-    36px;
-
-  padding:
-    8px
-    9px;
-
-  background:
-    var(--ws-surface);
-
-  color:
-    var(--ws-text);
-
-  border:
-    1px solid
-    var(--ws-border);
-
-  border-radius:
-    7px;
-
-  outline:
-    none;
-
-  font-size:
-    12px;
-
-  transition:
-    border-color
-      0.12s
-      ease,
-    box-shadow
-      0.12s
-      ease;
-}
 
 
-.ozon-unlinked-input:focus {
-  border-color:
-    var(--ws-blue);
 
-  box-shadow:
-    0 0 0 3px
-    rgba(
-      63,
-      143,
-      214,
-      0.08
-    );
-}
+
 
 
 .ozon-unlinked-input--error {
@@ -1216,62 +1089,17 @@ tr:hover {
 }
 
 
-.ozon-unlinked-button {
-  min-height:
-    36px;
-
-  padding:
-    8px
-    12px;
-
-  border:
-    1px solid
-    var(--ws-blue);
-
-  border-radius:
-    7px;
-
-  background:
-    var(--ws-blue);
-
-  color:
-    #ffffff;
-
-  font-size:
-    11px;
-
-  font-weight:
-    650;
-
-  white-space:
-    nowrap;
-
-  cursor:
-    pointer;
-}
 
 
-.ozon-unlinked-button:disabled {
-  cursor:
-    not-allowed;
 
-  opacity:
-    0.46;
-}
+
 
 
 .ozon-unlinked-hint {
   margin-top:
     9px;
 
-  color:
-    var(--ws-text-muted);
 
-  font-size:
-    11px;
-
-  line-height:
-    1.45;
 }
 
 

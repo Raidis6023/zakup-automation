@@ -23,6 +23,15 @@
   --ui-surface-radius: 10px;
   --ui-surface-section-gap: 18px;
   --ui-surface-grid-gap: 12px;
+  --ui-metric-grid-gap: 12px;
+  --ui-metric-card-gap: 13px;
+  --ui-metric-card-gap-ved: 14px;
+  --ui-metric-icon-size: 42px;
+  --ui-metric-icon-size-large: 48px;
+  --ui-enot-table-min-width: 1180px;
+  --ui-enot-control-height: 36px;
+  --ui-enot-input-radius: 7px;
+  --ui-enot-radius: 9px;
   --ui-panel-header-height: 72px;
   --ui-panel-header-gap: 12px;
   --ui-panel-header-padding-block: 12px;

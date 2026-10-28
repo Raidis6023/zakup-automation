@@ -95,7 +95,7 @@
     );
 
   gap:
-    12px;
+    var(--ui-metric-grid-gap);
 
   margin-bottom:
     18px;
@@ -111,7 +111,7 @@
     center;
 
   gap:
-    14px;
+    var(--ui-metric-card-gap-ved);
 
   min-height:
     94px;
@@ -133,14 +133,13 @@
     center;
 
   width:
-    48px;
+    var(--ui-metric-icon-size-large);
 
   height:
-    48px;
+    var(--ui-metric-icon-size-large);
 
   flex:
-    0 0
-    48px;
+    0 0 var(--ui-metric-icon-size-large);
 
   border-radius:
     11px;
