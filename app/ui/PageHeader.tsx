@@ -6,9 +6,17 @@ import styles from "./PageHeader.module.css";
  * Visual distinctions are expressed only as variants, not duplicated JSX.
  * Breadcrumbs and decorative stripes are rendered by WorkspaceShell.
  */
-type Variant = "ozon" | "wildberries" | "yandex-market" | "zakup";
+type Variant = "default" | "ozon" | "wildberries" | "yandex-market" | "zakup";
 
 const variants = {
+  default: {
+    root: "header",
+    titleArea: "",
+    heading: "title",
+    description: "subtitle",
+    actions: "header-actions",
+    showThemeToggle: false,
+  },
   ozon: {
     root: "header ozon-header",
     titleArea: "ozon-title-wrap ozon-title-wrap--text-only",
@@ -48,11 +56,11 @@ function classNames(...classes: string[]) {
 }
 
 export default function PageHeader({
-  variant,
+  variant = "default",
   title,
   description,
 }: {
-  variant: Variant;
+  variant?: Variant;
   title: string;
   description: string;
 }) {
