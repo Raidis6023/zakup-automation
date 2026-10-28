@@ -9,8 +9,6 @@ import {
 } from "react";
 
 
-const STORAGE_KEY =
-  "zakup-products-expanded";
 
 
 // ============================================================
@@ -98,96 +96,18 @@ export default function ZakupProductsSectionClient({
   // ВОССТАНАВЛИВАЕМ СОСТОЯНИЕ
   // ==========================================================
 
-  useEffect(
-    () => {
-
-      try {
-
-        const stored =
-          window.localStorage.getItem(
-            STORAGE_KEY
-          );
-
-
-        if (
-          stored ===
-          "1"
-        ) {
-
-          setExpanded(
-            true
-          );
-
-        }
-
-
-        if (
-          stored ===
-          "0"
-        ) {
-
-          setExpanded(
-            false
-          );
-
-        }
-
-      } catch {
-
-        // localStorage может быть недоступен,
-        // например в жёстком приватном режиме.
-        // Тогда просто оставляем таблицу свёрнутой.
-
-      } finally {
-
-        setStorageLoaded(
-          true
-        );
-
-      }
-
-    },
-    []
-  );
-
+  // Always closed at page entry. No remembered expanded sections.
+  useEffect(() => {
+    setStorageLoaded(true);
+  }, []);
 
   // ==========================================================
   // ПЕРЕКЛЮЧЕНИЕ
   // ==========================================================
 
   function toggleExpanded() {
-
-    setExpanded(
-      previous => {
-
-        const next =
-          !previous;
-
-
-        try {
-
-          window.localStorage.setItem(
-            STORAGE_KEY,
-            next
-              ? "1"
-              : "0"
-          );
-
-        } catch {
-
-          // Ничего страшного.
-          // Сама таблица всё равно продолжит работать.
-
-        }
-
-
-        return next;
-
-      }
-    );
-
+    setExpanded(previous => !previous);
   }
-
 
   return (
 

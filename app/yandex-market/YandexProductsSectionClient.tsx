@@ -7,8 +7,6 @@ import {
 } from "react";
 
 
-const STORAGE_KEY =
-  "yandex-products-expanded";
 
 
 // ============================================================
@@ -90,124 +88,19 @@ export default function YandexProductsSectionClient({
   // RESTORE STATE
   // ==========================================================
 
-  useEffect(
-    () => {
-
-      const params =
-        new URLSearchParams(
-          window.location.search
-        );
-
-      const focus =
-        params.get(
-          "focusStockDays"
-        );
-
-      if (
-        focus
-      ) {
-
-        setExpanded(
-          true
-        );
-
-        try {
-
-          window.localStorage.setItem(
-            STORAGE_KEY,
-            "1"
-          );
-
-        } catch {
-
-          // Storage may be unavailable.
-        }
-
-      } else {
-
-        try {
-
-          const stored =
-            window.localStorage.getItem(
-              STORAGE_KEY
-            );
-
-          if (
-            stored ===
-              "1"
-          ) {
-
-            setExpanded(
-              true
-            );
-
-          }
-
-          if (
-            stored ===
-              "0"
-          ) {
-
-            setExpanded(
-              false
-            );
-
-          }
-
-        } catch {
-
-          // Storage may be unavailable.
-        }
-
-      }
-
-      setStorageLoaded(
-        true
-      );
-
-    },
-    []
-  );
-
+  // The section is collapsed at page entry; a focused product can be
+  // revealed by opening the table explicitly.
+  useEffect(() => {
+    setStorageLoaded(true);
+  }, []);
 
   // ==========================================================
   // TOGGLE
   // ==========================================================
 
   function toggleExpanded() {
-
-    setExpanded(
-      previous => {
-
-        const next =
-          !previous;
-
-
-        try {
-
-          window.localStorage.setItem(
-            STORAGE_KEY,
-
-            next
-              ? "1"
-              : "0"
-          );
-
-        } catch {
-
-          // Сама таблица продолжит работать
-          // даже без localStorage.
-
-        }
-
-
-        return next;
-
-      }
-    );
-
+    setExpanded(previous => !previous);
   }
-
 
   return (
     <section
