@@ -1,5 +1,4 @@
 import WorkspaceCollapsiblePanel from "./WorkspaceCollapsiblePanel";
-import styles from "./MarketplaceFinancePanel.module.css";
 
 type Marketplace = "ozon" | "wildberries" | "yandex";
 
@@ -35,7 +34,7 @@ export default function MarketplaceFinancePanel({ marketplace }: { marketplace: 
       actionHref={item.href}
       actionLabel="Открыть ИИ-финансиста"
     >
-      <div className={styles.body}>{item.message}</div>
+      <div className="ws-panel-message">{item.message}</div>
     </WorkspaceCollapsiblePanel>
   );
 }

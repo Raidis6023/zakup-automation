@@ -12,9 +12,6 @@
 
   --workspace-module-header-height:
     98px;
-
-  --workspace-decoration-height:
-    64px;
 }
 
 
@@ -74,115 +71,6 @@
 .theme-toggle {
   display:
     none;
-}
-
-
-/* ============================================================
-   ДЕКОРАТИВНЫЕ ПОЛОСЫ
-
-   Общая верхняя панель:
-   72px.
-
-   Высота шапки раздела:
-   98px.
-
-   Высота полос:
-   64px.
-
-   (98 - 64) / 2 = 17px.
-   ============================================================ */
-
-.workspace-content--module
->
-.workspace-corner-decoration {
-  position:
-    fixed;
-
-  z-index:
-    41;
-
-  top:
-    calc(
-      var(
-        --home-topbar-height,
-        72px
-      )
-      +
-      17px
-    );
-
-  right:
-    30px;
-
-  display:
-    block;
-
-  width:
-    min(
-      500px,
-      42%
-    );
-
-  height:
-    var(
-      --workspace-decoration-height,
-      64px
-    );
-
-  pointer-events:
-    none;
-
-  visibility:
-    visible;
-
-  opacity:
-    1;
-}
-
-
-.workspace-content--module
->
-.workspace-corner-decoration
-.home-decoration {
-  display:
-    flex;
-
-  width:
-    100%;
-
-  height:
-    var(
-      --workspace-decoration-height,
-      64px
-    );
-
-  align-items:
-    center;
-
-  justify-content:
-    flex-end;
-
-  overflow:
-    visible;
-}
-
-
-.workspace-content--module
->
-.workspace-corner-decoration
-.home-decoration
-svg {
-  display:
-    block;
-
-  width:
-    100%;
-
-  height:
-    100%;
-
-  overflow:
-    visible;
 }
 
 
@@ -454,91 +342,6 @@ svg {
 
 
 /* ============================================================
-   ЗАКУП — КНОПКА "ГЛАВНАЯ"
-
-   Центрируется по той же оси,
-   что текст и декоративные полосы.
-   ============================================================ */
-
-.workspace-content--module
-.page.zakup-reference-page
-.zakup-v2-header
-.zakup-v2-header-actions {
-  position:
-    relative;
-
-  z-index:
-    42;
-
-  display:
-    flex !important;
-
-  align-items:
-    center !important;
-
-  justify-content:
-    flex-end;
-
-  align-self:
-    center !important;
-
-  margin:
-    0 !important;
-
-  padding:
-    0 !important;
-
-  transform:
-    none !important;
-}
-
-
-.workspace-content--module
-.page.zakup-reference-page
-.zakup-v2-header
-.zakup-v2-home-button {
-  margin:
-    0 !important;
-
-  align-self:
-    center;
-}
-
-
-/* ============================================================
-   ЕДИНАЯ КНОПКА "ГЛАВНАЯ"
-
-   Эталон: естественная ширина кнопки в Закупе /
-   Списке артикулов. Все страницы используют одинаковые
-   горизонтальные отступы, без старых min-width.
-   ============================================================ */
-
-.workspace-content--module
-.workspace-home-button {
-  width:
-    auto !important;
-
-  min-width:
-    0 !important;
-
-  padding-left:
-    15px !important;
-
-  padding-right:
-    15px !important;
-
-  box-sizing:
-    border-box;
-
-  flex:
-    0 0 auto;
-
-  justify-content:
-    center;
-}
-
-
-/* ============================================================
    ПЕРВЫЙ БЛОК ПОСЛЕ ШАПКИ
 
    Не даём внешнему margin визуально менять
@@ -586,20 +389,6 @@ html[data-theme="dark"]
 ) {
 
   .workspace-content--module
-  >
-  .workspace-corner-decoration {
-    right:
-      20px;
-
-    width:
-      min(
-        350px,
-        40%
-      );
-  }
-
-
-  .workspace-content--module
   .header,
 
   .workspace-content--module
@@ -622,17 +411,6 @@ html[data-theme="dark"]
 @media (
   max-width: 900px
 ) {
-
-  .workspace-content--module
-  >
-  .workspace-corner-decoration {
-    width:
-      min(
-        300px,
-        62%
-      );
-  }
-
 
   .workspace-content--module
   .header,
@@ -667,14 +445,6 @@ html[data-theme="dark"]
   .home-content.workspace-content--module {
     padding-top:
       0;
-  }
-
-
-  .workspace-content--module
-  >
-  .workspace-corner-decoration {
-    display:
-      none;
   }
 
 
@@ -740,48 +510,68 @@ html[data-theme="dark"]
 
 }
 
-
-/* Global breadcrumb rail. Rendered once by WorkspaceShell on every module,
-   including routes added later. Positioned beside the shared striped logo,
-   independently of the page's own title, so no extra header row is needed. */
-.workspace-content--module > .workspace-global-breadcrumbs {
-  position: fixed;
+/* Fixed header rail: shared by all modules; inherits colors from .home-shell. */
+/* One fixed breadcrumb + decoration rail shared by all workspace modules.
+ * The rail lives under .home-shell, so the shell's marketplace accent tokens
+ * reach both the breadcrumb and SVG gradients (including dark mode).
+ *
+ * Module header: 98px; decoration: 64px; vertical inset: (98 - 64) / 2 = 17px.
+ */
+.workspace-fixed-brand {
+  position: fixed !important;
   z-index: 43;
-  top: calc(var(--home-topbar-height, 72px) + 30px);
-  right: calc(30px + min(500px, 42%) + 10px);
+  top: calc(var(--home-topbar-height, 72px) + 17px);
+  right: 30px;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  gap: 10px;
+  height: 64px;
+  max-width: calc(100vw - 260px);
+  pointer-events: none;
+  transform: none !important;
+}
+
+.workspace-fixed-path {
   min-width: 0;
-  max-width: calc(100vw - min(500px, 42%) - 260px);
-  height: 38px;
+  max-width: 560px;
   pointer-events: auto;
 }
 
-@media (max-width: 1100px) {
-  .workspace-content--module > .workspace-global-breadcrumbs {
-    right: calc(20px + min(350px, 40%) + 10px);
-    max-width: calc(100vw - min(350px, 40%) - 170px);
-  }
+.workspace-fixed-logo {
+  width: min(500px, 42vw);
+  height: 64px;
+  flex: none;
+  pointer-events: none;
 }
 
-@media (max-width: 900px) {
-  .workspace-content--module > .workspace-global-breadcrumbs {
-    right: calc(20px + min(300px, 62%) + 10px);
-    max-width: calc(100vw - min(300px, 62%) - 125px);
+.workspace-fixed-logo > .home-decoration {
+  position: static !important;
+  width: 100% !important;
+  height: 100%;
+  max-width: none !important;
+  margin: 0 !important;
+  transform: none !important;
+}
+
+@media (max-width: 1100px) {
+  .workspace-fixed-brand {
+    right: 20px;
+    max-width: calc(100vw - 170px);
+  }
+
+  .workspace-fixed-logo {
+    width: min(350px, 40vw);
   }
 }
 
 @media (max-width: 800px) {
-  .workspace-content--module > .workspace-global-breadcrumbs {
+  .workspace-fixed-brand {
     right: 12px;
-    top: calc(var(--home-topbar-height, 72px) + 28px);
-    max-width: min(46vw, 320px);
+    top: calc(var(--home-topbar-height, 72px) + 15px);
+    max-width: calc(100vw - 85px);
   }
-}
 
-@media (max-width: 500px) {
-  .workspace-content--module > .workspace-global-breadcrumbs {
-    max-width: 42vw;
+  .workspace-fixed-logo {
+    width: min(240px, 32vw);
   }
 }
