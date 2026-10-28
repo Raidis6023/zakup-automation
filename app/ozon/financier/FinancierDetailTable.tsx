@@ -28,6 +28,7 @@ type Data = {
   ads_campaigns_total?:number;ads_campaigns_complete?:number;
   ads_partial_spend?:number;ads_partial_skus?:number;
   ads_jobs?:Array<{status:string;last_error:string|null;date_from:string;date_to:string}>;
+  cache_updated_at?:string|null;
   advertising?:{finance_total:number;finance_unallocated:number};
 };
 type SortKey =
@@ -189,7 +190,7 @@ export default function FinancierDetailTable({
         {['Выручка','Операционная прибыль'].includes(k.name)?<button className="ozf-kpi-link" onClick={()=>setGraphMetric(k.name==='Выручка'?'revenue':'profit')}>{k.name}</button>:<span>{k.name}</span>}<strong>{k.value}</strong>
       </div>)}
     </div>
-    <FinanceDynamics marketplace="ozon" from={data?.from??''} to={data?.to??''} offers={includeUnallocated?undefined:rows.map(r=>r.offer_id)} selected={graphMetric}/><div className="ozf-section-tools">
+    <FinanceDynamics marketplace="ozon" revision={data?.cache_updated_at??''} from={data?.from??''} to={data?.to??''} offers={includeUnallocated?undefined:rows.map(r=>r.offer_id)} selected={graphMetric}/><div className="ozf-section-tools">
       <input placeholder="Поиск по артикулу, коду или КМ" aria-label="Поиск товаров" value={search}
         onChange={e=>setSearch(e.target.value)} />
       <span>Сортировка: {defs.find(d=>d[0]===sort.key)?.[1]} {sort.dir===-1?"↓":"↑"}</span>
@@ -278,7 +279,7 @@ export default function FinancierDetailTable({
                     {money(r.estimated_result)}</td>
                   </tr>
                 </tbody></table>
-                <details><summary>{r.offer_id} · КМ, себестоимость и ТК Маяк</summary><OzonRowRates master={r.master_code} onSaved={onSaved}/></details><FinanceDynamics marketplace="ozon" from={data?.from??''} to={data?.to??''} offer={r.offer_id}/>
+                <details><summary>{r.offer_id} · КМ, себестоимость и ТК Маяк</summary><OzonRowRates master={r.master_code} onSaved={onSaved}/></details><FinanceDynamics marketplace="ozon" revision={data?.cache_updated_at??''} from={data?.from??''} to={data?.to??''} offer={r.offer_id}/>
                 <CampaignCharts offer={r.offer_id} from={data?.from??''} to={data?.to??''}/>
               </div>
             </td>

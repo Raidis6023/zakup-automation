@@ -1,23 +1,28 @@
 "use client";
-import { useEffect, useState } from "react";
+import FinanceDynamics from "../../components/finance/FinanceDynamics";
+import CopyArticle from "../../components/finance/CopyArticle";
+import { useEffect, useMemo, useState } from "react";
 type Row={nm_id:string;article:string;name:string;realization:number;to_transfer:number;delivery:number;storage_in_report:number|null;acceptance:number;penalty:number;deduction:number;rows:number;operations:Record<string,{amount:number;count:number;realization:number;delivery:number;storage:number;penalty:number;deduction:number}>};
 type Ad={nm_id:number;date:string;campaign_id:number;spend:number;views:number;clicks:number;orders:number;sum_price:number};
-type Data={ok:boolean;from:string;to:string;financial_rows:number;rows:Row[];cache?:{status:string;rowsSaved:number};ads:{items:Ad[];campaigns:number;coverage:string;warning:string|null};coverage:Record<string,string>;notice:string};
+type Data={daily:Array<{day:string;rows:Array<{nm_id:string;revenue:number}>}>;ok:boolean;from:string;to:string;financial_rows:number;rows:Row[];cache?:{status:string;rowsSaved:number};ads:{items:Ad[];campaigns:number;coverage:string;warning:string|null};coverage:Record<string,string>;notice:string};
 const money=(v:number|null)=>v==null?"—":v.toLocaleString("ru-RU",{minimumFractionDigits:2,maximumFractionDigits:2});
 const day=(offset:number)=>{const d=new Date();d.setUTCDate(d.getUTCDate()+offset);return d.toISOString().slice(0,10);};
+const reportCache=new Map<string,{at:number;data:Data}>();
 export default function WbFinancierClient(){
 const [from,setFrom]=useState(()=>day(-14)),[to,setTo]=useState(()=>day(-1));
 const [retryAt,setRetryAt]=useState(""),[now,setNow]=useState(Date.now());
 useEffect(()=>{const id=setInterval(()=>setNow(Date.now()),1000);return ()=>clearInterval(id);},[]);
 const blocked=Boolean(retryAt&&Date.parse(retryAt)>now);
 const [data,setData]=useState<Data|null>(null),[error,setError]=useState(""),[busy,setBusy]=useState(false),[filter,setFilter]=useState(""),[selected,setSelected]=useState("");
-async function load(){if(blocked)return;setBusy(true);setError("");try{
-const q=new URLSearchParams({from,to});const r=await fetch("/api/agents/wb-finance?"+q,{cache:"no-store"});
-const obj=await r.json();if(r.status===429&&obj.retryAt)setRetryAt(obj.retryAt);if(!r.ok||!obj.ok)throw new Error(obj.error??"Ошибка загрузки");setRetryAt("");setData(obj);
+async function load(refresh=false){if(blocked)return;setBusy(true);setError("");try{
+const q=new URLSearchParams({from,to});const cached=reportCache.get(q.toString());if(!refresh&&cached&&Date.now()-cached.at<30*60*1000){setData(cached.data);setSelected('');return;}const r=await fetch("/api/agents/wb-finance?"+q,{cache:"no-store"});
+const obj=await r.json();if(r.status===429&&obj.retryAt)setRetryAt(obj.retryAt);if(!r.ok||!obj.ok)throw new Error(obj.error??"Ошибка загрузки");setRetryAt("");reportCache.set(q.toString(),{at:Date.now(),data:obj});setData(obj);setSelected("");
 }catch(e){setData(null);setError(e instanceof Error?e.message:String(e));}finally{setBusy(false);}}
 const adsByNm=new Map<string,{spend:number;views:number;clicks:number;orders:number;sum_price:number}>();
 for(const a of data?.ads.items??[]){const k=String(a.nm_id),v=adsByNm.get(k)??{spend:0,views:0,clicks:0,orders:0,sum_price:0};v.spend+=a.spend;v.views+=a.views;v.clicks+=a.clicks;v.orders+=a.orders;v.sum_price+=a.sum_price;adsByNm.set(k,v);}
 const rows=(data?.rows??[]).filter(r=>(r.article+" "+r.nm_id+" "+r.name).toLowerCase().includes(filter.toLowerCase()));
+const wholeSeries=useMemo(()=>(data?.daily??[]).map(d=>({day:d.day,v:{orders:null,buyouts:null,revenue:d.rows.reduce((s,r)=>s+r.revenue,0),profit:null,marketplace:null,advertising:null,inbound:null}})),[data]);
+const itemSeries=useMemo(()=>(data?.daily??[]).map(d=>({day:d.day,v:{orders:null,buyouts:null,revenue:d.rows.filter(r=>r.nm_id===selected).reduce((s,r)=>s+r.revenue,0),profit:null,marketplace:null,advertising:null,inbound:null}})),[data,selected]);
 const active=rows.find(r=>r.nm_id===selected);
 const sum=(fn:(r:Row)=>number)=>rows.reduce((t,r)=>t+fn(r),0);
 const adCovered=data?.ads.coverage==="stats_only";
@@ -27,13 +32,14 @@ return <div className="ozf-layout">
 <label>С даты <input type="date" value={from} onChange={e=>setFrom(e.target.value)} /></label>
 <label>По дату включительно <input type="date" value={to} onChange={e=>setTo(e.target.value)} /></label>
 <label>КМ <select disabled><option>Все КМ · справочник ожидается</option></select></label>
-<button className="ozf-btn ozf-primary" disabled={busy||blocked} onClick={load}>{busy?"Загружаем...":blocked?"Лимит WB · ожидание":"Сформировать"}</button>
-<button className="ozf-btn" disabled={busy||blocked} onClick={load}>Обновить отчёт</button>
+<button className="ozf-btn ozf-primary" disabled={busy||blocked} onClick={()=>void load()}>{busy?"Загружаем...":blocked?"Лимит WB · ожидание":"Сформировать"}</button>
+<button className="ozf-btn" disabled={busy||blocked} onClick={()=>void load(true)}>Обновить отчёт</button>
 </div>
 {error&&<p className="ozf-error" role="alert">{error}</p>}
 {blocked&&<p className="ozf-notice">Запросы временно заблокированы. Следующая попытка после {new Date(retryAt).toLocaleTimeString("ru-RU",{timeZone:"Asia/Krasnoyarsk"})} (Красноярск). Осталось {Math.ceil((Date.parse(retryAt)-now)/1000)} сек.</p>}
 </section>
-{data&&<>
+{busy&&<div className="bi-skeleton" role="status">Подготавливаем полный отчёт…</div>}
+{data&&!busy&&<>
 <section className="ozf-panel">
 <h2>Результаты по артикулам</h2>
 <p>Данные за {data.from} – {data.to} включительно. Нажми на артикул для расшифровки.</p>
@@ -42,13 +48,14 @@ return <div className="ozf-layout">
 </div>
 {data.cache?.status!=="complete"&&<p className="ozf-error" role="alert">НЕПОЛНАЯ ВЫГРУЗКА: сохранено {data.cache?.rowsSaved?.toLocaleString("ru-RU")??"?"} строк. Финансовые итоги предварительные и не пригодны для решений.</p>}
 <p className="ozf-notice" style={{marginTop:16}}>Не рассчитана прибыль: нет себестоимости и ТК «Маяк». Платное хранение не загружено отдельным отчётом. {data.ads.warning}</p>
+<FinanceDynamics marketplace="wb" from={data.from} to={data.to} provided={wholeSeries} selected="revenue"/>
 <div className="ozf-toolbar" style={{marginTop:18}}><input placeholder="Поиск по артикулу, nmId или товару" value={filter} onChange={e=>setFilter(e.target.value)}/><span>Артикулов: {rows.length} · Финансовых операций: {data.financial_rows}</span></div>
 <div className="ozf-financial-scroll"><table className="ozf-table ozf-financial-table" style={{minWidth:1900}}>
 <thead><tr>{["Артикул","nmId","Товар","Реализация, ₽","К перечислению, ₽","Логистика, ₽","Хранение, ₽","Приёмка, ₽","Штрафы, ₽","Удержания, ₽","Реклама, ₽","Расходы всего, ₽","Финрезультат, ₽"].map(h=><th key={h}>{h}</th>)}</tr></thead>
 <tbody>{rows.map(r=>{
 const ad=adsByNm.get(r.nm_id)?.spend??0;
 return <tr key={r.nm_id} className={selected===r.nm_id?"ozf-row-active":""} onClick={()=>setSelected(selected===r.nm_id?"":r.nm_id)}>
-<td style={{color:"#98beff"}}>▸ {r.article||"Не сопоставлен"}</td><td>{r.nm_id}</td><td>{r.name||"—"}</td>
+<td style={{color:"#98beff",whiteSpace:"nowrap"}}>▸ {r.article||"Не сопоставлен"}<CopyArticle article={r.article||r.nm_id}/></td><td>{r.nm_id}</td><td>{r.name||"—"}</td>
 <td>{money(r.realization)}</td><td>{money(r.to_transfer)}</td><td className="ozf-negative">{money(r.delivery)}</td>
 <td>{r.storage_in_report==null?"Нет данных":money(r.storage_in_report)+" (из реализации)"}</td>
 <td>{money(r.acceptance)}</td><td>{money(r.penalty)}</td><td>{money(r.deduction)}</td>
@@ -57,7 +64,7 @@ return <tr key={r.nm_id} className={selected===r.nm_id?"ozf-row-active":""} onCl
 <tfoot><tr><th colSpan={3}>Итого за период · {rows.length} артикулов</th><th>{money(sum(r=>r.realization))}</th><th>{money(sum(r=>r.to_transfer))}</th><th>{money(sum(r=>r.delivery))}</th><th>Нет данных</th><th>{money(sum(r=>r.acceptance))}</th><th>{money(sum(r=>r.penalty))}</th><th>{money(sum(r=>r.deduction))}</th><th>{adCovered?money([...adsByNm.values()].reduce((t,v)=>t+v.spend,0)):"Нет данных"}</th><th>—</th><th>—</th></tr></tfoot>
 </table></div>
 {active&&<div className="ozf-panel" style={{marginTop:18}}>
-<h2>Детализация: {active.article||active.nm_id}</h2>
+<h2>Детализация: {active.article||active.nm_id}<CopyArticle article={active.article||active.nm_id}/></h2><FinanceDynamics marketplace="wb" from={data.from} to={data.to} provided={itemSeries} selected="revenue"/>
 <p>{active.name||""} · nmId {active.nm_id} · {active.rows} строк реализации</p>
 <div className="ozf-table-scroll"><table className="ozf-table"><thead><tr>{["Операция","Строк","К перечислению, ₽","Реализация, ₽","Логистика, ₽","Хранение, ₽","Штраф, ₽","Удержание, ₽"].map(x=><th key={x}>{x}</th>)}</tr></thead><tbody>
 {Object.entries(active.operations).sort((a,b)=>a[0].localeCompare(b[0],"ru")).map(([name,v])=><tr key={name}><td>{name}</td><td>{v.count}</td><td>{money(v.amount)}</td><td>{money(v.realization)}</td><td>{money(v.delivery)}</td><td>{money(v.storage)}</td><td>{money(v.penalty)}</td><td>{money(v.deduction)}</td></tr>)}

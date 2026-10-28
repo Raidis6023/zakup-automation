@@ -754,6 +754,9 @@ export async function GET(request: NextRequest) {
   if (!db) return fail("Доступ к финансовым данным разрешён только администраторам", 403);
   const url = new URL(request.url);
   try {
+    if(url.searchParams.get('mode')==='managers'){
+      const {data,error}=await db.from('ozon_finance_managers').select('manager_name');if(error)throw error;return NextResponse.json({ok:true,managers:[...new Set((data??[]).map(x=>x.manager_name).filter(Boolean))]});
+    }
     if(url.searchParams.get('mode')==='rateHistory'){
       const master=url.searchParams.get('master_code')??'';
       if(!/^[A-Za-zА-Яа-яЁё0-9._-]{1,80}$/.test(master))return fail('Некорректный ЕНОТ',400);
@@ -766,7 +769,9 @@ export async function GET(request: NextRequest) {
     }
     const from = url.searchParams.get("from") ?? "";
     const to = url.searchParams.get("to") ?? "";
-    return NextResponse.json({ ok: true, ...(await buildReport(db, from, to)) });
+    const report=await buildReport(db,from,to);
+    if(url.searchParams.get('compact')==='1')return NextResponse.json({ok:true,rows:report.rows.map(r=>({offer_id:r.offer_id,revenue:r.revenue,cogs:r.cogs,mayak_expense:r.mayak_expense,estimated_result:r.estimated_result,advertising_amount:r.advertising_amount,order_count:r.order_count,buyout_units:r.buyout_units})),unallocated_amount:report.unallocated_amount,advertising:report.advertising,missing_days:report.missing_days});
+    return NextResponse.json({ok:true,...report});
   } catch (e) { return fail(e, 400); }
 }
 export async function POST(request: NextRequest) {

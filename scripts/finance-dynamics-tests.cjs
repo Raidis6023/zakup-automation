@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),ts=require('typescript');
-const source=fs.readFileSync('app/components/finance/FinanceDynamics.tsx','utf8');const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2020}}).outputText;
+const source=fs.readFileSync('app/components/finance/finance-series.ts','utf8');const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2020}}).outputText;
 const m={exports:{}};new Function('require','module','exports',code)(require,m,m.exports);
 const {amounts}=m.exports;
 const oz={rows:[{offer_id:'a',revenue:1000,cogs:200,mayak_expense:50,estimated_result:400,advertising_amount:-100,order_count:5,buyout_units:4}],unallocated_amount:-30,advertising:{finance_total:-120}};

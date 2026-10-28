@@ -125,7 +125,7 @@ export async function GET(request:NextRequest){
     return NextResponse.json({ok:false,error:"Выберите корректный период до 31 дня"},{status:400});
   const {data:latest,error:latestError}=await db.from("wb_finance_cache_jobs")
    .select("run_day,date_from,date_to,status,rows_saved,completed_at")
-   .lte("date_from",from).gte("date_to",to).gt("rows_saved",0)
+   .lte("date_from",from).gte("date_to",to).eq("status","complete")
    .order("run_day",{ascending:false}).limit(1).maybeSingle();
   if(latestError)throw latestError;
   if(!latest){
@@ -135,20 +135,26 @@ export async function GET(request:NextRequest){
     return NextResponse.json({ok:false,cache_pending:true,progress,
       error:"За выбранный период нет завершённого кэша WB. Дождитесь фоновой загрузки. Изменение фильтров не отправляет запросы в WB."},{status:503});
   }
-  const lines:FinanceLine[]=[];
+  const lines:FinanceLine[]=[];let readCount=0;
   // Read only Supabase. Paginate because PostgREST defaults to 1000 records.
   for(let offset=0;offset<latest.rows_saved;offset+=1000){
     const {data,error}=await db.from("wb_finance_cache_lines").select("payload")
       .eq("run_day",latest.run_day).order("line_index",{ascending:true}).range(offset,offset+999);
     if(error)throw error;
     if(!data?.length)break;
+    readCount+=data.length;
     for(const rec of data){
       const line=rec.payload as FinanceLine;
       const reportDate=String(line.rrDate??line.rrdDt??line.rrdDate??line.saleDt??"").slice(0,10);
       if(reportDate>=from&&reportDate<=to)lines.push(line);
     }
   }
-  return NextResponse.json({ok:true,from,to,financial_rows:lines.length,
+  if(readCount!==latest.rows_saved)throw Error("Кэш WB прочитан не полностью. Повторите загрузку отчёта.");
+  const daily=Array.from({length:Math.round((Date.parse(to)-Date.parse(from))/86400000)+1},(_,i)=>{
+    const day=new Date(Date.parse(from)+i*86400000).toISOString().slice(0,10);
+    return {day,rows:groupFinancial(lines.filter(line=>String(line.rrDate??line.rrdDt??line.rrdDate??line.saleDt??'').slice(0,10)===day)).map(r=>({nm_id:r.nm_id,revenue:r.realization}))};
+  });
+  return NextResponse.json({ok:true,from,to,financial_rows:lines.length,daily,
     rows:groupFinancial(lines),
     ads:{items:[],campaigns:0,coverage:"not_loaded",warning:"Рекламная статистика пока не загружена в кэш. Новые запросы к WB при смене фильтра не отправляются."},
     coverage:{finance:latest.status==="complete"?"cached_complete":"cached_partial",advertising:"not_loaded",paid_storage:"not_loaded",advertising_actual_charges:"not_loaded"},

@@ -1,4 +1,5 @@
 "use client";
+import {prepareFinanceSeries,clearFinanceSeries} from '../../components/finance/finance-series-cache';
 import FinancierDetailTable from "./FinancierDetailTable";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -57,6 +58,7 @@ export default function FinancierClient() {
   const [appliedFrom,setAppliedFrom] = useState(() => isoShift(-14));
   const [appliedTo,setAppliedTo] = useState(() => isoShift(-1));
   const [pendingManager,setPendingManager] = useState("Все КМ");
+  const [managerOptions,setManagerOptions]=useState<string[]>([]);
   const [data, setData] = useState<FinanceReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -81,14 +83,17 @@ export default function FinancierClient() {
       const response = await fetch(API + "?" + query.toString(), { cache: "no-store" });
       const json = await response.json();
       if (!response.ok || !json.ok) throw new Error(json.error || "Ошибка получения отчёта");
+      if(json.missing_days?.length)throw Error('Период ещё не загружен полностью: '+json.missing_days.join(', '));
+      clearFinanceSeries();
+      await prepareFinanceSeries('ozon',appliedFrom,appliedTo,json.cache_updated_at??'');
       setData(json as FinanceReport);
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setLoading(false); }
   }, [appliedFrom,appliedTo]);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(()=>{fetch(API+'?mode=managers',{cache:'no-store'}).then(r=>r.json()).then(d=>{if(d.ok)setManagerOptions(d.managers)}).catch(()=>{});},[]);
   const managers = useMemo(() => ["Все КМ",
-    ...new Set((data?.rows ?? []).map(r => r.manager).sort((a, b) => a.localeCompare(b, "ru")))],
-    [data]);
+    ...new Set([...managerOptions,...(data?.rows ?? []).map(r => r.manager)].sort((a, b) => a.localeCompare(b, "ru")))],
+    [data,managerOptions]);
   const rows = useMemo(() => (data?.rows ?? []).filter(r =>
     (managerFilter === "Все КМ" || r.manager === managerFilter) &&
     (r.offer_id + " " + (r.master_code ?? "") + " " + (r.name ?? ""))
@@ -105,10 +110,13 @@ export default function FinancierClient() {
       if (!from || !to || from>to)throw new Error("Проверь даты периода");
       // Selecting a date or KM reads ONLY the local Supabase cache.
       // It must never enqueue a fresh Ozon API import.
-      setManagerFilter(pendingManager);setAppliedFrom(from);setAppliedTo(to);
-      setProgress("Отчёт за "+from+" — "+to+
-        " включительно. Данные только из Supabase; API Ozon не вызывается.");
-      if(appliedFrom===from && appliedTo===to)await load();
+      const requested={from,to,manager:pendingManager};
+      const response=await fetch(API+'?'+new URLSearchParams({from,to}),{cache:'no-store'});
+      const report=await response.json();if(!response.ok||!report.ok)throw Error(report.error??'Ошибка отчёта');
+      if(report.missing_days?.length)throw Error('Период загружен не полностью. Не хватает дней: '+report.missing_days.join(', ')+'. Нажмите «Загрузить / продолжить из Ozon».');
+      setProgress('Подготавливаем таблицу и все дни графиков…');
+      await prepareFinanceSeries('ozon',from,to,report.cache_updated_at??'');
+      setAppliedFrom(requested.from);setAppliedTo(requested.to);setManagerFilter(requested.manager);setData(report);setSelected('');setProgress('');
     }catch(error){setError(error instanceof Error?error.message:String(error))}
     finally{setBusy(false)}
   }
@@ -116,9 +124,9 @@ export default function FinancierClient() {
     setBusy(true);setError('');try{
       if(!from||!to||from>to)throw Error('Проверь даты периода');
       const result=await post({action:'queuePeriod',from,to});
-      setManagerFilter(pendingManager);setAppliedFrom(from);setAppliedTo(to);
+
       setProgress(result.queued_days>0?'Загрузка поставлена в очередь: '+result.queued_days+' дней. Уже загружено: '+result.completed_days+'. Прогресс сохраняется.':'Все дни выбранного периода уже загружены.');
-      if(appliedFrom===from&&appliedTo===to)await load();
+
     }catch(e){setError(e instanceof Error?e.message:'Ошибка загрузки');}finally{setBusy(false);}
   }
   async function toggleDiscontinued(r:FinanceRow,checked:boolean) {
@@ -363,24 +371,26 @@ export default function FinancierClient() {
       <div className="ozf-panel ozf-filters">
         <label>С даты<input type="date" value={from} onChange={e=>setFrom(e.target.value)} disabled={busy}/></label>
         <label>По дату (включительно)<input type="date" value={to} onChange={e=>setTo(e.target.value)} disabled={busy}/></label>
-        <label>КМ<select value={pendingManager} onChange={e=>setPendingManager(e.target.value)}>
+        <label>КМ<select disabled={busy||loading} value={pendingManager} onChange={e=>setPendingManager(e.target.value)}>
           {managers.map(m=><option key={m} value={m}>{m}</option>)}
         </select></label>
         <button className="ozf-btn ozf-primary" disabled={busy||loading}
           onClick={()=>void formReport()}>{busy?"Формируем…":"Сформировать"}</button>
+        <button className="ozf-btn" disabled={!data||loading||busy} onClick={()=>void load()}>Обновить расчёт</button>
         <button className="ozf-btn" onClick={()=>void queueFinance()} disabled={loading||busy}>Загрузить / продолжить из Ozon</button>
       </div>
       {data&&<p>Показан период: <b>{data.from} — {data.to}</b> включительно. Кэш: {data.cache_updated_at?new Date(data.cache_updated_at).toLocaleString('ru-RU',{timeZone:'Asia/Krasnoyarsk'}):'—'} (Красноярск).</p>}
       {connectionStatus && <p className="ozf-progress" role="status">{connectionStatus}</p>}
       {error && <p className="ozf-error" role="alert">{error}</p>}
       {progress && <p className="ozf-progress" role="status">{progress}</p>}
-      <FinancierDetailTable data={data} rows={rows}
+      {(busy||loading)&&<div className="bi-skeleton" role="status">Подготавливаем полный отчёт…</div>}
+      {data&&!busy&&!loading&&<FinancierDetailTable data={data} rows={rows}
         includeUnallocated={managerFilter==="Все КМ"} onSaved={load}
         onToggle={(masterCode,offerId,checked)=>{
           const row=rows.find(r=>r.master_code===masterCode && r.offer_id===offerId);
           if(row)return toggleDiscontinued(row,checked);
-        }}/>
-      <div className="ozf-panel ozf-missing-report">
+        }}/>}
+      {data&&!busy&&!loading&&<><div className="ozf-panel ozf-missing-report">
         <div className="ozf-toolbar">
           <div><h2>Контроль незаполненных данных · {missingRows.length} размещений</h2>
             <p>Отдельный реестр по всей номенклатуре, независимо от выгрузки начислений. Нет master_code, КМ, себестоимости или ТК Маяк.</p></div>
@@ -428,6 +438,7 @@ export default function FinancierClient() {
             </tbody></table>;
         })()}
       </div>}
+      </>}
     </section>
   );
 }
