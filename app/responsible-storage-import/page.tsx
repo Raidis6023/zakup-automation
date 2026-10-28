@@ -1,4 +1,4 @@
-import Breadcrumbs from "../ui/Breadcrumbs";
+
 
 import ThemeToggle
   from "../ThemeToggle";
@@ -42,14 +42,7 @@ export default function ResponsibleStorageImportPage() {
 
           <div className="header-actions">
             <ThemeToggle />
-            <Breadcrumbs
-              items={[
-                { label: "Главная", href: "/" },
-                { label: "Закуп", href: "/zakup" },
-                { label: "Остатки", href: "/stocks" },
-                { label: "Ответственное хранение", shortLabel: "ОХ", href: "/responsible-storage-import" },
-              ]}
-            />
+            
           </div>
 
         </header>
