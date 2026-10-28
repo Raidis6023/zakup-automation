@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import ThemeToggle from "../ThemeToggle";
 import styles from "./PageHeader.module.css";
 
@@ -6,7 +7,7 @@ import styles from "./PageHeader.module.css";
  * Visual distinctions are expressed only as variants, not duplicated JSX.
  * Breadcrumbs and decorative stripes are rendered by WorkspaceShell.
  */
-type Variant = "default" | "ozon" | "wildberries" | "yandex-market" | "zakup";
+type Variant = "default" | "sku-list" | "ved" | "ozon" | "wildberries" | "yandex-market" | "zakup";
 
 const variants = {
   default: {
@@ -16,6 +17,22 @@ const variants = {
     description: "subtitle",
     actions: "header-actions",
     showThemeToggle: false,
+  },
+  "sku-list": {
+    root: "header sku-list-header",
+    titleArea: "",
+    heading: "",
+    description: "",
+    actions: "header-actions sku-list-header-actions",
+    showThemeToggle: false,
+  },
+  ved: {
+    root: "header ved-header",
+    titleArea: "ved-title-wrap",
+    heading: "title",
+    description: "subtitle",
+    actions: "header-actions ved-header-actions",
+    showThemeToggle: true,
   },
   ozon: {
     root: "header ozon-header",
@@ -59,10 +76,16 @@ export default function PageHeader({
   variant = "default",
   title,
   description,
+  eyebrow,
+  showThemeToggle,
+  actions,
 }: {
   variant?: Variant;
   title: string;
   description: string;
+  eyebrow?: string;
+  showThemeToggle?: boolean;
+  actions?: ReactNode;
 }) {
   const config = variants[variant];
 
@@ -70,6 +93,7 @@ export default function PageHeader({
     <header className={config.root}>
       <div className={classNames(config.titleArea, styles.titleArea)}>
         <div className={styles.copy}>
+          {eyebrow ? <div className="small-label">{eyebrow}</div> : null}
           <h1 className={config.heading}>{title}</h1>
           <p className={classNames(config.description, styles.description)}>
             {description}
@@ -78,7 +102,8 @@ export default function PageHeader({
       </div>
 
       <div className={classNames(config.actions, styles.actions)}>
-        {config.showThemeToggle ? <ThemeToggle /> : null}
+        {(showThemeToggle ?? config.showThemeToggle) ? <ThemeToggle /> : null}
+        {actions}
       </div>
     </header>
   );
