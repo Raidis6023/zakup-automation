@@ -1138,12 +1138,7 @@ export default async function VedPage() {
               <ThemeToggle />
 
 
-              <Link
-                href="/"
-                className="secondary-button workspace-home-button ved-back-link"
-              >
-                Главная
-              </Link>
+
 
             </div>
 
@@ -1270,12 +1265,7 @@ export default async function VedPage() {
             <ThemeToggle />
 
 
-            <Link
-              href="/"
-              className="secondary-button workspace-home-button ved-back-link"
-            >
-              Главная
-            </Link>
+
 
           </div>
 
