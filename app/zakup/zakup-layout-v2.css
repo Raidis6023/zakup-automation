@@ -8,7 +8,7 @@
     12px;
 
   --zakup-v2-icon-size:
-    42px;
+    var(--ui-metric-icon-size);
 
   --zakup-v2-row-height:
     100px;
@@ -588,7 +588,7 @@ svg {
     center;
 
   gap:
-    13px;
+    var(--ui-metric-card-gap);
 
   min-height:
     104px;
@@ -608,7 +608,7 @@ svg {
     var(--ws-border);
 
   border-radius:
-    10px;
+    var(--ui-surface-radius);
 }
 
 
@@ -851,7 +851,7 @@ svg {
     center;
 
   gap:
-    13px;
+    var(--ui-metric-card-gap);
 
   min-height:
     104px;
@@ -871,7 +871,7 @@ svg {
     var(--ws-border);
 
   border-radius:
-    10px;
+    var(--ui-surface-radius);
 }
 
 

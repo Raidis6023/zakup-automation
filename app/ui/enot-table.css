@@ -1,0 +1,103 @@
+/* One visual contract for the three marketplace ENOT mapping tables.
+   Columns, validation, and event handlers remain marketplace-specific. */
+:is(.ozon-unlinked-table-shell, .wb-unmapped-table-shell, .yandex-unlinked-table-shell) {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+}
+:is(.ozon-unlinked-table-shell, .yandex-unlinked-table-shell) {
+  border: 1px solid var(--ws-border);
+  border-radius: var(--ui-enot-radius);
+}
+.wb-unmapped-table-shell { border-top: 0; }
+
+:is(.ozon-unlinked-table, .wb-unmapped-table, .yandex-unlinked-table) {
+  width: 100%;
+  min-width: var(--ui-enot-table-min-width);
+  border-collapse: collapse;
+  color: var(--ws-text);
+}
+:is(.ozon-unlinked-table, .wb-unmapped-table, .yandex-unlinked-table) th {
+  padding: var(--ui-table-compact-header-padding-block) var(--ui-table-compact-header-padding-inline);
+  border-bottom: 1px solid var(--ws-border);
+  background: var(--ws-surface-soft);
+  color: var(--ws-text-muted);
+  font-size: var(--ui-table-compact-header-font-size);
+  font-weight: 650;
+  text-align: left;
+  white-space: nowrap;
+}
+:is(.ozon-unlinked-table, .wb-unmapped-table, .yandex-unlinked-table) td {
+  padding: var(--ui-table-compact-cell-padding-block) var(--ui-table-compact-cell-padding-inline);
+  border-bottom: 1px solid var(--ws-border-soft);
+  color: var(--ws-text);
+  font-size: var(--ui-table-body-font-size);
+  vertical-align: top;
+}
+:is(.ozon-unlinked-table, .wb-unmapped-table, .yandex-unlinked-table) tbody tr:last-child td {
+  border-bottom: 0;
+}
+:is(.ozon-unlinked-table, .wb-unmapped-table, .yandex-unlinked-table) tbody tr:hover {
+  background: var(--ws-surface-hover);
+}
+:is(.ozon-unlinked-input, .wb-unmapped-input, .yandex-unlinked-input) {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: var(--ui-enot-control-height);
+  padding: 8px 9px;
+  border: 1px solid var(--ws-border);
+  border-radius: var(--ui-enot-input-radius);
+  outline: none;
+  background: var(--ws-surface);
+  color: var(--ws-text);
+  font: inherit;
+  font-size: var(--ui-table-body-font-size);
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+.wb-unmapped-input {
+  width: 170px;
+  padding: 0 10px;
+}
+:is(.ozon-unlinked-input, .wb-unmapped-input, .yandex-unlinked-input):focus {
+  border-color: var(--ws-blue);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ws-blue) 9%, transparent);
+}
+:is(.ozon-unlinked-input, .wb-unmapped-input, .yandex-unlinked-input)::placeholder {
+  color: var(--ws-text-muted);
+}
+:is(.ozon-unlinked-input, .wb-unmapped-input, .yandex-unlinked-input):disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+:is(.ozon-unlinked-button, .wb-unmapped-button, .yandex-unlinked-button) {
+  min-height: var(--ui-enot-control-height);
+  padding: 8px 12px;
+  border: 1px solid var(--ws-blue);
+  border-radius: var(--ui-enot-input-radius);
+  background: var(--ws-blue);
+  color: #fff;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+}
+:is(.ozon-unlinked-button, .wb-unmapped-button, .yandex-unlinked-button):hover:not(:disabled) {
+  border-color: var(--ws-blue-hover);
+  background: var(--ws-blue-hover);
+  text-decoration: none;
+}
+:is(.ozon-unlinked-button, .wb-unmapped-button, .yandex-unlinked-button):focus-visible {
+  outline: var(--ui-focus-width) solid var(--ws-blue);
+  outline-offset: var(--ui-focus-offset);
+}
+:is(.ozon-unlinked-button, .wb-unmapped-button, .yandex-unlinked-button):disabled {
+  opacity: .46;
+  cursor: not-allowed;
+}
+:is(.ozon-unlinked-hint, .wb-unmapped-hint, .yandex-unlinked-hint) {
+  color: var(--ws-text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}

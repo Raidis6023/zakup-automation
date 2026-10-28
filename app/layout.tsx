@@ -7,6 +7,7 @@ import WorkspaceRouteFrame from "./WorkspaceRouteFrame";
 
 import "./globals.css";
 import "./ui/tokens.css";
+import "./ui/enot-table.css";
 
 // ============================================================
 // МЕТАДАННЫЕ
