@@ -1,43 +1,59 @@
-# Shared UI foundation: Wildberries pilot
+# Workspace: общая система интерфейса
 
-The first migration covers the three navigation links in the Wildberries page
-header and the synchronization button. Product tables, synchronization requests,
-cooldowns, calculations, authentication and other marketplaces are unchanged.
+Цель: единые компоненты и оформление для всего рабочего пространства КПК МИА.
+Не переносите интерфейс в один гигантский файл. Используйте общий каркас,
+семантические дизайн-токены и небольшие переиспользуемые компоненты.
 
-## Where to change appearance
+## Уже централизовано
 
-- `app/ui/tokens.css`: shared control dimensions, typography, spacing, radius,
-  motion and focus settings. It also holds WB theme values for the migrated
-  controls. Existing `--ws-*` colors are a compatibility bridge, not a second
-  implementation of the new controls.
-- `app/ui/Button.module.css`: shared button/link appearance and native states.
-- `app/ui/Button.tsx`: a native button. Defaults to `type="button"`; retains
-  native props, event handlers, disabled state and refs.
-- `app/ui/ButtonLink.tsx`: a Next.js link with the same secondary-control style.
-  Navigation remains a link rather than an onClick handler on a button.
+- `app/WorkspaceShell.tsx`: общая оболочка, боковое меню, topbar и
+  единственные хлебные крошки рядом с декоративными полосами.
+- `app/ui/workspace-breadcrumb-routes.ts`: дерево известных маршрутов и
+  автоматический безопасный fallback для будущих страниц.
+- `app/ui/Breadcrumbs.tsx` и `Breadcrumbs.module.css`: вариант №5
+  с вертикальной линией, кликабельные пункты, светлая/тёмная темы.
+- `app/ui/PageHeader.tsx` и `PageHeader.module.css`: общие JSX-структура
+  и геометрия заголовка. Сейчас подключены `/ozon`, `/wildberries`,
+  `/yandex-market` и `/zakup`. Сохраняются совместимые классы
+  маркетплейсов и закупа для плавного переноса стилей.
+- `app/MarketplaceFinancePanel.tsx`: общий блок «Финансовая аналитика»
+  для трёх маркетплейсов, на базе `WorkspaceCollapsiblePanel`.
+- `app/ui/tokens.css`: параметры интерфейса (размеры, отступы, радиусы,
+  шрифты, фокус); единая точка изменения значений для компонентов,
+  которые эти токены уже используют.
+- `app/ui/Button.tsx`, `ButtonLink.tsx` и `Button.module.css`:
+  общий стиль кнопок и ссылок, но ещё не все страницы мигрированы.
 
-The root layout imports the tokens once. They do not restyle legacy elements.
-The migrated page opts into semantic theme tokens with `workspace-ui`.
-The old WB button selectors are removed rather than overridden by another
-global stylesheet. Icon animation and synchronization layout remain on WB.
+## Как создавать новые страницы
 
-## Scope of a change
+1. Рабочий маршрут размещайте внутри `app/`. Он автоматически получит
+   оболочку Workspace и хлебные крошки от `WorkspaceShell`.
+   Не добавляйте второй `Breadcrumbs` в `page.tsx`.
+2. Если название или иерархия неочевидны, добавьте запись в
+   `workspace-breadcrumb-routes.ts` с верным родительским URL.
+   Иначе будет использован автоматический fallback по пути.
+3. Для заголовка используйте `PageHeader` и подходящий согласованный
+   вариант. При добавлении нового семейства страниц дополняйте
+   общий компонент, не копируйте отдельную шапку.
+4. Используйте `Button` и `ButtonLink` там, где стили уже мигрированы.
+   Не маскируйте ссылки под обработчики событий у кнопок.
+5. Контекстные действия («Обновить», «Загрузить», «Сформировать») размещайте
+   в функциональных плашках, а не рядом с декоративными полосами.
 
-Changing `--ui-control-radius` updates all four migrated controls. Changing
-primary colors affects the synchronization button, not secondary navigation.
-Other pages start using these settings only after their controls are migrated.
-Changing this file does not automatically migrate existing markup or tables.
+## Что пока НЕ унифицировано
 
-## Review before merging
+- Все таблицы, информационные карточки и сложные панели разных модулей.
+- Наследованные CSS-размеры/цвета и индивидуальные классы оформления.
+- Заголовки остальных рабочих страниц (пока используют старую разметку).
+- Часть кнопок на старых страницах.
 
-Compare WB before/after in light and dark themes at 1920px and 1366px, and check
-the existing 1050px and 650px layout breakpoints. Check navigation hrefs, visible
-keyboard focus, synchronization idle/loading/disabled/error states, and table
-collapse/sorting. Change the radius token temporarily and verify all four
-controls respond, then restore the original value.
+Изменение компонента влияет на **подключённые** страницы. Оно не обязано
+автоматически затрагивать разметку, которая ещё не использует общую систему.
 
-TypeScript and targeted ESLint checks pass. An initial production build compiled
-successfully but stopped while prerendering `/admin` because this environment
-has no `NEXT_PUBLIC_SUPABASE_URL`. Browser verification is pending: the local
-Chromium installation is unavailable, and the download failed. Do not treat a
-successful compile as confirmation of visual equivalence or live sync behavior.
+## Регрессионная проверка при каждом переносе
+
+Проверяйте светлую/тёмную темы, 1920/1366/1050/650 px, вертикальное
+положение заголовка, отсутствие перекрытия декоративных полос, переходы
+хлебных крошек, keyboard focus, маршруты действий и состояние таблиц.
+Затем проводите сборку Next.js/TypeScript и проверяйте Vercel Preview.
+Успешная компиляция **не заменяет** визуальную проверку приватного сайта.
