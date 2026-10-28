@@ -30,6 +30,9 @@ import HomeRightPanel
 import WorkspaceDecoration
   from "./WorkspaceDecoration";
 
+import Breadcrumbs from "./ui/Breadcrumbs";
+import { workspaceBreadcrumbs } from "./ui/workspace-breadcrumb-routes";
+
 import WorkspaceCompanyLogo
   from "./WorkspaceCompanyLogo";
 
@@ -1363,6 +1366,13 @@ export default function WorkspaceShell({
 
               : null
           }
+
+
+          {module && (
+            <div className="workspace-global-breadcrumbs">
+              <Breadcrumbs items={workspaceBreadcrumbs(pathname, vedOrderSource)} />
+            </div>
+          )}
 
 
           {

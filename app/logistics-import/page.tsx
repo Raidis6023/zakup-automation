@@ -1,4 +1,4 @@
-import Breadcrumbs from "../ui/Breadcrumbs";
+
 
 import ThemeToggle
   from "../ThemeToggle";
@@ -46,13 +46,7 @@ export default function LogisticsImportPage() {
 
           <div className="header-actions">
             <ThemeToggle />
-            <Breadcrumbs
-              items={[
-                { label: "Главная", href: "/" },
-                { label: "Закуп", href: "/zakup" },
-                { label: "Импорт логистики", shortLabel: "Габариты", href: "/logistics-import" },
-              ]}
-            />
+            
           </div>
 
         </header>

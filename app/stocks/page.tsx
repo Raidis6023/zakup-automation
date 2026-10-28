@@ -180,8 +180,6 @@ export default async function StocksPage({ searchParams }: {
         </div>
         <div className="header-actions">
           <ThemeToggle />
-          <Link className="secondary-button navigation-button" href="/zakup">← Закуп</Link>
-          <Link className="secondary-button navigation-button workspace-home-button" href="/">Главная</Link>
         </div>
       </header>
       <section className="section stocks-upload">

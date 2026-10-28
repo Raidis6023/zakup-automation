@@ -1,4 +1,4 @@
-import Breadcrumbs from "../ui/Breadcrumbs";
+
 
 import {
   runChinaCalculation,
@@ -845,12 +845,7 @@ export default async function Home() {
 
 
           <div className="zakup-v2-header-actions">
-            <Breadcrumbs
-              items={[
-                { label: "Главная", href: "/" },
-                { label: "Закуп", href: "/zakup" },
-              ]}
-            />
+            
           </div>
 
         </header>

@@ -1,6 +1,4 @@
 import { redirect } from "next/navigation";
-import Link
-  from "next/link";
 
 import ThemeToggle
   from "../ThemeToggle";
@@ -187,12 +185,7 @@ export default async function StockImportPage({
             <ThemeToggle />
 
 
-            <Link
-              href="/stocks"
-              className="secondary-button navigation-button"
-            >
-              ← Остатки
-            </Link>
+
 
           </div>
 

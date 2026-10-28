@@ -1,5 +1,4 @@
 import VedNewProductsClient from "./VedNewProductsClient";
-import Link from "next/link";
 
 import {
   getOzonSeptemberRows,
@@ -833,13 +832,7 @@ export default async function SkuListPage() {
             className=
               "header-actions sku-list-header-actions"
           >
-            <Link
-              href="/"
-              className=
-                "secondary-button workspace-home-button sku-list-home-button"
-            >
-              Главная
-            </Link>
+
           </div>
         </header>
 

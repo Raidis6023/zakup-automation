@@ -1,6 +1,3 @@
-import Link
-from "next/link";
-
 import VedTakeInWorkPanel
   from "../../VedTakeInWorkPanel";
 
@@ -24,14 +21,6 @@ type OrderState = {
 
 type HandoffReadiness = {
   ready?: boolean;
-};
-
-
-type PageSearchParams = {
-  from?:
-    string
-    |
-    string[];
 };
 
 
@@ -268,88 +257,19 @@ async function hasMissingVedOrderPhotos(orderId: string): Promise<boolean> {
 
 
 // ============================================================
-// СТИЛИ НАВИГАЦИОННЫХ КНОПОК
-// ============================================================
-
-const headerButtonStyle = {
-  display:
-    "inline-flex" as const,
-
-  alignItems:
-    "center" as const,
-
-  justifyContent:
-    "center" as const,
-
-  textAlign:
-    "center" as const,
-
-  textDecoration:
-    "none" as const,
-
-  whiteSpace:
-    "nowrap" as const,
-};
-
-
-// ============================================================
 // PAGE
 // ============================================================
 
 export default async function VedOrderPage({
   params,
-  searchParams,
 }: {
-  params:
-    Promise<{
-      id: string;
-    }>;
-
-  searchParams:
-    Promise<PageSearchParams>;
+  params: Promise<{ id: string }>;
 }) {
 
   const {
     id,
   } =
     await params;
-
-
-  const resolvedSearchParams =
-    await searchParams;
-
-
-  const rawSource =
-    Array.isArray(
-      resolvedSearchParams.from
-    )
-
-      ? resolvedSearchParams.from[0]
-
-      : resolvedSearchParams.from;
-
-
-  const openedFromZakup =
-    rawSource ===
-    "zakup";
-
-
-  const sectionHref =
-    openedFromZakup
-      ? "/zakup"
-      : "/ved";
-
-
-  const sectionLabel =
-    openedFromZakup
-      ? "Закуп"
-      : "ВЭД";
-
-
-  const sectionTitle =
-    openedFromZakup
-      ? "Вернуться в раздел Закуп"
-      : "Вернуться в раздел ВЭД";
 
 
   const [excelExportAvailable, needsOzonPhotos] = await Promise.all([
@@ -413,34 +333,6 @@ export default async function VedOrderPage({
 
             {needsOzonPhotos ? <AutoVedOrderPhotos orderId={id} /> : null}
 
-            <Link
-              href="/"
-              className="secondary-button"
-              style={
-                headerButtonStyle
-              }
-              title="Перейти на главную страницу"
-            >
-              Главная
-            </Link>
-
-
-            <Link
-              href={
-                sectionHref
-              }
-              className="secondary-button"
-              style={
-                headerButtonStyle
-              }
-              title={
-                sectionTitle
-              }
-            >
-              {
-                sectionLabel
-              }
-            </Link>
 
           </div>
 

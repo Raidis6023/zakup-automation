@@ -2,7 +2,7 @@ import type {
   ReactNode,
 } from "react";
 
-import Breadcrumbs from "../ui/Breadcrumbs";
+
 import headerStyles from "../ui/BreadcrumbHeader.module.css";
 import MarketplaceFinancePanel from "../MarketplaceFinancePanel";
 
@@ -1354,10 +1354,7 @@ export default async function OzonPage() {
 
             <ThemeToggle />
 
-            <Breadcrumbs items={[
-              { label: "Главная", href: "/" },
-              { label: "Ozon", href: "/ozon" },
-            ]} />
+            
 
           </div>
 

@@ -2,7 +2,7 @@ import {
   type ReactNode,
 } from "react";
 
-import Breadcrumbs from "../ui/Breadcrumbs";
+
 import headerStyles from "../ui/BreadcrumbHeader.module.css";
 import MarketplaceFinancePanel from "../MarketplaceFinancePanel";
 
@@ -1433,10 +1433,7 @@ export default async function YandexMarketPage() {
 
             <ThemeToggle />
 
-            <Breadcrumbs items={[
-              { label: "Главная", href: "/" },
-              { label: "Яндекс Маркет", shortLabel: "ЯМ", href: "/yandex-market" },
-            ]} />
+            
 
           </div>
 
