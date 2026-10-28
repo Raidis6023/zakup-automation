@@ -1,45 +1,17 @@
-/* FBY precheck and supply plan use the same workspace surfaces as other
-   marketplace sections. Accent, borders and text are theme-aware. */
-.panel {
+/* Content and planner tables only: shared panel owns header and collapse. */
+.fbyPanel {
+  margin-bottom: var(--ui-surface-section-gap);
+}
+.content {
   min-width: 0;
-  margin: var(--ui-surface-section-gap) 0;
-  padding: 0 0 var(--ui-surface-section-padding);
-  overflow: hidden;
-  border: 1px solid var(--ws-border);
-  border-radius: var(--ui-surface-radius);
-  background: var(--ws-surface);
-  color: var(--ws-text);
+  padding-bottom: var(--ui-surface-section-padding);
 }
-.heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--ui-panel-header-gap);
-  min-height: var(--ui-panel-header-height);
-  box-sizing: border-box;
-  padding: var(--ui-panel-header-padding-block) var(--ui-panel-header-padding-inline);
-  border-bottom: 1px solid var(--ws-border-soft);
-}
-.heading > div { min-width: 0; flex: 1 1 auto; }
-.heading h2 {
-  margin: 3px 0 4px;
-  color: var(--ws-text);
-  font-size: var(--ui-panel-title-size);
-  font-weight: 750;
-  line-height: 1.25;
-}
-.heading p, .footer p {
+.footer p {
   max-width: 780px;
   margin: 0;
   color: var(--ws-text-muted);
   font-size: var(--ui-panel-caption-size);
   line-height: 1.4;
-}
-.tag {
-  color: var(--ws-icon);
-  font-size: 10px;
-  font-weight: 750;
-  letter-spacing: .07em;
 }
 .facts {
   display: grid;
@@ -266,13 +238,11 @@
 }
 @media (max-width: 900px) {
   .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .heading, .footer, .selectionBar { align-items: stretch; flex-direction: column; }
-  .heading > .secondary { align-self: flex-start; }
+  .footer, .selectionBar { align-items: stretch; flex-direction: column; }
   .actions { justify-content: flex-start; }
 }
 @media (max-width: 580px) {
   .facts { grid-template-columns: 1fr; }
-  .heading { padding: 12px; }
   .info, .alertDanger, .alertWarning { margin-inline: 12px; }
   .footer, .selectionBar { margin-inline: 12px; }
   .primary { width: 100%; }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import styles from "./YandexFbySupplyPlanner.module.css";
+import WorkspaceCollapsiblePanel from "../WorkspaceCollapsiblePanel";
 
 type Status = {
   ok: boolean;
@@ -108,15 +109,18 @@ export default function YandexEligibilityPrecheck() {
   }
 
   return (
-    <section className={styles.panel}>
-      <div className={styles.heading}>
-        <div>
-          <div className={styles.tag}>ШАГ 1 · ПРОВЕРКА ДО РАСЧЁТА ПОТРЕБНОСТИ</div>
-          <h2>Загрузить проверку ЯМ → получить Excel по кластерам</h2>
-          <p>Загружаешь файл с «да/нет» по складам, сайт сверяет его с потребностью и сразу скачивает расчётный Excel. Не надо отдельно запускать сопоставление.</p>
-        </div>
-        <button type="button" className={styles.secondary} onClick={()=>setVersion(v=>v+1)}>Обновить проверку</button>
-      </div>
+    <WorkspaceCollapsiblePanel
+      tone="yandex"
+      icon="supply"
+      eyebrow="ШАГ 1 · ПРОВЕРКА ДО РАСЧЁТА ПОТРЕБНОСТИ"
+      title="Загрузить проверку ЯМ → получить Excel по кластерам"
+      subtitle="Загружаешь файл с «да/нет» по складам, сайт сверяет его с потребностью и сразу скачивает расчётный Excel. Не надо отдельно запускать сопоставление."
+      wrapSubtitle
+      actionLabel="Обновить проверку"
+      onAction={() => setVersion(v => v + 1)}
+      className={styles.fbyPanel}
+    >
+      <div className={styles.content}>
 
       {status && <div className={styles.facts}>
         <div><span>Активных SKU в каталоге</span><strong>{status.activeOffers}</strong></div>
@@ -163,6 +167,7 @@ export default function YandexEligibilityPrecheck() {
       {phase && <p aria-live="polite" className={styles.meta}>{phase}</p>}
       {result && <p className={styles.info}>{result}</p>}
       {error && <p role="alert" className={styles.alertDanger}>{error}</p>}
-    </section>
+      </div>
+    </WorkspaceCollapsiblePanel>
   );
 }
