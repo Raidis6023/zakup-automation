@@ -1,5 +1,7 @@
 "use client";
 
+import { useWorkspaceDisclosure } from "../ui/useWorkspaceDisclosure";
+
 import {
   useEffect,
   useMemo,
@@ -392,13 +394,7 @@ export default function WbProductsTableClient({
   // COLLAPSE
   // ==========================================================
 
-  const [
-    expanded,
-    setExpanded,
-  ] =
-    useState(
-      false
-    );
+  const { expanded, toggle: toggleExpanded } = useWorkspaceDisclosure();
 
 
   const [
@@ -625,9 +621,7 @@ export default function WbProductsTableClient({
   // TOGGLE
   // ==========================================================
 
-  function toggleExpanded() {
-    setExpanded(previous => !previous);
-  }
+
 
   // ==========================================================
   // SORT CLICK

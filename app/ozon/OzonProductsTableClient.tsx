@@ -1,5 +1,7 @@
 "use client";
 
+import { useWorkspaceDisclosure } from "../ui/useWorkspaceDisclosure";
+
 import {
   Fragment,
   useEffect,
@@ -228,7 +230,7 @@ export default function OzonProductsTableClient({
     );
 
 
-  const [expanded, setExpanded] = useState(false);
+  const { expanded, toggle: toggleTable } = useWorkspaceDisclosure();
   const [ready, setReady] = useState(false);
 
   const [
@@ -356,9 +358,7 @@ export default function OzonProductsTableClient({
     ]
   );
 
-  function toggleTable() {
-    setExpanded(previous => !previous);
-  }
+
 
   function SortHeading({ column, label, numeric = false }: {
     column: OzonSortKey;

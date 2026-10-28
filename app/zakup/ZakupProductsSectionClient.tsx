@@ -1,5 +1,7 @@
 "use client";
 
+import { useWorkspaceDisclosure } from "../ui/useWorkspaceDisclosure";
+
 import Link from "next/link";
 
 import {
@@ -74,13 +76,7 @@ export default function ZakupProductsSectionClient({
     ReactNode;
 }) {
 
-  const [
-    expanded,
-    setExpanded,
-  ] =
-    useState(
-      false
-    );
+  const { expanded, toggle: toggleExpanded } = useWorkspaceDisclosure();
 
 
   const [
@@ -105,9 +101,7 @@ export default function ZakupProductsSectionClient({
   // ПЕРЕКЛЮЧЕНИЕ
   // ==========================================================
 
-  function toggleExpanded() {
-    setExpanded(previous => !previous);
-  }
+
 
   return (
 
