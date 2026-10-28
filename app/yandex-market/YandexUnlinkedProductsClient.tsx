@@ -699,7 +699,7 @@ export default function YandexUnlinkedProductsClient({
                           type="button"
 
                           className=
-                            "secondary-button yandex-unlinked-button"
+                            "primary-button yandex-unlinked-button"
 
                           disabled={
                             submitting
