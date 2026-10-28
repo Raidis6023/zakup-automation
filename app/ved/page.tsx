@@ -1,3 +1,4 @@
+import PageHeader from "../ui/PageHeader";
 import ExternalVedStatus from "./ExternalVedStatus";
 import Link
 from "next/link";
@@ -9,9 +10,6 @@ import {
 import {
   revalidatePath,
 } from "next/cache";
-
-import ThemeToggle
-from "../ThemeToggle";
 
 import WorkspaceCollapsiblePanel
 from "../WorkspaceCollapsiblePanel";
@@ -1108,41 +1106,11 @@ export default async function VedPage() {
           className="container"
         >
 
-          <header
-            className="header ved-header"
-          >
-
-            <div
-              className="ved-title-wrap"
-            >
-<h1
-                className="title"
-              >
-                ВЭД
-              </h1>
-
-
-              <p
-                className="subtitle"
-              >
-                Заказы в Китай и работа отдела ВЭД.
-              </p>
-
-            </div>
-
-
-            <div
-              className="header-actions ved-header-actions"
-            >
-
-              <ThemeToggle />
-
-
-
-
-            </div>
-
-          </header>
+          <PageHeader
+            variant="ved"
+            title="ВЭД"
+            description="Заказы в Китай и работа отдела ВЭД."
+          />
 
 
           <section
@@ -1235,41 +1203,11 @@ export default async function VedPage() {
             HEADER
             =================================== */}
 
-        <header
-          className="header ved-header"
-        >
-
-          <div
-            className="ved-title-wrap"
-          >
-<h1
-              className="title"
-            >
-              ВЭД
-            </h1>
-
-
-            <p
-              className="subtitle"
-            >
-              Заказы в Китай, переданные в работу отдела ВЭД.
-            </p>
-
-          </div>
-
-
-          <div
-            className="header-actions ved-header-actions"
-          >
-
-            <ThemeToggle />
-
-
-
-
-          </div>
-
-        </header>
+        <PageHeader
+            variant="ved"
+            title="ВЭД"
+            description="Заказы в Китай, переданные в работу отдела ВЭД."
+          />
 
 
         {/* ===================================
