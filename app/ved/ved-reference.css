@@ -272,7 +272,7 @@ th {
     12px;
 
   background:
-    var(--ws-surface-soft);
+    var(--ui-table-header-background, var(--ws-surface-soft));
 
   color:
     var(--ws-text-secondary);

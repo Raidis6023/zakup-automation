@@ -18,7 +18,7 @@
 .ozf-discontinued{opacity:.68;background:#111a2b}
 .ozf-discontinued td:first-child{background:#111a2b}
 .ozf-financial-table input[type=checkbox]{accent-color:#6e91ee;cursor:pointer}
-.ozf-filters select{width:100%;min-width:155px;background:#0d1524;color:#e5ecff;border:1px solid #354664;border-radius:9px;padding:12px}
+.ozf-filters select{width:100%;min-width:155px;border-radius:9px;padding:12px}
 
 /* Financial workbook conditional formatting and one dense scrollable grid */
 .ozf-financial-summary{overflow:hidden;padding:15px 18px}
@@ -200,7 +200,7 @@ html[data-theme="dark"] .ozf-page {
   z-index: 6;
   opacity: 1;
   color: var(--ozf-ink);
-  background: var(--ozf-soft) !important;
+  background: var(--ui-table-header-background, var(--ozf-soft)) !important;
   box-shadow: 0 1px 0 var(--ozf-border);
 }
 .ozf-page .ozf-financial-table thead th:first-child { left: 0; z-index: 8; }
@@ -260,7 +260,7 @@ html[data-theme="dark"] .ozf-page {
   z-index: 2;
   opacity: 1;
   color: var(--ozf-ink);
-  background: var(--ozf-soft);
+  background: var(--ui-table-header-background, var(--ozf-soft));
   box-shadow: 0 1px 0 var(--ozf-border);
 }
 .ozf-page .ozf-rates-scroll { overscroll-behavior: contain; }
@@ -307,6 +307,6 @@ html[data-theme="dark"] .ozf-page {
 .ozf-page.ymf .ozf-breakdown-table thead th,
 .ozf-page .ozf-table:not(.ozf-financial-table) thead th {
   color: var(--ozf-ink);
-  background: var(--ozf-soft);
+  background: var(--ui-table-header-background, var(--ozf-soft));
   opacity: 1;
 }

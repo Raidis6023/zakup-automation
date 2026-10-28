@@ -1981,3 +1981,21 @@ html[data-theme="dark"]
   outline: 2px solid var(--ws-blue, #11865d);
   outline-offset: -2px;
 }
+
+
+/* Keyboard navigation for long data grids and their adjacent filters.
+   Shared focus tokens; no changes to row heights, sticky offsets, or scroll. */
+:is(
+  .sku-list-status-select,
+  .sku-new-controls input,
+  .ozf-page .ozf-filters select,
+  .ozf-page .ozf-sort-control,
+  .ymf-controls input,
+  .ymf-controls button,
+  .ymf-rate-fields input,
+  .ymf .ozf-section-tools input,
+  .ved-reference-page .ved-action-button
+):focus-visible {
+  outline: var(--ui-focus-width, 2px) solid var(--ui-accent, var(--ws-blue));
+  outline-offset: var(--ui-focus-offset, 3px);
+}
