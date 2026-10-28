@@ -1,6 +1,8 @@
 /* One shared unit-economics table system for all marketplaces and reference pages. */
-.unit-page{min-height:calc(100vh - 80px);padding:24px 20px 38px;color:var(--ws-text);--unit-accent:#139a6b;}
-.unit-page>.header{position:sticky;top:80px;z-index:14;background:var(--ws-page);padding:8px 0 14px;border-bottom:1px solid var(--ws-border-soft);margin-bottom:14px;}
+.unit-page{min-height:calc(100vh - var(--home-topbar-height,80px));padding:0 20px 38px;color:var(--ws-text);--unit-accent:#139a6b;}
+/* PageHeader already uses the universal .workspace-content--module .header
+   sticky geometry. Do not add a second top offset or z-index here. */
+.unit-page>.header{background:var(--ws-page);}
 .unit-page .unit-body{width:100%;min-width:0;}
 .unit-page .unit-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:12px 0 14px;}
 .unit-actions-main{display:flex;gap:8px;flex-wrap:wrap;}
@@ -65,5 +67,5 @@
 .unit-upload small{font-weight:400;color:var(--ws-text-muted);}
 .unit-upload input{position:absolute;inset:0;opacity:0;cursor:pointer;}
 .unit-preview{margin-top:12px;}
-@media(max-width:900px){.unit-page{padding:18px 12px;}.unit-page>.header{top:80px;}.unit-table-toolbar{flex-wrap:wrap;}.unit-toolbar-right{width:100%;}.unit-toolbar-right input{min-width:0;flex:1;}.unit-model-caption{display:none;}}
-@media(max-width:800px){.unit-page>.header{position:static;}.unit-table-scroller{max-height:65vh;}}
+@media(max-width:900px){.unit-page{padding:0 12px 28px;}.unit-table-toolbar{flex-wrap:wrap;}.unit-toolbar-right{width:100%;}.unit-toolbar-right input{min-width:0;flex:1;}.unit-model-caption{display:none;}}
+@media(max-width:800px){.unit-table-scroller{max-height:65vh;}}

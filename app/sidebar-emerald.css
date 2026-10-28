@@ -1,25 +1,173 @@
-/* Single shared emerald navigation contract, adapted from the agreed sidebar reference. */
-.home-shell {--workspace-sidebar-expanded-width:190px;--workspace-sidebar-collapsed-width:60px;--emerald-nav:#40eeb5;--emerald-nav-muted:#91cdb8;}
-.home-shell .home-sidebar {padding-left:8px;padding-right:8px;background:linear-gradient(160deg,#041b15 0%,#03110e 55%,#051b15 100%);border-color:rgba(59,228,160,.25);}
-.home-shell .home-workspaces{gap:3px;}
-.home-shell .home-workspace-link {position:relative;isolation:isolate;min-height:38px;height:38px;box-sizing:border-box;padding:3px 10px;gap:10px;border-radius:21px;color:#c7e4d8!important;font-size:12px;font-weight:600;background:transparent;border:1px solid transparent;overflow:visible;transition:background .18s ease,color .18s ease,border-color .18s ease;}
-.home-shell .home-workspace-link:hover {color:white!important;background:rgba(28,147,108,.23);}
-.home-shell .home-workspace-link--active {background:linear-gradient(115deg,rgba(15,148,103,.68),rgba(5,62,47,.67));border-color:rgba(39,242,162,.69);box-shadow:inset 0 0 13px rgba(20,225,148,.13),0 0 11px rgba(12,201,131,.17);color:white!important;font-weight:750;}
-.home-shell .home-workspace-link--active::after{content:"✓";color:#46ffc1;font-size:17px;font-weight:700;margin-left:auto;}
-.home-shell .home-brand-icon,.home-shell .home-workspace-icon{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:0 0 26px;width:26px;height:26px;color:var(--emerald-nav-muted);z-index:0;}
-.home-shell .home-brand-icon svg,.home-shell .home-workspace-icon>svg,.home-shell .home-brand-icon>svg{width:23px;height:23px;max-width:23px;max-height:23px;fill:none;stroke:currentColor;}
-.home-shell .home-workspace-link--active .home-brand-icon,.home-shell .home-workspace-link--active .home-workspace-icon{color:#44ffbd;}
-.home-shell .home-workspace-link--active .home-brand-icon:before{content:"";position:absolute;inset:-5px;border:1.3px solid #40f2ad;border-radius:50%;box-shadow:0 0 10px rgba(32,238,164,.7),inset 0 0 9px rgba(25,230,151,.28);pointer-events:none;}
-.home-shell .home-workspace-link--active .home-brand-icon:after{content:"";position:absolute;z-index:-1;left:-18px;bottom:15px;width:62px;height:40px;opacity:.65;background:radial-gradient(ellipse at 35% 80%,rgba(33,255,169,.64),transparent 65%),radial-gradient(ellipse at 66% 25%,rgba(14,167,116,.34),transparent 70%);filter:blur(9px);pointer-events:none;}
-.home-shell .home-workspace-label{color:inherit;font-size:12px;line-height:1.25;min-width:0;white-space:nowrap;}
-.home-shell .home-workspace-icon{flex-basis:26px;}
-.home-shell .home-sidebar .home-workspaces-secondary{border-color:rgba(91,205,161,.22);}
-.home-shell .home-sidebar-toggle{color:var(--emerald-nav-muted);}
-.home-shell--sidebar-collapsed .home-workspace-link{justify-content:center;padding:3px 0;gap:0;}
-.home-shell--sidebar-collapsed .home-workspace-link--active::after{display:none;}
-.home-shell--sidebar-collapsed .home-workspace-label{display:none;}
-.home-shell--sidebar-collapsed .home-brand-icon{margin:auto;}
-.home-shell .home-company-logo{background:linear-gradient(160deg,#041b15,#03110e);border-color:rgba(59,228,160,.25);}
-@media(max-width:1100px){.home-shell{--workspace-sidebar-expanded-width:190px;--workspace-sidebar-collapsed-width:60px;}}
-@media(max-width:800px){.home-shell .home-sidebar{background:#051a14;}.home-shell .home-workspaces{gap:7px;}.home-shell .home-workspace-link{height:40px;min-height:40px;padding:5px 10px;}.home-shell--sidebar-collapsed .home-workspace-label{display:inline;}}
-@media(prefers-reduced-motion:reduce){.home-shell .home-workspace-link{transition:none;}}
+/* Emerald navigation is isolated from marketplace page accent variables.
+   Shared dimensions apply to every menu item; one stylesheet owns the styling. */
+.home-shell {
+  --workspace-sidebar-expanded-width: 230px;
+  --workspace-sidebar-collapsed-width: 72px;
+  --emerald-nav: #40eeb5;
+  --emerald-nav-muted: #91cdb8;
+  --emerald-nav-bg: #051913;
+}
+
+.home-shell .home-sidebar {
+  padding-left: 10px;
+  padding-right: 10px;
+  background: linear-gradient(160deg, #041b15 0%, #03110e 55%, #051b15 100%);
+  border-color: rgba(59, 228, 160, .25);
+}
+
+.home-shell .home-workspaces { gap: 5px; }
+
+.home-shell .home-sidebar .home-workspace-link {
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  height: 46px;
+  min-height: 46px;
+  padding: 4px 11px;
+  gap: 12px;
+  border: 1px solid transparent;
+  border-radius: 23px;
+  color: #c7e4d8;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  overflow: visible;
+  transition: background-color .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease;
+}
+
+/* Menu remains emerald even when the contents of a marketplace page turn
+   blue (Ozon), purple (WB), or orange (Yandex). Do not overwrite --ws-* here. */
+.home-shell .home-sidebar .home-workspace-link:hover {
+  color: #fff;
+  background: rgba(28,147,108,.23);
+  border-color: rgba(49,220,151,.22);
+}
+.home-shell .home-sidebar .home-workspace-link--active,
+.home-shell .home-sidebar .home-workspace-link--active:hover {
+  color: #fff;
+  background: linear-gradient(115deg,rgba(15,148,103,.68),rgba(5,62,47,.67));
+  border-color: rgba(39,242,162,.69);
+  box-shadow: inset 0 0 13px rgba(20,225,148,.13),0 0 11px rgba(12,201,131,.17);
+  font-weight: 750;
+}
+
+.home-shell .home-sidebar .home-workspace-link--active::after {
+  content: "✓";
+  color: #46ffc1;
+  font-size: 18px;
+  font-weight: 700;
+  margin-left: auto;
+}
+
+.home-shell .home-sidebar .home-brand-icon,
+.home-shell .home-sidebar .home-workspace-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  color: var(--emerald-nav-muted);
+  z-index: 0;
+}
+.home-shell .home-sidebar .home-brand-icon svg,
+.home-shell .home-sidebar .home-workspace-icon > svg {
+  display: block;
+  width: 28px;
+  height: 28px;
+  max-width: 28px;
+  max-height: 28px;
+  fill: none;
+  stroke: currentColor;
+}
+
+.home-shell .home-sidebar .home-workspace-link--active .home-brand-icon,
+.home-shell .home-sidebar .home-workspace-link--active .home-workspace-icon {
+  color: #44ffbd;
+}
+.home-shell .home-sidebar .home-workspace-link--active .home-brand-icon::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 1.3px solid #40f2ad;
+  border-radius: 50%;
+  box-shadow: 0 0 11px rgba(32,238,164,.67),inset 0 0 8px rgba(25,230,151,.28);
+  pointer-events: none;
+}
+.home-shell .home-sidebar .home-workspace-link--active .home-brand-icon::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: -18px;
+  bottom: 17px;
+  width: 72px;
+  height: 45px;
+  opacity: .62;
+  background:
+    radial-gradient(ellipse at 35% 80%,rgba(33,255,169,.64),transparent 65%),
+    radial-gradient(ellipse at 66% 25%,rgba(14,167,116,.34),transparent 70%);
+  filter: blur(9px);
+  pointer-events: none;
+}
+.home-shell .home-sidebar .home-workspace-label {
+  color: inherit;
+  font-size: 14px;
+  font-weight: inherit;
+  line-height: 1.25;
+  min-width: 0;
+  white-space: nowrap;
+}
+.home-shell .home-sidebar .home-workspaces-secondary {
+  border-color: rgba(91,205,161,.22);
+}
+.home-shell .home-sidebar-toggle { color: var(--emerald-nav-muted); }
+
+/* The collapsed version retains a centered 34px glyph and its neon circle. */
+.home-shell--sidebar-collapsed .home-sidebar {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+.home-shell--sidebar-collapsed .home-sidebar .home-workspace-link {
+  justify-content: center;
+  padding: 4px 0;
+  gap: 0;
+}
+.home-shell--sidebar-collapsed .home-sidebar .home-workspace-link--active::after,
+.home-shell--sidebar-collapsed .home-sidebar .home-workspace-label {
+  display: none;
+}
+.home-shell--sidebar-collapsed .home-sidebar .home-brand-icon,
+.home-shell--sidebar-collapsed .home-sidebar .home-workspace-icon {
+  margin: 0 auto;
+}
+.home-shell .home-company-logo {
+  background: linear-gradient(160deg,#041b15,#03110e);
+  border-color: rgba(59,228,160,.25);
+}
+
+/* On narrower desktop screens preserve usable width for wide unit tables. */
+@media (min-width: 801px) and (max-width: 1100px) {
+  .home-shell {
+    --workspace-sidebar-expanded-width: 212px;
+    --workspace-sidebar-collapsed-width: 72px;
+  }
+  .home-shell .home-sidebar .home-workspace-link { font-size: 13px; }
+  .home-shell .home-sidebar .home-workspace-label { font-size: 13px; }
+}
+@media (max-width: 800px) {
+  .home-shell .home-sidebar { background: #051a14; }
+  .home-shell .home-workspaces { gap: 7px; }
+  .home-shell .home-sidebar .home-workspace-link {
+    height: 46px;
+    min-height: 46px;
+    padding: 5px 12px;
+    gap: 12px;
+  }
+  .home-shell--sidebar-collapsed .home-sidebar .home-workspace-label { display: inline; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-shell .home-sidebar .home-workspace-link { transition: none; }
+}
