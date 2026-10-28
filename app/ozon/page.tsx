@@ -1349,7 +1349,7 @@ export default async function OzonPage() {
 
           <div
             className=
-              `header-actions ozon-header-actions ${headerStyles.actions}`
+              {`header-actions ozon-header-actions ${headerStyles.actions}`}
           >
 
             <ThemeToggle />
