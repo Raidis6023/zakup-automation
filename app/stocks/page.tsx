@@ -1,7 +1,7 @@
+import PageHeader from "../ui/PageHeader";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import ThemeToggle from "../ThemeToggle";
 import StocksClient, { type StockRow, type StockEvent } from "./StocksClient";
 import "./stocks.css";
 
@@ -172,16 +172,12 @@ export default async function StocksPage({ searchParams }: {
   catch (cause) { error = cause instanceof Error ? cause.message : "Не удалось получить остатки"; }
   return (
     <main className="page stocks-page"><div className="container">
-      <header className="header">
-        <div>
-          <div className="small-label">СКЛАДСКОЙ УЧЁТ · ТЕСТОВЫЙ РЕЖИМ</div>
-          <h1 className="title">Остатки</h1>
-          <p className="subtitle">Контроль еженедельных Excel-выгрузок АВЕДЭКС и ответственного хранения.</p>
-        </div>
-        <div className="header-actions">
-          <ThemeToggle />
-        </div>
-      </header>
+      <PageHeader
+          title="Остатки"
+          eyebrow="СКЛАДСКОЙ УЧЁТ · ТЕСТОВЫЙ РЕЖИМ"
+          description="Контроль еженедельных Excel-выгрузок АВЕДЭКС и ответственного хранения."
+          showThemeToggle
+        />
       <section className="section stocks-upload">
         <div className="stocks-buttons">
           <Link className="primary-button stocks-upload-link" href="/stock-import">Загрузить остатки АВЕДЭКС</Link>
