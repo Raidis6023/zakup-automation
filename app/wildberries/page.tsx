@@ -2,7 +2,7 @@ import type {
   ReactNode,
 } from "react";
 
-import Breadcrumbs from "../ui/Breadcrumbs";
+
 
 import ThemeToggle
 from "../ThemeToggle";
@@ -1039,12 +1039,7 @@ export default async function WildberriesPage() {
             <ThemeToggle />
 
 
-            <Breadcrumbs
-              items={[
-                { label: "Главная", href: "/" },
-                { label: "Wildberries", shortLabel: "WB", href: "/wildberries" },
-              ]}
-            />
+            
 
           </div>
 
