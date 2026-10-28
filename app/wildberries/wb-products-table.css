@@ -404,7 +404,7 @@ th {
   background:
     var(
       --table-header-bg,
-      var(--ws-surface-soft)
+      var(--ui-table-header-background, var(--ws-surface-soft))
     );
 
   color:

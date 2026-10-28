@@ -30,6 +30,11 @@
   --ui-status-dot-size: 8px;
   --ui-metric-card-gap: 13px;
   --ui-metric-card-gap-ved: 14px;
+  --ui-metric-card-min-height: 104px;
+  --ui-metric-card-padding: 15px 16px;
+  --ui-metric-tile-size: var(--ui-metric-icon-size);
+  --ui-metric-svg-size: 24px;
+  --ui-summary-icon-svg-size: 22px;
   --ui-metric-icon-size: 42px;
   --ui-metric-icon-size-large: 48px;
   --ui-enot-table-min-width: 1180px;
@@ -69,6 +74,7 @@
   --ui-text-secondary: var(--ws-text-secondary, #496985);
   --ui-surface: var(--ws-surface-soft, #f3f8fd);
   --ui-surface-hover: var(--ws-surface-hover, #edf6f1);
+  --ui-table-header-background: var(--ws-surface-soft, #f3f8fd);
   --ui-border: var(--ws-border, #d8e7f4);
   --ui-primary-text: #ffffff;
   --ui-primary-background: var(--ui-accent);

@@ -3,6 +3,12 @@
    ============================================================ */
 
 .ved-reference-page {
+  --ui-metric-card-gap: var(--ui-metric-card-gap-ved);
+  --ui-metric-card-min-height: 94px;
+  --ui-metric-card-padding: 15px;
+  --ui-metric-tile-size: var(--ui-metric-icon-size-large);
+  --ui-metric-svg-size: 25px;
+  --ui-metric-tile-radius: 11px;
   --ved-blue:
     var(--ws-blue);
 
@@ -74,76 +80,6 @@
 
   margin-bottom:
     18px;
-}
-
-
-.ved-reference-page
-.ved-summary-card {
-  display:
-    flex;
-
-  align-items:
-    center;
-
-  gap:
-    var(--ui-metric-card-gap-ved);
-
-  min-height:
-    94px;
-
-  padding:
-    15px;
-}
-
-
-.ved-reference-page
-.ved-summary-icon {
-  display:
-    inline-flex;
-
-  align-items:
-    center;
-
-  justify-content:
-    center;
-
-  width:
-    var(--ui-metric-icon-size-large);
-
-  height:
-    var(--ui-metric-icon-size-large);
-
-  flex:
-    0 0 var(--ui-metric-icon-size-large);
-
-  border-radius:
-    11px;
-}
-
-
-.ved-reference-page
-.ved-summary-icon
-svg {
-  width:
-    25px;
-
-  height:
-    25px;
-
-  fill:
-    none;
-
-  stroke:
-    currentColor;
-
-  stroke-width:
-    1.9;
-
-  stroke-linecap:
-    round;
-
-  stroke-linejoin:
-    round;
 }
 
 

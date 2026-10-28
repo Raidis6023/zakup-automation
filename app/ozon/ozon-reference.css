@@ -1330,7 +1330,7 @@ html[data-theme="dark"]
   z-index: 2;
   padding: 0;
   height: 42px;
-  background: var(--ws-surface-soft);
+  background: var(--ui-table-header-background, var(--ws-surface-soft));
   border-right: 1px solid var(--ws-border-soft);
   border-bottom: 1px solid var(--ws-border);
   box-shadow: 0 1px 0 var(--ws-border);

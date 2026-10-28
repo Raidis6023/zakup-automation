@@ -1547,17 +1547,17 @@ html[data-theme="dark"]
     center;
 
   width:
-    42px;
+    var(--ui-summary-icon-size);
 
   height:
-    42px;
+    var(--ui-summary-icon-size);
 
   flex:
     0 0
-    42px;
+    var(--ui-summary-icon-size);
 
   border-radius:
-    10px;
+    var(--ui-panel-icon-radius);
 }
 
 :is(
@@ -1567,10 +1567,10 @@ html[data-theme="dark"]
   .yandex-reference-page .ym-summary-icon svg
 ) {
   width:
-    22px;
+    var(--ui-summary-icon-svg-size);
 
   height:
-    22px;
+    var(--ui-summary-icon-svg-size);
 
   fill:
     none;
@@ -1815,7 +1815,8 @@ html[data-theme="dark"]
    layout rules remain local. Edit --ui-panel-* tokens to update all three. */
 :is(.ozon-reference-page .ozon-products-toggle,
     .wb-reference-page .wb-products-toggle,
-    .zakup-reference-page .zakup-products-toggle) {
+    .zakup-reference-page .zakup-products-toggle,
+    .yandex-reference-page .ym-products-toggle) {
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -1831,13 +1832,15 @@ html[data-theme="dark"]
 
 :is(.ozon-reference-page .ozon-products-toggle:hover,
     .wb-reference-page .wb-products-toggle:hover,
-    .zakup-reference-page .zakup-products-toggle:hover) {
+    .zakup-reference-page .zakup-products-toggle:hover,
+    .yandex-reference-page .ym-products-toggle:hover) {
   background: var(--ws-surface-hover);
 }
 
 :is(.ozon-reference-page .ozon-products-toggle-copy,
     .wb-reference-page .wb-products-toggle-copy,
-    .zakup-reference-page .zakup-products-toggle-copy) {
+    .zakup-reference-page .zakup-products-toggle-copy,
+    .yandex-reference-page .ym-products-toggle-copy) {
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -1845,7 +1848,8 @@ html[data-theme="dark"]
 
 :is(.ozon-reference-page .ozon-products-toggle-copy strong,
     .wb-reference-page .wb-products-toggle-title,
-    .zakup-reference-page .zakup-products-toggle-title) {
+    .zakup-reference-page .zakup-products-toggle-title,
+    .yandex-reference-page .ym-products-toggle-title) {
   color: var(--ws-text);
   font-size: var(--ui-panel-title-size);
   font-weight: 750;
@@ -1853,19 +1857,61 @@ html[data-theme="dark"]
 
 :is(.ozon-reference-page .ozon-products-toggle-copy > span,
     .wb-reference-page .wb-products-toggle-subtitle,
-    .zakup-reference-page .zakup-products-toggle-subtitle) {
+    .zakup-reference-page .zakup-products-toggle-subtitle,
+    .yandex-reference-page .ym-products-toggle-subtitle) {
   font-size: var(--ui-panel-caption-size);
 }
 
 :is(.ozon-reference-page .ozon-products-toggle-icon svg,
     .wb-reference-page .wb-products-toggle-icon svg,
-    .zakup-reference-page .zakup-products-icon svg) {
+    .zakup-reference-page .zakup-products-icon svg,
+    .yandex-reference-page .ym-products-section-icon svg) {
   width: var(--ui-panel-icon-svg-size);
   height: var(--ui-panel-icon-svg-size);
 }
 
 :is(.wb-reference-page .wb-products-toggle-icon svg,
-    .zakup-reference-page .zakup-products-icon svg) {
+    .zakup-reference-page .zakup-products-icon svg,
+    .yandex-reference-page .ym-products-section-icon svg) {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Unified KPI-card geometry for Procurement / VED. Their distinct
+   statuses, contents, measurements and responsive exceptions stay local. */
+:is(.zakup-reference-page .zakup-v2-metric-card,
+    .zakup-reference-page .zakup-v2-result-card,
+    .ved-reference-page .ved-summary-card) {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-metric-card-gap);
+  box-sizing: border-box;
+  min-height: var(--ui-metric-card-min-height);
+  padding: var(--ui-metric-card-padding);
+  background: var(--ws-surface);
+  border: 1px solid var(--ws-border);
+  border-radius: var(--ui-surface-radius);
+}
+:is(.zakup-reference-page .zakup-v2-metric-icon,
+    .zakup-reference-page .zakup-v2-result-icon,
+    .ved-reference-page .ved-summary-icon,
+    .yandex-reference-page .ym-products-section-icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ui-metric-tile-size);
+  height: var(--ui-metric-tile-size);
+  flex: 0 0 var(--ui-metric-tile-size);
+  border-radius: var(--ui-metric-tile-radius, var(--ui-panel-icon-radius));
+}
+:is(.zakup-reference-page .zakup-v2-metric-icon svg,
+    .zakup-reference-page .zakup-v2-result-icon svg,
+    .ved-reference-page .ved-summary-icon svg) {
+  width: var(--ui-metric-svg-size);
+  height: var(--ui-metric-svg-size);
   fill: none;
   stroke: currentColor;
   stroke-width: 1.9;
