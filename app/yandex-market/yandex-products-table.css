@@ -53,61 +53,7 @@
 }
 
 
-.yandex-reference-page
-.ym-products-toggle {
-  display:
-    flex;
-
-  align-items:
-    center;
-
-  gap:
-    12px;
-
-  width:
-    100%;
-
-  min-height:
-    72px;
-
-  box-sizing:
-    border-box;
-
-  padding:
-    12px 14px;
-
-  border:
-    none;
-
-  background:
-    transparent;
-
-  color:
-    inherit;
-
-  font:
-    inherit;
-
-  text-align:
-    left;
-
-  cursor:
-    pointer;
-
-  transition:
-    background-color
-      0.12s
-      ease;
-}
-
-
-.yandex-reference-page
-.ym-products-toggle:hover {
-  background:
-    var(--ws-surface-hover);
-}
-
-
+.yandex-reference-page .ym-products-toggle { color: inherit; font: inherit; transition: background-color 0.12s ease; }
 .yandex-reference-page
 .ym-products-toggle:focus-visible {
   outline:
@@ -123,108 +69,12 @@
    SECTION ICON
    ============================================================ */
 
-.yandex-reference-page
-.ym-products-section-icon {
-  display:
-    inline-flex;
-
-  align-items:
-    center;
-
-  justify-content:
-    center;
-
-  width:
-    42px;
-
-  height:
-    42px;
-
-  flex:
-    0 0 42px;
-
-  border-radius:
-    10px;
-
-  color:
-    var(--ym-products-orange);
-
-  background:
-    rgba(
-      230,
-      152,
-      62,
-      0.13
-    );
-}
-
-
-.yandex-reference-page
-.ym-products-section-icon
-svg {
-  width:
-    23px;
-
-  height:
-    23px;
-
-  fill:
-    none;
-
-  stroke:
-    currentColor;
-
-  stroke-width:
-    1.9;
-
-  stroke-linecap:
-    round;
-
-  stroke-linejoin:
-    round;
-}
-
-
+.yandex-reference-page .ym-products-section-icon { color: var(--ym-products-orange); background: rgba(230, 152, 62, 0.13); }
 /* ============================================================
    SECTION COPY
    ============================================================ */
 
-.yandex-reference-page
-.ym-products-toggle-copy {
-  display:
-    flex;
-
-  flex-direction:
-    column;
-
-  min-width:
-    0;
-}
-
-
-.yandex-reference-page
-.ym-products-toggle-title {
-  color:
-    var(--ws-text);
-
-  font-size:
-    15px;
-
-  font-weight:
-    750;
-}
-
-
-.yandex-reference-page
-.ym-products-toggle-subtitle {
-  margin-top:
-    3px;
-
-  font-size:
-    11px;
-}
-
-
+.yandex-reference-page .ym-products-toggle-subtitle { margin-top: 3px; }
 /* ============================================================
    TABLE CONTENT
    ============================================================ */
@@ -342,7 +192,7 @@ svg {
   background:
     var(
       --table-header-bg,
-      var(--ws-surface-soft)
+      var(--ui-table-header-background, var(--ws-surface-soft))
     );
 
   border-bottom:
