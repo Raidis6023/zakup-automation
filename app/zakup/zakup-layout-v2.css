@@ -1258,62 +1258,7 @@ svg {
 }
 
 
-.zakup-reference-page
-.zakup-products-toggle {
-  display:
-    flex;
-
-  align-items:
-    center;
-
-  gap:
-    12px;
-
-  width:
-    100%;
-
-  min-height:
-    72px;
-
-  box-sizing:
-    border-box;
-
-  padding:
-    12px
-    14px;
-
-  border:
-    none;
-
-  background:
-    transparent;
-
-  color:
-    inherit;
-
-  font:
-    inherit;
-
-  text-align:
-    left;
-
-  cursor:
-    pointer;
-
-  transition:
-    background-color
-      0.12s
-      ease;
-}
-
-
-.zakup-reference-page
-.zakup-products-toggle:hover {
-  background:
-    var(--ws-surface-hover);
-}
-
-
+.zakup-reference-page .zakup-products-toggle { color: inherit; font: inherit; transition: background-color 0.12s ease; }
 .zakup-reference-page
 .zakup-products-toggle:focus-visible {
   outline:
@@ -1368,68 +1313,7 @@ svg {
 }
 
 
-.zakup-reference-page
-.zakup-products-icon
-svg {
-  width:
-    23px;
-
-  height:
-    23px;
-
-  fill:
-    none;
-
-  stroke:
-    currentColor;
-
-  stroke-width:
-    1.9;
-
-  stroke-linecap:
-    round;
-
-  stroke-linejoin:
-    round;
-}
-
-
-.zakup-reference-page
-.zakup-products-toggle-copy {
-  display:
-    flex;
-
-  flex-direction:
-    column;
-
-  min-width:
-    0;
-}
-
-
-.zakup-reference-page
-.zakup-products-toggle-title {
-  color:
-    var(--ws-text);
-
-  font-size:
-    15px;
-
-  font-weight:
-    750;
-}
-
-
-.zakup-reference-page
-.zakup-products-toggle-subtitle {
-  margin-top:
-    3px;
-
-  font-size:
-    11px;
-}
-
-
+.zakup-reference-page .zakup-products-toggle-subtitle { margin-top: 3px; }
 .zakup-reference-page
 .zakup-products-table-content {
   border-top:
