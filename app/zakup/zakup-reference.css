@@ -39,19 +39,6 @@
 }
 
 
-/* ============================================================
-   HEADER
-   ============================================================ */
-
-.zakup-reference-page
-.zakup-header {
-  align-items:
-    center;
-
-  margin-bottom:
-    18px;
-}
-
 
 .zakup-reference-page
 .zakup-title-block {
@@ -111,18 +98,6 @@ svg {
     23px;
 }
 
-
-.zakup-reference-page
-.zakup-header-actions {
-  display:
-    flex;
-
-  align-items:
-    center;
-
-  gap:
-    10px;
-}
 
 
 .zakup-reference-page
@@ -866,19 +841,6 @@ svg {
     round;
 }
 
-
-/* ============================================================
-   ТОВАРЫ
-   ============================================================ */
-
-.zakup-reference-page
-.zakup-products-section {
-  padding:
-    0;
-
-  overflow:
-    hidden;
-}
 
 
 .zakup-reference-page

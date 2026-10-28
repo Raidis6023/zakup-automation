@@ -24,6 +24,10 @@
   --ui-surface-section-gap: 18px;
   --ui-surface-grid-gap: 12px;
   --ui-metric-grid-gap: 12px;
+  --ui-summary-card-min-height: 88px;
+  --ui-summary-icon-size: 42px;
+  --ui-summary-card-gap: 12px;
+  --ui-status-dot-size: 8px;
   --ui-metric-card-gap: 13px;
   --ui-metric-card-gap-ved: 14px;
   --ui-metric-icon-size: 42px;
