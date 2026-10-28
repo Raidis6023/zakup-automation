@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Breadcrumbs, { type BreadcrumbItem } from "./ui/Breadcrumbs";
 import WorkspaceDecoration from "./WorkspaceDecoration";
-import "./fixed-workspace-brand.css";
 
 /**
  * Keep breadcrumbs and stripes fixed without detaching them from the
