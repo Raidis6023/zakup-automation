@@ -1669,15 +1669,15 @@ html[data-theme="dark"]
   padding-right: 14px;
 }
 
-.zakup-reference-page .zakup-products-header-links .secondary-button {
+.zakup-reference-page .zakup-products-header-links .navigation-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   text-decoration: none;
 }
 
-.zakup-reference-page .zakup-products-header-links .secondary-button:hover,
-.zakup-reference-page .zakup-products-header-links .secondary-button:focus-visible {
+.zakup-reference-page .zakup-products-header-links .navigation-button:hover,
+.zakup-reference-page .zakup-products-header-links .navigation-button:focus-visible {
   text-decoration: none;
 }
 

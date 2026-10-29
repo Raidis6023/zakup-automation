@@ -1,6 +1,7 @@
 "use client";
 import {useState} from "react";
 import {useRouter} from "next/navigation";
+import Button from "../ui/Button";
 type Status="ved_in_work"|"production_confirmed"|"in_transit"|"cancelled";
 const labels:Record<Status,string>={
  ved_in_work:"В работе",
@@ -34,9 +35,9 @@ export default function ExternalVedStatus({id,current,number}:{id:string;current
    style={{color:"var(--text)",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:8,padding:"7px"}}>
    {Object.entries(labels).map(([key,label])=><option value={key} key={key}>{label}</option>)}
   </select>
-  <button type="button" className="secondary-button" disabled={busy||value===current} onClick={save}>
+  <Button type="button" variant="secondary" disabled={busy||value===current} onClick={save}>
    {busy?"Сохраняем...":"Сохранить"}
-  </button>
+  </Button>
   {error&&<span role="alert" style={{color:"#d37a71",fontSize:12,width:"100%"}}>{error}</span>}
  </div>;
 }

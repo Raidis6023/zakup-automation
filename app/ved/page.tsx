@@ -1,4 +1,6 @@
 import PageHeader from "../ui/PageHeader";
+import Button from "../ui/Button";
+import ButtonLink from "../ui/ButtonLink";
 import ExternalVedStatus from "./ExternalVedStatus";
 import Link
 from "next/link";
@@ -1715,12 +1717,12 @@ export default async function VedPage() {
                                           />
 
 
-                                          <button
+                                          <Button
                                             type="submit"
-                                            className="primary-button ved-action-button"
+                                            className="ved-action-button"
                                           >
                                             Взять в работу
-                                          </button>
+                                          </Button>
 
                                         </form>
 
@@ -1728,14 +1730,15 @@ export default async function VedPage() {
 
                                       : (
 
-                                        <Link
+                                        <ButtonLink
                                           href={
                                             `/ved-orders/${order.id}?from=ved`
                                           }
-                                          className="secondary-button ved-action-button"
+                                          variant="secondary"
+                                          className="ved-action-button"
                                         >
                                           Открыть
-                                        </Link>
+                                        </ButtonLink>
 
                                       )
                                   }

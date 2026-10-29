@@ -2,6 +2,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import Button from "../ui/Button";
 
 // ============================================================
 // ТИП ТОВАРА
@@ -485,16 +486,16 @@ export default function ZakupProductsTableClient({
           Продажи за 28 дней, остатки в штуках
         </span>
 
-        <button
+        <Button
           type="button"
-          className="secondary-button"
+          variant="secondary"
           aria-expanded={showBreakdown}
           onClick={toggleBreakdown}
         >
           {showBreakdown
             ? "Скрыть разбивку по маркетплейсам"
             : "Показать разбивку по маркетплейсам"}
-        </button>
+        </Button>
       </div>
 
       <div
