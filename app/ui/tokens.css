@@ -75,6 +75,10 @@
   --ui-button-primary-legacy-weight: 650;
 }
 
+/* All Workspace routes inherit control colors from their shared shell.
+ * A page with .workspace-ui can still override its own palette (WB, unit economics).
+ * Without this, Button/Link on other routes had unresolved --ui-primary-* vars. */
+.home-shell,
 .workspace-ui {
   --ui-accent: var(--ws-blue, #11865d);
   --ui-accent-hover: var(--ws-blue-hover, #0b6c4b);

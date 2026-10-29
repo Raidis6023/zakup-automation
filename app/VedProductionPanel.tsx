@@ -1,5 +1,7 @@
 "use client";
 
+import Button from "./ui/Button";
+
 import {
   useEffect,
   useState,
@@ -1633,30 +1635,8 @@ export default function VedProductionPanel(
                   }
                 }
 
-                style={{
-                  width:
-                    "100%",
-
-                  minHeight:
-                    "42px",
-
-                  padding:
-                    "0 11px",
-
-                  border:
-                    arrivalDateError
-                      ? "1px solid #d64545"
-                      : "1px solid var(--border)",
-
-                  borderRadius:
-                    "8px",
-
-                  background:
-                    "var(--background)",
-
-                  color:
-                    "var(--text)",
-                }}
+                className="ws-editor-input ws-editor-input--tall"
+                style={{ borderColor: arrivalDateError ? "#d64545" : undefined }}
               />
 
 
@@ -1685,10 +1665,10 @@ export default function VedProductionPanel(
             </div>
 
 
-            <button
+            <Button
               type="button"
 
-              className="primary-button"
+              
 
               disabled={
                 submitting
@@ -1705,7 +1685,7 @@ export default function VedProductionPanel(
               {submitting
                 ? "Подтверждаем..."
                 : "Подтвердить прибытие"}
-            </button>
+            </Button>
 
           </div>
 
@@ -2005,30 +1985,8 @@ export default function VedProductionPanel(
                   }
                 }
 
-                style={{
-                  width:
-                    "100%",
-
-                  minHeight:
-                    "42px",
-
-                  padding:
-                    "0 11px",
-
-                  border:
-                    transitDateError
-                      ? "1px solid #d64545"
-                      : "1px solid var(--border)",
-
-                  borderRadius:
-                    "8px",
-
-                  background:
-                    "var(--background)",
-
-                  color:
-                    "var(--text)",
-                }}
+                className="ws-editor-input ws-editor-input--tall"
+                style={{ borderColor: transitDateError ? "#d64545" : undefined }}
               />
 
 
@@ -2057,10 +2015,10 @@ export default function VedProductionPanel(
             </div>
 
 
-            <button
+            <Button
               type="button"
 
-              className="primary-button"
+              
 
               disabled={
                 submitting
@@ -2077,7 +2035,7 @@ export default function VedProductionPanel(
               {submitting
                 ? "Подтверждаем..."
                 : "Подтвердить отправку"}
-            </button>
+            </Button>
 
           </div>
 
@@ -2224,28 +2182,7 @@ export default function VedProductionPanel(
               }
             }
 
-            style={{
-              width:
-                "100%",
-
-              minHeight:
-                "42px",
-
-              padding:
-                "0 11px",
-
-              border:
-                "1px solid var(--border)",
-
-              borderRadius:
-                "8px",
-
-              background:
-                "var(--background)",
-
-              color:
-                "var(--text)",
-            }}
+            className="ws-editor-input ws-editor-input--tall"
           />
 
         </div>
@@ -2298,30 +2235,8 @@ export default function VedProductionPanel(
               }
             }
 
-            style={{
-              width:
-                "100%",
-
-              minHeight:
-                "42px",
-
-              padding:
-                "0 11px",
-
-              border:
-                productionDateError
-                  ? "1px solid #d64545"
-                  : "1px solid var(--border)",
-
-              borderRadius:
-                "8px",
-
-              background:
-                "var(--background)",
-
-              color:
-                "var(--text)",
-            }}
+            className="ws-editor-input ws-editor-input--tall"
+                style={{ borderColor: productionDateError ? "#d64545" : undefined }}
           />
 
 
@@ -2371,11 +2286,10 @@ export default function VedProductionPanel(
         }}
       >
 
-        <button
+        <Button
           type="button"
 
-          className=
-            "primary-button"
+          
 
           disabled={
             submitting
@@ -2394,7 +2308,7 @@ export default function VedProductionPanel(
             ? "Подтверждаем..."
             : "Подтвердить передачу в производство"}
 
-        </button>
+        </Button>
 
 
         <div

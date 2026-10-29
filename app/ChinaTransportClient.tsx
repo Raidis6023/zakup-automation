@@ -1,5 +1,7 @@
 "use client";
 
+import Button from "./ui/Button";
+
 import {
   useEffect,
   useState,
@@ -947,40 +949,17 @@ export default function ChinaTransportClient() {
                 }
               }
 
-              style={{
-                width:
-                  "180px",
-
-                minHeight:
-                  "44px",
-
-                padding:
-                  "0 14px",
-
-                borderRadius:
-                  "10px",
-
-                border:
-                  "1px solid var(--border)",
-
-                background:
-                  "var(--card)",
-
-                color:
-                  "var(--text)",
-
-                fontSize:
-                  "16px",
-              }}
+              className="ws-editor-input ws-editor-input--large"
+              style={{ width: "180px", fontSize: "16px" }}
             />
 
           </label>
 
 
-          <button
+          <Button
             type="button"
 
-            className="primary-button"
+            
 
             disabled={
               loading
@@ -999,7 +978,7 @@ export default function ChinaTransportClient() {
               ? "Считаем..."
               : "Пересчитать"}
 
-          </button>
+          </Button>
 
         </div>
 
@@ -2441,37 +2420,17 @@ export default function ChinaTransportClient() {
                     }
                   }
 
-                  style={{
-                    minHeight:
-                      "44px",
-
-                    width:
-                      "260px",
-
-                    padding:
-                      "0 14px",
-
-                    borderRadius:
-                      "10px",
-
-                    border:
-                      "1px solid var(--border)",
-
-                    background:
-                      "var(--card)",
-
-                    color:
-                      "var(--text)",
-                  }}
+                  className="ws-editor-input ws-editor-input--large"
+              style={{ width: "260px" }}
                 />
 
               </label>
 
 
-              <button
+              <Button
                 type="button"
 
-                className="primary-button"
+                
 
                 disabled={
                   creatingOrder
@@ -2495,7 +2454,7 @@ export default function ChinaTransportClient() {
                   ? "Создаём..."
                   : "Создать заказ"}
 
-              </button>
+              </Button>
 
             </div>
 

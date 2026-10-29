@@ -1,5 +1,7 @@
 "use client";
 
+import Button from "./ui/Button";
+
 import {
   useEffect,
   useState,
@@ -542,36 +544,15 @@ export default function VedTakeInWorkPanel(
               }
             }
 
-            style={{
-              width:
-                "220px",
-
-              minHeight:
-                "40px",
-
-              padding:
-                "0 11px",
-
-              border:
-                "1px solid var(--border)",
-
-              borderRadius:
-                "8px",
-
-              background:
-                "var(--background)",
-
-              color:
-                "var(--text)",
-            }}
+            className="ws-editor-input"
+            style={{ width: "220px" }}
           />
 
 
-          <button
+          <Button
             type="button"
 
-            className=
-              "primary-button"
+            
 
             disabled={
               submitting
@@ -590,7 +571,7 @@ export default function VedTakeInWorkPanel(
               ? "Принимаем..."
               : "Взять в работу"}
 
-          </button>
+          </Button>
 
         </div>
 
