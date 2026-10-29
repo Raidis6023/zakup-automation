@@ -2243,3 +2243,60 @@ html[data-theme="dark"]
   z-index: 2;
   background: var(--ui-table-header-background, var(--ws-surface-soft, var(--surface-soft)));
 }
+
+/* Stage 3: a single reliable responsive summary-grid contract. The old
+   five-column rule could override local marketplace media styles. */
+@media (max-width: 1350px) {
+  .workspace-content--module :is(.ws-summary-grid,
+    .ozon-reference-page .ozon-summary-grid,
+    .wb-reference-page .wb-summary-grid) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .workspace-content--module :is(
+    .ozon-reference-page .ozon-sync-info-grid,
+    .wb-reference-page .wb-sync-info-grid) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 800px) {
+  .workspace-content--module :is(.ws-summary-grid,
+    .ozon-reference-page .ozon-summary-grid,
+    .wb-reference-page .wb-summary-grid) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .workspace-content--module :is(.ws-summary-grid,
+    .ozon-reference-page .ozon-summary-grid,
+    .wb-reference-page .wb-summary-grid,
+    .ozon-reference-page .ozon-sync-info-grid,
+    .wb-reference-page .wb-sync-info-grid) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Unified palette and focus for the existing operational form fields.
+   Each module still owns its width, business validations and data handlers. */
+.workspace-content--module :is(
+  .unit-toolbar-right input:not([type="checkbox"]):not([type="file"]),
+  .unit-editor input:not([type="checkbox"]):not([type="file"]),
+  .unit-editor select,
+  .sku-new-controls input:not([type="checkbox"]):not([type="file"]),
+  .ymf .ymf-rate-fields input,
+  .ymf .ozf-section-tools input
+) {
+  color: var(--ws-text);
+  background-color: var(--ws-surface);
+  border-color: var(--ws-border);
+}
+.workspace-content--module :is(
+  .unit-toolbar-right input,
+  .unit-editor input,
+  .unit-editor select,
+  .sku-new-controls input,
+  .ymf .ymf-rate-fields input,
+  .ymf .ozf-section-tools input
+):focus-visible {
+  outline: var(--ui-focus-width, 2px) solid var(--ws-blue);
+  outline-offset: var(--ui-focus-offset, 2px);
+}
