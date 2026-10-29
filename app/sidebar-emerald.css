@@ -96,7 +96,8 @@ html[data-theme="dark"] .home-shell[data-accent-area] {
 .home-shell .home-sidebar .home-workspace-link--active .home-workspace-icon {
   color: #44ffbd;
 }
-.home-shell .home-sidebar .home-workspace-link--active .home-brand-icon::before {
+.home-shell .home-sidebar .home-workspace-link--active :is(.home-brand-icon, .home-workspace-icon)::before,
+.home-shell .home-topbar-right .home-icon-button:is(.active, :focus-visible)::before {
   content: "";
   position: absolute;
   inset: -4px;
@@ -105,7 +106,8 @@ html[data-theme="dark"] .home-shell[data-accent-area] {
   box-shadow: 0 0 11px rgba(32,238,164,.67),inset 0 0 8px rgba(25,230,151,.28);
   pointer-events: none;
 }
-.home-shell .home-sidebar .home-workspace-link--active .home-brand-icon::after {
+.home-shell .home-sidebar .home-workspace-link--active :is(.home-brand-icon, .home-workspace-icon)::after,
+.home-shell .home-topbar-right .home-icon-button:is(.active, :focus-visible)::after {
   content: "";
   position: absolute;
   z-index: -1;
@@ -134,10 +136,17 @@ html[data-theme="dark"] .home-shell[data-accent-area] {
 .home-shell .home-sidebar-toggle { color: var(--ws-utility-icon); }
 
 
-/* Active utility items illuminate the actual SVG silhouette. */
-.home-shell .home-sidebar .home-workspace-link--active .home-workspace-icon > svg {
-  filter: drop-shadow(0 0 2px var(--ws-utility-icon))
-          drop-shadow(0 0 6px color-mix(in srgb, var(--ws-utility-icon) 72%, transparent));
+/* Keep the 42px ring centered on the 38px topbar button, matching the
+   34px icon + 4px inset of the existing procurement icon. */
+.home-shell .home-topbar-right .home-icon-button:is(.active, :focus-visible)::before {
+  inset: -2px;
+}
+/* The selected utility icon, not its path strokes, remains crisp in the ring.
+   A positive SVG stacking level keeps it above the soft radial smoke layer. */
+.home-shell .home-topbar-right .home-icon-button:is(.active, :focus-visible) > svg {
+  position: relative;
+  z-index: 1;
+  filter: none;
 }
 
 /* Marketplace-specific sidebar accents, restored from pre-emerald styles.

@@ -2018,21 +2018,17 @@ button.active {
     );
 }
 
-/* Glow follows the SVG itself, not a synthetic circular icon badge. */
+/* Topbar utilities use the same circular 42px halo as selected
+   sidebar pictograms. The actual ring + radial glow live in the unified
+   sidebar-emerald.css rules, so there are no competing implementations. */
 .home-shell .home-topbar-right .home-icon-button:is(.active, :focus-visible) {
-  isolation: auto;
+  position: relative;
+  isolation: isolate;
   background: transparent;
   border-color: transparent;
   border-radius: 9px;
   box-shadow: none;
   color: var(--ws-utility-icon);
-}
-.home-shell .home-topbar-right .home-icon-button:is(.active, :focus-visible)::before {
-  content: none;
-}
-.home-shell .home-topbar-right .home-icon-button:is(.active, :focus-visible) > svg {
-  filter: drop-shadow(0 0 2px var(--ws-utility-icon))
-          drop-shadow(0 0 6px color-mix(in srgb, var(--ws-utility-icon) 72%, transparent));
 }
 .home-shell .home-topbar-right .home-icon-button:focus-visible {
   outline: var(--ui-focus-width, 2px) solid var(--ws-utility-icon);
