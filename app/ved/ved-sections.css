@@ -1,0 +1,9 @@
+.ved-module-page { display: flex; flex-direction: column; gap: 20px; max-width: 1280px; padding: 16px 24px 36px; color: var(--ws-nav-text); }
+.ved-module-content { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr)); gap: 14px; }
+.ved-module-panel { border: 1px solid var(--ws-border); border-radius: 15px; padding: 20px; background: var(--ws-surface); }
+.ved-module-panel h2 { font-size: 17px; font-weight: 700; margin: 0 0 10px; color: var(--ws-nav-text); }
+.ved-module-panel p { font-size: 14px; line-height: 1.5; margin: 0; color: var(--ws-text-muted); }
+.ved-module-footer { font-size: 13px; line-height: 1.5; color: var(--ws-text-muted); }
+.ved-module-footer a { color: #37c98e; text-decoration: none; font-weight: 650; }
+.ved-module-footer a:hover { text-decoration: underline; }
+@media (max-width: 800px) { .ved-module-page { padding: 12px 14px 28px; } }

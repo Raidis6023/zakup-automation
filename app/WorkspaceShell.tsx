@@ -2,6 +2,7 @@
 
 import Link
   from "next/link";
+import Image from "next/image";
 
 import {
   usePathname,
@@ -53,6 +54,7 @@ import "./workspace-reference-shell.css";
 import "./workspace-reference-components.css";
 import "./workspace-theme-polish.css";
 import "./sidebar-emerald.css";
+import "./ved-nav.css";
 
 
 // ============================================================
@@ -196,6 +198,11 @@ type WorkspaceNavKey =
   | "sku-list"
   | "procurement"
   | "ved"
+  | "ved-orders"
+  | "ved-offers"
+  | "ved-registry"
+  | "ved-documents"
+  | "ved-references"
   | "unit-economics"
   | "ozon"
   | "wildberries"
@@ -243,6 +250,8 @@ export default function WorkspaceShell({
     );
 
 
+  const [vedMenuExpanded, setVedMenuExpanded] = useState(false);
+
   const [
     pendingNavKey,
     setPendingNavKey,
@@ -288,6 +297,14 @@ export default function WorkspaceShell({
     pathname.startsWith(
       "/ved-orders/"
     );
+
+
+  // Keep VED subnavigation visible on its own pages; other modules stay uncluttered.
+  useEffect(() => {
+    if (pathname === "/ved" || pathname.startsWith("/ved/") || pathname.startsWith("/ved-orders")) {
+      setVedMenuExpanded(true);
+    }
+  }, [pathname]);
 
 
   // ==========================================================
@@ -409,14 +426,10 @@ export default function WorkspaceShell({
     key: WorkspaceNavKey
   ) {
 
-    if (
-      pendingNavKey !== null
-    ) {
-
-      return (
-        key === pendingNavKey
-      );
-
+    if (pendingNavKey !== null) {
+      // The parent VED section must stay selected while a nested link is loading.
+      if (key === "ved" && pendingNavKey.startsWith("ved-")) return true;
+      return key === pendingNavKey;
     }
 
 
@@ -540,6 +553,26 @@ export default function WorkspaceShell({
           )
         );
 
+
+      case "ved-orders":
+        return pathname === "/ved" || pathname === "/ved-orders"
+          || (isVedOrderDetail && vedOrderSource === "ved");
+
+      case "ved-offers":
+        return pathname === "/ved/commercial-offers"
+          || pathname.startsWith("/ved/commercial-offers/");
+
+      case "ved-registry":
+        return pathname === "/ved/registry"
+          || pathname.startsWith("/ved/registry/");
+
+      case "ved-documents":
+        return pathname === "/ved/documents"
+          || pathname.startsWith("/ved/documents/");
+
+      case "ved-references":
+        return pathname === "/ved/references"
+          || pathname.startsWith("/ved/references/");
 
       case "unit-economics":
         return pathname === "/unit-economics" || pathname.startsWith("/unit-economics/");
@@ -970,48 +1003,66 @@ export default function WorkspaceShell({
                 </Link>
 
 
-                <Link
-                  href="/ved"
-
-                  onClick={
-                    event =>
-                      handleNavClick(
-                        event,
-                        "ved"
-                      )
-                  }
-
-                  className={
-                    navClass(
-                      "ved"
-                    )
-                  }
-
-                  aria-current={
-                    isNavActive(
-                      "ved"
-                    )
-
-                      ? "page"
-
-                      : undefined
-                  }
-
-                  aria-label="ВЭД"
-                  title="ВЭД"
-                >
-
-                  <span className="home-brand-icon"><EmeraldSidebarIcon kind="globe" /></span>
-
-
-                  <span
-                    className=
-                      "home-workspace-label"
+                <div className="home-ved-nav-group">
+                  <div className="home-ved-nav-parent">
+                    <Link
+                      href="/ved/commercial-offers"
+                      onClick={event => {
+                        setVedMenuExpanded(true);
+                        handleNavClick(event, "ved");
+                      }}
+                      className={navClass("ved")}
+                      aria-current={isNavActive("ved") ? "page" : undefined}
+                      aria-label="ВЭД"
+                      title="ВЭД"
+                    >
+                      <span className="home-brand-icon"><EmeraldSidebarIcon kind="globe" /></span>
+                      <span className="home-workspace-label">ВЭД</span>
+                    </Link>
+                    <button
+                      className="home-ved-nav-toggle"
+                      type="button"
+                      aria-label={vedMenuExpanded ? "Свернуть подразделы ВЭД" : "Развернуть подразделы ВЭД"}
+                      aria-expanded={vedMenuExpanded}
+                      aria-controls="workspace-ved-subnav"
+                      onClick={() => setVedMenuExpanded(open => !open)}
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
+                    </button>
+                  </div>
+                  <nav
+                    id="workspace-ved-subnav"
+                    className={`home-ved-subnav${vedMenuExpanded ? "" : " home-ved-subnav--hidden"}`}
+                    aria-label="Подразделы ВЭД"
                   >
-                    ВЭД
-                  </span>
-
-                </Link>
+                    {([
+                      { key: "ved-orders", label: "Заказы", href: "/ved", icon: "orders" },
+                      { key: "ved-offers", label: "Коммерческие предложения", href: "/ved/commercial-offers", icon: "offers" },
+                      { key: "ved-registry", label: "Реестр товаров и расчётов", href: "/ved/registry", icon: "registry" },
+                      { key: "ved-documents", label: "Документы", href: "/ved/documents", icon: "documents" },
+                      { key: "ved-references", label: "Справочники ВЭД", href: "/ved/references", icon: "references" },
+                    ] as const).map(item => (
+                      <Link
+                        key={item.key}
+                        href={item.href}
+                        onClick={event => {
+                          setVedMenuExpanded(true);
+                          handleNavClick(event, item.key);
+                        }}
+                        className={`home-ved-subnav-link${isNavActive(item.key) ? " home-ved-subnav-link--active" : ""}`}
+                        aria-current={isNavActive(item.key) ? "page" : undefined}
+                        title={item.label}
+                      >
+                        <span className="home-ved-subnav-icon">
+                          <Image src={`/ved-nav/${item.icon}.png`} width={26} height={26} alt="" unoptimized />
+                        </span>
+                        <span className="home-ved-subnav-label">{item.label}</span>
+                      </Link>
+                    ))}
+                  </nav>
+                </div>
 
 
                 <Link

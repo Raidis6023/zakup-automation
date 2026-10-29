@@ -1,0 +1,124 @@
+/* VED subnavigation inherits the workspace emerald palette and sidebar width. */
+.home-shell .home-sidebar .home-ved-nav-group {
+  position: relative;
+  min-width: 0;
+}
+.home-shell .home-sidebar .home-ved-nav-parent { position: relative; }
+.home-shell .home-sidebar .home-ved-nav-parent > .home-workspace-link {
+  width: 100%;
+  padding-right: 40px;
+}
+.home-shell .home-sidebar .home-ved-nav-toggle {
+  position: absolute;
+  top: 50%;
+  right: 9px;
+  width: 28px;
+  height: 28px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  color: var(--ws-nav-text);
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: color .18s ease, background .18s ease;
+}
+.home-shell .home-sidebar .home-ved-nav-toggle:hover,
+.home-shell .home-sidebar .home-ved-nav-toggle:focus-visible {
+  color: #44ffbd;
+  background: rgba(55,201,142,.15);
+}
+.home-shell .home-sidebar .home-ved-nav-toggle svg {
+  width: 16px; height: 16px; fill: none; stroke: currentColor;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  transition: transform .18s ease;
+}
+.home-shell .home-sidebar .home-ved-nav-toggle[aria-expanded="false"] svg { transform: rotate(-90deg); }
+.home-shell .home-sidebar .home-ved-subnav {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 0 5px 14px;
+  min-width: 0;
+}
+.home-shell .home-sidebar .home-ved-subnav--hidden { display: none; }
+.home-shell .home-sidebar .home-ved-subnav-link {
+  box-sizing: border-box;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 7px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  text-decoration: none;
+  background: transparent;
+  color: var(--ws-nav-text);
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 1.16;
+  transition: color .18s ease, border-color .18s ease, background-color .18s ease;
+}
+.home-shell .home-sidebar .home-ved-subnav-link:hover,
+.home-shell .home-sidebar .home-ved-subnav-link:focus-visible {
+  color: var(--ws-nav-hover-text);
+  background: color-mix(in srgb, #37c98e 10%, var(--ws-sidebar));
+  border-color: rgba(55,201,142,.24);
+}
+.home-shell .home-sidebar .home-ved-subnav-link--active,
+.home-shell .home-sidebar .home-ved-subnav-link--active:hover {
+  color: #0b8056;
+  background: color-mix(in srgb, #37c98e 14%, var(--ws-sidebar));
+  border-color: rgba(55,201,142,.43);
+  box-shadow: inset 0 0 9px rgba(55,201,142,.08);
+}
+.home-shell .home-sidebar .home-ved-subnav-icon {
+  flex: 0 0 26px;
+  display: grid;
+  place-items: center;
+  width: 26px; height: 26px;
+}
+.home-shell .home-sidebar .home-ved-subnav-icon img {
+  display: block;
+  width: 22px; height: 22px;
+  object-fit: contain;
+}
+.home-shell .home-sidebar .home-ved-subnav-label {
+  flex: 1; min-width: 0;
+  white-space: normal;
+  overflow-wrap: normal;
+}
+.home-shell--sidebar-collapsed .home-sidebar .home-ved-nav-toggle { display: none; }
+.home-shell--sidebar-collapsed .home-sidebar .home-ved-subnav {
+  display: none;
+  position: absolute;
+  z-index: 80;
+  top: 0;
+  left: calc(100% - 4px);
+  width: 258px;
+  padding: 9px;
+  border: 1px solid var(--ws-border);
+  border-radius: 15px;
+  background: var(--ws-sidebar);
+  box-shadow: 0 12px 32px rgba(0,0,0,.28);
+}
+.home-shell--sidebar-collapsed .home-sidebar .home-ved-nav-group:is(:hover, :focus-within) .home-ved-subnav {
+  display: flex;
+}
+@media (max-width: 800px) {
+  .home-shell .home-sidebar .home-ved-subnav-link { min-height: 40px; }
+  .home-shell--sidebar-collapsed .home-sidebar .home-ved-nav-toggle { display: grid; }
+  .home-shell--sidebar-collapsed .home-sidebar .home-ved-subnav {
+    position: static; width: auto; padding: 4px 0 5px 14px;
+    border: 0; box-shadow: none; background: transparent;
+  }
+  .home-shell--sidebar-collapsed .home-sidebar .home-ved-subnav--hidden { display: none; }
+  .home-shell--sidebar-collapsed .home-sidebar .home-ved-subnav:not(.home-ved-subnav--hidden) { display: flex; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-shell .home-sidebar .home-ved-nav-toggle,
+  .home-shell .home-sidebar .home-ved-subnav-link { transition: none; }
+}
+html[data-theme="dark"] .home-shell .home-sidebar .home-ved-subnav-link--active,
+html.dark .home-shell .home-sidebar .home-ved-subnav-link--active { color: #44ffbd; }
