@@ -1,5 +1,7 @@
 "use client";
 
+import Button from "./ui/Button";
+
 import {
   useState,
 } from "react";
@@ -1585,11 +1587,8 @@ export default function LogisticsImportClient() {
             </div>
 
 
-            <button
+            <Button
               type="button"
-
-              className=
-                "primary-button"
 
               disabled={
                 applying
@@ -1612,7 +1611,7 @@ export default function LogisticsImportClient() {
                 ? "Записываем..."
                 : `Подтвердить импорт (${preview.ready_rows})`}
 
-            </button>
+            </Button>
 
           </section>
 

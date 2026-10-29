@@ -18,6 +18,7 @@
   --ui-focus-width: 2px;
   --ui-focus-offset: 3px;
   --ui-feedback-success: #31966c;
+  --ui-feedback-warning: #b07924;
   --ui-feedback-error: #d95c5c;
   /* Central geometry. Original dimensions intentionally preserved. */
   --ui-surface-card-padding: 16px;
@@ -118,5 +119,6 @@ html[data-theme="dark"] .wb-reference-page.workspace-ui {
 /* Theme-aware status text contrast. */
 html[data-theme="dark"] {
   --ui-feedback-success: #65c894;
+  --ui-feedback-warning: #e3ac61;
   --ui-feedback-error: #ee8585;
 }

@@ -2135,3 +2135,45 @@ html[data-theme="dark"]
   outline: var(--ui-focus-width) solid var(--ws-blue);
   outline-offset: var(--ui-focus-offset);
 }
+
+/* Reusable stock/import notices and filter controls.
+   Variants own colors; page CSS only handles layout-specific dimensions. */
+.ws-notice {
+  --ui-notice-color: var(--ui-feedback-warning);
+  padding: 13px 15px;
+  margin-bottom: 14px;
+  border: 1px solid var(--ui-notice-color);
+  border-radius: var(--ui-surface-radius);
+  background: color-mix(in srgb, var(--ui-notice-color) 9%, var(--surface));
+  color: var(--text);
+  font-size: var(--ui-font-size);
+  line-height: 1.5;
+}
+.ws-notice--success {
+  --ui-notice-color: var(--ui-feedback-success);
+}
+.ws-notice--warning {
+  --ui-notice-color: var(--ui-feedback-warning);
+}
+.ws-text-field {
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--ui-control-radius);
+  background: var(--input);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--ui-font-size);
+}
+.ws-text-field:focus-visible,
+.ws-inline-toggle:focus-visible {
+  outline: var(--ui-focus-width) solid var(--ws-blue, #11865d);
+  outline-offset: var(--ui-focus-offset);
+}
+.ws-inline-toggle {
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}

@@ -1,5 +1,5 @@
 import PageHeader from "../ui/PageHeader";
-import Link from "next/link";
+import ButtonLink from "../ui/ButtonLink";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import StocksClient, { type StockRow, type StockEvent } from "./StocksClient";
@@ -180,8 +180,8 @@ export default async function StocksPage({ searchParams }: {
         />
       <section className="section stocks-upload">
         <div className="stocks-buttons">
-          <Link className="primary-button stocks-upload-link" href="/stock-import">Загрузить остатки АВЕДЭКС</Link>
-          <Link className="primary-button stocks-upload-link" href="/responsible-storage-import">Загрузить ОХ</Link>
+          <ButtonLink variant="primary" className="stocks-upload-link" href="/stock-import">Загрузить остатки АВЕДЭКС</ButtonLink>
+          <ButtonLink variant="primary" className="stocks-upload-link" href="/responsible-storage-import">Загрузить ОХ</ButtonLink>
         </div>
         <p className="stocks-caption">
           Открываются существующие проверенные импорты Excel. Остатки записываются
@@ -189,7 +189,7 @@ export default async function StocksPage({ searchParams }: {
         </p>
       </section>
       {query.import === "avedex" && (
-        <div className={query.calc === "ok" ? "stocks-success" : "stocks-warning"}>
+        <div className={query.calc === "ok" ? "ws-notice ws-notice--success" : "ws-notice ws-notice--warning"}>
           Остатки АВЕДЭКС сохранены в общей базе. {query.calc === "ok"
             ? "Расчёт Китая обновлён."
             : "Расчёт Китая обновить не удалось. Проверьте входные данные на странице «Закуп»."}
