@@ -949,7 +949,8 @@ export default function ChinaTransportClient() {
                 }
               }
 
-              className="ws-editor-input ws-editor-input--large"\n              style={{ width: "180px", fontSize: "16px" }}
+              className="ws-editor-input ws-editor-input--large"
+              style={{ width: "180px", fontSize: "16px" }}
             />
 
           </label>
@@ -2419,7 +2420,8 @@ export default function ChinaTransportClient() {
                     }
                   }
 
-                  className="ws-editor-input ws-editor-input--large"\n              style={{ width: "260px" }}
+                  className="ws-editor-input ws-editor-input--large"
+              style={{ width: "260px" }}
                 />
 
               </label>

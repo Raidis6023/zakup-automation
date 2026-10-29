@@ -544,7 +544,8 @@ export default function VedTakeInWorkPanel(
               }
             }
 
-            className="ws-editor-input"\n            style={{ width: "220px" }}
+            className="ws-editor-input"
+            style={{ width: "220px" }}
           />
 
 

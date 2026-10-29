@@ -1635,7 +1635,8 @@ export default function VedProductionPanel(
                   }
                 }
 
-                className="ws-editor-input ws-editor-input--tall"\n                style={{ borderColor: arrivalDateError ? "#d64545" : undefined }}
+                className="ws-editor-input ws-editor-input--tall"
+                style={{ borderColor: arrivalDateError ? "#d64545" : undefined }}
               />
 
 
@@ -1984,7 +1985,8 @@ export default function VedProductionPanel(
                   }
                 }
 
-                className="ws-editor-input ws-editor-input--tall"\n                style={{ borderColor: transitDateError ? "#d64545" : undefined }}
+                className="ws-editor-input ws-editor-input--tall"
+                style={{ borderColor: transitDateError ? "#d64545" : undefined }}
               />
 
 
@@ -2233,7 +2235,8 @@ export default function VedProductionPanel(
               }
             }
 
-            className="ws-editor-input ws-editor-input--tall"\n                style={{ borderColor: productionDateError ? "#d64545" : undefined }}
+            className="ws-editor-input ws-editor-input--tall"
+                style={{ borderColor: productionDateError ? "#d64545" : undefined }}
           />
 
 
