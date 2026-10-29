@@ -604,8 +604,8 @@
 
 
 .sku-list-status-select option {
-  background: #ffffff !important;
-  color: #18324a !important;
+  background: var(--ws-surface) !important;
+  color: var(--ws-text) !important;
   font-weight: 500 !important;
 }
 
@@ -851,7 +851,7 @@ html[data-theme="dark"]
 .sku-new-action button:disabled {opacity:.45;cursor:default;}
 .sku-new-action button:hover:not(:disabled) {border-color:#178e72;}
 .sku-new-controls {display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
-.sku-new-controls input { width:105px; border-radius:7px; border:1px solid var(--ws-border-soft); padding:8px; font:var(--ui-font-size-compact) monospace; }
+.sku-new-controls input { width:105px; border-radius:7px; border:1px solid var(--ws-border-soft); padding:8px; font:var(--ui-font-size-compact) monospace; background:var(--ws-surface); color:var(--ws-text); }
 .sku-new-linked {font-size:11px;color:#1a966e;}
 .sku-new-message {padding-top:6px;font-size:11px;color:var(--ws-text-muted);}
 .sku-new-footnote {padding-top:12px;}
@@ -872,4 +872,16 @@ html[data-theme="dark"]
 .sku-new-content {
   padding:
     14px;
+}
+
+/* The registry heading can wrap at small widths; its tables still scroll. */
+@media (max-width: 800px) {
+  .sku-list-header { flex-wrap: wrap; align-items: flex-start; }
+  .sku-list-header-actions { max-width: 100%; flex-wrap: wrap; }
+  .sku-new-heading { flex-wrap: wrap; }
+}
+@media (max-width: 650px) {
+  .sku-list-header { gap: 12px; }
+  .sku-list-header-actions { width: 100%; }
+  .sku-new-controls { min-width: 0; }
 }

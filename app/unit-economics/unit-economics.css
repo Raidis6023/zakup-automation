@@ -30,6 +30,8 @@
 .unit-table-title span{font-size:10px;font-weight:500;color:var(--ws-text-muted);margin-left:10px;}
 .unit-toolbar-right{display:flex;gap:8px;align-items:center;}
 .unit-toolbar-right input,.unit-editor input,.unit-editor select {
+  color:var(--ws-text);
+  background:var(--ws-surface);
   border:1px solid var(--ws-border);
   border-radius:var(--ui-control-radius);
   min-height:33px;
@@ -85,3 +87,16 @@
 .unit-preview{margin-top:12px;}
 @media(max-width:900px){.unit-page{padding:0 12px 28px;}.unit-table-toolbar{flex-wrap:wrap;}.unit-toolbar-right{width:100%;}.unit-toolbar-right input{min-width:0;flex:1;}.unit-model-caption{display:none;}}
 @media(max-width:800px){.unit-table-scroller{max-height:65vh;}}
+
+/* Wrap settings and uploads without changing the scrolling table layout. */
+@media (max-width: 650px) {
+  .unit-page { min-width: 0; }
+  .unit-model-bar { flex-wrap: wrap; gap: 8px; }
+  .unit-model-tabs { flex-wrap: wrap; }
+  .unit-toolbar-right { min-width: 0; flex-wrap: wrap; }
+  .unit-toolbar-right input { width: 100%; min-width: 0; }
+  .unit-upload-buttons { flex-wrap: wrap; }
+  .unit-editor { min-width: 0; }
+  .unit-editor select { min-width: 0; max-width: 100%; width: 100%; }
+  .unit-columns-list { grid-template-columns: minmax(0, 1fr); }
+}
