@@ -99,6 +99,7 @@
 
 .yandex-reference-page
 .ym-products-table-shell {
+  max-height: 68vh;
   scrollbar-gutter: stable;
 }
 

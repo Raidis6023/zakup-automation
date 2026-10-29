@@ -207,6 +207,7 @@
 
 .wb-reference-page
 .wb-products-scroll {
+  max-height: 68vh;
 
   scrollbar-gutter:
     stable;
