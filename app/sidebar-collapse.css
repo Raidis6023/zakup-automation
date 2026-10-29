@@ -11,7 +11,7 @@
     minmax(0, 1fr);
 
   transition:
-    grid-template-columns 0.18s ease;
+    grid-template-columns var(--ui-panel-motion-duration) var(--ui-panel-motion-easing);
 }
 
 
@@ -19,27 +19,24 @@
    ЛОГОТИП И ЕГО ПОСТОЯННАЯ ПРАВАЯ ГРАНИЦА
    ============================================================ */
 
+/* The logo is an independent fixed topbar segment, not a shrinking grid
+   child. Its right edge always equals the expanded sidebar / fixed topbar. */
 .home-shell .home-company-logo {
-  position: relative;
-  z-index: 25;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 51;
   box-sizing: border-box;
-
   width: var(--workspace-sidebar-expanded-width);
-  margin-left: -12px;
+  height: var(--home-topbar-height);
+  margin: 0;
+  margin-bottom: 0;
   padding: 0 12px;
-
-  background: var(--surface);
-
-  /*
-   * Правая линия существует ВСЕГДА.
-   * При сворачивании она не исчезает,
-   * не появляется и не перемещается.
-   */
-  border-right: 1px solid var(--border);
-
-  transition:
-    background-color 0.22s ease,
-    border-color 0.22s ease;
+  overflow: visible;
+  background: var(--ws-sidebar);
+  border-right: 1px solid var(--ws-border);
+  border-bottom: 1px solid var(--ws-border);
+  transition: background-color .14s ease, border-color .14s ease;
 }
 
 
@@ -57,26 +54,9 @@
    ГОРИЗОНТАЛЬНАЯ ЛИНИЯ ПОД ЛОГОТИПОМ
    ============================================================ */
 
+/* The logo itself owns the complete bottom line, even while collapsed. */
 .home-shell .home-sidebar::after {
-  content: "";
-
-  position: absolute;
-
-  top: var(--home-topbar-height);
-  left: 0;
-  right: auto;
-
-  width: var(--workspace-sidebar-expanded-width);
-  height: 1px;
-
-  background: var(--border);
-
-  z-index: 30;
-
-  pointer-events: none;
-
-  transition:
-    background-color 0.22s ease;
+  content: none;
 }
 
 
@@ -309,11 +289,9 @@
 .home-shell--sidebar-collapsed
 .home-workspace-link {
   justify-content: flex-start;
-
-  gap: 0;
-
-  padding-left: 7px;
-  padding-right: 0;
+  gap: 12px;
+  padding-left: 11px;
+  padding-right: 4px;
 }
 
 
@@ -332,7 +310,7 @@
 
 .home-shell--sidebar-collapsed
 .home-sidebar-toggle {
-  right: -15px;
+  right: 6px;
 }
 
 
@@ -393,13 +371,16 @@
 
 
   .home-shell .home-company-logo {
+    position: relative;
+    top: auto;
+    left: auto;
+    z-index: auto;
     width: 204px;
-
     margin-left: 0;
-
     padding: 0;
-
+    overflow: visible;
     border-right: none;
+    border-bottom: none;
   }
 
 
