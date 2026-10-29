@@ -2077,3 +2077,61 @@ html[data-theme="dark"]
   outline-offset: var(--ui-focus-offset);
 }
 
+/* Shared settings/profile feedback. Keep module-specific margins and card
+   radii local; one theme-aware surface/feedback palette covers both. */
+:is(.admin-users-note,.profile-note) {
+  padding: 12px 14px;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+:is(.admin-users-card,.profile-card) {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+:is(.admin-users-status,.profile-form-status) {
+  min-height: 18px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+:is(.admin-role-locked,.admin-level-badge) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+:is(.admin-users-status-success,.profile-form-status-success,.profile-avatar-status-success) {
+  color: var(--ui-feedback-success);
+}
+:is(.admin-users-status-error,.profile-form-status-error,.profile-avatar-status-error) {
+  color: var(--ui-feedback-error);
+}
+
+/* Shared tab control vocabulary, without changing the size, active state
+   or marketplace-specific surface of individual tabs. */
+:is(.unit-market-tabs button,.unit-model-tabs button,.sku-new-tabs button) {
+  border-radius: var(--ui-control-radius);
+  font-size: var(--ui-font-size-compact);
+  cursor: pointer;
+}
+:is(.unit-toolbar-right input,.unit-editor input,.unit-editor select,.sku-new-controls input) {
+  background: var(--ws-surface);
+  color: var(--ws-text);
+}
+:is(.admin-working-role-select,.admin-marketplace-select,.admin-level-select,
+    .admin-block-button,.profile-input,.profile-save-button,
+    .profile-avatar-button,.profile-avatar-change,.profile-avatar-remove,
+    .unit-button,.unit-external,.sku-list-tab):focus-visible {
+  outline: var(--ui-focus-width) solid var(--ws-blue);
+  outline-offset: var(--ui-focus-offset);
+}

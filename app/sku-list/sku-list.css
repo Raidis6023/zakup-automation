@@ -837,7 +837,7 @@ html[data-theme="dark"]
 .sku-new-heading p,.sku-new-footnote {margin:0;font-size:12px;line-height:1.5;color:var(--ws-text-muted);}
 .sku-new-count {padding:7px 10px;border:1px solid var(--ws-border-soft);border-radius:8px;font-size:12px;white-space:nowrap;}
 .sku-new-tabs {display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 12px;}
-.sku-new-tabs button {padding:7px 11px;border-radius:var(--ui-control-radius);border:1px solid var(--ws-border-soft);background:var(--ws-surface-soft);color:var(--ws-text);cursor:pointer;font-size:var(--ui-font-size-compact);}
+.sku-new-tabs button { padding: 7px 11px; border: 1px solid var(--ws-border-soft); background: var(--ws-surface-soft); color: var(--ws-text); }
 .sku-new-tabs button.active {border-color:#178e72;background:color-mix(in srgb,var(--ws-surface) 83%,#178e72);}
 .sku-new-empty {min-height:90px;display:flex;align-items:center;justify-content:center;color:var(--ws-text-muted);}
 .sku-new-scroll {max-height:440px;overflow:auto;border:1px solid var(--ws-border-soft);border-radius:9px;}
@@ -858,7 +858,7 @@ html[data-theme="dark"]
 .sku-new-action button:disabled {opacity:.45;cursor:default;}
 .sku-new-action button:hover:not(:disabled) {border-color:#178e72;}
 .sku-new-controls {display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
-.sku-new-controls input {width:105px;border-radius:7px;border:1px solid var(--ws-border-soft);padding:8px;background:var(--ws-surface);color:var(--ws-text);font:var(--ui-font-size-compact) monospace;}
+.sku-new-controls input { width:105px; border-radius:7px; border:1px solid var(--ws-border-soft); padding:8px; font:var(--ui-font-size-compact) monospace; }
 .sku-new-linked {font-size:11px;color:#1a966e;}
 .sku-new-message {padding-top:6px;font-size:11px;color:var(--ws-text-muted);}
 .sku-new-footnote {padding-top:12px;}
