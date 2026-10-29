@@ -3228,7 +3228,9 @@ export default function HomeHeaderActions() {
             }
           >
 
-            <HomeTasksIcon />
+            <span className="home-utility-icon-visual">
+              <HomeTasksIcon />
+            </span>
 
           </button>
 
@@ -3413,7 +3415,9 @@ export default function HomeHeaderActions() {
             }
           >
 
-            <HomeBellIcon />
+            <span className="home-utility-icon-visual">
+              <HomeBellIcon />
+            </span>
 
 
             {
@@ -3883,7 +3887,9 @@ export default function HomeHeaderActions() {
             }
           >
 
-            <CalendarIcon />
+            <span className="home-utility-icon-visual">
+              <CalendarIcon />
+            </span>
 
           </button>
 

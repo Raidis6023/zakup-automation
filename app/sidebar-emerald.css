@@ -70,7 +70,8 @@ html[data-theme="dark"] .home-shell[data-accent-area] {
 }
 
 .home-shell .home-sidebar .home-brand-icon,
-.home-shell .home-sidebar .home-workspace-icon {
+.home-shell .home-sidebar .home-workspace-icon,
+.home-shell .home-topbar-right .home-utility-icon-visual {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -81,6 +82,14 @@ html[data-theme="dark"] .home-shell[data-accent-area] {
   color: var(--ws-utility-icon);
   z-index: 0;
 }
+/* Match the existing brand-icon clipping for utility icons. The missing
+   clip is why the smoke ballooned into a giant neon circle. */
+.home-shell .home-sidebar .home-workspace-icon,
+.home-shell .home-topbar-right .home-utility-icon-visual {
+  overflow: hidden;
+  border-radius: 12px;
+}
+
 .home-shell .home-sidebar .home-brand-icon svg,
 .home-shell .home-sidebar .home-workspace-icon > svg {
   display: block;
@@ -97,7 +106,7 @@ html[data-theme="dark"] .home-shell[data-accent-area] {
   color: #44ffbd;
 }
 .home-shell .home-sidebar .home-workspace-link--active :is(.home-brand-icon, .home-workspace-icon)::before,
-.home-shell .home-topbar-right .home-icon-button:is(.active, :focus-visible)::before {
+.home-shell .home-topbar-right .home-icon-button:is(.active, :focus-visible) .home-utility-icon-visual::before {
   content: "";
   position: absolute;
   inset: -4px;
@@ -107,7 +116,7 @@ html[data-theme="dark"] .home-shell[data-accent-area] {
   pointer-events: none;
 }
 .home-shell .home-sidebar .home-workspace-link--active :is(.home-brand-icon, .home-workspace-icon)::after,
-.home-shell .home-topbar-right .home-icon-button:is(.active, :focus-visible)::after {
+.home-shell .home-topbar-right .home-icon-button:is(.active, :focus-visible) .home-utility-icon-visual::after {
   content: "";
   position: absolute;
   z-index: -1;
@@ -136,17 +145,21 @@ html[data-theme="dark"] .home-shell[data-accent-area] {
 .home-shell .home-sidebar-toggle { color: var(--ws-utility-icon); }
 
 
-/* Keep the 42px ring centered on the 38px topbar button, matching the
-   34px icon + 4px inset of the existing procurement icon. */
-.home-shell .home-topbar-right .home-icon-button:is(.active, :focus-visible)::before {
-  inset: -2px;
+/* The topbar draws the same ring on a 34px inner icon slot as the sidebar,
+   never on the entire 38px clickable button. The unread badge stays outside. */
+.home-shell .home-topbar-right .home-icon-button:is(.active, :focus-visible) .home-utility-icon-visual {
+  color: #44ffbd;
 }
-/* The selected utility icon, not its path strokes, remains crisp in the ring.
-   A positive SVG stacking level keeps it above the soft radial smoke layer. */
-.home-shell .home-topbar-right .home-icon-button:is(.active, :focus-visible) > svg {
-  position: relative;
-  z-index: 1;
+.home-shell .home-topbar-right .home-utility-icon-visual > svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
   filter: none;
+}
+.home-shell .home-topbar-right .home-notification-badge {
+  position: absolute;
+  z-index: 3;
 }
 
 /* Marketplace-specific sidebar accents, restored from pre-emerald styles.

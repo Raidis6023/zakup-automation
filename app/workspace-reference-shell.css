@@ -2018,9 +2018,8 @@ button.active {
     );
 }
 
-/* Topbar utilities use the same circular 42px halo as selected
-   sidebar pictograms. The actual ring + radial glow live in the unified
-   sidebar-emerald.css rules, so there are no competing implementations. */
+/* The ring and clipped smoke now belong to the inner 34px icon visual.
+   Keep focus and interaction on the original button, outside the icon ring. */
 .home-shell .home-topbar-right .home-icon-button:is(.active, :focus-visible) {
   position: relative;
   isolation: isolate;
