@@ -2,7 +2,7 @@
 
 import { useWorkspaceDisclosure } from "../ui/useWorkspaceDisclosure";
 
-import Link from "next/link";
+import ButtonLink from "../ui/ButtonLink";
 
 import {
   useEffect,
@@ -166,12 +166,12 @@ export default function ZakupProductsSectionClient({
         </button>
 
         <nav className="zakup-products-header-links" aria-label="Связанные разделы товаров">
-          <Link href="/stocks" className="secondary-button navigation-button">
+          <ButtonLink href="/stocks" variant="secondary" className="navigation-button">
             Остатки
-          </Link>
-          <Link href="/logistics-import" className="secondary-button navigation-button">
+          </ButtonLink>
+          <ButtonLink href="/logistics-import" variant="secondary" className="navigation-button">
             Габариты
-          </Link>
+          </ButtonLink>
         </nav>
       </div>
 

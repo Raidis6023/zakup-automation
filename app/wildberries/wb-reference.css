@@ -895,30 +895,10 @@ html[data-theme="dark"]
   max-width: 1350px
 ) {
 
-  .wb-reference-page
-  .wb-summary-grid {
-    grid-template-columns:
-      repeat(
-        3,
-        minmax(
-          0,
-          1fr
-        )
-      );
-  }
+  
 
 
-  .wb-reference-page
-  .wb-sync-info-grid {
-    grid-template-columns:
-      repeat(
-        2,
-        minmax(
-          0,
-          1fr
-        )
-      );
-  }
+  
 
 }
 
@@ -949,17 +929,7 @@ html[data-theme="dark"]
   }
 
 
-  .wb-reference-page
-  .wb-summary-grid {
-    grid-template-columns:
-      repeat(
-        2,
-        minmax(
-          0,
-          1fr
-        )
-      );
-  }
+  
 
 
   .wb-reference-page

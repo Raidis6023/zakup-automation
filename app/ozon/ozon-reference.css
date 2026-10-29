@@ -1019,30 +1019,10 @@ html[data-theme="dark"]
   max-width: 1350px
 ) {
 
-  .ozon-reference-page
-  .ozon-summary-grid {
-    grid-template-columns:
-      repeat(
-        3,
-        minmax(
-          0,
-          1fr
-        )
-      );
-  }
+  
 
 
-  .ozon-reference-page
-  .ozon-sync-info-grid {
-    grid-template-columns:
-      repeat(
-        2,
-        minmax(
-          0,
-          1fr
-        )
-      );
-  }
+  
 
 }
 
@@ -1083,17 +1063,7 @@ html[data-theme="dark"]
   }
 
 
-  .ozon-reference-page
-  .ozon-summary-grid {
-    grid-template-columns:
-      repeat(
-        2,
-        minmax(
-          0,
-          1fr
-        )
-      );
-  }
+  
 
 }
 
