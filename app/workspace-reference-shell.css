@@ -106,7 +106,7 @@
 
   transition:
     grid-template-columns
-      var(--ui-panel-motion-duration)
+      var(--ui-sidebar-motion-duration)
       var(--ui-panel-motion-easing),
     background-color
       0.14s
@@ -2018,23 +2018,23 @@ button.active {
     );
 }
 
-/* Uniform emerald selection for the topbar utility buttons. The existing
-   .active class reflects an open popup; focus-visible works from keyboard.
-   Nonactive buttons keep the original layout and hitbox. */
-.home-shell .home-topbar-right .home-icon-button.active,
-.home-shell .home-topbar-right .home-icon-button:focus-visible {
-  isolation: isolate;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--ws-utility-icon) 16%, var(--ws-surface));
-  box-shadow: 0 0 12px color-mix(in srgb, var(--ws-utility-icon) 23%, transparent);
+/* Glow follows the SVG itself, not a synthetic circular icon badge. */
+.home-shell .home-topbar-right .home-icon-button:is(.active, :focus-visible) {
+  isolation: auto;
+  background: transparent;
+  border-color: transparent;
+  border-radius: 9px;
+  box-shadow: none;
+  color: var(--ws-utility-icon);
 }
-.home-shell .home-topbar-right .home-icon-button.active::before,
-.home-shell .home-topbar-right .home-icon-button:focus-visible::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border: 1.3px solid var(--ws-utility-icon);
-  border-radius: 50%;
-  box-shadow: 0 0 10px color-mix(in srgb, var(--ws-utility-icon) 45%, transparent);
-  pointer-events: none;
+.home-shell .home-topbar-right .home-icon-button:is(.active, :focus-visible)::before {
+  content: none;
+}
+.home-shell .home-topbar-right .home-icon-button:is(.active, :focus-visible) > svg {
+  filter: drop-shadow(0 0 2px var(--ws-utility-icon))
+          drop-shadow(0 0 6px color-mix(in srgb, var(--ws-utility-icon) 72%, transparent));
+}
+.home-shell .home-topbar-right .home-icon-button:focus-visible {
+  outline: var(--ui-focus-width, 2px) solid var(--ws-utility-icon);
+  outline-offset: var(--ui-focus-offset, 3px);
 }

@@ -16,7 +16,8 @@
   --ui-font-weight-secondary: 600;
   --ui-motion-fast: 120ms;
   --ui-panel-motion-duration: 700ms;
-  --ui-panel-motion-easing: ease;
+  --ui-sidebar-motion-duration: 240ms;
+  --ui-panel-motion-easing: cubic-bezier(0.4, 0, 0.2, 1);
   --ui-focus-width: 2px;
   --ui-focus-offset: 3px;
   --ui-feedback-success: #31966c;

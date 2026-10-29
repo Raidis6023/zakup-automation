@@ -11,7 +11,7 @@
     minmax(0, 1fr);
 
   transition:
-    grid-template-columns var(--ui-panel-motion-duration) var(--ui-panel-motion-easing);
+    grid-template-columns var(--ui-sidebar-motion-duration) var(--ui-panel-motion-easing);
 }
 
 
@@ -28,7 +28,8 @@
   z-index: 51;
   box-sizing: border-box;
   width: var(--workspace-sidebar-expanded-width);
-  height: var(--home-topbar-height);
+  /* Screenshot: logo border y=72, topbar border y=73. */
+  height: calc(var(--home-topbar-height) + 1px);
   margin: 0;
   margin-bottom: 0;
   padding: 0 12px;
@@ -116,7 +117,7 @@
   position: absolute;
 
   top: 88px;
-  right: 6px;
+  right: -36px;
 
   z-index: 40;
 
@@ -147,7 +148,6 @@
   cursor: pointer;
 
   transition:
-    right 0.18s ease,
     background-color 0.22s ease,
     color 0.22s ease,
     border-color 0.22s ease;
@@ -310,7 +310,7 @@
 
 .home-shell--sidebar-collapsed
 .home-sidebar-toggle {
-  right: 6px;
+  right: -36px;
 }
 
 
