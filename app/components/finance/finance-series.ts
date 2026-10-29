@@ -24,6 +24,12 @@ export function percentageComposition(v:Values):Record<string,number|null>{
  return Object.fromEntries(keys.map(k=>[k,total>0?normalized[k]/total*100:null]));
 }
 export function dailyChanges(reports:Array<{day:string;report:Report}>,market:string,offer?:string,offers?:string[]):FinancePoint[]{
- let prev:Values={orders:0,buyouts:0,revenue:0,profit:0,marketplace:0,advertising:0,inbound:0};
- return reports.map(({day,report})=>{const cur=amounts(report,market,offer,offers);const v=Object.fromEntries(Object.keys(cur).map(k=>{const key=k as keyof Values;return [key,report.missing_days?.length||cur[key]===null||prev[key]===null?null:cur[key]!-prev[key]!]})) as Values;prev=cur;return {day,v}});
+ return reports.map(({day,report})=>{
+  const cur=amounts(report,market,offer,offers);
+  const v=Object.fromEntries(Object.keys(cur).map(k=>{
+   const key=k as keyof Values;
+   return [key,report.missing_days?.length||cur[key]===null?null:cur[key]];
+  })) as Values;
+  return {day,v};
+ });
 }

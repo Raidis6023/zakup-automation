@@ -31,7 +31,12 @@ export function calculate(lines:Line[],from:string,to:string){
  function product(l:Line){let p=products.get(l.article);if(!p){p={article:l.article,name:l.name,delivered:0,cancelled:0,returned:0,unredeemed:0,deliveredQty:0,cancelledQty:0,returnedQty:0,unredeemedQty:0,buyouts:0,income:0,expenses:{},expense:0,result:0};products.set(l.article,p);}return p;}
  const excluded:Array<{sheet:string;row:number;article:string;orderId:string;reason:string;amount:number}>=[];
  const warnings:Array<{sheet:string;row:number;article:string;orderId:string;reason:string}>=[];
- const articleTotals:Record<string,number>={};const common:Record<string,number>={};let subscription=0;let includedIncomeRows=0;let includedExpenseRows=0;
+ const articleTotals:Record<string,number>={};const common:Record<string,number>={};
+ const commonDailyRaw:Record<string,Record<string,number>>={},subscriptionDaily:Record<string,number>={};
+ let subscription=0;let includedIncomeRows=0;let includedExpenseRows=0;
+ const addDaily=(target:Record<string,Record<string,number>>,name:string,day:string,amount:number)=>{
+  if(!day)return;const days=target[name]??{};days[day]=(days[day]??0)+amount;target[name]=days;
+ };
  function reject(l:Line,reason:string){excluded.push({sheet:l.sheet,row:l.row,article:l.article,orderId:l.orderId,reason,amount:l.amount});}
  for(const l of lines){
   if(l.source==='income'){
@@ -49,8 +54,8 @@ export function calculate(lines:Line[],from:string,to:string){
    if(!within(l.serviceDate)){reject(l,l.serviceDate?'Дата услуги вне периода':'Не установлена дата услуги');continue;}
    if(l.orderId&&!within(l.orderDate)){reject(l,l.orderDate?'Заказ создан вне периода':'Не установлена дата создания заказа');continue;}
    includedExpenseRows++;articleTotals[l.sheet]=(articleTotals[l.sheet]??0)+l.amount;
-   if(l.allocation==='subscription'){subscription+=l.amount;continue;}
-   if(l.allocation==='common'||!l.article){common[l.sheet]=(common[l.sheet]??0)+l.amount;continue;}
+   if(l.allocation==='subscription'){subscription+=l.amount;subscriptionDaily[l.serviceDate]=(subscriptionDaily[l.serviceDate]??0)+l.amount;continue;}
+   if(l.allocation==='common'||!l.article){common[l.sheet]=(common[l.sheet]??0)+l.amount;addDaily(commonDailyRaw,l.sheet,l.serviceDate,l.amount);continue;}
    const p=product(l);p.expenses[l.sheet]=(p.expenses[l.sheet]??0)+l.amount;
   }
  }
@@ -61,10 +66,13 @@ export function calculate(lines:Line[],from:string,to:string){
   const total=Math.abs(subscription);const allocations=weights.map(p=>{const exact=total*p.buyouts/denominator;return {p,n:Math.floor(exact),remainder:exact-Math.floor(exact)}});
   let residual=total-allocations.reduce((s,a)=>s+a.n,0);allocations.sort((a,b)=>b.remainder-a.remainder||a.p.article.localeCompare(b.p.article));
   for(const a of allocations){if(residual>0){a.n++;residual--;}a.p.expenses['Подписки']=a.n*Math.sign(subscription);}
- }else if(subscription)common['Подписки']=subscription;
+ }else if(subscription){common['Подписки']=subscription;for(const [day,amount] of Object.entries(subscriptionDaily))addDaily(commonDailyRaw,'Подписки',day,amount);}
  const rows=[...products.values()].map(p=>{p.expense=Object.values(p.expenses).reduce((s,v)=>s+v,0);p.result=p.income-p.expense;return p;}).sort((a,b)=>b.result-a.result);
  const totals={income:rows.reduce((s,p)=>s+p.income,0),allocated:rows.reduce((s,p)=>s+p.expense,0),common:Object.values(common).reduce((s,v)=>s+v,0),expenses:Object.values(articleTotals).reduce((s,v)=>s+v,0),result:0,buyouts:rows.reduce((s,p)=>s+p.buyouts,0),subscription,subscriptionDenominator:denominator};
  totals.result=totals.income-totals.expenses;
  if(totals.expenses!==totals.allocated+totals.common)throw new Error('Не сошлась сверка распределённых расходов');
- return {ruleVersion:RULE_VERSION,from,to,rows,totals,articleTotals,common,excluded,warnings,includedIncomeRows,includedExpenseRows};
+ const commonDetails=Object.fromEntries(Object.entries(commonDailyRaw).map(([name,days])=>[
+  name,Object.entries(days).sort(([a],[b])=>a.localeCompare(b)).map(([date,amount])=>({date,amount}))
+ ]));
+ return {ruleVersion:RULE_VERSION,from,to,rows,totals,articleTotals,common,commonDetails,excluded,warnings,includedIncomeRows,includedExpenseRows};
 }
