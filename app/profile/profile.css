@@ -85,25 +85,7 @@
 
   line-height: 1.5;
 }
-
-
-.profile-card {
-  overflow: hidden;
-
-  border:
-    1px solid
-    var(--border);
-
-  border-radius: 16px;
-
-  background:
-    var(--surface);
-
-  box-shadow:
-    var(--shadow);
-}
-
-
+.profile-card { border-radius: 16px; box-shadow: var(--shadow); }
 .profile-main {
   display: flex;
 
@@ -340,20 +322,6 @@
 
   line-height: 1.35;
 }
-
-
-.profile-avatar-status-success {
-  color:
-    #31966c;
-}
-
-
-.profile-avatar-status-error {
-  color:
-    #d95c5c;
-}
-
-
 /* ============================================================
    PROFILE MAIN
    ============================================================ */
@@ -623,32 +591,7 @@
 
   padding-top: 4px;
 }
-
-
-.profile-form-status {
-  min-height: 18px;
-
-  color:
-    var(--text-muted);
-
-  font-size: 12px;
-
-  line-height: 1.4;
-}
-
-
-.profile-form-status-success {
-  color:
-    #31966c;
-}
-
-
-.profile-form-status-error {
-  color:
-    #d95c5c;
-}
-
-
+.profile-form-status { line-height: 1.4; }
 .profile-save-button {
   flex:
     0 0 auto;
@@ -703,36 +646,7 @@
 
   cursor: not-allowed;
 }
-
-
-.profile-note {
-  margin:
-    16px
-    0
-    0;
-
-  padding:
-    12px
-    14px;
-
-  border:
-    1px solid
-    var(--border-soft);
-
-  border-radius: 9px;
-
-  background:
-    var(--surface-soft);
-
-  color:
-    var(--text-muted);
-
-  font-size: 12px;
-
-  line-height: 1.5;
-}
-
-
+.profile-note { margin: 16px 0 0; border-radius: 9px; }
 /* ============================================================
    MOBILE
    ============================================================ */

@@ -10,7 +10,15 @@
 .unit-external{color:var(--ws-text-secondary);}
 .unit-button:hover,.unit-external:hover{border-color:var(--unit-accent);color:var(--unit-accent);}
 .unit-market-tabs{display:flex;align-items:center;gap:7px;padding-bottom:5px;flex-wrap:wrap;}
-.unit-market-tabs button,.unit-model-tabs button{min-height:35px;border:1px solid var(--ws-border);border-radius:8px;background:var(--ws-surface);color:var(--ws-text-secondary);padding:7px 17px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;}
+.unit-market-tabs button,.unit-model-tabs button {
+  min-height: 35px;
+  border: 1px solid var(--ws-border);
+  background: var(--ws-surface);
+  color: var(--ws-text-secondary);
+  padding: 7px 17px;
+  font: inherit;
+  font-weight: 700;
+}
 .unit-market-tabs button.active,.unit-model-tabs button.active{color:#fff;background:linear-gradient(125deg,#119b6d,#07583f);border-color:#119b6d;}
 .unit-model-bar{display:flex;align-items:center;gap:14px;padding:8px 0 14px;color:var(--ws-text-secondary);font-size:12px;}
 .unit-model-tabs{display:flex;gap:6px;}
@@ -21,7 +29,15 @@
 .unit-table-title{font-size:14px;font-weight:750;color:var(--ws-text);}
 .unit-table-title span{font-size:10px;font-weight:500;color:var(--ws-text-muted);margin-left:10px;}
 .unit-toolbar-right{display:flex;gap:8px;align-items:center;}
-.unit-toolbar-right input,.unit-editor input,.unit-editor select{border:1px solid var(--ws-border);border-radius:var(--ui-control-radius);background:var(--ws-surface);color:var(--ws-text);min-height:33px;padding:7px 10px;font:inherit;font-size:var(--ui-font-size-compact);min-width:180px;}
+.unit-toolbar-right input,.unit-editor input,.unit-editor select {
+  border:1px solid var(--ws-border);
+  border-radius:var(--ui-control-radius);
+  min-height:33px;
+  padding:7px 10px;
+  font:inherit;
+  font-size:var(--ui-font-size-compact);
+  min-width:180px;
+}
 .unit-toolbar-right input{min-width:min(32vw,280px);}
 .unit-gear{width:35px;height:35px;border:1px solid var(--ws-border);border-radius:8px;background:var(--ws-surface);color:var(--ws-text-secondary);font-size:22px;cursor:pointer;}
 .unit-gear.active,.unit-gear:hover{border-color:var(--unit-accent);color:var(--unit-accent);}
