@@ -1,4 +1,5 @@
 import PageHeader from "../ui/PageHeader";
+import Button from "../ui/Button";
 import { redirect } from "next/navigation";
 
 import StockImportClient
@@ -502,12 +503,11 @@ export default async function StockImportPage({
                   }
                 >
 
-                  <button
+                  <Button
                     type="submit"
-                    className="primary-button"
                   >
                     Подтвердить импорт
-                  </button>
+                  </Button>
 
                 </form>
 

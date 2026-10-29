@@ -1,5 +1,7 @@
 "use client";
 
+import Button from "./ui/Button";
+
 import {
   useState,
 } from "react";
@@ -2141,10 +2143,8 @@ export default function ResponsibleStorageImportClient() {
             </div>
 
 
-            <button
+            <Button
               type="button"
-
-              className="primary-button"
 
               disabled={
                 applying
@@ -2164,7 +2164,7 @@ export default function ResponsibleStorageImportClient() {
                 ? "Записываем..."
                 : `Подтвердить импорт (${preview.total_rows})`}
 
-            </button>
+            </Button>
 
           </section>
 

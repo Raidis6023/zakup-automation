@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import Button from "../ui/Button";
 
 export type StockEvent = {
   date: string; source: "АВЕДЭКС" | "ОХ"; previous: number; current: number; delta: number;
@@ -58,15 +59,15 @@ export default function StocksClient(props: Props) {
         <div className="muted">АВЕДЭКС + ОХ</div>
         <div className="stocks-tiny">{num(rows.length)} товарных позиций</div></div>
     </section>
-    {(aDate !== oDate || outdated(aDate) || outdated(oDate)) && <div className="stocks-warning">
+    {(aDate !== oDate || outdated(aDate) || outdated(oDate)) && <div className="ws-notice ws-notice--warning">
       Данные складов за разные даты или устарели: АВЕДЭКС {day(aDate)}, ОХ {day(oDate)}.
       Общая сумма не является единым складским срезом.
     </div>}
-    {!calculatedFromLatest && <div className="stocks-warning">
+    {!calculatedFromLatest && <div className="ws-notice ws-notice--warning">
       Последний сохранённый расчёт Китая пока не использует обе последние даты Excel.
       Исходные остатки доступны в общей базе; проверьте расчёт на странице «Закуп».
     </div>}
-    {missing > 0 && <div className="stocks-warning">
+    {missing > 0 && <div className="ws-notice ws-notice--warning">
       {num(missing)} товаров исчезли из выгрузки одного из складов относительно прошлой.
       Они не обязательно имеют нулевой остаток. Проверьте полноту файла.
     </div>}
@@ -75,7 +76,7 @@ export default function StocksClient(props: Props) {
         <p className="stocks-caption">Δ означает разницу между двумя Excel-снимками.
           Причину изменения система пока не знает.</p></div></div>
       <div className="stocks-controls">
-        <input className="stocks-search" aria-label="Поиск" placeholder="Поиск по артикулу, названию или master_code"
+        <input className="ws-text-field stocks-search" aria-label="Поиск" placeholder="Поиск по артикулу, названию или master_code"
           value={search} onChange={(e) => {setSearch(e.target.value);setLimit(50);}} />
         <label><input type="checkbox" checked={changed}
           onChange={(e) => {setChanged(e.target.checked);setLimit(50);}} /> Только с изменениями</label>
@@ -94,10 +95,10 @@ export default function StocksClient(props: Props) {
           {filtered.length === 0 && <tr><td colSpan={6}>Товары не найдены.</td></tr>}
         </tbody>
       </table></div>
-      {filtered.length > limit && <button className="secondary-button stocks-more"
-        onClick={() => setLimit((n) => n + 50)}>Показать ещё 50</button>}
+      {filtered.length > limit && <Button variant="secondary" className="stocks-more"
+        onClick={() => setLimit((n) => n + 50)}>Показать ещё 50</Button>}
     </section>
-    <div className="stocks-warning">
+    <div className="ws-notice ws-notice--warning">
       История за 30 дней показывает изменения между еженедельными снимками.
       Полного журнала подтверждённых складских движений пока нет, поэтому
       реальную недостачу по формуле «прошлый остаток + приход − расход» пока не вычисляем.
@@ -108,7 +109,7 @@ export default function StocksClient(props: Props) {
 function StockLine({row:r,expanded,onClick}:{row:StockRow;expanded:boolean;onClick:()=>void}) {
   return <>
     <tr>
-      <td><button type="button" className="stocks-expand" aria-expanded={expanded} onClick={onClick}>
+      <td><button type="button" className="ws-inline-toggle stocks-expand" aria-expanded={expanded} onClick={onClick}>
         {expanded ? "▾" : "▸"} <strong>{r.article}</strong></button>
         <div className="stocks-tiny">{r.name}</div>
         {r.masterCode && <div className="stocks-tiny">Код: {r.masterCode}</div>}</td>
