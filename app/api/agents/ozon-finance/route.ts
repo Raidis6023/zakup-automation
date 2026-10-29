@@ -35,6 +35,7 @@ type ReportLine = {
   amount: number | string;
   item_count: number;
 };
+type UnallocatedDaily = { day:string;type_id:string;accrued_category:string;amount:number|string;item_count:number };
 type Cost = { master_code: string; valid_from: string; unit_cost_rub: number };
 type Expense = { offer_id: string; master_code: string; ordered_units: number; covered_cogs_units: number; covered_mayak_units: number; cogs_total: number; mayak_total: number };
 type Product = { id: string; offer_id: string | null; master_code: string | null; name: string | null };
@@ -249,7 +250,7 @@ async function syncOneDay(db: ReturnType<typeof createAdminClient>, day: string)
 }
 async function buildReport(db: ReturnType<typeof createAdminClient>, from: string, to: string) {
   const days = dateRange(from, to);
-  const [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, adJobsRes, adTasksRes, itemizedRes, transitRes, crossdockRes, crossdockCurrentRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes] =
+  const [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, adJobsRes, adTasksRes, itemizedRes, transitRes, crossdockRes, crossdockCurrentRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes, unallocatedDailyRes] =
     await Promise.all([
       db.from("ozon_finance_sync_days").select("day,record_count,synced_at").eq("account_key", ACCOUNT)
         .gte("day", from).lte("day", to),
@@ -285,8 +286,9 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
       db.from("ozon_finance_page_jobs").select("day,status,pages_completed,rows_saved,last_error,updated_at")
         .eq("account_key",ACCOUNT).gte("day",from).lte("day",to).order("day"),
       db.rpc("ozon_finance_unallocated_v3",{p_from:from,p_to:to,p_account:ACCOUNT}),
+      db.rpc("ozon_finance_unallocated_daily_v1",{p_from:from,p_to:to,p_account:ACCOUNT}),
     ]);
-  for (const item of [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, adJobsRes, adTasksRes, itemizedRes, transitRes, crossdockRes, crossdockCurrentRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes]) {
+  for (const item of [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, adJobsRes, adTasksRes, itemizedRes, transitRes, crossdockRes, crossdockCurrentRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes, unallocatedDailyRes]) {
     if (item.error) throw item.error;
   }
   const loaded = new Set((syncRes.data ?? []).map(r => r.day));
@@ -632,7 +634,10 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
         name:types.get(item.type_id)||fallback[item.type_id]||
           "Статья Ozon №"+item.type_id,
         amount:round(Number(item.amount)),count:Number(item.item_count),
-        category:item.accrued_category};
+        category:item.accrued_category,
+        daily:(unallocatedDailyRes.data as UnallocatedDaily[]??[])
+          .filter(day=>String(day.type_id)===String(item.type_id)&&day.accrued_category===item.accrued_category)
+          .map(day=>({date:String(day.day),amount:round(Number(day.amount)),count:Number(day.item_count)}))};
     }).sort((a,b)=>Math.abs(b.amount)-Math.abs(a.amount)),
   };
 }

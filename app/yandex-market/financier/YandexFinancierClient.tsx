@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from 'react';
 import {rules} from '../../../lib/yandex/finance';
 import type {readFinance} from '../../../lib/yandex/finance-cache';
 import YandexFinanceTable,{type RateInput} from './YandexFinanceTable';
+import AccrualBreakdownList from '../../components/finance/AccrualBreakdownList';
 type Data=NonNullable<Awaited<ReturnType<typeof readFinance>>>;
 const money=(n:number)=>new Intl.NumberFormat('ru-RU',{minimumFractionDigits:0,maximumFractionDigits:0}).format(Math.sign(n)*Math.round(Math.abs(n)/100)||0)+' ₽';
 function csv(name:string,records:Record<string,unknown>[]){
@@ -37,7 +38,9 @@ export default function YandexFinancierClient({initial,initialError}:{initial:Da
 
  <button className="ozf-btn" onClick={()=>csv('Yandex_расчёт.csv',data.rows.map(r=>({'Код товара':r.master_code,Артикул:r.article,КМ:r.manager,Товар:r.name,'Операционная прибыль':r.result===null?null:Math.round(r.result/100),Выручка:Math.round(r.income/100),'Реклама, ₽':-Math.round(r.advertising/100),'ДРР, %':r.drr===null?null:r.drr*100,'Хранение, ₽':-Math.round(r.storage/100),Заказы:r.orders,Отмены:r.cancelledTotal,Выкупы:r.buyouts,'ROAS, %':r.roas===null?null:r.roas*100,'Товары в пути':r.inTransit,'Выручка с товарами в пути':r.transitRevenue===null?null:Math.round(r.transitRevenue/100),'ДРР с товарами в пути, %':r.transitDrr===null?null:r.transitDrr*100,'Цена закупа, руб':r.unitCost===null?null:Math.round(r.unitCost/100),'Себестоимость, ₽':r.cogs===null?null:-Math.round(r.cogs/100),'ТК Маяк, ₽/шт':r.mayakUnit===null?null:Math.round(r.mayakUnit/100),'ТК Маяк, ₽':r.mayak===null?null:-Math.round(r.mayak/100),...Object.fromEntries(rules.map(([name])=>[name,-Math.round((r.expenses[name]??0)/100)]))})))}>Скачать расчёт CSV за период</button>
  <YandexFinanceTable data={data} onSave={saveRate} saving={savingRate} onToggle={toggleStatus} statusSaving={statusSaving} onManager={saveManager}/>
- <section className="ozf-panel" id="ymf-unallocated"><h2>Нераспределённые расходы</h2><table className="ozf-table"><tbody>{Object.entries(data.common).map(([name,n])=><tr key={name}><th>{name}</th><td>{money(-n)}</td></tr>)}</tbody><tfoot><tr><th scope="row">Итого</th><td>{money(-data.totals.common)}</td></tr></tfoot></table></section>
+ <section className="ozf-panel" id="ymf-unallocated"><h2>Нераспределённые расходы</h2><AccrualBreakdownList
+   items={Object.entries(data.common).map(([name,amount])=>({name,amount,daily:data.commonDetails?.[name]??[]}))}
+   total={data.totals.common} totalLabel="Итого" minorUnits invert/></section>
 
  </>}
  </>;

@@ -40,4 +40,26 @@
 .ozf-kpi{position:relative}
 .ozf-kpi-link::after{content:"";position:absolute;inset:0;z-index:1;border-radius:inherit;cursor:pointer}
 .ozf-kpi-link:focus-visible::after{outline:2px solid currentColor;outline-offset:2px}
+.ozf-collapsible-register{padding:0!important;overflow:hidden}
+.ozf-collapsible-register>summary{display:flex;align-items:center;justify-content:space-between;gap:16px;cursor:pointer;padding:17px 20px;list-style:none}
+.ozf-collapsible-register>summary::-webkit-details-marker{display:none}
+.ozf-collapsible-register>summary::before{content:'▸';color:var(--ozf-accent,#37c98e);font-size:14px;transition:transform .18s ease}
+.ozf-collapsible-register[open]>summary::before{transform:rotate(90deg)}
+.ozf-collapsible-register>summary>strong{margin-right:auto}
+.ozf-collapsible-register>summary>span{color:var(--ozf-muted,#91a7c6);font-size:11px}
+.ozf-collapsible-register>.ozf-toolbar,.ozf-collapsible-register>.ozf-table-scroll{margin:0 20px 18px}
+.ozf-accrual-list{margin-top:14px;border:1px solid var(--ozf-border,#31415d);border-radius:10px;overflow:hidden}
+.ozf-accrual-item{border-bottom:1px solid var(--ozf-subtle-border,#283750)}
+.ozf-accrual-item>summary,.ozf-accrual-total{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:20px;padding:12px 14px}
+.ozf-accrual-item>summary{cursor:pointer;list-style:none}
+.ozf-accrual-item>summary::-webkit-details-marker{display:none}
+.ozf-accrual-item>summary>span::before{content:'▸';display:inline-block;margin-right:9px;color:var(--ozf-accent,#37c98e);transition:transform .18s ease}
+.ozf-accrual-item[open]>summary>span::before{transform:rotate(90deg)}
+.ozf-accrual-item>summary:hover{background:var(--ozf-hover,#1a2b42)}
+.ozf-accrual-item strong,.ozf-accrual-total strong{font-variant-numeric:tabular-nums;white-space:nowrap}
+.ozf-accrual-days{padding:3px 14px 11px 38px;background:var(--ozf-soft,#101c30)}
+.ozf-accrual-days>div{display:grid;grid-template-columns:120px minmax(0,1fr) auto;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--ozf-subtle-border,#283750)}
+.ozf-accrual-days>div:last-child{border-bottom:0}.ozf-accrual-days time{font-variant-numeric:tabular-nums}.ozf-accrual-days small{color:var(--ozf-muted,#91a7c6)}
+.ozf-accrual-days p{margin:8px 0!important}.ozf-accrual-total{font-weight:700;background:var(--ozf-footer,#18283f)}
+@media(max-width:700px){.ozf-collapsible-register>summary>span{display:none}.ozf-accrual-days>div{grid-template-columns:1fr auto}.ozf-accrual-days small{display:none}}
 

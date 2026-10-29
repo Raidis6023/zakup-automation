@@ -1,6 +1,7 @@
 "use client";
 import {prepareFinanceSeries,clearFinanceSeries} from '../../components/finance/finance-series-cache';
 import FinancierDetailTable from "./FinancierDetailTable";
+import AccrualBreakdownList from '../../components/finance/AccrualBreakdownList';
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type Detail = { type_id: string; name: string; amount: number; count: number };
@@ -29,7 +30,7 @@ type FinanceReport = {
   source: string; calculation_includes_api_calls: boolean;
   reference_gaps: Array<{offer_id:string;master_code:string|null;name:string|null;manager:string;missing:string[]}>;
   background_jobs: Array<{day:string;status:string;pages_completed:number;rows_saved:number;last_error:string|null;updated_at:string}>;
-  rows: FinanceRow[]; unallocated_details: Array<{ type_id?:string; name: string; amount: number }>;
+  rows: FinanceRow[]; unallocated_details: Array<{ type_id?:string; name: string; amount: number;daily?:Array<{date:string;amount:number;count:number}> }>;
 };
 const API = "/api/agents/ozon-finance";
 const currency = (v: number | null | undefined) =>
@@ -388,7 +389,8 @@ export default function FinancierClient() {
           const row=rows.find(r=>r.master_code===masterCode && r.offer_id===offerId);
           if(row)return toggleDiscontinued(row,checked);
         }}/>}
-      {data&&!busy&&!loading&&<><div className="ozf-panel ozf-missing-report">
+      {data&&!busy&&!loading&&<><details className="ozf-panel ozf-missing-report ozf-collapsible-register">
+        <summary><strong>Контроль незаполненных данных · {missingRows.length} размещений</strong><span>Нажмите, чтобы открыть список</span></summary>
         <div className="ozf-toolbar">
           <div><h2>Контроль незаполненных данных · {missingRows.length} размещений</h2>
             <p>Отдельный реестр по всей номенклатуре, независимо от выгрузки начислений. Нет master_code, КМ, себестоимости или ТК Маяк.</p></div>
@@ -405,7 +407,7 @@ export default function FinancierClient() {
             {!missingRows.length&&<tr><td colSpan={5} className="ozf-empty">В справочнике товаров все обязательные поля заполнены.</td></tr>}
           </tbody>
         </table></div>
-      </div>
+      </details>
       <div className="ozf-panel ozf-ai">
         <div className="ozf-toolbar"><div><h2>ИИ-аудитор</h2></div>
           <button className="ozf-btn ozf-primary" onClick={() => void analyze()} disabled={aiBusy || !data || data.missing_days.length > 0}>{aiBusy ? "Анализ…" : "Проанализировать начисления"}</button></div>
@@ -425,15 +427,8 @@ export default function FinancierClient() {
             !["41","46"].includes(String(d.type_id??"")) &&
             !/оплата за клик|реклам|размещени.*склад|платн.*хранени/i.test(d.name));
           const otherTotal=Math.round(other.reduce((sum,d)=>sum+Number(d.amount),0)*100)/100;
-          return <table className="ozf-table">
-            <thead><tr><th>Статья</th><th>Сумма</th></tr></thead><tbody>
-              {other.map((d,i)=><tr key={String(d.type_id)+"-"+i}>
-                <td>{d.name}</td><td>{currency(d.amount)}</td>
-              </tr>)}
-              <tr className="ozf-breakdown-total"><td>Итого прочие нераспределённые начисления</td>
-                <td>{currency(otherTotal)}</td></tr>
-
-            </tbody></table>;
+          return <AccrualBreakdownList items={other} total={otherTotal}
+            totalLabel="Итого прочие нераспределённые начисления"/>;
         })()}
       </div>}
       </>}
