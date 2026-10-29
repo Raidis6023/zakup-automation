@@ -1303,11 +1303,7 @@ html[data-theme="dark"]
 
 /* Sticky grid, stable widths, dense cell rhythm, Ozon-blue sorting. */
 .ozon-reference-page .ozon-products-scroll {
-  position: relative;
-  width: 100%;
   max-height: 68vh;
-  overflow: auto;
-  overscroll-behavior: contain;
   scrollbar-gutter: stable;
   background: var(--ws-surface);
 }
@@ -1325,8 +1321,6 @@ html[data-theme="dark"]
 .ozon-reference-page .ozon-products-col-offer { width: calc((100% - 875px) * .40 - 140px); }
 .ozon-reference-page .ozon-products-col-number { width: 155px; }
 .ozon-reference-page .ozon-products-sort-table > thead > tr > th {
-  position: sticky;
-  top: 0;
   z-index: 2;
   padding: 0;
   height: 42px;
