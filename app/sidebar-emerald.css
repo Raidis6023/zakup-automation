@@ -21,7 +21,8 @@
 }
 /* Pages have their own dark backgrounds, so the sidebar must use the exact
    page token, not a constant emerald gradient. */
-html[data-theme="dark"] .home-shell {
+html[data-theme="dark"] .home-shell,
+html[data-theme="dark"] .home-shell[data-accent-area] {
   --ws-sidebar: var(--ws-page);
 }
 
