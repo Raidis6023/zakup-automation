@@ -1,7 +1,4 @@
 .home-right-panel {
-  --home-right-panel-inset:
-    26px;
-
   --home-right-panel-width:
     min(
       500px,
@@ -14,10 +11,9 @@
   top:
     0;
 
-  right:
-    var(
-      --home-right-panel-inset
-    );
+  /* Always align the panel edge with the viewport, in both modes.
+     The toggle remains 36px to the left of the collapsed panel. */
+  right: 0;
 
   bottom:
     0;
@@ -92,9 +88,6 @@
 
 
 .home-right-panel--admin {
-  --home-right-panel-inset:
-    30px;
-
   --home-right-panel-width:
     min(
       500px,
@@ -119,16 +112,9 @@ html[data-theme="dark"]
 
 
 .home-right-panel--collapsed {
-  transform:
-    translateX(
-      calc(
-        100%
-        +
-        var(
-          --home-right-panel-inset
-        )
-      )
-    );
+  /* Translation starts from right:0, keeping the reveal button visible
+     36px from the viewport edge without any offset or horizontal gap. */
+  transform: translateX(100%);
 }
 
 
