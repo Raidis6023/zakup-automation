@@ -125,6 +125,48 @@
 }
 .home-shell .home-sidebar-toggle { color: var(--emerald-nav-muted); }
 
+
+/* Marketplace-specific sidebar accents, restored from pre-emerald styles.
+   Do not change the accent of the current marketplace's page contents. */
+.home-shell .home-sidebar .home-workspace-link[data-marketplace="ozon"] {
+  --sidebar-market-accent: #1478bb;
+  --sidebar-market-bright: #8acbff;
+}
+.home-shell .home-sidebar .home-workspace-link[data-marketplace="wildberries"] {
+  --sidebar-market-accent: #8834b9;
+  --sidebar-market-bright: #e1b5fa;
+}
+.home-shell .home-sidebar .home-workspace-link[data-marketplace="yandex-market"] {
+  --sidebar-market-accent: #b95c13;
+  --sidebar-market-bright: #ffc18c;
+}
+.home-shell .home-sidebar .home-workspace-link[data-marketplace]:is(:hover, :focus-visible):not(.home-workspace-link--active) {
+  color: var(--sidebar-market-bright);
+  background: color-mix(in srgb, var(--sidebar-market-accent) 22%, #051913);
+  border-color: color-mix(in srgb, var(--sidebar-market-accent) 58%, transparent);
+}
+.home-shell .home-sidebar .home-workspace-link[data-marketplace]:is(:hover, :focus-visible):not(.home-workspace-link--active) .home-brand-icon {
+  color: var(--sidebar-market-bright);
+}
+.home-shell .home-sidebar .home-workspace-link[data-marketplace].home-workspace-link--active,
+.home-shell .home-sidebar .home-workspace-link[data-marketplace].home-workspace-link--active:is(:hover, :focus-visible) {
+  color: #fff;
+  background: linear-gradient(115deg, color-mix(in srgb, var(--sidebar-market-accent) 62%, #051913), color-mix(in srgb, var(--sidebar-market-accent) 30%, #051913));
+  border-color: var(--sidebar-market-accent);
+  box-shadow: inset 0 0 13px color-mix(in srgb, var(--sidebar-market-accent) 26%, transparent), 0 0 13px color-mix(in srgb, var(--sidebar-market-accent) 25%, transparent);
+}
+.home-shell .home-sidebar .home-workspace-link[data-marketplace].home-workspace-link--active::after,
+.home-shell .home-sidebar .home-workspace-link[data-marketplace].home-workspace-link--active .home-brand-icon {
+  color: var(--sidebar-market-bright);
+}
+.home-shell .home-sidebar .home-workspace-link[data-marketplace].home-workspace-link--active .home-brand-icon::before {
+  border-color: var(--sidebar-market-bright);
+  box-shadow: 0 0 11px color-mix(in srgb, var(--sidebar-market-accent) 72%, transparent), inset 0 0 8px color-mix(in srgb, var(--sidebar-market-accent) 38%, transparent);
+}
+.home-shell .home-sidebar .home-workspace-link[data-marketplace].home-workspace-link--active .home-brand-icon::after {
+  background: radial-gradient(ellipse at 35% 80%, color-mix(in srgb, var(--sidebar-market-accent) 67%, transparent), transparent 65%), radial-gradient(ellipse at 66% 25%, color-mix(in srgb, var(--sidebar-market-accent) 36%, transparent), transparent 70%);
+}
+
 /* The collapsed version retains a centered 34px glyph and its neon circle. */
 .home-shell--sidebar-collapsed .home-sidebar {
   padding-left: 5px;

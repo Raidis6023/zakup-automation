@@ -1,5 +1,7 @@
 "use client";
 
+import Button from "./ui/Button";
+
 import {
   useEffect,
   useState,
@@ -3459,28 +3461,7 @@ export default function VedOrderDetailClient(
                         }
                       }
 
-                      style={{
-                        width:
-                          "100%",
-
-                        minHeight:
-                          "40px",
-
-                        padding:
-                          "0 11px",
-
-                        border:
-                          "1px solid var(--border)",
-
-                        borderRadius:
-                          "8px",
-
-                        background:
-                          "var(--background)",
-
-                        color:
-                          "var(--text)",
-                      }}
+                      className="ws-editor-input"
                     />
 
                   </div>
@@ -3548,28 +3529,7 @@ export default function VedOrderDetailClient(
                         }
                       }
 
-                      style={{
-                        width:
-                          "100%",
-
-                        minHeight:
-                          "40px",
-
-                        padding:
-                          "0 11px",
-
-                        border:
-                          "1px solid var(--border)",
-
-                        borderRadius:
-                          "8px",
-
-                        background:
-                          "var(--background)",
-
-                        color:
-                          "var(--text)",
-                      }}
+                      className="ws-editor-input"
                     />
 
                   </div>
@@ -3618,11 +3578,10 @@ export default function VedOrderDetailClient(
                   }}
                 >
 
-                  <button
+                  <Button variant="secondary"
                     type="button"
 
-                    className=
-                      "secondary-button"
+                    
 
                     disabled={
                       selectedBusy
@@ -3646,7 +3605,7 @@ export default function VedOrderDetailClient(
 
                       : "Сохранить данные"}
 
-                  </button>
+                  </Button>
 
                 </div>
 
@@ -3745,28 +3704,7 @@ export default function VedOrderDetailClient(
                         }
                       }
 
-                      style={{
-                        width:
-                          "100%",
-
-                        minHeight:
-                          "40px",
-
-                        padding:
-                          "0 11px",
-
-                        border:
-                          "1px solid var(--border)",
-
-                        borderRadius:
-                          "8px",
-
-                        background:
-                          "var(--background)",
-
-                        color:
-                          "var(--text)",
-                      }}
+                      className="ws-editor-input"
                     />
 
                   </div>
@@ -3825,28 +3763,7 @@ export default function VedOrderDetailClient(
                         }
                       }
 
-                      style={{
-                        width:
-                          "100%",
-
-                        minHeight:
-                          "40px",
-
-                        padding:
-                          "0 11px",
-
-                        border:
-                          "1px solid var(--border)",
-
-                        borderRadius:
-                          "8px",
-
-                        background:
-                          "var(--background)",
-
-                        color:
-                          "var(--text)",
-                      }}
+                      className="ws-editor-input"
                     />
 
                   </div>
@@ -4069,11 +3986,10 @@ export default function VedOrderDetailClient(
                     }}
                   >
 
-                    <button
+                    <Button variant="secondary"
                       type="button"
 
-                      className=
-                        "secondary-button"
+                      
 
                       disabled={
                         selectedBusy
@@ -4090,7 +4006,7 @@ export default function VedOrderDetailClient(
                       }
                     >
                       Рассчитать
-                    </button>
+                    </Button>
 
 
                     {selectedPreview
@@ -4099,11 +4015,10 @@ export default function VedOrderDetailClient(
                         .moq_review_status !==
                         "pending" && (
 
-                      <button
+                      <Button
                         type="button"
 
-                        className=
-                          "primary-button"
+                        
 
                         disabled={
                           selectedBusy
@@ -4120,7 +4035,7 @@ export default function VedOrderDetailClient(
                         }
                       >
                         Подтвердить MOQ и цену
-                      </button>
+                      </Button>
 
                     )}
 
@@ -4133,11 +4048,10 @@ export default function VedOrderDetailClient(
 
                       <>
 
-                        <button
+                        <Button
                           type="button"
 
-                          className=
-                            "primary-button"
+                          
 
                           disabled={
                             selectedBusy
@@ -4155,14 +4069,13 @@ export default function VedOrderDetailClient(
                           }
                         >
                           Включить в заказ
-                        </button>
+                        </Button>
 
 
-                        <button
+                        <Button variant="secondary"
                           type="button"
 
-                          className=
-                            "secondary-button"
+                          
 
                           disabled={
                             selectedBusy
@@ -4180,7 +4093,7 @@ export default function VedOrderDetailClient(
                           }
                         >
                           Не заказывать
-                        </button>
+                        </Button>
 
                       </>
 
@@ -4420,28 +4333,7 @@ export default function VedOrderDetailClient(
                       }
                     }
 
-                    style={{
-                      width:
-                        "100%",
-
-                      minHeight:
-                        "40px",
-
-                      padding:
-                        "0 11px",
-
-                      border:
-                        "1px solid var(--border)",
-
-                      borderRadius:
-                        "8px",
-
-                      background:
-                        "var(--background)",
-
-                      color:
-                        "var(--text)",
-                    }}
+                    className="ws-editor-input"
                   />
 
                 </div>
@@ -4507,28 +4399,7 @@ export default function VedOrderDetailClient(
                       }
                     }
 
-                    style={{
-                      width:
-                        "100%",
-
-                      minHeight:
-                        "40px",
-
-                      padding:
-                        "0 11px",
-
-                      border:
-                        "1px solid var(--border)",
-
-                      borderRadius:
-                        "8px",
-
-                      background:
-                        "var(--background)",
-
-                      color:
-                        "var(--text)",
-                    }}
+                    className="ws-editor-input"
                   />
 
                 </div>
@@ -4589,28 +4460,7 @@ export default function VedOrderDetailClient(
                         }
                       }
 
-                      style={{
-                        width:
-                          "100%",
-
-                        minHeight:
-                          "40px",
-
-                        padding:
-                          "0 11px",
-
-                        border:
-                          "1px solid var(--border)",
-
-                        borderRadius:
-                          "8px",
-
-                        background:
-                          "var(--background)",
-
-                        color:
-                          "var(--text)",
-                      }}
+                      className="ws-editor-input"
                     />
 
                   </div>
@@ -4679,28 +4529,7 @@ export default function VedOrderDetailClient(
                       }
                     }
 
-                    style={{
-                      width:
-                        "100%",
-
-                      minHeight:
-                        "40px",
-
-                      padding:
-                        "0 11px",
-
-                      border:
-                        "1px solid var(--border)",
-
-                      borderRadius:
-                        "8px",
-
-                      background:
-                        "var(--background)",
-
-                      color:
-                        "var(--text)",
-                    }}
+                    className="ws-editor-input"
                   />
 
                 </div>
@@ -4755,28 +4584,7 @@ export default function VedOrderDetailClient(
                       }
                     }
 
-                    style={{
-                      width:
-                        "100%",
-
-                      minHeight:
-                        "40px",
-
-                      padding:
-                        "0 11px",
-
-                      border:
-                        "1px solid var(--border)",
-
-                      borderRadius:
-                        "8px",
-
-                      background:
-                        "var(--background)",
-
-                      color:
-                        "var(--text)",
-                    }}
+                    className="ws-editor-input"
                   />
 
                 </div>
@@ -4831,28 +4639,7 @@ export default function VedOrderDetailClient(
                       }
                     }
 
-                    style={{
-                      width:
-                        "100%",
-
-                      minHeight:
-                        "40px",
-
-                      padding:
-                        "0 11px",
-
-                      border:
-                        "1px solid var(--border)",
-
-                      borderRadius:
-                        "8px",
-
-                      background:
-                        "var(--background)",
-
-                      color:
-                        "var(--text)",
-                    }}
+                    className="ws-editor-input"
                   />
 
                 </div>
@@ -4989,28 +4776,7 @@ export default function VedOrderDetailClient(
                       }
                     }
 
-                    style={{
-                      width:
-                        "100%",
-
-                      minHeight:
-                        "40px",
-
-                      padding:
-                        "0 11px",
-
-                      border:
-                        "1px solid var(--border)",
-
-                      borderRadius:
-                        "8px",
-
-                      background:
-                        "var(--background)",
-
-                      color:
-                        "var(--text)",
-                    }}
+                    className="ws-editor-input"
                   />
 
                 </div>
@@ -5041,11 +4807,10 @@ export default function VedOrderDetailClient(
                 }}
               >
 
-                <button
+                <Button
                   type="button"
 
-                  className=
-                    "primary-button"
+                  
 
                   disabled={
                     selectedVedBusy
@@ -5068,16 +4833,15 @@ export default function VedOrderDetailClient(
 
                     : "Сохранить изменения ВЭД"}
 
-                </button>
+                </Button>
 
 
                 {vedMoqEditable && (
 
-                  <button
+                  <Button variant="secondary"
                     type="button"
 
-                    className=
-                      "secondary-button"
+                    
 
                     disabled={
                       selectedVedBusy
@@ -5101,7 +4865,7 @@ export default function VedOrderDetailClient(
 
                       : "Пересчитать по новому MOQ"}
 
-                  </button>
+                  </Button>
 
                 )}
 
@@ -6565,11 +6329,10 @@ export default function VedOrderDetailClient(
               &&
               problemCount > 0 && (
 
-              <button
+              <Button variant="secondary"
                 type="button"
 
-                className=
-                  "secondary-button"
+                
 
                 onClick={
                   () => {
@@ -6587,16 +6350,15 @@ export default function VedOrderDetailClient(
                 {showProblems
                   ? "Скрыть проблемы"
                   : "Показать проблемы"}
-              </button>
+              </Button>
 
             )}
 
 
-            <button
+            <Button variant="secondary"
               type="button"
 
-              className=
-                "secondary-button"
+              
 
               disabled={
                 loadingHandoff
@@ -6613,16 +6375,15 @@ export default function VedOrderDetailClient(
               }
             >
               Проверить
-            </button>
+            </Button>
 
 
             {canSendToVedStatus && (
 
-              <button
+              <Button
                 type="button"
 
-                className=
-                  "primary-button"
+                
 
                 disabled={
                   !handoff?.ready
@@ -6643,7 +6404,7 @@ export default function VedOrderDetailClient(
                 {sendingHandoff
                   ? "Передаём..."
                   : "Передать в ВЭД"}
-              </button>
+              </Button>
 
             )}
 
