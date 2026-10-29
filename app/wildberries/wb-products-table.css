@@ -207,23 +207,6 @@
 
 .wb-reference-page
 .wb-products-scroll {
-  position:
-    relative;
-
-  width:
-    100%;
-
-  max-height:
-    68vh;
-
-  overflow-x:
-    auto;
-
-  overflow-y:
-    auto;
-
-  overscroll-behavior:
-    contain;
 
   scrollbar-gutter:
     stable;
@@ -383,12 +366,6 @@ td:last-child {
 .wb-products-sort-table
 thead
 th {
-  position:
-    sticky;
-
-  top:
-    0;
-
   z-index:
     20;
 

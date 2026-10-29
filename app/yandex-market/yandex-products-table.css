@@ -99,26 +99,7 @@
 
 .yandex-reference-page
 .ym-products-table-shell {
-  position:
-    relative;
-
-  width:
-    100%;
-
-  max-height:
-    68vh;
-
-  overflow-x:
-    auto;
-
-  overflow-y:
-    auto;
-
-  overscroll-behavior:
-    contain;
-
-  scrollbar-gutter:
-    stable;
+  scrollbar-gutter: stable;
 }
 
 
@@ -180,12 +161,6 @@
 
 .yandex-reference-page
 .ym-products-table-header {
-  position:
-    sticky;
-
-  top:
-    0;
-
   z-index:
     20;
 

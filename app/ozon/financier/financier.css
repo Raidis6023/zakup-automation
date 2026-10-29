@@ -11,9 +11,9 @@
 .ozf-financial-summary{overflow:hidden}
 .ozf-financial-scroll{max-height:690px;overflow:auto;container-type:inline-size}
 .ozf-financial-table{min-width:2800px}
-.ozf-financial-table th{position:sticky;top:0;z-index:2;background:#19253e;white-space:nowrap}
+.ozf-financial-table th{position:sticky;top:0;z-index:2;white-space:nowrap}
 .ozf-financial-table td{white-space:nowrap;font-variant-numeric:tabular-nums}
-.ozf-financial-table td:first-child,.ozf-financial-table th:first-child{position:sticky;left:0;z-index:1;background:#19253e}
+.ozf-financial-table td:first-child,.ozf-financial-table th:first-child{position:sticky;left:0;z-index:1;}
 .ozf-financial-table th:first-child{z-index:3}
 .ozf-discontinued{opacity:.68;background:#111a2b}
 .ozf-discontinued td:first-child{background:#111a2b}
@@ -39,10 +39,10 @@
 .ozf-financial-scroll{max-height:68vh;min-height:220px;overflow:auto;position:relative;border:1px solid rgba(138,165,212,.2);border-radius:8px;isolation:isolate}
 .ozf-financial-table{min-width:2960px;font-size:11px;border-collapse:separate;border-spacing:0;line-height:1.2}
 .ozf-financial-table th,.ozf-financial-table td{padding:6px 8px!important;white-space:nowrap;vertical-align:middle!important;border-bottom:1px solid rgba(147,161,186,.14)}
-.ozf-financial-table thead th{position:sticky;top:0;background:#1b2b47!important;z-index:6;opacity:1;height:40px;box-shadow:0 1px 0 rgba(157,173,202,.25)}
+.ozf-financial-table thead th{position:sticky;top:0;z-index:6;opacity:1;height:40px;box-shadow:0 1px 0 rgba(157,173,202,.25)}
 .ozf-financial-table th:first-child{left:0;z-index:8}
-.ozf-financial-table tbody td:first-child{position:sticky;left:0;z-index:3;background:#172137}
-.ozf-financial-table tfoot td{position:sticky;bottom:0;background:#243654!important;font-weight:700;border-top:2px solid #6183bd;z-index:5}
+.ozf-financial-table tbody td:first-child{position:sticky;left:0;z-index:3;}
+.ozf-financial-table tfoot td{position:sticky;bottom:0;font-weight:700;border-top:2px solid #6183bd;z-index:5}
 .ozf-financial-table tfoot td:first-child{left:0;z-index:7}
 .ozf-financial-table tbody tr:hover>td{background:#233452}
 .ozf-financial-table tbody tr.ozf-discontinued>td{background:#101725!important;color:#9cacbf}

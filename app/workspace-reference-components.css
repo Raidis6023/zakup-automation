@@ -2202,3 +2202,44 @@ html[data-theme="dark"]
   outline: var(--ui-focus-width) solid var(--ui-accent, var(--ws-blue, #11865d));
   outline-offset: var(--ui-focus-offset);
 }
+
+/* Shared scrollport and sticky-header mechanics, without changing column
+   geometry, sort handlers, theme colors or per-table stacking order. */
+:is(
+  .ozon-reference-page .ozon-products-scroll,
+  .wb-reference-page .wb-products-scroll,
+  .yandex-reference-page .ym-products-table-shell,
+  .sku-list-table-scroll,
+  .unit-table-scroller,
+  .stocks-page .table-wrapper,
+  .ved-reference-page .ved-orders-section .table-wrapper
+) {
+  position: relative;
+  width: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+:is(.stocks-page .table-wrapper,
+    .ved-reference-page .ved-orders-section .table-wrapper) {
+  max-height: min(68vh, 760px);
+}
+:is(
+  .ozon-reference-page .ozon-products-sort-table > thead > tr > th,
+  .wb-reference-page .wb-products-sort-table thead th,
+  .yandex-reference-page .ym-products-table-header,
+  .sku-list-table thead th,
+  .sku-new-table th,
+  .unit-data-table th,
+  .unit-constants th,
+  .stocks-page .stocks-table thead th,
+  .ved-reference-page .ved-orders-table th
+) {
+  position: sticky;
+  top: 0;
+}
+/* Only these two legacy reports lacked an inner vertical scrollport. */
+:is(.stocks-page .stocks-table thead th,
+    .ved-reference-page .ved-orders-table th) {
+  z-index: 2;
+  background: var(--ui-table-header-background, var(--ws-surface-soft, var(--surface-soft)));
+}
