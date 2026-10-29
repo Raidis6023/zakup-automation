@@ -13,7 +13,7 @@ const variants = {
   home: { root: "home-title-row", titleArea: "", heading: "", description: "", actions: "", showThemeToggle: false },
   "admin-users": { root: "admin-users-header", titleArea: "", heading: "", description: "", actions: "", showThemeToggle: false },
   profile: { root: "profile-header", titleArea: "", heading: "", description: "", actions: "", showThemeToggle: false },
-  financier: { root: "ozf-heading", titleArea: "", heading: "", description: "", actions: "", showThemeToggle: false },
+  financier: { root: "header ozf-heading", titleArea: "", heading: "title", description: "subtitle", actions: "header-actions", showThemeToggle: false },
   default: {
     root: "header",
     titleArea: "",
