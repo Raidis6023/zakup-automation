@@ -77,8 +77,8 @@
 
   transition:
     transform
-      0.70s
-      ease,
+      var(--ui-panel-motion-duration)
+      var(--ui-panel-motion-easing),
     background-color
       0.14s
       ease,

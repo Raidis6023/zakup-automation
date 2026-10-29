@@ -106,8 +106,8 @@
 
   transition:
     grid-template-columns
-      0.18s
-      ease,
+      var(--ui-panel-motion-duration)
+      var(--ui-panel-motion-easing),
     background-color
       0.14s
       ease,
@@ -2016,4 +2016,25 @@ button.active {
       16%,
       transparent
     );
+}
+
+/* Uniform emerald selection for the topbar utility buttons. The existing
+   .active class reflects an open popup; focus-visible works from keyboard.
+   Nonactive buttons keep the original layout and hitbox. */
+.home-shell .home-topbar-right .home-icon-button.active,
+.home-shell .home-topbar-right .home-icon-button:focus-visible {
+  isolation: isolate;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ws-utility-icon) 16%, var(--ws-surface));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--ws-utility-icon) 23%, transparent);
+}
+.home-shell .home-topbar-right .home-icon-button.active::before,
+.home-shell .home-topbar-right .home-icon-button:focus-visible::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1.3px solid var(--ws-utility-icon);
+  border-radius: 50%;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--ws-utility-icon) 45%, transparent);
+  pointer-events: none;
 }
