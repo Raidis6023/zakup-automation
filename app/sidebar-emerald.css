@@ -11,6 +11,9 @@
 
 .home-shell .home-sidebar {
   box-sizing: border-box;
+  /* The fixed logo no longer occupies flex flow; reserve its old row so the
+     navigation retains its original Y coordinate in both sidebar states. */
+  padding-top: calc(var(--home-topbar-height) + 12px);
   padding-left: var(--sidebar-menu-inset);
   padding-right: var(--sidebar-menu-inset);
   background: var(--ws-sidebar);
@@ -204,7 +207,11 @@ html[data-theme="dark"] .home-shell {
   .home-shell .home-sidebar .home-workspace-label { font-size: 13px; }
 }
 @media (max-width: 800px) {
-  .home-shell .home-sidebar { background: var(--ws-sidebar); }
+  .home-shell .home-sidebar {
+    background: var(--ws-sidebar);
+    /* On mobile the logo returns to normal flow. */
+    padding-top: 12px;
+  }
   .home-shell .home-workspaces { gap: 7px; }
   .home-shell .home-sidebar .home-workspace-link {
     height: 46px;
