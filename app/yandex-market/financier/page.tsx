@@ -10,5 +10,5 @@ export const dynamic='force-dynamic';
 export default async function Page(){
  let db;try{db=await financeAccess();}catch{redirect('/yandex-market');}
  let initial=null,error='';try{const {data:latest,error:readError}=await db.from('yandex_finance_reports').select('date_from,date_to').eq('status','ready').order('created_at',{ascending:false}).limit(1).maybeSingle();if(readError)throw readError;if(latest)initial=await readFinance(latest.date_from,latest.date_to);}catch(e){error=e instanceof Error?e.message:'Не удалось прочитать отчёт';}
- return <main className="ozf-page ymf"><PageHeader variant="financier" title="Финансист Яндекс Маркета" eyebrow="ИИ-АГЕНТ / ФИНАНСЫ / ЯНДЕКС МАРКЕТ" eyebrowClassName="ozf-eyebrow" /><YandexFinancierClient initial={initial} initialError={error}/></main>;
+ return <main className="ozf-page ymf"><PageHeader variant="financier" title="ИИ-финансист Яндекс Маркета" description="Финансовая аналитика, доходы и расходы по артикулам Яндекс Маркета." /><YandexFinancierClient initial={initial} initialError={error}/></main>;
 }

@@ -2300,3 +2300,54 @@ html[data-theme="dark"]
   outline: var(--ui-focus-width, 2px) solid var(--ws-blue);
   outline-offset: var(--ui-focus-offset, 2px);
 }
+
+/* Finance pages now use PageHeader's standard .header, so they inherit
+   the same 98px sticky rail and 72px topbar offset as Ozon/WB/Yandex.
+   Remove their old independent 32px page indent and tall heading typography.
+   Keep the fixed breadcrumb/striped brand at z-index:43 above the rail (z:40). */
+.workspace-content--module .ozf-page {
+  box-sizing: border-box;
+  padding: 0 0 64px;
+}
+.workspace-content--module .ozf-page > .header.ozf-heading {
+  gap: 22px;
+  margin: 0 0 16px !important;
+  padding-left: 0;
+  background: var(--ws-page);
+}
+.workspace-content--module .ozf-page > .header.ozf-heading h1 {
+  margin: 0;
+  color: var(--ws-text);
+  font-size: clamp(22px, 1.65vw, 28px);
+  font-weight: 750;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+.workspace-content--module .ozf-page > .header.ozf-heading p {
+  margin: 5px 0 0;
+  color: var(--ws-text-muted);
+  font-size: 13px;
+  line-height: 1.3;
+  opacity: 1;
+}
+.workspace-content--module .ozf-page > .ozf-toolbar {
+  flex-wrap: wrap;
+  align-items: center;
+}
+.workspace-content--module .ozf-page .ozf-guard {
+  color: var(--ws-text-secondary);
+  background: var(--ws-surface);
+  border-color: var(--ws-border);
+}
+@media (max-width: 800px) {
+  .workspace-content--module .ozf-page {
+    padding-bottom: 40px;
+  }
+  .workspace-content--module .ozf-page > .header.ozf-heading {
+    align-items: center;
+    flex-direction: row;
+    height: auto;
+    min-height: 94px;
+    padding-right: min(300px, 62%) !important;
+  }
+}
