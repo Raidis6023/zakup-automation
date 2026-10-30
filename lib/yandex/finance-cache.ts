@@ -2,10 +2,51 @@ import {createAdminClient} from '../supabase/admin';
 import type {Line} from './finance';
 import {financialReport,type Rate,type Listing,type OrderQuantity} from './finance-profit';
 export async function readFinance(from:string,to:string){
- const db=createAdminClient();const {data:report,error}=await db.from('yandex_finance_reports').select('id,date_from,date_to,status,line_count,completed_at,order_units_complete').eq('status','ready').lte('date_from',from).gte('date_to',to).order('created_at',{ascending:false}).limit(1).maybeSingle();
- if(error)throw error;if(!report)return null;
- const lines:Line[]=[];for(let offset=0;offset<report.line_count;offset+=1000){const {data,error}=await db.from('yandex_finance_lines').select('payload').eq('report_id',report.id).order('line_index').range(offset,offset+999);if(error)throw error;lines.push(...(data??[]).map(x=>x.payload as Line));}if(lines.length!==report.line_count)throw new Error('Кэш финансов неполный');
- const orders:OrderQuantity[]=[];if(report.order_units_complete)for(let offset=0;;offset+=1000){const {data,error}=await db.from('yandex_finance_order_quantities').select('order_id,item_id,article,name,order_date,quantity,status,in_transit_quantity,realization_total_cents').eq('report_id',report.id).order('order_id').order('item_id').range(offset,offset+999);if(error)throw error;orders.push(...data as OrderQuantity[]);if(data.length<1000)break;}
+ const db=createAdminClient();
+ let {data:report,error}=await db.from('yandex_finance_reports').select('id,date_from,date_to,status,line_count,completed_at,order_units_complete')
+  .eq('status','ready').lte('date_from',from).gte('date_to',to).order('created_at',{ascending:false}).limit(1).maybeSingle();
+ if(error)throw error;
+ const lines:Line[]=[],orders:OrderQuantity[]=[];
+ if(report){
+  for(let offset=0;offset<report.line_count;offset+=1000){
+   const {data,error}=await db.from('yandex_finance_lines').select('payload').eq('report_id',report.id).order('line_index').range(offset,offset+999);
+   if(error)throw error;lines.push(...(data??[]).map(x=>x.payload as Line));
+  }
+  if(lines.length!==report.line_count)throw new Error('Кэш финансов ЯМ неполный');
+  if(report.order_units_complete)for(let offset=0;;offset+=1000){
+   const {data,error}=await db.from('yandex_finance_order_quantities').select('order_id,item_id,article,name,order_date,quantity,status,in_transit_quantity,realization_total_cents')
+   .eq('report_id',report.id).order('order_id').order('item_id').range(offset,offset+999);
+   if(error)throw error;orders.push(...data as OrderQuantity[]);if(data.length<1000)break;
+  }
+ }else{
+  const days=Math.round((Date.parse(to)-Date.parse(from))/86400000)+1;
+  if(days<1||days>91)return null;
+  const {data:snapshots,error:snapshotError}=await db.from('yandex_finance_daily_snapshots')
+   .select('snapshot_day,line_count,order_count,captured_at,source_report_id')
+   .gte('snapshot_day',from).lte('snapshot_day',to).order('snapshot_day');
+  if(snapshotError)throw snapshotError;
+  if((snapshots??[]).length!==days)return null;
+  for(let i=0;i<days;i++){
+   const day=new Date(Date.parse(from)+i*86400000).toISOString().slice(0,10);
+   const snapshot=snapshots![i];if(snapshot.snapshot_day!==day)return null;
+   const lengthBefore=lines.length,ordersBefore=orders.length;
+   for(let offset=0;offset<snapshot.line_count;offset+=1000){
+    const {data,error}=await db.from('yandex_finance_daily_lines').select('payload')
+     .eq('snapshot_day',day).order('line_index').range(offset,offset+999);
+    if(error)throw error;lines.push(...(data??[]).map(x=>x.payload as Line));
+   }
+   if(lines.length-lengthBefore!==snapshot.line_count)throw Error('Неполные дневные строки ЯМ '+day);
+   for(let offset=0;offset<snapshot.order_count;offset+=1000){
+    const {data,error}=await db.from('yandex_finance_daily_orders')
+    .select('order_id,item_id,article,name,quantity,status,in_transit_quantity,realization_total_cents')
+    .eq('snapshot_day',day).order('order_id').order('item_id').range(offset,offset+999);
+    if(error)throw error;orders.push(...(data??[]).map(x=>({...x,order_date:day} as OrderQuantity)));
+   }
+   if(orders.length-ordersBefore!==snapshot.order_count)throw Error('Неполные дневные заказы ЯМ '+day);
+  }
+  report={id:'daily-history',date_from:from,date_to:to,status:'ready',line_count:lines.length,completed_at:snapshots![snapshots!.length-1].captured_at,order_units_complete:true};
+ }
+ if(!report)return null;
  const rates:Rate[]=[];for(let offset=0;;offset+=1000){const {data,error}=await db.from('yandex_finance_rates').select('master_code,valid_from,cost_cents,mayak_cents,version').order('master_code').order('valid_from').range(offset,offset+999);if(error)throw error;rates.push(...data as Rate[]);if(data.length<1000)break;}
  for(let offset=0;;offset+=1000){const {data,error}=await db.from('yandex_finance_article_rates').select('article,valid_from,cost_cents,mayak_cents,version').order('article').order('valid_from').range(offset,offset+999);if(error)throw error;rates.push(...data.map(r=>({...r,master_code:null})));if(data.length<1000)break;}
  const listings:Listing[]=[];for(let offset=0;;offset+=1000){const {data,error}=await db.from('yandex_products').select('offer_id,master_code,raw_data').order('id').range(offset,offset+999);if(error)throw error;listings.push(...data.map(x=>({offer_id:x.offer_id,master_code:x.master_code,name:x.raw_data?.offer?.name??null})));if(data.length<1000)break;}

@@ -62,3 +62,8 @@ create table if not exists public.wb_finance_unit_rates(
 alter table public.wb_finance_unit_rates enable row level security;
 revoke all on public.wb_finance_unit_rates from anon,authenticated;
 grant select,insert,update on public.wb_finance_unit_rates to service_role;
+
+-- Mark old empty rolling WB jobs as replaced, without falsely declaring them complete.
+alter table public.wb_finance_cache_jobs drop constraint if exists wb_finance_cache_jobs_status_check;
+alter table public.wb_finance_cache_jobs add constraint wb_finance_cache_jobs_status_check
+ check (status in ('pending','running','waiting','complete','failed','superseded'));
