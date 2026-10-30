@@ -55,22 +55,31 @@ export async function POST(req:NextRequest){
    }
   }
   if(job.phase==='order_units_pull'){
-   const state=(job.order_state??{}) as {from?:string;end?:string;pageToken?:string;pages?:number};
    const endExclusive=new Date(Date.parse(job.date_to)+86400000).toISOString().slice(0,10);
-   const windowFrom=state.from??job.date_from;
-   const windowEnd=state.end??new Date(Math.min(Date.parse(windowFrom)+30*86400000,Date.parse(endExclusive))).toISOString().slice(0,10);
    const business=job.business_id;if(!business)throw new Error('Не сохранён businessId для выгрузки заказанных единиц');
-   const query=new URLSearchParams({limit:'50'});if(state.pageToken)query.set('pageToken',state.pageToken);
-   const response=await yandex(`/v1/businesses/${business}/orders?${query}`,{dates:{creationDateFrom:windowFrom,creationDateTo:windowEnd},fake:false});
-   const quantities=orderQuantities(response).filter(o=>o.order_date>=windowFrom&&o.order_date<windowEnd);
-   if(quantities.length){const {error}=await db.from('yandex_finance_order_quantities').upsert(quantities.map(o=>({...o,report_id:id})),{onConflict:'report_id,order_id,item_id'});if(error)throw error;}
-   const next=response.paging?.nextPageToken;
-   if(next&&next===state.pageToken)throw new Error('ЯМ повторил токен страницы заказов');
-   if(next)await update({order_state:{from:windowFrom,end:windowEnd,pageToken:next,pages:(state.pages??0)+1}});
-   else if(windowEnd<endExclusive)await update({order_state:{from:windowEnd,pages:(state.pages??0)+1}});
-   else await update({status:'ready',phase:'done',order_units_complete:true,order_state:{pages:(state.pages??0)+1},completed_at:new Date().toISOString(),error:null});
+   let state=(job.order_state??{}) as {from?:string;end?:string;pageToken?:string;pages?:number};
+   const pullStarted=Date.now();
+   // A browser request used to pull exactly one 50-order page. Any tab sleep,
+   // navigation or flaky connection left the report stuck. Pull a safe batch
+   // server-side and checkpoint every page so one click can finish the period.
+   for(let batch=0;batch<24&&Date.now()-pullStarted<180000;batch++){
+    const windowFrom=state.from??job.date_from;
+    const windowEnd=state.end??new Date(Math.min(Date.parse(windowFrom)+30*86400000,Date.parse(endExclusive))).toISOString().slice(0,10);
+    const query=new URLSearchParams({limit:'50'});if(state.pageToken)query.set('pageToken',state.pageToken);
+    const response=await yandex(`/v1/businesses/${business}/orders?${query}`,{dates:{creationDateFrom:windowFrom,creationDateTo:windowEnd},fake:false});
+    const quantities=orderQuantities(response).filter(o=>o.order_date>=windowFrom&&o.order_date<windowEnd);
+    if(quantities.length){const {error}=await db.from('yandex_finance_order_quantities').upsert(quantities.map(o=>({...o,report_id:id})),{onConflict:'report_id,order_id,item_id'});if(error)throw error;}
+    const next=response.paging?.nextPageToken,pages=(state.pages??0)+1;
+    if(next&&next===state.pageToken)throw new Error('ЯМ повторил токен страницы заказов');
+    if(next)state={from:windowFrom,end:windowEnd,pageToken:next,pages};
+    else if(windowEnd<endExclusive)state={from:windowEnd,pages};
+    else {await update({status:'ready',phase:'done',order_units_complete:true,order_state:{pages},completed_at:new Date().toISOString(),error:null});break;}
+    await update({order_state:state});
+    await new Promise(resolve=>setTimeout(resolve,350));
+   }
   }
   const safe={...job};delete (safe as Record<string,unknown>).services_base64;return NextResponse.json(safe);
  }catch(e){const raw=e instanceof Error?e.message:'Ошибка загрузки';const error=raw.replace(/ACMA:[^\s"\\]+/g,'[скрыто]');if(db&&lockedId)await db.from('yandex_finance_reports').update({status:'failed',error}).eq('id',lockedId);return NextResponse.json({error},{status:500});
  }finally{if(db&&lockedId)await db.from('yandex_finance_reports').update({locked_until:null}).eq('id',lockedId);}
 }
+
