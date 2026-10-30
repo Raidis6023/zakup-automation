@@ -53,3 +53,12 @@ begin
 end $$;
 revoke all on function public.finance_publish_wb_daily(date) from public,anon,authenticated;
 grant execute on function public.finance_publish_wb_daily(date) to service_role;
+
+create table if not exists public.wb_finance_unit_rates(
+ nm_id text not null check(nm_id ~ '^[0-9]+$'), valid_from date not null,
+ cost_cents bigint check(cost_cents>=0),mayak_cents bigint check(mayak_cents>=0),
+ version bigint not null default 1,updated_by uuid,updated_at timestamptz not null default now(),
+ primary key(nm_id,valid_from));
+alter table public.wb_finance_unit_rates enable row level security;
+revoke all on public.wb_finance_unit_rates from anon,authenticated;
+grant select,insert,update on public.wb_finance_unit_rates to service_role;

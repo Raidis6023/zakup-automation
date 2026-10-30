@@ -28,22 +28,41 @@ async function wb(url: string, token: string) {
   return await r.json() as unknown;
 }
 
-function groupFinancial(lines:FinanceLine[]) {
-  const byId=new Map<string,{nm_id:string;article:string;name:string;realization:number;to_transfer:number;delivery:number;storage_in_report:number|null;acceptance:number;penalty:number;deduction:number;rows:number;operations:Record<string,{amount:number;count:number;realization:number;delivery:number;storage:number;penalty:number;deduction:number}>}>();
+type Rate={nm_id:string;valid_from:string;cost_cents:number|null;mayak_cents:number|null;version:number};
+function groupFinancial(lines:FinanceLine[],rates:Rate[]=[]) {
+ const rateMap=new Map<string,Rate[]>();for(const r of rates){const a=rateMap.get(r.nm_id)??[];a.push(r);rateMap.set(r.nm_id,a);}for(const a of rateMap.values())a.sort((x,y)=>y.valid_from.localeCompare(x.valid_from));
+  const byId=new Map<string,{nm_id:string;article:string;name:string;realization:number;to_transfer:number;delivery:number;storage_in_report:number|null;acceptance:number;penalty:number;deduction:number;rows:number;sales_units:number;return_units:number;net_transfer:number;cogs_estimate:number;mayak_estimate:number;cost_missing:boolean;mayak_missing:boolean;cost_rub:number|null;mayak_rub:number|null;operations:Record<string,{amount:number;count:number;realization:number;delivery:number;storage:number;penalty:number;deduction:number}>}>();
   for(const l of lines){
     const id=String(l.nmId ?? "0"), article=String(l.vendorCode ?? ""), name=String(l.title ?? l.subjectName ?? "");
     const key=id!=="0" ? id : "unallocated";
     let x=byId.get(key);
-    if(!x){x={nm_id:key,article,name,realization:0,to_transfer:0,delivery:0,storage_in_report:null,acceptance:0,penalty:0,deduction:0,rows:0,operations:{}};byId.set(key,x);}
+    if(!x){x={nm_id:key,article,name,realization:0,to_transfer:0,delivery:0,storage_in_report:null,acceptance:0,penalty:0,deduction:0,rows:0,sales_units:0,return_units:0,net_transfer:0,cogs_estimate:0,mayak_estimate:0,cost_missing:false,mayak_missing:false,cost_rub:null,mayak_rub:null,operations:{}};byId.set(key,x);}
     x.rows++;
     const op=String(l.sellerOperName ?? l.docTypeName ?? "Неизвестная операция");
     const transfer=num(l.forPay),sale=num(l.retailAmount), delivery=num(l.deliveryAmount);
     x.realization+=sale; x.to_transfer+=transfer; x.delivery+=delivery;
+    const doc=String(l.docTypeName??'').toLowerCase(),name=op.toLowerCase();
+    const sold=doc==='продажа'&&name==='продажа',returned=doc==='возврат'&&name==='возврат';
+    const quantity=Math.max(0,num(l.quantity));
+    if(sold)x.sales_units+=quantity;if(returned)x.return_units+=quantity;
+    x.net_transfer+=returned?-Math.abs(transfer):transfer;
+    if(quantity&&(sold||returned)){
+      const d=String(l.rrDate??l.rrdDt??l.rrdDate??l.saleDt??'').slice(0,10);
+      const rate=(rateMap.get(key)??[]).find(r=>r.valid_from<=d);
+      const cost=rate?.cost_cents==null?null:Number(rate.cost_cents)/100;
+      const mayak=rate?.mayak_cents==null?null:Number(rate.mayak_cents)/100;
+      if(cost===null)x.cost_missing=true;else{x.cogs_estimate+=(sold?1:-1)*quantity*cost;x.cost_rub=cost;}
+      if(sold){if(mayak===null)x.mayak_missing=true;else{x.mayak_estimate+=quantity*mayak;x.mayak_rub=mayak;}}
+    }
     if(l.paidStorage!==undefined && l.paidStorage!==null) x.storage_in_report=round((x.storage_in_report??0)+num(l.paidStorage));x.acceptance+=num(l.paidAcceptance);x.penalty+=num(l.penalty);x.deduction+=num(l.deduction);
     const prev=x.operations[op]??{amount:0,count:0,realization:0,delivery:0,storage:0,penalty:0,deduction:0};
     x.operations[op]={amount:round(prev.amount+transfer),count:prev.count+1,realization:round(prev.realization+sale),delivery:round(prev.delivery+delivery),storage:round(prev.storage+num(l.paidStorage)),penalty:round(prev.penalty+num(l.penalty)),deduction:round(prev.deduction+num(l.deduction))};
   }
-  return [...byId.values()].map(x=>({...x,realization:round(x.realization),to_transfer:round(x.to_transfer),delivery:round(x.delivery),storage_in_report:x.storage_in_report==null?null:round(x.storage_in_report),acceptance:round(x.acceptance),penalty:round(x.penalty),deduction:round(x.deduction)}));
+  return [...byId.values()].map(x=>{
+   const cogs=x.cost_missing?null:round(x.cogs_estimate),mayak_expense=x.mayak_missing?null:round(x.mayak_estimate);
+   const preliminary_result=cogs===null||mayak_expense===null?null:round(x.net_transfer-x.delivery-(x.storage_in_report??0)-x.acceptance-x.penalty-x.deduction-cogs-mayak_expense);
+   return {...x,realization:round(x.realization),to_transfer:round(x.to_transfer),delivery:round(x.delivery),storage_in_report:x.storage_in_report==null?null:round(x.storage_in_report),acceptance:round(x.acceptance),penalty:round(x.penalty),deduction:round(x.deduction),buyouts:x.sales_units-x.return_units,cogs,mayak_expense,preliminary_result,missing_rates:[...(x.cost_missing?['Себестоимость']:[]),...(x.mayak_missing?['ТК Маяк']:[])]};
+  });
 }
 
 const FINANCE_KEY="finance_detailed";
@@ -150,12 +169,14 @@ export async function GET(request:NextRequest){
     }
   }
   if(readCount!==latest.rows_saved)throw Error("Кэш WB прочитан не полностью. Повторите загрузку отчёта.");
+  const {data:rates,error:rateError}=await db.from('wb_finance_unit_rates').select('nm_id,valid_from,cost_cents,mayak_cents,version').order('valid_from',{ascending:false});
+  if(rateError)throw rateError;
   const daily=Array.from({length:Math.round((Date.parse(to)-Date.parse(from))/86400000)+1},(_,i)=>{
     const day=new Date(Date.parse(from)+i*86400000).toISOString().slice(0,10);
     return {day,rows:groupFinancial(lines.filter(line=>String(line.rrDate??line.rrdDt??line.rrdDate??line.saleDt??'').slice(0,10)===day)).map(r=>({nm_id:r.nm_id,revenue:r.realization}))};
   });
   return NextResponse.json({ok:true,from,to,financial_rows:lines.length,daily,
-    rows:groupFinancial(lines),
+    rows:groupFinancial(lines,(rates??[]) as Rate[]),
     ads:{items:[],campaigns:0,coverage:"not_loaded",warning:"Рекламная статистика пока не загружена в кэш. Новые запросы к WB при смене фильтра не отправляются."},
     coverage:{finance:latest.status==="complete"?"cached_complete":"cached_partial",advertising:"not_loaded",paid_storage:"not_loaded",advertising_actual_charges:"not_loaded"},
     cache:{status:latest.status,runDay:latest.run_day,from:latest.date_from,to:latest.date_to,completedAt:latest.completed_at,rowsSaved:latest.rows_saved},

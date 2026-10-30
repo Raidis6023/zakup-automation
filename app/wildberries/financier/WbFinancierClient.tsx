@@ -2,7 +2,7 @@
 import FinanceDynamics from "../../components/finance/FinanceDynamics";
 import CopyArticle from "../../components/finance/CopyArticle";
 import { useEffect, useMemo, useState } from "react";
-type Row={nm_id:string;article:string;name:string;realization:number;to_transfer:number;delivery:number;storage_in_report:number|null;acceptance:number;penalty:number;deduction:number;rows:number;operations:Record<string,{amount:number;count:number;realization:number;delivery:number;storage:number;penalty:number;deduction:number}>};
+type Row={nm_id:string;article:string;name:string;realization:number;to_transfer:number;delivery:number;storage_in_report:number|null;acceptance:number;penalty:number;deduction:number;rows:number;sales_units:number;return_units:number;buyouts:number;cogs:number|null;mayak_expense:number|null;preliminary_result:number|null;missing_rates:string[];cost_rub:number|null;mayak_rub:number|null;operations:Record<string,{amount:number;count:number;realization:number;delivery:number;storage:number;penalty:number;deduction:number}>};
 type Ad={nm_id:number;date:string;campaign_id:number;spend:number;views:number;clicks:number;orders:number;sum_price:number};
 type Data={daily:Array<{day:string;rows:Array<{nm_id:string;revenue:number}>}>;ok:boolean;from:string;to:string;financial_rows:number;rows:Row[];cache?:{status:string;rowsSaved:number};ads:{items:Ad[];campaigns:number;coverage:string;warning:string|null};coverage:Record<string,string>;notice:string};
 const money=(v:number|null)=>v==null?"—":v.toLocaleString("ru-RU",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -14,6 +14,7 @@ const [retryAt,setRetryAt]=useState(""),[now,setNow]=useState(Date.now());
 useEffect(()=>{const id=setInterval(()=>setNow(Date.now()),1000);return ()=>clearInterval(id);},[]);
 const blocked=Boolean(retryAt&&Date.parse(retryAt)>now);
 const [data,setData]=useState<Data|null>(null),[error,setError]=useState(""),[busy,setBusy]=useState(false),[filter,setFilter]=useState(""),[selected,setSelected]=useState("");
+const [validFrom,setValidFrom]=useState(()=>day(-28)),[costInput,setCostInput]=useState(""),[mayakInput,setMayakInput]=useState(""),[savingRates,setSavingRates]=useState(false);
 async function load(refresh=false){if(blocked)return;setBusy(true);setError("");try{
 const q=new URLSearchParams({from,to});const cached=reportCache.get(q.toString());if(!refresh&&cached&&Date.now()-cached.at<30*60*1000){setData(cached.data);setSelected('');return;}const r=await fetch("/api/agents/wb-finance?"+q,{cache:"no-store"});
 const obj=await r.json();if(r.status===429&&obj.retryAt)setRetryAt(obj.retryAt);if(!r.ok||!obj.ok)throw new Error(obj.error??"Ошибка загрузки");setRetryAt("");reportCache.set(q.toString(),{at:Date.now(),data:obj});setData(obj);setSelected("");
@@ -24,6 +25,13 @@ const rows=(data?.rows??[]).filter(r=>(r.article+" "+r.nm_id+" "+r.name).toLower
 const wholeSeries=useMemo(()=>(data?.daily??[]).map(d=>({day:d.day,v:{orders:null,buyouts:null,revenue:d.rows.reduce((s,r)=>s+r.revenue,0),profit:null,marketplace:null,advertising:null,inbound:null}})),[data]);
 const itemSeries=useMemo(()=>(data?.daily??[]).map(d=>({day:d.day,v:{orders:null,buyouts:null,revenue:d.rows.filter(r=>r.nm_id===selected).reduce((s,r)=>s+r.revenue,0),profit:null,marketplace:null,advertising:null,inbound:null}})),[data,selected]);
 const active=rows.find(r=>r.nm_id===selected);
+function selectRow(r:Row){if(selected===r.nm_id){setSelected('');return;}setSelected(r.nm_id);setCostInput(r.cost_rub==null?'':String(r.cost_rub));setMayakInput(r.mayak_rub==null?'':String(r.mayak_rub));}
+async function saveRates(){if(!active)return;setSavingRates(true);setError('');try{
+ const response=await fetch('/api/agents/wb-finance-rates',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nm_id:active.nm_id,valid_from:validFrom,cost:costInput,mayak:mayakInput})});
+ const body=await response.json();if(!response.ok)throw Error(body.error??'Ошибка сохранения');
+ const id=active.nm_id;reportCache.clear();await load(true);setSelected(id);
+ }catch(e){setError(e instanceof Error?e.message:'Ошибка сохранения');}finally{setSavingRates(false);}}
+
 const sum=(fn:(r:Row)=>number)=>rows.reduce((t,r)=>t+fn(r),0);
 const adCovered=data?.ads.coverage==="stats_only";
 return <div className="ozf-layout">
@@ -47,24 +55,32 @@ return <div className="ozf-layout">
 {[["Реализация",sum(r=>r.realization)],["К перечислению WB",sum(r=>r.to_transfer)],["Логистика",sum(r=>r.delivery)],["Штрафы и удержания",sum(r=>r.penalty+r.deduction)]].map(([label,value])=><div className="ozf-panel" key={String(label)}><span>{label}</span><strong>{money(Number(value))} ₽</strong></div>)}
 </div>
 {data.cache?.status!=="complete"&&<p className="ozf-error" role="alert">НЕПОЛНАЯ ВЫГРУЗКА: сохранено {data.cache?.rowsSaved?.toLocaleString("ru-RU")??"?"} строк. Финансовые итоги предварительные и не пригодны для решений.</p>}
-<p className="ozf-notice" style={{marginTop:16}}>Не рассчитана прибыль: нет себестоимости и ТК «Маяк». Платное хранение не загружено отдельным отчётом. {data.ads.warning}</p>
+<p className="ozf-notice" style={{marginTop:16}}>Предварительный результат учитывает введённые себестоимость и ТК «Маяк». Окончательная прибыль недоступна, пока реклама и отдельное хранение не подтверждены. {data.ads.warning}</p>
 <FinanceDynamics marketplace="wb" from={data.from} to={data.to} provided={wholeSeries} selected="revenue"/>
 <div className="ozf-toolbar" style={{marginTop:18}}><input placeholder="Поиск по артикулу, nmId или товару" value={filter} onChange={e=>setFilter(e.target.value)}/><span>Артикулов: {rows.length} · Финансовых операций: {data.financial_rows}</span></div>
 <div className="ozf-financial-scroll"><table className="ozf-table ozf-financial-table" style={{minWidth:1900}}>
-<thead><tr>{["Артикул","nmId","Товар","Реализация, ₽","К перечислению, ₽","Логистика, ₽","Хранение, ₽","Приёмка, ₽","Штрафы, ₽","Удержания, ₽","Реклама, ₽","Расходы всего, ₽","Финрезультат, ₽"].map(h=><th key={h}>{h}</th>)}</tr></thead>
+<thead><tr>{["Артикул","nmId","Товар","Реализация, ₽","К перечислению, ₽","Логистика, ₽","Хранение, ₽","Приёмка, ₽","Штрафы, ₽","Удержания, ₽","Реклама, ₽","Расходы всего, ₽","Предв. результат, ₽"].map(h=><th key={h}>{h}</th>)}</tr></thead>
 <tbody>{rows.map(r=>{
 const ad=adsByNm.get(r.nm_id)?.spend??0;
-return <tr key={r.nm_id} className={selected===r.nm_id?"ozf-row-active":""} onClick={()=>setSelected(selected===r.nm_id?"":r.nm_id)}>
+return <tr key={r.nm_id} className={selected===r.nm_id?"ozf-row-active":""} onClick={()=>selectRow(r)}>
 <td style={{color:"#98beff",whiteSpace:"nowrap"}}>▸ {r.article||"Не сопоставлен"}<CopyArticle article={r.article||r.nm_id}/></td><td>{r.nm_id}</td><td>{r.name||"—"}</td>
 <td>{money(r.realization)}</td><td>{money(r.to_transfer)}</td><td className="ozf-negative">{money(r.delivery)}</td>
 <td>{r.storage_in_report==null?"Нет данных":money(r.storage_in_report)+" (из реализации)"}</td>
 <td>{money(r.acceptance)}</td><td>{money(r.penalty)}</td><td>{money(r.deduction)}</td>
-<td>{adCovered?money(ad):"Нет данных"}</td><td>Нет полных данных</td><td>Не рассчитан</td>
+<td>{adCovered?money(ad):"Нет данных"}</td><td>{r.cogs===null||r.mayak_expense===null?"Нужны ставки":money(r.cogs+r.mayak_expense)}</td><td title="Предварительная оценка, не включает неподтверждённую рекламу">{r.preliminary_result===null?"Нужны ставки":money(r.preliminary_result)+" *"}</td>
 </tr>})}</tbody>
 <tfoot><tr><th colSpan={3}>Итого за период · {rows.length} артикулов</th><th>{money(sum(r=>r.realization))}</th><th>{money(sum(r=>r.to_transfer))}</th><th>{money(sum(r=>r.delivery))}</th><th>Нет данных</th><th>{money(sum(r=>r.acceptance))}</th><th>{money(sum(r=>r.penalty))}</th><th>{money(sum(r=>r.deduction))}</th><th>{adCovered?money([...adsByNm.values()].reduce((t,v)=>t+v.spend,0)):"Нет данных"}</th><th>—</th><th>—</th></tr></tfoot>
 </table></div>
 {active&&<div className="ozf-panel" style={{marginTop:18}}>
-<h2>Детализация: {active.article||active.nm_id}<CopyArticle article={active.article||active.nm_id}/></h2><FinanceDynamics marketplace="wb" from={data.from} to={data.to} provided={itemSeries} selected="revenue"/>
+<h2>Детализация: {active.article||active.nm_id}<CopyArticle article={active.article||active.nm_id}/></h2>
+<div className="ozf-rate-editor"><h3>Себестоимость и ТК «Маяк»</h3><div className="ozf-filters">
+<label>Действуют с <input type="date" value={validFrom} onChange={e=>setValidFrom(e.target.value)}/></label>
+<label>Себестоимость, ₽/шт <input inputMode="decimal" value={costInput} onChange={e=>setCostInput(e.target.value)} placeholder="Не задана"/></label>
+<label>ТК «Маяк», ₽/шт <input inputMode="decimal" value={mayakInput} onChange={e=>setMayakInput(e.target.value)} placeholder="Не задана"/></label>
+<button className="ozf-btn ozf-primary" disabled={savingRates||busy} onClick={()=>void saveRates()}>{savingRates?"Сохраняем…":"Сохранить и пересчитать"}</button></div>
+<p>Расчёт по датам операций. Продажи {active.sales_units}, возвраты {active.return_units}, выкупы {active.buyouts}. Себестоимость: {money(active.cogs)} ₽; ТК «Маяк»: {money(active.mayak_expense)} ₽. Предварительный результат: {money(active.preliminary_result)} ₽.</p>
+{active.missing_rates.length>0&&<p className="ozf-error">Не хватает: {active.missing_rates.join(', ')}</p>}
+</div><FinanceDynamics marketplace="wb" from={data.from} to={data.to} provided={itemSeries} selected="revenue"/>
 <p>{active.name||""} · nmId {active.nm_id} · {active.rows} строк реализации</p>
 <div className="ozf-table-scroll"><table className="ozf-table"><thead><tr>{["Операция","Строк","К перечислению, ₽","Реализация, ₽","Логистика, ₽","Хранение, ₽","Штраф, ₽","Удержание, ₽"].map(x=><th key={x}>{x}</th>)}</tr></thead><tbody>
 {Object.entries(active.operations).sort((a,b)=>a[0].localeCompare(b[0],"ru")).map(([name,v])=><tr key={name}><td>{name}</td><td>{v.count}</td><td>{money(v.amount)}</td><td>{money(v.realization)}</td><td>{money(v.delivery)}</td><td>{money(v.storage)}</td><td>{money(v.penalty)}</td><td>{money(v.deduction)}</td></tr>)}
