@@ -33,6 +33,8 @@ async function saveRates(){if(!active)return;setSavingRates(true);setError('');t
  }catch(e){setError(e instanceof Error?e.message:'Ошибка сохранения');}finally{setSavingRates(false);}}
 
 const sum=(fn:(r:Row)=>number)=>rows.reduce((t,r)=>t+fn(r),0);
+const allRatesFilled=rows.length>0&&rows.every(r=>r.preliminary_result!==null);
+const missingRateArticles=rows.filter(r=>r.missing_rates.length>0).length;
 const adCovered=data?.ads.coverage==="stats_only";
 return <div className="ozf-layout">
 <section className="ozf-panel">
@@ -56,6 +58,7 @@ return <div className="ozf-layout">
 </div>
 {data.cache?.status!=="complete"&&<p className="ozf-error" role="alert">НЕПОЛНАЯ ВЫГРУЗКА: сохранено {data.cache?.rowsSaved?.toLocaleString("ru-RU")??"?"} строк. Финансовые итоги предварительные и не пригодны для решений.</p>}
 <p className="ozf-notice" style={{marginTop:16}}>Предварительный результат учитывает введённые себестоимость и ТК «Маяк». Окончательная прибыль недоступна, пока реклама и отдельное хранение не подтверждены. {data.ads.warning}</p>
+<p className="ozf-notice">Артикулов с недостающими ставками: <b>{missingRateArticles}</b>. {allRatesFilled?<>Предварительный итог за выбранный период: <b>{money(sum(r=>r.preliminary_result??0))} ₽</b>. Реклама и хранение ещё не подтверждены.</>:<>После заполнения ставок по всем артикулам здесь появится предварительный итог.</>}</p>
 <FinanceDynamics marketplace="wb" from={data.from} to={data.to} provided={wholeSeries} selected="revenue"/>
 <div className="ozf-toolbar" style={{marginTop:18}}><input placeholder="Поиск по артикулу, nmId или товару" value={filter} onChange={e=>setFilter(e.target.value)}/><span>Артикулов: {rows.length} · Финансовых операций: {data.financial_rows}</span></div>
 <div className="ozf-financial-scroll"><table className="ozf-table ozf-financial-table" style={{minWidth:1900}}>
@@ -69,7 +72,7 @@ return <tr key={r.nm_id} className={selected===r.nm_id?"ozf-row-active":""} onCl
 <td>{money(r.acceptance)}</td><td>{money(r.penalty)}</td><td>{money(r.deduction)}</td>
 <td>{adCovered?money(ad):"Нет данных"}</td><td>{r.cogs===null||r.mayak_expense===null?"Нужны ставки":money(r.cogs+r.mayak_expense)}</td><td title="Предварительная оценка, не включает неподтверждённую рекламу">{r.preliminary_result===null?"Нужны ставки":money(r.preliminary_result)+" *"}</td>
 </tr>})}</tbody>
-<tfoot><tr><th colSpan={3}>Итого за период · {rows.length} артикулов</th><th>{money(sum(r=>r.realization))}</th><th>{money(sum(r=>r.to_transfer))}</th><th>{money(sum(r=>r.delivery))}</th><th>Нет данных</th><th>{money(sum(r=>r.acceptance))}</th><th>{money(sum(r=>r.penalty))}</th><th>{money(sum(r=>r.deduction))}</th><th>{adCovered?money([...adsByNm.values()].reduce((t,v)=>t+v.spend,0)):"Нет данных"}</th><th>—</th><th>—</th></tr></tfoot>
+<tfoot><tr><th colSpan={3}>Итого за период · {rows.length} артикулов</th><th>{money(sum(r=>r.realization))}</th><th>{money(sum(r=>r.to_transfer))}</th><th>{money(sum(r=>r.delivery))}</th><th>Нет данных</th><th>{money(sum(r=>r.acceptance))}</th><th>{money(sum(r=>r.penalty))}</th><th>{money(sum(r=>r.deduction))}</th><th>{adCovered?money([...adsByNm.values()].reduce((t,v)=>t+v.spend,0)):"Нет данных"}</th><th>{allRatesFilled?money(sum(r=>(r.cogs??0)+(r.mayak_expense??0))):"Нужны ставки"}</th><th title="Предварительно, без неподтверждённой рекламы и хранения">{allRatesFilled?money(sum(r=>r.preliminary_result??0))+" *":"Нужны ставки"}</th></tr></tfoot>
 </table></div>
 {active&&<div className="ozf-panel" style={{marginTop:18}}>
 <h2>Детализация: {active.article||active.nm_id}<CopyArticle article={active.article||active.nm_id}/></h2>
