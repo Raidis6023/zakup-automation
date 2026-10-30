@@ -1,0 +1,40 @@
+.ved-calculator-panel { grid-column: 1 / -1; padding: 17px; min-width: 0; }
+.ved-calc { color: var(--ws-text); }
+.ved-calc-note { border: 1px solid rgba(55,201,142,.35); background: rgba(55,201,142,.06); border-radius: 12px; padding: 13px 16px; margin-bottom: 15px; }
+.ved-calc-note strong { font-size: 14px; color: var(--ws-text); }
+.ved-calc-note p { margin-top: 5px; line-height: 1.6; font-size: 12px; }
+.ved-calc-layout { display: grid; grid-template-columns: minmax(300px, 43%) minmax(0, 1fr); gap: 16px; align-items: start; }
+.ved-calc-editor,.ved-calc-output { min-width: 0; }
+.ved-calc-section { border: 1px solid var(--ws-border); border-radius: 11px; margin-bottom: 10px; background: var(--ws-surface); overflow: hidden; }
+.ved-calc-section summary { padding: 13px 15px; cursor: pointer; color: var(--ws-text); font-size: 13px; font-weight: 650; }
+.ved-calc-section summary:hover { background: var(--ws-hover, rgba(55,201,142,.06)); }
+.ved-calc-section[open] summary { border-bottom: 1px solid var(--ws-border); color: var(--ws-active, #37c98e); }
+.ved-calc-fields { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 11px; padding: 13px; }
+.ved-calc-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ved-calc-field span { font-size: 11px; color: var(--ws-text-muted); }
+.ved-calc-field input,.ved-calc-field select { box-sizing: border-box; width: 100%; min-width: 0; background: var(--ws-surface-soft, var(--ws-surface)); color: var(--ws-text); border: 1px solid var(--ws-border); border-radius: 7px; padding: 9px; font-size: 13px; }
+.ved-calc-field input:focus-visible,.ved-calc-field select:focus-visible { outline: 2px solid #37c98e; outline-offset: 1px; }
+.ved-calc-check { display: flex; align-items: flex-start; gap: 8px; margin: 0 13px 12px; line-height: 1.4; font-size: 11px; color: var(--ws-text-muted); cursor: pointer; }
+.ved-calc-check input { accent-color: #37c98e; }
+.ved-calc-reset { border: 1px solid var(--ws-border); border-radius: 8px; color: var(--ws-text); padding: 9px 13px; background: var(--ws-surface); cursor: pointer; font-size: 12px; }
+.ved-calc-average { border: 1px solid rgba(55,201,142,.36); border-radius: 11px; background: rgba(55,201,142,.07); padding: 17px; display: flex; flex-direction: column; gap: 6px; }
+.ved-calc-average span { font-size: 12px; color: var(--ws-text-muted); }
+.ved-calc-average strong { color: var(--ws-active, #37c98e); font-size: clamp(22px, 3vw, 32px); font-variant-numeric: tabular-nums; }
+.ved-calc-average small { font-size: 11px; color: var(--ws-text-muted); }
+.ved-calc-results { display: grid; gap: 10px; margin-top: 12px; }
+.ved-calc-result { border: 1px solid var(--ws-border); border-radius: 11px; padding: 14px; }
+.ved-calc-result-top { display: flex; gap: 8px; align-items: center; justify-content: space-between; font-size: 12px; flex-wrap: wrap; }
+.ved-calc-result-top span { color: var(--ws-text-muted); font-size: 11px; }
+.ved-calc-cost { font-size: 22px; font-variant-numeric: tabular-nums; font-weight: 700; margin: 8px 0 10px; }
+.ved-calc-cost small { font-size: 11px; font-weight: 400; color: var(--ws-text-muted); }
+.ved-calc-mini { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; font-size: 11px; color: var(--ws-text-muted); }
+.ved-calc-mini span { overflow-wrap: anywhere; }
+.ved-calc-feasibility { background: var(--ws-surface-soft, var(--ws-surface)); border-radius: 10px; border: 1px solid var(--ws-border); margin: 12px 0; padding: 13px; font-size: 12px; }
+.ved-calc-feasibility p { font-size: 11px; margin-top: 7px; line-height: 1.55; }
+.ved-calc-warning { margin: 9px 0 0 !important; font-size: 11px !important; color: var(--ws-text-muted); padding-left: 10px; border-left: 2px solid #37c98e; }
+.ved-calc-errors { padding: 14px; border: 1px solid #dc5470; border-radius: 9px; }
+.ved-calc-errors p { margin-top: 8px; }
+.ved-calc-open { display: inline-flex; margin-top: 13px; color: var(--ws-active, #37c98e); font-size: 13px; text-decoration: none; font-weight: 650; }
+.ved-calc-open:hover { text-decoration: underline; }
+@media(max-width:960px){.ved-calc-layout{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:570px){.ved-calc-fields,.ved-calc-mini{grid-template-columns:minmax(0,1fr)}.ved-calculator-panel{padding:11px}}
