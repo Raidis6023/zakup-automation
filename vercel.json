@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/agents/ozon-finance-plan",
-      "schedule": "20 22 * * *"
+      "schedule": "5 22 * * *"
     },
     {
       "path": "/api/agents/ozon-finance-support-cron",
@@ -38,3 +38,4 @@
     }
   ]
 }
+
