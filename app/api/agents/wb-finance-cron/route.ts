@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "../../../../lib/supabase/admin";
+import { createClient } from "../../../../lib/supabase/server";
+import { runAuxiliarySync } from "../wb-finance-aux-sync/route";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=300;
-const PAGE_SIZE=20000;
+const PAGE_SIZE=100000;
 const BATCH=200;
 type Job={run_day:string;date_from:string;date_to:string;status:string;next_offset:number;rows_saved:number;retry_at:string|null;updated_at:string};
 const date=(v:Date)=>v.toISOString().slice(0,10);
@@ -12,6 +14,7 @@ const shift=(d:string,delta:number)=>date(new Date(Date.parse(d+"T00:00:00Z")+de
 // Reporting day rolls forward only at 06:00 Krasnoyarsk, not at midnight.
 const todayKras=()=>date(new Date(Date.now()+3600000));
 const reply=(obj:object,status=200)=>NextResponse.json(obj,{status,headers:{"Cache-Control":"no-store"}});
+async function adminAccess(){const session=await createClient();const {data:{user}}=await session.auth.getUser();if(!user)throw Error("Требуется авторизация");const db=createAdminClient();const {data,error}=await db.from("app_user_access").select("admin_level,is_blocked").eq("user_id",user.id).maybeSingle();if(error||!data||data.is_blocked||!["admin","senior_admin"].includes(data.admin_level??""))throw Error("Недостаточно прав для финансовой аналитики");}
 async function work(req:NextRequest,attempt:number,started:number){
  if(!process.env.CRON_SECRET||req.headers.get("authorization")!=="Bearer "+process.env.CRON_SECRET)return reply({ok:false,error:"Unauthorized"},401);
  const token=process.env.WB_FINANCE_TOKEN?.trim();
@@ -85,4 +88,10 @@ async function work(req:NextRequest,attempt:number,started:number){
  }
 }
 
-export async function GET(req:NextRequest){return work(req,0,Date.now());}
+async function runAll(req:NextRequest){
+ const [financeResponse,auxiliary]=await Promise.all([work(req,0,Date.now()),runAuxiliarySync()]);
+ const finance=await financeResponse.json();const ok=financeResponse.ok||auxiliary.ok;
+ return reply({ok,finance,auxiliary},ok?200:503);
+}
+export async function GET(req:NextRequest){return runAll(req);}
+export async function POST(req:NextRequest){try{await adminAccess();const secret=process.env.CRON_SECRET;if(!secret)return reply({ok:false,error:"Не найден CRON_SECRET"},503);const internal=new NextRequest(req.url,{method:"GET",headers:{authorization:"Bearer "+secret}});return runAll(internal);}catch(e){return reply({ok:false,error:e instanceof Error?e.message:String(e)},403);}}
