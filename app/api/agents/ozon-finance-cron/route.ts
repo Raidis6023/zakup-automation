@@ -25,7 +25,12 @@ export async function GET(request: NextRequest) {
 
   // Finance planning and loading must not rely on scheduler invocation order.
   const plan=await planFinanceWindow(request);
-  if(!plan.ok)return reply({ok:false,phase:"planning",error:"Не удалось подготовить финансовые дни",http_status:plan.status},503);
+  if(!plan.ok){
+    const details=await plan.json() as {error?:string};
+    const reason=String(details.error??"Ошибка планирования Ozon").slice(0,300);
+    console.error("Ozon finance planning failed",reason);
+    return reply({ok:false,phase:"planning",error:reason,http_status:plan.status},503);
+  }
   const db=createAdminClient();
   // Keep the descriptions of ALL Ozon charge types in the local dictionary.
   // Refresh at most when empty; the report itself never calls Ozon.
@@ -56,14 +61,18 @@ export async function GET(request: NextRequest) {
   // The daily 05:00 KRAS plan includes local YESTERDAY even when UTC
   // is still on that same calendar date. Do not postpone that day until 07:00.
   const localToday=new Date(Date.now()+7*3600000).toISOString().slice(0,10);
+  // Look at the entire rolling period before prioritizing missing days.
+  // Limiting to the oldest 14 first can starve newly missing dates.
+  const windowFrom=new Date(Date.parse(localToday+"T00:00:00Z")-28*86400000).toISOString().slice(0,10);
   const {data,error}=await db.from("ozon_finance_page_jobs")
     .select("day,status,pages_completed,rows_saved,updated_at")
     .eq("account_key","main").neq("status","complete")
-    .lt("day",localToday).order("day",{ascending:true}).limit(14);
+    .gte("day",windowFrom).lt("day",localToday)
+    .order("day",{ascending:true}).limit(28);
   if(error)return reply({ok:false,error:error.message},503);
   const pending=data??[];
   if(!pending.length)return reply({ok:true,phase:"ledger_cache_idle",
-    note:"31-day window is planned at 05:00 KRAS; supporting APIs run independently."});
+    note:"28-day window is planned at 05:00 KRAS; supporting APIs run independently."});
   const {data:published,error:publishedError}=await db.from("ozon_finance_sync_days")
     .select("day").eq("account_key","main").lt("day",localToday);
   if(publishedError)return reply({ok:false,error:publishedError.message},503);

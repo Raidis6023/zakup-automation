@@ -122,11 +122,22 @@ export default function FinancierClient() {
   async function queueFinance(){
     setBusy(true);setError('');try{
       if(!from||!to||from>to)throw Error('Проверь даты периода');
-      const result=await post({action:'queuePeriod',from,to});
-
-      setProgress(result.queued_days>0?'Загрузка поставлена в очередь: '+result.queued_days+' дней. Уже загружено: '+result.completed_days+'. Прогресс сохраняется.':'Все дни выбранного периода уже загружены.');
-
-    }catch(e){setError(e instanceof Error?e.message:'Ошибка загрузки');}finally{setBusy(false);}
+      await post({action:'queuePeriod',from,to});
+      // Do not merely queue the missing days. A single daily cron may run
+      // long after the user clicks. Import the missing pages immediately.
+      const response=await fetch(API+'?'+new URLSearchParams({from,to}),{cache:'no-store'});
+      const report=await response.json();
+      if(!response.ok||!report.ok)throw Error(report.error??'Не удалось проверить полноту периода');
+      const missing=(report.missing_days??[]) as string[];
+      if(missing.length===0){
+        await formReport();
+        return;
+      }
+      setProgress('Загружаем недостающие дни Ozon: '+missing.join(', ')+'. Прогресс сохраняется.');
+      const complete=await syncPeriod(missing);
+      if(complete)await formReport();
+    }catch(e){setError(e instanceof Error?e.message:'Ошибка загрузки');}
+    finally{setBusy(false);}
   }
   async function toggleDiscontinued(r:FinanceRow,checked:boolean) {
     if(!r.master_code)return;
@@ -224,11 +235,11 @@ export default function FinancierClient() {
       await load();
     } finally { setBusy(false); }
   }
-  async function syncPeriod() {
-    if (!data) return;
-    const forceRefresh = data.missing_days.length === 0;
+  async function syncPeriod(missingOverride?:string[]):Promise<boolean> {
+    if (!data && !missingOverride) return false;
+    const forceRefresh = !missingOverride && data?.missing_days.length === 0;
     if (forceRefresh && !window.confirm("Все дни загружены. Перезапустить финансовую синхронизацию за выбранный период?")) return;
-    const days = forceRefresh ? listDays(from, to) : data.missing_days;
+    const days = missingOverride ?? (forceRefresh ? listDays(from, to) : (data?.missing_days ?? []));
     setBusy(true); setError(""); setAdvice("");
     let completed = 0;
     let totalPages = 0;
@@ -307,6 +318,7 @@ export default function FinancierClient() {
       setProgress("Выгрузка завершена. Загружено дней: " + completed + " из " + days.length +
         ". Количество начислений: " + totalRows + " за последний день.");
       await load();
+      return true;
     } catch (e) {
       setError(
         "Завершено дней: " + completed + "/" + days.length +
@@ -314,6 +326,7 @@ export default function FinancierClient() {
         " Уже загруженные страницы сохранены. Можно продолжить после обновления страницы."
       );
       await load();
+      return false;
     } finally { setBusy(false); }
   }
   function choose(r: FinanceRow) {
