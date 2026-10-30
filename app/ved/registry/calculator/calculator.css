@@ -38,3 +38,5 @@
 .ved-calc-open:hover { text-decoration: underline; }
 @media(max-width:960px){.ved-calc-layout{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:570px){.ved-calc-fields,.ved-calc-mini{grid-template-columns:minmax(0,1fr)}.ved-calculator-panel{padding:11px}}
+
+.ved-calc-hint { padding: 2px 13px 13px; font-size: 11px; line-height: 1.5; color: var(--ws-text-muted); margin: 0 !important; }

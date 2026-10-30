@@ -11,7 +11,7 @@ import {
 } from "@/lib/ved-calculation/engine";
 
 const initial: VedCalculationInput = {
-  product: { unitPriceCny: 4.77, unitsPerCarton: 100, cartonVolumeM3: 0.1031745, cartonGrossKg: 16.8, moqUnits: 2000 },
+  product: { unitPriceCny: 4.77, unitsPerCarton: 100, cartonVolumeM3: 0.1031745, cartonGrossKg: 16.8, moqUnits: 2000, markingCnyPerUnit: 0 },
   currency: { cnyRub: 13.5, eurRub: 95 },
   container: { usableVolumeM3: 68, maxPayloadKg: 26000 },
   expenses: {
@@ -19,12 +19,14 @@ const initial: VedCalculationInput = {
     bankCommissionRub: 10000, brokerServicesRub: 15000,
     customsOperationsFeeRub: 0, otherSharedRub: 0,
     otherRubPerUnit: 0, refundableSecurityRub: 0,
+    certificationRub: 0, moldingRub: 0, indirectPaymentsRub: 0, additionalRub: 0,
+    dangerousCargo: false, dangerSurchargeBeforeRub: 60000, dangerSurchargeAfterRub: 60000,
   },
   customs: {
     dutyMode: "ad-valorem", adValoremPercent: 10,
     specificEurPerUnit: 0, specificUnit: "gross-kg",
     vatPercent: 22, includeFreightBeforeBorderInCustomsBase: true,
-    importVatRecoverable: false,
+    importVatRecoverable: false, feeMode: "schedule", feeDate: "2026-10-30",
   },
 };
 
@@ -47,11 +49,16 @@ function Result({ title, result }: { title: string; result: VedScenarioResult })
     </div>
     <div className="ved-calc-cost">{money(result.managementCostPerUnitRub)} ₽ <small>/ шт.</small></div>
     <div className="ved-calc-mini">
-      <span>Товар: {money(result.goodsRub)} ₽</span>
+      <span>Товар с маркировкой: {money(result.goodsRub)} ₽</span>
       <span>Логистика: {money(result.freightBeforeBorderRub + result.freightAfterBorderRub)} ₽</span>
       <span>Пошлина: {money(result.dutyRub)} ₽</span>
       <span>НДС при ввозе: {money(result.importVatRub)} ₽</span>
-      <span>Сбор: {money(result.customsOperationsFeeRub)} ₽</span>
+      <span>Сбор ({result.customsFeeSource === "manual" ? "вручную" : result.customsFeeSource.slice(-4)}): {money(result.customsOperationsFeeRub)} ₽</span>
+      <span>Оформление брокера: {money(result.brokerServicesRub)} ₽</span>
+      <span>Сертификация: {money(result.certificationRub)} ₽</span>
+      <span>Молдинг: {money(result.moldingRub)} ₽</span>
+      <span>Косвенные: {money(result.indirectPaymentsRub)} ₽</span>
+      <span>Дополнительные: {money(result.additionalRub)} ₽</span>
       <span>Денежная потребность: {money(result.cashRequirementRub)} ₽</span>
     </div>
     {result.warnings.map(message => <p className="ved-calc-warning" key={message}>{message}</p>)}
@@ -80,7 +87,7 @@ export default function VedCalculator() {
   return <div className="ved-calc">
     <div className="ved-calc-note">
       <strong>Черновой калькулятор, без сохранения</strong>
-      <p>Загружен только пример параметров старого держателя телефона. Курсы, ставки и расходы ниже взяты как демонстрационные значения из прежних расчётов, а не как подтверждённые актуальные тарифы. Изменения не сохраняются в базе.</p>
+      <p>Используются демонстрационные параметры держателя телефона и тарифов: это не подтверждённая себестоимость. Сбор рассчитывается по обычной шкале 2025/2026 для каждого сценария. Специальные случаи требуют ручной проверки. Данные не сохраняются.</p>
     </div>
     <div className="ved-calc-layout">
       <section className="ved-calc-editor" aria-label="Исходные данные">
@@ -93,6 +100,7 @@ export default function VedCalculator() {
             {nf("product", "cartonGrossKg", "Вес брутто коробки, кг", p.cartonGrossKg)}
             {nf("product", "cartonNetKg", "Вес нетто коробки, кг (если есть)", p.cartonNetKg)}
             {nf("product", "moqUnits", "MOQ, штук", p.moqUnits)}
+            {nf("product", "markingCnyPerUnit", "Маркировка на 1 шт. (F14), CNY", p.markingCnyPerUnit)}
           </div>
         </details>
         <details className="ved-calc-section">
@@ -105,20 +113,38 @@ export default function VedCalculator() {
           </div>
         </details>
         <details className="ved-calc-section">
-          <summary>Общие расходы на условный 40HQ</summary>
+          <summary>Логистика и расходы, распределяемые по объёму</summary>
           <div className="ved-calc-fields">
             {nf("expenses", "freightBeforeBorderRub", "Перевозка до границы, ₽", e.freightBeforeBorderRub)}
             {nf("expenses", "freightAfterBorderRub", "Перевозка после границы, ₽", e.freightAfterBorderRub)}
             {nf("expenses", "bankCommissionRub", "Банковские расходы, ₽", e.bankCommissionRub)}
-            {nf("expenses", "brokerServicesRub", "Услуги брокера, ₽", e.brokerServicesRub)}
-            {nf("expenses", "customsOperationsFeeRub", "Общий сбор типовой декларации, ₽", e.customsOperationsFeeRub)}
-            {nf("expenses", "otherSharedRub", "Прочие общие расходы, ₽", e.otherSharedRub)}
-            {nf("expenses", "otherRubPerUnit", "Расходы на единицу товара, ₽", e.otherRubPerUnit)}
-            {nf("expenses", "refundableSecurityRub", "Возвратное обеспечение, ₽", e.refundableSecurityRub)}
+            {nf("expenses", "otherSharedRub", "Общие расходы на контейнер, ₽", e.otherSharedRub)}
+
           </div>
         </details>
         <details className="ved-calc-section">
-          <summary>Таможенные параметры (задать вручную)</summary>
+          <summary>Разовые и дополнительные расходы</summary>
+          <div className="ved-calc-fields">
+            {nf("expenses", "brokerServicesRub", "Брокер: полная сумма на сценарий, ₽", e.brokerServicesRub)}
+            {nf("expenses", "certificationRub", "Сертификация: полная сумма, ₽", e.certificationRub)}
+            {nf("expenses", "moldingRub", "Молдинг: сумма на весь MOQ, ₽", e.moldingRub)}
+            {nf("expenses", "indirectPaymentsRub", "Косвенные платежи: фиксированно, ₽", e.indirectPaymentsRub)}
+            {nf("expenses", "additionalRub", "Дополнительные (вкл. обеспечение), ₽", e.additionalRub)}
+            {nf("expenses", "otherRubPerUnit", "Прочие затраты на 1 шт., ₽", e.otherRubPerUnit)}
+          </div>
+          <label className="ved-calc-check">
+            <input type="checkbox" checked={Boolean(e.dangerousCargo)}
+              onChange={event => update("expenses", "dangerousCargo", event.target.checked)} />
+            <span>Опасный груз: добавить отдельные надбавки до и после границы</span>
+          </label>
+          {e.dangerousCargo && <div className="ved-calc-fields">
+            {nf("expenses", "dangerSurchargeBeforeRub", "Надбавка до границы, ₽", e.dangerSurchargeBeforeRub)}
+            {nf("expenses", "dangerSurchargeAfterRub", "Надбавка после границы, ₽", e.dangerSurchargeAfterRub)}
+          </div>}
+          <p className="ved-calc-hint">Разовые суммы не распределяются по объёму в первоначальном расчёте. Молдинг распределяется на MOQ. Обеспечение, внесённое в дополнительные расходы, не дублируйте.</p>
+        </details>
+        <details className="ved-calc-section">
+          <summary>Таможенные параметры и сбор</summary>
           <div className="ved-calc-fields">
             <label className="ved-calc-field">
               <span>Тип ставки пошлины</span>
@@ -140,6 +166,19 @@ export default function VedCalculator() {
               </select>
             </label>
             {nf("customs", "vatPercent", "НДС при ввозе, %", t.vatPercent)}
+            <label className="ved-calc-field">
+              <span>Режим таможенного сбора</span>
+              <select value={t.feeMode ?? "schedule"} onChange={event => update("customs", "feeMode", event.target.value)}>
+                <option value="schedule">Обычная ступенчатая шкала</option>
+                <option value="manual">Сумма вручную (особые случаи)</option>
+              </select>
+            </label>
+            <label className="ved-calc-field">
+              <span>Дата ставки сбора</span>
+              <input type="date" value={t.feeDate ?? "2026-10-30"}
+                onChange={event => update("customs", "feeDate", event.target.value)} />
+            </label>
+            {t.feeMode === "manual" && nf("expenses", "customsOperationsFeeRub", "Ручной сбор на каждый сценарий, ₽", e.customsOperationsFeeRub)}
           </div>
           <label className="ved-calc-check"><input type="checkbox" checked={t.includeFreightBeforeBorderInCustomsBase} onChange={event => update("customs", "includeFreightBeforeBorderInCustomsBase", event.target.checked)} /><span>Включать оценочную перевозку до границы в базу для пошлины (проверить по условиям поставки)</span></label>
           <label className="ved-calc-check"><input type="checkbox" checked={t.importVatRecoverable} onChange={event => update("customs", "importVatRecoverable", event.target.checked)} /><span>Показывать управленческую себестоимость без потенциально возмещаемого НДС</span></label>

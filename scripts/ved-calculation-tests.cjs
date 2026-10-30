@@ -93,3 +93,68 @@ input = base(); input.product.cartonVolumeM3 = 0; input.currency.cnyRub = -1;
 assert.ok(validateVedInput(input).length >= 2);
 assert.throws(() => calculateVed(input), VedInputError);
 console.log("PASS VED: 40HQ, MOQ fractional, 1cbm, duties (4 modes), VAT, volume fees, security, limits, validation");
+
+
+// Regression: exact inclusive brackets for ordinary import operations fees, 2025/2026.
+const { ordinaryImportCustomsFee, ORDINARY_IMPORT_FEE_SCHEDULES } = mod.exports;
+assert.equal(ORDINARY_IMPORT_FEE_SCHEDULES[2026].length, 8);
+for (const [value, amount] of [
+  [0,1231],[200000,1231],[200000.01,2462],[450000,2462],[450000.01,4924],
+  [1200000,4924],[1200000.01,13541],[2700000.01,18465],
+  [4200000.01,21344],[5500000.01,49240],[10000000,49240],[10000000.01,73860],
+  [100000000,73860],
+]) assert.equal(ordinaryImportCustomsFee(value,2026),amount,"2026 customs bracket "+value);
+assert.equal(ordinaryImportCustomsFee(7000000,2025),27540);
+assert.equal(ordinaryImportCustomsFee(7000000.01,2025),30000);
+assert.equal(ordinaryImportCustomsFee(100000000,2025),30000);
+input = base();
+input.customs.feeDate = "2026-10-30";
+let testResult = calculateVed(input);
+for (const id of ["40hq","moq","one-cbm"]) {
+  const sr = testResult.scenarios[id];
+  assert.equal(sr.customsOperationsFeeRub,ordinaryImportCustomsFee(sr.customsValueEstimateRub,2026));
+  assert.equal(sr.customsFeeSource,"schedule-2026");
+  assert.equal(sr.brokerServicesRub,input.expenses.brokerServicesRub,"broker is full amount per scenario");
+}
+input.expenses.certificationRub = 90000;
+input.expenses.moldingRub = 50000;
+input.expenses.indirectPaymentsRub = 7000;
+input.expenses.additionalRub = 500000; // Historical security manually entered as additional expense.
+input.product.markingCnyPerUnit = 0.2;
+input.expenses.dangerousCargo = true;
+input.expenses.dangerSurchargeBeforeRub = 60000;
+input.expenses.dangerSurchargeAfterRub = 60000;
+testResult=calculateVed(input);
+for (const id of ["40hq","moq","one-cbm"]) {
+  const sr=testResult.scenarios[id], ref=calculateVed(base()).scenarios[id];
+  near(sr.certificationRub,90000);
+  near(sr.brokerServicesRub,15000);
+  near(sr.indirectPaymentsRub,7000);
+  near(sr.additionalRub,500000);
+  near(sr.moldingRub / sr.units,50000/input.product.moqUnits);
+  near(sr.markingRub/sr.units,0.2*13.5);
+  near(sr.freightBeforeBorderRub - ref.freightBeforeBorderRub,60000*sr.containerEquivalent);
+  near(sr.freightAfterBorderRub - ref.freightAfterBorderRub,60000*sr.containerEquivalent);
+}
+near(testResult.scenarios["40hq"].freightBeforeBorderRub - calculateVed(base()).scenarios["40hq"].freightBeforeBorderRub,60000);
+near(testResult.scenarios["40hq"].freightAfterBorderRub - calculateVed(base()).scenarios["40hq"].freightAfterBorderRub,60000);
+input = base();
+input.product.moqUnits=1000000;input.customs.feeDate="2026-10-30";
+testResult=calculateVed(input);
+assert.equal(testResult.scenarios.moq.customsOperationsFeeRub,73860,
+  "MOQ exceeding one container uses highest bracket, NEVER prorates above statutory bracket");
+input.customs.feeMode="manual";
+input.expenses.customsOperationsFeeRub=32123;
+testResult=calculateVed(input);
+for (const id of ["40hq","moq","one-cbm"]) {
+  assert.equal(testResult.scenarios[id].customsOperationsFeeRub,32123,
+    "manual customs fee is fixed per scenario");
+  assert.equal(testResult.scenarios[id].customsFeeSource,"manual");
+}
+input.customs.feeDate="2027-01-15";input.customs.feeMode="schedule";
+assert.throws(()=>calculateVed(input),VedInputError);
+input.customs.feeMode="manual";
+assert.doesNotThrow(()=>calculateVed(input));
+input.customs.feeDate="2026-02-30";
+assert.throws(()=>calculateVed(input),VedInputError);
+console.log("PASS VED: 2025/26 bracket boundaries, fees without scaling, certification, molding MOQ, fixed expenses, dangerous cargo");
