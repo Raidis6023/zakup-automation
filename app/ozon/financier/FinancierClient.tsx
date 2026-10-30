@@ -238,7 +238,7 @@ export default function FinancierClient() {
   async function syncPeriod(missingOverride?:string[]):Promise<boolean> {
     if (!data && !missingOverride) return false;
     const forceRefresh = !missingOverride && data?.missing_days.length === 0;
-    if (forceRefresh && !window.confirm("Все дни загружены. Перезапустить финансовую синхронизацию за выбранный период?")) return;
+    if (forceRefresh && !window.confirm("Все дни загружены. Перезапустить финансовую синхронизацию за выбранный период?")) return false;
     const days = missingOverride ?? (forceRefresh ? listDays(from, to) : (data?.missing_days ?? []));
     setBusy(true); setError(""); setAdvice("");
     let completed = 0;
