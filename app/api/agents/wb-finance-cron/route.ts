@@ -17,7 +17,7 @@ export async function GET(req:NextRequest){
  const token=process.env.WB_FINANCE_TOKEN?.trim();
  if(!token)return reply({ok:false,error:"Missing WB_FINANCE_TOKEN"},503);
  const db=createAdminClient();
- const day=todayKras(),from=shift(day,-31),to=shift(day,-1);
+ const day=todayKras(),from=shift(day,-28),to=shift(day,-1);
  const {error:initError}=await db.from("wb_finance_cache_jobs").upsert({run_day:day,date_from:from,date_to:to,status:"pending",next_offset:0,rows_saved:0},{onConflict:"run_day",ignoreDuplicates:true});
  if(initError)return reply({ok:false,error:initError.message},503);
  // One job at a time. Prioritize unfinished jobs; never create partial complete snapshots.
@@ -67,6 +67,7 @@ export async function GET(req:NextRequest){
    updated_at:new Date().toISOString()
   }).eq("run_day",job.run_day);
   if(progressError)throw new Error(progressError.message);
+  if(done){const published=await db.rpc('finance_publish_wb_daily',{p_run_day:job.run_day});if(published.error)return reply({ok:false,status:'complete_unpublished',error:published.error.message,runDay:job.run_day},503);}
   return reply({ok:true,status:done?"complete":"waiting",from:job.date_from,to:job.date_to,rowsSaved:job.next_offset+raw.length});
  }catch(e){
   const message=e instanceof Error?e.message:String(e);

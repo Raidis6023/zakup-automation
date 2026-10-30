@@ -35,7 +35,10 @@
     {
       "path": "/api/agents/yandex-finance-campaigns-cron",
       "schedule": "10 0 * * *"
+    },
+    {
+      "path": "/api/agents/yandex-finance-cron",
+      "schedule": "25 23 * * *"
     }
   ]
 }
-

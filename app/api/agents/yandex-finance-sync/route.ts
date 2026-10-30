@@ -19,7 +19,7 @@ export async function POST(req:NextRequest){
  let lockedId:string|null=null;
  let db:Awaited<ReturnType<typeof financeAccess>>|null=null;
  try{
-  db=await financeAccess();const input=await req.json();
+  db=await financeAccess(req);const input=await req.json();
   if(input.action==='start'){
    const {from,to}=input;if(!validDate(from)||!validDate(to)||from>to||Date.parse(to)-Date.parse(from)>90*86400000)return NextResponse.json({error:'Выберите период не более 91 дня'},{status:400});
    const {data:active,error:findError}=await db.from('yandex_finance_reports').select('id,date_from,date_to,status,phase').eq('status','loading').order('created_at',{ascending:false}).limit(1).maybeSingle();if(findError)throw findError;if(active)return NextResponse.json(active);
@@ -73,7 +73,7 @@ export async function POST(req:NextRequest){
     if(next&&next===state.pageToken)throw new Error('ЯМ повторил токен страницы заказов');
     if(next)state={from:windowFrom,end:windowEnd,pageToken:next,pages};
     else if(windowEnd<endExclusive)state={from:windowEnd,pages};
-    else {await update({status:'ready',phase:'done',order_units_complete:true,order_state:{pages},completed_at:new Date().toISOString(),error:null});break;}
+    else {await update({status:'ready',phase:'done',order_units_complete:true,order_state:{pages},completed_at:new Date().toISOString(),error:null});const publish=await db.rpc('finance_publish_yandex_daily',{p_report_id:id});if(publish.error)throw Error('Не удалось опубликовать дневные данные: '+publish.error.message);break;}
     await update({order_state:state});
     await new Promise(resolve=>setTimeout(resolve,350));
    }
