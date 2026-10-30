@@ -60,14 +60,26 @@ export async function GET(request: NextRequest) {
   const pending=data??[];
   if(!pending.length)return reply({ok:true,phase:"ledger_cache_idle",
     note:"31-day window is planned at 05:00 KRAS; supporting APIs run independently."});
+  const {data:published,error:publishedError}=await db.from("ozon_finance_sync_days")
+    .select("day").eq("account_key","main").lt("day",localToday);
+  if(publishedError)return reply({ok:false,error:publishedError.message},503);
+  const publishedDays=new Set((published??[]).map(row=>row.day));
+  // Missing days always beat refreshes. Otherwise the rolling 7-day refresh
+  // can keep putting old dates back at the head of the queue forever.
+  pending.sort((a,b)=>{
+    const aMissing=publishedDays.has(a.day)?1:0,bMissing=publishedDays.has(b.day)?1:0;
+    return aMissing-bMissing||a.day.localeCompare(b.day);
+  });
 
   // Do NOT use user-supplied URLs. Fixed same-origin endpoint, credential
   // passed only over HTTPS, never included in response or logs.
-  const day=pending[0].day;
   const started=Date.now();
-  let pages=0, last:null|unknown=null;
+  let pages=0,last:null|unknown=null,completedDays=0;
   try {
-    while(pages<10 && Date.now()-started<235000) {
+   for(const job of pending) {
+    const day=job.day;
+    let dayPages=0;
+    while(dayPages<10 && pages<36 && Date.now()-started<235000) {
       // Execute in the same server process. No Vercel-to-Vercel fetch.
       // This shares authenticated service-role access with the scheduler.
       const pageRequest = new NextRequest(
@@ -94,22 +106,24 @@ export async function GET(request: NextRequest) {
           .eq("pages_completed",0);
         console.error("Ozon finance background import failure",
           {day, status:response.status, detail:diagnostic});
-        return reply({ok:false,phase:"import_failed",day,detail:diagnostic},502);
+        return reply({ok:false,phase:"import_failed",day,detail:diagnostic,
+          completed_days:completedDays},502);
       }
       last={day,rows_saved:state.rows_saved,pages_completed:state.pages_completed,
         done:!!state.done,busy:!!state.busy};
+      if(state.done)completedDays++;
       if(state.busy || state.done)break;
-      pages++;
+      pages++;dayPages++;
     }
-    return reply({ok:true,phase:"import",remaining_days:pending.length,last});
+    if(Date.now()-started>=235000||pages>=36)break;
+   }
+    return reply({ok:true,phase:"import",
+      remaining_days:Math.max(0,pending.length-completedDays),
+      completed_days:completedDays,pages,last});
   }catch(error) {
     const diagnostic = error instanceof Error?error.message:"Unexpected exception";
-    await db.from("ozon_finance_page_jobs")
-      .update({status:"failed",last_error:"Cron exception: "+diagnostic.slice(0,350),
-        updated_at:new Date().toISOString()})
-      .eq("account_key","main").eq("day",day)
-      .eq("pages_completed",0);
-    console.error("Ozon finance scheduler exception", {day, diagnostic});
-    return reply({ok:false,phase:"server_error",day,error:diagnostic.slice(0,300)},503);
+    console.error("Ozon finance scheduler exception", {diagnostic});
+    return reply({ok:false,phase:"server_error",error:diagnostic.slice(0,300)},503);
   }
 }
+
