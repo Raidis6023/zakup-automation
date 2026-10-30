@@ -1,0 +1,48 @@
+.ved-offer-upload-launch {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 36px; padding: 8px 14px;
+  border: 1px solid #1d986b; border-radius: 9px;
+  color: #fff; background: #12895b; font-weight: 650; font-size: 13px;
+  cursor: pointer; white-space: nowrap;
+}
+.ved-offer-upload-launch:hover { background: #0d754d; }
+.ved-offer-upload-launch svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ved-upload-backdrop {
+  position: fixed; inset: 0; z-index: 5000;
+  display: grid; place-items: center; padding: 20px;
+  background: rgba(0, 0, 0, .62);
+}
+.ved-upload-dialog {
+  width: min(100%, 510px); max-height: min(90vh, 740px); overflow: auto;
+  padding: 22px; border: 1px solid var(--border, #315548);
+  border-radius: 16px; background: var(--surface, #0d1b17);
+  color: var(--text, #e7f5ec); box-shadow: 0 24px 70px rgba(0,0,0,.35);
+}
+.ved-upload-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 15px; margin-bottom: 20px; }
+.ved-upload-head h2 { margin: 0 0 8px; font-size: 19px; line-height: 1.3; }
+.ved-upload-head p { margin: 0; color: var(--text-muted); font-size: 12px; line-height: 1.5; }
+.ved-upload-close { flex: none; border: 1px solid var(--border); color: var(--text); background: transparent; border-radius: 8px; width: 30px; height: 30px; font-size: 22px; cursor: pointer; }
+.ved-upload-file-input { display: none; }
+.ved-upload-drop-zone {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: 10px; padding: 30px 22px; border: 1.5px dashed #249f71;
+  background: color-mix(in srgb, #37c98e 5%, var(--surface));
+  border-radius: 12px; cursor: pointer;
+}
+.ved-upload-drop-zone:hover, .ved-upload-drop-zone--dragging { background: color-mix(in srgb, #37c98e 15%, var(--surface)); border-color: #37c98e; }
+.ved-upload-drop-zone:focus-visible { outline: 2px solid #37c98e; outline-offset: 3px; }
+.ved-upload-drop-zone svg { width: 36px; height: 36px; fill: none; stroke: #22af7a; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ved-upload-drop-zone strong { font-size: 15px; }
+.ved-upload-drop-zone span, .ved-upload-drop-zone small { color: var(--text-muted); font-size: 12px; line-height: 1.45; }
+.ved-upload-drop-zone small { font-size: 11px; }
+.ved-upload-error { color: #df6262; font-size: 12px; }
+.ved-upload-preview {
+  display: flex; flex-direction: column; gap: 6px; margin-top: 14px;
+  border: 1px solid var(--border); padding: 12px; border-radius: 9px;
+  overflow-wrap: anywhere; font-size: 13px;
+}
+.ved-upload-preview span, .ved-upload-preview small { color: var(--text-muted); }
+.ved-upload-disclaimer { color: var(--text-muted); font-size: 11px; line-height: 1.5; margin: 16px 0 0; }
+.ved-upload-footer { display: flex; justify-content: flex-end; margin-top: 18px; }
+.ved-upload-footer button { padding: 8px 14px; border-radius: 8px; color: var(--text); border: 1px solid var(--border); background: var(--surface-soft); cursor: pointer; }
+@media (max-width: 800px) { .ved-upload-dialog { padding: 16px; } }

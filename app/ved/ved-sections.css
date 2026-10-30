@@ -1,9 +1,61 @@
-.ved-module-page { display: flex; flex-direction: column; gap: 20px; max-width: 1280px; padding: 16px 24px 36px; color: var(--ws-nav-text); }
-.ved-module-content { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr)); gap: 14px; }
-.ved-module-panel { border: 1px solid var(--ws-border); border-radius: 15px; padding: 20px; background: var(--ws-surface); }
-.ved-module-panel h2 { font-size: 17px; font-weight: 700; margin: 0 0 10px; color: var(--ws-nav-text); }
-.ved-module-panel p { font-size: 14px; line-height: 1.5; margin: 0; color: var(--ws-text-muted); }
-.ved-module-footer { font-size: 13px; line-height: 1.5; color: var(--ws-text-muted); }
-.ved-module-footer a { color: #37c98e; text-decoration: none; font-weight: 650; }
+/* The pages share the same .page > .container > .header structure and
+   sticky 98px Workspace header used by existing VED orders. */
+.workspace-content--module .page.ved-module-page {
+  min-height: 100%;
+  width: 100%;
+  max-width: none;
+  color: var(--ws-text);
+}
+.workspace-content--module .page.ved-module-page > .container {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+.workspace-content--module .page.ved-module-page > .container > .header {
+  margin: 0 !important;
+  gap: 18px;
+}
+.ved-module-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 24px 0 48px;
+}
+.ved-module-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 14px;
+  padding: 12px 24px 4px 48px;
+}
+.ved-module-panel {
+  background: var(--ws-surface);
+  border: 1px solid var(--ws-border);
+  border-radius: 13px;
+  padding: 18px;
+}
+.ved-module-panel h2 {
+  margin: 0 0 9px;
+  font-size: 15px;
+  color: var(--ws-text);
+}
+.ved-module-panel p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ws-text-muted);
+}
+.ved-module-footer {
+  padding: 12px 24px 24px 48px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--ws-text-muted);
+}
+.ved-module-footer a {
+  color: var(--ws-active, #148b60);
+  text-decoration: none;
+}
 .ved-module-footer a:hover { text-decoration: underline; }
-@media (max-width: 800px) { .ved-module-page { padding: 12px 14px 28px; } }
+@media (max-width: 800px) {
+  .ved-module-toolbar { padding: 10px 14px 0; }
+  .ved-module-content { padding: 8px 14px 4px; }
+  .ved-module-footer { padding: 10px 14px 22px; }
+}

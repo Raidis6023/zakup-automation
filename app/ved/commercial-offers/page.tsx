@@ -1,11 +1,17 @@
 import VedSectionIntro from "../VedSectionIntro";
+import VedOfferUploadDialog from "./VedOfferUploadDialog";
+import "./ved-offer-upload.css";
 
-export default function VedSectionPage() {
+export default function VedCommercialOffersPage() {
   return (
-    <VedSectionIntro title="Коммерческие предложения" description="Предложения поставщиков и связанные с ними расчёты.">
+    <VedSectionIntro
+      title="Коммерческие предложения"
+      description="Предложения поставщиков и связанные с ними расчёты."
+      actions={<VedOfferUploadDialog />}
+    >
       <article className="ved-module-panel">
         <h2>Предложения поставщиков</h2>
-        <p>Здесь будет общий список КП с датами, поставщиками, версиями и исходными файлами. Записи пока не импортированы.</p>
+        <p>После подключения импорта здесь появятся КП с датами, поставщиками, версиями и исходными Excel-файлами.</p>
       </article>
       <article className="ved-module-panel">
         <h2>Состав предложений</h2>
