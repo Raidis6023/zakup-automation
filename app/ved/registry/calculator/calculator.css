@@ -40,3 +40,14 @@
 @media(max-width:570px){.ved-calc-fields,.ved-calc-mini{grid-template-columns:minmax(0,1fr)}.ved-calculator-panel{padding:11px}}
 
 .ved-calc-hint { padding: 2px 13px 13px; font-size: 11px; line-height: 1.5; color: var(--ws-text-muted); margin: 0 !important; }
+
+.ved-calc-persistence{border:1px solid var(--ws-border);border-radius:11px;padding:14px;margin-bottom:15px;background:var(--ws-surface)}
+.ved-calc-persist-bar{display:flex;align-items:end;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+.ved-calc-persist-bar .ved-calc-field{min-width:175px;flex:1}
+.ved-calc-persist-bar .ved-calc-reset{display:inline-flex;align-items:center;justify-content:center;min-height:37px;box-sizing:border-box;text-decoration:none}
+.ved-calc-reset:disabled{opacity:.5;cursor:not-allowed}
+.ved-calc-snapshots{display:grid;gap:7px;padding:12px;max-height:330px;overflow-y:auto}
+.ved-calc-snapshots button{display:flex;align-items:baseline;gap:5px;flex-wrap:wrap;text-align:left;color:var(--ws-text);background:var(--ws-surface-soft,var(--ws-surface));border:1px solid var(--ws-border);border-radius:8px;padding:11px;cursor:pointer}
+.ved-calc-snapshots button:hover{border-color:#37c98e}
+.ved-calc-snapshots button small{margin-left:auto;color:var(--ws-text-muted);font-size:10px}
+.ved-calc-snapshots p{font-size:11px;color:var(--ws-text-muted)}

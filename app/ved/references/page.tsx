@@ -1,16 +1,10 @@
 import VedSectionIntro from "../VedSectionIntro";
+import VedTariffEditor from "./VedTariffEditor";
 
-export default function VedSectionPage() {
+export default function VedReferencesPage() {
   return (
-    <VedSectionIntro title="Справочники ВЭД" description="Общие параметры и классификационные данные раздела.">
-      <article className="ved-module-panel">
-        <h2>ТН ВЭД и пошлины</h2>
-        <p>Коды, пояснения, формулы ставок и история подтверждённых таможенных классификаций.</p>
-      </article>
-      <article className="ved-module-panel">
-        <h2>Валюты и поставщики</h2>
-        <p>Курсы CNY и EUR по датам документов, надбавки, условия поставки и справочник поставщиков.</p>
-      </article>
+    <VedSectionIntro title="Справочники ВЭД" description="Единые тарифы, даты действия и история редакций для первоначальных расчётов.">
+      <VedTariffEditor/>
     </VedSectionIntro>
   );
 }

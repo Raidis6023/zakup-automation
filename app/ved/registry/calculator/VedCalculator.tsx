@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { applyTariffValues, VED_TARIFFS, type TariffRow, type VedTariffKey } from "@/lib/ved-calculation/tariffs";
 import {
   calculateVed,
   type VedCalculationInput,
@@ -30,6 +31,13 @@ const initial: VedCalculationInput = {
   },
 };
 
+type StoredCalculation = {
+  id: string; calculation_id: string; title: string; article: string;
+  version_no: number; calculation_date: string; created_at: string;
+  input_data: VedCalculationInput;
+};
+type TariffResponse = {ok:boolean;error?:string;selected?:Partial<Record<VedTariffKey,TariffRow>>;canEdit?:boolean};
+type SavedResponse = {ok:boolean;error?:string;items?:StoredCalculation[]};
 const money = (n: number) => new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 }).format(n);
 const number = (n: number) => new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 3 }).format(n);
 
@@ -67,6 +75,75 @@ function Result({ title, result }: { title: string; result: VedScenarioResult })
 
 export default function VedCalculator() {
   const [input, setInput] = useState<VedCalculationInput>(initial);
+  const [tariffDate, setTariffDate] = useState("2026-10-30");
+  useEffect(()=>{setTariffDate(new Date().toLocaleDateString("sv-SE"));},[]);
+  const [resolved, setResolved] = useState<Partial<Record<VedTariffKey,TariffRow>>>({});
+  const [ratesStatus, setRatesStatus] = useState("Тарифы не загружены");
+  const [canEdit, setCanEdit] = useState(false);
+  const [title, setTitle] = useState("Первоначальный расчёт товара");
+  const [article, setArticle] = useState("");
+  const [calculationId, setCalculationId] = useState<string | null>(null);
+  const [history, setHistory] = useState<StoredCalculation[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
+  const loadSaved = useCallback(async () => {
+    try {
+      const response = await fetch("/api/ved-calculations", {cache:"no-store"});
+      const json = await response.json() as SavedResponse;
+      if(!response.ok || !json.ok) throw Error(json.error || "Не удалось получить версии");
+      setHistory(json.items || []);
+    }catch(e){setSaveMessage(e instanceof Error ? e.message : "Ошибка получения версий");}
+  },[]);
+  useEffect(()=>{void loadSaved();},[loadSaved]);
+  useEffect(()=>{
+    let active=true;
+    setRatesStatus("Загрузка тарифов…");
+    void (async()=>{
+      try{
+        const res=await fetch("/api/ved-tariffs?asOf="+encodeURIComponent(tariffDate),{cache:"no-store"});
+        const json=await res.json() as TariffResponse;
+        if(!res.ok||!json.ok)throw Error(json.error||"Не удалось получить справочники");
+        if(!active)return;
+        setResolved(json.selected || {});
+        setCanEdit(Boolean(json.canEdit));
+        const count=Object.keys(json.selected||{}).length;
+        setRatesStatus(count?("Подтверждено параметров на дату: "+count+" из "+VED_TARIFFS.length):
+          "На выбранную дату тарифы пока не заведены. Используются демонстрационные значения.");
+      }catch(e){if(active){setResolved({});setCanEdit(false);setRatesStatus(e instanceof Error?e.message:"Ошибка загрузки тарифов");}}
+    })();
+    return ()=>{active=false;};
+  },[tariffDate]);
+  const applyRates = () => {
+    setInput(previous=>applyTariffValues({
+      ...previous,customs:{...previous.customs,feeDate:tariffDate},
+    },resolved));
+    setSaveMessage("Тарифы применены. Параметры без утверждённых ставок оставлены без изменений.");
+  };
+  const saveSnapshot = async()=>{
+    if(!canEdit){setSaveMessage("Недостаточно прав для сохранения");return;}
+    setSaving(true);setSaveMessage("");
+    try{
+      const response=await fetch("/api/ved-calculations",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({title,article,calculationDate:tariffDate,calculationId,input}),
+      });
+      const json=await response.json() as {ok:boolean;error?:string;snapshot?:{calculation_id:string;version_no:number}};
+      if(!response.ok||!json.ok||!json.snapshot)throw Error(json.error||"Сохранение не выполнено");
+      setCalculationId(json.snapshot.calculation_id);
+      setSaveMessage("Версия "+json.snapshot.version_no+" сохранена. Предыдущие версии не изменены.");
+      await loadSaved();
+    }catch(e){setSaveMessage(e instanceof Error?e.message:"Ошибка сохранения");}
+    finally{setSaving(false);}
+  };
+  const openSnapshot=(saved:StoredCalculation)=>{
+    setInput(saved.input_data);setTitle(saved.title);setArticle(saved.article);
+    setCalculationId(saved.calculation_id);setTariffDate(saved.calculation_date);
+    setSaveMessage("Открыта сохранённая версия "+saved.version_no+". Новый расчёт сохранится следующей версией.");
+  };
+  const startNew=()=>{
+    setInput(initial);setTitle("Первоначальный расчёт товара");setArticle("");
+    setCalculationId(null);setSaveMessage("Новый расчёт: предыдущие записи сохранены.");
+  };
   const update = (group: keyof VedCalculationInput, field: string, value: number | boolean | string | undefined) => {
     setInput(previous => ({ ...previous, [group]: { ...previous[group], [field]: value } }));
   };
@@ -87,7 +164,37 @@ export default function VedCalculator() {
   return <div className="ved-calc">
     <div className="ved-calc-note">
       <strong>Черновой калькулятор, без сохранения</strong>
-      <p>Используются демонстрационные параметры держателя телефона и тарифов: это не подтверждённая себестоимость. Сбор рассчитывается по обычной шкале 2025/2026 для каждого сценария. Специальные случаи требуют ручной проверки. Данные не сохраняются.</p>
+      <p>Используются демонстрационные параметры держателя телефона и тарифов: это не подтверждённая себестоимость. Сбор рассчитывается по обычной шкале 2025/2026 для каждого сценария. Специальные случаи требуют ручной проверки. Сохранение версий доступно авторизованным сотрудникам с правом редактирования.</p>
+    </div>
+    <div className="ved-calc-persistence">
+      <div className="ved-calc-persist-bar">
+        <label className="ved-calc-field">
+          <span>Дата для справочников / сохранения</span>
+          <input type="date" value={tariffDate} onChange={e=>setTariffDate(e.target.value)}/>
+        </label>
+        <button type="button" className="ved-calc-reset" onClick={applyRates}>Применить тарифы на дату</button>
+        <a className="ved-calc-reset" href="/ved/references">Открыть справочники</a>
+      </div>
+      <p className="ved-calc-hint">{ratesStatus}</p>
+      <div className="ved-calc-persist-bar">
+        <label className="ved-calc-field"><span>Название расчёта</span><input value={title} onChange={e=>setTitle(e.target.value)} maxLength={180}/></label>
+        <label className="ved-calc-field"><span>Артикул (необязательно)</span><input value={article} onChange={e=>setArticle(e.target.value)} maxLength={120}/></label>
+        <button type="button" className="ved-calc-reset" disabled={saving||!canEdit||!preview.data} onClick={()=>void saveSnapshot()}>
+          {saving?"Сохраняем…":calculationId?"Сохранить новую версию":"Сохранить расчёт"}
+        </button>
+        <button type="button" className="ved-calc-reset" onClick={startNew}>Новый расчёт</button>
+      </div>
+      {saveMessage&&<p className="ved-calc-hint" role="status">{saveMessage}</p>}
+      <details className="ved-calc-section">
+        <summary>Сохранённые расчёты и версии ({history.length} последних)</summary>
+        <div className="ved-calc-snapshots">
+          {history.length?history.map(saved=><button type="button" key={saved.id}
+            onClick={()=>openSnapshot(saved)}>
+            <strong>{saved.title}</strong> {saved.article&&<span>· {saved.article}</span>}
+            <small>версия {saved.version_no} · дата тарифа {saved.calculation_date}</small>
+          </button>):<p>Пока нет сохранённых расчётов или отсутствует доступ к истории.</p>}
+        </div>
+      </details>
     </div>
     <div className="ved-calc-layout">
       <section className="ved-calc-editor" aria-label="Исходные данные">
@@ -183,7 +290,7 @@ export default function VedCalculator() {
           <label className="ved-calc-check"><input type="checkbox" checked={t.includeFreightBeforeBorderInCustomsBase} onChange={event => update("customs", "includeFreightBeforeBorderInCustomsBase", event.target.checked)} /><span>Включать оценочную перевозку до границы в базу для пошлины (проверить по условиям поставки)</span></label>
           <label className="ved-calc-check"><input type="checkbox" checked={t.importVatRecoverable} onChange={event => update("customs", "importVatRecoverable", event.target.checked)} /><span>Показывать управленческую себестоимость без потенциально возмещаемого НДС</span></label>
         </details>
-        <button className="ved-calc-reset" type="button" onClick={() => setInput(initial)}>Восстановить пример</button>
+        <button className="ved-calc-reset" type="button" onClick={() => setInput(initial)}>Восстановить демонстрационные числа</button>
       </section>
       <section className="ved-calc-output" aria-live="polite" aria-label="Результат расчёта">
         {preview.data ? <>

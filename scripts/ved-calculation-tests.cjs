@@ -158,3 +158,47 @@ assert.doesNotThrow(()=>calculateVed(input));
 input.customs.feeDate="2026-02-30";
 assert.throws(()=>calculateVed(input),VedInputError);
 console.log("PASS VED: 2025/26 bracket boundaries, fees without scaling, certification, molding MOQ, fixed expenses, dangerous cargo");
+
+
+// Read-only comparison fixtures from 15 tabs of the department's live 2026 workbook.
+// The Excel formulas intentionally differ where they calculate customs fee from total
+// landed cost (instead of customs value) or CBM bank commission as 10000/3.
+const realFixture=require("./ved-live-audit-15.json");
+assert.equal(realFixture.cases.length,15);
+let fullyMatched40hq=0,changedMoq=0,changedOne=0;
+for(const sheet of realFixture.cases){
+ const input={
+   product:{unitPriceCny:sheet.price,unitsPerCarton:sheet.unitsPerCarton,
+     cartonVolumeM3:sheet.cartonVolumeM3,cartonGrossKg:sheet.cartonGrossKg,
+     moqUnits:sheet.moq,markingCnyPerUnit:sheet.markingCnyPerUnit},
+   currency:{cnyRub:sheet.cnyRub,eurRub:sheet.eurRub},
+   container:{usableVolumeM3:68},
+   expenses:{freightBeforeBorderRub:sheet.freightBeforeBorderRub,
+     freightAfterBorderRub:sheet.freightAfterBorderRub,
+     bankCommissionRub:sheet.bankCommissionRub,brokerServicesRub:sheet.brokerServicesRub,
+     customsOperationsFeeRub:0,otherSharedRub:0,otherRubPerUnit:0,refundableSecurityRub:0,
+     certificationRub:0,moldingRub:0,indirectPaymentsRub:0,additionalRub:0,
+     dangerousCargo:sheet.dangerousCargo,dangerSurchargeBeforeRub:60000,dangerSurchargeAfterRub:60000},
+   customs:{dutyMode:"ad-valorem",adValoremPercent:sheet.adValoremPercent,
+     specificEurPerUnit:sheet.specificEurPerUnit,specificUnit:"gross-kg",
+     vatPercent:sheet.vatPercent,includeFreightBeforeBorderInCustomsBase:true,
+     importVatRecoverable:false,feeDate:"2026-10-30",feeMode:"schedule"},
+ };
+ const actual=calculateVed(input);
+ const full=actual.scenarios["40hq"],moq=actual.scenarios.moq,one=actual.scenarios["one-cbm"];
+ near(full.managementCostPerUnitRub,sheet.excel.forty,1e-6);
+ fullyMatched40hq++;
+ const expectedMoqDelta=sheet.audit.feeDifferences[1]/moq.units;
+ const expectedOneDelta=(sheet.audit.feeDifferences[2]+one.bankCommissionRub-sheet.excel.oneBank)/one.units;
+ near(moq.managementCostPerUnitRub-sheet.excel.moq,expectedMoqDelta,1e-6);
+ near(one.managementCostPerUnitRub-sheet.excel.one,expectedOneDelta,1e-6);
+ near(full.customsOperationsFeeRub-sheet.excel.fees[0],sheet.audit.feeDifferences[0],1e-8);
+ near(moq.customsOperationsFeeRub-sheet.excel.fees[1],sheet.audit.feeDifferences[1],1e-8);
+ near(one.customsOperationsFeeRub-sheet.excel.fees[2],sheet.audit.feeDifferences[2],1e-8);
+ if(Math.abs(expectedMoqDelta)>1e-6)changedMoq++;
+ if(Math.abs(expectedOneDelta)>1e-6)changedOne++;
+}
+assert.equal(fullyMatched40hq,15);
+assert.equal(changedMoq,7);
+assert.equal(changedOne,15);
+console.log("PASS VED: 15 real 2026 workbook tabs (40HQ exact; MOQ and CBM deltas explained by agreed corrections)");

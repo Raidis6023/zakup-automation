@@ -1,6 +1,6 @@
 /**
  * Preliminary management model for mixed 40HQ shipments.
- * All tariff values are supplied by the caller; no legal rates are hardcoded.
+ * User editable tariffs are supplied by the caller; ordinary 2025/2026 customs-fee brackets are versioned below.
  * This is NOT a customs declaration calculator.
  */
 export type DutyMode = "ad-valorem" | "specific" | "combined-max" | "combined-sum";
