@@ -1,5 +1,6 @@
 "use client";
 import {prepareFinanceSeries,clearFinanceSeries} from '../../components/finance/finance-series-cache';
+import OzonMissingRateEditor from "./OzonMissingRateEditor";
 import FinancierDetailTable from "./FinancierDetailTable";
 import AccrualBreakdownList from '../../components/finance/AccrualBreakdownList';
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -410,14 +411,14 @@ export default function FinancierClient() {
           <a href="/ozon/financier/settings" className="ozf-btn">Открыть справочник тарифов</a>
         </div>
         <div className="ozf-table-scroll"><table className="ozf-table">
-          <thead><tr><th>Артикул</th><th>master_code</th><th>КМ</th><th>Чего не хватает</th><th>Статус результата</th></tr></thead>
+          <thead><tr><th>Артикул</th><th>master_code</th><th>КМ</th><th>Чего не хватает</th><th>Статус результата</th><th>Добавить для расчёта</th></tr></thead>
           <tbody>
             {missingRows.map(r=><tr key={r.offer_id}>
               <td>{r.offer_id}</td><td>{r.master_code??"Не привязан"}</td><td>{r.manager}</td>
               <td>{r.missing.join(", ")}</td>
-              <td>Неполные исходные данные</td>
+              <td>Неполные исходные данные</td><td><OzonMissingRateEditor master={r.master_code} offer={r.offer_id} missing={r.missing} day={data.from} onSaved={load}/></td>
             </tr>)}
-            {!missingRows.length&&<tr><td colSpan={5} className="ozf-empty">В справочнике товаров все обязательные поля заполнены.</td></tr>}
+            {!missingRows.length&&<tr><td colSpan={6} className="ozf-empty">В справочнике товаров все обязательные поля заполнены.</td></tr>}
           </tbody>
         </table></div>
       </details>

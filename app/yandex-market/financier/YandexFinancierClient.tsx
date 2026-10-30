@@ -6,12 +6,15 @@ import YandexFinanceTable,{type RateInput} from './YandexFinanceTable';
 import AccrualBreakdownList from '../../components/finance/AccrualBreakdownList';
 type Data=NonNullable<Awaited<ReturnType<typeof readFinance>>>;
 const money=(n:number)=>new Intl.NumberFormat('ru-RU',{minimumFractionDigits:0,maximumFractionDigits:0}).format(Math.sign(n)*Math.round(Math.abs(n)/100)||0)+' ₽';
+const localDay=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Krasnoyarsk',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+const shift=(day:string,delta:number)=>new Date(Date.parse(day+'T00:00:00Z')+delta*86400000).toISOString().slice(0,10);
 function csv(name:string,records:Record<string,unknown>[]){
  if(!records.length)return;const keys=Object.keys(records[0]);const cell=(v:unknown)=>'"'+(typeof v==='number'?String(Number.isInteger(v)?v:Number(v.toFixed(8))).replace('.',','):String(v??'').replace(/^[=+@]/,"'$&")).replace(/"/g,'""')+'"';
  const text='\ufeff'+[keys,...records.map(r=>keys.map(k=>r[k]))].map(row=>row.map(cell).join(';')).join('\r\n');const url=URL.createObjectURL(new Blob([text],{type:'text/csv;charset=utf-8;'}));const a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);
 }
 export default function YandexFinancierClient({initial,initialError}:{initial:Data|null;initialError:string}){
- const [from,setFrom]=useState(initial?.from??'2026-10-01'),[to,setTo]=useState(initial?.to??'2026-10-26');
+ const defaultTo=shift(localDay(),-1),defaultFrom=shift(defaultTo,-27);
+ const [from,setFrom]=useState(initial?.from??defaultFrom),[to,setTo]=useState(initial?.to??defaultTo);
  const [data,setData]=useState(initial),[error,setError]=useState(initialError),[busy,setBusy]=useState(false),[progress,setProgress]=useState(''),[savingRate,setSavingRate]=useState(false),[statusSaving,setStatusSaving]=useState(false);
  const alive=useRef(true);useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[]);
  async function request(url:string,body?:unknown){const r=await fetch(url,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:undefined,body:body?JSON.stringify(body):undefined,cache:'no-store'});const d=await r.json();if(!r.ok)throw new Error(d.error??'Ошибка запроса');return d;}
