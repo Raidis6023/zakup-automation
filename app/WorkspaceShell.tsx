@@ -1056,7 +1056,7 @@ export default function WorkspaceShell({
                         title={item.label}
                       >
                         <span className="home-ved-subnav-icon">
-                          <Image src={`/ved-nav/${item.icon}.png`} width={26} height={26} alt="" unoptimized />
+                          <Image src={`/ved-nav/${item.icon}-v3.svg`} width={30} height={30} alt="" unoptimized />
                         </span>
                         <span className="home-ved-subnav-label">{item.label}</span>
                       </Link>

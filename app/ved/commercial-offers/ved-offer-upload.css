@@ -46,3 +46,40 @@
 .ved-upload-footer { display: flex; justify-content: flex-end; margin-top: 18px; }
 .ved-upload-footer button { padding: 8px 14px; border-radius: 8px; color: var(--text); border: 1px solid var(--border); background: var(--surface-soft); cursor: pointer; }
 @media (max-width: 800px) { .ved-upload-dialog { padding: 16px; } }
+
+
+.ved-upload-dialog { width: min(100%, 620px); }
+.ved-upload-batch-row { display: grid; gap: 6px; margin-top: 15px; font-size: 12px; color: var(--text); }
+.ved-upload-batch-controls { display: flex; gap: 8px; }
+.ved-upload-batch-controls input, .ved-upload-kp-field input {
+  min-width: 0; width: 100%; padding: 9px 11px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--input); color: var(--text);
+}
+.ved-upload-batch-controls button, .ved-upload-parts button {
+  border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); background: var(--surface-soft);
+  padding: 8px 11px; cursor: pointer;
+}
+.ved-upload-batch-controls button { flex: none; }
+.ved-upload-batch-controls button:disabled, .ved-upload-footer button:disabled { opacity: .45; cursor: not-allowed; }
+.ved-upload-queue { display: flex; flex-direction: column; gap: 9px; margin-top: 16px; }
+.ved-upload-queue-title { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 12px; }
+.ved-upload-queue-title span { color: var(--text-muted); }
+.ved-upload-row { display: flex; flex-direction: column; gap: 8px; padding: 12px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--surface-soft); }
+.ved-upload-row-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ved-upload-row-head strong { font-size: 13px; overflow-wrap: anywhere; }
+.ved-upload-remove { flex: none; border: 0; color: #ce6d6d; background: none; cursor: pointer; font-size: 12px; }
+.ved-upload-metadata { color: var(--text-muted); font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
+.ved-upload-kp-field { display: grid; gap: 5px; font-size: 12px; }
+.ved-upload-parts { display: flex; flex-wrap: wrap; gap: 6px; }
+.ved-upload-parts button { color: #087c54; background: color-mix(in srgb, #37c98e 9%, var(--surface));
+  border-color: color-mix(in srgb, #37c98e 40%, var(--border)); font-size: 12px; }
+html[data-theme="dark"] .ved-upload-parts button { color: #59e4ae; }
+.ved-upload-parts button:hover { border-color: #37c98e; }
+.ved-upload-footer { gap: 10px; }
+@media (max-width: 640px) {
+  .ved-upload-batch-controls { flex-direction: column; }
+  .ved-upload-queue-title { flex-direction: column; }
+}

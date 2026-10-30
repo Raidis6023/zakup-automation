@@ -74,15 +74,16 @@
   box-shadow: inset 0 0 9px rgba(55,201,142,.08);
 }
 .home-shell .home-sidebar .home-ved-subnav-icon {
-  flex: 0 0 26px;
+  flex: 0 0 30px;
   display: grid;
   place-items: center;
-  width: 26px; height: 26px;
+  width: 30px; height: 30px;
 }
 .home-shell .home-sidebar .home-ved-subnav-icon img {
   display: block;
-  width: 22px; height: 22px;
+  width: 26px; height: 26px;
   object-fit: contain;
+  filter: drop-shadow(0 0 1.4px rgba(55,201,142,.42));
 }
 .home-shell .home-sidebar .home-ved-subnav-label {
   flex: 1; min-width: 0;
