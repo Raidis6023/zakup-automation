@@ -41,8 +41,8 @@ function groupFinancial(lines:FinanceLine[],rates:Rate[]=[]) {
     const op=String(l.sellerOperName ?? l.docTypeName ?? "Неизвестная операция");
     const transfer=num(l.forPay),sale=num(l.retailAmount), delivery=num(l.deliveryAmount);
     x.realization+=sale; x.to_transfer+=transfer; x.delivery+=delivery;
-    const doc=String(l.docTypeName??'').toLowerCase(),name=op.toLowerCase();
-    const sold=doc==='продажа'&&name==='продажа',returned=doc==='возврат'&&name==='возврат';
+    const doc=String(l.docTypeName??'').toLowerCase(),opName=op.toLowerCase();
+    const sold=doc==='продажа'&&opName==='продажа',returned=doc==='возврат'&&opName==='возврат';
     const quantity=Math.max(0,num(l.quantity));
     if(sold)x.sales_units+=quantity;if(returned)x.return_units+=quantity;
     x.net_transfer+=returned?-Math.abs(transfer):transfer;
