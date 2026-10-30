@@ -140,35 +140,54 @@ export async function GET(request:NextRequest){
   const db=createAdminClient();
   const from=request.nextUrl.searchParams.get("from")??"";
   const to=request.nextUrl.searchParams.get("to")??"";
-  if(!dateOK(from)||!dateOK(to)||from>to||Date.parse(to)-Date.parse(from)>30*86400000)
-    return NextResponse.json({ok:false,error:"Выберите корректный период до 31 дня"},{status:400});
-  const {data:latest,error:latestError}=await db.from("wb_finance_cache_jobs")
+  if(!dateOK(from)||!dateOK(to)||from>to||Date.parse(to)-Date.parse(from)>90*86400000)
+    return NextResponse.json({ok:false,error:"Выберите корректный период до 91 дня"},{status:400});
+  let {data:latest,error:latestError}=await db.from("wb_finance_cache_jobs")
    .select("run_day,date_from,date_to,status,rows_saved,completed_at")
    .lte("date_from",from).gte("date_to",to).eq("status","complete")
    .order("run_day",{ascending:false}).limit(1).maybeSingle();
   if(latestError)throw latestError;
-  if(!latest){
-    const {data:progress}=await db.from("wb_finance_cache_jobs")
-      .select("run_day,date_from,date_to,status,rows_saved,retry_at,last_error")
-      .order("run_day",{ascending:false}).limit(1).maybeSingle();
-    return NextResponse.json({ok:false,cache_pending:true,progress,
-      error:"За выбранный период нет завершённого кэша WB. Дождитесь фоновой загрузки. Изменение фильтров не отправляет запросы в WB."},{status:503});
-  }
+
   const lines:FinanceLine[]=[];let readCount=0;
-  // Read only Supabase. Paginate because PostgREST defaults to 1000 records.
-  for(let offset=0;offset<latest.rows_saved;offset+=1000){
-    const {data,error}=await db.from("wb_finance_cache_lines").select("payload")
-      .eq("run_day",latest.run_day).order("line_index",{ascending:true}).range(offset,offset+999);
-    if(error)throw error;
-    if(!data?.length)break;
+  if(latest){
+   for(let offset=0;offset<latest.rows_saved;offset+=1000){
+    const {data,error}=await db.from('wb_finance_cache_lines').select('payload')
+     .eq('run_day',latest.run_day).order('line_index',{ascending:true}).range(offset,offset+999);
+    if(error)throw error;if(!data?.length)break;
     readCount+=data.length;
     for(const rec of data){
-      const line=rec.payload as FinanceLine;
-      const reportDate=String(line.rrDate??line.rrdDt??line.rrdDate??line.saleDt??"").slice(0,10);
-      if(reportDate>=from&&reportDate<=to)lines.push(line);
+     const line=rec.payload as FinanceLine;
+     const dt=String(line.rrDate??line.rrdDt??line.rrdDate??line.saleDt??'').slice(0,10);
+     if(dt>=from&&dt<=to)lines.push(line);
     }
+   }
+   if(readCount!==latest.rows_saved)throw Error('Кэш WB прочитан не полностью');
+  }else{
+   const n=Math.round((Date.parse(to)-Date.parse(from))/86400000)+1;
+   const {data:snapshots,error:snapshotError}=await db.from('wb_finance_daily_snapshots')
+    .select('snapshot_day,line_count,captured_at').gte('snapshot_day',from).lte('snapshot_day',to).order('snapshot_day');
+   if(snapshotError)throw snapshotError;
+   const missing:string[]=[];
+   for(let i=0;i<n;i++){
+    const day=new Date(Date.parse(from)+i*86400000).toISOString().slice(0,10);
+    const rec=snapshots?.[i];
+    if(!rec||rec.snapshot_day!==day){missing.push(day);continue;}
+    const before=lines.length;
+    for(let offset=0;offset<rec.line_count;offset+=1000){
+     const {data,error}=await db.from('wb_finance_daily_lines').select('payload')
+      .eq('snapshot_day',day).order('line_index').range(offset,offset+999);
+     if(error)throw error;lines.push(...(data??[]).map(x=>x.payload as FinanceLine));
+    }
+    if(lines.length-before!==rec.line_count)throw Error('Неполные дневные данные WB '+day);
+   }
+   if(missing.length){
+    const progress=await db.from('wb_finance_cache_jobs').select('run_day,date_from,date_to,status,rows_saved,retry_at,last_error')
+      .in('status',['pending','waiting','running','failed']).order('run_day',{ascending:false}).limit(1).maybeSingle();
+    return NextResponse.json({ok:false,cache_pending:true,progress:progress.data,
+      error:'Нет завершённых данных WB за '+missing.length+' дней. Первые пропуски: '+missing.slice(0,4).join(', ')},{status:503});
+   }
+   latest={run_day:to,date_from:from,date_to:to,status:'complete',rows_saved:lines.length,completed_at:snapshots?.[snapshots.length-1]?.captured_at??null};
   }
-  if(readCount!==latest.rows_saved)throw Error("Кэш WB прочитан не полностью. Повторите загрузку отчёта.");
   const {data:rates,error:rateError}=await db.from('wb_finance_unit_rates').select('nm_id,valid_from,cost_cents,mayak_cents,version').order('valid_from',{ascending:false});
   if(rateError)throw rateError;
   const daily=Array.from({length:Math.round((Date.parse(to)-Date.parse(from))/86400000)+1},(_,i)=>{

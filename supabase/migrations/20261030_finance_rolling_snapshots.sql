@@ -42,7 +42,7 @@ begin
  insert into public.wb_finance_daily_lines(snapshot_day,line_index,payload,source_run_day)
  select d.day,(row_number() over(partition by d.day order by l.line_index)-1)::integer,l.payload,p_run_day
  from public.wb_finance_cache_lines l
- cross join lateral (select substring(coalesce(nullif(l.payload->>'rrDate',''),nullif(l.payload->>'rrdDt',''),nullif(l.payload->>'rrdDate',''),nullif(l.payload->>'saleDt','')) from 1 for 10)::date day) d
+ cross join lateral (select substring(coalesce(nullif(l.payload->>'rrDate',''),nullif(l.payload->>'rrdDt',''),nullif(l.payload->>'rrdDate',''),nullif(l.payload->>'saleDt','')) from 1 for 10)::date as day) d
  where l.run_day=p_run_day and d.day between r.date_from and r.date_to;
  insert into public.wb_finance_daily_snapshots(snapshot_day,source_run_day,line_count,captured_at)
  select d.day,p_run_day,(select count(*)::integer from public.wb_finance_daily_lines where snapshot_day=d.day),now()
