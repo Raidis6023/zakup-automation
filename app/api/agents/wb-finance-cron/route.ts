@@ -4,7 +4,7 @@ import { createAdminClient } from "../../../../lib/supabase/admin";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=300;
-const PAGE_SIZE=10000;
+const PAGE_SIZE=20000;
 const BATCH=200;
 type Job={run_day:string;date_from:string;date_to:string;status:string;next_offset:number;rows_saved:number;retry_at:string|null;updated_at:string};
 const date=(v:Date)=>v.toISOString().slice(0,10);
@@ -12,16 +12,20 @@ const shift=(d:string,delta:number)=>date(new Date(Date.parse(d+"T00:00:00Z")+de
 // Reporting day rolls forward only at 06:00 Krasnoyarsk, not at midnight.
 const todayKras=()=>date(new Date(Date.now()+3600000));
 const reply=(obj:object,status=200)=>NextResponse.json(obj,{status,headers:{"Cache-Control":"no-store"}});
-export async function GET(req:NextRequest){
+async function work(req:NextRequest,attempt:number,started:number){
  if(!process.env.CRON_SECRET||req.headers.get("authorization")!=="Bearer "+process.env.CRON_SECRET)return reply({ok:false,error:"Unauthorized"},401);
  const token=process.env.WB_FINANCE_TOKEN?.trim();
  if(!token)return reply({ok:false,error:"Missing WB_FINANCE_TOKEN"},503);
  const db=createAdminClient();
- const day=todayKras(),from=shift(day,-31),to=shift(day,-1);
+ const day=todayKras(),from=shift(day,-28),to=shift(day,-1);
+ // Skip obsolete zero-progress jobs. The latest rolling window replaces them.
+ const old=await db.from('wb_finance_cache_jobs').update({status:'superseded',updated_at:new Date().toISOString()})
+ .eq('rows_saved',0).lt('run_day',day).in('status',['pending','waiting','failed']);
+ if(old.error)return reply({ok:false,error:old.error.message},503);
  const {error:initError}=await db.from("wb_finance_cache_jobs").upsert({run_day:day,date_from:from,date_to:to,status:"pending",next_offset:0,rows_saved:0},{onConflict:"run_day",ignoreDuplicates:true});
  if(initError)return reply({ok:false,error:initError.message},503);
  // One job at a time. Prioritize unfinished jobs; never create partial complete snapshots.
- const {data:pending,error:jobError}=await db.from("wb_finance_cache_jobs").select("*").neq("status","complete").order("run_day",{ascending:true}).limit(10);
+ const {data:pending,error:jobError}=await db.from("wb_finance_cache_jobs").select("*").in("status",["pending","waiting","running","failed"]).order("run_day",{ascending:true}).limit(100);
  if(jobError)return reply({ok:false,error:jobError.message},503);
  const now=Date.now();
  const job=(pending??[] as Job[]).find(j=>!(j.retry_at&&Date.parse(j.retry_at)>now)&&!(j.status==="running"&&Date.parse(j.updated_at)>now-240000)) as Job|undefined;
@@ -67,10 +71,18 @@ export async function GET(req:NextRequest){
    updated_at:new Date().toISOString()
   }).eq("run_day",job.run_day);
   if(progressError)throw new Error(progressError.message);
-  return reply({ok:true,status:done?"complete":"waiting",from:job.date_from,to:job.date_to,rowsSaved:job.next_offset+raw.length});
+  if(done){const published=await db.rpc('finance_publish_wb_daily',{p_run_day:job.run_day});if(published.error)return reply({ok:false,status:'complete_unpublished',error:published.error.message,runDay:job.run_day},503);}
+  if(!done&&attempt<2&&Date.now()-started<190000){
+    const wait=Math.min(Math.max(0,Date.parse(reserve)-Date.now()+1700),85000);
+    if(wait>0)await new Promise(resolve=>setTimeout(resolve,wait));
+    if(Date.now()-started<235000)return work(req,attempt+1,started);
+  }
+  return reply({ok:true,status:done?"complete":"waiting",from:job.date_from,to:job.date_to,rowsSaved:job.next_offset+raw.length,pages_processed:attempt+1});
  }catch(e){
   const message=e instanceof Error?e.message:String(e);
   await db.from("wb_finance_cache_jobs").update({status:"failed",retry_at:new Date(Date.now()+300000).toISOString(),last_error:message.slice(0,350),updated_at:new Date().toISOString()}).eq("run_day",job.run_day);
   return reply({ok:false,error:message.slice(0,350)},503);
  }
 }
+
+export async function GET(req:NextRequest){return work(req,0,Date.now());}

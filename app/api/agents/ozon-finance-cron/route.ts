@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { POST as processOneFinancePage } from "../ozon-finance-sync/route";
+import { GET as planFinanceWindow } from "../ozon-finance-plan/route";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -22,6 +23,9 @@ export async function GET(request: NextRequest) {
     error:"Нужны OZON_CLIENT_ID и OZON_API_KEY в Production. Performance API не подходит."
   },503);
 
+  // Finance planning and loading must not rely on scheduler invocation order.
+  const plan=await planFinanceWindow(request);
+  if(!plan.ok)return reply({ok:false,phase:"planning",error:"Не удалось подготовить финансовые дни",http_status:plan.status},503);
   const db=createAdminClient();
   // Keep the descriptions of ALL Ozon charge types in the local dictionary.
   // Refresh at most when empty; the report itself never calls Ozon.
