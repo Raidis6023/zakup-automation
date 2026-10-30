@@ -28,6 +28,10 @@ async function wb(url: string, token: string) {
   return await r.json() as unknown;
 }
 
+async function readPages<T>(load:(from:number,to:number)=>Promise<{data:T[]|null;error:unknown}>){
+ const rows:T[]=[];for(let offset=0;;offset+=1000){const {data,error}=await load(offset,offset+999);if(error)throw error;rows.push(...(data??[]));if((data?.length??0)<1000)break;}return rows;
+}
+
 type Rate={nm_id:string;valid_from:string;cost_cents:number|null;mayak_cents:number|null;version:number};
 function groupFinancial(lines:FinanceLine[],rates:Rate[]=[]) {
  const rateMap=new Map<string,Rate[]>();for(const r of rates){const a=rateMap.get(r.nm_id)??[];a.push(r);rateMap.set(r.nm_id,a);}for(const a of rateMap.values())a.sort((x,y)=>y.valid_from.localeCompare(x.valid_from));
@@ -190,15 +194,26 @@ export async function GET(request:NextRequest){
   }
   const {data:rates,error:rateError}=await db.from('wb_finance_unit_rates').select('nm_id,valid_from,cost_cents,mayak_cents,version').order('valid_from',{ascending:false});
   if(rateError)throw rateError;
+  const grouped=groupFinancial(lines,(rates??[]) as Rate[]);
   const daily=Array.from({length:Math.round((Date.parse(to)-Date.parse(from))/86400000)+1},(_,i)=>{
     const day=new Date(Date.parse(from)+i*86400000).toISOString().slice(0,10);
     return {day,rows:groupFinancial(lines.filter(line=>String(line.rrDate??line.rrdDt??line.rrdDate??line.saleDt??'').slice(0,10)===day)).map(r=>({nm_id:r.nm_id,revenue:r.realization}))};
   });
-  return NextResponse.json({ok:true,from,to,financial_rows:lines.length,daily,
-    rows:groupFinancial(lines,(rates??[]) as Rate[]),
-    ads:{items:[],campaigns:0,coverage:"not_loaded",warning:"Рекламная статистика пока не загружена в кэш. Новые запросы к WB при смене фильтра не отправляются."},
-    coverage:{finance:latest.status==="complete"?"cached_complete":"cached_partial",advertising:"not_loaded",paid_storage:"not_loaded",advertising_actual_charges:"not_loaded"},
+  const ads=await readPages<{snapshot_day:string;campaign_id:number;nm_id:number;spend:number;views:number;clicks:number;orders:number;sum_price:number}>(async(a,b)=>{const q=await db.from('wb_finance_ad_daily').select('snapshot_day,campaign_id,nm_id,spend,views,clicks,orders,sum_price').gte('snapshot_day',from).lte('snapshot_day',to).order('snapshot_day').range(a,b);return {data:q.data,error:q.error};});
+  const storage=await readPages<{snapshot_day:string;nm_id:number|null;amount:number}>(async(a,b)=>{const q=await db.from('wb_finance_storage_daily').select('snapshot_day,nm_id,amount').gte('snapshot_day',from).lte('snapshot_day',to).order('snapshot_day').range(a,b);return {data:q.data,error:q.error};});
+  const orders=await readPages<{nm_id:number;is_cancel:boolean}>(async(a,b)=>{const q=await db.from('wb_orders').select('nm_id,is_cancel').gte('order_date',from+'T00:00:00Z').lte('order_date',to+'T23:59:59Z').order('order_date').range(a,b);return {data:q.data,error:q.error};});
+  const [adSnapshots,storageSnapshots]=await Promise.all([db.from('wb_finance_ad_snapshots').select('snapshot_day').gte('snapshot_day',from).lte('snapshot_day',to),db.from('wb_finance_storage_snapshots').select('snapshot_day').gte('snapshot_day',from).lte('snapshot_day',to)]);if(adSnapshots.error)throw adSnapshots.error;if(storageSnapshots.error)throw storageSnapshots.error;
+  const orderByNm=new Map<string,{orders:number;cancelled:number}>();for(const row of orders){const key=String(row.nm_id),v=orderByNm.get(key)??{orders:0,cancelled:0};v.orders++;if(row.is_cancel)v.cancelled++;orderByNm.set(key,v);}
+  const storageByNm=new Map<string,number>();for(const row of storage)if(row.nm_id)storageByNm.set(String(row.nm_id),(storageByNm.get(String(row.nm_id))??0)+num(row.amount));
+  const expectedDays=Math.round((Date.parse(to)-Date.parse(from))/86400000)+1;
+  const enriched=grouped.map(row=>({...row,order_count:orderByNm.get(row.nm_id)?.orders??0,cancel_count:orderByNm.get(row.nm_id)?.cancelled??0,external_storage:storageByNm.has(row.nm_id)?round(storageByNm.get(row.nm_id)!):null}));
+  const adItems:AdItem[]=ads.map(row=>({nm_id:Number(row.nm_id),date:row.snapshot_day,campaign_id:Number(row.campaign_id),spend:Number(row.spend),views:Number(row.views),clicks:Number(row.clicks),orders:Number(row.orders),sum_price:Number(row.sum_price)}));
+  const adsComplete=(adSnapshots.data?.length??0)===expectedDays,storageComplete=(storageSnapshots.data?.length??0)===expectedDays,ordersComplete=orders.length>0;
+  return NextResponse.json({ok:true,from,to,financial_rows:lines.length,daily,rows:enriched,
+    ads:{items:adItems,campaigns:new Set(ads.map(x=>x.campaign_id)).size,coverage:adsComplete?'cached_complete':adItems.length?'cached_partial':'not_loaded',warning:adsComplete?null:'Реклама загружена не за все дни выбранного периода.'},
+    orders:{rows:orders.length,coverage:ordersComplete?'cached_partial':'not_loaded'},storage:{rows:storage.length,coverage:storageComplete?'cached_complete':storage.length?'cached_partial':'not_loaded'},
+    coverage:{finance:latest.status==='complete'?'cached_complete':'cached_partial',advertising:adsComplete?'cached_complete':adItems.length?'cached_partial':'not_loaded',paid_storage:storageComplete?'cached_complete':storage.length?'cached_partial':'not_loaded',orders:ordersComplete?'cached_partial':'not_loaded',advertising_actual_charges:'not_loaded'},
     cache:{status:latest.status,runDay:latest.run_day,from:latest.date_from,to:latest.date_to,completedAt:latest.completed_at,rowsSaved:latest.rows_saved},
-    notice:latest.status==="complete"?"Отчёт загружен из Supabase. Хранение и реклама требуют отдельной фоновой синхронизации.":"ВНИМАНИЕ: финансовый кэш НЕПОЛНЫЙ, итоговые суммы непригодны для решений. Показаны только уже сохранённые строки. Реклама ещё не загружена."});
+    notice:'Отчёт собран из сохранённых данных Supabase. Статус каждой части указан в coverage; неполные разделы не маскируются нулями.'});
  }catch(e){return NextResponse.json({ok:false,error:e instanceof Error?e.message:String(e)},{status:500});}
 }
