@@ -27,7 +27,17 @@ html[data-theme="dark"] .home-shell[data-accent-area] {
   --ws-sidebar: var(--ws-page);
 }
 
-.home-shell .home-workspaces { gap: 5px; }
+/* Clip only the navigation viewport, not the sidebar itself: the
+   collapse handle must stay outside the sidebar's right edge.
+   The viewport grows with the 240ms grid-column animation, so text can
+   never paint over the adjacent page before the sidebar reaches it. */
+.home-shell .home-workspaces {
+  gap: 5px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
+  overflow-y: visible;
+}
 
 .home-shell .home-sidebar .home-workspace-link {
   position: relative;
@@ -138,6 +148,9 @@ html[data-theme="dark"] .home-shell[data-accent-area] {
   line-height: 1.25;
   min-width: 0;
   white-space: nowrap;
+  opacity: 1;
+  transition: opacity var(--ui-sidebar-motion-duration) var(--ui-panel-motion-easing),
+    color 0.13s ease;
 }
 .home-shell .home-sidebar .home-workspaces-secondary {
   border-color: var(--ws-border-soft);
@@ -212,9 +225,14 @@ html[data-theme="dark"] .home-shell[data-accent-area] {
   padding: 4px 11px;
   gap: 12px;
 }
-.home-shell--sidebar-collapsed .home-sidebar .home-workspace-link--active::after,
-.home-shell--sidebar-collapsed .home-sidebar .home-workspace-label {
+.home-shell--sidebar-collapsed .home-sidebar .home-workspace-link--active::after {
   display: none;
+}
+/* Fade the labels along with the column, instead of instantly mounting
+   them outside its current width. The nav viewport clips the reveal. */
+.home-shell--sidebar-collapsed .home-sidebar .home-workspace-label {
+  opacity: 0;
+  pointer-events: none;
 }
 .home-shell--sidebar-collapsed .home-sidebar .home-brand-icon,
 .home-shell--sidebar-collapsed .home-sidebar .home-workspace-icon {
@@ -240,15 +258,25 @@ html[data-theme="dark"] .home-shell[data-accent-area] {
     /* On mobile the logo returns to normal flow. */
     padding-top: 12px;
   }
-  .home-shell .home-workspaces { gap: 7px; }
+  .home-shell .home-workspaces {
+    gap: 7px;
+    /* Mobile has a horizontally scrollable navigation, not a collapsing rail. */
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
   .home-shell .home-sidebar .home-workspace-link {
     height: 46px;
     min-height: 46px;
     padding: 5px 12px;
     gap: 12px;
   }
-  .home-shell--sidebar-collapsed .home-sidebar .home-workspace-label { display: inline; }
+  .home-shell--sidebar-collapsed .home-sidebar .home-workspace-label {
+    display: inline;
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .home-shell .home-sidebar .home-workspace-link { transition: none; }
+  .home-shell .home-sidebar .home-workspace-link,
+  .home-shell .home-sidebar .home-workspace-label { transition: none; }
 }
