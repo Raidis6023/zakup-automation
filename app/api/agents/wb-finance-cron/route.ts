@@ -21,18 +21,31 @@ async function work(req:NextRequest,attempt:number,started:number){
  if(!token)return reply({ok:false,error:"Missing WB_FINANCE_TOKEN"},503);
  const db=createAdminClient();
  const day=todayKras(),from=shift(day,-28),to=shift(day,-1);
- // Skip obsolete zero-progress jobs. The latest rolling window replaces them.
- const old=await db.from('wb_finance_cache_jobs').update({status:'superseded',updated_at:new Date().toISOString()})
- .eq('rows_saved',0).lt('run_day',day).in('status',['pending','waiting','failed']);
- if(old.error)return reply({ok:false,error:old.error.message},503);
- const {error:initError}=await db.from("wb_finance_cache_jobs").upsert({run_day:day,date_from:from,date_to:to,status:"pending",next_offset:0,rows_saved:0},{onConflict:"run_day",ignoreDuplicates:true});
- if(initError)return reply({ok:false,error:initError.message},503);
- // One job at a time. Prioritize unfinished jobs; never create partial complete snapshots.
- const {data:pending,error:jobError}=await db.from("wb_finance_cache_jobs").select("*").in("status",["pending","waiting","running","failed"]).order("run_day",{ascending:true}).limit(100);
+ // Previous partial windows must never block today's rolling 28-day window.
+ // Keep their raw cache for audit, but remove them from the active queue.
+ const archived=await db.from('wb_finance_cache_jobs').update({status:'superseded',updated_at:new Date().toISOString()})
+  .lt('run_day',day).in('status',['pending','waiting','running','failed']);
+ if(archived.error)return reply({ok:false,error:archived.error.message},503);
+
+ const {data:existing,error:existingError}=await db.from("wb_finance_cache_jobs").select("*").eq("run_day",day).maybeSingle();
+ if(existingError)return reply({ok:false,error:existingError.message},503);
+ if(!existing){
+  const {error:createError}=await db.from("wb_finance_cache_jobs").insert({run_day:day,date_from:from,date_to:to,status:"pending",next_offset:0,rows_saved:0});
+  if(createError)return reply({ok:false,error:createError.message},503);
+ }else if(existing.rows_saved===0&&(existing.date_from!==from||existing.date_to!==to)){
+  const {error:rangeError}=await db.from("wb_finance_cache_jobs").update({date_from:from,date_to:to,status:"pending",next_offset:0,retry_at:null,last_error:null,updated_at:new Date().toISOString()}).eq("run_day",day);
+  if(rangeError)return reply({ok:false,error:rangeError.message},503);
+ }else if(existing.rows_saved>0&&(existing.date_from!==from||existing.date_to!==to)){
+  return reply({ok:false,error:"Текущий кэш WB создан для другого периода; требуется безопасный перезапуск",runDay:day},409);
+ }
+
+ const {data:current,error:jobError}=await db.from("wb_finance_cache_jobs").select("*").eq("run_day",day).single();
  if(jobError)return reply({ok:false,error:jobError.message},503);
+ const job=current as Job;
+ if(job.status==="complete")return reply({ok:true,status:"complete",from:job.date_from,to:job.date_to,rowsSaved:job.rows_saved});
  const now=Date.now();
- const job=(pending??[] as Job[]).find(j=>!(j.retry_at&&Date.parse(j.retry_at)>now)&&!(j.status==="running"&&Date.parse(j.updated_at)>now-240000)) as Job|undefined;
- if(!job)return reply({ok:true,status:"waiting_or_complete",day});
+ if(job.retry_at&&Date.parse(job.retry_at)>now)return reply({ok:true,status:"waiting",from:job.date_from,to:job.date_to,rowsSaved:job.rows_saved,retryAt:job.retry_at});
+ if(job.status==="running"&&Date.parse(job.updated_at)>now-240000)return reply({ok:true,status:"busy",from:job.date_from,to:job.date_to,rowsSaved:job.rows_saved});
  const {data:locked,error:lockError}=await db.from("wb_finance_cache_jobs")
   .update({status:"running",updated_at:new Date().toISOString(),last_error:null})
   .eq("run_day",job.run_day).eq("next_offset",job.next_offset).eq("status",job.status).select("run_day");
