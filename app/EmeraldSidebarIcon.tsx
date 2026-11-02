@@ -66,19 +66,17 @@ export default function EmeraldSidebarIcon({ kind }: { kind: Kind }) {
 
   if (kind === "offers") {
     return (
-      <svg className="emerald-sidebar-glyph" viewBox="0 0 32 32" aria-hidden="true" fill="none">
-        <text
-          x="16"
-          y="24"
-          textAnchor="middle"
-          fill="currentColor"
-          stroke="none"
-          fontSize="24"
-          fontWeight="800"
-          fontFamily="Arial, sans-serif"
-        >
-          ¥
-        </text>
+      <svg
+        className="emerald-sidebar-glyph"
+        viewBox="0 0 32 32"
+        aria-hidden="true"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M8 6.5 16 16.5 24 6.5M16 16.5V27M10 13.5H22M10 17.5H22" />
       </svg>
     );
   }
