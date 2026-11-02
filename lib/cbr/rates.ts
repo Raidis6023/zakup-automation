@@ -39,9 +39,14 @@ async function load(date:string):Promise<Doc>{
 export async function getCbrRates(asOf:string=moscowToday()):Promise<CbrRates>{
  const current=await load(asOf);
  let prev:Doc|null=null;
- for(let n=1;n<=8;n++){
-  try{const p=await load(before(current.effectiveDate,n));if(p.effectiveDate<current.effectiveDate){prev=p;break;}}
-  catch{break;}
+ // Compare with the CBR rate applicable to the previous calendar day.
+ // On weekends/holidays the CBR returns the latest published rate, so
+ // yesterday correctly equals today until a new official rate is published.
+ try{
+  const p=await load(before(asOf,1));
+  if(p.effectiveDate<=current.effectiveDate)prev=p;
+ }catch{
+  prev=null;
  }
  const rates={} as Record<CbrCurrency,CbrRate>;
  for(const code of CBR_CURRENCIES){
