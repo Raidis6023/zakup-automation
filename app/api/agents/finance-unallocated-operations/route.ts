@@ -14,9 +14,9 @@ export async function GET(req:NextRequest){try{
  if(market==='ozon'){
   if(!typeId||typeId.length>30)return NextResponse.json({error:'Не указан код начисления Ozon'},{status:400});
   const r=await db.from('ozon_finance_accruals').select('raw,sku,amount,type_id,accrued_category,unit_number')
-   .eq('account_key','main').eq('day',day).eq('accrued_category','NON_ITEM').eq('type_id',typeId).order('row_index').limit(limit+1);
+   .eq('account_key','main').eq('day',day).eq('accrued_category','NON_ITEM').eq('raw->non_item_fee->>type_id',typeId).order('row_index').limit(limit+1);
   if(r.error)throw r.error;
-  rows=(r.data??[]).map(x=>({id:String(x.raw?.accrual_id??x.unit_number??''),orderId:x.unit_number??null,article:x.sku??null,amount:money(x.amount),type:String(x.type_id??'')}));
+  rows=(r.data??[]).map(x=>({id:String(x.raw?.accrual_id??x.unit_number??''),orderId:x.unit_number??null,article:x.sku??null,amount:money(x.amount),type:String(x.raw?.non_item_fee?.type_id??'')}));
  }else if(market==='yandex'){
   // Daily history stores original sheet/row IDs. These IDs are not marketplace transaction IDs.
   const snapshots=await db.from('yandex_finance_daily_snapshots').select('snapshot_day').eq('snapshot_day',day).limit(1);

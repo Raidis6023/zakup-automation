@@ -282,7 +282,7 @@ export default function FinancierDetailTable({
                       item.type_id==="REMAINDER"?"Прочее":
                       item.type_id==="SERVICE"?"Услуга Ozon":"Начисление Ozon";
                     return <tr key={item.type_id+"-"+i}>
-                      <td>{item.name}</td><td title={"Код Ozon: "+item.type_id}>{category}</td>
+                      <td>{item.name==='ITEM'?'Товарное начисление Ozon (ITEM)':item.name}</td><td title={"Код Ozon: "+item.type_id}>{category}</td>
                       <td>{item.count}</td><td className={moneyTone(item.amount)}>{money(item.amount)}</td>
                     </tr>;
                   })}
