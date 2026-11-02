@@ -8,7 +8,7 @@ export default function AdminTasksPage() {
         "Задачи администрирования"
     >
 
-      <PageHeader variant="home" title="Задачи" description="Задачи администраторов и всех рабочих отделов." />
+      <PageHeader variant="admin" title="Задачи" description="Задачи администраторов и всех рабочих отделов." />
 
 
       <section
