@@ -3,7 +3,12 @@ import {useCallback,useEffect,useMemo,useState} from "react";
 import {VED_TARIFFS,type VedTariffKey,type TariffRow} from "@/lib/ved-calculation/tariffs";
 import "./ved-tariffs.css";
 type Response={ok:boolean;error?:string;canEdit?:boolean;selected?:Record<string,TariffRow>;history?:TariffRow[];fxError?:string|null};
-const groups=["Курсы","Контейнер","Фуры","Логистика","Разовые расходы","Налоги"] as const;
+const groups=["Курсы","Контейнеры и фуры","Логистика","Разовые расходы","Налоги"] as const;
+const itemsForGroup=(group:typeof groups[number])=>VED_TARIFFS.filter(item=>
+ group==="Контейнеры и фуры"
+  ? item.section==="Контейнер"||item.section==="Фуры"
+  : item.section===group
+);
 const fmt=(n:number,digits=6)=>new Intl.NumberFormat("ru-RU",{minimumFractionDigits:digits===2?2:0,maximumFractionDigits:digits}).format(n);
 const currencyKeys=new Set<VedTariffKey>(["usdRub","eurRub","cnyRub"]);
 const today=()=>new Date().toLocaleDateString("sv-SE",{timeZone:"Europe/Moscow"});
@@ -54,7 +59,7 @@ export default function VedTariffEditor(){
   <div className="ved-tariffs-groups">
    {groups.map(group=><section key={group} className="ved-tariffs-group">
     <h3>{group}</h3><div className="ved-tariffs-rows">
-     {VED_TARIFFS.filter(item=>item.section===group).map(item=>{
+     {itemsForGroup(group).map(item=>{
       const row=data?.selected?.[item.key];
       return <div className="ved-tariffs-line" key={item.key}>
        <span>{item.title}</span>

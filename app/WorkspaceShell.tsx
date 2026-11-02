@@ -38,7 +38,6 @@ import WorkspaceMarketplaceLogo
 
 import {
   ArticleListIcon,
-  EmployeesIcon,
   ProcurementIcon,
   VedIcon,
 } from "./WorkspaceNavIcons";
@@ -86,33 +85,15 @@ function SearchIcon() {
 }
 
 
-function AdminHomeIcon() {
-
+function AdminEmployeesIcon() {
   return (
-
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-
-      <path
-        d="
-          M12 3
-          19 6
-          v5
-          c0 4.8-2.8 8-7 10
-          -4.2-2-7-5.2-7-10V6z
-        "
-      />
-
-      <path
-        d="m9.5 12 1.7 1.7 3.5-3.7"
-      />
-
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="9" cy="7.5" r="3.3" />
+      <path d="M3.5 20v-1.4a4 4 0 0 1 4-4h3a4 4 0 0 1 4 4V20" />
+      <path d="M16 4.5a3.2 3.2 0 0 1 0 6.1" />
+      <path d="M17 14.7a4 4 0 0 1 3.5 4V20" />
     </svg>
-
   );
-
 }
 
 
@@ -189,7 +170,6 @@ type WorkspaceShellProps = {
 
 
 type WorkspaceNavKey =
-  | "admin-home"
   | "admin-users"
   | "admin-tasks"
   | "admin-logs"
@@ -433,14 +413,6 @@ export default function WorkspaceShell({
 
 
     switch (key) {
-
-      case "admin-home":
-
-        return (
-          pathname ===
-          "/admin"
-        );
-
 
       case "admin-users":
 
@@ -718,6 +690,7 @@ export default function WorkspaceShell({
 
     <div
       data-accent-area={accentArea}
+      data-workspace-mode={adminMode ? "admin" : "work"}
       className={
         sidebarCollapsed
 
@@ -804,55 +777,6 @@ export default function WorkspaceShell({
               >
 
                 <Link
-                  href="/admin"
-
-                  onClick={
-                    event =>
-                      handleNavClick(
-                        event,
-                        "admin-home"
-                      )
-                  }
-
-                  className={
-                    navClass(
-                      "admin-home"
-                    )
-                  }
-
-                  aria-current={
-                    isNavActive(
-                      "admin-home"
-                    )
-
-                      ? "page"
-
-                      : undefined
-                  }
-
-                  aria-label="Главная"
-                  title="Главная"
-                >
-
-                  <span
-                    className=
-                      "home-workspace-icon"
-                  >
-                    <AdminHomeIcon />
-                  </span>
-
-
-                  <span
-                    className=
-                      "home-workspace-label"
-                  >
-                    Главная
-                  </span>
-
-                </Link>
-
-
-                <Link
                   href="/admin/users"
 
                   onClick={
@@ -883,11 +807,8 @@ export default function WorkspaceShell({
                   title="Сотрудники"
                 >
 
-                  <span
-                    className=
-                      "home-brand-icon"
-                  >
-                    <EmployeesIcon />
+                  <span className="home-workspace-icon">
+                    <AdminEmployeesIcon />
                   </span>
 
 

@@ -121,6 +121,30 @@ export function workspaceBreadcrumbs(
   const path = pathname.replace(/\/+$/, "") || "/";
   if (path === "/") return [];
 
+  // Administrative breadcrumbs have their own home destination. The generic
+  // Workspace home ("/") belongs to role-based work mode and must not leak
+  // into the administrator's navigation.
+  if (path === "/admin") {
+    return [{ label: "Главная", href: "/admin" }];
+  }
+  if (path.startsWith("/admin/")) {
+    const chain: BreadcrumbItem[] = [{ label: "Главная", href: "/admin" }];
+    let current = path;
+    const seen = new Set<string>();
+    const parents: BreadcrumbItem[] = [];
+    while (current !== "/admin" && current !== "/" && !seen.has(current)) {
+      seen.add(current);
+      const entry = routes[current] ?? getFallback(current);
+      parents.unshift({
+        label: entry.label,
+        href: current,
+        ...(entry.shortLabel ? { shortLabel: entry.shortLabel } : {}),
+      });
+      current = entry.parent ?? "/admin";
+    }
+    return [...chain, ...parents];
+  }
+
   // /ved displays the Orders page, while the VED section entry is
   // /ved/commercial-offers. Keep both levels visible in the breadcrumb.
   if (path === "/ved") {
