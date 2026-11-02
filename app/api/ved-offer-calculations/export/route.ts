@@ -2,6 +2,7 @@ import {NextResponse} from "next/server";
 import {requireVedAccess,VedAccessError} from "@/lib/ved-calculation/server-access";
 import {buildVedExport,type VedExportItem} from "@/lib/ved-calculation/excel-export";
 import {findSupplierPhotos} from "@/lib/ved-calculation/offer-photos";
+import {vedExcelContentDisposition} from "@/lib/ved-calculation/download-filename";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -60,7 +61,9 @@ export async function POST(request:Request){
   const content=await buildVedExport(items);
   return new Response(new Uint8Array(content),{status:200,headers:{
    "Content-Type":"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-   "Content-Disposition":'attachment; filename="VED-'+offer.quote_code+'-v'+version.version_no+'.xlsx"',
+   "Content-Disposition":vedExcelContentDisposition(
+    "ВЭД-"+offer.quote_code+"-версия-"+version.version_no+".xlsx"
+   ),
    "Cache-Control":"private,no-store","X-Content-Type-Options":"nosniff",
   }});
  }catch(error){

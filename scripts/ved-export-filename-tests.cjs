@@ -1,0 +1,15 @@
+const fs=require("node:fs");
+const path=require("node:path");
+const ts=require("typescript");
+const assert=require("node:assert/strict");
+const source=fs.readFileSync(path.join(__dirname,"../lib/ved-calculation/download-filename.ts"),"utf8");
+const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+const mod={exports:{}};
+new Function("require","exports","module",js)(require,mod.exports,mod);
+const name="ВЭД-КП-26-ROY-0001-версия-2.xlsx";
+const value=mod.exports.vedExcelContentDisposition(name);
+assert.doesNotThrow(()=>new Headers({"Content-Disposition":value}),"HTTP ByteString must accept Content-Disposition");
+assert(value.includes("filename*=UTF-8''"),"UTF-8 filename* required");
+assert(value.includes(encodeURIComponent("КП-26-ROY-0001")),"Cyrillic КП number is not encoded");
+assert(!/[А-Яа-яЁё]/.test(value),"Raw Cyrillic must not enter HTTP headers");
+console.log("PASS VED filename: RFC5987 UTF-8 name and valid HTTP ByteString header");

@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import {calculateVed,VedInputError,type VedCalculationInput,type VedCalculationResult} from "@/lib/ved-calculation/engine";
 import type {TariffRow,VedTariffKey} from "@/lib/ved-calculation/tariffs";
-import VedOfferProductCalculator from "./VedOfferProductCalculator";
+import {VedCalculatorWorkspace} from "./VedCalculatorWorkspace";
 
 type Quote={id:string;quote_code:string;quote_date:string;supplier_code:string;item_count:number};
 type Product={id:string;source_sheet:string;source_row:number;supplier_article:string;description_original:string;
@@ -69,12 +69,14 @@ export default function VedWholeOfferCalculator({offerId}:{offerId:string}){
  const lastSaved=useRef<{id:string;signature:string}|null>(null);
  const signature=()=>JSON.stringify({date,rows:rows.map(r=>({itemId:r.itemId,input:{...r.input,
   customs:{...r.input.customs,feeDate:date}}}))});
- const fetchVersions=useCallback(async()=>{
+ const fetchVersions=useCallback(async():Promise<Version[]>=>{
   const res=await fetch("/api/ved-offer-calculations?offerId="+encodeURIComponent(offerId),{cache:"no-store"});
   const obj=await res.json() as Response&{versions?:Version[]};
   if(!res.ok||!obj.ok)throw Error(obj.error||"Не удалось загрузить версии КП");
-  setVersions(obj.versions||[]);
-  setLatestId(obj.versions?.[0]?.id||null);
+  const found=obj.versions||[];
+  setVersions(found);
+  setLatestId(found[0]?.id||null);
+  return found;
  },[offerId]);
  useEffect(()=>{
   let active=true;
@@ -91,10 +93,32 @@ export default function VedWholeOfferCalculator({offerId}:{offerId:string}){
     if(!tariffs.ok)throw Error(tariffs.error||"Тарифы не загружены");
     if(!active)return;
     setOffer(quote.offer);setQuoteItems(quote.items);setCanEdit(Boolean(tariffs.canEdit));
-    setRows(quote.items.map(item=>({itemId:item.id,article:item.supplier_article,
-      title:item.description_original,input:inputFromQuote(item,tariffs.selected,dateMoscow())})));
+    const original=quote.items.map(item=>({itemId:item.id,article:item.supplier_article,
+      title:item.description_original,input:inputFromQuote(item,tariffs.selected,dateMoscow())}));
+    setRows(original);setSelectedItem(original[0]?.itemId||null);
     if(tariffs.fxError)setMessage("Не удалось получить курс ЦБ: "+tariffs.fxError+"; расчёт не запустится до уточнения курсов.");
-    await fetchVersions();
+    // Restore the latest COMPLETE snapshot on entry, so confirmed duties
+    // aren't lost after reloading the page. Partial versions stay in history.
+    try{
+      const history=await fetchVersions();
+      if(!active)return;
+      const complete=history.find(v=>v.items_data.length===original.length&&
+        v.items_data.every(entry=>Boolean(entry.result)&&original.some(row=>row.itemId===entry.itemId)));
+      if(complete){
+        const restored=complete.items_data.map(x=>({itemId:x.itemId,article:x.article,title:x.title,input:x.input}));
+        setRows(restored);setDate(complete.calculation_date);
+        setSelectedItem(restored[0]?.itemId||null);
+        lastSaved.current={id:complete.id,signature:JSON.stringify({date:complete.calculation_date,
+          rows:restored.map(row=>({itemId:row.itemId,input:{...row.input,
+           customs:{...row.input.customs,feeDate:complete.calculation_date}}}))})};
+        if(history[0]?.id!==complete.id)
+          setMessage("Открыта последняя полностью рассчитанная версия "+complete.version_no+
+           ". Более поздние незавершённые версии доступны в истории КП.");
+      }
+    }catch(e){
+      if(active)setMessage("КП загружено, но историю версий не удалось получить: "+
+        (e instanceof Error?e.message:"ошибка запроса"));
+    }
    }catch(e){if(active)setError(e instanceof Error?e.message:"Ошибка загрузки КП");}
    finally{if(active)setLoading(false);}
   })();
@@ -105,6 +129,8 @@ export default function VedWholeOfferCalculator({offerId}:{offerId:string}){
   catch(e){return {...row,result:null,errors:e instanceof VedInputError?e.issues:["Не удалось рассчитать товар"]};}
  }),[rows]);
  const ready=preview.filter(p=>Boolean(p.result)).length;
+ const selected=preview.find(p=>p.itemId===selectedItem)||preview[0]||null;
+ const selectedSource=quoteItems.find(p=>p.id===selected?.itemId);
  const patchInput=(id:string,group:keyof VedCalculationInput,key:string,value:string|number|boolean|undefined)=>{
   setRows(old=>old.map(r=>{
    if(r.itemId!==id)return r;
@@ -218,7 +244,7 @@ export default function VedWholeOfferCalculator({offerId}:{offerId:string}){
    <div><small>Требуют данных</small><strong>{rows.length-ready}</strong></div>
    <label>Дата тарифов и расчёта<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
   </div>
-  <p className="ved-offer-help">Нажми на строку товара, чтобы открыть полный калькулятор: исходные параметры, статьи расходов и три сценария. Кнопка «Скачать всё КП в Excel» сама сохраняет новую общую версию перед выгрузкой. Указывай подтверждённую ставку пошлины по ТН ВЭД.</p>
+  <p className="ved-offer-help">Выберите артикул непосредственно в калькуляторе. Все его исходные параметры, сценарии 40HQ / MOQ / 1 м³ и правки сохраняются в одном общем расчёте КП.</p>
   <div className="ved-offer-bulk">
    <label>Применить одну ставку пошлины ко всем товарам, % <input id="ved-bulk-duty" type="number" min="0" step="any" placeholder="Например, 10"/></label>
    <button type="button" onClick={()=>{
@@ -228,35 +254,32 @@ export default function VedWholeOfferCalculator({offerId}:{offerId:string}){
   </div>
   {message&&<p role="status" className="ved-offer-help">{message}</p>}
   {error&&<p role="alert" className="ved-offer-error">{error}</p>}
-  <div className="ved-offer-list">
-   {preview.map((row,i)=>{
-    const isSelected=selectedItem===row.itemId;
-    const source=quoteItems.find(x=>x.id===row.itemId);
-    return <section key={row.itemId} className="ved-offer-product">
-     <div className="ved-offer-product-head">
-      <button type="button" aria-expanded={isSelected} aria-controls={"ved-item-"+row.itemId}
-       onClick={()=>setSelectedItem(isSelected?null:row.itemId)}>
-       <span className="ved-offer-toggle-arrow" aria-hidden="true">{isSelected?"▾":"▸"}</span>
-       <strong>{i+1}. {row.article}</strong><span>{row.title.split("\n")[0]}</span>
-      </button>
-      <div className="ved-offer-product-cost">
-       {row.result?<strong>{rub(row.result.averageCostPerUnitRub)} ₽/шт.</strong>:
-        <span className="ved-offer-pending">Нужно уточнить</span>}
-       <small>{row.result?"Среднее 40HQ и MOQ":row.errors.slice(0,2).join("; ")}</small>
-      </div>
+  {selected&&<section className="ved-calc ved-offer-classic-calculator" aria-label="Калькулятор выбранного товара">
+   <div className="ved-calc-persistence ved-offer-article-picker">
+    <div className="ved-calc-persist-bar">
+     <label className="ved-calc-field ved-offer-article-field">
+      <span>Выбрать артикул КП</span>
+      <select value={selected.itemId} onChange={event=>setSelectedItem(event.target.value)}>
+       {preview.map((item,i)=><option key={item.itemId} value={item.itemId}>
+        {i+1}. {item.article} · {item.title.split("\n")[0].slice(0,95)}
+        {item.result?" · "+rub(item.result.averageCostPerUnitRub)+" ₽/шт.":" · требуется уточнить"}
+       </option>)}
+      </select>
+     </label>
+     <div className="ved-offer-selected-info">
+      <strong>{selected.article}</strong>
+      <span>{selected.result?rub(selected.result.averageCostPerUnitRub)+" ₽/шт. (40HQ + MOQ)":
+       "Есть недостающие параметры"}</span>
+      <small>Товар {preview.findIndex(p=>p.itemId===selected.itemId)+1} из {preview.length}</small>
      </div>
-     {isSelected&&<div id={"ved-item-"+row.itemId} className="ved-offer-product-editor">
-      <VedOfferProductCalculator
-       input={row.input}
-       result={row.result}
-       errors={row.errors}
-       source={source}
-       onChange={(group,key,value)=>patchInput(row.itemId,group,key,value)}
-      />
-     </div>}
-    </section>;
-   })}
-  </div>
+    </div>
+    {selectedSource&&<p className="ved-calc-hint">Источник: лист «{selectedSource.source_sheet}», строка {selectedSource.source_row}. Упаковка: {String(selectedSource.detected_data.packaging||"не указана")}.</p>}
+   </div>
+   <VedCalculatorWorkspace
+    input={selected.input}
+    onChange={(group,key,value)=>patchInput(selected.itemId,group,key,value)}
+   />
+  </section>}
   <div className="ved-offer-actions">
    <button type="button" disabled={!canEdit||busy||!rows.length} onClick={()=>void save()}>
     {busy?"Обрабатываем…":"Сохранить новую версию всего КП"}</button>
