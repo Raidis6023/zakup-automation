@@ -24,6 +24,7 @@ const routes: Record<string, RouteSpec> = {
   "/ved": { label: "ВЭД" },
   "/ved/commercial-offers": { label: "Коммерческие предложения", parent: "/ved" },
   "/ved/registry": { label: "Реестр товаров и расчётов", parent: "/ved" },
+  "/ved/registry/calculator": { label: "Калькулятор ВЭД", parent: "/ved/registry" },
   "/ved/documents": { label: "Документы", parent: "/ved" },
   "/ved/references": { label: "Справочники ВЭД", parent: "/ved" },
   "/unit-economics": { label: "Юнит-экономика" },
@@ -51,6 +52,36 @@ const routes: Record<string, RouteSpec> = {
   "/admin/logs": { label: "История логов", parent: "/admin" },
 };
 
+const segmentLabels: Record<string, string> = {
+  "calculator": "Калькулятор ВЭД",
+  "financier": "ИИ-финансист",
+  "settings": "Настройки",
+  "fbw-supplies": "Формирование поставок",
+  "commissions": "Комиссии",
+  "logistics": "Логистика и тарифы",
+  "stock-import": "Загрузка АВЕДЭКС",
+  "responsible-storage-import": "Ответственное хранение",
+  "logistics-import": "Импорт логистики",
+  "commercial-offers": "Коммерческие предложения",
+  "registry": "Реестр товаров и расчётов",
+  "references": "Справочники ВЭД",
+  "documents": "Документы",
+  "orders": "Заказы",
+  "sku-list": "Список артикулов",
+  "unit-economics": "Юнит-экономика",
+  "wildberries": "Wildberries",
+  "yandex-market": "Яндекс Маркет",
+  "ozon": "Ozon",
+  "admin": "Администрирование",
+  "users": "Сотрудники",
+  "tasks": "Задачи",
+  "logs": "История логов",
+  "profile": "Профиль",
+  "stocks": "Остатки",
+  "zakup": "Закуп",
+  "ved": "ВЭД",
+};
+
 function displaySegment(segment: string): string {
   let decoded = segment;
   try {
@@ -58,7 +89,14 @@ function displaySegment(segment: string): string {
   } catch {
     // Keep a readable fallback for malformed URLs.
   }
-  return decoded.replace(/[-_]+/g, " ").replace(/^./, letter => letter.toUpperCase());
+  const normalized = decoded.toLowerCase();
+  if (segmentLabels[normalized]) return segmentLabels[normalized];
+
+  const readable = decoded.replace(/[-_]+/g, " ").replace(/^./, letter => letter.toUpperCase());
+  // New Latin route slugs must be registered above instead of leaking English
+  // technical names into the Russian navigation.
+  if (/^[a-z0-9_-]+$/i.test(decoded) && /[a-z]/i.test(decoded)) return "Раздел";
+  return readable;
 }
 
 function getFallback(pathname: string): RouteSpec {

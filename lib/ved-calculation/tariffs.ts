@@ -30,9 +30,9 @@ export type TariffDefinition = {
 
 /** Shared list: one source for server validation, reference editor and calculator mapping. */
 export const VED_TARIFFS: readonly TariffDefinition[] = [
-  {key:"usdRub",title:"USD к RUB (ЦБ)",unit:"₽/USD",section:"Курсы",group:"reference",automatic:true},
-  {key:"eurRub",title:"EUR к RUB (ЦБ)",unit:"₽/EUR",section:"Курсы",group:"currency",automatic:true},
-  {key:"cnyRub",title:"CNY к RUB (ЦБ + 1 ₽)",unit:"₽/CNY",section:"Курсы",group:"currency",automatic:true},
+  {key:"usdRub",title:"USD / RUB (ЦБ)",unit:"₽/USD",section:"Курсы",group:"reference",automatic:true},
+  {key:"eurRub",title:"EUR / RUB (ЦБ)",unit:"₽/EUR",section:"Курсы",group:"currency",automatic:true},
+  {key:"cnyRub",title:"CNY / RUB (ЦБ + 1 ₽)",unit:"₽/CNY",section:"Курсы",group:"currency",automatic:true},
   {key:"usableVolumeM3", title:"Рабочий объём 40HQ",unit:"м³",section:"Контейнер",group:"container"},
   {key:"maxPayloadKg",title:"Допустимая масса контейнера",unit:"кг",section:"Контейнер",group:"container"},
   {key:"truckVolume90M3",title:"Объём фуры 90 м³",unit:"м³",section:"Фуры",group:"reference"},

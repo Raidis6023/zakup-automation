@@ -4,7 +4,8 @@ import {VED_TARIFFS,type VedTariffKey,type TariffRow} from "@/lib/ved-calculatio
 import "./ved-tariffs.css";
 type Response={ok:boolean;error?:string;canEdit?:boolean;selected?:Record<string,TariffRow>;history?:TariffRow[];fxError?:string|null};
 const groups=["Курсы","Контейнер","Фуры","Логистика","Разовые расходы","Налоги"] as const;
-const fmt=(n:number)=>new Intl.NumberFormat("ru-RU",{maximumFractionDigits:6}).format(n);
+const fmt=(n:number,digits=6)=>new Intl.NumberFormat("ru-RU",{minimumFractionDigits:digits===2?2:0,maximumFractionDigits:digits}).format(n);
+const currencyKeys=new Set<VedTariffKey>(["usdRub","eurRub","cnyRub"]);
 const today=()=>new Date().toLocaleDateString("sv-SE",{timeZone:"Europe/Moscow"});
 export default function VedTariffEditor(){
  const [date,setDate]=useState(today),[data,setData]=useState<Response|null>(null);
@@ -58,7 +59,7 @@ export default function VedTariffEditor(){
       return <div className="ved-tariffs-line" key={item.key}>
        <span>{item.title}</span>
        <div className="ved-tariffs-value">
-        <strong>{row?fmt(Number(row.amount)):"Не установлено"} <small>{row?item.unit:""}</small></strong>
+        <strong>{row?fmt(Number(row.amount),item.section==="Курсы"?2:6):"Не установлено"} <small>{row?item.unit:""}</small></strong>
         {data?.canEdit&&!item.automatic&&<button type="button" className="ved-tariffs-edit-button"
          onClick={()=>edit(item.key,row)} title="Создать редакцию" aria-label={"Редактировать: "+item.title}>✎</button>}
        </div>
@@ -97,7 +98,7 @@ export default function VedTariffEditor(){
    <div className="ved-tariffs-history">
     {(data.history||[]).filter(row=>!filter||VED_TARIFFS.find(t=>t.key===row.tariff_key)?.title.toLowerCase().includes(filter.toLowerCase())).map(row=><div className="ved-tariffs-line" key={row.id}>
      <span>{VED_TARIFFS.find(t=>t.key===row.tariff_key)?.title||row.tariff_key}</span>
-     <strong>{fmt(Number(row.amount))}</strong>
+     <strong>{fmt(Number(row.amount),currencyKeys.has(row.tariff_key)?2:6)}</strong>
      <span className="ved-tariffs-valid">{row.effective_from} · {row.reason||"Без комментария"}</span>
     </div>)}
    </div>
