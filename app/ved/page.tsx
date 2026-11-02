@@ -1110,7 +1110,7 @@ export default async function VedPage() {
 
           <PageHeader
             variant="ved"
-            title="ВЭД"
+            title="Заказы"
             description="Заказы в Китай и работа отдела ВЭД."
           />
 
@@ -1207,7 +1207,7 @@ export default async function VedPage() {
 
         <PageHeader
             variant="ved"
-            title="ВЭД"
+            title="Заказы"
             description="Заказы в Китай, переданные в работу отдела ВЭД."
           />
 
