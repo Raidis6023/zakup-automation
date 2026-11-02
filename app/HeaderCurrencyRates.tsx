@@ -50,9 +50,10 @@ export default function HeaderCurrencyRates() {
     <div className={styles.rates} aria-label="Курсы Банка России без надбавок">
       {(["USD", "EUR", "CNY"] as const).map(code => {
         const rate = reply?.rates?.[code];
-        const arrow =
+        const indicator =
           rate?.trend === "up" ? "↑" :
-          rate?.trend === "down" ? "↓" : "";
+          rate?.trend === "down" ? "↓" :
+          rate?.trend === "flat" ? "=" : null;
 
         const tooltip = rate
           ? `Сегодня: ${fmt(rate.official)} ₽, вчера: ${rate.previous !== null ? fmt(rate.previous) + " ₽" : "нет данных"}`
@@ -68,17 +69,18 @@ export default function HeaderCurrencyRates() {
           >
             <span className={styles.code}>{code}</span>
             <span className={styles.value}>{rate ? fmt(rate.official) : "—"}</span>
-            {arrow && (
+            {indicator && (
               <span
                 className={
-                  rate?.trend === "up" ? styles.up : styles.down
+                  rate?.trend === "up" ? styles.up :
+                  rate?.trend === "down" ? styles.down : styles.flat
                 }
                 aria-label={
                   rate?.trend === "up" ? "Курс вырос" :
-                  rate?.trend === "down" ? "Курс снизился" : "Без изменений"
+                  rate?.trend === "down" ? "Курс снизился" : "Курс не изменился"
                 }
               >
-                {arrow}
+                {indicator}
               </span>
             )}
           </span>
