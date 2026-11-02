@@ -546,6 +546,8 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     const offer=mapBySku.get(component.sku)?.offer_id||'SKU:'+component.sku;
     const row=byOffer.get(offer);if(!row)continue;
     // These are components of the existing posting, NOT additional revenue.
+    if(!row.details.some(x=>x.type_id==='SALES')&&Number(component.sale_amount)!==0)
+      row.details.push({type_id:'SALE_COMPONENT',name:'Стоимость продаж в составе начислений (справочно)',amount:Number(component.sale_amount),count:0,is_advertising:false,is_reference:true});
     for(const x of [
       {type_id:'BONUS_COMPONENT',name:'Баллы за скидки (уже в составе начисления)',amount:Number(component.bonus)},
       {type_id:'PARTNER_COMPONENT',name:'Поддержка партнёрских программ (уже в составе начисления)',amount:Number(component.coinvestment)}
@@ -614,8 +616,8 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     ads_partial_spend:round([...adByOffer.values()].reduce((a,b)=>a+b,0)),
     ads_partial_skus:adByOffer.size,
     sales_window_covered: salesWindowCovered,
-    actual_buyout_days: salesWindowCovered ? days.length : 0,
-    actual_buyouts_covered: salesWindowCovered,
+    actual_buyout_days: 0,
+    actual_buyouts_covered: false,
     unit_method:"orders_minus_cancellations_returns_not_covered",
     stock_as_of:(stocksRes.data as StockRow[]??[])[0] ?? null,
     transit_as_of:transitAsOf,
@@ -628,7 +630,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     ads_performance_total:adComplete?round([...adByOffer.values()].reduce((a,b)=>a+b,0)):null,
     background_jobs: jobsRes.data ?? [],
     calculation_includes_api_calls: false,
-    profit_status: salesWindowCovered ? "calculated_from_orders_less_cancellations" : "missing_sales_coverage",
+    profit_status: salesWindowCovered ? "provisional_missing_return_order_dates" : "missing_sales_coverage",
     warning: "Расчётные выкупы Ozon пока = заказы − отмены. Возвраты покупателей НЕ подтверждены на дату исходного заказа: количество и себестоимость предварительные. Реклама Seller уже учтена в начислениях и не списывается дважды. Отсутствующие отчёты Performance не означают нулевую рекламу.",
     rows: Array.from(byOffer.values()).sort((a, b) => a.ozon_amount - b.ozon_amount),
     reference_gaps: referenceGaps.sort((a,b)=>a.offer_id.localeCompare(b.offer_id,"ru")),

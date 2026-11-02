@@ -190,7 +190,7 @@ export default function FinancierDetailTable({
     ["master_code","Код товара"],["manager","КМ"],["offer_id","Артикул"],
     ["estimated_result","Операционная прибыль"],["revenue","Выручка"],
     ["ad","Реклама, ₽"],["drr","ДРР"],["storage","Хранение, ₽"],
-    ["orders","Заказы"],["cancelled","Отмены"],["buyout","Выкупы"],
+    ["orders","Заказы"],["cancelled","Отмены"],["buyout","Расч. выкупы*"],
     ["roas","ROAS"],["transit","Товары в пути"],["transit_revenue","Выручка с товарами в пути"],
     ["transit_drr","ДРР с товарами в пути"],["ozon_stock","Остатки Ozon"],
     ["crossdock","В пути на склады"],["main","Аведэкс основной"],
@@ -267,7 +267,7 @@ export default function FinancierDetailTable({
           {expanded===r.offer_id&&<tr key={r.offer_id+"-detail"} className="ozf-expanded-row">
             <td colSpan={25}>
               <div className="ozf-expanded-content"><div className="ozf-pinned-article"><strong>{r.offer_id}</strong><CopyArticle article={r.offer_id}/></div>{r.offer_id.startsWith('SKU:')&&<p className="ozf-error">Нет подтверждённой связки SKU {r.offer_id.slice(4)} с артикулом продавца. Скопируй SKU и найди его в кабинете Ozon в списке товаров. Автоматическое сопоставление с чужой карточкой отключено.</p>}
-                <p className="ozf-notice">Баллы и поддержка программ уже включены в начисления Ozon. Справочные строки не складываются с прибылью повторно.</p><table className="ozf-breakdown-table"><thead><tr>
+                <p className="ozf-notice">* Расчётные выкупы = заказы минус отмены. Возвраты на дату исходного заказа пока не загружены, поэтому прибыль предварительная. Баллы и поддержка программ уже входят в начисления Ozon; справочные строки нельзя прибавлять повторно.</p><table className="ozf-breakdown-table"><thead><tr>
                   <th>Статья</th><th>Категория</th><th>Операций</th><th>Сумма, ₽</th>
                 </tr></thead><tbody>
                   {r.estimated_result===null&&<tr className="ozf-missing-explainer">
