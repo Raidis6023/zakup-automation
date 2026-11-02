@@ -1005,7 +1005,7 @@ export default function WorkspaceShell({
                 <div className="home-ved-nav-group">
                   <div className="home-ved-nav-parent">
                     <Link
-                      href="/ved/commercial-offers"
+                      href="/ved"
                       onClick={event => {
                         setVedMenuExpanded(true);
                         handleNavClick(event, "ved");

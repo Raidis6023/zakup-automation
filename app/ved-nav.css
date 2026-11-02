@@ -55,9 +55,9 @@
   text-decoration: none;
   background: transparent;
   color: var(--ws-nav-text);
-  font-size: 13px;
-  font-weight: 550;
-  line-height: 1.16;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
   transition: color .18s ease, border-color .18s ease, background-color .18s ease;
 }
 .home-shell .home-sidebar .home-ved-subnav-link:hover,

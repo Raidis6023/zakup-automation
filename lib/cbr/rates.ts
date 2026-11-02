@@ -38,22 +38,45 @@ async function load(date:string):Promise<Doc>{
 }
 export async function getCbrRates(asOf:string=moscowToday()):Promise<CbrRates>{
  const current=await load(asOf);
- let prev:Doc|null=null;
- // Compare with the CBR rate applicable to the previous calendar day.
- // On weekends/holidays the CBR returns the latest published rate, so
- // yesterday correctly equals today until a new official rate is published.
+
+ // The tooltip reports the rate that applied on the previous calendar day.
+ // During weekends and holidays this can be the same published CBR document
+ // as today, which is correct for the "yesterday" value shown to the user.
+ let yesterday:Doc|null=null;
  try{
   const p=await load(before(asOf,1));
-  if(p.effectiveDate<=current.effectiveDate)prev=p;
+  if(p.effectiveDate<=current.effectiveDate)yesterday=p;
  }catch{
-  prev=null;
+  yesterday=null;
  }
+
+ // Trend direction must compare two different CBR publication dates.
+ // Otherwise, on weekends/holidays, yesterday and today resolve to the same
+ // document and every currency incorrectly appears unchanged.
+ let previousPublished:Doc|null=
+  yesterday&&yesterday.effectiveDate<current.effectiveDate?yesterday:null;
+ if(!previousPublished){
+  for(let n=1;n<=8;n++){
+   try{
+    const p=await load(before(current.effectiveDate,n));
+    if(p.effectiveDate<current.effectiveDate){
+     previousPublished=p;
+     break;
+    }
+   }catch{
+    break;
+   }
+  }
+ }
+
  const rates={} as Record<CbrCurrency,CbrRate>;
  for(const code of CBR_CURRENCIES){
-  const official=current.rates[code],previous=prev?.rates[code]??null;
+  const official=current.rates[code];
+  const previous=yesterday?.rates[code]??null;
+  const trendBaseline=previousPublished?.rates[code]??null;
   rates[code]={
-   official,previous,effectiveDate:current.effectiveDate,previousDate:prev?.effectiveDate??null,
-   trend:previous===null?"unknown":official>previous+1e-8?"up":official<previous-1e-8?"down":"flat",
+   official,previous,effectiveDate:current.effectiveDate,previousDate:yesterday?.effectiveDate??null,
+   trend:trendBaseline===null?"unknown":official>trendBaseline+1e-8?"up":official<trendBaseline-1e-8?"down":"flat",
   };
  }
  return {asOf,source:SOURCE,rates};
