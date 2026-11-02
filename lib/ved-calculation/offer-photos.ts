@@ -5,8 +5,9 @@ type Position={sheet:string;row:number;product:string;};
 function imageBytes(media:ExcelJS.Media):ImageAttachment|null{
  const ext=String(media.extension||"").toLowerCase();
  if(!["png","jpg","jpeg","gif"].includes(ext))return null;
+ const image=media as ExcelJS.Media & {base64?:string};
  const buffer=media.buffer?Buffer.from(media.buffer):
-  media.base64?Buffer.from(media.base64.replace(/^data:[^,]+,/,""),"base64"):null;
+  image.base64?Buffer.from(image.base64.replace(/^data:[^,]+,/,""),"base64"):null;
  return buffer?{buffer,extension:ext==="jpg"?"jpeg":ext as "png"|"jpeg"|"gif"}:null;
 }
 /** Images are kept in the original supplier workbook in private storage.
@@ -20,7 +21,7 @@ export async function findSupplierPhotos(
  const warnings:string[]=[];
  for(const item of items)photos.set(item.id,{productPhoto:null,packagingPhoto:null});
  let workbook:ExcelJS.Workbook;
- try{workbook=new ExcelJS.Workbook();await workbook.xlsx.load(bytes);}
+ try{workbook=new ExcelJS.Workbook();await workbook.xlsx.load(bytes as unknown as Parameters<typeof workbook.xlsx.load>[0]);}
  catch{
   return {photos,warnings:["Этот формат Excel не поддерживает извлечение встроенных изображений; исходник сохранён"]};
  }
