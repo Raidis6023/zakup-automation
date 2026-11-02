@@ -99,8 +99,8 @@ html[data-theme="dark"] .home-shell[data-accent-area] {
   color: var(--ws-utility-icon);
   z-index: 0;
 }
-/* Match the existing brand-icon clipping for utility icons. The missing
-   clip is why the smoke ballooned into a giant neon circle. */
+/* Both workspace icon containers share the same rounded clipping.
+   Active rings and glow stay inside the icon slot in work and admin modes. */
 .home-shell .home-sidebar .home-brand-icon,
 .home-shell .home-sidebar .home-workspace-icon,
 .home-shell .home-topbar-right .home-utility-icon-visual {
