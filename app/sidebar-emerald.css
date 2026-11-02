@@ -108,12 +108,12 @@ html[data-theme="dark"] .home-shell[data-accent-area] {
   border-radius: 12px;
 }
 
-/* Admin employees use the same monochrome line-icon treatment in both
-   themes. Active-state accent is shared with the rest of the sidebar. */
-.home-shell .home-sidebar .home-admin-employees-icon {
+/* Every administrative sidebar icon keeps one emerald base color
+   in light and dark themes. Selection uses the shared active accent. */
+.home-shell[data-workspace-mode="admin"] .home-sidebar .home-workspace-icon {
   color: #11865d;
 }
-.home-shell .home-sidebar .home-workspace-link--active .home-admin-employees-icon {
+.home-shell[data-workspace-mode="admin"] .home-sidebar .home-workspace-link--active .home-workspace-icon {
   color: #44ffbd;
 }
 
