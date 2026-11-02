@@ -61,7 +61,7 @@ export default function VedTariffEditor(){
        <div className="ved-tariffs-value">
         <strong>{row?fmt(Number(row.amount),item.section==="Курсы"?2:6):"Не установлено"} <small>{row?item.unit:""}</small></strong>
         {data?.canEdit&&!item.automatic&&<button type="button" className="ved-tariffs-edit-button"
-         onClick={()=>edit(item.key,row)} title="Создать редакцию" aria-label={"Редактировать: "+item.title}>✎</button>}
+         onClick={()=>edit(item.key,row)} title="Редактировать" aria-label={"Редактировать: "+item.title}>✎</button>}
        </div>
        <span className="ved-tariffs-valid">{row?"с "+row.effective_from+(item.automatic?" · ЦБ":""):item.automatic?"Нет данных ЦБ":"Значение не задано"}</span>
       </div>;
@@ -74,7 +74,7 @@ export default function VedTariffEditor(){
    <div className="ved-tariffs-editor-title">
     <strong>{editorOpen?"Новая редакция параметра":"Редактирование параметров"}</strong>
     <button type="button" onClick={()=>{setEditorOpen(v=>!v);setKey("usableVolumeM3");setAmount("");}}>
-     {editorOpen?"Закрыть":"Добавить редакцию"}
+     {editorOpen?"Закрыть":"Редактировать"}
     </button>
    </div>
    {editorOpen&&<div className="ved-tariffs-form">
