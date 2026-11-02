@@ -84,12 +84,6 @@
   max-width: 28px;
   max-height: 28px;
 }
-.home-shell .home-sidebar .home-ved-subnav-icon img {
-  display: block;
-  width: 26px; height: 26px;
-  object-fit: contain;
-  filter: drop-shadow(0 0 1.4px rgba(55,201,142,.42));
-}
 .home-shell .home-sidebar .home-ved-subnav-label {
   flex: 1; min-width: 0;
   white-space: normal;

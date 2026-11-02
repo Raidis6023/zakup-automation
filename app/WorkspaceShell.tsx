@@ -2,7 +2,6 @@
 
 import Link
   from "next/link";
-import Image from "next/image";
 
 import {
   usePathname,
@@ -1056,11 +1055,7 @@ export default function WorkspaceShell({
                         title={item.label}
                       >
                         <span className="home-ved-subnav-icon home-brand-icon">
-                          {item.icon === "orders" || item.icon === "documents" || item.icon === "references" ? (
-                            <EmeraldSidebarIcon kind={item.icon} />
-                          ) : (
-                            <Image src={`/ved-nav/${item.icon}-v3.svg`} width={30} height={30} alt="" unoptimized />
-                          )}
+                          <EmeraldSidebarIcon kind={item.icon} />
                         </span>
                         <span className="home-ved-subnav-label">{item.label}</span>
                       </Link>
