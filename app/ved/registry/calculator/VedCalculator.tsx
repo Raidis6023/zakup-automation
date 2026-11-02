@@ -12,7 +12,7 @@ import {
 } from "@/lib/ved-calculation/engine";
 
 const initial: VedCalculationInput = {
-  product: { unitPriceCny: 4.77, unitsPerCarton: 100, cartonVolumeM3: 0.1031745, cartonGrossKg: 16.8, moqUnits: 2000, markingCnyPerUnit: 0 },
+  product: { productName:"",tnVedCode:"",incoterm:"FOB",departurePort:"",unitPriceCny: 4.77, unitsPerCarton: 100, cartonVolumeM3: 0.1031745, cartonGrossKg: 16.8, moqUnits: 2000, markingCnyPerUnit: 0 },
   currency: { cnyRub: 13.5, eurRub: 95 },
   container: { usableVolumeM3: 68, maxPayloadKg: 22000 },
   expenses: {
@@ -85,6 +85,7 @@ export default function VedCalculator() {
   const [calculationId, setCalculationId] = useState<string | null>(null);
   const [history, setHistory] = useState<StoredCalculation[]>([]);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const loadSaved = useCallback(async () => {
     try {
@@ -107,12 +108,8 @@ export default function VedCalculator() {
         setResolved(json.selected || {});
         // Fresh calculations get live CBR currencies and confirmed container constants.
         // Saved snapshots must retain their own historical input values.
-        if(!calculationId&&json.selected?.cnyRub&&json.selected?.eurRub){
-          setInput(previous=>({...previous,
-            currency:{cnyRub:Number(json.selected!.cnyRub!.amount),eurRub:Number(json.selected!.eurRub!.amount)},
-            container:{usableVolumeM3:Number(json.selected!.usableVolumeM3?.amount??68),
-              maxPayloadKg:Number(json.selected!.maxPayloadKg?.amount??22000)},
-          }));
+        if(!calculationId){
+          setInput(previous=>applyTariffValues(previous,json.selected||{}));
         }
         setCanEdit(Boolean(json.canEdit));
         const count=Object.keys(json.selected||{}).length;
@@ -144,6 +141,37 @@ export default function VedCalculator() {
     }catch(e){setSaveMessage(e instanceof Error?e.message:"Ошибка сохранения");}
     finally{setSaving(false);}
   };
+  const exportExcel=async(ids:string[])=>{
+    if(!ids.length){setSaveMessage("Нет сохранённых расчётов для экспорта");return;}
+    setExporting(true);setSaveMessage("");
+    try{
+      const response=await fetch("/api/ved-calculations/export",{
+        method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ids}),
+      });
+      if(!response.ok){
+        const json=await response.json() as {error?:string};
+        throw Error(json.error||"Не удалось сформировать Excel");
+      }
+      const blob=await response.blob();
+      const url=window.URL.createObjectURL(blob);
+      const anchor=document.createElement("a");
+      anchor.href=url;
+      anchor.download="ВЭД-расчёты-"+new Date().toLocaleDateString("sv-SE")+".xlsx";
+      document.body.appendChild(anchor);anchor.click();anchor.remove();
+      window.setTimeout(()=>window.URL.revokeObjectURL(url),3000);
+      setSaveMessage("Excel сформирован из сохранённых версий. Один товар = один лист.");
+    }catch(e){setSaveMessage(e instanceof Error?e.message:"Ошибка экспорта Excel");}
+    finally{setExporting(false);}
+  };
+  const exportLatest=()=>{
+    const seen=new Set<string>();
+    const ids=history.filter(saved=>{
+      if(seen.has(saved.calculation_id))return false;
+      seen.add(saved.calculation_id);
+      return true;
+    }).slice(0,30).map(saved=>saved.id);
+    void exportExcel(ids);
+  };
   const openSnapshot=(saved:StoredCalculation)=>{
     setInput(saved.input_data);setTitle(saved.title);setArticle(saved.article);
     setCalculationId(saved.calculation_id);setTariffDate(saved.calculation_date);
@@ -155,6 +183,14 @@ export default function VedCalculator() {
   };
   const update = (group: keyof VedCalculationInput, field: string, value: number | boolean | string | undefined) => {
     setInput(previous => ({ ...previous, [group]: { ...previous[group], [field]: value } }));
+  };
+  const updateCartonDimension=(field:"cartonLengthCm"|"cartonWidthCm"|"cartonHeightCm",value?:number)=>{
+    setInput(previous=>{
+      const product={...previous.product,[field]:value};
+      const {cartonLengthCm:l,cartonWidthCm:w,cartonHeightCm:h}=product;
+      if(l&&w&&h&&l>0&&w>0&&h>0)product.cartonVolumeM3=l*w*h/1000000;
+      return {...previous,product};
+    });
   };
   const preview = useMemo(() => {
     try {
@@ -169,11 +205,17 @@ export default function VedCalculator() {
   const p = input.product, c = input.container, r = input.currency, e = input.expenses, t = input.customs;
   const nf = (group: keyof VedCalculationInput, key: string, title: string, value?: number) =>
     <NumberField key={group + key} title={title} value={value} change={v => update(group, key, v)} />;
+  const tf=(field:keyof VedCalculationInput["product"],label:string,value?:string,maxLength=160)=>
+    <label className="ved-calc-field" key={field}>
+      <span>{label}</span>
+      <input type="text" maxLength={maxLength} value={value||""}
+        onChange={event=>update("product",field,event.target.value)}/>
+    </label>;
 
   return <div className="ved-calc">
     <div className="ved-calc-note">
-      <strong>Черновой калькулятор, без сохранения</strong>
-      <p>Используются демонстрационные параметры держателя телефона и тарифов: это не подтверждённая себестоимость. Сбор рассчитывается по обычной шкале 2025/2026 для каждого сценария. Специальные случаи требуют ручной проверки. Сохранение версий доступно авторизованным сотрудникам с правом редактирования.</p>
+      <strong>Калькулятор ВЭД · сохранение и выгрузка Excel</strong>
+      <p>При новом расчёте подставляются значения из справочника ВЭД на выбранную дату. Данные демонстрационного товара необходимо заменить своими. Каждая сохранённая версия остаётся неизменной; Excel берёт из неё точные суммы и оформление утверждённого шаблона.</p>
     </div>
     <div className="ved-calc-persistence">
       <div className="ved-calc-persist-bar">
@@ -195,24 +237,43 @@ export default function VedCalculator() {
       </div>
       {saveMessage&&<p className="ved-calc-hint" role="status">{saveMessage}</p>}
       <details className="ved-calc-section">
-        <summary>Сохранённые расчёты и версии ({history.length} последних)</summary>
+        <summary>Сохранённые расчёты, версии и Excel ({history.length} последних)</summary>
         <div className="ved-calc-snapshots">
-          {history.length?history.map(saved=><button type="button" key={saved.id}
-            onClick={()=>openSnapshot(saved)}>
-            <strong>{saved.title}</strong> {saved.article&&<span>· {saved.article}</span>}
-            <small>версия {saved.version_no} · дата тарифа {saved.calculation_date}</small>
-          </button>):<p>Пока нет сохранённых расчётов или отсутствует доступ к истории.</p>}
+          {history.length>0&&<button className="ved-calc-export-all" type="button" disabled={exporting}
+            onClick={exportLatest}>{exporting?"Формируем Excel…":"Скачать последние версии всех товаров в один Excel (до 30 листов)"}</button>}
+          {history.length?history.map(saved=><div className="ved-calc-snapshot-row" key={saved.id}>
+            <button className="ved-calc-snapshot-open" type="button" onClick={()=>openSnapshot(saved)}>
+              <strong>{saved.title}</strong> {saved.article&&<span>· {saved.article}</span>}
+              <small>версия {saved.version_no} · дата тарифа {saved.calculation_date}</small>
+            </button>
+            <button className="ved-calc-snapshot-export" type="button" disabled={exporting}
+              onClick={()=>void exportExcel([saved.id])} aria-label={"Скачать Excel для "+saved.title}>
+              Скачать Excel
+            </button>
+          </div>):<p>Пока нет сохранённых расчётов или отсутствует доступ к истории.</p>}
         </div>
       </details>
     </div>
     <div className="ved-calc-layout">
       <section className="ved-calc-editor" aria-label="Исходные данные">
         <details className="ved-calc-section">
-          <summary>Товар и MOQ</summary>
+          <summary>Товар, упаковка и MOQ</summary>
           <div className="ved-calc-fields">
+            {tf("productName","Наименование товара для Excel",p.productName)}
+            {tf("tnVedCode","Код ТН ВЭД",p.tnVedCode,10)}
+            {tf("incoterm","Условие поставки (FOB / FCA / другое)",p.incoterm,24)}
+            {tf("departurePort","Порт / место отправления",p.departurePort,120)}
             {nf("product", "unitPriceCny", "Цена за штуку, CNY", p.unitPriceCny)}
             {nf("product", "unitsPerCarton", "Штук в коробке", p.unitsPerCarton)}
             {nf("product", "cartonVolumeM3", "Объём коробки, м³", p.cartonVolumeM3)}
+            {(["cartonLengthCm","cartonWidthCm","cartonHeightCm"] as const).map((field,i)=>
+              <NumberField key={field} title={["Длина короба, см","Ширина короба, см","Высота короба, см"][i]}
+                value={p[field]} change={v=>updateCartonDimension(field,v)}/>
+            )}
+            <p className="ved-calc-hint ved-calc-fields-hint">Если указать все три габарита коробки, объём рассчитается автоматически. При наличии только объёма габариты в Excel остаются пустыми.</p>
+            {nf("product","individualLengthCm","Длина индивидуальной упаковки, см",p.individualLengthCm)}
+            {nf("product","individualWidthCm","Ширина индивидуальной упаковки, см",p.individualWidthCm)}
+            {nf("product","individualHeightCm","Высота индивидуальной упаковки, см",p.individualHeightCm)}
             {nf("product", "cartonGrossKg", "Вес брутто коробки, кг", p.cartonGrossKg)}
             {nf("product", "cartonNetKg", "Вес нетто коробки, кг (если есть)", p.cartonNetKg)}
             {nf("product", "moqUnits", "MOQ, штук", p.moqUnits)}

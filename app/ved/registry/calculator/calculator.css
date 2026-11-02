@@ -51,3 +51,11 @@
 .ved-calc-snapshots button:hover{border-color:#37c98e}
 .ved-calc-snapshots button small{margin-left:auto;color:var(--ws-text-muted);font-size:10px}
 .ved-calc-snapshots p{font-size:11px;color:var(--ws-text-muted)}
+
+.ved-calc-snapshot-row{display:flex;align-items:stretch;gap:8px;min-width:0}
+.ved-calc-snapshots .ved-calc-snapshot-open{flex:1;min-width:0}
+.ved-calc-snapshots .ved-calc-snapshot-export{flex:none;color:var(--ws-active,#37c98e);font-weight:650}
+.ved-calc-snapshots .ved-calc-export-all{border-color:rgba(55,201,142,.55);color:var(--ws-active,#37c98e);font-weight:700;justify-content:center}
+.ved-calc-snapshots button:disabled{cursor:wait;opacity:.6}
+.ved-calc-fields-hint{grid-column:1/-1;padding:2px 0!important}
+@media(max-width:570px){.ved-calc-snapshot-row{flex-direction:column}}

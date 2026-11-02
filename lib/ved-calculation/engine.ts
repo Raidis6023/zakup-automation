@@ -36,6 +36,16 @@ export function ordinaryImportCustomsFee(customsValueRub: number, year: 2025 | 2
 
 export interface VedCalculationInput {
   product: {
+    productName?: string;
+    tnVedCode?: string;
+    incoterm?: string;
+    departurePort?: string;
+    cartonLengthCm?: number;
+    cartonWidthCm?: number;
+    cartonHeightCm?: number;
+    individualLengthCm?: number;
+    individualWidthCm?: number;
+    individualHeightCm?: number;
     unitPriceCny: number;
     unitsPerCarton: number;
     cartonVolumeM3: number;
