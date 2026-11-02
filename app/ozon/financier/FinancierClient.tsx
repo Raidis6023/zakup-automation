@@ -63,6 +63,7 @@ export default function FinancierClient() {
   const [pendingManager,setPendingManager] = useState("Все КМ");
   const [managerOptions,setManagerOptions]=useState<string[]>([]);
   const [data, setData] = useState<FinanceReport | null>(null);
+  const [adsBusy,setAdsBusy]=useState(false),[adsStatus,setAdsStatus]=useState('');
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [diagnosing, setDiagnosing] = useState(false);
@@ -391,7 +392,7 @@ export default function FinancierClient() {
         <button className="ozf-btn ozf-primary" disabled={busy||loading}
           onClick={()=>void formReport()}>{busy?"Формируем…":"Сформировать"}</button>
         <button className="ozf-btn" disabled={!data||loading||busy} onClick={()=>void load()}>Обновить расчёт</button>
-        <button className="ozf-btn" onClick={()=>void queueFinance()} disabled={loading||busy}>Загрузить / продолжить из Ozon</button>
+        <button className="ozf-btn" onClick={()=>void queueFinance()} disabled={loading||busy}>Загрузить / продолжить из Ozon</button><button className="ozf-btn" disabled={adsBusy} onClick={async()=>{setAdsBusy(true);setAdsStatus('Обработка очереди рекламы…');try{const r=await fetch('/api/agents/ozon-finance-ads',{method:'POST'}),j=await r.json();setAdsStatus(r.ok?'Реклама Ozon: '+String(j.phase??'выполнено')+'. Отчётов: '+String(j.reports_processed??0):'Ошибка: '+String(j.error??j.phase??r.status));}catch(e){setAdsStatus(String(e))}finally{setAdsBusy(false)}}}>{adsBusy?'Выгружаем рекламу…':'Продолжить рекламу Ozon'}</button><span role="status">{adsStatus}</span>
       </div>
       {data&&<p>Показан период: <b>{data.from} — {data.to}</b> включительно. Кэш: {data.cache_updated_at?new Date(data.cache_updated_at).toLocaleString('ru-RU',{timeZone:'Asia/Krasnoyarsk'}):'—'} (Красноярск).</p>}
       {connectionStatus && <p className="ozf-progress" role="status">{connectionStatus}</p>}

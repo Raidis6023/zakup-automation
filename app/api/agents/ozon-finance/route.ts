@@ -79,7 +79,7 @@ type Group = {
   in_china: number | null; in_crossdock: number | null; in_transit: number | null;
   transit_revenue: number | null; transit_drr: number | null;
   discontinued: boolean;
-  details: Array<{ type_id: string; name: string; amount: number; count: number; is_advertising: boolean }>;
+  details: Array<{ type_id: string; name: string; amount: number; count: number; is_advertising: boolean; is_reference?:boolean }>;
 };
 
 function validDate(value: string): boolean {
@@ -250,7 +250,7 @@ async function syncOneDay(db: ReturnType<typeof createAdminClient>, day: string)
 }
 async function buildReport(db: ReturnType<typeof createAdminClient>, from: string, to: string) {
   const days = dateRange(from, to);
-  const [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, adJobsRes, adTasksRes, itemizedRes, transitRes, crossdockRes, crossdockCurrentRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes, unallocatedDailyRes] =
+  const [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, adJobsRes, adTasksRes, itemizedRes, transitRes, crossdockRes, crossdockCurrentRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes, unallocatedDailyRes, incomeComponentsRes] =
     await Promise.all([
       db.from("ozon_finance_sync_days").select("day,record_count,synced_at").eq("account_key", ACCOUNT)
         .gte("day", from).lte("day", to),
@@ -287,8 +287,9 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
         .eq("account_key",ACCOUNT).gte("day",from).lte("day",to).order("day"),
       db.rpc("ozon_finance_unallocated_v3",{p_from:from,p_to:to,p_account:ACCOUNT}),
       db.rpc("ozon_finance_unallocated_daily_v1",{p_from:from,p_to:to,p_account:ACCOUNT}),
+       db.rpc("ozon_finance_posting_income_components_v1",{p_from:from,p_to:to,p_account:ACCOUNT}),
     ]);
-  for (const item of [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, adJobsRes, adTasksRes, itemizedRes, transitRes, crossdockRes, crossdockCurrentRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes, unallocatedDailyRes]) {
+  for (const item of [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, adJobsRes, adTasksRes, itemizedRes, transitRes, crossdockRes, crossdockCurrentRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes, unallocatedDailyRes, incomeComponentsRes]) {
     if (item.error) throw item.error;
   }
   const loaded = new Set((syncRes.data ?? []).map(r => r.day));
@@ -541,7 +542,20 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     const row=byOffer.get(offer);
     if(row)row.details=[...map.values()].sort((a,b)=>Math.abs(b.amount)-Math.abs(a.amount));
   }
+  for(const component of incomeComponentsRes.data as Array<{sku:string;sale_amount:number;bonus:number;coinvestment:number}>??[]){
+    const offer=mapBySku.get(component.sku)?.offer_id||'SKU:'+component.sku;
+    const row=byOffer.get(offer);if(!row)continue;
+    // These are components of the existing posting, NOT additional revenue.
+    for(const x of [
+      {type_id:'BONUS_COMPONENT',name:'Баллы за скидки (уже в составе начисления)',amount:Number(component.bonus)},
+      {type_id:'PARTNER_COMPONENT',name:'Поддержка партнёрских программ (уже в составе начисления)',amount:Number(component.coinvestment)}
+    ])if(x.amount!==0)row.details.push({...x,count:0,is_advertising:false,is_reference:true});
+  }
   for(const row of byOffer.values()){
+    if(!row.details.some(x=>x.type_id==='SALES')){
+      const posting=row.details.find(x=>x.type_id==='POSTING');
+      if(posting)row.details.push({...posting,type_id:'POSTING_INCOME',name:'Доходные начисления по отправлениям (справочно)',is_reference:true});
+    }
     if(row.allocated_seller_ppc!==0)
       row.details.push({type_id:"PPC_ALLOCATION",
         name:"Оплата за клик (распределено из общих начислений Seller API)",
@@ -602,7 +616,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     sales_window_covered: salesWindowCovered,
     actual_buyout_days: salesWindowCovered ? days.length : 0,
     actual_buyouts_covered: salesWindowCovered,
-    unit_method:"orders_minus_cancellations",
+    unit_method:"orders_minus_cancellations_returns_not_covered",
     stock_as_of:(stocksRes.data as StockRow[]??[])[0] ?? null,
     transit_as_of:transitAsOf,
     transit_snapshot_ready:transitSnapshotReady,
@@ -615,7 +629,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     background_jobs: jobsRes.data ?? [],
     calculation_includes_api_calls: false,
     profit_status: salesWindowCovered ? "calculated_from_orders_less_cancellations" : "missing_sales_coverage",
-    warning: "Расчёты по кэшу Supabase: количество «выкупов» по согласованной формуле = заказы − отмены (НЕ подтверждение вручения покупателю). Цена закупа списывается по этому количеству. Реклама уже учтена в начислениях Ozon и не списывается дважды. Товары в пути и кросс-докинг без подтверждённых статусов не подменяются нулями.",
+    warning: "Расчётные выкупы Ozon пока = заказы − отмены. Возвраты покупателей НЕ подтверждены на дату исходного заказа: количество и себестоимость предварительные. Реклама Seller уже учтена в начислениях и не списывается дважды. Отсутствующие отчёты Performance не означают нулевую рекламу.",
     rows: Array.from(byOffer.values()).sort((a, b) => a.ozon_amount - b.ozon_amount),
     reference_gaps: referenceGaps.sort((a,b)=>a.offer_id.localeCompare(b.offer_id,"ru")),
     unallocated_details: (unallocatedRes.data as Array<{

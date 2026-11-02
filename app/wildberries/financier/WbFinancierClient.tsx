@@ -84,7 +84,7 @@ return <div className="ozf-layout">
 {busy&&<div className="bi-skeleton" role="status">Подготавливаем полный отчёт…</div>}
 {data&&!busy&&<>
 <section className="ozf-panel">
-<h2>Результаты по артикулам</h2>
+<h2 id="wb-finance-main">Результаты по артикулам</h2>
 <p>Данные за {data.from} – {data.to} включительно. Нажми на артикул для расшифровки.</p>
 <div className="ozf-metrics" style={{marginTop:14}}>
 {[["Реализация",sum(r=>r.realization)],["К перечислению WB",sum(r=>r.to_transfer)],["Заказы",sum(r=>r.order_count)],["Логистика",sum(r=>r.delivery)],["Штрафы и удержания",sum(r=>r.penalty+r.deduction)]].map(([label,value])=><div className="ozf-panel" key={String(label)}><span>{label}</span><strong>{money(Number(value))} ₽</strong></div>)}

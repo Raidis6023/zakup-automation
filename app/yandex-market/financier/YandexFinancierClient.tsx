@@ -13,7 +13,8 @@ const shift=(day:string,delta:number)=>new Date(Date.parse(day+'T00:00:00Z')+del
 export default function YandexFinancierClient({initial,initialError}:{initial:Data|null;initialError:string}){
  const defaultTo=shift(localDay(),-1),defaultFrom=shift(defaultTo,-27);
  const [from,setFrom]=useState(initial?.from??defaultFrom),[to,setTo]=useState(initial?.to??defaultTo);
- const [data,setData]=useState(initial),[error,setError]=useState(initialError),[busy,setBusy]=useState(false),[progress,setProgress]=useState(''),[savingRate,setSavingRate]=useState(false),[statusSaving,setStatusSaving]=useState(false);
+ const [adBusy,setAdBusy]=useState(false),[adStatus,setAdStatus]=useState('');
+  const [data,setData]=useState(initial),[error,setError]=useState(initialError),[busy,setBusy]=useState(false),[progress,setProgress]=useState(''),[savingRate,setSavingRate]=useState(false),[statusSaving,setStatusSaving]=useState(false);
  const alive=useRef(true);useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[]);
  async function request(url:string,body?:unknown){const r=await fetch(url,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:undefined,body:body?JSON.stringify(body):undefined,cache:'no-store'});const d=await r.json();if(!r.ok)throw new Error(d.error??'Ошибка запроса');return d;}
  async function load(){setError('');setBusy(true);try{const d=await request(`/api/agents/yandex-finance?from=${from}&to=${to}`);if(alive.current)setData(d);}catch(e){if(alive.current)setError(e instanceof Error?e.message:'Ошибка');}finally{if(alive.current)setBusy(false);}}
@@ -58,7 +59,7 @@ export default function YandexFinancierClient({initial,initialError}:{initial:Da
   ]);
  }
  return <>
- <section className="ozf-panel ozf-filters"><label>С даты<input type="date" value={from} onChange={e=>setFrom(e.target.value)} disabled={busy}/></label><label>По дату (включительно)<input type="date" value={to} onChange={e=>setTo(e.target.value)} disabled={busy}/></label><button className="ozf-btn ozf-primary" onClick={load} disabled={busy}>Сформировать</button><button className="ozf-btn" onClick={sync} disabled={busy}>Загрузить / продолжить из ЯМ</button><span role="status">{busy?'Загрузка… ':''}{progress}</span></section>
+ <section className="ozf-panel ozf-filters"><label>С даты<input type="date" value={from} onChange={e=>setFrom(e.target.value)} disabled={busy}/></label><label>По дату (включительно)<input type="date" value={to} onChange={e=>setTo(e.target.value)} disabled={busy}/></label><button className="ozf-btn ozf-primary" onClick={load} disabled={busy}>Сформировать</button><button className="ozf-btn" onClick={sync} disabled={busy}>Загрузить / продолжить из ЯМ</button><button className="ozf-btn" disabled={adBusy} onClick={async()=>{setAdBusy(true);setAdStatus('Загружаем рекламные отчёты…');try{const r=await fetch('/api/agents/yandex-finance-campaigns-cron',{method:'POST'}),j=await r.json();setAdStatus(r.ok?'Реклама ЯМ: '+String(j.phase??'обработка'):'Ошибка рекламы: '+String(j.error??r.status));}catch(e){setAdStatus(String(e))}finally{setAdBusy(false)}}}>{adBusy?'Выгружаем рекламу…':'Продолжить рекламу ЯМ'}</button><span role="status">{adStatus}</span><span role="status">{busy?'Загрузка… ':''}{progress}</span></section>
  {error&&<p role="alert" className="ymf-warning">{error}</p>}
  {data&&<>
  <p>Показан период: <b>{data.from} — {data.to}</b> включительно. Кэш: {data.report.completed_at?new Date(data.report.completed_at).toLocaleString('ru-RU',{timeZone:'Asia/Krasnoyarsk'}):'—'} (Красноярск).</p>
