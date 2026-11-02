@@ -52,8 +52,7 @@ export default function HeaderCurrencyRates() {
         const rate = reply?.rates?.[code];
         const arrow =
           rate?.trend === "up" ? "↑" :
-          rate?.trend === "down" ? "↓" :
-          rate?.trend === "flat" ? "→" : "";
+          rate?.trend === "down" ? "↓" : "";
 
         const tooltip = rate
           ? `Сегодня: ${fmt(rate.official)} ₽, вчера: ${rate.previous !== null ? fmt(rate.previous) + " ₽" : "нет данных"}`
@@ -72,8 +71,7 @@ export default function HeaderCurrencyRates() {
             {arrow && (
               <span
                 className={
-                  rate?.trend === "up" ? styles.up :
-                  rate?.trend === "down" ? styles.down : styles.flat
+                  rate?.trend === "up" ? styles.up : styles.down
                 }
                 aria-label={
                   rate?.trend === "up" ? "Курс вырос" :
