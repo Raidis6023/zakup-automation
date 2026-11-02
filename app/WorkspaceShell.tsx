@@ -2,7 +2,6 @@
 
 import Link
   from "next/link";
-import Image from "next/image";
 
 import {
   usePathname,
@@ -1055,8 +1054,8 @@ export default function WorkspaceShell({
                         aria-current={isNavActive(item.key) ? "page" : undefined}
                         title={item.label}
                       >
-                        <span className="home-ved-subnav-icon">
-                          <Image src={`/ved-nav/${item.icon}-v3.svg`} width={30} height={30} alt="" unoptimized />
+                        <span className="home-ved-subnav-icon home-brand-icon">
+                          <EmeraldSidebarIcon kind={item.icon} />
                         </span>
                         <span className="home-ved-subnav-label">{item.label}</span>
                       </Link>
