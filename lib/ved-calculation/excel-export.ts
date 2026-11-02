@@ -3,159 +3,282 @@ import {brotliDecompressSync} from "node:zlib";
 import {VED_TEMPLATE_BLUEPRINT_BROTLI_BASE64} from "./template-blueprint";
 import type {VedCalculationInput,VedCalculationResult,VedScenarioResult} from "./engine";
 
-/** Stored visual blueprint captured from the user-supplied, macro-free workbook.
- * The original 24-row layout, colors, borders, fonts, widths, merges and labels
- * are reproduced. Approved server results replace contradictory source formulas.
- * Formula inputs can be edited on the site, not in this immutable exported snapshot.
- */
 type Blueprint={
- version:number;
- styles:Partial<ExcelJS.Style>[];
- grid:string;
- cells:Array<[string,string|number]>;
- merged:string[];
- cols:Array<[number,number,number]>;
- rows:Array<[number,number]>;
+ version:number;styles:Partial<ExcelJS.Style>[];grid:string;
+ cells:Array<[string,string|number]>;merged:string[];
+ cols:Array<[number,number,number]>;rows:Array<[number,number]>;
 };
-type ExportItem={
+export type ImageAttachment={buffer:Buffer;extension:"png"|"jpeg"|"gif"};
+export type VedExportItem={
  id:string;title:string;article:string;version_no:number;
  calculation_date:string;input_data:VedCalculationInput;
- result_data:VedCalculationResult;
+ result_data:VedCalculationResult|null;
+ source?:{quoteCode?:string;sheet?:string;row?:number;material?:string;
+  packaging?:string;unit?:string;cargoCny?:number|null;leadTime?:number|null};
+ productPhoto?:ImageAttachment|null;packagingPhoto?:ImageAttachment|null;
+ errors?:string[];
  tariffs_data?:Record<string,unknown>;
 };
-const source=JSON.parse(
+const blueprint=JSON.parse(
  brotliDecompressSync(Buffer.from(VED_TEMPLATE_BLUEPRINT_BROTLI_BASE64,"base64")).toString("utf8"),
 ) as Blueprint;
-if(source.version!==1||source.grid.length!==24*18*2||source.styles.length<100)
- throw Error("Повреждён шаблон Excel расчёта ВЭД");
-function uniqueSheetName(name:string,used:Set<string>){
- const clean=name.replace(/[\\/?*[\]:]/g," ").replace(/[\x00-\x1F]/g,"").trim()||"Товар";
- const base=clean.slice(0,31),taken=(n:string)=>used.has(n.toLowerCase());
- let next=base,i=2;
- while(taken(next)){
-  const suffix=" ("+(i++)+")";
-  next=base.slice(0,31-suffix.length)+suffix;
+if(blueprint.version!==1||blueprint.grid.length!==24*18*2)throw Error("Шаблон Excel ВЭД повреждён");
+const fmt="#,##0.00;[Red](#,##0.00);–";
+const clean=(str:string)=>str.replace(/[\\/?*[\]:\x00-\x1F]/g," ").trim();
+function uniqueName(s:string,used:Set<string>){
+ const base=clean(s).slice(0,31)||"Товар";let name=base,i=2;
+ while(used.has(name.toLowerCase())){
+  const suffix=" ("+i++ +")";
+  name=base.slice(0,31-suffix.length)+suffix;
  }
- used.add(next.toLowerCase());return next;
+ used.add(name.toLowerCase());return name;
 }
-function addTemplate(wb:ExcelJS.Workbook,name:string){
+function createSheet(wb:ExcelJS.Workbook,name:string){
  const sheet=wb.addWorksheet(name);
- for(const [from,to,width] of source.cols)for(let col=from;col<=to;col++)sheet.getColumn(col).width=width;
- for(const [row,height] of source.rows)sheet.getRow(row).height=height;
- const styleCells=new Array<number>(24*18);
- for(let n=0;n<styleCells.length;n++){
-  const id=parseInt(source.grid.slice(n*2,n*2+2),36);
-  styleCells[n]=id;
-  if(id){const cell=sheet.getCell(Math.floor(n/18)+1,n%18+1);cell.style=structuredClone(source.styles[id]);}
+ for(const [a,b,width] of blueprint.cols)for(let c=a;c<=b;c++)sheet.getColumn(c).width=width;
+ for(const [row,height] of blueprint.rows)sheet.getRow(row).height=height;
+ for(let n=0;n<432;n++){
+  const style=parseInt(blueprint.grid.slice(n*2,n*2+2),36);
+  if(style)sheet.getCell(Math.floor(n/18)+1,n%18+1).style=structuredClone(blueprint.styles[style]);
  }
- for(const [ref,val] of source.cells){
-  const cell=sheet.getCell(ref);
-  if(typeof val==="string"&&val.startsWith("="))cell.value={formula:val.slice(1)};
-  else cell.value=val;
+ for(const [ref,value] of blueprint.cells){
+  sheet.getCell(ref).value=typeof value==="string"&&value.startsWith("=")?
+   {formula:value.slice(1)}:value;
  }
- for(const range of source.merged)sheet.mergeCells(range);
- sheet.pageSetup={paperSize:9,orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:1};
+ for(const range of blueprint.merged)sheet.mergeCells(range);
  sheet.views=[{state:"normal",showGridLines:false}];
+ sheet.pageSetup={paperSize:9,orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0};
+ sheet.getColumn(19).width=3;
+ for(let c=20;c<=28;c++)sheet.getColumn(c).width=15;
  return sheet;
 }
-function set(sheet:ExcelJS.Worksheet,ref:string,value:string|number|boolean|null|undefined){
- sheet.getCell(ref).value=value===undefined?null:value;
+const num=(x:unknown):number|null=>typeof x==="number"&&Number.isFinite(x)?x:null;
+function set(sh:ExcelJS.Worksheet,ref:string,value:unknown){
+ const cell=sh.getCell(ref);
+ cell.value=typeof value==="number"&&!Number.isFinite(value)?null:
+  value===undefined?null:value as ExcelJS.CellValue;
 }
-function numeric(x:unknown):number|null{return typeof x==="number"&&Number.isFinite(x)?x:null;}
-function annotate(sheet:ExcelJS.Worksheet,ref:string,text:string){
- sheet.getCell(ref).note=text;
+function formula(sh:ExcelJS.Worksheet,ref:string,f:string,cached?:number|null){
+ sh.getCell(ref).value={formula:f, ...(cached!==undefined&&cached!==null?{result:cached}:{})};
 }
-const resultRows=[
- ["40hq","B",22] as const,["moq","C",23] as const,["one-cbm","D",24] as const,
-];
-function fillScenario(sheet:ExcelJS.Worksheet,
- col:string,row:number,s:VedScenarioResult,t:VedCalculationInput){
- const indirect=s.indirectPaymentsRub;
- const extras=s.additionalRub+s.otherSharedRub+s.otherPerUnitRub;
- const rows:Record<number,number>={
-  4:s.goodsRub,5:s.dutyRub,6:s.importVatRub,7:s.customsOperationsFeeRub,
-  8:s.brokerServicesRub,9:s.freightBeforeBorderRub,10:s.freightAfterBorderRub,
-  11:s.certificationRub,12:indirect,13:extras,14:s.moldingRub,15:s.bankCommissionRub,
-  16:s.totalCostIncludingVatRub,
-  17:s.grossKg>0?s.freightBeforeBorderRub/s.grossKg:0,
-  18:s.grossKg>0?(
-    s.customsOperationsFeeRub+s.brokerServicesRub+s.freightBeforeBorderRub+
-    s.freightAfterBorderRub+s.certificationRub+indirect+extras+s.moldingRub+
-    s.bankCommissionRub
-   )/s.grossKg:0,
-  19:s.volumeM3,
+function side(sh:ExcelJS.Worksheet,labelCell:string,valueCell:string,label:string,value:unknown){
+ sh.getCell(labelCell).value=label;
+ sh.getCell(valueCell).value=typeof value==="number"&&!Number.isFinite(value)?null:
+  value===undefined?null:value as ExcelJS.CellValue;
+ sh.getCell(labelCell).font={name:"Aptos",size:10,color:{argb:"FF667A72"}};
+ sh.getCell(valueCell).font={name:"Aptos",size:10,bold:true,color:{argb:"FF176F50"}};
+ sh.getCell(labelCell).alignment={vertical:"middle",wrapText:true};
+ sh.getCell(valueCell).alignment={vertical:"middle",wrapText:true};
+ sh.getCell(valueCell).border={bottom:{style:"hair",color:{argb:"FFB7D8C8"}}};
+ if(typeof value==="number")sh.getCell(valueCell).numFmt=fmt;
+}
+function feeFor(base:string,year:string,manual:string){
+ const f=(limits:number[],rates:number[])=>{
+  let inner=String(rates[rates.length-1]);
+  for(let i=limits.length-1;i>=0;i--)inner="IF("+base+"<="+limits[i]+","+rates[i]+","+inner+")";
+  return inner;
  };
- for(const [r,value] of Object.entries(rows))set(sheet,col+r,value);
- const price=s.goodsRub/t.currency.cnyRub;
- const cost=s.managementCostPerUnitRub;
- const details:Record<string,number|string>={
-  ["C"+row]:row===22?"40HQ":row===23?"MOQ":"CBM",
-  ["D"+row]:t.product.unitsPerCarton,["E"+row]:t.product.cartonGrossKg,
-  ["F"+row]:s.units,["G"+row]:s.theoreticalCartons,["H"+row]:s.grossKg,
-  ["I"+row]:price,["J"+row]:s.goodsRub,["K"+row]:s.dutyRub,
-  ["L"+row]:s.importVatRub,["M"+row]:cost,["N"+row]:s.managementCostRub,
-  ["O"+row]:0,["P"+row]:cost,
- };
- for(const [ref,val] of Object.entries(details))set(sheet,ref,val);
+ const a=f([200000,450000,1200000,2700000,4200000,5500000,7000000],
+  [1067,2134,4269,11746,16524,21344,27540,30000]);
+ const b=f([200000,450000,1200000,2700000,4200000,5500000,10000000],
+  [1231,2462,4924,13541,18465,21344,49240,73860]);
+ return "IF("+manual+"=1,$U$38,IF("+year+"=2025,"+a+","+b+"))";
 }
-function fillProduct(sheet:ExcelJS.Worksheet,item:ExportItem){
- const {input_data:t,result_data:output}=item,p=t.product;
- // Clear every example-specific cell from the uploaded demonstration workbook.
- set(sheet,"A1","40 HQ");
- set(sheet,"B1",p.incoterm||"");
- set(sheet,"C1",p.departurePort||"");
- set(sheet,"A22",p.tnVedCode||null);
- for(const row of [22,23,24])set(sheet,"B"+row,p.productName||item.title);
- // Show the exact saved financial parameters, not today's changing CBR rate.
- set(sheet,"F4",p.unitPriceCny);
- set(sheet,"F5",t.currency.cnyRub);
- set(sheet,"F6",p.unitPriceCny*t.currency.cnyRub);
- set(sheet,"F8",t.customs.vatPercent/100);
- set(sheet,"F9",t.currency.cnyRub);
- set(sheet,"F10",t.currency.eurRub);
- set(sheet,"F11",t.customs.adValoremPercent/100);
- set(sheet,"F12",t.customs.specificEurPerUnit||null);
- set(sheet,"F13",Boolean(t.expenses.dangerousCargo));
- set(sheet,"F14",p.markingCnyPerUnit||0);
- set(sheet,"F15",p.unitPriceCny);
- set(sheet,"F16",p.moqUnits);
- set(sheet,"F17",p.moqUnits);
- set(sheet,"F18",p.moqUnits/p.unitsPerCarton);
- set(sheet,"F19",p.cartonVolumeM3);
- for(const [cell,value] of [
+function fillCore(sh:ExcelJS.Worksheet,item:VedExportItem){
+ const t=item.input_data,p=t.product,s=item.result_data;
+ const saved=(scenario:"40hq"|"moq"|"one-cbm")=>s?.scenarios[scenario]??null;
+ const cs=[{col:"B",row:22,result:saved("40hq")},{col:"C",row:23,result:saved("moq")},{col:"D",row:24,result:saved("one-cbm")}];
+ set(sh,"A1","40 HQ");
+ set(sh,"B1",p.incoterm||"");
+ set(sh,"C1",p.departurePort||"");
+ set(sh,"A22",p.tnVedCode||null);
+ sh.getCell("A22").numFmt="@";
+ for(const row of [22,23,24])set(sh,"B"+row,p.productName||item.title);
+ set(sh,"F8",t.customs.vatPercent/100);
+ set(sh,"F9",t.currency.cnyRub);
+ set(sh,"F10",t.currency.eurRub);
+ set(sh,"F11",t.customs.adValoremPercent>=0?t.customs.adValoremPercent/100:null);
+ set(sh,"F12",t.customs.specificEurPerUnit||null);
+ set(sh,"F13",Boolean(t.expenses.dangerousCargo));
+ set(sh,"F14",p.markingCnyPerUnit??0);
+ set(sh,"F15",p.unitPriceCny||null);
+ set(sh,"F16",p.moqUnits||null);
+ for(const [ref,value] of [
   ["G5",p.cartonLengthCm],["H5",p.cartonWidthCm],["I5",p.cartonHeightCm],
   ["G7",p.individualLengthCm],["H7",p.individualWidthCm],["I7",p.individualHeightCm],
- ] as const)set(sheet,cell,numeric(value));
- const individualVolume=p.individualLengthCm&&p.individualWidthCm&&p.individualHeightCm
-  ? p.individualLengthCm*p.individualWidthCm*p.individualHeightCm/1000 : null;
- set(sheet,"G9",individualVolume);
- for(const [key,col,row] of resultRows)fillScenario(sheet,col,row,output.scenarios[key],t);
- set(sheet,"B19",t.container.usableVolumeM3);
- set(sheet,"D19",1);
- set(sheet,"Q22",output.averageCostPerUnitRub);
- // Numbers in the export are authoritative snapshots, not the uncorrected
- // formulas from the illustrative source workbook.
- annotate(sheet,"F9","Курс юаня для ВЭД сохранён в версии расчёта. Это официальный курс ЦБ + 1 ₽ (если применён автоматический тариф). Дата расчёта: "+item.calculation_date);
- annotate(sheet,"Q22","Средняя управленческая себестоимость 40HQ и MOQ из сохранённой версии расчёта. Сценарий 1 м³ исключён.");
- annotate(sheet,"B16","Итого включая ввозной НДС. Если НДС возмещаемый, итог может отличаться от управленческой себестоимости ниже.");
- if(p.tnVedCode)sheet.getCell("A22").numFmt="@";
- if(item.article)annotate(sheet,"B22","Артикул: "+item.article+"; версия "+item.version_no+"; дата расчёта "+item.calculation_date);
- // The template has no slots for extra source fields; document non-tabulated
- // cash needs without shifting its printed grid.
- if(t.expenses.refundableSecurityRub>0)annotate(sheet,"D16",
-  "Возвратное обеспечение за пределами себестоимости: "+t.expenses.refundableSecurityRub+" ₽ на 40HQ; см. денежную потребность расчёта.");
+ ] as const)set(sh,ref,num(value));
+ if(p.cartonLengthCm&&p.cartonWidthCm&&p.cartonHeightCm)
+  formula(sh,"F19","G5*H5*I5/1000000",p.cartonVolumeM3);
+ else set(sh,"F19",p.cartonVolumeM3||null);
+ formula(sh,"F4","F15",p.unitPriceCny);
+ formula(sh,"F5","F9",t.currency.cnyRub);
+ formula(sh,"F6","F4*F5",p.unitPriceCny*t.currency.cnyRub);
+ formula(sh,"F17","F16",p.moqUnits);
+ formula(sh,"F18","IFERROR(F17/D22,0)",p.unitsPerCarton?p.moqUnits/p.unitsPerCarton:0);
+ if(p.individualLengthCm&&p.individualWidthCm&&p.individualHeightCm)
+  formula(sh,"G9","G7*H7*I7/1000",p.individualLengthCm*p.individualWidthCm*p.individualHeightCm/1000);
+ else set(sh,"G9",null);
+ set(sh,"C22","40HQ");set(sh,"C23","MOQ");set(sh,"C24","1 м³");
+ set(sh,"D22",p.unitsPerCarton||null);
+ set(sh,"E22",p.cartonGrossKg||null);
+ set(sh,"O22",0);
+ formula(sh,"B19","U22",t.container.usableVolumeM3);
+ formula(sh,"C19","IFERROR(F16/D22*F19,0)",saved("moq")?.volumeM3);
+ set(sh,"D19",1);
+ const refs:Record<string,number|null>={
+  U22:t.container.usableVolumeM3,U23:t.container.maxPayloadKg??null,
+  U24:t.expenses.freightBeforeBorderRub,U25:t.expenses.freightAfterBorderRub,
+  U26:t.expenses.bankCommissionRub,U27:t.expenses.brokerServicesRub,
+  U28:t.expenses.otherSharedRub,U29:t.expenses.otherRubPerUnit,
+  U30:t.expenses.certificationRub??0,U31:t.expenses.moldingRub??0,
+  U32:t.expenses.indirectPaymentsRub??0,U33:t.expenses.additionalRub??0,
+  U34:t.expenses.dangerSurchargeBeforeRub??60000,
+  U35:t.expenses.dangerSurchargeAfterRub??60000,
+  U36:t.expenses.refundableSecurityRub,
+  U37:t.customs.feeMode==="manual"?1:0,
+  U38:t.expenses.customsOperationsFeeRub,
+  U39:t.customs.includeFreightBeforeBorderInCustomsBase?1:0,
+  U40:t.customs.importVatRecoverable?1:0,
+  U43:t.product.cartonNetKg??null,
+  U46:Number(t.customs.feeDate?.slice(0,4)||item.calculation_date.slice(0,4))===2025?2025:2026,
+  U47:p.cartonVolumeM3||null,
+ };
+ for(const [ref,value] of Object.entries(refs))set(sh,ref,value);
+ set(sh,"U41",t.customs.dutyMode);
+ set(sh,"U42",t.customs.specificUnit);
+ for(const {col,row,result:r} of cs){
+  const exp=col,rr=String(row),volume=exp+"19";
+  if(col==="B")formula(sh,"F"+rr,"IFERROR(B19/F19*D22,0)",r?.units);
+  else if(col==="C")formula(sh,"F"+rr,"F16",r?.units);
+  else formula(sh,"F"+rr,"IFERROR(D19/F19*D22,0)",r?.units);
+  if(row!==22){
+   formula(sh,"D"+rr,"$D$22",p.unitsPerCarton);
+   formula(sh,"E"+rr,"$E$22",p.cartonGrossKg);
+   formula(sh,"O"+rr,"$O$22",0);
+  }
+  formula(sh,"G"+rr,"IFERROR(F"+rr+"/D"+rr+",0)",r?.theoreticalCartons);
+  formula(sh,"H"+rr,"G"+rr+"*E"+rr,r?.grossKg);
+  formula(sh,"I"+rr,"F"+rr+"*($F$15+$F$14)",r? (r.goodsRub/t.currency.cnyRub):null);
+  formula(sh,"J"+rr,"I"+rr+"*$F$9",r?.goodsRub);
+  const before=col+"9",base="(J"+rr+"+IF($U$39=1,"+before+",0))";
+  const adv=base+"*$F$11";
+  const weight="IF($U$42=\"item\",F"+rr+",IF($U$42=\"net-kg\",G"+rr+"*$U$43,H"+rr+"))";
+  const specific="("+weight+"*$F$12*$F$10)";
+  const duty="IF($U$41=\"ad-valorem\","+adv+",IF($U$41=\"specific\","+specific+
+    ",IF($U$41=\"combined-max\",MAX("+adv+","+specific+"),"+adv+"+"+specific+")))";
+  formula(sh,"K"+rr,"IFERROR("+duty+",0)",r?.dutyRub);
+  formula(sh,"L"+rr,"("+base+"+K"+rr+")*$F$8",r?.importVatRub);
+  const cost=col+"16-IF($U$40=1,"+col+"6,0)";
+  formula(sh,"M"+rr,"IFERROR(("+cost+")/F"+rr+",0)",r?.managementCostPerUnitRub);
+  formula(sh,"N"+rr,"M"+rr+"*F"+rr,r?.managementCostRub);
+  formula(sh,"P"+rr,"M"+rr+"*(1+O"+rr+")",r?.managementCostPerUnitRub);
+  const ratio="("+volume+"/$B$19)";
+  const cells:Record<number,[string,number|null|undefined]>={
+   4:["J"+rr,r?.goodsRub],
+   5:["K"+rr,r?.dutyRub],
+   6:["L"+rr,r?.importVatRub],
+   7:[feeFor(base,"$U$46","$U$37"),r?.customsOperationsFeeRub],
+   8:["$U$27",r?.brokerServicesRub],
+   9:["($U$24+IF($F$13,$U$34,0))*"+ratio,r?.freightBeforeBorderRub],
+   10:["($U$25+IF($F$13,$U$35,0))*"+ratio,r?.freightAfterBorderRub],
+   11:["$U$30",r?.certificationRub],
+   12:["$U$32",r?.indirectPaymentsRub],
+   13:["$U$33+$U$28*"+ratio+"+$U$29*F"+rr,
+    r? r.additionalRub+r.otherSharedRub+r.otherPerUnitRub:null],
+   14:["IFERROR($U$31/$F$16*F"+rr+",0)",r?.moldingRub],
+   15:["$U$26*"+ratio,r?.bankCommissionRub],
+   16:["SUM("+col+"4:"+col+"15)",r?.totalCostIncludingVatRub],
+   17:["IFERROR("+col+"9/H"+rr+",0)",r&&r.grossKg>0?r.freightBeforeBorderRub/r.grossKg:0],
+   18:["IFERROR(SUM("+col+"7:"+col+"15)/H"+rr+",0)",
+    r&&r.grossKg>0?(r.totalCostIncludingVatRub-r.goodsRub-r.dutyRub-r.importVatRub)/r.grossKg:0],
+  };
+  for(const [rowNum,[f,val]] of Object.entries(cells))formula(sh,col+rowNum,f,val);
+ }
+ formula(sh,"Q22","AVERAGE(P22:P23)",s?.averageCostPerUnitRub);
+ sh.getCell("F9").note="Сохранённый расчётный курс CNY для ВЭД, надбавка ЦБ + 1 ₽ уже учтена. Меняйте это значение для пересчёта Excel.";
+ sh.getCell("Q22").note="Среднее только 40HQ и MOQ. Результат пересчитывается при изменении исходных данных Excel.";
+ if(!s)sh.getCell("Q22").note="Данные КП неполные, уточните отмеченные поля. Excel пересчитает формулы после заполнения.";
 }
-export async function buildVedExport(items:ExportItem[]):Promise<Buffer>{
- if(!items.length||items.length>30)throw Error("Выберите от 1 до 30 расчётов");
+function fillDetails(sh:ExcelJS.Worksheet,item:VedExportItem){
+ const p=item.input_data.product,source=item.source||{};
+ sh.mergeCells("T1:AB1");const title=sh.getCell("T1");
+ title.value="ДАННЫЕ ТОВАРА И УПАКОВКИ";title.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF103B30"}};
+ title.font={name:"Aptos",bold:true,color:{argb:"FFFFFFFF"},size:12};
+ title.alignment={vertical:"middle"};sh.getRow(1).height=Math.max(sh.getRow(1).height||0,26);
+ for(const [ref,value] of [["T2","ФОТО ТОВАРА"],["X2","ФОТО УПАКОВКИ"]] as const){
+  sh.getCell(ref).value=value;sh.getCell(ref).font={name:"Aptos",size:10,bold:true,color:{argb:"FF13704A"}};
+ }
+ for(let row=3;row<=12;row++)sh.getRow(row).height=Math.max(sh.getRow(row).height||0,21);
+ const description=String(p.productName||item.title);
+ const list:Array<[number,string,unknown]>= [
+  [15,"Номер КП",source.quoteCode||"Без привязки"],
+  [16,"Артикул",item.article],[17,"Наименование",description],
+  [18,"Материал",source.material||""],[19,"Упаковка",source.packaging||""],
+  [20,"Единица поставки",source.unit||""],
+  [21,"Условие поставки",p.incoterm||""],[22,"Порт / место отправления",p.departurePort||""],
+  [23,"Цена FOB / EXW, CNY",p.unitPriceCny],[24,"Цена карго, CNY (справ.)",source.cargoCny??null],
+  [25,"MOQ, шт",p.moqUnits],[26,"Штук в коробке",p.unitsPerCarton],
+  [27,"Длина короба, см",p.cartonLengthCm],[28,"Ширина короба, см",p.cartonWidthCm],
+  [29,"Высота короба, см",p.cartonHeightCm],[30,"Объём короба, м³",p.cartonVolumeM3],
+  [31,"Брутто короба, кг",p.cartonGrossKg],[32,"Нетто короба, кг",p.cartonNetKg],
+  [33,"Размеры инд. упаковки, см",
+   [p.individualLengthCm,p.individualWidthCm,p.individualHeightCm].filter(Boolean).join(" × ")],
+  [34,"Срок производства, дней",source.leadTime??null],
+  [35,"Дата расчёта",item.calculation_date],
+  [36,"Версия расчёта КП",item.version_no],
+ ];
+ for(const [row,label,value] of list){
+  side(sh,"T"+row,"W"+row,label,value);
+  sh.getRow(row).height=Math.max(sh.getRow(row).height||0,row===17||row===19?36:19);
+ }
+ sh.getColumn("T").width=32;sh.getColumn("W").width=24;
+ const settings:Array<[number,string]>= [
+  [22,"Рабочий объём контейнера, м³"],[23,"Допустимая масса контейнера, кг"],
+  [24,"Перевозка до границы, ₽"],[25,"Перевозка после границы, ₽"],
+  [26,"Банковская комиссия, ₽"],[27,"Брокер, ₽"],
+  [28,"Общие расходы на контейнер, ₽"],[29,"Прочие на 1 шт., ₽"],
+  [30,"Сертификация, ₽"],[31,"Молдинг на MOQ, ₽"],
+  [32,"Косвенные платежи, ₽"],[33,"Дополнительные платежи, ₽"],
+  [34,"Опасный груз: до границы, ₽"],[35,"Опасный груз: после границы, ₽"],
+  [36,"Возвратное обеспечение, ₽"],[37,"Ручной таможенный сбор (1/0)"],
+  [38,"Ручной таможенный сбор, ₽"],[39,"Включать доставку до границы в ТС (1/0)"],
+  [40,"Возмещаемый НДС (1/0)"],[41,"Тип пошлины"],
+  [42,"Единица специфической ставки"],[43,"Вес нетто коробки, кг"],
+  [46,"Год шкалы таможенного сбора"],[47,"Объём коробки (резерв), м³"]
+ ];
+ sh.mergeCells("T39:W39");sh.getCell("T39").value="НАСТРОЙКИ И ФОРМУЛЫ РАСЧЁТА";
+ sh.getCell("T39").font={bold:true,color:{argb:"FF13704A"},size:11};
+ // Parameters occupy U22:U47 for formula compatibility; labels are in X:AB.
+ sh.getColumn("U").width=17;sh.getColumn("X").width=34;
+ for(const [row,label] of settings){
+  sh.getCell("X"+row).value=label;
+  sh.getCell("X"+row).font={size:9,color:{argb:"FF566F63"}};
+  sh.getCell("U"+row).numFmt=fmt;
+  sh.getCell("U"+row).font={size:10,bold:true,color:{argb:"FF1966BE"}};
+  sh.getCell("U"+row).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFE9F4EF"}};
+ }
+ sh.getCell("X44").value="Синие числа и поля F8:F16, D22:E22 можно менять; формулы пересчитываются в Excel.";
+ sh.getCell("X44").alignment={wrapText:true};sh.getRow(44).height=32;
+ sh.getCell("T38").value=item.errors?.length?"ТРЕБУЕТ УТОЧНЕНИЯ: "+item.errors.join("; "):"Расчётные данные заполнены";
+ sh.getCell("T38").font={bold:true,size:10,color:{argb:item.errors?.length?"FFD35C42":"FF198258"}};
+ sh.mergeCells("T38:W38");
+}
+function drawPhoto(wb:ExcelJS.Workbook,sh:ExcelJS.Worksheet,image:ImageAttachment|null|undefined,col:number){
+ if(!image){sh.getCell(col===19?"T5":"X5").value="Нет изображения в исходном КП";return;}
+ const id=wb.addImage({buffer:image.buffer,extension:image.extension});
+ sh.addImage(id,{tl:{col,row:2.4},ext:{width:245,height:175},editAs:"oneCell"});
+}
+export async function buildVedExport(items:VedExportItem[]):Promise<Buffer>{
+ if(!items.length||items.length>100)throw Error("Можно выгрузить от 1 до 100 товаров");
  const wb=new ExcelJS.Workbook();
- wb.creator="КПК МИА · WorkSpace";
- wb.created=new Date();
- wb.calcProperties.fullCalcOnLoad=false;
+ wb.creator="КПК МИА · WorkSpace";wb.created=new Date();
+ wb.calcProperties.fullCalcOnLoad=true;
  const used=new Set<string>();
  for(const item of items){
-  const title=item.article||item.input_data.product.productName||item.title;
-  const sheet=addTemplate(wb,uniqueSheetName(title,used));
-  fillProduct(sheet,item);
+  const sh=createSheet(wb,uniqueName(item.article||item.title,used));
+  fillCore(sh,item);fillDetails(sh,item);
+  drawPhoto(wb,sh,item.productPhoto,19);
+  drawPhoto(wb,sh,item.packagingPhoto,23);
  }
  return Buffer.from(await wb.xlsx.writeBuffer());
 }

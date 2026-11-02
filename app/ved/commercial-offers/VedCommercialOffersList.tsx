@@ -55,12 +55,13 @@ export default function VedCommercialOffersList(){
        <span>{offer.supplier_code} · {offer.quote_date} · {offer.item_count} товаров</span>
        <small>{offer.original_file_name}</small>
       </button>
+      <Link className="ved-quote-action" href={"/ved/registry/calculator?offerId="+encodeURIComponent(offer.id)}>Рассчитать всё КП</Link>
       <button type="button" className="ved-quote-original" onClick={()=>void openSource(offer.id)}>Исходный Excel</button>
      </div>
      <span className="ved-quote-status">{offer.status==="imported"?"Распознано":offer.status==="needs_review"?"Нужна проверка формата":offer.status==="uploading"?"Загрузка":"Ошибка"}</span>
      {offer.import_notes&&<p className="ved-quote-muted">{offer.import_notes}</p>}
      {expanded&&<div className="ved-quote-table-scroll">
-      <table className="ved-quote-table"><thead><tr><th>Артикул</th><th>Наименование</th><th>Цена CNY</th><th>MOQ</th><th>Упаковка</th><th>Проверка</th><th>Действие</th></tr></thead>
+      <table className="ved-quote-table"><thead><tr><th>Артикул</th><th>Наименование</th><th>Цена CNY</th><th>MOQ</th><th>Упаковка</th><th>Проверка</th></tr></thead>
        <tbody>{rows.map(item=>{
         const p=item.detected_data;
         return <tr key={item.id}>
@@ -74,7 +75,7 @@ export default function VedCommercialOffersList(){
           <span className="ved-quote-ready">Данные КП заполнены</span>}
           {item.warnings.length>0&&<small title={item.warnings.join("; ")}>Требует проверки</small>}
          </td>
-         <td><Link className="ved-quote-action" href={"/ved/registry/calculator?offerItem="+encodeURIComponent(item.id)}>Рассчитать</Link></td>
+
         </tr>;
        })}</tbody></table>
        {!rows.length&&<p className="ved-quote-muted">На выбранном КП нет распознанных товаров.</p>}

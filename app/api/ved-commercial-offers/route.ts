@@ -26,6 +26,19 @@ export async function GET(request:Request){
  try{
   const {admin}=await requireVedAccess();
   const url=new URL(request.url),itemId=url.searchParams.get("item"),download=url.searchParams.get("download");
+  const wholeOfferId=url.searchParams.get("offerId");
+  if(wholeOfferId){
+   if(!UUID.test(wholeOfferId))return fail("Неверный идентификатор КП");
+   const {data:offer,error:offerError}=await admin.from("ved_commercial_offers")
+    .select("id,quote_code,quote_date,supplier_code,item_count,status").eq("id",wholeOfferId).maybeSingle();
+   if(offerError)throw offerError;
+   if(!offer)return fail("КП не найдено",404);
+   const {data:items,error:itemsError}=await admin.from("ved_commercial_offer_items")
+    .select("id,offer_id,source_sheet,source_row,supplier_article,description_original,detected_data,missing_fields,warnings")
+    .eq("offer_id",wholeOfferId).order("source_row",{ascending:true}).limit(450);
+   if(itemsError)throw itemsError;
+   return NextResponse.json({ok:true,offer,items:items||[]},{headers:{"Cache-Control":"private,no-store"}});
+  }
   if(itemId){
    if(!UUID.test(itemId))return fail("Неверный код товара");
    const {data:item,error}=await admin.from("ved_commercial_offer_items").select("*").eq("id",itemId).maybeSingle();
