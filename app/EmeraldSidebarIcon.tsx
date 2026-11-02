@@ -66,18 +66,19 @@ export default function EmeraldSidebarIcon({ kind }: { kind: Kind }) {
 
   if (kind === "offers") {
     return (
-      <svg
-        className="emerald-sidebar-glyph"
-        viewBox="0 0 32 32"
-        aria-hidden="true"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <circle cx="16" cy="16" r="13" />
-        <path d="M10.5 8 16 15.5 21.5 8M16 15.5V25M10 18.5h12M10 22h12" />
+      <svg className="emerald-sidebar-glyph" viewBox="0 0 32 32" aria-hidden="true" fill="none">
+        <text
+          x="16"
+          y="24"
+          textAnchor="middle"
+          fill="currentColor"
+          stroke="none"
+          fontSize="24"
+          fontWeight="800"
+          fontFamily="Arial, sans-serif"
+        >
+          ¥
+        </text>
       </svg>
     );
   }
@@ -94,11 +95,10 @@ export default function EmeraldSidebarIcon({ kind }: { kind: Kind }) {
         strokeLinecap="round"
         strokeLinejoin="round"
       >
-        <circle cx="16" cy="16" r="13" />
-        <path d="M14 9h9M14 16h9M14 23h9" />
-        <circle cx="9" cy="9" r="1" fill="currentColor" stroke="none" />
-        <circle cx="9" cy="16" r="1" fill="currentColor" stroke="none" />
-        <circle cx="9" cy="23" r="1" fill="currentColor" stroke="none" />
+        <path d="M14 9h13M14 16h13M14 23h13" />
+        <circle cx="9" cy="9" r="1.2" fill="currentColor" stroke="none" />
+        <circle cx="9" cy="16" r="1.2" fill="currentColor" stroke="none" />
+        <circle cx="9" cy="23" r="1.2" fill="currentColor" stroke="none" />
       </svg>
     );
   }
