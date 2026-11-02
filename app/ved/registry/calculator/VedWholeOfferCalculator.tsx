@@ -1,7 +1,8 @@
 "use client";
-import {useCallback,useEffect,useMemo,useState} from "react";
+import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import {calculateVed,VedInputError,type VedCalculationInput,type VedCalculationResult} from "@/lib/ved-calculation/engine";
 import type {TariffRow,VedTariffKey} from "@/lib/ved-calculation/tariffs";
+import VedOfferProductCalculator from "./VedOfferProductCalculator";
 
 type Quote={id:string;quote_code:string;quote_date:string;supplier_code:string;item_count:number};
 type Product={id:string;source_sheet:string;source_row:number;supplier_article:string;description_original:string;
@@ -54,7 +55,6 @@ function inputFromQuote(item:Product,tariff:TariffResponse["selected"],asOf:stri
   },
  };
 }
-const numberField=(value:number)=>Number.isFinite(value)&&value>=0?String(value):"";
 export default function VedWholeOfferCalculator({offerId}:{offerId:string}){
  const [offer,setOffer]=useState<Quote|null>(null);
  const [quoteItems,setQuoteItems]=useState<Product[]>([]);
@@ -64,7 +64,11 @@ export default function VedWholeOfferCalculator({offerId}:{offerId:string}){
  const [error,setError]=useState(""),[message,setMessage]=useState("");
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[canEdit,setCanEdit]=useState(false);
  const [latestId,setLatestId]=useState<string|null>(null);
+ const [progress,setProgress]=useState("");
  const [selectedItem,setSelectedItem]=useState<string|null>(null);
+ const lastSaved=useRef<{id:string;signature:string}|null>(null);
+ const signature=()=>JSON.stringify({date,rows:rows.map(r=>({itemId:r.itemId,input:{...r.input,
+  customs:{...r.input.customs,feeDate:date}}}))});
  const fetchVersions=useCallback(async()=>{
   const res=await fetch("/api/ved-offer-calculations?offerId="+encodeURIComponent(offerId),{cache:"no-store"});
   const obj=await res.json() as Response&{versions?:Version[]};
@@ -101,13 +105,19 @@ export default function VedWholeOfferCalculator({offerId}:{offerId:string}){
   catch(e){return {...row,result:null,errors:e instanceof VedInputError?e.issues:["Не удалось рассчитать товар"]};}
  }),[rows]);
  const ready=preview.filter(p=>Boolean(p.result)).length;
- const patchProduct=(id:string,key:keyof VedCalculationInput["product"],value:string|number)=>{
-  setRows(old=>old.map(r=>r.itemId!==id?r:{...r,input:{...r.input,
-    product:{...r.input.product,[key]:value}}}));
- };
- const patchDuty=(id:string,value:number)=>{
-  setRows(old=>old.map(r=>r.itemId!==id?r:{...r,input:{...r.input,
-    customs:{...r.input.customs,adValoremPercent:value}}}));
+ const patchInput=(id:string,group:keyof VedCalculationInput,key:string,value:string|number|boolean|undefined)=>{
+  setRows(old=>old.map(r=>{
+   if(r.itemId!==id)return r;
+   const groupData={...r.input[group],[key]:value};
+   if(group==="product"&&["cartonLengthCm","cartonWidthCm","cartonHeightCm"].includes(key)){
+    const dims=groupData as VedCalculationInput["product"];
+    if(dims.cartonLengthCm&&dims.cartonWidthCm&&dims.cartonHeightCm&&
+      dims.cartonLengthCm>0&&dims.cartonWidthCm>0&&dims.cartonHeightCm>0){
+      dims.cartonVolumeM3=dims.cartonLengthCm*dims.cartonWidthCm*dims.cartonHeightCm/1000000;
+    }
+   }
+   return {...r,input:{...r.input,[group]:groupData}};
+  }));
  };
  const bulkDuty=(value:string)=>{
   const n=value.trim()===""?-1:Number(value);
@@ -116,53 +126,84 @@ export default function VedWholeOfferCalculator({offerId}:{offerId:string}){
     customs:{...r.input.customs,adValoremPercent:n}}})));
   setMessage("Ставка установлена на все товары. Проверьте соответствие кодов ТН ВЭД.");
  };
- const save=async()=>{
-  if(!canEdit||!offer)return;
-  setBusy(true);setError("");setMessage("");
-  try{
-   const res=await fetch("/api/ved-offer-calculations",{method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({offerId:offer.id,calculationDate:date,
-      items:rows.map(r=>({itemId:r.itemId,input:{...r.input,
-        customs:{...r.input.customs,feeDate:date}}}))}),
-   });
-   const data=await res.json() as Response&{version?:{id:string;version_no:number};
-    readyCount?:number;totalCount?:number;warning?:string};
-   if(!res.ok||!data.ok||!data.version)throw Error(data.error||"Ошибка сохранения КП");
-   setLatestId(data.version.id);
-   setMessage("Сохранён общий расчёт КП, версия "+data.version.version_no+". Рассчитано "+data.readyCount+" из "+data.totalCount+
-    (data.warning?". "+data.warning:""));
-   await fetchVersions();
-  }catch(e){setError(e instanceof Error?e.message:"Ошибка сохранения");}
-  finally{setBusy(false);}
+ const persist=async()=>{
+  if(!canEdit||!offer)throw Error("Нет прав на сохранение расчёта КП");
+  const res=await fetch("/api/ved-offer-calculations",{method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({
+    offerId:offer.id,calculationDate:date,
+    items:rows.map(r=>({itemId:r.itemId,input:{...r.input,
+     customs:{...r.input.customs,feeDate:date}}})),
+   }),
+  });
+  const data=await res.json() as Response&{version?:{id:string;version_no:number};
+   readyCount?:number;totalCount?:number;warning?:string};
+  if(!res.ok||!data.ok||!data.version)throw Error(data.error||"Не удалось сохранить общую версию КП");
+  setLatestId(data.version.id);
+  lastSaved.current={id:data.version.id,signature:signature()};
+  // The export must proceed even if refreshing the versions list fails.
+  try{await fetchVersions();}catch(err){console.warn("VED version list refresh failed",err);}
+  return data;
  };
- const exportExcel=async(versionId:string)=>{
+ const save=async()=>{
+  if(busy)return;
+  setBusy(true);setError("");setMessage("");setProgress("Сохраняем общую версию КП…");
+  try{
+   const data=await persist();
+   setMessage("Сохранён общий расчёт КП, версия "+data.version!.version_no+
+    ". Рассчитано "+data.readyCount+" из "+data.totalCount+(data.warning?". "+data.warning:""));
+  }catch(e){setError(e instanceof Error?e.message:"Ошибка сохранения");}
+  finally{setBusy(false);setProgress("");}
+ };
+ const exportExcel=async(savedVersionId?:string)=>{
+  if(busy)return;
   setBusy(true);setError("");setMessage("");
   try{
+   let versionId=savedVersionId;
+   if(!versionId){
+    // A previous successful save may be reused if none of its inputs changed.
+    if(lastSaved.current?.signature===signature())versionId=lastSaved.current.id;
+    else if(canEdit){
+     setProgress("1/2. Сохраняем текущий расчёт всего КП…");
+     const saved=await persist();
+     versionId=saved.version!.id;
+     if(saved.warning)setMessage(saved.warning);
+    }else versionId=latestId||undefined;
+   }
+   if(!versionId)throw Error("Нет доступной сохранённой версии КП. Требуется право ВЭД для создания расчёта.");
+   setProgress("2/2. Создаём Excel с формулами и фотографиями…");
    const res=await fetch("/api/ved-offer-calculations/export",{method:"POST",
     headers:{"Content-Type":"application/json"},body:JSON.stringify({versionId})});
-   if(!res.ok){const data=await res.json() as Response;throw Error(data.error||"Не удалось скачать Excel");}
+   if(!res.ok){
+    let detail="Сервер не сформировал Excel (HTTP "+res.status+")";
+    try{const data=await res.json() as Response;if(data.error)detail=data.error;}catch{}
+    throw Error(detail);
+   }
+   const contentType=res.headers.get("Content-Type")||"";
+   if(!contentType.includes("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+    throw Error("Сервер вернул не Excel, а "+contentType);
    const blob=await res.blob();
-   const url=URL.createObjectURL(blob),link=document.createElement("a");
-   link.href=url;link.download=(offer?.quote_code||"KP")+"-расчёт.xlsx";
-   document.body.appendChild(link);link.click();link.remove();
-   window.setTimeout(()=>URL.revokeObjectURL(url),3000);
-   setMessage("Excel сформирован: каждый товар на отдельном листе, фотографии из оригинала, редактируемые формулы.");
-  }catch(e){setError(e instanceof Error?e.message:"Ошибка экспорта");}
-  finally{setBusy(false);}
+   if(blob.size<2000)throw Error("Получен пустой либо повреждённый Excel-файл");
+   const url=window.URL.createObjectURL(blob);
+   const link=document.createElement("a");
+   link.href=url;
+   link.download=(offer?.quote_code||"KP")+"-расчёт-"+date+".xlsx";
+   link.style.display="none";
+   document.body.appendChild(link);
+   link.click();link.remove();
+   window.setTimeout(()=>window.URL.revokeObjectURL(url),10000);
+   setMessage("Сформирован Excel для всего КП ("+rows.length+
+    " товаров). Проверьте скачанный файл: один товар на лист.");
+  }catch(e){setError(e instanceof Error?e.message:"Ошибка формирования Excel");}
+  finally{setBusy(false);setProgress("");}
  };
  const restore=(v:Version)=>{
   setRows(v.items_data.map(x=>({itemId:x.itemId,article:x.article,title:x.title,input:x.input})));
   setDate(v.calculation_date);setLatestId(v.id);
+  lastSaved.current={id:v.id,signature:JSON.stringify({date:v.calculation_date,
+   rows:v.items_data.map(x=>({itemId:x.itemId,input:x.input}))})};
   setMessage("Открыта версия "+v.version_no+". Изменения сохраняются только новой версией всего КП.");
  };
- const field=(r:Row,key:keyof VedCalculationInput["product"],label:string)=>
-  <label className="ved-offer-input" key={String(key)}>
-   <span>{label}</span>
-   <input type="number" min="0" step="any"
-    value={numberField(Number(r.input.product[key]??0))}
-    onChange={e=>patchProduct(r.itemId,key,e.target.value===""?0:Number(e.target.value))}/>
-  </label>;
  if(loading)return <div className="ved-offer-loading">Загрузка всего КП и справочников…</div>;
  if(error&&!offer)return <p className="ved-offer-error">{error}</p>;
  return <div className="ved-whole-offer">
@@ -177,7 +218,7 @@ export default function VedWholeOfferCalculator({offerId}:{offerId:string}){
    <div><small>Требуют данных</small><strong>{rows.length-ready}</strong></div>
    <label>Дата тарифов и расчёта<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
   </div>
-  <p className="ved-offer-help">Пошлина не берётся из воздуха. Укажите подтверждённую ставку по конкретному ТН ВЭД. Все общие расходы и курсы загружены из справочника на дату открытия расчёта.</p>
+  <p className="ved-offer-help">Нажми на строку товара, чтобы открыть полный калькулятор: исходные параметры, статьи расходов и три сценария. Кнопка «Скачать всё КП в Excel» сама сохраняет новую общую версию перед выгрузкой. Указывай подтверждённую ставку пошлины по ТН ВЭД.</p>
   <div className="ved-offer-bulk">
    <label>Применить одну ставку пошлины ко всем товарам, % <input id="ved-bulk-duty" type="number" min="0" step="any" placeholder="Например, 10"/></label>
    <button type="button" onClick={()=>{
@@ -193,7 +234,9 @@ export default function VedWholeOfferCalculator({offerId}:{offerId:string}){
     const source=quoteItems.find(x=>x.id===row.itemId);
     return <section key={row.itemId} className="ved-offer-product">
      <div className="ved-offer-product-head">
-      <button type="button" onClick={()=>setSelectedItem(isSelected?null:row.itemId)}>
+      <button type="button" aria-expanded={isSelected} aria-controls={"ved-item-"+row.itemId}
+       onClick={()=>setSelectedItem(isSelected?null:row.itemId)}>
+       <span className="ved-offer-toggle-arrow" aria-hidden="true">{isSelected?"▾":"▸"}</span>
        <strong>{i+1}. {row.article}</strong><span>{row.title.split("\n")[0]}</span>
       </button>
       <div className="ved-offer-product-cost">
@@ -202,29 +245,14 @@ export default function VedWholeOfferCalculator({offerId}:{offerId:string}){
        <small>{row.result?"Среднее 40HQ и MOQ":row.errors.slice(0,2).join("; ")}</small>
       </div>
      </div>
-     {isSelected&&<div className="ved-offer-product-editor">
-      <div className="ved-offer-product-fields">
-       <label className="ved-offer-input"><span>Наименование</span>
-        <input value={row.input.product.productName||""} onChange={e=>patchProduct(row.itemId,"productName",e.target.value)}/></label>
-       <label className="ved-offer-input"><span>ТН ВЭД (подтверждённый)</span>
-        <input maxLength={10} value={row.input.product.tnVedCode||""} onChange={e=>patchProduct(row.itemId,"tnVedCode",e.target.value)}/></label>
-       {field(row,"unitPriceCny","Цена, CNY/шт.")}
-       {field(row,"unitsPerCarton","Штук в коробке")}
-       {field(row,"moqUnits","MOQ, шт.")}
-       {field(row,"cartonVolumeM3","Объём короба, м³")}
-       {field(row,"cartonGrossKg","Брутто короба, кг")}
-       <label className="ved-offer-input"><span>Пошлина адвалорная, %</span>
-        <input type="number" min="0" step="any" value={numberField(row.input.customs.adValoremPercent)}
-          onChange={e=>patchDuty(row.itemId,e.target.value===""?-1:Number(e.target.value))}/></label>
-      </div>
-      {source&&<p className="ved-offer-help">Источник: лист «{source.source_sheet}», строка {source.source_row}.
-       Упаковка: {String(source.detected_data.packaging||"не указана")}.
-       Фотографии и текст упаковки будут взяты непосредственно из оригинального Excel.</p>}
-      {row.result?<div className="ved-offer-scenarios">
-       <span>40HQ: <b>{rub(row.result.scenarios["40hq"].managementCostPerUnitRub)} ₽</b></span>
-       <span>MOQ: <b>{rub(row.result.scenarios.moq.managementCostPerUnitRub)} ₽</b></span>
-       <span>1 м³: <b>{rub(row.result.scenarios["one-cbm"].managementCostPerUnitRub)} ₽</b></span>
-      </div>:<p className="ved-offer-error">{row.errors.join("; ")}</p>}
+     {isSelected&&<div id={"ved-item-"+row.itemId} className="ved-offer-product-editor">
+      <VedOfferProductCalculator
+       input={row.input}
+       result={row.result}
+       errors={row.errors}
+       source={source}
+       onChange={(group,key,value)=>patchInput(row.itemId,group,key,value)}
+      />
      </div>}
     </section>;
    })}
@@ -232,10 +260,14 @@ export default function VedWholeOfferCalculator({offerId}:{offerId:string}){
   <div className="ved-offer-actions">
    <button type="button" disabled={!canEdit||busy||!rows.length} onClick={()=>void save()}>
     {busy?"Обрабатываем…":"Сохранить новую версию всего КП"}</button>
-   <button type="button" disabled={!latestId||busy} onClick={()=>latestId&&void exportExcel(latestId)}>
-    Выгрузить всё КП в Excel
+   <button type="button" disabled={busy||!rows.length||(!canEdit&&!latestId)}
+    onClick={()=>void exportExcel()} title="Сохраняет текущий расчёт и сразу скачивает Excel">
+    {busy?"Готовим файл…":"Скачать всё КП в Excel"}
    </button>
   </div>
+  {progress&&<p role="status" className="ved-offer-progress">{progress}</p>}
+  {error&&<p role="alert" className="ved-offer-error">{error}</p>}
+  {message&&<p role="status" className="ved-offer-help">{message}</p>}
   {versions.length>0&&<details className="ved-offer-versions">
    <summary>История общего расчёта КП ({versions.length} версий)</summary>
    {versions.map(v=><div className="ved-offer-version" key={v.id}>

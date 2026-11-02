@@ -31,3 +31,40 @@
 .ved-offer-version span{flex:1}
 .ved-offer-loading{font-size:12px;color:var(--ws-text-muted);padding:20px}
 @media(max-width:650px){.ved-offer-product-head{flex-direction:column;align-items:flex-start}.ved-offer-product-cost{text-align:left}.ved-offer-summary label{margin-left:0}}
+
+
+/* Full per-product costing, preserving the common emerald WorkSpace theme. */
+.ved-offer-toggle-arrow{color:#37c98e;font-size:16px;font-weight:700;min-width:12px}
+.ved-offer-product-head>button:focus-visible{outline:2px solid #37c98e;outline-offset:2px;border-radius:4px}
+.ved-offer-full-calculator{display:grid;gap:15px;min-width:0}
+.ved-offer-calc-heading{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.ved-offer-calc-heading strong{font-size:14px;color:var(--ws-text)}
+.ved-offer-calc-heading span{font-size:11px;color:var(--ws-text-muted)}
+.ved-offer-source{display:flex;flex-direction:column;gap:3px;border-left:3px solid rgba(55,201,142,.65);padding:5px 12px;color:var(--ws-text-muted);font-size:11px}
+.ved-offer-input-section,.ved-offer-calculation-results{padding:14px;border:1px solid var(--ws-border);border-radius:10px;background:var(--ws-surface-soft,var(--ws-surface));min-width:0}
+.ved-offer-input-section h3,.ved-offer-calculation-results h3{font-size:13px;font-weight:700;margin:0 0 14px;color:var(--ws-text)}
+.ved-offer-calculation-results h4{font-size:12px;font-weight:700;color:var(--ws-text);margin:16px 0 8px}
+.ved-offer-product-fields select{background:var(--ws-surface);border:1px solid var(--ws-border);color:var(--ws-text);border-radius:7px;padding:8px 10px;min-width:0;width:100%;box-sizing:border-box;cursor:pointer}
+.ved-offer-check{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ws-text);padding-top:17px;cursor:pointer}
+.ved-offer-check input{width:16px;height:16px;accent-color:#37c98e}
+.ved-offer-calculation-highlights{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.ved-offer-calculation-highlights>div{border:1px solid var(--ws-border);border-radius:8px;background:var(--ws-surface);padding:12px;display:grid;gap:5px}
+.ved-offer-calculation-highlights small{color:var(--ws-text-muted);font-size:10px}
+.ved-offer-calculation-highlights strong{font-size:18px;font-weight:750;font-variant-numeric:tabular-nums}
+.ved-offer-calculation-highlights .ved-offer-calculation-average{border-color:rgba(55,201,142,.6);background:rgba(55,201,142,.07)}
+.ved-offer-calculation-average strong{color:#37c98e}
+.ved-offer-calculation-scroll{width:100%;overflow-x:auto;border:1px solid var(--ws-border);border-radius:9px}
+.ved-offer-calculation-table{width:100%;border-collapse:collapse;min-width:660px;font-size:12px}
+.ved-offer-calculation-table th,.ved-offer-calculation-table td{border-bottom:1px solid var(--ws-border);padding:9px 11px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ved-offer-calculation-table td:first-child,.ved-offer-calculation-table th:first-child{text-align:left;white-space:normal;min-width:210px}
+.ved-offer-calculation-table th{background:rgba(55,201,142,.08);font-weight:700}
+.ved-offer-calculation-table th small{display:block;font-size:10px;color:var(--ws-text-muted);margin-top:3px}
+.ved-offer-calculation-table tr:last-child td{border-bottom:0}
+.ved-offer-calculation-table tbody tr:hover{background:rgba(55,201,142,.035)}
+.ved-offer-calculation-total{background:rgba(55,201,142,.075);font-weight:750}
+.ved-offer-calculation-total td{border-top:1px solid rgba(55,201,142,.2)}
+.ved-offer-calc-warnings{font-size:11px;color:#eeb978}
+.ved-offer-progress{font-size:12px;font-weight:650;color:#37c98e}
+.ved-offer-actions button:last-child{background:rgba(55,201,142,.19);border-color:rgba(55,201,142,.55)}
+@media(max-width:1100px){.ved-offer-calculation-highlights{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.ved-offer-calculation-highlights{grid-template-columns:1fr}.ved-offer-input-section,.ved-offer-calculation-results{padding:10px}}
