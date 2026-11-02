@@ -74,7 +74,7 @@ export default function EmeraldSidebarIcon({ kind }: { kind: Kind }) {
           fill="currentColor"
           stroke="none"
           fontSize="24"
-          fontWeight="600"
+          fontWeight="500"
           fontFamily="Arial, sans-serif"
         >
           ¥
