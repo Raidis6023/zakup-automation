@@ -8,7 +8,7 @@ export default function AdminLogsPage() {
         "История логов"
     >
 
-      <PageHeader variant="home" title="История логов" description="Журнал административных действий в WorkSpace." />
+      <PageHeader variant="admin" title="История логов" description="Журнал административных действий в WorkSpace." />
 
 
       <section
