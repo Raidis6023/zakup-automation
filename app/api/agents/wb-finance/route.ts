@@ -206,7 +206,21 @@ export async function GET(request:NextRequest){
   const orderByNm=new Map<string,{orders:number;cancelled:number}>();for(const row of orders){const key=String(row.nm_id),v=orderByNm.get(key)??{orders:0,cancelled:0};v.orders++;if(row.is_cancel)v.cancelled++;orderByNm.set(key,v);}
   const storageByNm=new Map<string,number>();for(const row of storage)if(row.nm_id)storageByNm.set(String(row.nm_id),(storageByNm.get(String(row.nm_id))??0)+num(row.amount));
   const expectedDays=Math.round((Date.parse(to)-Date.parse(from))/86400000)+1;
-  const enriched=grouped.map(row=>({...row,order_count:orderByNm.get(row.nm_id)?.orders??0,cancel_count:orderByNm.get(row.nm_id)?.cancelled??0,external_storage:storageByNm.has(row.nm_id)?round(storageByNm.get(row.nm_id)!):null}));
+  const [listings,managers]=await Promise.all([
+    readPages<{external_id:string;seller_article:string;master_code:string|null}>(async(a,b)=>{const q=await db.from('marketplace_listings').select('external_id,seller_article,master_code').eq('marketplace','wildberries').eq('is_active',true).order('id').range(a,b);return {data:q.data,error:q.error};}),
+    readPages<{master_code:string;manager_name:string}>(async(a,b)=>{const q=await db.from('ozon_finance_managers').select('master_code,manager_name').order('master_code').range(a,b);return {data:q.data,error:q.error};})
+  ]);
+  const listingByNm=new Map(listings.map(x=>[String(x.external_id),x]));
+  const listingByArticle=new Map(listings.map(x=>[String(x.seller_article),x]));
+  const managerByMaster=new Map(managers.map(x=>[String(x.master_code),String(x.manager_name)]));
+  const enriched=grouped.map(row=>{
+    const listing=listingByNm.get(row.nm_id)??listingByArticle.get(row.article),master=listing?.master_code??null;
+    const manager=master?managerByMaster.get(master):null;
+    return {...row,master_code:master,manager:manager??'Не назначен',
+      missing_rates:[...row.missing_rates,...(!master?['Код товара (ЕНОТ)']:[]),...(!manager?['КМ']:[])],
+      order_count:orderByNm.get(row.nm_id)?.orders??0,cancel_count:orderByNm.get(row.nm_id)?.cancelled??0,
+      external_storage:storageByNm.has(row.nm_id)?round(storageByNm.get(row.nm_id)!):null};
+  });
   const adItems:AdItem[]=ads.map(row=>({nm_id:Number(row.nm_id),date:row.snapshot_day,campaign_id:Number(row.campaign_id),spend:Number(row.spend),views:Number(row.views),clicks:Number(row.clicks),orders:Number(row.orders),sum_price:Number(row.sum_price)}));
   const adsComplete=(adSnapshots.data?.length??0)===expectedDays,storageComplete=(storageSnapshots.data?.length??0)===expectedDays,ordersComplete=orders.length>0;
   return NextResponse.json({ok:true,from,to,financial_rows:lines.length,daily,rows:enriched,

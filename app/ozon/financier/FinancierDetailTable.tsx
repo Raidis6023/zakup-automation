@@ -5,6 +5,7 @@ import { Fragment, useMemo, useState } from "react";
 import dynamic from 'next/dynamic';
 import {knownSum,ratioTotal,uniqueStock} from '../../../lib/finance-totals';
 import OzonRowRates from './OzonRowRates';
+import {downloadFinanceWorkbook} from '../../components/finance/export-xlsx';
 const CampaignCharts=dynamic(()=>import('./CampaignCharts'),{ssr:false});
 
 export type FinancialRow = {
@@ -140,6 +141,31 @@ export default function FinancierDetailTable({
       .reduce((sum,x)=>sum+Number(x.amount),0):0;
   const storageAmount=directStorage==null && unallocatedStorage===0?null:
     round((directStorage??0)+unallocatedStorage);
+  const missingData=rows.filter(r=>
+    !r.master_code||r.manager==="Не назначен"||
+    r.data_gaps.some(g=>/master_code|км|себестоим|цена закуп|тк маяк/i.test(g)));
+  function exportFinancialResult(){
+    return downloadFinanceWorkbook(`Ozon_финрез_${data?.from??"период"}_${data?.to??""}.xlsx`,[
+      {name:"Финансовый результат",rows:rows.map(r=>{
+        const ad=advertising(r),hold=storage(r),share=adShare(r);
+        return {"Код товара":r.master_code,"КМ":r.manager,"Артикул":r.offer_id,"Товар":r.name,
+          "Операционная прибыль, ₽":r.estimated_result,"Выручка, ₽":r.revenue,"Начисления Ozon, ₽":r.ozon_amount,
+          "Реклама, ₽":ad,"ДРР, %":share===null?null:Number((share*100).toFixed(4)),
+          "Хранение, ₽":hold,"Заказы, шт":r.order_count,"Отмены, шт":r.cancelled_units,"Выкупы, шт":r.buyout_units,
+          "Себестоимость, ₽":r.cogs,"Себестоимость, ₽/шт":r.unit_cost,"ТК Маяк, ₽":r.mayak_expense,
+          "ТК Маяк, ₽/шт":r.mayak_unit,"Чего не хватает":r.data_gaps.join("; ")};
+      })},
+      {name:"Итоги",rows:[{"Период с":data?.from,"Период по":data?.to,"Операционная прибыль, ₽":operatingProfit,
+        "Выручка, ₽":sumRevenue,"Реклама, ₽":adAmount,"Хранение, ₽":storageAmount,"Артикулов":rows.length}]}
+    ]);
+  }
+  function exportMissingData(){
+    return downloadFinanceWorkbook(`Ozon_недостающие_данные_${data?.from??"период"}_${data?.to??""}.xlsx`,[
+      {name:"Недостающие данные",rows:missingData.map(r=>({"Код товара":r.master_code,"Артикул":r.offer_id,
+        "Товар":r.name,"КМ":r.manager==="Не назначен"?"":r.manager,"Себестоимость, ₽/шт":r.unit_cost,
+        "ТК Маяк, ₽/шт":r.mayak_unit,"Чего не хватает":r.data_gaps.join("; "),"Период с":data?.from,"Период по":data?.to}))}
+    ]);
+  }
   const positionsPositive=rows.filter(r=>r.estimated_result!=null&&r.estimated_result>0).length;
   const positionsNegative=rows.filter(r=>r.estimated_result!=null&&r.estimated_result<0).length;
   const profitability=operatingProfit!=null&&sumRevenue!=null&&sumRevenue>0
@@ -184,7 +210,7 @@ export default function FinancierDetailTable({
     <div className="ozf-section-heading"><div>
       <h2>Результаты по артикулам</h2>
       
-    </div><a href="#ozf-unallocated" className="ozf-btn ozf-jump">Нераспределённые расходы ↓</a></div>
+    </div><div className="ozf-toolbar"><button type="button" className="ozf-btn" onClick={()=>void exportFinancialResult()}>Скачать финрез XLSX</button><button type="button" className="ozf-btn" onClick={()=>void exportMissingData()}>Недостающие данные XLSX · {missingData.length}</button><a href="#ozf-unallocated" className="ozf-btn ozf-jump">Нераспределённые расходы ↓</a></div></div>
     <div className="ozf-kpi-grid">{kpis.map(k=>
       <div key={k.name} className={"ozf-kpi "+k.tone}>
         {['Выручка','Операционная прибыль'].includes(k.name)?<button type="button" className="ozf-kpi-link" onClick={()=>setGraphMetric(k.name==='Выручка'?'revenue':'profit')}>{k.name}</button>:<span>{k.name}</span>}<strong>{k.value}</strong>

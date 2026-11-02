@@ -1,8 +1,9 @@
 "use client";
 import FinanceDynamics from "../../components/finance/FinanceDynamics";
 import CopyArticle from "../../components/finance/CopyArticle";
+import {downloadFinanceWorkbook} from "../../components/finance/export-xlsx";
 import { useEffect, useMemo, useState } from "react";
-type Row={nm_id:string;article:string;name:string;realization:number;to_transfer:number;delivery:number;storage_in_report:number|null;acceptance:number;penalty:number;deduction:number;rows:number;sales_units:number;return_units:number;buyouts:number;cogs:number|null;mayak_expense:number|null;preliminary_result:number|null;missing_rates:string[];cost_rub:number|null;mayak_rub:number|null;order_count:number;cancel_count:number;external_storage:number|null;operations:Record<string,{amount:number;count:number;realization:number;delivery:number;storage:number;penalty:number;deduction:number}>};
+type Row={nm_id:string;article:string;name:string;master_code:string|null;manager:string;realization:number;to_transfer:number;delivery:number;storage_in_report:number|null;acceptance:number;penalty:number;deduction:number;rows:number;sales_units:number;return_units:number;buyouts:number;cogs:number|null;mayak_expense:number|null;preliminary_result:number|null;missing_rates:string[];cost_rub:number|null;mayak_rub:number|null;order_count:number;cancel_count:number;external_storage:number|null;operations:Record<string,{amount:number;count:number;realization:number;delivery:number;storage:number;penalty:number;deduction:number}>};
 type Ad={nm_id:number;date:string;campaign_id:number;spend:number;views:number;clicks:number;orders:number;sum_price:number};
 type Data={daily:Array<{day:string;rows:Array<{nm_id:string;revenue:number}>}>;ok:boolean;from:string;to:string;financial_rows:number;rows:Row[];cache?:{status:string;rowsSaved:number};ads:{items:Ad[];campaigns:number;coverage:string;warning:string|null};orders?:{rows:number;coverage:string};storage?:{rows:number;coverage:string};coverage:Record<string,string>;notice:string};
 const money=(v:number|null)=>v==null?"—":v.toLocaleString("ru-RU",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -37,6 +38,30 @@ const sum=(fn:(r:Row)=>number)=>rows.reduce((t,r)=>t+fn(r),0);
 const allRatesFilled=rows.length>0&&rows.every(r=>r.preliminary_result!==null);
 const missingRateArticles=rows.filter(r=>r.missing_rates.length>0).length;
 const adCovered=data?.ads.coverage==="stats_only";
+const exportRows=data?.rows??[];
+const missingRows=exportRows.filter(r=>r.missing_rates.length>0||!r.master_code||r.manager==="Не назначен");
+function exportFinancialResult(){
+ return downloadFinanceWorkbook(`WB_финрез_${from}_${to}.xlsx`,[
+  {name:"Финансовый результат",rows:exportRows.map(r=>{const ad=adsByNm.get(r.nm_id)?.spend??null;return {
+   "Код товара":r.master_code,"КМ":r.manager,"Артикул":r.article,"nmId":r.nm_id,"Товар":r.name,
+   "Предварительный результат, ₽":r.preliminary_result,"Реализация, ₽":r.realization,"К перечислению, ₽":r.to_transfer,
+   "Логистика, ₽":r.delivery,"Хранение в реализации, ₽":r.storage_in_report,"Отдельное хранение, ₽":r.external_storage,
+   "Приёмка, ₽":r.acceptance,"Штрафы, ₽":r.penalty,"Удержания, ₽":r.deduction,"Реклама, ₽":ad,
+   "Заказы, шт":r.order_count,"Отмены, шт":r.cancel_count,"Выкупы, шт":r.buyouts,
+   "Себестоимость, ₽":r.cogs,"Себестоимость, ₽/шт":r.cost_rub,"ТК Маяк, ₽":r.mayak_expense,
+   "ТК Маяк, ₽/шт":r.mayak_rub,"Чего не хватает":r.missing_rates.join("; ")};
+  })},
+  {name:"Итоги",rows:[{"Период с":from,"Период по":to,"Предварительный результат, ₽":exportRows.every(r=>r.preliminary_result!==null)?exportRows.reduce((sum,r)=>sum+(r.preliminary_result??0),0):null,
+   "Реализация, ₽":exportRows.reduce((sum,r)=>sum+r.realization,0),"К перечислению, ₽":exportRows.reduce((sum,r)=>sum+r.to_transfer,0),"Артикулов":exportRows.length}]}
+ ]);
+}
+function exportMissingData(){
+ return downloadFinanceWorkbook(`WB_недостающие_данные_${from}_${to}.xlsx`,[
+  {name:"Недостающие данные",rows:missingRows.map(r=>({"Код товара":r.master_code,"Артикул":r.article,"nmId":r.nm_id,
+   "Товар":r.name,"КМ":r.manager==="Не назначен"?"":r.manager,"Себестоимость, ₽/шт":r.cost_rub,
+   "ТК Маяк, ₽/шт":r.mayak_rub,"Чего не хватает":r.missing_rates.join("; "),"Период с":from,"Период по":to}))}
+ ]);
+}
 return <div className="ozf-layout">
 <section className="ozf-panel">
 <div className="ozf-filters">
@@ -46,7 +71,9 @@ return <div className="ozf-layout">
 <button className="ozf-btn ozf-primary" disabled={busy||blocked} onClick={()=>void load()}>{busy?"Загружаем...":blocked?"Лимит WB · ожидание":"Сформировать"}</button>
 <button className="ozf-btn" disabled={busy||blocked} onClick={()=>void load(true)}>Обновить отчёт</button>
 <button className="ozf-btn" disabled={busy||syncing} onClick={()=>void syncAll()}>{syncing?"Выгружаем все данные…":"Загрузить все данные WB"}</button>
-<a className="ozf-btn" aria-disabled={!data} href={data?`/api/agents/wb-finance-export?from=${from}&to=${to}`:undefined}>Скачать Excel для проверки</a>
+<button className="ozf-btn" disabled={!data} onClick={()=>void exportFinancialResult()}>Скачать финрез XLSX</button>
+<button className="ozf-btn" disabled={!data} onClick={()=>void exportMissingData()}>Недостающие данные XLSX · {missingRows.length}</button>
+<a className="ozf-btn" aria-disabled={!data} href={data?`/api/agents/wb-finance-export?from=${from}&to=${to}`:undefined}>Скачать исходные данные XLSX</a>
 </div>
 {error&&<p className="ozf-error" role="alert">{error}</p>}
 {progress&&<p className="ozf-progress" role="status">{progress}</p>}

@@ -4,14 +4,11 @@ import {rules} from '../../../lib/yandex/finance';
 import type {readFinance} from '../../../lib/yandex/finance-cache';
 import YandexFinanceTable,{type RateInput} from './YandexFinanceTable';
 import AccrualBreakdownList from '../../components/finance/AccrualBreakdownList';
+import {downloadFinanceWorkbook} from '../../components/finance/export-xlsx';
 type Data=NonNullable<Awaited<ReturnType<typeof readFinance>>>;
 const money=(n:number)=>new Intl.NumberFormat('ru-RU',{minimumFractionDigits:0,maximumFractionDigits:0}).format(Math.sign(n)*Math.round(Math.abs(n)/100)||0)+' ₽';
 const localDay=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Krasnoyarsk',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 const shift=(day:string,delta:number)=>new Date(Date.parse(day+'T00:00:00Z')+delta*86400000).toISOString().slice(0,10);
-function csv(name:string,records:Record<string,unknown>[]){
- if(!records.length)return;const keys=Object.keys(records[0]);const cell=(v:unknown)=>'"'+(typeof v==='number'?String(Number.isInteger(v)?v:Number(v.toFixed(8))).replace('.',','):String(v??'').replace(/^[=+@]/,"'$&")).replace(/"/g,'""')+'"';
- const text='\ufeff'+[keys,...records.map(r=>keys.map(k=>r[k]))].map(row=>row.map(cell).join(';')).join('\r\n');const url=URL.createObjectURL(new Blob([text],{type:'text/csv;charset=utf-8;'}));const a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);
-}
 export default function YandexFinancierClient({initial,initialError}:{initial:Data|null;initialError:string}){
  const defaultTo=shift(localDay(),-1),defaultFrom=shift(defaultTo,-27);
  const [from,setFrom]=useState(initial?.from??defaultFrom),[to,setTo]=useState(initial?.to??defaultTo);
@@ -33,13 +30,39 @@ export default function YandexFinancierClient({initial,initialError}:{initial:Da
  async function saveRate(value:RateInput){setSavingRate(true);setBusy(true);setError('');try{await request('/api/agents/yandex-finance-rates',value);if(data&&alive.current){setData(await request(`/api/agents/yandex-finance?from=${data.from}&to=${data.to}`));setProgress(value.valid_from>data.to?'Тариф сохранён с '+value.valid_from+'. Он не меняет выбранный период.':'Тариф сохранён. Расчёт обновлён.');}}catch(e){if(alive.current)setError(e instanceof Error?e.message:'Ошибка сохранения');}finally{if(alive.current){setSavingRate(false);setBusy(false);}}}
  async function toggleStatus(master:string,checked:boolean){setStatusSaving(true);setError('');try{await request('/api/agents/yandex-finance-status',{master_code:master,discontinued:checked});if(alive.current)setData(current=>current?{...current,rows:current.rows.map(r=>r.master_code===master?{...r,discontinued:checked}:r)}:current);}catch(e){if(alive.current)setError(e instanceof Error?e.message:'Не удалось сохранить статус');}finally{if(alive.current)setStatusSaving(false);}}
  async function saveManager(article:string,manager:string){await request('/api/agents/yandex-finance-manager',{article,manager});if(data)setData(await request(`/api/agents/yandex-finance?from=${data.from}&to=${data.to}`));}
+ function exportFinancialResult(){
+  if(!data)return Promise.resolve();
+  const rows=data.rows.map(r=>({"Код товара":r.master_code,"КМ":r.manager,"Артикул":r.article,"Товар":r.name,
+   "Операционная прибыль, ₽":r.result===null?null:r.result/100,"Выручка, ₽":r.income/100,
+   "Реклама, ₽":-r.advertising/100,"ДРР, %":r.drr===null?null:r.drr*100,"Хранение, ₽":-r.storage/100,
+   "Заказы, шт":r.orders,"Отмены, шт":r.cancelledTotal,"Выкупы, шт":r.buyouts,
+   "Себестоимость, ₽":r.cogs===null?null:-r.cogs/100,"Себестоимость, ₽/шт":r.unitCost===null?null:r.unitCost/100,
+   "ТК Маяк, ₽":r.mayak===null?null:-r.mayak/100,"ТК Маяк, ₽/шт":r.mayakUnit===null?null:r.mayakUnit/100,
+   "Чего не хватает":r.dataGaps.join("; "),...Object.fromEntries(rules.map(([name])=>[name+", ₽",-(r.expenses[name]??0)/100]))}));
+  return downloadFinanceWorkbook(`ЯМ_финрез_${data.from}_${data.to}.xlsx`,[
+   {name:"Финансовый результат",rows},
+   {name:"Итоги",rows:[{"Период с":data.from,"Период по":data.to,"Операционная прибыль, ₽":data.totals.result===null?null:data.totals.result/100,
+    "Выручка, ₽":data.totals.income/100,"Реклама, ₽":-data.totals.advertising/100,"Хранение, ₽":-data.totals.storage/100,
+    "Заказы, шт":data.totals.orders,"Выкупы, шт":data.totals.buyouts,"Артикулов":data.rows.length}]}
+  ]);
+ }
+ function exportMissingData(){
+  if(!data)return Promise.resolve();
+  const missing=data.rows.filter(r=>r.dataGaps.length>0||!r.master_code||r.manager==="Не назначен");
+  return downloadFinanceWorkbook(`ЯМ_недостающие_данные_${data.from}_${data.to}.xlsx`,[
+   {name:"Недостающие данные",rows:missing.map(r=>({"Код товара":r.master_code,"Артикул":r.article,"Товар":r.name,
+    "КМ":r.manager==="Не назначен"?"":r.manager,"Себестоимость, ₽/шт":r.unitCost===null?null:r.unitCost/100,
+    "ТК Маяк, ₽/шт":r.mayakUnit===null?null:r.mayakUnit/100,"Чего не хватает":r.dataGaps.join("; "),
+    "Период с":data.from,"Период по":data.to}))}
+  ]);
+ }
  return <>
  <section className="ozf-panel ozf-filters"><label>С даты<input type="date" value={from} onChange={e=>setFrom(e.target.value)} disabled={busy}/></label><label>По дату (включительно)<input type="date" value={to} onChange={e=>setTo(e.target.value)} disabled={busy}/></label><button className="ozf-btn ozf-primary" onClick={load} disabled={busy}>Сформировать</button><button className="ozf-btn" onClick={sync} disabled={busy}>Загрузить / продолжить из ЯМ</button><span role="status">{busy?'Загрузка… ':''}{progress}</span></section>
  {error&&<p role="alert" className="ymf-warning">{error}</p>}
  {data&&<>
  <p>Показан период: <b>{data.from} — {data.to}</b> включительно. Кэш: {data.report.completed_at?new Date(data.report.completed_at).toLocaleString('ru-RU',{timeZone:'Asia/Krasnoyarsk'}):'—'} (Красноярск).</p>
 
- <button className="ozf-btn" onClick={()=>csv('Yandex_расчёт.csv',data.rows.map(r=>({'Код товара':r.master_code,Артикул:r.article,КМ:r.manager,Товар:r.name,'Операционная прибыль':r.result===null?null:Math.round(r.result/100),Выручка:Math.round(r.income/100),'Реклама, ₽':-Math.round(r.advertising/100),'ДРР, %':r.drr===null?null:r.drr*100,'Хранение, ₽':-Math.round(r.storage/100),Заказы:r.orders,Отмены:r.cancelledTotal,Выкупы:r.buyouts,'ROAS, %':r.roas===null?null:r.roas*100,'Товары в пути':r.inTransit,'Выручка с товарами в пути':r.transitRevenue===null?null:Math.round(r.transitRevenue/100),'ДРР с товарами в пути, %':r.transitDrr===null?null:r.transitDrr*100,'Цена закупа, руб':r.unitCost===null?null:Math.round(r.unitCost/100),'Себестоимость, ₽':r.cogs===null?null:-Math.round(r.cogs/100),'ТК Маяк, ₽/шт':r.mayakUnit===null?null:Math.round(r.mayakUnit/100),'ТК Маяк, ₽':r.mayak===null?null:-Math.round(r.mayak/100),...Object.fromEntries(rules.map(([name])=>[name,-Math.round((r.expenses[name]??0)/100)]))})))}>Скачать расчёт CSV за период</button>
+ <div className="ozf-toolbar"><button className="ozf-btn" onClick={()=>void exportFinancialResult()}>Скачать финрез XLSX</button><button className="ozf-btn" onClick={()=>void exportMissingData()}>Недостающие данные XLSX · {data.rows.filter(r=>r.dataGaps.length>0||!r.master_code||r.manager==="Не назначен").length}</button></div>
  <YandexFinanceTable data={data} onSave={saveRate} saving={savingRate} onToggle={toggleStatus} statusSaving={statusSaving} onManager={saveManager}/>
  <section className="ozf-panel" id="ymf-unallocated"><h2>Нераспределённые расходы</h2><AccrualBreakdownList
    items={Object.entries(data.common).map(([name,amount])=>({name,amount,daily:data.commonDetails?.[name]??[]}))}

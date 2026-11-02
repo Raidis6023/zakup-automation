@@ -52,6 +52,13 @@ export async function readFinance(from:string,to:string){
  const listings:Listing[]=[];for(let offset=0;;offset+=1000){const {data,error}=await db.from('yandex_products').select('offer_id,master_code,raw_data').order('id').range(offset,offset+999);if(error)throw error;listings.push(...data.map(x=>({offer_id:x.offer_id,master_code:x.master_code,name:x.raw_data?.offer?.name??null})));if(data.length<1000)break;}
  const managers=await db.from('yandex_finance_managers').select('master_key,manager_name');if(managers.error)throw managers.error;const managerByKey=new Map(managers.data.map(x=>[x.master_key,x.manager_name]));
  const result=financialReport(lines,from,to,rates,listings,orders,report.order_units_complete);
+ const daily=Array.from({length:Math.round((Date.parse(to)-Date.parse(from))/86400000)+1},(_,index)=>{
+  const day=new Date(Date.parse(from)+index*86400000).toISOString().slice(0,10);
+  const item=financialReport(lines,day,day,rates,listings,orders,report.order_units_complete);
+  return {day,orders:item.totals.orders,buyouts:item.totals.buyouts,income:item.totals.income,result:item.totals.result};
+ });
+ const dailyResult=daily.every(x=>x.result!==null)?daily.reduce((sum,x)=>sum+Number(x.result),0):null;
+ const dailyReconciled=result.totals.result!==null&&dailyResult!==null&&dailyResult===result.totals.result;
  const [stockRun,ownStocks,products,statuses,vedOrders,vedItems]=await Promise.all([
   db.from('yandex_stock_sync_runs').select('id,snapshot_date').eq('status','success').order('created_at',{ascending:false}).limit(1).maybeSingle(),
   db.rpc('ozon_finance_stock_summary'),db.from('products').select('id,master_code').limit(10000),
@@ -67,6 +74,6 @@ export async function readFinance(from:string,to:string){
  const vedStates=new Map((vedOrders.data??[]).map(x=>[x.id,x.workflow_status||x.status||'draft']));
  const chinaByMaster=new Map<string,number>();const chinaReady=!products.error&&!vedOrders.error&&!vedItems.error&&[...vedStates.values()].some(v=>['in_transit','dispatched','shipping','on_the_way'].includes(v));
  if(chinaReady)for(const x of vedItems.data??[]){if(!['in_transit','dispatched','shipping','on_the_way'].includes(vedStates.get(x.ved_order_id)??'')||['cancelled','received','rejected'].includes(x.status))continue;const code=productCodes.get(String(x.product_id));if(code)chinaByMaster.set(code,(chinaByMaster.get(code)??0)+Number(x.order_quantity??x.quantity??0));}
- const rows=result.rows.map(p=>{const own=p.master_code?ownByMaster.get(p.master_code):null;return {...p,manager:managerByKey.get(p.master_code??'article:'+p.article)??'Ольга',marketplaceStock:stockAvailable?marketplaceStock.get(p.article)??0:null,mainStock:own?.main??null,oxStock:own?.ox??null,inChina:chinaReady&&p.master_code?chinaByMaster.get(p.master_code)??0:null,inCrossdock:null as number|null,discontinued:!!(p.master_code&&/выведен|выводится/i.test(statusByMaster.get(p.master_code)??''))};});
- return {...result,rows,report,stockDate:stockAvailable?stockRun.data?.snapshot_date??null:null};
+ const rows=result.rows.map(p=>{const own=p.master_code?ownByMaster.get(p.master_code):null;const manager=managerByKey.get(p.master_code??'article:'+p.article);return {...p,manager:manager??'Не назначен',dataGaps:manager?p.dataGaps:[...p.dataGaps,'Нет КМ'],marketplaceStock:stockAvailable?marketplaceStock.get(p.article)??0:null,mainStock:own?.main??null,oxStock:own?.ox??null,inChina:chinaReady&&p.master_code?chinaByMaster.get(p.master_code)??0:null,inCrossdock:null as number|null,discontinued:!!(p.master_code&&/выведен|выводится/i.test(statusByMaster.get(p.master_code)??''))};});
+ return {...result,rows,report,daily,dailyReconciled,stockDate:stockAvailable?stockRun.data?.snapshot_date??null:null};
 }
