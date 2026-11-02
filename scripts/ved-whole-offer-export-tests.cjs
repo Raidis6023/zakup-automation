@@ -34,7 +34,7 @@ async function main(){
    importVatRecoverable:false,feeMode:"schedule",feeDate:"2026-11-02"},
  };
  const result=engine.calculateVed(input);
- const pixel=Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/X9kAAAAASUVORK5CYII=","base64");
+ const pixel=await require("sharp")({create:{width:25,height:25,channels:3,background:"#D7F3E5"}}).png().toBuffer();
  const original=new ExcelJS.Workbook(),sheet=original.addWorksheet("КП");
  const photoId=original.addImage({buffer:pixel,extension:"png"});
  const packId=original.addImage({buffer:pixel,extension:"png"});
@@ -55,11 +55,33 @@ async function main(){
  const loaded=new ExcelJS.Workbook();await loaded.xlsx.load(buffer);
  assert.equal(loaded.worksheets.length,2);
  const tab=loaded.worksheets[0];
- assert.equal(tab.getCell("T19").value,"Упаковка");
- assert.equal(tab.getCell("W19").value,"Зип-пакет, стикер, Честный знак");
- assert.equal(tab.getCell("T18").value,"Материал");
- assert.equal(tab.getCell("W18").value,"Бамбук + хлопок");
+ assert.equal(tab.getCell("A31").value,"Вид и состав упаковки");
+ assert.equal(tab.getCell("E31").value,"Зип-пакет, стикер, Честный знак");
+ assert.equal(tab.getCell("A30").value,"Материал");
+ assert.equal(tab.getCell("E30").value,"Бамбук + хлопок");
+ assert.equal(tab.getCell("B22").value,"Набор ватных палочек 600 шт");
+ assert.equal(tab.getCell("G5").value,58);
+ assert.equal(tab.getCell("H5").value,46);
+ assert.equal(tab.getCell("I5").value,38);
  assert.equal(tab.getImages().length,2,"photos were not embedded");
+ const imgs=tab.getImages();
+ assert(Math.abs(imgs[0].range.tl.col-9.15)<0.15,"Product photo must start inside J3:Q19, not column T");
+ assert(Math.abs(imgs[0].range.tl.row-2.3)<0.15,"Product photo must start within row 3");
+ assert(Math.abs(imgs[1].range.tl.col-6.1)<0.15,"Package photo must start inside G11:I19, not column X");
+ assert(Math.abs(imgs[1].range.tl.row-10.2)<0.15,"Package photo must start within row 11");
+ assert.equal(tab.getCell("E16").value,10000,"MOQ must be in merged cell MASTER E16, NOT F16");
+ for(const ref of ["F17","F23"]){
+  assert.equal(tab.getCell(ref).formula,"E16",ref+" must refer to MOQ master E16");
+ }
+ assert.equal(tab.getCell("C19").formula,"IFERROR(E16/D22*F19,0)",
+  "MOQ volume must refer to E16, not its empty merged child F16");
+ assert(Math.abs(tab.getCell("C19").result-result.scenarios.moq.volumeM3)<1e-8,
+  "MOQ volume formula cached result is inconsistent with the calculation engine");
+ tab.eachRow(row=>row.eachCell(cell=>{
+  if(cell.type===ExcelJS.ValueType.Formula){
+   assert(!/\$?F\$?16\b/.test(cell.formula),cell.address+" references merged-cell slave F16");
+  }
+ }));
  for(const ref of ["B4","B7","B9","B15","C16","J22","K22","M22","P22","Q22"]){
   assert.equal(tab.getCell(ref).type,ExcelJS.ValueType.Formula,ref+" is hardcoded, not editable formula");
  }
@@ -71,6 +93,6 @@ async function main(){
  assert.equal(tab.getCell("AF24").value,500000);
  const exportZip=Buffer.from(buffer);
  assert(exportZip.length>10000,"export is too small");
- console.log("PASS VED whole-KP editable XLSX: 2 sheets, source product+pack photos, packaging info, live formulas, cached engine results");
+ console.log("PASS VED Excel: original product J3:Q19, package G11:I19, source details, 2 sheets, MOQ merged E16 formulas and cached results");
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

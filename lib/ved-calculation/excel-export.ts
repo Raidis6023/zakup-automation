@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import sharp from "sharp";
 import {brotliDecompressSync} from "node:zlib";
 import {VED_TEMPLATE_BLUEPRINT_BROTLI_BASE64} from "./template-blueprint";
 import type {VedCalculationInput,VedCalculationResult,VedScenarioResult} from "./engine";
@@ -102,7 +103,9 @@ function fillCore(sh:ExcelJS.Worksheet,item:VedExportItem){
  set(sh,"F13",Boolean(t.expenses.dangerousCargo));
  set(sh,"F14",p.markingCnyPerUnit??0);
  set(sh,"F15",p.unitPriceCny||null);
- set(sh,"F16",p.moqUnits||null);
+ // E16:F16 is a merged cell in the approved template.
+ // ExcelJS writes through F16 to the master E16, so every formula MUST read E16.
+ set(sh,"E16",p.moqUnits||null);
  for(const [ref,value] of [
   ["G5",p.cartonLengthCm],["H5",p.cartonWidthCm],["I5",p.cartonHeightCm],
   ["G7",p.individualLengthCm],["H7",p.individualWidthCm],["I7",p.individualHeightCm],
@@ -113,7 +116,7 @@ function fillCore(sh:ExcelJS.Worksheet,item:VedExportItem){
  formula(sh,"F4","F15",p.unitPriceCny);
  formula(sh,"F5","F9",t.currency.cnyRub);
  formula(sh,"F6","F4*F5",p.unitPriceCny*t.currency.cnyRub);
- formula(sh,"F17","F16",p.moqUnits);
+ formula(sh,"F17","E16",p.moqUnits);
  formula(sh,"F18","IFERROR(F17/D22,0)",p.unitsPerCarton?p.moqUnits/p.unitsPerCarton:0);
  if(p.individualLengthCm&&p.individualWidthCm&&p.individualHeightCm)
   formula(sh,"G9","G7*H7*I7/1000",p.individualLengthCm*p.individualWidthCm*p.individualHeightCm/1000);
@@ -123,7 +126,7 @@ function fillCore(sh:ExcelJS.Worksheet,item:VedExportItem){
  set(sh,"E22",p.cartonGrossKg||null);
  set(sh,"O22",0);
  formula(sh,"B19","AF22",t.container.usableVolumeM3);
- formula(sh,"C19","IFERROR(F16/D22*F19,0)",saved("moq")?.volumeM3);
+ formula(sh,"C19","IFERROR(E16/D22*F19,0)",saved("moq")?.volumeM3);
  set(sh,"D19",1);
  const refs:Record<string,number|null>={
   AF22:t.container.usableVolumeM3,AF23:t.container.maxPayloadKg??null,
@@ -149,7 +152,7 @@ function fillCore(sh:ExcelJS.Worksheet,item:VedExportItem){
  for(const {col,row,result:r} of cs){
   const exp=col,rr=String(row),volume=exp+"19";
   if(col==="B")formula(sh,"F"+rr,"IFERROR(B19/F19*D22,0)",r?.units);
-  else if(col==="C")formula(sh,"F"+rr,"F16",r?.units);
+  else if(col==="C")formula(sh,"F"+rr,"E16",r?.units);
   else formula(sh,"F"+rr,"IFERROR(D19/F19*D22,0)",r?.units);
   if(row!==22){
    formula(sh,"D"+rr,"$D$22",p.unitsPerCarton);
@@ -185,7 +188,7 @@ function fillCore(sh:ExcelJS.Worksheet,item:VedExportItem){
    12:["$AF$32",r?.indirectPaymentsRub],
    13:["$AF$33+$AF$28*"+ratio+"+$AF$29*F"+rr,
     r? r.additionalRub+r.otherSharedRub+r.otherPerUnitRub:null],
-   14:["IFERROR($AF$31/$F$16*F"+rr+",0)",r?.moldingRub],
+   14:["IFERROR($AF$31/$E$16*F"+rr+",0)",r?.moldingRub],
    15:["$AF$26*"+ratio,r?.bankCommissionRub],
    16:["SUM("+col+"4:"+col+"15)",r?.totalCostIncludingVatRub],
    17:["IFERROR("+col+"9/H"+rr+",0)",r&&r.grossKg>0?r.freightBeforeBorderRub/r.grossKg:0],
@@ -201,37 +204,59 @@ function fillCore(sh:ExcelJS.Worksheet,item:VedExportItem){
 }
 function fillDetails(sh:ExcelJS.Worksheet,item:VedExportItem){
  const p=item.input_data.product,source=item.source||{};
- sh.mergeCells("T1:AB1");const title=sh.getCell("T1");
- title.value="ДАННЫЕ ТОВАРА И УПАКОВКИ";title.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF103B30"}};
- title.font={name:"Aptos",bold:true,color:{argb:"FFFFFFFF"},size:12};
- title.alignment={vertical:"middle"};sh.getRow(1).height=Math.max(sh.getRow(1).height||0,26);
- for(const [ref,value] of [["T2","ФОТО ТОВАРА"],["X2","ФОТО УПАКОВКИ"]] as const){
-  sh.getCell(ref).value=value;sh.getCell(ref).font={name:"Aptos",size:10,bold:true,color:{argb:"FF13704A"}};
- }
- for(let row=3;row<=12;row++)sh.getRow(row).height=Math.max(sh.getRow(row).height||0,21);
+ // The main 24-row visual is intentionally untouched: source product photo
+ // goes in J3:Q19, packaging photo in G11:I19. Extra supplier text starts
+ // BELOW row 24, not in a second competing photo panel at T/X.
+ const header=sh.getCell("A26");
+ sh.mergeCells("A26:Q26");
+ header.value="СВЕДЕНИЯ О ТОВАРЕ И УПАКОВКЕ ИЗ КОММЕРЧЕСКОГО ПРЕДЛОЖЕНИЯ";
+ header.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF103B30"}};
+ header.font={name:"Aptos",bold:true,color:{argb:"FFFFFFFF"},size:11};
+ header.alignment={vertical:"middle"};
+ sh.getRow(26).height=27;
+ const size=[p.individualLengthCm,p.individualWidthCm,p.individualHeightCm]
+  .filter(x=>typeof x==="number"&&x>0).join(" × ");
  const description=String(p.productName||item.title);
- const list:Array<[number,string,unknown]>= [
-  [15,"Номер КП",source.quoteCode||"Без привязки"],
-  [16,"Артикул",item.article],[17,"Наименование",description],
-  [18,"Материал",source.material||""],[19,"Упаковка",source.packaging||""],
-  [20,"Единица поставки",source.unit||""],
-  [21,"Условие поставки",p.incoterm||""],[22,"Порт / место отправления",p.departurePort||""],
-  [23,"Цена FOB / EXW, CNY",p.unitPriceCny],[24,"Цена карго, CNY (справ.)",source.cargoCny??null],
-  [25,"MOQ, шт",p.moqUnits],[26,"Штук в коробке",p.unitsPerCarton],
-  [27,"Длина короба, см",p.cartonLengthCm],[28,"Ширина короба, см",p.cartonWidthCm],
-  [29,"Высота короба, см",p.cartonHeightCm],[30,"Объём короба, м³",p.cartonVolumeM3],
-  [31,"Брутто короба, кг",p.cartonGrossKg],[32,"Нетто короба, кг",p.cartonNetKg],
-  [33,"Размеры инд. упаковки, см",
-   [p.individualLengthCm,p.individualWidthCm,p.individualHeightCm].filter(Boolean).join(" × ")],
-  [34,"Срок производства, дней",source.leadTime??null],
-  [35,"Дата расчёта",item.calculation_date],
-  [36,"Версия расчёта КП",item.version_no],
+ const fields:Array<[number,string,unknown]>=[
+  [27,"Номер КП",source.quoteCode||""],
+  [28,"Артикул поставщика",item.article],
+  [29,"Наименование",description],
+  [30,"Материал",source.material||""],
+  [31,"Вид и состав упаковки",source.packaging||""],
+  [32,"Единица поставки",source.unit||""],
+  [33,"Условие поставки",p.incoterm||""],
+  [34,"Порт / место отправления",p.departurePort||""],
+  [35,"Размеры индивидуальной упаковки, см",size],
+  [36,"Цена карго CNY (справочно)",source.cargoCny??null],
+  [37,"Срок производства, дней",source.leadTime??null],
+  [38,"Дата расчёта",item.calculation_date],
+  [39,"Версия расчёта КП",item.version_no],
  ];
- for(const [row,label,value] of list){
-  side(sh,"T"+row,"W"+row,label,value);
-  sh.getRow(row).height=Math.max(sh.getRow(row).height||0,row===17||row===19?36:19);
+ for(const [row,label,value] of fields){
+  sh.mergeCells("A"+row+":D"+row);
+  sh.mergeCells("E"+row+":Q"+row);
+  const l=sh.getCell("A"+row),v=sh.getCell("E"+row);
+  l.value=label;
+  v.value=value===undefined?null:value as ExcelJS.CellValue;
+  l.font={name:"Aptos",size:10,bold:true,color:{argb:"FF456659"}};
+  v.font={name:"Aptos",size:10,color:{argb:"FF24463A"}};
+  l.alignment={vertical:"middle",wrapText:true};
+  v.alignment={vertical:"middle",wrapText:true};
+  l.border={bottom:{style:"hair",color:{argb:"FFB7D8C8"}}};
+  v.border={bottom:{style:"hair",color:{argb:"FFB7D8C8"}}};
+  if(typeof value==="number")v.numFmt=fmt;
+  sh.getRow(row).height=row===29||row===31?36:21;
  }
- sh.getColumn("T").width=32;sh.getColumn("W").width=24;
+ const info=sh.getCell("A41");
+ sh.mergeCells("A41:Q41");
+ info.value=item.errors?.length?"НЕОБХОДИМО УТОЧНИТЬ: "+item.errors.join("; "):
+  "Фотографии товара и упаковки размещены в штатных полях исходного шаблона.";
+ info.font={name:"Aptos",size:10,bold:true,color:{argb:item.errors?.length?"FFD35C42":"FF198258"}};
+ info.alignment={wrapText:true};
+ sh.getRow(41).height=32;
+
+ // Keep adjustable model assumptions to the right of the ORIGINAL template.
+ // They remain editable and visible rather than hardcoded in formulas.
  const settings:Array<[number,string]>= [
   [22,"Рабочий объём контейнера, м³"],[23,"Допустимая масса контейнера, кг"],
   [24,"Перевозка до границы, ₽"],[25,"Перевозка после границы, ₽"],
@@ -246,27 +271,42 @@ function fillDetails(sh:ExcelJS.Worksheet,item:VedExportItem){
   [42,"Единица специфической ставки"],[43,"Вес нетто коробки, кг"],
   [46,"Год шкалы таможенного сбора"],[47,"Объём коробки (резерв), м³"]
  ];
- sh.mergeCells("AC20:AF20");sh.getCell("AC20").value="НАСТРОЙКИ И ФОРМУЛЫ РАСЧЁТА";
+ sh.mergeCells("AC20:AF20");
+ sh.getCell("AC20").value="НАСТРОЙКИ И ФОРМУЛЫ РАСЧЁТА";
  sh.getCell("AC20").font={bold:true,color:{argb:"FF13704A"},size:11};
- // Parameters occupy AF22:AF47 for formula compatibility; labels are in X:AB.
- sh.getColumn("AF").width=17;sh.getColumn("AC").width=34;
+ sh.getColumn("AF").width=17;
+ sh.getColumn("AC").width=34;
  for(const [row,label] of settings){
   sh.getCell("AC"+row).value=label;
   sh.getCell("AC"+row).font={size:9,color:{argb:"FF566F63"}};
-  sh.getCell("U"+row).numFmt=fmt;
-  sh.getCell("U"+row).font={size:10,bold:true,color:{argb:"FF1966BE"}};
-  sh.getCell("U"+row).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFE9F4EF"}};
+  const value=sh.getCell("AF"+row);
+  if(typeof value.value==="number")value.numFmt=fmt;
+  value.font={size:10,bold:true,color:{argb:"FF1966BE"}};
+  value.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFE9F4EF"}};
  }
- sh.getCell("AC44").value="Синие числа и поля F8:F16, D22:E22 можно менять; формулы пересчитываются в Excel.";
- sh.getCell("AC44").alignment={wrapText:true};sh.getRow(44).height=32;
- sh.getCell("T38").value=item.errors?.length?"ТРЕБУЕТ УТОЧНЕНИЯ: "+item.errors.join("; "):"Расчётные данные заполнены";
- sh.getCell("T38").font={bold:true,size:10,color:{argb:item.errors?.length?"FFD35C42":"FF198258"}};
- sh.mergeCells("T38:W38");
+ sh.getCell("AC44").value="Синие параметры и E16 (MOQ), F8:F15, D22:E22 редактируются; формулы Excel пересчитывают расчёт.";
+ sh.getCell("AC44").alignment={wrapText:true};
+ sh.getRow(44).height=32;
 }
-function drawPhoto(wb:ExcelJS.Workbook,sh:ExcelJS.Worksheet,image:ImageAttachment|null|undefined,col:number){
- if(!image){sh.getCell(col===19?"T5":"X5").value="Нет изображения в исходном КП";return;}
- const id=wb.addImage({base64:"data:image/"+image.extension+";base64,"+image.buffer.toString("base64"),extension:image.extension});
- sh.addImage(id,{tl:{col,row:2.4},ext:{width:245,height:175},editAs:"oneCell"});
+type PhotoSlot="product"|"packaging";
+async function drawPhoto(wb:ExcelJS.Workbook,sh:ExcelJS.Worksheet,
+ image:ImageAttachment|null|undefined,slot:PhotoSlot){
+ const product=slot==="product";
+ const topLeft=product?{col:9.15,row:2.3}:{col:6.1,row:10.2};
+ const width=product?760:300;
+ const height=product?300:220;
+ if(!image){
+  sh.getCell(product?"J5":"G12").note="В исходном КП фотография отсутствует.";
+  return;
+ }
+ // Fit photo proportionally inside the exact merged region. No cropping,
+ // stretching or overlays on calculation cells.
+ const normalized=await sharp(image.buffer,{failOn:"none"})
+  .rotate()
+  .resize(width,height,{fit:"contain",background:{r:255,g:255,b:255,alpha:1}})
+  .png().toBuffer();
+ const id=wb.addImage({base64:"data:image/png;base64,"+normalized.toString("base64"),extension:"png"});
+ sh.addImage(id,{tl:topLeft,ext:{width,height},editAs:"oneCell"});
 }
 export async function buildVedExport(items:VedExportItem[]):Promise<Buffer>{
  if(!items.length||items.length>100)throw Error("Можно выгрузить от 1 до 100 товаров");
@@ -277,8 +317,8 @@ export async function buildVedExport(items:VedExportItem[]):Promise<Buffer>{
  for(const item of items){
   const sh=createSheet(wb,uniqueName(item.article||item.title,used));
   fillCore(sh,item);fillDetails(sh,item);
-  drawPhoto(wb,sh,item.productPhoto,19);
-  drawPhoto(wb,sh,item.packagingPhoto,23);
+  await drawPhoto(wb,sh,item.productPhoto,"product");
+  await drawPhoto(wb,sh,item.packagingPhoto,"packaging");
  }
  return Buffer.from(await wb.xlsx.writeBuffer());
 }
