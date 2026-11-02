@@ -36,6 +36,9 @@ async function work(req:NextRequest,attempt:number,started:number,history?:{run_
   const {error:rangeError}=await db.from("wb_finance_cache_jobs").update({date_from:from,date_to:to,status:"pending",next_offset:0,retry_at:null,last_error:null,updated_at:new Date().toISOString()}).eq("run_day",day);
   if(rangeError)return reply({ok:false,error:rangeError.message},503);
  }else if(existing.rows_saved>0&&(existing.date_from!==from||existing.date_to!==to)){
+  // Already-completed 28-day cache must remain immutable; rolling coverage is
+  // assembled from the published day snapshots, not by rewriting old source.
+  if(existing.status==='complete')return reply({ok:true,status:'complete',from:existing.date_from,to:existing.date_to,rowsSaved:existing.rows_saved,historyWindow:true});
   return reply({ok:false,error:"Текущий кэш WB создан для другого периода; требуется безопасный перезапуск",runDay:day},409);
  }
 
