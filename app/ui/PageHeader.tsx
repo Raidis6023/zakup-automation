@@ -7,13 +7,14 @@ import styles from "./PageHeader.module.css";
  * Visual distinctions are expressed only as variants, not duplicated JSX.
  * Breadcrumbs and decorative stripes are rendered by WorkspaceShell.
  */
-type Variant = "default" | "home" | "admin-users" | "profile" | "financier" | "sku-list" | "ved" | "ozon" | "wildberries" | "yandex-market" | "zakup";
+type Variant = "default" | "home" | "admin" | "admin-users" | "profile" | "financier" | "sku-list" | "ved" | "ozon" | "wildberries" | "yandex-market" | "zakup";
 
 const variants = {
   home: { root: "home-title-row", titleArea: "", heading: "", description: "", actions: "", showThemeToggle: false },
+  admin: { root: "ws-page-heading ws-page-heading--admin", titleArea: "", heading: "ws-page-heading__title", description: "ws-page-heading__description", actions: "", showThemeToggle: false },
   "admin-users": { root: "admin-users-header", titleArea: "", heading: "", description: "", actions: "", showThemeToggle: false },
   profile: { root: "profile-header", titleArea: "", heading: "", description: "", actions: "", showThemeToggle: false },
-  financier: { root: "header ozf-heading", titleArea: "", heading: "title", description: "subtitle", actions: "header-actions", showThemeToggle: false },
+  financier: { root: "header ozf-heading ws-page-heading", titleArea: "", heading: "title ws-page-heading__title", description: "subtitle ws-page-heading__description", actions: "header-actions", showThemeToggle: false },
   default: {
     root: "header",
     titleArea: "",
