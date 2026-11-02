@@ -83,12 +83,25 @@ export function workspaceBreadcrumbs(
   const path = pathname.replace(/\/+$/, "") || "/";
   if (path === "/") return [];
 
+  // /ved displays the Orders page, while the VED section entry is
+  // /ved/commercial-offers. Keep both levels visible in the breadcrumb.
+  if (path === "/ved") {
+    return [
+      { label: "Главная", href: "/" },
+      { label: "ВЭД", href: "/ved/commercial-offers" },
+      { label: "Заказы", href: "/ved" },
+    ];
+  }
+
   // Dynamic VED order IDs must never become a fabricated parent route.
   if (path.startsWith("/ved-orders/")) {
     const parent = vedOrderSource === "zakup" ? "/zakup" : "/ved";
     return [
       { label: "Главная", href: "/" },
-      { label: routes[parent].label, href: parent },
+      {
+        label: routes[parent].label,
+        href: parent === "/ved" ? "/ved/commercial-offers" : parent,
+      },
       { label: "Заказ в Китай", href: path },
     ];
   }
@@ -102,7 +115,7 @@ export function workspaceBreadcrumbs(
     const entry = routes[current] ?? getFallback(current);
     parents.unshift({
       label: entry.label,
-      href: current,
+      href: current === "/ved" ? "/ved/commercial-offers" : current,
       ...(entry.shortLabel ? { shortLabel: entry.shortLabel } : {}),
     });
     current = entry.parent ?? "/";
