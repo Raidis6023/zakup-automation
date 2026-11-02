@@ -14,7 +14,7 @@ export default function AdminPage() {
 
   return (
     <section aria-label="Администрирование">
-      <PageHeader variant="home" title="Администрирование" description="Управление сотрудниками, доступами и настройками WorkSpace" />
+      <PageHeader variant="admin" title="Администрирование" description="Управление сотрудниками, доступами и настройками WorkSpace" />
 
       <section
         aria-label="Наше API-хуяпи v1"
