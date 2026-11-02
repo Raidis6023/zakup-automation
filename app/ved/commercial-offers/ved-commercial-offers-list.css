@@ -1,0 +1,14 @@
+.ved-quote-list{grid-column:1/-1;min-width:0}.ved-quote-list-heading,.ved-quote-entry-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ved-quote-list-heading{flex-wrap:wrap}.ved-quote-list-heading h2{margin:0 0 7px}.ved-quote-list-heading p{color:var(--ws-text-muted);font-size:12px;margin:0}
+.ved-quote-list-heading button,.ved-quote-original{background:var(--ws-surface-soft,var(--ws-surface));color:var(--ws-text);border:1px solid var(--ws-border);border-radius:8px;padding:8px 12px;cursor:pointer}
+.ved-quote-entries{display:grid;gap:12px;margin-top:16px}.ved-quote-entry{border:1px solid var(--ws-border);border-radius:12px;padding:12px;background:var(--ws-surface)}
+.ved-quote-entry-toggle{min-width:0;display:flex;flex:1;align-items:center;flex-wrap:wrap;gap:8px;text-align:left;background:none;color:var(--ws-text);border:0;cursor:pointer;padding:5px}
+.ved-quote-entry-toggle strong{color:var(--ws-active,#37c98e)}.ved-quote-entry-toggle span{font-size:12px}.ved-quote-entry-toggle small{font-size:11px;color:var(--ws-text-muted);overflow-wrap:anywhere}
+.ved-quote-original{flex:none}.ved-quote-muted{color:var(--ws-text-muted);font-size:12px;margin:7px 0}
+.ved-quote-status{font-size:10px;color:var(--ws-text-muted);padding-left:5px}.ved-quote-table-scroll{overflow:auto;margin-top:10px}
+.ved-quote-table{width:100%;border-collapse:collapse;white-space:normal;font-size:12px;min-width:750px}
+.ved-quote-table th,.ved-quote-table td{padding:10px 9px;text-align:left;border-bottom:1px solid var(--ws-border);vertical-align:top}
+.ved-quote-table th{font-weight:700;color:var(--ws-text-muted)}.ved-quote-table td small{display:block;color:var(--ws-text-muted);font-size:10px;margin-top:4px}
+.ved-quote-action{display:inline-flex;padding:7px 10px;background:rgba(55,201,142,.1);color:var(--ws-active,#37c98e);border:1px solid rgba(55,201,142,.5);border-radius:8px;text-decoration:none;font-weight:650}
+.ved-quote-warning{color:#eeb978}.ved-quote-ready{color:#37c98e}.ved-quote-error{color:#eb6b78}
+@media(max-width:640px){.ved-quote-entry-head{align-items:flex-start;flex-direction:column}.ved-quote-original{align-self:flex-end}}

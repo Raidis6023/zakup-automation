@@ -16,7 +16,7 @@ export async function GET() {
   try{
     const {admin}=await requireVedAccess();
     const {data,error}=await admin.from("ved_calculation_snapshots")
-     .select("id,calculation_id,title,article,version_no,calculation_date,input_data,result_data,tariffs_data,created_at")
+     .select("id,calculation_id,title,article,version_no,calculation_date,input_data,result_data,tariffs_data,created_at,offer_item_id")
      .order("created_at",{ascending:false}).limit(60);
     if(error)throw error;
     return NextResponse.json({ok:true,items:data??[]},{headers:{"Cache-Control":"private,no-store"}});
@@ -35,6 +35,14 @@ export async function POST(request: Request) {
     }
     if (JSON.stringify(body).length>100000)
       return NextResponse.json({ok:false,error:"Слишком большой расчёт"},{status:413});
+    const sourceOfferItemId=body.sourceOfferItemId===undefined||body.sourceOfferItemId===null?null:String(body.sourceOfferItemId);
+    if(sourceOfferItemId!==null){
+      if(!uuidRe.test(sourceOfferItemId))return NextResponse.json({ok:false,error:"Некорректная ссылка на товар КП"},{status:400});
+      const {data:offerItem,error:itemError}=await admin.from("ved_commercial_offer_items")
+        .select("id").eq("id",sourceOfferItemId).maybeSingle();
+      if(itemError)throw itemError;
+      if(!offerItem)return NextResponse.json({ok:false,error:"Исходный товар КП не найден"},{status:404});
+    }
     const input=body.input as VedCalculationInput;
     // Recalculate on the server. Browser-submitted results are never trusted.
     const result=calculateVed(input);
@@ -75,7 +83,7 @@ export async function POST(request: Request) {
       version=latest.version_no+1;
     } else calculationId=crypto.randomUUID();
     const {data,error}=await admin.from("ved_calculation_snapshots")
-      .insert({calculation_id:calculationId,title,article,version_no:version,calculation_date:calculationDate,
+      .insert({calculation_id:calculationId,title,article,offer_item_id:sourceOfferItemId,version_no:version,calculation_date:calculationDate,
         input_data:input,result_data:result,tariffs_data:tariffSnapshot,created_by:user.id})
       .select("id,calculation_id,version_no,created_at").single();
     if(error){

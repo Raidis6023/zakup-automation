@@ -34,6 +34,7 @@ const initial: VedCalculationInput = {
 type StoredCalculation = {
   id: string; calculation_id: string; title: string; article: string;
   version_no: number; calculation_date: string; created_at: string;
+  offer_item_id?: string | null;
   input_data: VedCalculationInput;
 };
 type TariffResponse = {ok:boolean;error?:string;selected?:Partial<Record<VedTariffKey,TariffRow>>;canEdit?:boolean};
@@ -83,6 +84,8 @@ export default function VedCalculator() {
   const [title, setTitle] = useState("Первоначальный расчёт товара");
   const [article, setArticle] = useState("");
   const [calculationId, setCalculationId] = useState<string | null>(null);
+  const [offerItemId,setOfferItemId]=useState<string|null>(null);
+  const [offerSource,setOfferSource]=useState("");
   const [history, setHistory] = useState<StoredCalculation[]>([]);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -96,6 +99,57 @@ export default function VedCalculator() {
     }catch(e){setSaveMessage(e instanceof Error ? e.message : "Ошибка получения версий");}
   },[]);
   useEffect(()=>{void loadSaved();},[loadSaved]);
+  useEffect(()=>{
+    const itemId=new URLSearchParams(window.location.search).get("offerItem");
+    if(!itemId)return;
+    let active=true;
+    (async()=>{
+      try{
+        const res=await fetch("/api/ved-commercial-offers?item="+encodeURIComponent(itemId),{cache:"no-store"});
+        const json=await res.json() as {
+          ok:boolean;error?:string;
+          item?:{id:string;supplier_article:string;description_original:string;detected_data:Record<string,string|number|null>;missing_fields:string[]};
+          offer?:{quote_code:string;quote_date:string;supplier_code:string};
+        };
+        if(!res.ok||!json.ok||!json.item||!json.offer)throw Error(json.error||"Товар из КП не найден");
+        if(!active)return;
+        const info=json.item.detected_data;
+        const numeric=(name:string)=>{
+          const value=info[name];return typeof value==="number"&&Number.isFinite(value)?value:Number.NaN;
+        };
+        setOfferItemId(json.item.id);
+        setOfferSource(json.offer.quote_code+" · "+json.offer.supplier_code+
+          (json.item.missing_fields.length?" · недостаёт: "+json.item.missing_fields.join(", "):""));
+        setTitle("Расчёт "+json.item.supplier_article+" ("+json.offer.quote_code+")");
+        setArticle(json.item.supplier_article);
+        setTariffDate(json.offer.quote_date);
+        setCalculationId(null);
+        setInput(prev=>({...prev,
+          product:{...prev.product,
+            productName:json.item!.description_original.split("\n")[0].slice(0,160),
+            incoterm:String(info.incoterm||"FOB"),
+            departurePort:String(info.departurePort||""),
+            unitPriceCny:numeric("unitPriceCny"),
+            unitsPerCarton:numeric("unitsPerCarton"),
+            cartonGrossKg:numeric("cartonGrossKg"),
+            cartonVolumeM3:numeric("cartonVolumeM3"),
+            moqUnits:numeric("moqUnits"),
+            cartonLengthCm:typeof info.cartonLengthCm==="number"?info.cartonLengthCm:undefined,
+            cartonWidthCm:typeof info.cartonWidthCm==="number"?info.cartonWidthCm:undefined,
+            cartonHeightCm:typeof info.cartonHeightCm==="number"?info.cartonHeightCm:undefined,
+            individualLengthCm:typeof info.individualLengthCm==="number"?info.individualLengthCm:undefined,
+            individualWidthCm:typeof info.individualWidthCm==="number"?info.individualWidthCm:undefined,
+            individualHeightCm:typeof info.individualHeightCm==="number"?info.individualHeightCm:undefined,
+          },
+          customs:{...prev.customs,adValoremPercent:Number.NaN,feeDate:json.offer!.quote_date},
+        }));
+        setSaveMessage("Данные КП перенесены. Проверьте тариф пошлины и код ТН ВЭД перед сохранением.");
+      }catch(error){
+        if(active)setSaveMessage(error instanceof Error?error.message:"Не удалось открыть товар КП");
+      }
+    })();
+    return ()=>{active=false;};
+  },[]);
   useEffect(()=>{
     let active=true;
     setRatesStatus("Загрузка тарифов…");
@@ -131,7 +185,7 @@ export default function VedCalculator() {
     try{
       const response=await fetch("/api/ved-calculations",{
         method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({title,article,calculationDate:tariffDate,calculationId,input}),
+        body:JSON.stringify({title,article,calculationDate:tariffDate,calculationId,sourceOfferItemId:offerItemId,input}),
       });
       const json=await response.json() as {ok:boolean;error?:string;snapshot?:{calculation_id:string;version_no:number}};
       if(!response.ok||!json.ok||!json.snapshot)throw Error(json.error||"Сохранение не выполнено");
@@ -175,11 +229,13 @@ export default function VedCalculator() {
   const openSnapshot=(saved:StoredCalculation)=>{
     setInput(saved.input_data);setTitle(saved.title);setArticle(saved.article);
     setCalculationId(saved.calculation_id);setTariffDate(saved.calculation_date);
+    setOfferItemId(saved.offer_item_id||null);setOfferSource(saved.offer_item_id?"Открыта связанная версия КП":"");
     setSaveMessage("Открыта сохранённая версия "+saved.version_no+". Новый расчёт сохранится следующей версией.");
   };
   const startNew=()=>{
     setInput(applyTariffValues(initial,resolved));setTitle("Первоначальный расчёт товара");setArticle("");
-    setCalculationId(null);setSaveMessage("Новый расчёт: предыдущие записи сохранены.");
+    setCalculationId(null);setOfferItemId(null);setOfferSource("");
+    setSaveMessage("Новый расчёт: предыдущие записи сохранены.");
   };
   const update = (group: keyof VedCalculationInput, field: string, value: number | boolean | string | undefined) => {
     setInput(previous => ({ ...previous, [group]: { ...previous[group], [field]: value } }));
@@ -213,6 +269,8 @@ export default function VedCalculator() {
     </label>;
 
   return <div className="ved-calc">
+    {offerSource&&<div className="ved-calc-note"><strong>Источник: {offerSource}</strong>
+      <p>Товар импортирован из Excel поставщика. Отсутствующие поля оставлены пустыми. Ставка пошлины не подставляется наугад: укажите её после проверки ТН ВЭД.</p></div>}
     <div className="ved-calc-note">
       <strong>Калькулятор ВЭД · сохранение и выгрузка Excel</strong>
       <p>При новом расчёте подставляются значения из справочника ВЭД на выбранную дату. Данные демонстрационного товара необходимо заменить своими. Каждая сохранённая версия остаётся неизменной; Excel берёт из неё точные суммы и оформление утверждённого шаблона.</p>

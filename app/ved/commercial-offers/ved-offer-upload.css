@@ -83,3 +83,9 @@ html[data-theme="dark"] .ved-upload-parts button { color: #59e4ae; }
   .ved-upload-batch-controls { flex-direction: column; }
   .ved-upload-queue-title { flex-direction: column; }
 }
+
+.ved-offer-import-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+.ved-offer-import-fields label{display:grid;gap:6px;color:var(--ws-text);font-size:12px}
+.ved-offer-import-fields input,.ved-offer-import-fields select{width:100%;box-sizing:border-box;padding:9px;background:var(--ws-surface-soft,var(--ws-surface));border:1px solid var(--ws-border);color:var(--ws-text);border-radius:8px}
+.ved-upload-import-commit{color:#e8fff4!important;background:#12895b!important;border-color:#37c98e!important;font-weight:700}
+@media(max-width:540px){.ved-offer-import-fields{grid-template-columns:1fr}}
