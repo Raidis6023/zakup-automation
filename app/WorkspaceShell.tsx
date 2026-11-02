@@ -690,6 +690,7 @@ export default function WorkspaceShell({
 
     <div
       data-accent-area={accentArea}
+      data-workspace-mode={adminMode ? "admin" : "work"}
       className={
         sidebarCollapsed
 
@@ -806,7 +807,7 @@ export default function WorkspaceShell({
                   title="Сотрудники"
                 >
 
-                  <span className="home-workspace-icon home-admin-employees-icon">
+                  <span className="home-workspace-icon">
                     <AdminEmployeesIcon />
                   </span>
 
