@@ -31,6 +31,7 @@ import {
 
 import HomeThemeToggle
   from "./HomeThemeToggle";
+import HeaderCurrencyRates from "./HeaderCurrencyRates";
 
 import WorkspaceModeSwitcher
   from "./WorkspaceModeSwitcher";
@@ -3193,6 +3194,8 @@ export default function HomeHeaderActions() {
           actionsRef
         }
       >
+
+        <HeaderCurrencyRates />
 
         {/* ====================================================
             TASKS

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import {getCbrRates} from "@/lib/cbr/rates";
 import { calculateVed, VedInputError, type VedCalculationInput } from "@/lib/ved-calculation/engine";
 import { requireVedAccess, VedAccessError } from "@/lib/ved-calculation/server-access";
 import { applyTariffValues, isValidTariffDate, resolveTariffs, VED_TARIFFS, type TariffRow } from "@/lib/ved-calculation/tariffs";
@@ -42,13 +43,19 @@ export async function POST(request: Request) {
       .lte("effective_from",calculationDate).order("id",{ascending:false}).limit(1000);
     if(rateError)throw rateError;
     const selected=resolveTariffs((history??[]) as unknown as TariffRow[],calculationDate);
+    const cbr=await getCbrRates(calculationDate).catch(()=>null);
     const tariffSnapshot:Record<string,unknown>={};
     for(const item of VED_TARIFFS) {
       const row=selected[item.key];
-      const actual=(input[item.group] as unknown as Record<string,unknown>)[item.key];
+      const actual=item.group==="reference"?undefined:
+        (input[item.group] as unknown as Record<string,unknown>)[item.key];
+      const code=item.key==="usdRub"?"USD":item.key==="eurRub"?"EUR":item.key==="cnyRub"?"CNY":null;
+      const fx=code&&cbr?cbr.rates[code]:null;
+      const markup=item.key==="cnyRub"?1:0;
       tariffSnapshot[item.key]={
+        ...(fx?{officialCbr:fx.official,markupRub:markup,cbrDate:fx.effectiveDate,source:cbr?.source}:{}),
         actual:typeof actual==="number"?actual:null,
-        reference:row?Number(row.amount):null,
+        reference:fx?fx.official+markup:(row?Number(row.amount):null),
         referenceId:row?.id??null,
         effectiveFrom:row?.effective_from??null,
         isOverride:row?typeof actual==="number"&&actual!==Number(row.amount):true,

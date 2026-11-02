@@ -14,7 +14,7 @@ import {
 const initial: VedCalculationInput = {
   product: { unitPriceCny: 4.77, unitsPerCarton: 100, cartonVolumeM3: 0.1031745, cartonGrossKg: 16.8, moqUnits: 2000, markingCnyPerUnit: 0 },
   currency: { cnyRub: 13.5, eurRub: 95 },
-  container: { usableVolumeM3: 68, maxPayloadKg: 26000 },
+  container: { usableVolumeM3: 68, maxPayloadKg: 22000 },
   expenses: {
     freightBeforeBorderRub: 500000, freightAfterBorderRub: 500000,
     bankCommissionRub: 10000, brokerServicesRub: 15000,
@@ -105,6 +105,15 @@ export default function VedCalculator() {
         if(!res.ok||!json.ok)throw Error(json.error||"Не удалось получить справочники");
         if(!active)return;
         setResolved(json.selected || {});
+        // Fresh calculations get live CBR currencies and confirmed container constants.
+        // Saved snapshots must retain their own historical input values.
+        if(!calculationId&&json.selected?.cnyRub&&json.selected?.eurRub){
+          setInput(previous=>({...previous,
+            currency:{cnyRub:Number(json.selected!.cnyRub!.amount),eurRub:Number(json.selected!.eurRub!.amount)},
+            container:{usableVolumeM3:Number(json.selected!.usableVolumeM3?.amount??68),
+              maxPayloadKg:Number(json.selected!.maxPayloadKg?.amount??22000)},
+          }));
+        }
         setCanEdit(Boolean(json.canEdit));
         const count=Object.keys(json.selected||{}).length;
         setRatesStatus(count?("Подтверждено параметров на дату: "+count+" из "+VED_TARIFFS.length):
@@ -112,7 +121,7 @@ export default function VedCalculator() {
       }catch(e){if(active){setResolved({});setCanEdit(false);setRatesStatus(e instanceof Error?e.message:"Ошибка загрузки тарифов");}}
     })();
     return ()=>{active=false;};
-  },[tariffDate]);
+  },[tariffDate,calculationId]);
   const applyRates = () => {
     setInput(previous=>applyTariffValues({
       ...previous,customs:{...previous.customs,feeDate:tariffDate},
@@ -141,7 +150,7 @@ export default function VedCalculator() {
     setSaveMessage("Открыта сохранённая версия "+saved.version_no+". Новый расчёт сохранится следующей версией.");
   };
   const startNew=()=>{
-    setInput(initial);setTitle("Первоначальный расчёт товара");setArticle("");
+    setInput(applyTariffValues(initial,resolved));setTitle("Первоначальный расчёт товара");setArticle("");
     setCalculationId(null);setSaveMessage("Новый расчёт: предыдущие записи сохранены.");
   };
   const update = (group: keyof VedCalculationInput, field: string, value: number | boolean | string | undefined) => {

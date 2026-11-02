@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import {getCbrRates,type CbrRates} from "@/lib/cbr/rates";
 import { requireVedAccess, VedAccessError } from "@/lib/ved-calculation/server-access";
 import { isValidTariffDate, resolveTariffs, VED_TARIFF_KEYS, type TariffRow } from "@/lib/ved-calculation/tariffs";
 export const dynamic="force-dynamic";
@@ -20,6 +21,20 @@ export async function GET(request: Request) {
     if(error)throw error;
     const rows=(data||[]) as unknown as TariffRow[];
     const selected=resolveTariffs(rows,asOf);
+    let cbrRates:CbrRates|null=null,fxError:string|null=null;
+    try{
+      cbrRates=await getCbrRates(asOf);
+      for(const [key,code,markup] of [
+        ["usdRub","USD",0],["eurRub","EUR",0],["cnyRub","CNY",1],
+      ] as const){
+        const r=cbrRates.rates[code];
+        selected[key]={id:0,tariff_key:key,effective_from:r.effectiveDate,
+          amount:r.official+markup,reason:"Банк России "+r.official+" ₽, надбавка "+markup+" ₽",created_at:""};
+      }
+    }catch(e){
+      fxError=e instanceof Error?e.message:"Курсы ЦБ недоступны";
+      delete selected.usdRub;delete selected.eurRub;delete selected.cnyRub;
+    }
     // Whole audit history can include future revisions, but only for authorised editors.
     let history: TariffRow[]=[];
     if (url.searchParams.get("history")==="1" && canEdit) {
@@ -29,7 +44,7 @@ export async function GET(request: Request) {
       if(histError)throw histError;
       history=(events||[]) as unknown as TariffRow[];
     }
-    return NextResponse.json({ok:true,asOf,selected,history,canEdit},{headers:{"Cache-Control":"private,no-store"}});
+    return NextResponse.json({ok:true,asOf,selected,history,canEdit,cbrRates,fxError},{headers:{"Cache-Control":"private,no-store"}});
   }catch(e){return errorResponse(e);}
 }
 export async function POST(request: Request) {
@@ -40,6 +55,7 @@ export async function POST(request: Request) {
     const date=String(body.effectiveFrom||"");
     const amount=body.amount;
     const reason=typeof body.reason==="string"?body.reason.trim():"";
+    if(["usdRub","eurRub","cnyRub"].includes(key))return NextResponse.json({ok:false,error:"Валюты подгружаются автоматически из ЦБ"},{status:400});
     if(!VED_TARIFF_KEYS.has(key)||!isValidTariffDate(date)||
        typeof amount!=="number"||!Number.isFinite(amount)||amount<0||amount>1e12||
        reason.length>1000){

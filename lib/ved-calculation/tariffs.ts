@@ -1,7 +1,8 @@
 import type { VedCalculationInput } from "./engine";
 
 export type VedTariffKey =
-  | "cnyRub" | "eurRub" | "usableVolumeM3" | "maxPayloadKg"
+  | "usdRub" | "cnyRub" | "eurRub" | "usableVolumeM3" | "maxPayloadKg"
+  | "truckVolume90M3" | "truckVolume100M3" | "truckPayloadKg"
   | "freightBeforeBorderRub" | "freightAfterBorderRub" | "bankCommissionRub"
   | "brokerServicesRub" | "certificationRub" | "moldingRub"
   | "indirectPaymentsRub" | "additionalRub" | "otherSharedRub"
@@ -22,16 +23,21 @@ export type TariffDefinition = {
   key: VedTariffKey;
   title: string;
   unit: string;
-  section: "Курсы" | "Контейнер" | "Логистика" | "Разовые расходы" | "Налоги";
-  group: "currency" | "container" | "expenses" | "customs" | "product";
+  section: "Курсы" | "Контейнер" | "Фуры" | "Логистика" | "Разовые расходы" | "Налоги";
+  group: "currency" | "container" | "expenses" | "customs" | "product" | "reference";
+  automatic?: boolean;
 };
 
 /** Shared list: one source for server validation, reference editor and calculator mapping. */
 export const VED_TARIFFS: readonly TariffDefinition[] = [
-  {key:"cnyRub", title:"Курс CNY к RUB", unit:"₽/CNY",section:"Курсы",group:"currency"},
-  {key:"eurRub", title:"Курс EUR к RUB", unit:"₽/EUR",section:"Курсы",group:"currency"},
+  {key:"usdRub",title:"USD к RUB (ЦБ)",unit:"₽/USD",section:"Курсы",group:"reference",automatic:true},
+  {key:"eurRub",title:"EUR к RUB (ЦБ)",unit:"₽/EUR",section:"Курсы",group:"currency",automatic:true},
+  {key:"cnyRub",title:"CNY к RUB (ЦБ + 1 ₽)",unit:"₽/CNY",section:"Курсы",group:"currency",automatic:true},
   {key:"usableVolumeM3", title:"Рабочий объём 40HQ",unit:"м³",section:"Контейнер",group:"container"},
   {key:"maxPayloadKg",title:"Допустимая масса контейнера",unit:"кг",section:"Контейнер",group:"container"},
+  {key:"truckVolume90M3",title:"Объём фуры 90 м³",unit:"м³",section:"Фуры",group:"reference"},
+  {key:"truckVolume100M3",title:"Объём фуры 100 м³",unit:"м³",section:"Фуры",group:"reference"},
+  {key:"truckPayloadKg",title:"Допустимая масса фуры",unit:"кг",section:"Фуры",group:"reference"},
   {key:"freightBeforeBorderRub",title:"Перевозка до границы",unit:"₽/40HQ",section:"Логистика",group:"expenses"},
   {key:"freightAfterBorderRub",title:"Перевозка после границы",unit:"₽/40HQ",section:"Логистика",group:"expenses"},
   {key:"bankCommissionRub",title:"Банковские расходы",unit:"₽/40HQ",section:"Логистика",group:"expenses"},
@@ -77,7 +83,7 @@ export function applyTariffValues(
   };
   for (const item of VED_TARIFFS) {
     const row = resolved[item.key];
-    if (row) {
+    if (row && item.group !== "reference") {
       const group = next[item.group] as unknown as Record<string, number | string | boolean | undefined>;
       group[item.key] = Number(row.amount);
     }
