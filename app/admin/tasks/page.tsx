@@ -1,41 +1,15 @@
 import PageHeader from "../../ui/PageHeader";
+import TasksBoard from "../../tasks/TasksBoard";
+
 export default function AdminTasksPage() {
-
   return (
-
-    <section
-      aria-label=
-        "Задачи администрирования"
-    >
-
-      <PageHeader variant="admin" title="Задачи" description="Задачи администраторов и всех рабочих отделов." />
-
-
-      <section
-        className=
-          "section"
-      >
-
-        <h2
-          className=
-            "section-title"
-        >
-          Административные задачи
-        </h2>
-
-
-        <div
-          className=
-            "muted"
-        >
-          Отдельное распределение задач между администраторами
-          будет добавлено на следующем этапе.
-        </div>
-
-      </section>
-
-    </section>
-
+    <main className="page tasks-page">
+      <PageHeader
+        variant="admin"
+        title="Задачи"
+        description="Задачи вашего отдела, поручения другим отделам и личные заметки."
+      />
+      <TasksBoard />
+    </main>
   );
-
 }
