@@ -2,11 +2,12 @@
 import FinanceDynamics from "../../components/finance/FinanceDynamics";
 import CopyArticle from "../../components/finance/CopyArticle";
 import OrderFulfillmentPanels from "../../components/finance/OrderFulfillmentPanels";
+import AccrualBreakdownList from '../../components/finance/AccrualBreakdownList';
 import {downloadFinanceWorkbook} from "../../components/finance/export-xlsx";
 import { useEffect, useMemo, useState } from "react";
 type Row={nm_id:string;article:string;name:string;master_code:string|null;manager:string;realization:number;to_transfer:number;delivery:number;storage_in_report:number|null;acceptance:number;penalty:number;deduction:number;rows:number;sales_units:number;return_units:number;buyouts:number;cogs:number|null;mayak_expense:number|null;preliminary_result:number|null;missing_rates:string[];cost_rub:number|null;mayak_rub:number|null;order_count:number;cancel_count:number;external_storage:number|null;operations:Record<string,{amount:number;count:number;realization:number;delivery:number;storage:number;penalty:number;deduction:number}>};
 type Ad={nm_id:number;date:string;campaign_id:number;spend:number;views:number;clicks:number;orders:number;sum_price:number};
-type Data={daily:Array<{day:string;rows:Array<{nm_id:string;revenue:number;profit:number|null;orders:number;buyouts:number}>}>;ok:boolean;from:string;to:string;financial_rows:number;rows:Row[];cache?:{status:string;rowsSaved:number};ads:{items:Ad[];campaigns:number;coverage:string;warning:string|null};orders?:{rows:number;coverage:string};storage?:{rows:number;coverage:string};coverage:Record<string,string>;notice:string};
+type Data={daily:Array<{day:string;rows:Array<{nm_id:string;revenue:number;profit:number|null;orders:number;buyouts:number}>}>;ok:boolean;from:string;to:string;financial_rows:number;rows:Row[];cache?:{status:string;rowsSaved:number};ads:{items:Ad[];campaigns:number;coverage:string;warning:string|null};orders?:{rows:number;coverage:string};storage?:{rows:number;coverage:string};coverage:Record<string,string>;notice:string;unallocated?:Array<{name:string;amount:number;daily:Array<{date:string;amount:number;count:number}>}>};
 const money=(v:number|null)=>v==null?"—":v.toLocaleString("ru-RU",{minimumFractionDigits:2,maximumFractionDigits:2});
 const day=(offset:number)=>{const d=new Date();d.setUTCDate(d.getUTCDate()+offset);return d.toISOString().slice(0,10);};
 const reportCache=new Map<string,{at:number;data:Data}>();
@@ -92,7 +93,8 @@ return <div className="ozf-layout">
 <p className="ozf-notice" style={{marginTop:16}}>Покрытие: финансы — <b>{data.coverage.finance}</b>, заказы — <b>{data.coverage.orders}</b>, реклама — <b>{data.coverage.advertising}</b>, хранение — <b>{data.coverage.paid_storage}</b>. Неполные разделы не подменяются нулями. {data.ads.warning}</p>
 <p className="ozf-notice">Артикулов с недостающими ставками: <b>{missingRateArticles}</b>. {allRatesFilled?<>Предварительный итог за выбранный период: <b>{money(sum(r=>r.preliminary_result??0))} ₽</b>. Реклама и хранение ещё не подтверждены.</>:<>После заполнения ставок по всем артикулам здесь появится предварительный итог.</>}</p>
 <OrderFulfillmentPanels market="wb" from={data.from} to={data.to}/>
- <FinanceDynamics marketplace="wb" from={data.from} to={data.to} provided={wholeSeries} selected="revenue"/>
+ <FinanceDynamics marketplace="wb" from={data.from} to={data.to} provided={wholeSeries} selected="revenue" expectedProfit={allRatesFilled?sum(r=>r.preliminary_result??0):null}/>
+ {Boolean(data.unallocated?.length)&&<details className="ozf-panel ozf-collapsible-register" style={{marginTop:14}}><summary>Нераспределённые расходы WB · детализация по датам и ID</summary><AccrualBreakdownList market="wb" from={data.from} to={data.to} items={data.unallocated??[]} total={(data.unallocated??[]).reduce((s,x)=>s+x.amount,0)} totalLabel="Итого нераспределённые операции"/></details>}
 <div className="ozf-toolbar" style={{marginTop:18}}><input placeholder="Поиск по артикулу, nmId или товару" value={filter} onChange={e=>setFilter(e.target.value)}/><span>Артикулов: {rows.length} · Финансовых операций: {data.financial_rows}</span></div>
 <div className="ozf-financial-scroll"><table className="ozf-table ozf-financial-table" style={{minWidth:1900}}>
 <thead><tr>{["Артикул","nmId","Товар","Заказы, шт","Отмены, шт","Реализация, ₽","К перечислению, ₽","Логистика, ₽","Хранение в реализации, ₽","Отдельное хранение, ₽","Приёмка, ₽","Штрафы, ₽","Удержания, ₽","Реклама, ₽","Расходы всего, ₽","Предв. результат, ₽"].map(h=><th key={h}>{h}</th>)}</tr></thead>

@@ -264,9 +264,18 @@ export async function GET(request:NextRequest){
       order_count:orderByNm.get(row.nm_id)?.orders??0,cancel_count:orderByNm.get(row.nm_id)?.cancelled??0,
       external_storage:scheme?null:storageByNm.has(row.nm_id)?round(storageByNm.get(row.nm_id)!):null};
   });
+  const commonMap=new Map<string,{name:string;amount:number;days:Map<string,{date:string;amount:number;count:number}>}>();
+  for(const l of financialLines){
+   if(num(l.nmId)!==0)continue;
+   const name=String(l.sellerOperName??l.docTypeName??'Прочие операции'),day=String(l.rrDate??l.rrdDt??l.rrdDate??l.saleDt??'').slice(0,10);
+   const amount=num(l.forPay)-num(l.deliveryAmount)-num(l.paidStorage)-num(l.paidAcceptance)-num(l.penalty)-num(l.deduction);
+   const entry=commonMap.get(name)??{name,amount:0,days:new Map<string,{date:string;amount:number;count:number}>()};
+   entry.amount+=amount;const item=entry.days.get(day)??{date:day,amount:0,count:0};item.amount+=amount;item.count++;entry.days.set(day,item);commonMap.set(name,entry);
+  }
+  const unallocated=[...commonMap.values()].map(v=>({name:v.name,amount:v.amount,daily:[...v.days.values()].sort((a,b)=>a.date.localeCompare(b.date))}));
   const adItems:AdItem[]=scheme?[]:ads.map(row=>({nm_id:Number(row.nm_id),date:row.snapshot_day,campaign_id:Number(row.campaign_id),spend:Number(row.spend),views:Number(row.views),clicks:Number(row.clicks),orders:Number(row.orders),sum_price:Number(row.sum_price)}));
   const adsComplete=(adSnapshots.data?.length??0)===expectedDays,storageComplete=(storageSnapshots.data?.length??0)===expectedDays,ordersComplete=orders.length>0;
-  return NextResponse.json({ok:true,from,to,scheme:scheme??null,financial_rows:financialLines.length,daily,rows:enriched,
+  return NextResponse.json({ok:true,from,to,scheme:scheme??null,unallocated,financial_rows:financialLines.length,daily,rows:enriched,
     ads:{items:adItems,campaigns:new Set(ads.map(x=>x.campaign_id)).size,coverage:scheme?'not_attributed':adsComplete?'cached_complete':adItems.length?'cached_partial':'not_loaded',warning:scheme?'Не связанные с SRID рекламные списания исключены.':adsComplete?null:'Реклама загружена не за все дни выбранного периода.'},
     orders:{rows:orders.length,coverage:ordersComplete?'cached_partial':'not_loaded'},storage:{rows:storage.length,coverage:storageComplete?'cached_complete':storage.length?'cached_partial':'not_loaded'},
     coverage:{finance:latest.status==='complete'?'cached_complete':'cached_partial',advertising:adsComplete?'cached_complete':adItems.length?'cached_partial':'not_loaded',paid_storage:storageComplete?'cached_complete':storage.length?'cached_partial':'not_loaded',orders:ordersComplete?'cached_partial':'not_loaded',advertising_actual_charges:'not_loaded'},
