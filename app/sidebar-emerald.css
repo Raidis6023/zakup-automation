@@ -120,11 +120,11 @@ html[data-theme="dark"] .home-shell[data-accent-area] {
 
 .home-shell .home-sidebar .home-workspace-link--active .home-brand-icon,
 .home-shell .home-sidebar .home-workspace-link--active .home-workspace-icon,
-.home-shell .home-sidebar .home-ved-subnav-link--active .home-ved-subnav-icon {
+.home-shell .home-sidebar .home-ved-subnav-link--active .home-brand-icon {
   color: #44ffbd;
 }
 .home-shell .home-sidebar .home-workspace-link--active :is(.home-brand-icon, .home-workspace-icon)::before,
-.home-shell .home-sidebar .home-ved-subnav-link--active .home-ved-subnav-icon::before,
+.home-shell .home-sidebar .home-ved-subnav-link--active .home-brand-icon::before,
 .home-shell .home-topbar-right .home-icon-button:is(.active, :focus-visible) .home-utility-icon-visual::before {
   content: "";
   position: absolute;
@@ -135,7 +135,7 @@ html[data-theme="dark"] .home-shell[data-accent-area] {
   pointer-events: none;
 }
 .home-shell .home-sidebar .home-workspace-link--active :is(.home-brand-icon, .home-workspace-icon)::after,
-.home-shell .home-sidebar .home-ved-subnav-link--active .home-ved-subnav-icon::after,
+.home-shell .home-sidebar .home-ved-subnav-link--active .home-brand-icon::after,
 .home-shell .home-topbar-right .home-icon-button:is(.active, :focus-visible) .home-utility-icon-visual::after {
   content: "";
   position: absolute;

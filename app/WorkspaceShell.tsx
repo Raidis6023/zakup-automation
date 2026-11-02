@@ -1055,7 +1055,7 @@ export default function WorkspaceShell({
                         aria-current={isNavActive(item.key) ? "page" : undefined}
                         title={item.label}
                       >
-                        <span className="home-ved-subnav-icon">
+                        <span className="home-ved-subnav-icon home-brand-icon">
                           {item.icon === "orders" || item.icon === "documents" || item.icon === "references" ? (
                             <EmeraldSidebarIcon kind={item.icon} />
                           ) : (
