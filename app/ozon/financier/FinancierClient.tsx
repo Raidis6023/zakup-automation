@@ -1,6 +1,7 @@
 "use client";
 import {prepareFinanceSeries,clearFinanceSeries} from '../../components/finance/finance-series-cache';
 import OzonMissingRateEditor from "./OzonMissingRateEditor";
+import OrderFulfillmentPanels from "../../components/finance/OrderFulfillmentPanels";
 import FinancierDetailTable from "./FinancierDetailTable";
 import AccrualBreakdownList from '../../components/finance/AccrualBreakdownList';
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -397,7 +398,8 @@ export default function FinancierClient() {
       {error && <p className="ozf-error" role="alert">{error}</p>}
       {progress && <p className="ozf-progress" role="status">{progress}</p>}
       {(busy||loading)&&<div className="bi-skeleton" role="status">Подготавливаем полный отчёт…</div>}
-      {data&&!busy&&!loading&&<FinancierDetailTable data={data} rows={rows}
+      {data&&!busy&&!loading&&<OrderFulfillmentPanels market="ozon" from={data.from} to={data.to}/>}
+       {data&&!busy&&!loading&&<FinancierDetailTable data={data} rows={rows}
         includeUnallocated={managerFilter==="Все КМ"} onSaved={load}
         onToggle={(masterCode,offerId,checked)=>{
           const row=rows.find(r=>r.master_code===masterCode && r.offer_id===offerId);

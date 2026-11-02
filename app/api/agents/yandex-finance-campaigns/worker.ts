@@ -8,7 +8,7 @@ export async function advancePromotion(){
  const c=await db.from('yandex_promotion_control').update({locked_until:new Date(Date.now()+240000).toISOString()}).eq('id',1).or('locked_until.is.null,locked_until.lt.'+now).select('next_request_at').maybeSingle();if(c.error)throw c.error;if(!c.data)return {ok:true,phase:'busy'};locked=true;
  // Financial report generation has priority: the basic Yandex plan permits one report at a time.
  const finance=await db.from('yandex_finance_reports').select('id').eq('status','loading').limit(1);if(finance.error)throw finance.error;
- const q=await db.from('yandex_promotion_jobs').select('day,kind,status,report_id').in('status',['requested','pending']).order('status',{ascending:false}).order('day').order('kind').limit(1).maybeSingle();if(q.error)throw q.error;if(!q.data)return {ok:true,phase:'idle'};task=q.data as Task;
+ const q=await db.from('yandex_promotion_jobs').select('day,kind,status,report_id').in('status',['requested','pending']).order('status',{ascending:false}).order('day',{ascending:false}).order('kind').limit(1).maybeSingle();if(q.error)throw q.error;if(!q.data)return {ok:true,phase:'idle'};task=q.data as Task;
  if(task.status==='pending'){
  if(finance.data.length)return {ok:true,phase:'finance_loading'};
  if(c.data.next_request_at&&Date.parse(c.data.next_request_at)>Date.now())return {ok:true,phase:'cooldown'};

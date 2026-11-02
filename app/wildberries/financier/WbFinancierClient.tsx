@@ -1,6 +1,7 @@
 "use client";
 import FinanceDynamics from "../../components/finance/FinanceDynamics";
 import CopyArticle from "../../components/finance/CopyArticle";
+import OrderFulfillmentPanels from "../../components/finance/OrderFulfillmentPanels";
 import {downloadFinanceWorkbook} from "../../components/finance/export-xlsx";
 import { useEffect, useMemo, useState } from "react";
 type Row={nm_id:string;article:string;name:string;master_code:string|null;manager:string;realization:number;to_transfer:number;delivery:number;storage_in_report:number|null;acceptance:number;penalty:number;deduction:number;rows:number;sales_units:number;return_units:number;buyouts:number;cogs:number|null;mayak_expense:number|null;preliminary_result:number|null;missing_rates:string[];cost_rub:number|null;mayak_rub:number|null;order_count:number;cancel_count:number;external_storage:number|null;operations:Record<string,{amount:number;count:number;realization:number;delivery:number;storage:number;penalty:number;deduction:number}>};
@@ -37,7 +38,7 @@ async function saveRates(){if(!active)return;setSavingRates(true);setError('');t
 const sum=(fn:(r:Row)=>number)=>rows.reduce((t,r)=>t+fn(r),0);
 const allRatesFilled=rows.length>0&&rows.every(r=>r.preliminary_result!==null);
 const missingRateArticles=rows.filter(r=>r.missing_rates.length>0).length;
-const adCovered=data?.ads.coverage==="stats_only";
+const adCovered=data?.ads.coverage==="cached_complete";
 const exportRows=data?.rows??[];
 const missingRows=exportRows.filter(r=>r.missing_rates.length>0||!r.master_code||r.manager==="Не назначен");
 function exportFinancialResult(){
@@ -90,7 +91,8 @@ return <div className="ozf-layout">
 {data.cache?.status!=="complete"&&<p className="ozf-error" role="alert">НЕПОЛНАЯ ВЫГРУЗКА: сохранено {data.cache?.rowsSaved?.toLocaleString("ru-RU")??"?"} строк. Финансовые итоги предварительные и не пригодны для решений.</p>}
 <p className="ozf-notice" style={{marginTop:16}}>Покрытие: финансы — <b>{data.coverage.finance}</b>, заказы — <b>{data.coverage.orders}</b>, реклама — <b>{data.coverage.advertising}</b>, хранение — <b>{data.coverage.paid_storage}</b>. Неполные разделы не подменяются нулями. {data.ads.warning}</p>
 <p className="ozf-notice">Артикулов с недостающими ставками: <b>{missingRateArticles}</b>. {allRatesFilled?<>Предварительный итог за выбранный период: <b>{money(sum(r=>r.preliminary_result??0))} ₽</b>. Реклама и хранение ещё не подтверждены.</>:<>После заполнения ставок по всем артикулам здесь появится предварительный итог.</>}</p>
-<FinanceDynamics marketplace="wb" from={data.from} to={data.to} provided={wholeSeries} selected="revenue"/>
+<OrderFulfillmentPanels market="wb" from={data.from} to={data.to}/>
+ <FinanceDynamics marketplace="wb" from={data.from} to={data.to} provided={wholeSeries} selected="revenue"/>
 <div className="ozf-toolbar" style={{marginTop:18}}><input placeholder="Поиск по артикулу, nmId или товару" value={filter} onChange={e=>setFilter(e.target.value)}/><span>Артикулов: {rows.length} · Финансовых операций: {data.financial_rows}</span></div>
 <div className="ozf-financial-scroll"><table className="ozf-table ozf-financial-table" style={{minWidth:1900}}>
 <thead><tr>{["Артикул","nmId","Товар","Заказы, шт","Отмены, шт","Реализация, ₽","К перечислению, ₽","Логистика, ₽","Хранение в реализации, ₽","Отдельное хранение, ₽","Приёмка, ₽","Штрафы, ₽","Удержания, ₽","Реклама, ₽","Расходы всего, ₽","Предв. результат, ₽"].map(h=><th key={h}>{h}</th>)}</tr></thead>
