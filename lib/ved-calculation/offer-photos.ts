@@ -2,10 +2,10 @@ import ExcelJS from "exceljs";
 import type {ImageAttachment} from "@/lib/ved-calculation/excel-export";
 export type PhotoPair={productPhoto:ImageAttachment|null;packagingPhoto:ImageAttachment|null};
 type Position={sheet:string;row:number;product:string;};
-function imageBytes(media:ExcelJS.Media):ImageAttachment|null{
+function imageBytes(media:ExcelJS.Image):ImageAttachment|null{
  const ext=String(media.extension||"").toLowerCase();
  if(!["png","jpg","jpeg","gif"].includes(ext))return null;
- const image=media as ExcelJS.Media & {base64?:string};
+ const image=media as ExcelJS.Image & {base64?:string};
  const buffer=media.buffer?Buffer.from(media.buffer):
   image.base64?Buffer.from(image.base64.replace(/^data:[^,]+,/,""),"base64"):null;
  return buffer?{buffer,extension:ext==="jpg"?"jpeg":ext as "png"|"jpeg"|"gif"}:null;
