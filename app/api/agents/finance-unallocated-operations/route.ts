@@ -32,7 +32,7 @@ export async function GET(req:NextRequest){try{
    if((r.data?.length??0)<1000)break;
   }
   rows=raw.map(x=>x.payload).filter(p=>p?.source==='expense'&&p.sheet===name&&p.serviceDate===day&&(p.allocation==='common'||p.allocation==='subscription'||!p.article))
-   .map(p=>({id:p.sheet+' · строка '+p.row,orderId:p.orderId||null,article:p.article||null,amount:money(p.amount),type:p.allocation}));
+   .map(p=>({id:String(p.sheet??'')+' · строка '+String(p.row??''),orderId:p.orderId?String(p.orderId):null,article:p.article?String(p.article):null,amount:money(p.amount),type:String(p.allocation??'')}));
  }else{
   const raw:Array<{payload:Record<string,unknown>}>=[];
   for(let offset=0;;offset+=1000){
