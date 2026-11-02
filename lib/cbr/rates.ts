@@ -53,16 +53,19 @@ export async function getCbrRates(asOf:string=moscowToday()):Promise<CbrRates>{
  // Trend direction must compare two different CBR publication dates.
  // Otherwise, on weekends/holidays, yesterday and today resolve to the same
  // document and every currency incorrectly appears unchanged.
- let previousPublished:Doc|null=null;
- for(let n=1;n<=8;n++){
-  try{
-   const p=await load(before(current.effectiveDate,n));
-   if(p.effectiveDate<current.effectiveDate){
-    previousPublished=p;
+ let previousPublished:Doc|null=
+  yesterday&&yesterday.effectiveDate<current.effectiveDate?yesterday:null;
+ if(!previousPublished){
+  for(let n=1;n<=8;n++){
+   try{
+    const p=await load(before(current.effectiveDate,n));
+    if(p.effectiveDate<current.effectiveDate){
+     previousPublished=p;
+     break;
+    }
+   }catch{
     break;
    }
-  }catch{
-   break;
   }
  }
 
