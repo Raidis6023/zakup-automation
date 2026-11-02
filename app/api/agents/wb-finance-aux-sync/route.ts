@@ -58,12 +58,13 @@ async function syncAds(from:string,to:string,deadline:number){
   for(const campaign of campaigns as Json[]){const campaignId=num(campaign.advertId);for(const day of Array.isArray(campaign.days)?campaign.days as Json[]:[]){const d=String(day.date??'').slice(0,10);for(const app of Array.isArray(day.apps)?day.apps as Json[]:[]){for(const item of Array.isArray(app.nms)?app.nms as Json[]:[]){const nmId=num(item.nmId);if(!nmId||d<from||d>to)continue;const key=d+'|'+campaignId+'|'+nmId,old=grouped.get(key);grouped.set(key,{snapshot_day:d,campaign_id:campaignId,nm_id:nmId,spend:num(item.sum)+(old?.spend??0),views:num(item.views)+(old?.views??0),clicks:num(item.clicks)+(old?.clicks??0),orders:num(item.orders)+(old?.orders??0),sum_price:num(item.sum_price)+(old?.sum_price??0),payload:{...item,appType:app.appType},captured_at:new Date().toISOString()});}}}}
  }
  const db=createAdminClient();const records=[...grouped.values()];
- const deleted=await db.from('wb_finance_ad_daily').delete().gte('snapshot_day',from).lte('snapshot_day',to);if(deleted.error)throw deleted.error;
- await upsertBatches('wb_finance_ad_daily',records,'snapshot_day,campaign_id,nm_id');
  const byDay=new Map<string,number>();for(const row of records)byDay.set(row.snapshot_day,(byDay.get(row.snapshot_day)??0)+1);
  const totalBatches=Math.ceil(ids.length/100),complete=processedBatches===totalBatches;
- if(complete)await upsertBatches('wb_finance_ad_snapshots',days(from,to).map(snapshot_day=>({snapshot_day,row_count:byDay.get(snapshot_day)??0,captured_at:new Date().toISOString()})),'snapshot_day');
- return {ok:true,campaigns:ids.length,rows:records.length,batches:processedBatches,total_batches:totalBatches,complete};
+ if(!complete)return {ok:false,campaigns:ids.length,rows:records.length,batches:processedBatches,total_batches:totalBatches,complete:false,error:'Частичная выгрузка рекламы WB: старый кэш сохранён'};
+ const deleted=await db.from('wb_finance_ad_daily').delete().gte('snapshot_day',from).lte('snapshot_day',to);if(deleted.error)throw deleted.error;
+ await upsertBatches('wb_finance_ad_daily',records,'snapshot_day,campaign_id,nm_id');
+ await upsertBatches('wb_finance_ad_snapshots',days(from,to).map(snapshot_day=>({snapshot_day,row_count:byDay.get(snapshot_day)??0,captured_at:new Date().toISOString()})),'snapshot_day');
+ return {ok:true,campaigns:ids.length,rows:records.length,batches:processedBatches,total_batches:totalBatches,complete:true};
 }
 
 const storageDay=(row:Json)=>String(row.date??row.dt??row.originalDate??'').slice(0,10);

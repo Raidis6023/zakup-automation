@@ -33,7 +33,7 @@ async function readPages<T>(load:(from:number,to:number)=>Promise<{data:T[]|null
 }
 
 type Rate={nm_id:string;valid_from:string;cost_cents:number|null;mayak_cents:number|null;version:number};
-function groupFinancial(lines:FinanceLine[],rates:Rate[]=[]) {
+function groupFinancial(lines:FinanceLine[],rates:Rate[]=[],sharedRates:Map<string,Rate[]>=new Map()) {
  const rateMap=new Map<string,Rate[]>();for(const r of rates){const a=rateMap.get(r.nm_id)??[];a.push(r);rateMap.set(r.nm_id,a);}for(const a of rateMap.values())a.sort((x,y)=>y.valid_from.localeCompare(x.valid_from));
   const byId=new Map<string,{nm_id:string;article:string;name:string;realization:number;to_transfer:number;delivery:number;storage_in_report:number|null;acceptance:number;penalty:number;deduction:number;rows:number;sales_units:number;return_units:number;net_transfer:number;cogs_estimate:number;mayak_estimate:number;cost_missing:boolean;mayak_missing:boolean;cost_rub:number|null;mayak_rub:number|null;operations:Record<string,{amount:number;count:number;realization:number;delivery:number;storage:number;penalty:number;deduction:number}>}>();
   for(const l of lines){
@@ -53,8 +53,11 @@ function groupFinancial(lines:FinanceLine[],rates:Rate[]=[]) {
     if(quantity&&(sold||returned)){
       const d=String(l.rrDate??l.rrdDt??l.rrdDate??l.saleDt??'').slice(0,10);
       const rate=(rateMap.get(key)??[]).find(r=>r.valid_from<=d);
-      const cost=rate?.cost_cents==null?null:Number(rate.cost_cents)/100;
-      const mayak=rate?.mayak_cents==null?null:Number(rate.mayak_cents)/100;
+       const shared=(sharedRates.get(key)??[]).find(r=>r.valid_from<=d);
+      const costCents=rate?.cost_cents??shared?.cost_cents??null;
+       const cost=costCents===null?null:Number(costCents)/100;
+      const mayakCents=rate?.mayak_cents??shared?.mayak_cents??null;
+       const mayak=mayakCents===null?null:Number(mayakCents)/100;
       if(cost===null)x.cost_missing=true;else{x.cogs_estimate+=(sold?1:-1)*quantity*cost;x.cost_rub=cost;}
       if(sold){if(mayak===null)x.mayak_missing=true;else{x.mayak_estimate+=quantity*mayak;x.mayak_rub=mayak;}}
     }
@@ -194,7 +197,37 @@ export async function GET(request:NextRequest){
   }
   const {data:rates,error:rateError}=await db.from('wb_finance_unit_rates').select('nm_id,valid_from,cost_cents,mayak_cents,version').order('valid_from',{ascending:false});
   if(rateError)throw rateError;
-  const grouped=groupFinancial(lines,(rates??[]) as Rate[]);
+
+  // ENOT tariffs are shared across marketplaces; WB-specific tariffs take precedence.
+  const [listings,managers]=await Promise.all([
+    readPages<{external_id:string;seller_article:string;master_code:string|null}>(async(a,b)=>{const q=await db.from('marketplace_listings').select('external_id,seller_article,master_code').eq('marketplace','wildberries').eq('is_active',true).order('id').range(a,b);return {data:q.data,error:q.error};}),
+    readPages<{master_code:string;manager_name:string}>(async(a,b)=>{const q=await db.from('ozon_finance_managers').select('master_code,manager_name').order('master_code').range(a,b);return {data:q.data,error:q.error};})
+  ]);
+  const [ymRates,ozonCosts,ozonMayak]=await Promise.all([
+    readPages<{master_code:string;valid_from:string;cost_cents:number|null;mayak_cents:number|null}>(async(a,b)=>{const q=await db.from('yandex_finance_rates').select('master_code,valid_from,cost_cents,mayak_cents').order('master_code').range(a,b);return {data:q.data,error:q.error};}),
+    readPages<{master_code:string;valid_from:string;unit_cost_rub:number}>(async(a,b)=>{const q=await db.from('ozon_finance_costs').select('master_code,valid_from,unit_cost_rub').order('master_code').range(a,b);return {data:q.data,error:q.error};}),
+    readPages<{master_code:string;valid_from:string;unit_cost_rub:number}>(async(a,b)=>{const q=await db.from('ozon_finance_mayak').select('master_code,valid_from,unit_cost_rub').order('master_code').range(a,b);return {data:q.data,error:q.error};})
+  ]);
+  const ymByMaster=new Map<string,typeof ymRates>(),costByMaster=new Map<string,typeof ozonCosts>(),mayakByMaster=new Map<string,typeof ozonMayak>();
+  for(const x of ymRates){const arr=ymByMaster.get(x.master_code)??[];arr.push(x);ymByMaster.set(x.master_code,arr);}
+  for(const x of ozonCosts){const arr=costByMaster.get(x.master_code)??[];arr.push(x);costByMaster.set(x.master_code,arr);}
+  for(const x of ozonMayak){const arr=mayakByMaster.get(x.master_code)??[];arr.push(x);mayakByMaster.set(x.master_code,arr);}
+  const sharedByMaster=new Map<string,Rate[]>();
+  for(const master of new Set([...ymByMaster.keys(),...costByMaster.keys(),...mayakByMaster.keys()])){
+    const ys=ymByMaster.get(master)??[],cs=costByMaster.get(master)??[],ms=mayakByMaster.get(master)??[];
+    const dates=[...new Set([...ys,...cs,...ms].map(x=>x.valid_from))].sort().reverse();
+    sharedByMaster.set(master,dates.map(d=>{
+      const y=ys.filter(x=>x.valid_from<=d).sort((a,b)=>b.valid_from.localeCompare(a.valid_from))[0];
+      const c=cs.filter(x=>x.valid_from<=d).sort((a,b)=>b.valid_from.localeCompare(a.valid_from))[0];
+      const mayak=ms.filter(x=>x.valid_from<=d).sort((a,b)=>b.valid_from.localeCompare(a.valid_from))[0];
+      return {nm_id:'',valid_from:d,cost_cents:y?.cost_cents??(c?Math.round(Number(c.unit_cost_rub)*100):null),mayak_cents:y?.mayak_cents??(mayak?Math.round(Number(mayak.unit_cost_rub)*100):null),version:0};
+    }));
+  }
+  const masterById=new Map(listings.map(x=>[String(x.external_id),x.master_code]));
+  const masterByArticle=new Map(listings.map(x=>[String(x.seller_article),x.master_code]));
+  const sharedByNm=new Map<string,Rate[]>();
+  for(const line of lines){const id=String(line.nmId??'0'),master=masterById.get(id)??masterByArticle.get(String(line.vendorCode??''));if(master&&!sharedByNm.has(id))sharedByNm.set(id,sharedByMaster.get(master)??[]);}
+  const grouped=groupFinancial(lines,(rates??[]) as Rate[],sharedByNm);
   const daily=Array.from({length:Math.round((Date.parse(to)-Date.parse(from))/86400000)+1},(_,i)=>{
     const day=new Date(Date.parse(from)+i*86400000).toISOString().slice(0,10);
     return {day,rows:groupFinancial(lines.filter(line=>String(line.rrDate??line.rrdDt??line.rrdDate??line.saleDt??'').slice(0,10)===day)).map(r=>({nm_id:r.nm_id,revenue:r.realization}))};
@@ -206,10 +239,7 @@ export async function GET(request:NextRequest){
   const orderByNm=new Map<string,{orders:number;cancelled:number}>();for(const row of orders){const key=String(row.nm_id),v=orderByNm.get(key)??{orders:0,cancelled:0};v.orders++;if(row.is_cancel)v.cancelled++;orderByNm.set(key,v);}
   const storageByNm=new Map<string,number>();for(const row of storage)if(row.nm_id)storageByNm.set(String(row.nm_id),(storageByNm.get(String(row.nm_id))??0)+num(row.amount));
   const expectedDays=Math.round((Date.parse(to)-Date.parse(from))/86400000)+1;
-  const [listings,managers]=await Promise.all([
-    readPages<{external_id:string;seller_article:string;master_code:string|null}>(async(a,b)=>{const q=await db.from('marketplace_listings').select('external_id,seller_article,master_code').eq('marketplace','wildberries').eq('is_active',true).order('id').range(a,b);return {data:q.data,error:q.error};}),
-    readPages<{master_code:string;manager_name:string}>(async(a,b)=>{const q=await db.from('ozon_finance_managers').select('master_code,manager_name').order('master_code').range(a,b);return {data:q.data,error:q.error};})
-  ]);
+
   const listingByNm=new Map(listings.map(x=>[String(x.external_id),x]));
   const listingByArticle=new Map(listings.map(x=>[String(x.seller_article),x]));
   const managerByMaster=new Map(managers.map(x=>[String(x.master_code),String(x.manager_name)]));

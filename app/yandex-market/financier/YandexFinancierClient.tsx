@@ -5,6 +5,7 @@ import type {readFinance} from '../../../lib/yandex/finance-cache';
 import YandexFinanceTable,{type RateInput} from './YandexFinanceTable';
 import AccrualBreakdownList from '../../components/finance/AccrualBreakdownList';
 import {downloadFinanceWorkbook} from '../../components/finance/export-xlsx';
+import OrderFulfillmentPanels from '../../components/finance/OrderFulfillmentPanels';
 type Data=NonNullable<Awaited<ReturnType<typeof readFinance>>>;
 const money=(n:number)=>new Intl.NumberFormat('ru-RU',{minimumFractionDigits:0,maximumFractionDigits:0}).format(Math.sign(n)*Math.round(Math.abs(n)/100)||0)+' ₽';
 const localDay=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Krasnoyarsk',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
@@ -63,6 +64,7 @@ export default function YandexFinancierClient({initial,initialError}:{initial:Da
  <p>Показан период: <b>{data.from} — {data.to}</b> включительно. Кэш: {data.report.completed_at?new Date(data.report.completed_at).toLocaleString('ru-RU',{timeZone:'Asia/Krasnoyarsk'}):'—'} (Красноярск).</p>
 
  <div className="ozf-toolbar"><button className="ozf-btn" onClick={()=>void exportFinancialResult()}>Скачать финрез XLSX</button><button className="ozf-btn" onClick={()=>void exportMissingData()}>Недостающие данные XLSX · {data.rows.filter(r=>r.dataGaps.length>0||!r.master_code||r.manager==="Не назначен").length}</button></div>
+ <OrderFulfillmentPanels market="yandex" from={data.from} to={data.to}/>
  <YandexFinanceTable data={data} onSave={saveRate} saving={savingRate} onToggle={toggleStatus} statusSaving={statusSaving} onManager={saveManager}/>
  <section className="ozf-panel" id="ymf-unallocated"><h2>Нераспределённые расходы</h2><AccrualBreakdownList
    items={Object.entries(data.common).map(([name,amount])=>({name,amount,daily:data.commonDetails?.[name]??[]}))}
