@@ -230,6 +230,9 @@ export default function TasksBoard() {
       });
       if (actionError) throw actionError;
       await refresh();
+      if (["create", "take", "finish", "edit"].includes(name)) {
+        window.dispatchEvent(new CustomEvent("workspace-tasks-updated"));
+      }
       return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Не удалось сохранить изменения");

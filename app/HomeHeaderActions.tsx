@@ -42,9 +42,10 @@ import {
 } from "./HomeHeaderIcons";
 
 import {
-  buildAdministratorTasks,
-  buildCurrentUserTasks,
+  buildMyWorkspaceTasks,
 } from "./HomeTasksData";
+
+import useWorkspaceTasks from "./useWorkspaceTasks";
 
 import {
   dismissSyncNotification,
@@ -910,6 +911,13 @@ export default function HomeHeaderActions() {
     >(
       null
     );
+
+
+  const {
+    snapshot: workspaceTaskSnapshot,
+    loading: workspaceTasksLoading,
+    error: workspaceTasksError,
+  } = useWorkspaceTasks();
 
 
   const [
@@ -2476,18 +2484,8 @@ export default function HomeHeaderActions() {
 
   const currentUserTasks =
     useMemo(
-      () =>
-        adminMode
-          ? buildAdministratorTasks(
-              currentProfile
-            )
-          : buildCurrentUserTasks(
-              currentProfile
-            ),
-      [
-        adminMode,
-        currentProfile,
-      ]
+      () => buildMyWorkspaceTasks(workspaceTaskSnapshot),
+      [workspaceTaskSnapshot]
     );
 
 
@@ -3262,10 +3260,20 @@ export default function HomeHeaderActions() {
 
 
                 {
-                  currentUserTasks.length ===
-                    0
-
+                  workspaceTasksLoading && !workspaceTaskSnapshot
                     ? (
+                      <div className="home-notifications-empty">
+                        <strong>Загружаем задачи…</strong>
+                      </div>
+                    )
+                    : workspaceTasksError && !workspaceTaskSnapshot
+                      ? (
+                        <div className="home-notifications-empty">
+                          <strong>Не удалось загрузить задачи.</strong>
+                        </div>
+                      )
+                      : currentUserTasks.length === 0
+                        ? (
 
                       <div
                         className="

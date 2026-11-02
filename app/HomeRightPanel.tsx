@@ -21,7 +21,7 @@ import {
 } from "./HomeHeaderIcons";
 
 import {
-  buildCurrentUserTasks,
+  buildDepartmentWorkspaceTasks,
   buildPersonalNotes,
   isManagerTaskProfile,
   MANAGER_TASKS,
@@ -39,6 +39,7 @@ import {
 } from "./SyncNotificationsClient";
 
 import "./HomeRightPanel.css";
+import useWorkspaceTasks from "./useWorkspaceTasks";
 
 type CurrentUserProfileRow = {
   user_id: string;
@@ -160,6 +161,12 @@ export default function HomeRightPanel() {
 
   const [profile, setProfile] =
     useState<CurrentUserProfileRow | null>(null);
+
+  const {
+    snapshot: workspaceTaskSnapshot,
+    loading: workspaceTasksLoading,
+    error: workspaceTasksError,
+  } = useWorkspaceTasks();
 
   const [syncNotifications, setSyncNotifications] =
     useState<SyncNotification[]>([]);
@@ -478,10 +485,10 @@ export default function HomeRightPanel() {
     [activeTab, tabs]
   );
 
-  const currentUserTasks =
+  const departmentTasks =
     useMemo<TaskItem[]>(
-      () => buildCurrentUserTasks(profile),
-      [profile]
+      () => buildDepartmentWorkspaceTasks(workspaceTaskSnapshot),
+      [workspaceTaskSnapshot]
     );
 
   const personalNotes =
@@ -495,7 +502,7 @@ export default function HomeRightPanel() {
       ? PRIVILEGED_TASKS
       : managerMode
         ? MANAGER_TASKS
-        : currentUserTasks;
+        : departmentTasks;
 
   const filteredTasks =
     activeTab === "all"
@@ -627,11 +634,23 @@ export default function HomeRightPanel() {
                       </div>
                     )
                   )
-                : (
-                  <div className="home-right-panel-empty">
-                    В этой категории задач пока нет.
-                  </div>
-                )
+                : workspaceTasksLoading && !workspaceTaskSnapshot
+                  ? (
+                    <div className="home-right-panel-empty">
+                      Загружаем задачи…
+                    </div>
+                  )
+                  : workspaceTasksError && !workspaceTaskSnapshot
+                    ? (
+                      <div className="home-right-panel-empty">
+                        Не удалось загрузить задачи.
+                      </div>
+                    )
+                    : (
+                      <div className="home-right-panel-empty">
+                        В этой категории задач пока нет.
+                      </div>
+                    )
           }
         </div>
       </section>

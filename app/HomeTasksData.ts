@@ -33,6 +33,85 @@ export type TaskProfile = {
   has_admin_access?: boolean;
 };
 
+export type WorkspaceTaskRecord = {
+  id: string;
+  title: string;
+  urgency: "current" | "urgent" | "critical";
+  created_by: string;
+  target_department: string;
+  assignee_id: string | null;
+  taken_by: string | null;
+  status: "not_started" | "in_progress" | "completed";
+  created_at: string;
+  creator_name: string;
+  assignee_name: string | null;
+};
+
+export type WorkspaceTaskSnapshot = {
+  user_id: string;
+  department: string;
+  tasks: WorkspaceTaskRecord[];
+};
+
+function workspaceTaskRole(department: string): TaskRole {
+  if (department.startsWith("category_manager")) return "category_manager";
+  if (department === "ved") return "ved";
+  if (department === "procurement") return "procurement";
+  if (department === "analyst") return "analyst";
+  if (department === "marketing") return "marketing";
+  return "administrators";
+}
+
+function toWorkspaceTaskItem(task: WorkspaceTaskRecord): TaskItem {
+  return {
+    id: task.id,
+    title: task.title,
+    creator: task.creator_name || "Сотрудник",
+    assignee: task.assignee_name || "Ожидает исполнителя",
+    role: workspaceTaskRole(task.target_department),
+    status: task.urgency === "critical"
+      ? "red"
+      : task.urgency === "urgent"
+        ? "yellow"
+        : "green",
+  };
+}
+
+export function buildDepartmentWorkspaceTasks(
+  snapshot: WorkspaceTaskSnapshot | null
+): TaskItem[] {
+  if (!snapshot) return [];
+  return snapshot.tasks
+    .filter(task =>
+      task.status !== "completed"
+      && (
+        (
+          task.status === "not_started"
+          && task.assignee_id === null
+          && task.taken_by === null
+        )
+        || task.taken_by === snapshot.user_id
+        || task.assignee_id === snapshot.user_id
+      )
+    )
+    .map(toWorkspaceTaskItem);
+}
+
+export function buildMyWorkspaceTasks(
+  snapshot: WorkspaceTaskSnapshot | null
+): TaskItem[] {
+  if (!snapshot) return [];
+  return snapshot.tasks
+    .filter(task =>
+      task.status !== "completed"
+      && (
+        task.taken_by === snapshot.user_id
+        || task.assignee_id === snapshot.user_id
+      )
+    )
+    .map(toWorkspaceTaskItem);
+}
+
 export const PRIVILEGED_TASKS: TaskItem[] = [
   {
     id: "task-admin-1",
