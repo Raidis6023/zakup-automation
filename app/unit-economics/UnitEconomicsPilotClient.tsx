@@ -1,0 +1,134 @@
+"use client";
+import {useEffect,useMemo,useState} from "react";
+import Link from "next/link";
+import {WORKBOOK_URL,type Marketplace,type ModelKey} from "@/lib/unit-economics/model-config";
+import pilot from "@/data/unit-economics-pilot.json";
+import {calculatePilotFbs,pilotFbsMinPrice} from "@/lib/unit-economics/pilot-fbs";
+
+type Entry={tab:string;row:number;values:(string|number|null)[];display:string[];formulas:Record<string,string>;calculated?:boolean;notes?:string[]};
+type Product={sku:string;name:string;models:Record<string,Entry>};
+type Cols={roi:number;margin:number;profit:number;cost:number;volume:number;price:number;buyer:number|null;category:number;vat:number;output:number;input:number};
+const DATA=pilot.products as Product[];
+const HEADERS=pilot.headers as Record<string,string[]>;
+const MARKET_NAMES:Record<Marketplace,string>={ozon:"Ozon",wb:"Wildberries",ym:"Яндекс Маркет"};
+const TABS:Record<Marketplace,ModelKey[]>={ozon:["ozon-fbo","ozon-fbs"],wb:["wb-fbw","wb-fbs"],ym:["ym-fby","ym-fbs"]};
+const LABEL:Record<ModelKey,string>={"ozon-fbo":"FBO","ozon-fbs":"FBS","wb-fbw":"FBW","wb-fbs":"FBS","ym-fby":"FBY","ym-fbs":"FBS"};
+const COLS:Record<string,Cols>={
+ "ozon-fbo":{roi:50,margin:49,profit:48,cost:11,volume:9,price:13,buyer:15,category:5,vat:38,output:39,input:40},
+ "wb-fbw":{roi:44,margin:43,profit:42,cost:11,volume:9,price:13,buyer:15,category:5,vat:31,output:32,input:33},
+ "wb-fbs":{roi:44,margin:43,profit:42,cost:11,volume:9,price:13,buyer:15,category:5,vat:31,output:32,input:33},
+ "ym-fby":{roi:38,margin:37,profit:36,cost:11,volume:9,price:13,buyer:null,category:5,vat:28,output:29,input:30},
+ "ozon-fbs":{roi:47,margin:46,profit:45,cost:8,volume:6,price:10,buyer:12,category:2,vat:36,output:37,input:38},
+ "ym-fbs":{roi:46,margin:45,profit:44,cost:11,volume:9,price:13,buyer:null,category:3,vat:36,output:37,input:38}
+};
+const GROUPS:Record<string,{name:string;cells:number[]}[]>={
+ "ozon-fbo":[
+  {name:"Цена и СПП",cells:[13,14,15]},
+  {name:"Комиссия маркетплейса",cells:[16,17,18]},
+  {name:"Логистика с учётом возвратов",cells:[6,7,8,9,10,19,20,21,22,23,24,25,26,27,28,29,30,31,32]},
+  {name:"НДС и налоговые вычеты",cells:[37,38,39,40,41,42,43,44,45,46,47]},
+  {name:"Реклама и другие затраты",cells:[11,12,33,34,35,36]},
+  {name:"Чистая прибыль и ROI",cells:[48,49,50]}
+ ],
+ "wb-fbw":[
+  {name:"Цена и СПП",cells:[13,14,15]},
+  {name:"Комиссия маркетплейса",cells:[16,17,18]},
+  {name:"Логистика с учётом возвратов",cells:[6,7,8,9,10,19,20,21,22,23,24,25,26,27]},
+  {name:"НДС и налоговые вычеты",cells:[30,31,32,33,34,35,36,37,38,39,40]},
+  {name:"Реклама и другие затраты",cells:[11,12,28,29]},
+  {name:"Чистая прибыль и ROI",cells:[41,42,43,44]}
+ ],
+ "wb-fbs":[
+  {name:"Цена и СПП",cells:[13,14,15]},
+  {name:"Комиссия маркетплейса",cells:[16,17,18,46]},
+  {name:"Логистика с учётом возвратов",cells:[6,7,8,9,10,19,20,21,22,23,24,25,26,27]},
+  {name:"НДС и налоговые вычеты",cells:[30,31,32,33,34,35,36,37,38,39,40]},
+  {name:"Реклама и другие затраты",cells:[11,12,28,29,45]},
+  {name:"Чистая прибыль и ROI",cells:[41,42,43,44]}
+ ],
+ "ozon-fbs":[
+  {name:"Цена и СПП",cells:[10,11,12]},
+  {name:"Комиссия маркетплейса",cells:[13,14,15]},
+  {name:"Логистика с учётом возвратов",cells:[3,4,5,6,7,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31]},
+  {name:"НДС и налоговые вычеты",cells:[35,36,37,38,39,40,41,42,43,44]},
+  {name:"Реклама и другие затраты",cells:[8,9,32,33,34]},
+  {name:"Чистая прибыль и ROI",cells:[45,46,47]}
+ ],
+ "ym-fbs":[
+  {name:"Цена и СПП",cells:[13,14]},
+  {name:"Комиссия маркетплейса",cells:[15,16,17]},
+  {name:"Логистика с учётом возвратов",cells:[6,7,8,9,10,18,19,20,21,22,23]},
+  {name:"НДС и налоговые вычеты",cells:[35,36,37,38,39,40,41,42,43]},
+  {name:"Реклама и другие затраты",cells:[11,12,32,33,34]},
+  {name:"Чистая прибыль и ROI",cells:[44,45,46]}
+ ],
+ "ym-fby":[
+  {name:"Цена и СПП",cells:[13,14]},
+  {name:"Комиссия маркетплейса",cells:[15,16,17]},
+  {name:"Логистика с учётом возвратов",cells:[6,7,8,9,10,18,19,20,21,22,23,24]},
+  {name:"НДС и налоговые вычеты",cells:[27,28,29,30,31,32,33,34,35]},
+  {name:"Реклама и другие затраты",cells:[11,12,25,26]},
+  {name:"Чистая прибыль и ROI",cells:[36,37,38]}
+ ]
+};
+const FINANCE:Record<string,{commission:number;logistics:number[];ads:number}>={"ozon-fbo":{commission:17,logistics:[22,25],ads:36},"ozon-fbs":{commission:14,logistics:[19,22,25],ads:34},"wb-fbw":{commission:17,logistics:[23],ads:29},"wb-fbs":{commission:17,logistics:[23],ads:29},"ym-fby":{commission:16,logistics:[20,21],ads:26},"ym-fbs":{commission:16,logistics:[20,21],ads:34}};
+const rub=(n:number)=>Number.isFinite(n)?new Intl.NumberFormat("ru-RU",{maximumFractionDigits:2}).format(n)+" ₽":"—";
+const GIDS:Record<string,string>={"ozon-fbo":"261268990","wb-fbw":"524833130","wb-fbs":"806114489","ym-fby":"395305505"};
+function entryFor(p:Product,m:ModelKey,price?:number):Entry|undefined{if(m==="ozon-fbs"||m==="ym-fbs")return calculatePilotFbs(p,m,price);return p.models[m];}
+const fmt=(r:Entry|undefined,i:number|null)=>r&&i!==null&&r.display[i]?r.display[i]:"—";
+const numeric=(r:Entry|undefined,i:number)=>typeof r?.values[i]==="number"?r.values[i] as number:Number(String(r?.values[i]??"0").replace(",",".").replace(/[^0-9.-]/g,""));
+function columnName(i:number){let s="";for(let n=i+1;n>0;){n--;s=String.fromCharCode(65+n%26)+s;n=Math.floor(n/26)}return s;}
+function Field({row,model,index}:{row:Entry;model:string;index:number}){
+ const value=fmt(row,index),formula=row.formulas[String(index)],header=HEADERS[model]?.[index]||"Исходное поле";
+ if(value==="—"&&!formula)return null;
+ return <details className="unit-pilot-field"><summary><span>{header} <small>{columnName(index)}{row.row}</small></span><b>{value}</b></summary><div>{formula?<><span>Формула исходной таблицы</span><code>{formula}</code></>:<span>Исходное значение без формулы</span>}<small>{row.tab}!{columnName(index)}{row.row}</small></div></details>;
+}
+export default function UnitEconomicsPilotClient(){
+ const [market,setMarket]=useState<Marketplace>("ozon");
+ const [selected,setSelected]=useState<Record<Marketplace,ModelKey>>({ozon:"ozon-fbo",wb:"wb-fbw",ym:"ym-fby"});
+ const [search,setSearch]=useState("");
+ const [sku,setSku]=useState<string|null>(null);
+ const [view,setView]=useState<"summary"|"details">("summary");
+ const [overrides,setOverrides]=useState<Record<string,string>>({});
+ const model=selected[market],c=COLS[model];
+ const list=useMemo(()=>DATA.filter(x=>(x.name+" "+x.sku).toLowerCase().includes(search.toLowerCase().trim())),[search]);
+ const item=DATA.find(p=>p.sku===sku);
+ const overrideKey=(sku||"")+"@"+model;
+ const override=overrides[overrideKey];
+ const overrideValue=override!==undefined&&override.trim()!==""&&Number(override)>0?Number(override):undefined;
+ const row=item?entryFor(item,model,overrideValue):undefined;
+ const baseModel=model==="ozon-fbs"?"ozon-fbo":model==="ym-fbs"?"ym-fby":model;
+ const sourceRow=item?.models[baseModel]?.row;
+ const sourceUrl=sourceRow?WORKBOOK_URL+"?gid="+GIDS[baseModel]+"#range=A"+sourceRow:WORKBOOK_URL;
+ const fees=FINANCE[model];
+ const logistics=row?fees.logistics.reduce((sum,i)=>sum+numeric(row,i),0):0;
+ const other=row?numeric(row,c.price)-numeric(row,c.cost)-numeric(row,fees.commission)-logistics-numeric(row,fees.ads)-numeric(row,c.profit):0;
+ const recommended=item&&(model==="ozon-fbs"||model==="ym-fbs")?pilotFbsMinPrice(item,model):null;
+ function changeModel(k:ModelKey){setSelected(x=>({...x,[market]:k}));setView("summary");}
+ function changeMarket(k:Marketplace){setMarket(k);setView("summary");}
+ useEffect(()=>{if(!sku)return;const handler=(e:KeyboardEvent)=>{if(e.key==="Escape")setSku(null)};document.addEventListener("keydown",handler);return()=>document.removeEventListener("keydown",handler)},[sku]);
+ useEffect(()=>{if(!sku)return;const previous=document.body.style.overflow;document.body.style.overflow="hidden";return()=>{document.body.style.overflow=previous}},[sku]);
+ const tabs=<><div className="unit-market-tabs" role="tablist">{(["ozon","wb","ym"] as const).map(k=><button key={k} role="tab" aria-selected={k===market} className={k===market?"active":""} onClick={()=>changeMarket(k)}>{MARKET_NAMES[k]}</button>)}</div><div className="unit-model-tabs" role="tablist">{TABS[market].map(k=><button key={k} role="tab" aria-selected={k===model} className={k===model?"active":""} onClick={()=>changeModel(k)}>{LABEL[k]}</button>)}</div></>;
+ return <section className="unit-pilot">
+  <div className="unit-pilot-top"><span>Новая юнит-экономика · 5 контрольных товаров</span><Link href={WORKBOOK_URL} target="_blank">Открыть исходные Google Таблицы ↗</Link></div>
+  <div className="unit-pilot-tabs">{tabs}</div>
+  <p className="unit-pilot-notice">Контрольные данные Google Таблиц на 02.11.2026. Для FBO/FBW/FBY отображаются исходные результаты, для Ozon FBS и Яндекс FBS — независимый пилотный расчёт по тарифам FBS. Старая версия не изменяется.</p>
+  <div className="unit-table-toolbar"><div className="unit-table-title">Пробная таблица <span>{list.length} товаров</span></div><div className="unit-toolbar-right"><input aria-label="Поиск пилотных товаров" placeholder="Поиск товара, артикула..." value={search} onChange={e=>setSearch(e.target.value)}/></div></div>
+  <div className="unit-pilot-scroller"><table className="unit-pilot-table"><thead><tr>{["Фото","Наименование","Рентабельность","Маржинальность","Чистая прибыль","Себестоимость","Литраж","Цена продажи","Цена с СПП","Зона размещения (Ozon FBO)"].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{list.map(p=>{const r=entryFor(p,model);return <tr key={p.sku} className={r?"clickable":""} tabIndex={r?0:-1} onClick={()=>r&&setSku(p.sku)} onKeyDown={e=>{if(r&&e.key==="Enter")setSku(p.sku)}}>
+   <td><div className="unit-pilot-thumb" title="Фотография не передаётся через выгрузку ячеек Google Sheets">Нет фото</div></td><td className="unit-pilot-name">{p.name}<small>{p.sku}</small></td><td className={r&&numeric(r,c.roi)<0?"unit-pilot-red":"unit-pilot-green"}>{fmt(r,c.roi)}</td><td>{fmt(r,c.margin)}</td><td className={r&&numeric(r,c.profit)<0?"unit-pilot-red":""}>{fmt(r,c.profit)}</td><td>{fmt(r,c.cost)}</td><td>{fmt(r,c.volume)}</td><td>{fmt(r,c.price)}</td><td>{fmt(r,c.buyer)}</td><td>{model==="ozon-fbo"?"Не указана":"—"}</td>
+  </tr>})}</tbody></table></div>
+  {!list.some(p=>entryFor(p,model))&&<p className="unit-pilot-notice">В этой модели нет строк для выбранных пяти товаров. Нули вместо отсутствующих расчётов не подставляем.</p>}
+  <p className="unit-pilot-note">Для фотографий подготовлен миниатюрный формат; сами изображения из Google Sheets в полученной выгрузке отсутствуют. Увеличение по наведению заработает при подключении реальных URL фото.</p>
+  {item&&<div className="unit-pilot-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setSku(null)}}><div className="unit-pilot-modal" role="dialog" aria-modal="true" aria-labelledby="unit-pilot-modal-title">
+   <header className="unit-pilot-modal-head"><div className="unit-pilot-heading"><div className="unit-pilot-thumb">Фото</div><div><h2 id="unit-pilot-modal-title">{item.name}</h2><p>Артикул: {item.sku}</p></div></div><button onClick={()=>setSku(null)} aria-label="Закрыть модалку">×</button></header>
+   <div className="unit-pilot-modal-tabs">{tabs}<div className="unit-pilot-views"><button className={view==="summary"?"active":""} onClick={()=>setView("summary")}>Сводка</button><button className={view==="details"?"active":""} onClick={()=>setView("details")}>Все расчёты</button></div></div>
+   {row?<div className="unit-pilot-modal-body" key={sku+model+view}>{row.calculated&&<div className="unit-pilot-notice"><strong>Пробный расчёт FBS.</strong> {row.notes?.join(". ")}.</div>}{view==="summary"?<>
+    <div className="unit-pilot-metrics"><div>ROI <strong className={numeric(row,c.roi)<0?"unit-pilot-red":"unit-pilot-green"}>{fmt(row,c.roi)}</strong></div><div>Чистая прибыль<strong>{fmt(row,c.profit)}</strong></div><div>Маржинальность<strong>{fmt(row,c.margin)}</strong></div></div>
+    <div className="unit-pilot-columns"><section className="unit-pilot-panel"><h3>Исходные данные</h3>{[["Категория",c.category],["Себестоимость, ₽",c.cost],["Цена продажи, ₽",c.price],["Объём, л",c.volume],["Цена с СПП",c.buyer]].map(([label,i])=><label key={String(label)}>{label}{label==="Цена продажи, ₽"&&row.calculated?<input className="unit-pilot-price-input" type="number" min="0.01" step="0.01" value={override??String(numeric(row,c.price))} onChange={e=>setOverrides(old=>({...old,[overrideKey]:e.target.value}))}/>:<output>{fmt(row,i as number|null)}</output>}</label>)}{model==="ozon-fbo"&&<label>Зона размещения<output>Не указана в строке</output></label>}</section>
+    <section className="unit-pilot-panel"><h3>Финансовый результат</h3><div>Цена продажи <b>{fmt(row,c.price)}</b></div><div>Себестоимость <b>{fmt(row,c.cost)}</b></div><div>Комиссия маркетплейса <b>{fmt(row,fees.commission)}</b></div><div>Логистика <b>{rub(logistics)}</b></div><div>Реклама <b>{fmt(row,fees.ads)}</b></div><div>Прочие расходы и налоги <b>{rub(other)}</b></div><details className="unit-pilot-vat-mini"><summary>НДС к уплате: {fmt(row,c.vat)}</summary><p>Исходящий НДС: {fmt(row,c.output)} · Входящий НДС: {fmt(row,c.input)}</p></details><div className="unit-pilot-total">Чистая прибыль <b>{fmt(row,c.profit)}</b></div></section></div>
+    <section className="unit-pilot-panel"><h3>Подбор цены по ROI <small>Цель 15,001%</small></h3><div className="unit-pilot-price"><span>Текущая цена <b>{fmt(row,c.price)}</b></span><span>Рекомендуемая цена <b>{recommended===null?"Ожидает независимого расчёта":rub(recommended)}</b></span></div></section>
+   </>:<><p className="unit-pilot-note">Разделы содержат исходные значения и полные формулы каждой ячейки Google Sheets.</p>{(GROUPS[model]||[]).map(g=><details key={g.name} className="unit-pilot-group"><summary><strong>{g.name}</strong><span>Раскрыть</span></summary><div>{g.cells.map(i=><Field key={i} row={row} model={model} index={i}/>)}</div></details>)}<details className="unit-pilot-group"><summary><strong>Все остальные поля исходного расчёта</strong><span>Раскрыть</span></summary><div>{row.values.map((_,i)=><Field key={i} row={row} model={model} index={i}/>)}</div></details></>}</div>:<div className="unit-pilot-no-data">Для этого товара нет расчёта по выбранной схеме продаж в исходной книге.</div>}
+   <footer className="unit-pilot-modal-foot"><span>Пилот: 02.11.2026 · исходная книга не изменяется</span><div><Link href={sourceUrl} target="_blank" rel="noreferrer">Открыть строку в Google Sheets ↗</Link><button onClick={()=>setSku(null)}>Закрыть</button></div></footer>
+  </div></div>}
+ </section>;
+}
