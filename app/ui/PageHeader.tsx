@@ -11,10 +11,10 @@ type Variant = "default" | "home" | "admin" | "admin-users" | "profile" | "finan
 
 const variants = {
   home: { root: "home-title-row", titleArea: "", heading: "", description: "", actions: "", showThemeToggle: false },
-  admin: { root: "ws-page-heading ws-page-heading--admin", titleArea: "", heading: "ws-page-heading__title", description: "ws-page-heading__description", actions: "", showThemeToggle: false },
+  admin: { root: "header", titleArea: "", heading: "title", description: "subtitle", actions: "", showThemeToggle: false },
   "admin-users": { root: "admin-users-header", titleArea: "", heading: "", description: "", actions: "", showThemeToggle: false },
   profile: { root: "profile-header", titleArea: "", heading: "", description: "", actions: "", showThemeToggle: false },
-  financier: { root: "header ozf-heading ws-page-heading", titleArea: "", heading: "title ws-page-heading__title", description: "subtitle ws-page-heading__description", actions: "header-actions", showThemeToggle: false },
+  financier: { root: "header ozf-heading", titleArea: "", heading: "title", description: "subtitle", actions: "header-actions", showThemeToggle: false },
   default: {
     root: "header",
     titleArea: "",

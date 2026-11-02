@@ -2301,40 +2301,9 @@ html[data-theme="dark"]
   outline-offset: var(--ui-focus-offset, 2px);
 }
 
-/* Shared heading contract for admin pages and all three financiers.
-   The title/subtitle start on the same horizontal grid as primary module pages.
-   Finance keeps its 98px sticky rail; admin uses the same copy typography and
-   a matching inset below the topbar. */
-.workspace-content--module .ws-page-heading--admin {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
-  margin: 10px 0 18px 22px;
-  padding-right: min(500px, 42%);
-}
-
-.workspace-content--module .ws-page-heading--admin h1,
-.workspace-content--module .ozf-page > .header.ozf-heading h1 {
-  margin: 0;
-  color: var(--ws-text);
-  font-size: 30px;
-  font-weight: 750;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-}
-
-.workspace-content--module .ws-page-heading--admin p,
-.workspace-content--module .ozf-page > .header.ozf-heading p {
-  margin: 5px 0 0;
-  color: var(--ws-text-muted);
-  font-size: 13px;
-  line-height: 1.3;
-  opacity: 1;
-}
-
-/* Finance pages inherit the shared sticky rail. Only the text inset changes:
-   the 22px offset aligns it with the primary page heading grid. */
+/* Admin and finance headings use the same PageHeader contract as the
+   primary Workspace pages: shared .header geometry, .title and .subtitle.
+   The three financiers retain their existing sticky rail and accent colors. */
 .workspace-content--module .ozf-page {
   box-sizing: border-box;
   padding: 0 0 64px;
@@ -2342,22 +2311,8 @@ html[data-theme="dark"]
 .workspace-content--module .ozf-page > .header.ozf-heading {
   gap: 22px;
   margin: 0 0 16px !important;
-  padding-left: 22px;
+  padding-left: 48px;
   background: var(--ws-page);
-}
-
-@media (max-width: 800px) {
-  .workspace-content--module .ws-page-heading--admin {
-    margin: 8px 0 16px;
-    padding-right: 0;
-  }
-  .workspace-content--module .ws-page-heading--admin h1,
-  .workspace-content--module .ozf-page > .header.ozf-heading h1 {
-    font-size: 25px;
-  }
-  .workspace-content--module .ozf-page > .header.ozf-heading {
-    padding-left: 22px;
-  }
 }
 .workspace-content--module .ozf-page > .ozf-toolbar {
   flex-wrap: wrap;
