@@ -36,7 +36,7 @@ export async function findSupplierPhotos(
   if(!sheet){warnings.push("Лист оригинала не найден: "+name);continue;}
   const drawings=sheet.getImages();
   for(const img of drawings){
-   const media=workbook.getImage(img.imageId);
+   const media=workbook.getImage(Number(img.imageId));
    if(!media)continue;
    const value=imageBytes(media);
    if(!value)continue;
