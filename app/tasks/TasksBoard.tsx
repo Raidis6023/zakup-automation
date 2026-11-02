@@ -7,7 +7,6 @@ import "./tasks.css";
 type Urgency = "current" | "urgent" | "critical";
 type TaskStatus = "not_started" | "in_progress" | "completed";
 type Tab = "my" | "other" | "notes";
-type Member = { id: string; name: string; department: string };
 type WorkTask = {
   id: string; title: string; urgency: Urgency; created_by: string;
   created_department: string; target_department: string; assignee_id: string | null;
@@ -20,7 +19,7 @@ type PersonalNote = {
   status: TaskStatus; created_at: string;
 };
 type Snapshot = {
-  user_id: string; department: string; members: Member[];
+  user_id: string; department: string;
   tasks: WorkTask[]; notes: PersonalNote[];
 };
 type Action = (name: string, payload: Record<string, unknown>) => Promise<boolean>;
@@ -115,9 +114,6 @@ function TaskRow({ task, tab, snapshot, busy, onAction }: {
 
   const canEdit = tab === "other" && task.created_by === snapshot.user_id && task.status === "not_started";
   const canComment = tab === "my" || task.created_by === snapshot.user_id;
-  const canChangeStatus = tab === "my" && (task.status === "not_started" ||
-    (task.status === "in_progress" && task.taken_by === snapshot.user_id));
-  const members = snapshot.members.filter(member => member.department === snapshot.department);
   const saveDetails = () => {
     if (!canEdit || busy || (!title.trim() && task.title)) return;
     if (title.trim() !== task.title || urgency !== task.urgency) {
@@ -138,19 +134,10 @@ function TaskRow({ task, tab, snapshot, busy, onAction }: {
     <td><UrgencyCell value={urgency} editable={canEdit && !busy}
       onChange={next => { setUrgency(next); void onAction("edit", { id: task.id, title: title.trim(), urgency: next }); }} /></td>
     <td><span>{task.creator_name}</span></td>
-    <td>{tab === "my" && task.status !== "completed" ?
-      <select className="tasks-inline-select" aria-label="Кто выполняет" disabled={busy}
-        value={task.assignee_id ?? ""} onChange={e => void onAction("assignee",
-          { id: task.id, assignee_id: e.target.value || null })}>
-        <option value="">Не назначен</option>
-        {members.map(member => <option key={member.id} value={member.id}>{member.name}</option>)}
-      </select> :
-      <div><span>{task.assignee_name || "Не назначен"}</span>
-        {tab === "other" && <span className="tasks-subtext">{deptLabel(task.target_department)}</span>}
-      </div>}
-    </td>
-    <td><StatusCell value={task.status} editable={canChangeStatus && !busy}
-      onChange={next => void onAction("status", { id: task.id, status: next })} /></td>
+    <td><div><span>{task.assignee_name || "Не назначен"}</span>
+      {tab === "other" && <span className="tasks-subtext">{deptLabel(task.target_department)}</span>}
+    </div></td>
+    <td><StatusCell value={task.status} /></td>
     <td className="tasks-number">{dateOf(task.created_at)}</td>
     <td className="tasks-number">{dateOf(task.started_at)}</td>
     <td className="tasks-number">{dateOf(task.finished_at)}</td>
@@ -212,7 +199,6 @@ export default function TasksBoard() {
   const [newTitle, setNewTitle] = useState("");
   const [newUrgency, setNewUrgency] = useState<Urgency | "">("");
   const [newComment, setNewComment] = useState("");
-  const [confirming, setConfirming] = useState(false);
   const [newNote, setNewNote] = useState("");
   const [newNoteUrgency, setNewNoteUrgency] = useState<Urgency>("current");
   const [newNoteDate, setNewNoteDate] = useState("");
@@ -262,11 +248,10 @@ export default function TasksBoard() {
 
   async function submitTask() {
     if (!canCreate) return;
-    if (!confirming) { setConfirming(true); return; }
     if (await onAction("create", {
       title: newTitle.trim(), urgency: newUrgency, target_department: target, comment: newComment,
     })) {
-      setNewTitle(""); setNewUrgency(""); setNewComment(""); setTarget(""); setConfirming(false);
+      setNewTitle(""); setNewUrgency(""); setNewComment(""); setTarget("");
     }
   }
   async function submitNote() {
@@ -290,7 +275,7 @@ export default function TasksBoard() {
         </button>)}
       </div>
       {tab === "other" && <label className="tasks-department-picker">Отдел-получатель
-        <select value={target} disabled={busy} onChange={e => { setTarget(e.target.value); setConfirming(false); }}>
+        <select value={target} disabled={busy} onChange={e => setTarget(e.target.value)}>
           <option value="">Выберите отдел</option>
           {DEPARTMENTS.filter(([key]) => key !== data?.department).map(([key, label]) =>
             <option key={key} value={key}>{label}</option>)}
@@ -320,10 +305,10 @@ export default function TasksBoard() {
             {tab === "other" && <tr className="tasks-draft-row">
               <td><input className="tasks-inline-input" placeholder="Введите новую задачу"
                 aria-label="Новая задача" maxLength={500} value={newTitle} disabled={busy}
-                onChange={e => { setNewTitle(e.target.value); setConfirming(false); }} /></td>
+                onChange={e => setNewTitle(e.target.value)} /></td>
               <td><select className={"tasks-pill tasks-urgency-" + (newUrgency || "empty")}
                 aria-label="Срочность новой задачи" disabled={busy} value={newUrgency}
-                onChange={e => { setNewUrgency(e.target.value as Urgency); setConfirming(false); }}>
+                onChange={e => setNewUrgency(e.target.value as Urgency)}>
                 <option value="">Выберите</option>
                 {URGENCIES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
               </select></td>
@@ -337,12 +322,11 @@ export default function TasksBoard() {
               <td><textarea className="tasks-inline-input tasks-comment" rows={1} maxLength={4000}
                 aria-label="Комментарий к новой задаче" placeholder="Комментарий"
                 disabled={busy} value={newComment}
-                onChange={e => { setNewComment(e.target.value); setConfirming(false); }} /></td>
+                onChange={e => setNewComment(e.target.value)} /></td>
               <td className="tasks-actions-cell"><button type="button"
                 className="tasks-action-button" disabled={!canCreate} onClick={() => void submitTask()}>
-                {confirming ? "Подтвердить" : "Поставить задачу"}
-              </button>{confirming && <button type="button" className="tasks-cancel"
-                onClick={() => setConfirming(false)}>Отмена</button>}</td>
+                Поставить задачу
+              </button></td>
             </tr>}
             {visible.map(task => <TaskRow key={task.id} task={task}
               tab={tab as "my" | "other"} snapshot={data} busy={busy} onAction={onAction} />)}
