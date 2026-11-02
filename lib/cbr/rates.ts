@@ -50,30 +50,15 @@ export async function getCbrRates(asOf:string=moscowToday()):Promise<CbrRates>{
   yesterday=null;
  }
 
- // Trend direction must compare two different CBR publication dates.
- // Otherwise, on weekends/holidays, yesterday and today resolve to the same
- // document and every currency incorrectly appears unchanged.
- let previousPublished:Doc|null=
-  yesterday&&yesterday.effectiveDate<current.effectiveDate?yesterday:null;
- if(!previousPublished){
-  for(let n=1;n<=8;n++){
-   try{
-    const p=await load(before(current.effectiveDate,n));
-    if(p.effectiveDate<current.effectiveDate){
-     previousPublished=p;
-     break;
-    }
-   }catch{
-    break;
-   }
-  }
- }
+ // Trend is based on the rate that applied on the previous calendar day.
+ // On weekends and holidays CBR returns the same published document for both
+ // dates, so the correct visual state is equality rather than a stale movement.
 
  const rates={} as Record<CbrCurrency,CbrRate>;
  for(const code of CBR_CURRENCIES){
   const official=current.rates[code];
   const previous=yesterday?.rates[code]??null;
-  const trendBaseline=previousPublished?.rates[code]??null;
+  const trendBaseline=previous;
   rates[code]={
    official,previous,effectiveDate:current.effectiveDate,previousDate:yesterday?.effectiveDate??null,
    trend:trendBaseline===null?"unknown":official>trendBaseline+1e-8?"up":official<trendBaseline-1e-8?"down":"flat",
