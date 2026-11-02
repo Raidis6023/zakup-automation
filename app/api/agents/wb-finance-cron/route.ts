@@ -20,7 +20,7 @@ async function work(req:NextRequest,attempt:number,started:number){
  const token=process.env.WB_FINANCE_TOKEN?.trim();
  if(!token)return reply({ok:false,error:"Missing WB_FINANCE_TOKEN"},503);
  const db=createAdminClient();
- const day=todayKras(),from=shift(day,-28),to=shift(day,-1);
+ const day=todayKras(),from=shift(day,-31),to=shift(day,-1);
  // Previous partial windows must never block today's rolling 28-day window.
  // Keep their raw cache for audit, but remove them from the active queue.
  const archived=await db.from('wb_finance_cache_jobs').update({status:'superseded',updated_at:new Date().toISOString()})

@@ -310,3 +310,21 @@ html[data-theme="dark"] .ozf-page {
   background: var(--ui-table-header-background, var(--ozf-soft));
   opacity: 1;
 }
+
+/* Keep numeric values aligned to the corresponding sortable headings. */
+.ozf-page .ozf-financial-table{font-variant-numeric:tabular-nums;}
+.ozf-page .ozf-financial-table tr>th:nth-child(n+4),
+.ozf-page .ozf-financial-table tr>td:nth-child(n+4){text-align:right;}
+.ozf-page .ozf-financial-table tr>th:nth-child(n+4) .ozf-sort-control{display:flex;width:100%;justify-content:flex-end;text-align:right;}
+.ozf-page .ozf-financial-table tr>th:nth-child(-n+3),
+.ozf-page .ozf-financial-table tr>td:nth-child(-n+3){text-align:left;}
+.ozf-page .ozf-financial-table tfoot td{font-variant-numeric:tabular-nums;}
+.ozf-accrual-days details{margin:0;border-bottom:1px solid var(--ozf-subtle-border,rgba(150,160,170,.18));}
+.ozf-accrual-days details>summary{list-style:none;cursor:pointer;display:flex;gap:12px;align-items:center;padding:7px 10px;}
+.ozf-accrual-days details>summary::-webkit-details-marker{display:none;}
+.ozf-accrual-days details>summary:hover{background:rgba(128,175,205,.10);}
+.ozf-accrual-days details>summary b{margin-left:auto;}
+.ozf-accrual-operations{padding:8px 12px;max-height:380px;overflow:auto;}
+.ozf-accrual-operations table{width:100%;border-collapse:collapse;font-size:12px;}
+.ozf-accrual-operations th,.ozf-accrual-operations td{padding:5px 8px;text-align:left;border-bottom:1px solid rgba(150,160,170,.15);}
+.ozf-accrual-operations th:last-child,.ozf-accrual-operations td:last-child{text-align:right;font-variant-numeric:tabular-nums;}

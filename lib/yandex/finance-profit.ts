@@ -8,7 +8,7 @@ function incomeSign(status:string){const s=status.toLowerCase().replace(/Ñ‘/g,'Ð
 export function financialReport(lines:Line[],from:string,to:string,rates:Rate[],listings:Listing[],orders:OrderQuantity[],ordersComplete:boolean){
  const base=calculate(lines,from,to);const mappings=new Map(listings.map(x=>[x.offer_id,x]));
  const histories=new Map<string,Rate[]>();for(const r of rates){const key=r.master_code??'article:'+r.article;const list=histories.get(key)??[];list.push(r);histories.set(key,list);}for(const list of histories.values())list.sort((a,b)=>b.valid_from.localeCompare(a.valid_from));
- const rateAt=(master:string|null,day:string,article:string)=>(histories.get(master??'article:'+article)??[]).find(r=>r.valid_from<=day);
+ const rateAt=(master:string|null,day:string,article:string)=>((master?histories.get(master):null)?.find(r=>r.valid_from<=day)??(histories.get('article:'+article)??[]).find(r=>r.valid_from<=day));
  const within=(d:string)=>d>=from&&d<=to;
  const orderByArticle=new Map<string,OrderQuantity[]>();
  if(ordersComplete)for(const o of orders){if(!within(o.order_date))continue;const list=orderByArticle.get(o.article)??[];list.push(o);orderByArticle.set(o.article,list);}

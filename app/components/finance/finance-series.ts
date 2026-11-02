@@ -28,7 +28,7 @@ export function dailyChanges(reports:Array<{day:string;report:Report}>,market:st
   const cur=amounts(report,market,offer,offers);
   const v=Object.fromEntries(Object.keys(cur).map(k=>{
    const key=k as keyof Values;
-   return [key,report.missing_days?.length||cur[key]===null?0:cur[key]];
+   return [key,report.missing_days?.length||cur[key]===null?null:cur[key]];
   })) as Values;
   return {day,v};
  });

@@ -54,7 +54,16 @@ export async function readFinance(from:string,to:string){
  const result=financialReport(lines,from,to,rates,listings,orders,report.order_units_complete);
  const daily=Array.from({length:Math.round((Date.parse(to)-Date.parse(from))/86400000)+1},(_,index)=>{
   const day=new Date(Date.parse(from)+index*86400000).toISOString().slice(0,10);
-  const item=financialReport(lines,day,day,rates,listings,orders,report.order_units_complete);
+  // Daily totals must use the same selected source rows as the whole-period calculation.
+  // Order-linked service expenses can be billed on a later day. Reassign those
+  // rows to the order day ONLY for the daily attribution, never in the source ledger.
+  const dayLines=lines.filter(l=>{
+    if(l.source==='income')return l.orderDate===day;
+    if(l.serviceDate<from||l.serviceDate>to)return false;
+    if(l.orderId&&(!l.orderDate||l.orderDate<from||l.orderDate>to))return false;
+    return (l.orderId?l.orderDate:l.serviceDate)===day;
+  }).map(l=>l.source==='expense'?{...l,serviceDate:day}:l);
+  const item=financialReport(dayLines,day,day,rates,listings,orders,report.order_units_complete);
   return {day,orders:item.totals.orders,buyouts:item.totals.buyouts,income:item.totals.income,result:item.totals.result};
  });
  const dailyResult=daily.every(x=>x.result!==null)?daily.reduce((sum,x)=>sum+Number(x.result),0):null;

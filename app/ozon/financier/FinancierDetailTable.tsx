@@ -293,7 +293,7 @@ export default function FinancierDetailTable({
                   {r.mayak_expense!=null&&<tr>
                     <td>ТК Маяк × заказанные единицы</td><td>Внешний расход</td>
                     <td>{qty(r.order_count)}</td>
-                    <td>{money(-Math.abs(r.mayak_expense))}</td>
+                    <td className="ozf-bad">{money(-Math.abs(r.mayak_expense))}</td>
                   </tr>}
                   {r.performance_ad_expense!=null&&<tr className="ozf-info-only">
                     <td>Реклама по SKU (Performance API, справочно)</td>
