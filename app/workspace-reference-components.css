@@ -2314,6 +2314,15 @@ html[data-theme="dark"]
   padding-left: 48px;
   background: var(--ws-page);
 }
+
+/* Neutralize legacy finance heading margins/opacity. Font, color and spacing
+   otherwise come from the same shared .title and .subtitle rules as other pages. */
+.workspace-content--module .ozf-page > .header.ozf-heading h1 {
+  margin: 0;
+}
+.workspace-content--module .ozf-page > .header.ozf-heading p {
+  opacity: 1;
+}
 .workspace-content--module .ozf-page > .ozf-toolbar {
   flex-wrap: wrap;
   align-items: center;
