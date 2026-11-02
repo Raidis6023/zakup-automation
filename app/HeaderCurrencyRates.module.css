@@ -47,7 +47,8 @@
 }
 
 .up,
-.down {
+.down,
+.flat {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -55,13 +56,16 @@
   width: 10px;
   height: 18px;
   font-size: 14px;
-  font-weight: 900;
+  font-weight: 800;
   line-height: 18px;
   text-align: center;
 }
 
-.up { color: #f46b75; }
-.down { color: #37c98e; }
+.up { color: #37c98e; }
+.down { color: #f46b75; }
+.flat { color: #d6a62e; }
+
+html[data-theme="dark"] .flat { color: #e7b94e; }
 
 .item::after {
   content: attr(data-tooltip);
