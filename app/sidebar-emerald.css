@@ -101,10 +101,20 @@ html[data-theme="dark"] .home-shell[data-accent-area] {
 }
 /* Match the existing brand-icon clipping for utility icons. The missing
    clip is why the smoke ballooned into a giant neon circle. */
+.home-shell .home-sidebar .home-brand-icon,
 .home-shell .home-sidebar .home-workspace-icon,
 .home-shell .home-topbar-right .home-utility-icon-visual {
   overflow: hidden;
   border-radius: 12px;
+}
+
+/* Admin employees use the same monochrome line-icon treatment in both
+   themes. Active-state accent is shared with the rest of the sidebar. */
+.home-shell .home-sidebar .home-admin-employees-icon {
+  color: #11865d;
+}
+.home-shell .home-sidebar .home-workspace-link--active .home-admin-employees-icon {
+  color: #44ffbd;
 }
 
 .home-shell .home-sidebar .home-brand-icon svg,
