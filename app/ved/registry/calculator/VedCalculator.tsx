@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {VedCalculatorWorkspace} from "./VedCalculatorWorkspace";
 import { applyTariffValues, VED_TARIFFS, type TariffRow, type VedTariffKey } from "@/lib/ved-calculation/tariffs";
 import {
@@ -56,20 +56,39 @@ export default function VedCalculator() {
   const [offerItemId,setOfferItemId]=useState<string|null>(null);
   const [offerSource,setOfferSource]=useState("");
   const [history, setHistory] = useState<StoredCalculation[]>([]);
+  const openedDeepLink=useRef(false);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const loadSaved = useCallback(async () => {
     try {
-      const response = await fetch("/api/ved-calculations", {cache:"no-store"});
+      const snapshotId=new URLSearchParams(window.location.search).get("snapshotId");
+      const response = await fetch("/api/ved-calculations"+
+        (snapshotId?"?snapshotId="+encodeURIComponent(snapshotId):""), {cache:"no-store"});
       const json = await response.json() as SavedResponse;
       if(!response.ok || !json.ok) throw Error(json.error || "Не удалось получить версии");
       setHistory(json.items || []);
+      if(!openedDeepLink.current){
+        openedDeepLink.current=true;
+        const id=new URLSearchParams(window.location.search).get("snapshotId");
+        if(id){
+          const saved=(json.items||[]).find(x=>x.id===id);
+          if(saved){
+            setInput(saved.input_data);setTitle(saved.title);setArticle(saved.article);
+            setCalculationId(saved.calculation_id);setTariffDate(saved.calculation_date);
+            setOfferItemId(saved.offer_item_id||null);
+            setOfferSource(saved.offer_item_id?"Открыт сохранённый расчёт товара из КП":"");
+            setSaveMessage("Открыта сохранённая версия "+saved.version_no+" из реестра. Новые изменения сохраняются отдельной версией.");
+          }else setSaveMessage("Версия расчёта не найдена среди последних сохранений.");
+        }
+      }
     }catch(e){setSaveMessage(e instanceof Error ? e.message : "Ошибка получения версий");}
   },[]);
   useEffect(()=>{void loadSaved();},[loadSaved]);
   useEffect(()=>{
-    const itemId=new URLSearchParams(window.location.search).get("offerItem");
+    const params=new URLSearchParams(window.location.search);
+    if(params.has("snapshotId"))return;
+    const itemId=params.get("offerItem");
     if(!itemId)return;
     let active=true;
     (async()=>{

@@ -18,11 +18,20 @@ export async function GET(request:Request){
   const {admin}=await requireVedAccess();
   const offerId=new URL(request.url).searchParams.get("offerId")||"";
   if(!uuid.test(offerId))return bad("Неверный идентификатор КП");
+  const versionId=new URL(request.url).searchParams.get("versionId");
+  if(versionId&&!uuid.test(versionId))return bad("Неверный идентификатор версии");
+  const fields="id,offer_id,version_no,calculation_date,items_data,tariffs_data,created_at";
   const {data,error}=await admin.from("ved_offer_calculation_versions")
-   .select("id,offer_id,version_no,calculation_date,items_data,tariffs_data,created_at")
-   .eq("offer_id",offerId).order("version_no",{ascending:false}).limit(10);
+   .select(fields).eq("offer_id",offerId).order("version_no",{ascending:false}).limit(50);
   if(error)throw error;
-  return NextResponse.json({ok:true,versions:data||[]},{headers:{"Cache-Control":"private,no-store"}});
+  const versions=[...(data||[])];
+  if(versionId&&!versions.some(v=>v.id===versionId)){
+   const {data:exact,error:lookupError}=await admin.from("ved_offer_calculation_versions")
+    .select(fields).eq("offer_id",offerId).eq("id",versionId).maybeSingle();
+   if(lookupError)throw lookupError;
+   if(exact)versions.push(exact);
+  }
+  return NextResponse.json({ok:true,versions},{headers:{"Cache-Control":"private,no-store"}});
  }catch(e){return failure(e);}
 }
 export async function POST(request:Request){

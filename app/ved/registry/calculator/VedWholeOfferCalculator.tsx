@@ -55,7 +55,9 @@ function inputFromQuote(item:Product,tariff:TariffResponse["selected"],asOf:stri
   },
  };
 }
-export default function VedWholeOfferCalculator({offerId}:{offerId:string}){
+export default function VedWholeOfferCalculator({offerId,initialItemId,initialVersionId}:{
+ offerId:string;initialItemId?:string;initialVersionId?:string;
+}){
  const [offer,setOffer]=useState<Quote|null>(null);
  const [quoteItems,setQuoteItems]=useState<Product[]>([]);
  const [rows,setRows]=useState<Row[]>([]);
@@ -70,14 +72,15 @@ export default function VedWholeOfferCalculator({offerId}:{offerId:string}){
  const signature=()=>JSON.stringify({date,rows:rows.map(r=>({itemId:r.itemId,input:{...r.input,
   customs:{...r.input.customs,feeDate:date}}}))});
  const fetchVersions=useCallback(async():Promise<Version[]>=>{
-  const res=await fetch("/api/ved-offer-calculations?offerId="+encodeURIComponent(offerId),{cache:"no-store"});
+  const res=await fetch("/api/ved-offer-calculations?offerId="+encodeURIComponent(offerId)+
+   (initialVersionId?"&versionId="+encodeURIComponent(initialVersionId):""),{cache:"no-store"});
   const obj=await res.json() as Response&{versions?:Version[]};
   if(!res.ok||!obj.ok)throw Error(obj.error||"Не удалось загрузить версии КП");
   const found=obj.versions||[];
   setVersions(found);
   setLatestId(found[0]?.id||null);
   return found;
- },[offerId]);
+ },[offerId,initialVersionId]);
  useEffect(()=>{
   let active=true;
   void (async()=>{
@@ -95,7 +98,7 @@ export default function VedWholeOfferCalculator({offerId}:{offerId:string}){
     setOffer(quote.offer);setQuoteItems(quote.items);setCanEdit(Boolean(tariffs.canEdit));
     const original=quote.items.map(item=>({itemId:item.id,article:item.supplier_article,
       title:item.description_original,input:inputFromQuote(item,tariffs.selected,dateMoscow())}));
-    setRows(original);setSelectedItem(original[0]?.itemId||null);
+    setRows(original);setSelectedItem(original.some(r=>r.itemId===initialItemId)?initialItemId!:original[0]?.itemId||null);
     if(tariffs.fxError)setMessage("Не удалось получить курс ЦБ: "+tariffs.fxError+"; расчёт не запустится до уточнения курсов.");
     // Restore the latest COMPLETE snapshot on entry, so confirmed duties
     // aren't lost after reloading the page. Partial versions stay in history.
@@ -104,15 +107,19 @@ export default function VedWholeOfferCalculator({offerId}:{offerId:string}){
       if(!active)return;
       const complete=history.find(v=>v.items_data.length===original.length&&
         v.items_data.every(entry=>Boolean(entry.result)&&original.some(row=>row.itemId===entry.itemId)));
-      if(complete){
-        const restored=complete.items_data.map(x=>({itemId:x.itemId,article:x.article,title:x.title,input:x.input}));
-        setRows(restored);setDate(complete.calculation_date);
-        setSelectedItem(restored[0]?.itemId||null);
-        lastSaved.current={id:complete.id,signature:JSON.stringify({date:complete.calculation_date,
+      const requested=initialVersionId?history.find(v=>v.id===initialVersionId):null;
+      const chosen=requested||complete;
+      if(chosen){
+        const restored=chosen.items_data.map(x=>({itemId:x.itemId,article:x.article,title:x.title,input:x.input}));
+        setRows(restored);setDate(chosen.calculation_date);
+        setSelectedItem(restored.some(r=>r.itemId===initialItemId)?initialItemId!:restored[0]?.itemId||null);
+        lastSaved.current={id:chosen.id,signature:JSON.stringify({date:chosen.calculation_date,
           rows:restored.map(row=>({itemId:row.itemId,input:{...row.input,
-           customs:{...row.input.customs,feeDate:complete.calculation_date}}}))})};
-        if(history[0]?.id!==complete.id)
-          setMessage("Открыта последняя полностью рассчитанная версия "+complete.version_no+
+           customs:{...row.input.customs,feeDate:chosen.calculation_date}}}))})};
+        if(requested)
+          setMessage("Открыта версия "+chosen.version_no+" из реестра. Изменения сохраняются новой версией КП.");
+        else if(history[0]?.id!==chosen.id)
+          setMessage("Открыта последняя полностью рассчитанная версия "+chosen.version_no+
            ". Более поздние незавершённые версии доступны в истории КП.");
       }
     }catch(e){
@@ -123,7 +130,7 @@ export default function VedWholeOfferCalculator({offerId}:{offerId:string}){
    finally{if(active)setLoading(false);}
   })();
   return ()=>{active=false;};
- },[offerId,fetchVersions]);
+ },[offerId,fetchVersions,initialItemId,initialVersionId]);
  const preview=useMemo<Preview[]>(()=>rows.map(row=>{
   try{return {...row,result:calculateVed(row.input),errors:[]};}
   catch(e){return {...row,result:null,errors:e instanceof VedInputError?e.issues:["Не удалось рассчитать товар"]};}

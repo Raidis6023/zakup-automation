@@ -12,14 +12,24 @@ function respondError(error: unknown) {
   return NextResponse.json({ok:false,error:"Ошибка сохранения расчёта ВЭД"},{status:500});
 }
 const uuidRe=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-export async function GET() {
+export async function GET(request:Request) {
   try{
     const {admin}=await requireVedAccess();
+    const snapshotId=new URL(request.url).searchParams.get("snapshotId");
+    if(snapshotId&&!uuidRe.test(snapshotId))
+     return NextResponse.json({ok:false,error:"Неверный идентификатор версии"},{status:400});
+    const columns="id,calculation_id,title,article,version_no,calculation_date,input_data,result_data,tariffs_data,created_at,offer_item_id";
     const {data,error}=await admin.from("ved_calculation_snapshots")
-     .select("id,calculation_id,title,article,version_no,calculation_date,input_data,result_data,tariffs_data,created_at,offer_item_id")
-     .order("created_at",{ascending:false}).limit(60);
+     .select(columns).order("created_at",{ascending:false}).limit(60);
     if(error)throw error;
-    return NextResponse.json({ok:true,items:data??[]},{headers:{"Cache-Control":"private,no-store"}});
+    const items=[...(data||[])];
+    if(snapshotId&&!items.some(row=>row.id===snapshotId)){
+     const {data:exact,error:lookupError}=await admin.from("ved_calculation_snapshots")
+      .select(columns).eq("id",snapshotId).maybeSingle();
+     if(lookupError)throw lookupError;
+     if(exact)items.push(exact);
+    }
+    return NextResponse.json({ok:true,items},{headers:{"Cache-Control":"private,no-store"}});
   }catch(e){return respondError(e);}
 }
 export async function POST(request: Request) {
