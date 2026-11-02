@@ -15,24 +15,24 @@ const shift=(d:string,delta:number)=>date(new Date(Date.parse(d+"T00:00:00Z")+de
 const todayKras=()=>date(new Date(Date.now()+3600000));
 const reply=(obj:object,status=200)=>NextResponse.json(obj,{status,headers:{"Cache-Control":"no-store"}});
 async function adminAccess(){const session=await createClient();const {data:{user}}=await session.auth.getUser();if(!user)throw Error("Требуется авторизация");const db=createAdminClient();const {data,error}=await db.from("app_user_access").select("admin_level,is_blocked").eq("user_id",user.id).maybeSingle();if(error||!data||data.is_blocked||!["admin","senior_admin"].includes(data.admin_level??""))throw Error("Недостаточно прав для финансовой аналитики");}
-async function work(req:NextRequest,attempt:number,started:number){
+async function work(req:NextRequest,attempt:number,started:number,history?:{run_day:string;from:string;to:string}){
  if(!process.env.CRON_SECRET||req.headers.get("authorization")!=="Bearer "+process.env.CRON_SECRET)return reply({ok:false,error:"Unauthorized"},401);
  const token=process.env.WB_FINANCE_TOKEN?.trim();
  if(!token)return reply({ok:false,error:"Missing WB_FINANCE_TOKEN"},503);
  const db=createAdminClient();
- const day=todayKras(),from=shift(day,-31),to=shift(day,-1);
- // Previous partial windows must never block today's rolling 28-day window.
+ const currentDay=todayKras(),day=history?.run_day??currentDay,from=history?.from??shift(currentDay,-31),to=history?.to??shift(currentDay,-1);
+ // Previous partial windows must never block today's rolling 31-day window.
  // Keep their raw cache for audit, but remove them from the active queue.
- const archived=await db.from('wb_finance_cache_jobs').update({status:'superseded',updated_at:new Date().toISOString()})
-  .lt('run_day',day).in('status',['pending','waiting','running','failed']);
- if(archived.error)return reply({ok:false,error:archived.error.message},503);
+ if(!history){const archived=await db.from('wb_finance_cache_jobs').update({status:'superseded',updated_at:new Date().toISOString()})
+  .lt('run_day',day).gte('date_to',shift(currentDay,-28)).in('status',['pending','waiting','running','failed']);
+ if(archived.error)return reply({ok:false,error:archived.error.message},503);}
 
  const {data:existing,error:existingError}=await db.from("wb_finance_cache_jobs").select("*").eq("run_day",day).maybeSingle();
  if(existingError)return reply({ok:false,error:existingError.message},503);
  if(!existing){
   const {error:createError}=await db.from("wb_finance_cache_jobs").insert({run_day:day,date_from:from,date_to:to,status:"pending",next_offset:0,rows_saved:0});
   if(createError)return reply({ok:false,error:createError.message},503);
- }else if(existing.rows_saved===0&&(existing.date_from!==from||existing.date_to!==to)){
+ }else if(existing.rows_saved===0&&(existing.date_from!==from||existing.date_to!==to||existing.status==='superseded')){
   const {error:rangeError}=await db.from("wb_finance_cache_jobs").update({date_from:from,date_to:to,status:"pending",next_offset:0,retry_at:null,last_error:null,updated_at:new Date().toISOString()}).eq("run_day",day);
   if(rangeError)return reply({ok:false,error:rangeError.message},503);
  }else if(existing.rows_saved>0&&(existing.date_from!==from||existing.date_to!==to)){
@@ -91,7 +91,7 @@ async function work(req:NextRequest,attempt:number,started:number){
   if(!done&&attempt<2&&Date.now()-started<190000){
     const wait=Math.min(Math.max(0,Date.parse(reserve)-Date.now()+1700),85000);
     if(wait>0)await new Promise(resolve=>setTimeout(resolve,wait));
-    if(Date.now()-started<235000)return work(req,attempt+1,started);
+    if(Date.now()-started<235000)return work(req,attempt+1,started,history);
   }
   return reply({ok:true,status:done?"complete":"waiting",from:job.date_from,to:job.date_to,rowsSaved:job.next_offset+raw.length,pages_processed:attempt+1});
  }catch(e){
@@ -102,9 +102,23 @@ async function work(req:NextRequest,attempt:number,started:number){
 }
 
 async function runAll(req:NextRequest){
- const [financeResponse,auxiliary]=await Promise.all([work(req,0,Date.now()),runAuxiliarySync()]);
- const finance=await financeResponse.json();const ok=financeResponse.ok||auxiliary.ok;
- return reply({ok,finance,auxiliary},ok?200:503);
+ const started=Date.now();
+ const [financeResponse,auxiliary]=await Promise.all([work(req,0,started),runAuxiliarySync()]);
+ const finance=await financeResponse.json();
+ let backfill:Record<string,unknown>|null=null;
+ // Restore the two missing October days from a complete historical WB report.
+ // Never mark an old partial cache as complete or synthesize missing daily snapshots.
+ if(financeResponse.ok&&finance.status==='complete'&&Date.now()-started<210000){
+  const db=createAdminClient(),target=['2026-10-01','2026-10-02'];
+  const stored=await db.from('wb_finance_daily_snapshots').select('snapshot_day').in('snapshot_day',target);
+  if(stored.error)backfill={ok:false,error:stored.error.message};
+  else if((stored.data??[]).length<target.length){
+   const response=await work(req,0,Date.now(),{run_day:'2026-10-30',from:'2026-10-01',to:'2026-10-02'});
+   backfill=await response.json();
+  }else backfill={ok:true,status:'cached'};
+ }
+ const ok=financeResponse.ok&&auxiliary.ok;
+ return reply({ok,finance,auxiliary,backfill},ok?200:503);
 }
 export async function GET(req:NextRequest){return runAll(req);}
 export async function POST(req:NextRequest){try{await adminAccess();const secret=process.env.CRON_SECRET;if(!secret)return reply({ok:false,error:"Не найден CRON_SECRET"},503);const internal=new NextRequest(req.url,{method:"GET",headers:{authorization:"Bearer "+secret}});return runAll(internal);}catch(e){return reply({ok:false,error:e instanceof Error?e.message:String(e)},403);}}
