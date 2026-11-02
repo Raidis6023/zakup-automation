@@ -1,5 +1,5 @@
 import {createAdminClient} from '../supabase/admin';
-import type {Line} from './finance';
+import type {Line,ConfirmedReturn} from './finance';
 import {financialReport,type Rate,type Listing,type OrderQuantity} from './finance-profit';
 export async function readFinance(from:string,to:string,scheme?:'fbo'|'fbs'){
  const db=createAdminClient();
@@ -65,7 +65,19 @@ export async function readFinance(from:string,to:string,scheme?:'fbo'|'fbs'){
  for(let offset=0;;offset+=1000){const {data,error}=await db.from('yandex_finance_article_rates').select('article,valid_from,cost_cents,mayak_cents,version').order('article').order('valid_from').range(offset,offset+999);if(error)throw error;rates.push(...data.map(r=>({...r,master_code:null})));if(data.length<1000)break;}
  const listings:Listing[]=[];for(let offset=0;;offset+=1000){const {data,error}=await db.from('yandex_products').select('offer_id,master_code,raw_data').order('id').range(offset,offset+999);if(error)throw error;listings.push(...data.map(x=>({offer_id:x.offer_id,master_code:x.master_code,name:x.raw_data?.offer?.name??null})));if(data.length<1000)break;}
  const managers=await db.from('yandex_finance_managers').select('master_key,manager_name');if(managers.error)throw managers.error;const managerByKey=new Map(managers.data.map(x=>[x.master_key,x.manager_name]));
- const result=financialReport(lines,from,to,rates,listings,orders,report.order_units_complete);
+
+ // Only confirmed money refunds for returned merchandise. Each must match
+ // an existing delivered order/article before the financial result changes.
+ const refunds=await db.from('yandex_returns').select('return_id').eq('return_type','RETURN').eq('refund_status','REFUNDED');
+ if(refunds.error)throw refunds.error;
+ const verifiedReturns:ConfirmedReturn[]=[];
+ const ids=(refunds.data??[]).map(x=>x.return_id);
+ for(let start=0;start<ids.length;start+=150){
+  const found=await db.from('yandex_return_items').select('return_id,order_id,shop_sku,quantity').in('return_id',ids.slice(start,start+150));
+  if(found.error)throw found.error;
+  for(const r of found.data??[])verifiedReturns.push({return_id:r.return_id,order_id:r.order_id,article:r.shop_sku,quantity:r.quantity});
+ }
+ const result=financialReport(lines,from,to,rates,listings,orders,report.order_units_complete,verifiedReturns);
  const daily=Array.from({length:Math.round((Date.parse(to)-Date.parse(from))/86400000)+1},(_,index)=>{
   const day=new Date(Date.parse(from)+index*86400000).toISOString().slice(0,10);
   // Daily totals must use the same selected source rows as the whole-period calculation.
@@ -77,7 +89,7 @@ export async function readFinance(from:string,to:string,scheme?:'fbo'|'fbs'){
     if(l.orderId&&(!l.orderDate||l.orderDate<from||l.orderDate>to))return false;
     return (l.orderId?l.orderDate:l.serviceDate)===day;
   }).map(l=>l.source==='expense'?{...l,serviceDate:day}:l);
-  const item=financialReport(dayLines,day,day,rates,listings,orders,report.order_units_complete);
+  const item=financialReport(dayLines,day,day,rates,listings,orders,report.order_units_complete,verifiedReturns);
   return {day,orders:item.totals.orders,buyouts:item.totals.buyouts,income:item.totals.income,result:item.totals.result};
  });
  const dailyResult=daily.every(x=>x.result!==null)?daily.reduce((sum,x)=>sum+Number(x.result),0):null;
