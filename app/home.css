@@ -565,11 +565,13 @@
 .home-topbar-divider {
   width: 1px;
 
-  height: 31px;
+  height: 26px;
 
   margin:
     0
     3px;
+
+  align-self: center;
 
   background:
     var(--border);
