@@ -12,3 +12,15 @@
 .ved-quote-action{display:inline-flex;font-family:inherit;padding:7px 10px;background:rgba(55,201,142,.1);color:var(--ws-active,#37c98e);border:1px solid rgba(55,201,142,.5);border-radius:8px;text-decoration:none;font-weight:650}
 .ved-quote-warning{color:#eeb978}.ved-quote-ready{color:#37c98e}.ved-quote-error{color:#eb6b78}
 @media(max-width:640px){.ved-quote-entry-head{align-items:flex-start;flex-direction:column}.ved-quote-original{align-self:flex-end}}
+
+/* Commercial-offer actions use the same compact typography as Workspace
+   secondary buttons. Set the full font contract, not only font-family:
+   native buttons and anchors otherwise keep different browser defaults. */
+.ved-quote-list .ved-quote-list-heading > button,
+.ved-quote-list .ved-quote-action,
+.ved-quote-list .ved-quote-original {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: var(--ui-font-size-compact, 12px);
+  font-weight: var(--ui-font-weight-secondary, 600);
+  line-height: normal;
+}
