@@ -47,24 +47,21 @@
 }
 
 .up,
-.down,
-.flat {
+.down {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  align-self: center;
+  width: 10px;
   height: 18px;
   font-size: 14px;
   font-weight: 900;
-  line-height: 1;
+  line-height: 18px;
+  text-align: center;
 }
 
 .up { color: #f46b75; }
 .down { color: #37c98e; }
-.flat {
-  color: var(--ws-text-muted);
-  font-size: 13px;
-  font-weight: 700;
-}
 
 .item::after {
   content: attr(data-tooltip);
