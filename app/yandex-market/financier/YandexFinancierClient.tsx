@@ -67,7 +67,7 @@ export default function YandexFinancierClient({initial,initialError}:{initial:Da
  <OrderFulfillmentPanels market="yandex" from={data.from} to={data.to}/>
  <YandexFinanceTable data={data} onSave={saveRate} saving={savingRate} onToggle={toggleStatus} statusSaving={statusSaving} onManager={saveManager}/>
  <section className="ozf-panel" id="ymf-unallocated"><h2>Нераспределённые расходы</h2><AccrualBreakdownList
-   items={Object.entries(data.common).map(([name,amount])=>({name,amount,daily:data.commonDetails?.[name]??[]}))}
+   items={Object.entries(data.common).map(([name,amount])=>({name,amount,daily:data.commonDetails?.[name]??[]}))} market="yandex" from={data.from} to={data.to}
    total={data.totals.common} totalLabel="Итого" minorUnits invert/></section>
 
  </>}

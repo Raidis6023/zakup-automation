@@ -443,7 +443,7 @@ export default function FinancierClient() {
             !["41","46"].includes(String(d.type_id??"")) &&
             !/оплата за клик|реклам|размещени.*склад|платн.*хранени/i.test(d.name));
           const otherTotal=Math.round(other.reduce((sum,d)=>sum+Number(d.amount),0)*100)/100;
-          return <AccrualBreakdownList items={other} total={otherTotal}
+          return <AccrualBreakdownList items={other.map(x=>({...x,typeId:String(x.type_id??'')}))} market="ozon" from={data.from} to={data.to} total={otherTotal}
             totalLabel="Итого прочие нераспределённые начисления"/>;
         })()}
       </div>}

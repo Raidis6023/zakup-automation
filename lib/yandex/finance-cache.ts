@@ -1,7 +1,7 @@
 import {createAdminClient} from '../supabase/admin';
 import type {Line} from './finance';
 import {financialReport,type Rate,type Listing,type OrderQuantity} from './finance-profit';
-export async function readFinance(from:string,to:string){
+export async function readFinance(from:string,to:string,scheme?:'fbo'|'fbs'){
  const db=createAdminClient();
  let {data:report,error}=await db.from('yandex_finance_reports').select('id,date_from,date_to,status,line_count,completed_at,order_units_complete')
   .eq('status','ready').lte('date_from',from).gte('date_to',to).order('created_at',{ascending:false}).limit(1).maybeSingle();
@@ -47,6 +47,20 @@ export async function readFinance(from:string,to:string){
   report={id:'daily-history',date_from:from,date_to:to,status:'ready',line_count:lines.length,completed_at:snapshots![snapshots!.length-1].captured_at,order_units_complete:true};
  }
  if(!report)return null;
+ if(scheme){
+  const ids=[...new Set([...orders.map(o=>o.order_id),...lines.filter(l=>l.orderId).map(l=>l.orderId)])];
+  const matching=new Set<string>();
+  for(let i=0;i<ids.length;i+=150){
+   const r=await db.from('yandex_order_items').select('order_id,warehouse_name').in('order_id',ids.slice(i,i+150));
+   if(r.error)throw r.error;
+   for(const x of r.data??[]){
+    const kind=/яндекс.?маркет/i.test(x.warehouse_name??'')?'fbo':/продавц/i.test(x.warehouse_name??'')?'fbs':null;
+    if(kind===scheme)matching.add(String(x.order_id));
+   }
+  }
+  const selected=lines.filter(l=>l.orderId&&matching.has(l.orderId));lines.length=0;lines.push(...selected);
+  const own=orders.filter(o=>matching.has(o.order_id));orders.length=0;orders.push(...own);
+ }
  const rates:Rate[]=[];for(let offset=0;;offset+=1000){const {data,error}=await db.from('yandex_finance_rates').select('master_code,valid_from,cost_cents,mayak_cents,version').order('master_code').order('valid_from').range(offset,offset+999);if(error)throw error;rates.push(...data as Rate[]);if(data.length<1000)break;}
  for(let offset=0;;offset+=1000){const {data,error}=await db.from('yandex_finance_article_rates').select('article,valid_from,cost_cents,mayak_cents,version').order('article').order('valid_from').range(offset,offset+999);if(error)throw error;rates.push(...data.map(r=>({...r,master_code:null})));if(data.length<1000)break;}
  const listings:Listing[]=[];for(let offset=0;;offset+=1000){const {data,error}=await db.from('yandex_products').select('offer_id,master_code,raw_data').order('id').range(offset,offset+999);if(error)throw error;listings.push(...data.map(x=>({offer_id:x.offer_id,master_code:x.master_code,name:x.raw_data?.offer?.name??null})));if(data.length<1000)break;}
@@ -54,7 +68,16 @@ export async function readFinance(from:string,to:string){
  const result=financialReport(lines,from,to,rates,listings,orders,report.order_units_complete);
  const daily=Array.from({length:Math.round((Date.parse(to)-Date.parse(from))/86400000)+1},(_,index)=>{
   const day=new Date(Date.parse(from)+index*86400000).toISOString().slice(0,10);
-  const item=financialReport(lines,day,day,rates,listings,orders,report.order_units_complete);
+  // Daily totals must use the same selected source rows as the whole-period calculation.
+  // Order-linked service expenses can be billed on a later day. Reassign those
+  // rows to the order day ONLY for the daily attribution, never in the source ledger.
+  const dayLines=lines.filter(l=>{
+    if(l.source==='income')return l.orderDate===day;
+    if(l.serviceDate<from||l.serviceDate>to)return false;
+    if(l.orderId&&(!l.orderDate||l.orderDate<from||l.orderDate>to))return false;
+    return (l.orderId?l.orderDate:l.serviceDate)===day;
+  }).map(l=>l.source==='expense'?{...l,serviceDate:day}:l);
+  const item=financialReport(dayLines,day,day,rates,listings,orders,report.order_units_complete);
   return {day,orders:item.totals.orders,buyouts:item.totals.buyouts,income:item.totals.income,result:item.totals.result};
  });
  const dailyResult=daily.every(x=>x.result!==null)?daily.reduce((sum,x)=>sum+Number(x.result),0):null;
@@ -75,5 +98,5 @@ export async function readFinance(from:string,to:string){
  const chinaByMaster=new Map<string,number>();const chinaReady=!products.error&&!vedOrders.error&&!vedItems.error&&[...vedStates.values()].some(v=>['in_transit','dispatched','shipping','on_the_way'].includes(v));
  if(chinaReady)for(const x of vedItems.data??[]){if(!['in_transit','dispatched','shipping','on_the_way'].includes(vedStates.get(x.ved_order_id)??'')||['cancelled','received','rejected'].includes(x.status))continue;const code=productCodes.get(String(x.product_id));if(code)chinaByMaster.set(code,(chinaByMaster.get(code)??0)+Number(x.order_quantity??x.quantity??0));}
  const rows=result.rows.map(p=>{const own=p.master_code?ownByMaster.get(p.master_code):null;const manager=managerByKey.get(p.master_code??'article:'+p.article);return {...p,manager:manager??'Не назначен',dataGaps:manager?p.dataGaps:[...p.dataGaps,'Нет КМ'],marketplaceStock:stockAvailable?marketplaceStock.get(p.article)??0:null,mainStock:own?.main??null,oxStock:own?.ox??null,inChina:chinaReady&&p.master_code?chinaByMaster.get(p.master_code)??0:null,inCrossdock:null as number|null,discontinued:!!(p.master_code&&/выведен|выводится/i.test(statusByMaster.get(p.master_code)??''))};});
- return {...result,rows,report,daily,dailyReconciled,stockDate:stockAvailable?stockRun.data?.snapshot_date??null:null};
+ return {...result,rows,report,daily,dailyReconciled,scheme:scheme??null,stockDate:stockAvailable?stockRun.data?.snapshot_date??null:null};
 }

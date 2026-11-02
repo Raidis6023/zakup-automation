@@ -216,7 +216,7 @@ export default function FinancierDetailTable({
         {['Выручка','Операционная прибыль'].includes(k.name)?<button type="button" className="ozf-kpi-link" onClick={()=>setGraphMetric(k.name==='Выручка'?'revenue':'profit')}>{k.name}</button>:<span>{k.name}</span>}<strong>{k.value}</strong>
       </div>)}
     </div>
-    <FinanceDynamics key={graphMetric} marketplace="ozon" revision={data?.cache_updated_at??''} from={data?.from??''} to={data?.to??''} offers={includeUnallocated?undefined:rows.map(r=>r.offer_id)} selected={graphMetric}/><div className="ozf-section-tools">
+    <FinanceDynamics key={graphMetric} marketplace="ozon" revision={data?.cache_updated_at??''} from={data?.from??''} to={data?.to??''} offers={includeUnallocated?undefined:rows.map(r=>r.offer_id)} selected={graphMetric} expectedProfit={operatingProfit}/><div className="ozf-section-tools">
       <input placeholder="Поиск по артикулу, коду или КМ" aria-label="Поиск товаров" value={search}
         onChange={e=>setSearch(e.target.value)} />
       <span>Сортировка: {defs.find(d=>d[0]===sort.key)?.[1]} {sort.dir===-1?"↓":"↑"}</span>
@@ -282,7 +282,7 @@ export default function FinancierDetailTable({
                       item.type_id==="REMAINDER"?"Прочее":
                       item.type_id==="SERVICE"?"Услуга Ozon":"Начисление Ozon";
                     return <tr key={item.type_id+"-"+i}>
-                      <td>{item.name}</td><td title={"Код Ozon: "+item.type_id}>{category}</td>
+                      <td>{item.name==='ITEM'?'Товарное начисление Ozon (ITEM)':item.name}</td><td title={"Код Ozon: "+item.type_id}>{category}</td>
                       <td>{item.count}</td><td className={moneyTone(item.amount)}>{money(item.amount)}</td>
                     </tr>;
                   })}
@@ -293,7 +293,7 @@ export default function FinancierDetailTable({
                   {r.mayak_expense!=null&&<tr>
                     <td>ТК Маяк × заказанные единицы</td><td>Внешний расход</td>
                     <td>{qty(r.order_count)}</td>
-                    <td>{money(-Math.abs(r.mayak_expense))}</td>
+                    <td className="ozf-bad">{money(-Math.abs(r.mayak_expense))}</td>
                   </tr>}
                   {r.performance_ad_expense!=null&&<tr className="ozf-info-only">
                     <td>Реклама по SKU (Performance API, справочно)</td>
