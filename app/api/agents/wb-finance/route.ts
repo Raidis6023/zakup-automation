@@ -227,16 +227,29 @@ export async function GET(request:NextRequest){
   const masterByArticle=new Map(listings.map(x=>[String(x.seller_article),x.master_code]));
   const sharedByNm=new Map<string,Rate[]>();
   for(const line of lines){const id=String(line.nmId??'0'),master=masterById.get(id)??masterByArticle.get(String(line.vendorCode??''));if(master&&!sharedByNm.has(id))sharedByNm.set(id,sharedByMaster.get(master)??[]);}
-  const grouped=groupFinancial(lines,(rates??[]) as Rate[],sharedByNm);
+  const scheme=request.nextUrl.searchParams.get('scheme');
+  if(scheme!==null&&!['fbw','fbs'].includes(scheme))return NextResponse.json({ok:false,error:'Неверная схема'},{status:400});
+  let financialLines=lines;
+  if(scheme){
+   const refFrom=new Date(Date.parse(from+'T00:00:00Z')-45*86400000).toISOString().slice(0,10);
+   const sourceOrders=await readPages<{srid:string;warehouse_type:string}>(async(a,b)=>{const q=await db.from('wb_orders').select('srid,warehouse_type').gte('order_date',refFrom+'T00:00:00Z').lte('order_date',to+'T23:59:59Z').order('srid').range(a,b);return {data:q.data,error:q.error};});
+   const srids=new Set(sourceOrders.filter(o=>(o.warehouse_type==='Склад WB'?'fbw':o.warehouse_type==='Склад продавца'?'fbs':null)===scheme).map(o=>o.srid));
+   financialLines=lines.filter(l=>{
+    const office=String(l.officeName??'').toLowerCase();
+    const kind=office==='склад wb'?'fbw':office.includes('склад поставщика')||office.includes('склад продавца')?'fbs':null;
+    return kind?kind===scheme:srids.has(String(l.srid??''));
+   });
+  }
+  const grouped=groupFinancial(financialLines,(rates??[]) as Rate[],sharedByNm);
   const daily=Array.from({length:Math.round((Date.parse(to)-Date.parse(from))/86400000)+1},(_,i)=>{
     const day=new Date(Date.parse(from)+i*86400000).toISOString().slice(0,10);
-    return {day,rows:groupFinancial(lines.filter(line=>String(line.rrDate??line.rrdDt??line.rrdDate??line.saleDt??'').slice(0,10)===day)).map(r=>({nm_id:r.nm_id,revenue:r.realization}))};
+    return {day,rows:groupFinancial(financialLines.filter(line=>String(line.rrDate??line.rrdDt??line.rrdDate??line.saleDt??'').slice(0,10)===day),(rates??[]) as Rate[],sharedByNm).map(r=>({nm_id:r.nm_id,revenue:r.realization,profit:r.preliminary_result,orders:r.sales_units,buyouts:r.buyouts}))};
   });
   const ads=await readPages<{snapshot_day:string;campaign_id:number;nm_id:number;spend:number;views:number;clicks:number;orders:number;sum_price:number}>(async(a,b)=>{const q=await db.from('wb_finance_ad_daily').select('snapshot_day,campaign_id,nm_id,spend,views,clicks,orders,sum_price').gte('snapshot_day',from).lte('snapshot_day',to).order('snapshot_day').range(a,b);return {data:q.data,error:q.error};});
   const storage=await readPages<{snapshot_day:string;nm_id:number|null;amount:number}>(async(a,b)=>{const q=await db.from('wb_finance_storage_daily').select('snapshot_day,nm_id,amount').gte('snapshot_day',from).lte('snapshot_day',to).order('snapshot_day').range(a,b);return {data:q.data,error:q.error};});
-  const orders=await readPages<{nm_id:number;is_cancel:boolean}>(async(a,b)=>{const q=await db.from('wb_orders').select('nm_id,is_cancel').gte('order_date',from+'T00:00:00Z').lte('order_date',to+'T23:59:59Z').order('order_date').range(a,b);return {data:q.data,error:q.error};});
+  const orders=await readPages<{nm_id:number;is_cancel:boolean;warehouse_type:string}>(async(a,b)=>{const q=await db.from('wb_orders').select('nm_id,is_cancel,warehouse_type').gte('order_date',from+'T00:00:00Z').lte('order_date',to+'T23:59:59Z').order('order_date').range(a,b);return {data:q.data,error:q.error};});
   const [adSnapshots,storageSnapshots]=await Promise.all([db.from('wb_finance_ad_snapshots').select('snapshot_day').gte('snapshot_day',from).lte('snapshot_day',to),db.from('wb_finance_storage_snapshots').select('snapshot_day').gte('snapshot_day',from).lte('snapshot_day',to)]);if(adSnapshots.error)throw adSnapshots.error;if(storageSnapshots.error)throw storageSnapshots.error;
-  const orderByNm=new Map<string,{orders:number;cancelled:number}>();for(const row of orders){const key=String(row.nm_id),v=orderByNm.get(key)??{orders:0,cancelled:0};v.orders++;if(row.is_cancel)v.cancelled++;orderByNm.set(key,v);}
+  const orderByNm=new Map<string,{orders:number;cancelled:number}>();for(const row of orders.filter(o=>!scheme||(scheme==='fbw'?o.warehouse_type==='Склад WB':o.warehouse_type==='Склад продавца'))){const key=String(row.nm_id),v=orderByNm.get(key)??{orders:0,cancelled:0};v.orders++;if(row.is_cancel)v.cancelled++;orderByNm.set(key,v);}
   const storageByNm=new Map<string,number>();for(const row of storage)if(row.nm_id)storageByNm.set(String(row.nm_id),(storageByNm.get(String(row.nm_id))??0)+num(row.amount));
   const expectedDays=Math.round((Date.parse(to)-Date.parse(from))/86400000)+1;
 
@@ -249,12 +262,12 @@ export async function GET(request:NextRequest){
     return {...row,master_code:master,manager:manager??'Не назначен',
       missing_rates:[...row.missing_rates,...(!master?['Код товара (ЕНОТ)']:[]),...(!manager?['КМ']:[])],
       order_count:orderByNm.get(row.nm_id)?.orders??0,cancel_count:orderByNm.get(row.nm_id)?.cancelled??0,
-      external_storage:storageByNm.has(row.nm_id)?round(storageByNm.get(row.nm_id)!):null};
+      external_storage:scheme?null:storageByNm.has(row.nm_id)?round(storageByNm.get(row.nm_id)!):null};
   });
-  const adItems:AdItem[]=ads.map(row=>({nm_id:Number(row.nm_id),date:row.snapshot_day,campaign_id:Number(row.campaign_id),spend:Number(row.spend),views:Number(row.views),clicks:Number(row.clicks),orders:Number(row.orders),sum_price:Number(row.sum_price)}));
+  const adItems:AdItem[]=scheme?[]:ads.map(row=>({nm_id:Number(row.nm_id),date:row.snapshot_day,campaign_id:Number(row.campaign_id),spend:Number(row.spend),views:Number(row.views),clicks:Number(row.clicks),orders:Number(row.orders),sum_price:Number(row.sum_price)}));
   const adsComplete=(adSnapshots.data?.length??0)===expectedDays,storageComplete=(storageSnapshots.data?.length??0)===expectedDays,ordersComplete=orders.length>0;
-  return NextResponse.json({ok:true,from,to,financial_rows:lines.length,daily,rows:enriched,
-    ads:{items:adItems,campaigns:new Set(ads.map(x=>x.campaign_id)).size,coverage:adsComplete?'cached_complete':adItems.length?'cached_partial':'not_loaded',warning:adsComplete?null:'Реклама загружена не за все дни выбранного периода.'},
+  return NextResponse.json({ok:true,from,to,scheme:scheme??null,financial_rows:financialLines.length,daily,rows:enriched,
+    ads:{items:adItems,campaigns:new Set(ads.map(x=>x.campaign_id)).size,coverage:scheme?'not_attributed':adsComplete?'cached_complete':adItems.length?'cached_partial':'not_loaded',warning:scheme?'Не связанные с SRID рекламные списания исключены.':adsComplete?null:'Реклама загружена не за все дни выбранного периода.'},
     orders:{rows:orders.length,coverage:ordersComplete?'cached_partial':'not_loaded'},storage:{rows:storage.length,coverage:storageComplete?'cached_complete':storage.length?'cached_partial':'not_loaded'},
     coverage:{finance:latest.status==='complete'?'cached_complete':'cached_partial',advertising:adsComplete?'cached_complete':adItems.length?'cached_partial':'not_loaded',paid_storage:storageComplete?'cached_complete':storage.length?'cached_partial':'not_loaded',orders:ordersComplete?'cached_partial':'not_loaded',advertising_actual_charges:'not_loaded'},
     cache:{status:latest.status,runDay:latest.run_day,from:latest.date_from,to:latest.date_to,completedAt:latest.completed_at,rowsSaved:latest.rows_saved},
