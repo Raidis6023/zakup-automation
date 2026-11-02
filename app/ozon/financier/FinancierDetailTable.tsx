@@ -18,7 +18,7 @@ export type FinancialRow = {
   transit_revenue:number|null;transit_drr:number|null;mayak_expense:number|null;
   cogs:number|null;unit_cost:number|null;mayak_unit:number|null;
   discontinued:boolean; data_gaps:string[];
-  details:Array<{type_id:string;name:string;amount:number;count:number;is_advertising?:boolean}>;
+  details:Array<{type_id:string;name:string;amount:number;count:number;is_advertising?:boolean;is_reference?:boolean}>;
 };
 type Data = {
   from:string;to:string;missing_days:string[];unallocated_amount:number;
@@ -190,7 +190,7 @@ export default function FinancierDetailTable({
     ["master_code","Код товара"],["manager","КМ"],["offer_id","Артикул"],
     ["estimated_result","Операционная прибыль"],["revenue","Выручка"],
     ["ad","Реклама, ₽"],["drr","ДРР"],["storage","Хранение, ₽"],
-    ["orders","Заказы"],["cancelled","Отмены"],["buyout","Выкупы"],
+    ["orders","Заказы"],["cancelled","Отмены"],["buyout","Расч. выкупы*"],
     ["roas","ROAS"],["transit","Товары в пути"],["transit_revenue","Выручка с товарами в пути"],
     ["transit_drr","ДРР с товарами в пути"],["ozon_stock","Остатки Ozon"],
     ["crossdock","В пути на склады"],["main","Аведэкс основной"],
@@ -266,8 +266,8 @@ export default function FinancierDetailTable({
           </tr>
           {expanded===r.offer_id&&<tr key={r.offer_id+"-detail"} className="ozf-expanded-row">
             <td colSpan={25}>
-              <div className="ozf-expanded-content"><div className="ozf-pinned-article"><strong>{r.offer_id}</strong><CopyArticle article={r.offer_id}/></div>
-                <table className="ozf-breakdown-table"><thead><tr>
+              <div className="ozf-expanded-content"><div className="ozf-pinned-article"><strong>{r.offer_id}</strong><CopyArticle article={r.offer_id}/></div>{r.offer_id.startsWith('SKU:')&&<p className="ozf-error">Нет подтверждённой связки SKU {r.offer_id.slice(4)} с артикулом продавца. Скопируй SKU и найди его в кабинете Ozon в списке товаров. Автоматическое сопоставление с чужой карточкой отключено.</p>}
+                <p className="ozf-notice">* Расчётные выкупы = заказы минус отмены. Возвраты на дату исходного заказа пока не загружены, поэтому прибыль предварительная. Баллы и поддержка программ уже входят в начисления Ozon; справочные строки нельзя прибавлять повторно.</p><table className="ozf-breakdown-table"><thead><tr>
                   <th>Статья</th><th>Категория</th><th>Операций</th><th>Сумма, ₽</th>
                 </tr></thead><tbody>
                   {r.estimated_result===null&&<tr className="ozf-missing-explainer">
@@ -277,11 +277,11 @@ export default function FinancierDetailTable({
                       ]).join("; ")}. Исправь сведения в настройках финансиста.</td>
                   </tr>}
                   {r.details.map((item,i)=>{
-                    const category=item.type_id==="SALES"?"Выручка":
+                    const category=item.is_reference?"Состав начисления · справочно":item.type_id==="SALES"?"Выручка":
                       item.type_id==="COMMISSION"?"Комиссия":
                       item.type_id==="REMAINDER"?"Прочее":
                       item.type_id==="SERVICE"?"Услуга Ozon":"Начисление Ozon";
-                    return <tr key={item.type_id+"-"+i}>
+                    return <tr key={item.type_id+"-"+i} className={item.is_reference?"ozf-info-only":""}>
                       <td>{item.name==='ITEM'?'Товарное начисление Ozon (ITEM)':item.name}</td><td title={"Код Ozon: "+item.type_id}>{category}</td>
                       <td>{item.count}</td><td className={moneyTone(item.amount)}>{money(item.amount)}</td>
                     </tr>;
