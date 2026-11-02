@@ -18,7 +18,7 @@ export default function AdminUsersPage() {
         "Сотрудники"
     >
 
-      <PageHeader variant="admin-users" title="Сотрудники" description="Пользователи WorkSpace, их рабочие роли и административные права" />
+      <PageHeader variant="admin" title="Сотрудники" description="Пользователи WorkSpace, их рабочие роли и административные права" />
 
 
       <AdminUsersPanel />
