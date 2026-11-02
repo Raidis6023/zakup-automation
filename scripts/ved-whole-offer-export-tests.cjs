@@ -63,12 +63,12 @@ async function main(){
  for(const ref of ["B4","B7","B9","B15","C16","J22","K22","M22","P22","Q22"]){
   assert.equal(tab.getCell(ref).type,ExcelJS.ValueType.Formula,ref+" is hardcoded, not editable formula");
  }
- assert(tab.getCell("B9").formula.includes("$U$24"),"freight doesn't refer to editable input");
+ assert(tab.getCell("B9").formula.includes("$AF$24"),"freight doesn't refer to editable input");
  assert(tab.getCell("Q22").formula.includes("AVERAGE"),"average is not a formula");
  assert.equal(tab.getCell("Q22").result,result.averageCostPerUnitRub);
  assert.equal(tab.getCell("F15").value,2.62);
  assert.equal(tab.getCell("F9").value,13.0816);
- assert.equal(tab.getCell("U24").value,500000);
+ assert.equal(tab.getCell("AF24").value,500000);
  const exportZip=Buffer.from(buffer);
  assert(exportZip.length>10000,"export is too small");
  console.log("PASS VED whole-KP editable XLSX: 2 sheets, source product+pack photos, packaging info, live formulas, cached engine results");

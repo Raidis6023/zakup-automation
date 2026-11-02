@@ -82,7 +82,7 @@ function feeFor(base:string,year:string,manual:string){
   [1067,2134,4269,11746,16524,21344,27540,30000]);
  const b=f([200000,450000,1200000,2700000,4200000,5500000,10000000],
   [1231,2462,4924,13541,18465,21344,49240,73860]);
- return "IF("+manual+"=1,$U$38,IF("+year+"=2025,"+a+","+b+"))";
+ return "IF("+manual+"=1,$AF$38,IF("+year+"=2025,"+a+","+b+"))";
 }
 function fillCore(sh:ExcelJS.Worksheet,item:VedExportItem){
  const t=item.input_data,p=t.product,s=item.result_data;
@@ -122,30 +122,30 @@ function fillCore(sh:ExcelJS.Worksheet,item:VedExportItem){
  set(sh,"D22",p.unitsPerCarton||null);
  set(sh,"E22",p.cartonGrossKg||null);
  set(sh,"O22",0);
- formula(sh,"B19","U22",t.container.usableVolumeM3);
+ formula(sh,"B19","AF22",t.container.usableVolumeM3);
  formula(sh,"C19","IFERROR(F16/D22*F19,0)",saved("moq")?.volumeM3);
  set(sh,"D19",1);
  const refs:Record<string,number|null>={
-  U22:t.container.usableVolumeM3,U23:t.container.maxPayloadKg??null,
-  U24:t.expenses.freightBeforeBorderRub,U25:t.expenses.freightAfterBorderRub,
-  U26:t.expenses.bankCommissionRub,U27:t.expenses.brokerServicesRub,
-  U28:t.expenses.otherSharedRub,U29:t.expenses.otherRubPerUnit,
-  U30:t.expenses.certificationRub??0,U31:t.expenses.moldingRub??0,
-  U32:t.expenses.indirectPaymentsRub??0,U33:t.expenses.additionalRub??0,
-  U34:t.expenses.dangerSurchargeBeforeRub??60000,
-  U35:t.expenses.dangerSurchargeAfterRub??60000,
-  U36:t.expenses.refundableSecurityRub,
-  U37:t.customs.feeMode==="manual"?1:0,
-  U38:t.expenses.customsOperationsFeeRub,
-  U39:t.customs.includeFreightBeforeBorderInCustomsBase?1:0,
-  U40:t.customs.importVatRecoverable?1:0,
-  U43:t.product.cartonNetKg??null,
-  U46:Number(t.customs.feeDate?.slice(0,4)||item.calculation_date.slice(0,4))===2025?2025:2026,
-  U47:p.cartonVolumeM3||null,
+  AF22:t.container.usableVolumeM3,AF23:t.container.maxPayloadKg??null,
+  AF24:t.expenses.freightBeforeBorderRub,AF25:t.expenses.freightAfterBorderRub,
+  AF26:t.expenses.bankCommissionRub,AF27:t.expenses.brokerServicesRub,
+  AF28:t.expenses.otherSharedRub,AF29:t.expenses.otherRubPerUnit,
+  AF30:t.expenses.certificationRub??0,AF31:t.expenses.moldingRub??0,
+  AF32:t.expenses.indirectPaymentsRub??0,AF33:t.expenses.additionalRub??0,
+  AF34:t.expenses.dangerSurchargeBeforeRub??60000,
+  AF35:t.expenses.dangerSurchargeAfterRub??60000,
+  AF36:t.expenses.refundableSecurityRub,
+  AF37:t.customs.feeMode==="manual"?1:0,
+  AF38:t.expenses.customsOperationsFeeRub,
+  AF39:t.customs.includeFreightBeforeBorderInCustomsBase?1:0,
+  AF40:t.customs.importVatRecoverable?1:0,
+  AF43:t.product.cartonNetKg??null,
+  AF46:Number(t.customs.feeDate?.slice(0,4)||item.calculation_date.slice(0,4))===2025?2025:2026,
+  AF47:p.cartonVolumeM3||null,
  };
  for(const [ref,value] of Object.entries(refs))set(sh,ref,value);
- set(sh,"U41",t.customs.dutyMode);
- set(sh,"U42",t.customs.specificUnit);
+ set(sh,"AF41",t.customs.dutyMode);
+ set(sh,"AF42",t.customs.specificUnit);
  for(const {col,row,result:r} of cs){
   const exp=col,rr=String(row),volume=exp+"19";
   if(col==="B")formula(sh,"F"+rr,"IFERROR(B19/F19*D22,0)",r?.units);
@@ -160,15 +160,15 @@ function fillCore(sh:ExcelJS.Worksheet,item:VedExportItem){
   formula(sh,"H"+rr,"G"+rr+"*E"+rr,r?.grossKg);
   formula(sh,"I"+rr,"F"+rr+"*($F$15+$F$14)",r? (r.goodsRub/t.currency.cnyRub):null);
   formula(sh,"J"+rr,"I"+rr+"*$F$9",r?.goodsRub);
-  const before=col+"9",base="(J"+rr+"+IF($U$39=1,"+before+",0))";
+  const before=col+"9",base="(J"+rr+"+IF($AF$39=1,"+before+",0))";
   const adv=base+"*$F$11";
-  const weight="IF($U$42=\"item\",F"+rr+",IF($U$42=\"net-kg\",G"+rr+"*$U$43,H"+rr+"))";
+  const weight="IF($AF$42=\"item\",F"+rr+",IF($AF$42=\"net-kg\",G"+rr+"*$AF$43,H"+rr+"))";
   const specific="("+weight+"*$F$12*$F$10)";
-  const duty="IF($U$41=\"ad-valorem\","+adv+",IF($U$41=\"specific\","+specific+
-    ",IF($U$41=\"combined-max\",MAX("+adv+","+specific+"),"+adv+"+"+specific+")))";
+  const duty="IF($AF$41=\"ad-valorem\","+adv+",IF($AF$41=\"specific\","+specific+
+    ",IF($AF$41=\"combined-max\",MAX("+adv+","+specific+"),"+adv+"+"+specific+")))";
   formula(sh,"K"+rr,"IFERROR("+duty+",0)",r?.dutyRub);
   formula(sh,"L"+rr,"("+base+"+K"+rr+")*$F$8",r?.importVatRub);
-  const cost=col+"16-IF($U$40=1,"+col+"6,0)";
+  const cost=col+"16-IF($AF$40=1,"+col+"6,0)";
   formula(sh,"M"+rr,"IFERROR(("+cost+")/F"+rr+",0)",r?.managementCostPerUnitRub);
   formula(sh,"N"+rr,"M"+rr+"*F"+rr,r?.managementCostRub);
   formula(sh,"P"+rr,"M"+rr+"*(1+O"+rr+")",r?.managementCostPerUnitRub);
@@ -177,16 +177,16 @@ function fillCore(sh:ExcelJS.Worksheet,item:VedExportItem){
    4:["J"+rr,r?.goodsRub],
    5:["K"+rr,r?.dutyRub],
    6:["L"+rr,r?.importVatRub],
-   7:[feeFor(base,"$U$46","$U$37"),r?.customsOperationsFeeRub],
-   8:["$U$27",r?.brokerServicesRub],
-   9:["($U$24+IF($F$13,$U$34,0))*"+ratio,r?.freightBeforeBorderRub],
-   10:["($U$25+IF($F$13,$U$35,0))*"+ratio,r?.freightAfterBorderRub],
-   11:["$U$30",r?.certificationRub],
-   12:["$U$32",r?.indirectPaymentsRub],
-   13:["$U$33+$U$28*"+ratio+"+$U$29*F"+rr,
+   7:[feeFor(base,"$AF$46","$AF$37"),r?.customsOperationsFeeRub],
+   8:["$AF$27",r?.brokerServicesRub],
+   9:["($AF$24+IF($F$13,$AF$34,0))*"+ratio,r?.freightBeforeBorderRub],
+   10:["($AF$25+IF($F$13,$AF$35,0))*"+ratio,r?.freightAfterBorderRub],
+   11:["$AF$30",r?.certificationRub],
+   12:["$AF$32",r?.indirectPaymentsRub],
+   13:["$AF$33+$AF$28*"+ratio+"+$AF$29*F"+rr,
     r? r.additionalRub+r.otherSharedRub+r.otherPerUnitRub:null],
-   14:["IFERROR($U$31/$F$16*F"+rr+",0)",r?.moldingRub],
-   15:["$U$26*"+ratio,r?.bankCommissionRub],
+   14:["IFERROR($AF$31/$F$16*F"+rr+",0)",r?.moldingRub],
+   15:["$AF$26*"+ratio,r?.bankCommissionRub],
    16:["SUM("+col+"4:"+col+"15)",r?.totalCostIncludingVatRub],
    17:["IFERROR("+col+"9/H"+rr+",0)",r&&r.grossKg>0?r.freightBeforeBorderRub/r.grossKg:0],
    18:["IFERROR(SUM("+col+"7:"+col+"15)/H"+rr+",0)",
@@ -246,26 +246,26 @@ function fillDetails(sh:ExcelJS.Worksheet,item:VedExportItem){
   [42,"Единица специфической ставки"],[43,"Вес нетто коробки, кг"],
   [46,"Год шкалы таможенного сбора"],[47,"Объём коробки (резерв), м³"]
  ];
- sh.mergeCells("T39:W39");sh.getCell("T39").value="НАСТРОЙКИ И ФОРМУЛЫ РАСЧЁТА";
- sh.getCell("T39").font={bold:true,color:{argb:"FF13704A"},size:11};
- // Parameters occupy U22:U47 for formula compatibility; labels are in X:AB.
- sh.getColumn("U").width=17;sh.getColumn("X").width=34;
+ sh.mergeCells("AC20:AF20");sh.getCell("AC20").value="НАСТРОЙКИ И ФОРМУЛЫ РАСЧЁТА";
+ sh.getCell("AC20").font={bold:true,color:{argb:"FF13704A"},size:11};
+ // Parameters occupy AF22:AF47 for formula compatibility; labels are in X:AB.
+ sh.getColumn("AF").width=17;sh.getColumn("AC").width=34;
  for(const [row,label] of settings){
-  sh.getCell("X"+row).value=label;
-  sh.getCell("X"+row).font={size:9,color:{argb:"FF566F63"}};
+  sh.getCell("AC"+row).value=label;
+  sh.getCell("AC"+row).font={size:9,color:{argb:"FF566F63"}};
   sh.getCell("U"+row).numFmt=fmt;
   sh.getCell("U"+row).font={size:10,bold:true,color:{argb:"FF1966BE"}};
   sh.getCell("U"+row).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFE9F4EF"}};
  }
- sh.getCell("X44").value="Синие числа и поля F8:F16, D22:E22 можно менять; формулы пересчитываются в Excel.";
- sh.getCell("X44").alignment={wrapText:true};sh.getRow(44).height=32;
+ sh.getCell("AC44").value="Синие числа и поля F8:F16, D22:E22 можно менять; формулы пересчитываются в Excel.";
+ sh.getCell("AC44").alignment={wrapText:true};sh.getRow(44).height=32;
  sh.getCell("T38").value=item.errors?.length?"ТРЕБУЕТ УТОЧНЕНИЯ: "+item.errors.join("; "):"Расчётные данные заполнены";
  sh.getCell("T38").font={bold:true,size:10,color:{argb:item.errors?.length?"FFD35C42":"FF198258"}};
  sh.mergeCells("T38:W38");
 }
 function drawPhoto(wb:ExcelJS.Workbook,sh:ExcelJS.Worksheet,image:ImageAttachment|null|undefined,col:number){
  if(!image){sh.getCell(col===19?"T5":"X5").value="Нет изображения в исходном КП";return;}
- const id=wb.addImage({buffer:image.buffer,extension:image.extension});
+ const id=wb.addImage({base64:"data:image/"+image.extension+";base64,"+image.buffer.toString("base64"),extension:image.extension});
  sh.addImage(id,{tl:{col,row:2.4},ext:{width:245,height:175},editAs:"oneCell"});
 }
 export async function buildVedExport(items:VedExportItem[]):Promise<Buffer>{
