@@ -116,22 +116,18 @@ return <div className="ozf-layout">
  <FinanceDynamics marketplace="wb" from={data.from} to={data.to} provided={wholeSeries} selected="revenue" expectedProfit={allRatesFilled?sum(r=>r.preliminary_result??0):null}/>
  {Boolean(data.unallocated?.length)&&<details className="ozf-panel ozf-collapsible-register" style={{marginTop:14}}><summary>Нераспределённые расходы WB · детализация по датам и ID</summary><AccrualBreakdownList market="wb" from={data.from} to={data.to} items={data.unallocated??[]} total={(data.unallocated??[]).reduce((s,x)=>s+x.amount,0)} totalLabel="Итого нераспределённые операции"/></details>}
 <div className="ozf-toolbar" style={{marginTop:18}}><input placeholder="Поиск по артикулу, nmId или товару" value={filter} onChange={e=>setFilter(e.target.value)}/><span>Артикулов: {rows.length} · Финансовых операций: {data.financial_rows}</span></div>
-<div className="ozf-financial-scroll"><table className="ozf-table ozf-financial-table" style={{minWidth:1900}}>
-<thead><tr>{["Артикул","nmId","Товар","Заказы, шт","Отмены, шт","Реализация, ₽","К перечислению, ₽","Логистика, ₽","Хранение в реализации, ₽","Отдельное хранение, ₽","Приёмка, ₽","Штрафы, ₽","Удержания, ₽","Реклама, ₽","Расходы всего, ₽","Предв. результат, ₽"].map(h=><th key={h}>{h}</th>)}</tr></thead>
-<tbody>{rows.map(r=>{
-const ad=adsByNm.get(r.nm_id)?.spend??0;
-return <tr key={r.nm_id} className={selected===r.nm_id?"ozf-row-active":""} onClick={()=>selectRow(r)}>
-<td style={{color:"#98beff",whiteSpace:"nowrap"}}>▸ {r.article||"Не сопоставлен"}<CopyArticle article={r.article||r.nm_id}/></td><td>{r.nm_id}</td><td>{r.name||"—"}</td>
-<td>{r.order_count}</td><td>{r.cancel_count}</td><td>{money(r.realization)}</td><td>{money(r.to_transfer)}</td><td className="ozf-negative">{money(r.delivery)}</td>
-<td>{r.storage_in_report==null?"Нет данных":money(r.storage_in_report)+" (из реализации)"}</td><td>{r.external_storage==null?"Нет данных":money(r.external_storage)}</td>
-<td>{money(r.acceptance)}</td><td>{money(r.penalty)}</td><td>{money(r.deduction)}</td>
-<td>{adCovered?money(ad):"Нет данных"}</td><td>{r.cogs===null||r.mayak_expense===null?"Нужны ставки":money(r.cogs+r.mayak_expense)}</td><td title="Предварительная оценка, не включает неподтверждённую рекламу">{r.preliminary_result===null?"Нужны ставки":money(r.preliminary_result)+" *"}</td>
-</tr>})}</tbody>
-<tfoot><tr><th colSpan={3}>Итого за период · {rows.length} артикулов</th><th>{sum(r=>r.order_count)}</th><th>{sum(r=>r.cancel_count)}</th><th>{money(sum(r=>r.realization))}</th><th>{money(sum(r=>r.to_transfer))}</th><th>{money(sum(r=>r.delivery))}</th><th>{data.coverage.finance==="cached_complete"?money(sum(r=>r.storage_in_report??0)):"Неполно"}</th><th>{data.coverage.paid_storage==="cached_complete"?money(sum(r=>r.external_storage??0)):"Неполно"}</th><th>{money(sum(r=>r.acceptance))}</th><th>{money(sum(r=>r.penalty))}</th><th>{money(sum(r=>r.deduction))}</th><th>{adCovered?money([...adsByNm.values()].reduce((t,v)=>t+v.spend,0)):"Нет данных"}</th><th>{allRatesFilled?money(sum(r=>(r.cogs??0)+(r.mayak_expense??0))):"Нужны ставки"}</th><th title="Предварительно, без неподтверждённой рекламы и хранения">{allRatesFilled?money(sum(r=>r.preliminary_result??0))+" *":"Нужны ставки"}</th></tr></tfoot>
-</table></div>
-{active&&<div className="ozf-panel" style={{marginTop:18}}>
-<h2>Детализация: {active.article||active.nm_id}<CopyArticle article={active.article||active.nm_id}/></h2>
-<div className="ozf-rate-editor"><h3>Себестоимость и ТК «Маяк»</h3><div className="ozf-filters">
+<div className="ozf-financial-scroll"><table className="ozf-table ozf-financial-table" style={{minWidth:1980}}>
+<thead><tr>{["Артикул","Артикул WB","Товар","Заказы","Отмены","Оборот розничный, ₽","Реализация, ₽","К перечислению, ₽","Логистика, ₽","Отдельное хранение, ₽","Приёмка, ₽","Штрафы, ₽","Продвижение/удержания, ₽","Реклама по артикулам, ₽","Себес + ТК Маяк, ₽","Предв. результат, ₽"].map(h=><th key={h}>{h}</th>)}</tr></thead>
+<tbody>{rows.map(r=>{const ad=adsByNm.get(r.nm_id)?.spend??0;return <Fragment key={r.nm_id}><tr className={selected===r.nm_id?"ozf-row-active":""} onClick={()=>selectRow(r)}>
+<td style={{color:'#98beff',whiteSpace:'nowrap'}}>▸ {r.article||'Не сопоставлен'} <CopyArticle article={r.article||r.nm_id}/></td><td>{r.nm_id}</td><td>{r.name||'—'}</td>
+<td>{r.order_count}</td><td>{r.cancel_count}</td><td>{money(r.gross_retail)}</td><td>{money(r.realization)}</td><td>{money(r.to_transfer)}</td>
+<td>{money(r.delivery)}</td><td>{r.external_storage==null?'Нет данных':money(r.external_storage)}</td><td>{money(r.acceptance)}</td><td>{money(r.penalty)}</td>
+<td>{money(r.deduction)}</td><td>{adCovered?money(ad):'Нет данных'}</td>
+<td>{r.cogs===null||r.mayak_expense===null?'Нужны ставки':money(r.cogs+r.mayak_expense)}</td>
+<td title="Предварительно; необъективные расходы рекламы по SKU не выдуманы">{r.preliminary_result===null?'Нужны ставки':money(r.preliminary_result)+' *'}</td>
+</tr>{selected===r.nm_id&&active&&<tr className="ozf-expanded-row"><td colSpan={16} onClick={e=>e.stopPropagation()}><div className="ozf-panel" style={{marginTop:18}}>
+<div className="ozf-pinned-article"><strong>Детализация · {active.article||active.nm_id} · WB {active.nm_id}</strong><CopyArticle article={active.article||active.nm_id}/><a className="ozf-btn" href={'/finance/keywords?market=wb&article='+encodeURIComponent(active.nm_id)+'&from='+data.from+'&to='+data.to} onClick={e=>e.stopPropagation()}>Ключевые слова товара</a></div>
+<div className="ozf-rate-editor"><h3>Себестоимость, ТК «Маяк» и КМ</h3><div className="ozf-filters"><label>КМ <input value={managerInput} onChange={e=>setManagerInput(e.target.value)} disabled={!active.master_code} placeholder="Не назначен"/></label><button className="ozf-btn" onClick={()=>void saveManager()} disabled={!active.master_code||managerSaving}>{managerSaving?'Сохраняем…':'Сохранить КМ'}</button></div>{!active.master_code&&<p className="ozf-error">Для назначения КМ требуется подтверждённый ЕНОТ.</p>}<div className="ozf-filters">
 <label>Действуют с <input type="date" value={validFrom} onChange={e=>setValidFrom(e.target.value)}/></label>
 <label>Себестоимость, ₽/шт <input inputMode="decimal" value={costInput} onChange={e=>setCostInput(e.target.value)} placeholder="Не задана"/></label>
 <label>ТК «Маяк», ₽/шт <input inputMode="decimal" value={mayakInput} onChange={e=>setMayakInput(e.target.value)} placeholder="Не задана"/></label>
@@ -144,7 +140,15 @@ return <tr key={r.nm_id} className={selected===r.nm_id?"ozf-row-active":""} onCl
 {Object.entries(active.operations).sort((a,b)=>a[0].localeCompare(b[0],"ru")).map(([name,v])=><tr key={name}><td>{name}</td><td>{v.count}</td><td>{money(v.amount)}</td><td>{money(v.realization)}</td><td>{money(v.delivery)}</td><td>{money(v.storage)}</td><td>{money(v.penalty)}</td><td>{money(v.deduction)}</td></tr>)}
 </tbody></table></div>
 <p className="ozf-footnote">Суммы показаны по полям отчёта реализации, не как рассчитанная прибыль. Рекламная статистика учтётся после сверки фактических списаний WB.</p>
-</div>}
+</div></td></tr>}</Fragment>})}</tbody>
+<tfoot><tr><th colSpan={3}>Итого · {rows.length} артикулов</th><th>{sum(r=>r.order_count)}</th><th>{sum(r=>r.cancel_count)}</th>
+<th>{money(sum(r=>r.gross_retail))}</th><th>{money(sum(r=>r.realization))}</th><th>{money(sum(r=>r.to_transfer))}</th>
+<th>{money(sum(r=>r.delivery))}</th><th>{data.coverage.paid_storage==='cached_complete'?money(sum(r=>r.external_storage??0)):'Неполно'}</th>
+<th>{money(sum(r=>r.acceptance))}</th><th>{money(sum(r=>r.penalty))}</th><th>{money(data.promotion_actual)}</th>
+<th>{adCovered?money([...adsByNm.values()].reduce((t,v)=>t+v.spend,0)):'Нет данных'}</th>
+<th>{allRatesFilled?money(sum(r=>(r.cogs??0)+(r.mayak_expense??0))):'Нужны ставки'}</th>
+<th>{allRatesFilled?money(sum(r=>r.preliminary_result??0))+' *':'Нужны ставки'}</th></tr></tfoot></table></div>
+
 </section>
 </>}
 </div>;
