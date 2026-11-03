@@ -17,6 +17,7 @@ require.extensions[".ts"]=(mod,filename)=>{
 };
 const {PRELIMINARY_MODELS,calculatePreliminary,suggestPreliminaryTargetPrice}=require("../lib/unit-economics/prospective-engine.ts");
 const {calculateUnitWeight}=require("../lib/unit-economics/unit-weight.ts");
+const {mergeProductOverrides,applyProductOverrides}=require("../lib/unit-economics/product-overrides.ts");
 const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-6,"Ожидается "+b+", получено "+a);
 const source=()=>({
  article:"RCAB-TEST-1",name:"Тестовый товар (RCAB-TEST-1)",
@@ -158,4 +159,37 @@ test("При неизвестном весе коробки или нецело�
  assert.equal(result.unitWeightKg,null);
  assert.match(result.unitWeightWarning,/вес брутто/);
  assert.equal(result.status,"needs_input"); // Воздействия на прибыль из-за веса нет.
+});
+
+test("Редактирование ВЭД: меняем исходные поля, не мутируем сохранённый расчёт",()=>{
+ const base=source();
+ const overrides=mergeProductOverrides({},{
+  name:"Набор ватных палочек",productType:"Ватные палочки",
+  cartonGrossKg:21,unitsPerCarton:70,individualLengthCm:5,costGrossRub:130
+ });
+ const copy=applyProductOverrides(base,overrides);
+ assert.equal(base.input.product.cartonGrossKg,19);
+ assert.equal(base.input.product.unitsPerCarton,120);
+ assert.equal(copy.input.product.cartonGrossKg,21);
+ assert.equal(copy.input.product.unitsPerCarton,70);
+ assert.equal(copy.name,"Набор ватных палочек");
+ for(const model of PRELIMINARY_MODELS){
+  const r=calculatePreliminary(copy,model,{});
+  close(r.unitWeightKg,.3);
+  close(r.costGrossRub,130);
+  assert.equal(r.status,"needs_input");
+ }
+});
+test("Редактирование: нельзя установить вес напрямую, запрещены нецелая вложимость и неизвестные поля",()=>{
+ assert.throws(()=>mergeProductOverrides({},{unitWeightKg:0.33}),/не допускает/);
+ assert.throws(()=>mergeProductOverrides({},{unitsPerCarton:2.3}),/целым/);
+ assert.throws(()=>mergeProductOverrides({},{cartonGrossKg:-3}),/Некорректное/);
+ const src=mergeProductOverrides({product:{unitsPerCarton:90}},{unitsPerCarton:null});
+ assert.equal(src.product,undefined);
+});
+test("Редактирование: корректировка себестоимости ниже входящего НДС отклоняется",()=>{
+ const x=source();
+ x.input.customs.importVatRecoverable=true;
+ const over=mergeProductOverrides({}, {costGrossRub:5});
+ assert.throws(()=>calculatePreliminary(applyProductOverrides(x,over),"ozon-fbo",{}),/ниже входящего НДС/);
 });

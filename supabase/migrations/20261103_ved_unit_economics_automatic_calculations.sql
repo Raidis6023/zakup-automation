@@ -16,12 +16,18 @@ CREATE TABLE IF NOT EXISTS public.unit_ved_products (
  volume_liters numeric(20,8),
  volume_source text,
  unit_weight_kg numeric CHECK (unit_weight_kg IS NULL OR unit_weight_kg > 0),
+ overrides jsonb NOT NULL DEFAULT '{}'::jsonb,
+ edit_revision integer NOT NULL DEFAULT 1,
  created_at timestamptz NOT NULL DEFAULT now(),
  updated_at timestamptz NOT NULL DEFAULT now()
 );
 -- Если реестр создан ранее, новая производная колонка добавляется безопасно.
 ALTER TABLE public.unit_ved_products
  ADD COLUMN IF NOT EXISTS unit_weight_kg numeric;
+ALTER TABLE public.unit_ved_products
+ ADD COLUMN IF NOT EXISTS overrides jsonb NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE public.unit_ved_products
+ ADD COLUMN IF NOT EXISTS edit_revision integer NOT NULL DEFAULT 1;
 CREATE TABLE IF NOT EXISTS public.unit_ved_settings (
  product_id uuid NOT NULL REFERENCES public.unit_ved_products(id) ON DELETE CASCADE,
  model text NOT NULL CHECK (model IN ('ozon-fbo','ozon-fbs','wb-fbw','wb-fbs','ym-fby','ym-fbs')),

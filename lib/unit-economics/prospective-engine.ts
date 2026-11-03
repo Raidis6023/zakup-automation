@@ -42,6 +42,7 @@ export type PreliminarySource={
  article:string;name:string;
  input:VedCalculationInput;
  result:VedCalculationResult|null;
+ costGrossOverrideRub?:number;
 };
 export type PreliminaryDetail={
  code:string;label:string;group:UnitExpenseGroup;
@@ -86,7 +87,9 @@ function goodsCost(source:PreliminarySource){
  // ВЭД managementCostPerUnitRub может уже исключать возмещаемый НДС.
  // НЕ вычитаем его из валовой стоимости дважды.
  const purchaseVat=source.input.customs.importVatRecoverable?importVat:0;
- return{gross:costGross,vat:purchaseVat,net:costGross-purchaseVat};
+ const gross=source.costGrossOverrideRub??costGross;
+ if(!Number.isFinite(gross)||gross<=0||gross<purchaseVat)throw Error("Себестоимость с НДС не может быть ниже входящего НДС закупки");
+ return{gross,vat:purchaseVat,net:gross-purchaseVat};
 }
 export function calculatePreliminary(source:PreliminarySource,model:PreliminaryModel,settings:PreliminarySettings={}):PreliminaryCalculation{
  const missing:string[]=[],assumptions:string[]=[];

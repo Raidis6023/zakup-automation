@@ -100,6 +100,9 @@ export async function syncUnitFromVedVersion(db:Db,type:VedEventKind,versionId:s
      cost_gross_rub:first.costGrossRub,purchase_vat_credit_rub:first.purchaseVatCreditRub,
      volume_liters:first.volumeLiters,volume_source:first.volumeSource,
      unit_weight_kg:first.unitWeightKg,
+     // Missing columns in an UPSERT can otherwise overwrite manual changes.
+     overrides:before.get(item.article)?.overrides||{},
+     edit_revision:before.get(item.article)?.edit_revision||1,
      updated_at:new Date().toISOString()
     };
    });
