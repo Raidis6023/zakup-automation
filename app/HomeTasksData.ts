@@ -1,321 +1,61 @@
-export type TaskRole =
-  | "administrators"
-  | "category_manager"
-  | "ved"
-  | "procurement"
-  | "analyst"
-  | "marketing";
-
-export type TaskStatus =
-  | "red"
-  | "yellow"
-  | "green";
-
-export type TaskItem = {
-  id: string;
-  title: string;
-  creator: string;
-  assignee: string;
-  role: TaskRole;
-  status: TaskStatus;
-};
-
-export type PersonalNote = {
-  id: string;
-  title: string;
-};
-
-export type TaskProfile = {
-  user_id?: string;
-  first_name?: string;
-  last_name?: string;
-  role_name?: string;
-  has_admin_access?: boolean;
-};
-
+export type TaskUrgency = "current" | "urgent" | "critical";
+export type TaskDotColor = "gray" | "yellow" | "orange" | "red";
+export type TaskStatus = "not_started" | "in_progress" | "completed";
+export type TaskItem = { id: string; title: string; creator: string; assignee: string; dotColor: TaskDotColor; };
+export type PersonalNote = { id: string; title: string; urgency: TaskUrgency; remind_at: string | null; status: TaskStatus; created_at: string; };
 export type WorkspaceTaskRecord = {
-  id: string;
-  title: string;
-  urgency: "current" | "urgent" | "critical";
-  created_by: string;
-  target_department: string;
-  assignee_id: string | null;
-  taken_by: string | null;
-  status: "not_started" | "in_progress" | "completed";
-  created_at: string;
-  creator_name: string;
-  assignee_name: string | null;
+  id: string; title: string; urgency: TaskUrgency; created_by: string;
+  created_department: string; target_department: string; assignee_id: string | null;
+  taken_by: string | null; status: TaskStatus; created_at: string;
+  creator_name: string; assignee_name: string | null;
 };
-
 export type WorkspaceTaskSnapshot = {
-  user_id: string;
-  department: string;
-  tasks: WorkspaceTaskRecord[];
+  user_id: string; department: string; tasks: WorkspaceTaskRecord[]; notes: PersonalNote[];
 };
-
-function workspaceTaskRole(department: string): TaskRole {
-  if (department.startsWith("category_manager")) return "category_manager";
-  if (department === "ved") return "ved";
-  if (department === "procurement") return "procurement";
-  if (department === "analyst") return "analyst";
-  if (department === "marketing") return "marketing";
-  return "administrators";
+export function getUrgencyDotColor(urgency: TaskUrgency): TaskDotColor {
+  if (urgency === "critical") return "red";
+  if (urgency === "urgent") return "orange";
+  return "yellow";
 }
-
-function toWorkspaceTaskItem(task: WorkspaceTaskRecord): TaskItem {
+function toTaskItem(task: WorkspaceTaskRecord, accepted: boolean): TaskItem {
   return {
-    id: task.id,
-    title: task.title,
-    creator: task.creator_name || "Сотрудник",
-    assignee: task.assignee_name || "Ожидает исполнителя",
-    role: workspaceTaskRole(task.target_department),
-    status: task.urgency === "critical"
-      ? "red"
-      : task.urgency === "urgent"
-        ? "yellow"
-        : "green",
+    id: task.id, title: task.title, creator: task.creator_name || "Сотрудник",
+    assignee: task.assignee_name || (accepted ? "Исполнитель" : "Ожидает исполнителя"),
+    dotColor: accepted ? getUrgencyDotColor(task.urgency) : "gray",
   };
 }
-
-export function buildDepartmentWorkspaceTasks(
-  snapshot: WorkspaceTaskSnapshot | null
-): TaskItem[] {
+export function buildMyWorkspaceTasks(snapshot: WorkspaceTaskSnapshot | null): TaskItem[] {
+  if (!snapshot) return [];
+  return snapshot.tasks
+    .filter(task => task.status === "in_progress"
+      && (task.taken_by === snapshot.user_id || task.assignee_id === snapshot.user_id))
+    .map(task => toTaskItem(task, true));
+}
+export function buildUnacceptedWorkspaceTasks(snapshot: WorkspaceTaskSnapshot | null): TaskItem[] {
   if (!snapshot) return [];
   return snapshot.tasks
     .filter(task =>
-      task.status !== "completed"
-      && (
-        (
-          task.status === "not_started"
-          && task.assignee_id === null
-          && task.taken_by === null
+      (
+        task.target_department === snapshot.department
+        || (
+          snapshot.department.startsWith("category_manager:")
+          && task.target_department === "category_manager"
         )
-        || task.taken_by === snapshot.user_id
-        || task.assignee_id === snapshot.user_id
       )
+      && task.status === "not_started"
+      && task.taken_by === null
     )
-    .map(toWorkspaceTaskItem);
+    .map(task => toTaskItem(task, false));
 }
-
-export function buildMyWorkspaceTasks(
-  snapshot: WorkspaceTaskSnapshot | null
-): TaskItem[] {
+export function buildCreatedByMeWorkspaceTasks(snapshot: WorkspaceTaskSnapshot | null): TaskItem[] {
   if (!snapshot) return [];
   return snapshot.tasks
-    .filter(task =>
-      task.status !== "completed"
-      && (
-        task.taken_by === snapshot.user_id
-        || task.assignee_id === snapshot.user_id
-      )
-    )
-    .map(toWorkspaceTaskItem);
+    .filter(task => task.created_by === snapshot.user_id
+      && task.created_department !== task.target_department
+      && task.status !== "completed")
+    .map(task => toTaskItem(task,
+      task.status === "in_progress" && (task.taken_by !== null || task.assignee_id !== null)));
 }
-
-export const PRIVILEGED_TASKS: TaskItem[] = [
-  {
-    id: "task-admin-1",
-    title: "Проверить права доступа нового сотрудника",
-    creator: "Иван Петров",
-    assignee: "Администраторы",
-    role: "administrators",
-    status: "red",
-  },
-  {
-    id: "task-ved-1",
-    title: "Проверить расчёт по новому товару",
-    creator: "Анна Волкова",
-    assignee: "Мария Соколова",
-    role: "ved",
-    status: "red",
-  },
-  {
-    id: "task-procurement-1",
-    title: "Подтвердить заказ поставщику",
-    creator: "Илья Петров",
-    assignee: "Алексей Орлов",
-    role: "procurement",
-    status: "yellow",
-  },
-  {
-    id: "task-analyst-1",
-    title: "Согласовать цену на товар",
-    creator: "Елена Смирнова",
-    assignee: "Олег Крылов",
-    role: "analyst",
-    status: "yellow",
-  },
-  {
-    id: "task-category-1",
-    title: "Проверить карточки новой категории",
-    creator: "Алексей Орлов",
-    assignee: "Мария Соколова",
-    role: "category_manager",
-    status: "green",
-  },
-  {
-    id: "task-marketing-1",
-    title: "Подготовить материалы для акции",
-    creator: "Мария Соколова",
-    assignee: "Елена Смирнова",
-    role: "marketing",
-    status: "green",
-  },
-];
-
-export const MANAGER_TASKS: TaskItem[] =
-  PRIVILEGED_TASKS.filter(
-    task => task.role !== "administrators"
-  );
-
-export function getTaskProfileName(
-  profile: TaskProfile | null
-) {
-  if (!profile) {
-    return "Текущий сотрудник";
-  }
-
-  const value = [
-    profile.first_name,
-    profile.last_name,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .trim();
-
-  return value || "Текущий сотрудник";
-}
-
-export function isManagerTaskProfile(
-  profile: TaskProfile | null
-) {
-  const role =
-    profile?.role_name?.trim().toLowerCase()
-    || "";
-
-  return (
-    role === "руководитель"
-    || role.startsWith("руководитель ")
-  );
-}
-
-export function getTaskRole(
-  profile: TaskProfile | null
-): TaskRole | null {
-  if (!profile) {
-    return null;
-  }
-
-  const role =
-    profile.role_name?.trim().toLowerCase()
-    || "";
-
-  if (role.startsWith("категорийный менеджер")) {
-    return "category_manager";
-  }
-  if (role === "вэд") {
-    return "ved";
-  }
-  if (role === "закуп") {
-    return "procurement";
-  }
-  if (role === "аналитик" || role === "аналитика") {
-    return "analyst";
-  }
-  if (role === "маркетинг") {
-    return "marketing";
-  }
-
-  return null;
-}
-
-export function buildCurrentUserTasks(
-  profile: TaskProfile | null
-): TaskItem[] {
-  if (!profile || isManagerTaskProfile(profile)) {
-    return [];
-  }
-
-  const role = getTaskRole(profile);
-  if (!role) {
-    return [];
-  }
-
-  const assignee = getTaskProfileName(profile);
-
-  return [
-    {
-      id: `${profile.user_id ?? "current"}-task-1`,
-      title: "Проверить расчёт по новому товару",
-      creator: "Анна Волкова",
-      assignee,
-      role,
-      status: "red",
-    },
-    {
-      id: `${profile.user_id ?? "current"}-task-2`,
-      title: "Подтвердить данные перед отправкой",
-      creator: "Илья Петров",
-      assignee,
-      role,
-      status: "yellow",
-    },
-    {
-      id: `${profile.user_id ?? "current"}-task-3`,
-      title: "Проверить изменения по товару",
-      creator: "Мария Соколова",
-      assignee,
-      role,
-      status: "green",
-    },
-  ];
-}
-
-export function buildAdministratorTasks(
-  profile: TaskProfile | null
-): TaskItem[] {
-  if (!profile || !profile.has_admin_access) {
-    return [];
-  }
-
-  return [
-    {
-      id: `${profile.user_id ?? "current"}-admin-task-1`,
-      title: "Проверить права доступа нового сотрудника",
-      creator: "Иван Петров",
-      assignee: "Администраторы",
-      role: "administrators",
-      status: "red",
-    },
-    {
-      id: `${profile.user_id ?? "current"}-admin-task-2`,
-      title: "Проверить настройки доступа к разделу",
-      creator: "Анна Волкова",
-      assignee: "Администраторы",
-      role: "administrators",
-      status: "yellow",
-    },
-  ];
-}
-
-export function buildPersonalNotes(
-  profile: TaskProfile | null
-): PersonalNote[] {
-  if (!profile) {
-    return [];
-  }
-
-  const ownerKey =
-    profile.user_id ?? "current-user";
-
-  return [
-    {
-      id: `${ownerKey}-note-1`,
-      title: "Не забыть проверить новые позиции",
-    },
-    {
-      id: `${ownerKey}-note-2`,
-      title: "Вернуться к сверке отчёта",
-    },
-  ];
+export function buildPersonalNotes(snapshot: WorkspaceTaskSnapshot | null): PersonalNote[] {
+  return snapshot?.notes ?? [];
 }

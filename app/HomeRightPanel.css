@@ -605,9 +605,15 @@ span:not(.home-right-panel-status) {
 }
 
 
-.home-right-panel-status--green {
+.home-right-panel-status--orange {
   background:
-    #42aa73;
+    #f08a32;
+}
+
+
+.home-right-panel-status--gray {
+  background:
+    #9aa3ad;
 }
 
 

@@ -21,14 +21,12 @@ import {
 } from "./HomeHeaderIcons";
 
 import {
-  buildDepartmentWorkspaceTasks,
+  buildCreatedByMeWorkspaceTasks,
+  buildMyWorkspaceTasks,
   buildPersonalNotes,
-  isManagerTaskProfile,
-  MANAGER_TASKS,
-  PRIVILEGED_TASKS,
+  buildUnacceptedWorkspaceTasks,
   type PersonalNote,
   type TaskItem,
-  type TaskRole,
 } from "./HomeTasksData";
 
 import {
@@ -50,35 +48,12 @@ type CurrentUserProfileRow = {
   admin_role_name: string | null;
 };
 
-type TabId =
-  | "all"
-  | "notes"
-  | TaskRole;
+type TabId = "my" | "unaccepted" | "created" | "notes";
 
-
-const ADMIN_TABS: Array<{ id: TabId; label: string }> = [
-  { id: "all", label: "Все" },
-  { id: "notes", label: "Заметки" },
-  { id: "administrators", label: "Администраторы" },
-  { id: "category_manager", label: "КМ" },
-  { id: "ved", label: "ВЭД" },
-  { id: "procurement", label: "Закуп" },
-  { id: "analyst", label: "Аналитика" },
-  { id: "marketing", label: "Маркетинг" },
-];
-
-const MANAGER_TABS: Array<{ id: TabId; label: string }> = [
-  { id: "all", label: "Все" },
-  { id: "notes", label: "Заметки" },
-  { id: "category_manager", label: "КМ" },
-  { id: "ved", label: "ВЭД" },
-  { id: "procurement", label: "Закуп" },
-  { id: "analyst", label: "Аналитика" },
-  { id: "marketing", label: "Маркетинг" },
-];
-
-const BASIC_TABS: Array<{ id: TabId; label: string }> = [
-  { id: "all", label: "Все" },
+const TASK_TABS: Array<{ id: TabId; label: string }> = [
+  { id: "my", label: "Мои" },
+  { id: "unaccepted", label: "Непринятые" },
+  { id: "created", label: "Поставленные мной" },
   { id: "notes", label: "Заметки" },
 ];
 
@@ -184,12 +159,12 @@ export default function HomeRightPanel() {
     useState(false);
 
   const [activeTab, setActiveTab] =
-    useState<TabId>("all");
+    useState<TabId>("my");
 
   useEffect(
     () => {
       setOpen(false);
-      setActiveTab("all");
+      setActiveTab("my");
     },
     [pathname]
   );
@@ -461,57 +436,38 @@ export default function HomeRightPanel() {
   }
 
 
-  const managerMode =
-    !adminHomeMode
-    && isManagerTaskProfile(profile);
+  const tabs = TASK_TABS;
 
-  const tabs =
-    adminHomeMode
-      ? ADMIN_TABS
-      : managerMode
-        ? MANAGER_TABS
-        : BASIC_TABS;
-
-  useEffect(
-    () => {
-      if (
-        !tabs.some(
-          tab => tab.id === activeTab
-        )
-      ) {
-        setActiveTab("all");
-      }
-    },
-    [activeTab, tabs]
+  const myTasks = useMemo<TaskItem[]>(
+    () => buildMyWorkspaceTasks(workspaceTaskSnapshot),
+    [workspaceTaskSnapshot]
+  );
+  const unacceptedTasks = useMemo<TaskItem[]>(
+    () => buildUnacceptedWorkspaceTasks(workspaceTaskSnapshot),
+    [workspaceTaskSnapshot]
+  );
+  const createdTasks = useMemo<TaskItem[]>(
+    () => buildCreatedByMeWorkspaceTasks(workspaceTaskSnapshot),
+    [workspaceTaskSnapshot]
+  );
+  const personalNotes = useMemo<PersonalNote[]>(
+    () => buildPersonalNotes(workspaceTaskSnapshot),
+    [workspaceTaskSnapshot]
   );
 
-  const departmentTasks =
-    useMemo<TaskItem[]>(
-      () => buildDepartmentWorkspaceTasks(workspaceTaskSnapshot),
-      [workspaceTaskSnapshot]
-    );
-
-  const personalNotes =
-    useMemo<PersonalNote[]>(
-      () => buildPersonalNotes(profile),
-      [profile]
-    );
-
-  const visibleTasks =
-    adminHomeMode
-      ? PRIVILEGED_TASKS
-      : managerMode
-        ? MANAGER_TASKS
-        : departmentTasks;
-
   const filteredTasks =
-    activeTab === "all"
-      ? visibleTasks
-      : activeTab === "notes"
-        ? []
-        : visibleTasks.filter(
-            task => task.role === activeTab
-          );
+    activeTab === "my"
+      ? myTasks
+      : activeTab === "unaccepted"
+        ? unacceptedTasks
+        : createdTasks;
+
+  const emptyMessage =
+    activeTab === "my"
+      ? "Задач, взятых вами в работу, пока нет."
+      : activeTab === "unaccepted"
+        ? "Непринятых задач для вашего отдела нет."
+        : "Вы пока не поставили задач другим отделам.";
 
   return (
     <aside
@@ -594,61 +550,63 @@ export default function HomeRightPanel() {
 
         <div className="home-right-panel-task-list">
           {
-            activeTab === "notes"
-              ? personalNotes.map(
-                  note => (
-                    <div
-                      key={note.id}
-                      className="
-                        home-right-panel-task
-                        home-right-panel-task--note
-                      "
-                    >
-                      <div>
-                        <strong>{note.title}</strong>
-                        <span>Личная заметка</span>
-                      </div>
-                    </div>
-                  )
+            workspaceTasksLoading && !workspaceTaskSnapshot
+              ? (
+                <div className="home-right-panel-empty">
+                  Загружаем задачи…
+                </div>
+              )
+              : workspaceTasksError && !workspaceTaskSnapshot
+                ? (
+                  <div className="home-right-panel-empty">
+                    Не удалось загрузить задачи.
+                  </div>
                 )
-              : filteredTasks.length > 0
-                ? filteredTasks.map(
-                    task => (
-                      <div
-                        key={task.id}
-                        className="home-right-panel-task"
-                      >
-                        <span
-                          className={
-                            `home-right-panel-status home-right-panel-status--${task.status}`
-                          }
-                        />
-                        <div>
-                          <strong>{task.title}</strong>
-                          <span>
-                            {task.creator}
-                            {" → "}
-                            {task.assignee}
-                          </span>
+                : activeTab === "notes"
+                  ? personalNotes.length > 0
+                    ? personalNotes.map(note => (
+                        <div
+                          key={note.id}
+                          className="
+                            home-right-panel-task
+                            home-right-panel-task--note
+                          "
+                        >
+                          <div>
+                            <strong>{note.title}</strong>
+                            <span>Личная заметка</span>
+                          </div>
                         </div>
-                      </div>
-                    )
-                  )
-                : workspaceTasksLoading && !workspaceTaskSnapshot
-                  ? (
-                    <div className="home-right-panel-empty">
-                      Загружаем задачи…
-                    </div>
-                  )
-                  : workspaceTasksError && !workspaceTaskSnapshot
-                    ? (
-                      <div className="home-right-panel-empty">
-                        Не удалось загрузить задачи.
-                      </div>
-                    )
+                      ))
                     : (
                       <div className="home-right-panel-empty">
-                        В этой категории задач пока нет.
+                        Заметок пока нет.
+                      </div>
+                    )
+                  : filteredTasks.length > 0
+                    ? filteredTasks.map(task => (
+                        <div
+                          key={task.id}
+                          className="home-right-panel-task"
+                        >
+                          <span
+                            className={
+                              `home-right-panel-status home-right-panel-status--${task.dotColor}`
+                            }
+                          />
+                          <div>
+                            <strong>{task.title}</strong>
+                            <span>
+                              {task.creator}
+                              {" → "}
+                              {task.assignee}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    : (
+                      <div className="home-right-panel-empty">
+                        {emptyMessage}
                       </div>
                     )
           }

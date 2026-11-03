@@ -1231,9 +1231,15 @@
 }
 
 
-.taskUrgencyGreen {
+.taskUrgencyOrange {
   background:
-    #42aa73;
+    #f08a32;
+}
+
+
+.taskUrgencyGray {
+  background:
+    #9aa3ad;
 }
 
 

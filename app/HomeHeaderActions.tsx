@@ -3297,7 +3297,7 @@ export default function HomeHeaderActions() {
 
                         <span>
                           Здесь будут задачи,
-                          назначенные именно вам.
+                          которые вы взяли в работу.
                         </span>
 
                       </div>
@@ -3330,17 +3330,22 @@ export default function HomeHeaderActions() {
                                 <span
                                   className={
                                     `${styles.taskUrgencyDot} ${
-                                      task.status ===
+                                      task.dotColor ===
                                         "red"
 
                                         ? styles.taskUrgencyRed
 
-                                        : task.status ===
-                                            "yellow"
+                                        : task.dotColor ===
+                                            "orange"
 
-                                          ? styles.taskUrgencyYellow
+                                          ? styles.taskUrgencyOrange
 
-                                          : styles.taskUrgencyGreen
+                                          : task.dotColor ===
+                                              "yellow"
+
+                                            ? styles.taskUrgencyYellow
+
+                                            : styles.taskUrgencyGray
                                     }`
                                   }
                                 />

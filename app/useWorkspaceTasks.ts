@@ -25,8 +25,12 @@ export default function useWorkspaceTasks() {
           .rpc("workspace_home_tasks_snapshot");
 
         if (fetchError) throw fetchError;
-        if (!data || !Array.isArray(data.tasks)) {
-          throw new Error("Сервер вернул некорректный список задач");
+        if (
+          !data
+          || !Array.isArray(data.tasks)
+          || !Array.isArray(data.notes)
+        ) {
+          throw new Error("Сервер вернул некорректный список задач и заметок");
         }
 
         if (active) {

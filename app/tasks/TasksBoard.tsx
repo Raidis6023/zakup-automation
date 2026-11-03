@@ -230,7 +230,15 @@ export default function TasksBoard() {
       });
       if (actionError) throw actionError;
       await refresh();
-      if (["create", "take", "finish", "edit"].includes(name)) {
+      if ([
+        "create",
+        "take",
+        "finish",
+        "edit",
+        "note_add",
+        "note_update",
+        "note_delete",
+      ].includes(name)) {
         window.dispatchEvent(new CustomEvent("workspace-tasks-updated"));
       }
       return true;
