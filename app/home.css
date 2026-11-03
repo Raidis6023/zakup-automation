@@ -944,6 +944,25 @@ html[data-theme="dark"]
 }
 
 
+.home-calendar-day:not(:disabled):not(.empty) {
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+
+.home-calendar-day:not(:disabled):not(.empty):hover:not(.today) {
+  background: var(--surface-soft);
+  color: var(--home-blue);
+}
+
+
+.home-calendar-day:disabled {
+  color: var(--text-muted);
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+
 .home-calendar-today-button {
   width: 100%;
 
@@ -2458,4 +2477,87 @@ html[data-theme="dark"] .home-header-sync-notification-icon--alert {
 .home-header-sync-notification-icon--alert .stock-alert-dot {
   fill: currentColor;
   stroke: none;
+}
+
+
+/* ============================================================
+   QUICK NOTE POPUP FROM THE HEADER CALENDAR
+   ============================================================ */
+
+.home-calendar-note-popup {
+  width: 360px;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 72px);
+  padding: 0;
+  overflow-y: auto;
+}
+
+.home-calendar-note-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.home-calendar-note-header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.home-calendar-note-header strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.home-calendar-note-header span {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.home-calendar-note-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.home-calendar-note-close:hover:not(:disabled) {
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+.home-calendar-note-close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.home-calendar-note-close svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.home-calendar-note-body {
+  padding: 16px;
+}
+
+@media (max-width: 600px) {
+  .home-calendar-note-popup {
+    right: -50px;
+  }
 }

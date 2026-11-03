@@ -46,6 +46,7 @@ import {
 } from "./HomeTasksData";
 
 import useWorkspaceTasks from "./useWorkspaceTasks";
+import HomeQuickNoteModal from "./HomeQuickNoteModal";
 
 import {
   dismissSyncNotification,
@@ -575,6 +576,79 @@ function formatToday(
 }
 
 
+function getKrasnoyarskToday() {
+
+  const parts =
+    new Intl.DateTimeFormat(
+      "en-CA",
+      {
+        timeZone: "Asia/Krasnoyarsk",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }
+    ).formatToParts(new Date());
+
+  const year =
+    Number(parts.find(part => part.type === "year")?.value);
+
+  const month =
+    Number(parts.find(part => part.type === "month")?.value);
+
+  const day =
+    Number(parts.find(part => part.type === "day")?.value);
+
+  return new Date(year, month - 1, day);
+
+}
+
+
+function formatCalendarDateInput(
+  date:
+    Date
+) {
+
+  const year =
+    date.getFullYear();
+
+  const month =
+    String(date.getMonth() + 1).padStart(2, "0");
+
+  const day =
+    String(date.getDate()).padStart(2, "0");
+
+  return year + "-" + month + "-" + day;
+
+}
+
+
+function isBeforeCalendarDate(
+  date:
+    Date,
+
+  reference:
+    Date
+) {
+
+  const dateValue =
+    new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate()
+    ).getTime();
+
+  const referenceValue =
+    new Date(
+      reference.getFullYear(),
+      reference.getMonth(),
+      reference.getDate()
+    ).getTime();
+
+  return dateValue < referenceValue;
+
+}
+
+
 function formatNotificationTime(
   value:
     string
@@ -959,7 +1033,7 @@ export default function HomeHeaderActions() {
   ] =
     useState(
       () =>
-        new Date()
+        getKrasnoyarskToday()
     );
 
 
@@ -971,7 +1045,7 @@ export default function HomeHeaderActions() {
       () => {
 
         const now =
-          new Date();
+          getKrasnoyarskToday();
 
 
         return new Date(
@@ -984,12 +1058,28 @@ export default function HomeHeaderActions() {
     );
 
 
+  const [
+    quickNoteDate,
+    setQuickNoteDate,
+  ] = useState<string | null>(null);
+
+
+  const closeQuickNote = useCallback(
+    () => setQuickNoteDate(null),
+    []
+  );
+
+
   const actionsRef =
     useRef<
       HTMLDivElement | null
     >(
       null
     );
+
+
+  const calendarActionRef =
+    useRef<HTMLDivElement | null>(null);
 
 
   // ==========================================================
@@ -1629,7 +1719,7 @@ export default function HomeHeaderActions() {
           () => {
 
             const now =
-              new Date();
+              getKrasnoyarskToday();
 
 
             setToday(
@@ -1696,6 +1786,15 @@ export default function HomeHeaderActions() {
 
 
         if (
+          target instanceof Node
+          && quickNoteDate
+          && !calendarActionRef.current?.contains(target)
+        ) {
+          setQuickNoteDate(null);
+        }
+
+
+        if (
           target instanceof
             Node
           &&
@@ -1750,6 +1849,12 @@ export default function HomeHeaderActions() {
         }
 
 
+        if (quickNoteDate) {
+          setQuickNoteDate(null);
+          return;
+        }
+
+
         setOpenPanel(
           null
         );
@@ -1788,6 +1893,7 @@ export default function HomeHeaderActions() {
     [
       selectedNotification,
       requestAction,
+      quickNoteDate,
     ]
   );
 
@@ -1913,7 +2019,7 @@ export default function HomeHeaderActions() {
   function showCurrentMonth() {
 
     const now =
-      new Date();
+      getKrasnoyarskToday();
 
 
     setToday(
@@ -3892,17 +3998,15 @@ export default function HomeHeaderActions() {
         <div
           className=
             "home-action-wrapper"
+          ref={calendarActionRef}
         >
 
           <button
             type="button"
 
             className={
-              openPanel ===
-                "calendar"
-
+              openPanel === "calendar" || quickNoteDate !== null
                 ? "home-icon-button active"
-
                 : "home-icon-button"
             }
 
@@ -3910,22 +4014,13 @@ export default function HomeHeaderActions() {
               "Календарь"
 
             aria-expanded={
-              openPanel ===
-                "calendar"
+              openPanel === "calendar" || quickNoteDate !== null
             }
 
-            onClick={
-              () =>
-                setOpenPanel(
-                  current =>
-                    current ===
-                      "calendar"
-
-                      ? null
-
-                      : "calendar"
-                )
-            }
+            onClick={() => {
+              setQuickNoteDate(null);
+              setOpenPanel(current => current === "calendar" ? null : "calendar");
+            }}
           >
 
             <span className="home-utility-icon-visual">
@@ -4084,6 +4179,13 @@ export default function HomeHeaderActions() {
                           );
 
 
+                        const pastDay =
+                          isBeforeCalendarDate(
+                            date,
+                            today
+                          );
+
+
                         return (
 
                           <button
@@ -4108,6 +4210,20 @@ export default function HomeHeaderActions() {
 
                                 : undefined
                             }
+
+                            aria-label={
+                              "Создать заметку на " + formatToday(date)
+                            }
+
+                            disabled={
+                              pastDay
+                            }
+
+                            onClick={() => {
+                              if (pastDay) return;
+                              setQuickNoteDate(formatCalendarDateInput(date));
+                              setOpenPanel(null);
+                            }}
                           >
                             {
                               date.getDate()
@@ -4145,6 +4261,16 @@ export default function HomeHeaderActions() {
 
               </div>
 
+            )
+          }
+
+
+          {
+            quickNoteDate && (
+              <HomeQuickNoteModal
+                date={quickNoteDate}
+                onClose={closeQuickNote}
+              />
             )
           }
 
