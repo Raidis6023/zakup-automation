@@ -140,7 +140,7 @@ async function adStats(from:string,to:string,token:string):Promise<{items:AdItem
         for(const product of products){
           const nm_id=num(product.nmId);
           if(!nm_id||date<from||date>to) continue;
-          items.push({nm_id,date,campaign_id,spend:num(product.sum),views:num(product.views),clicks:num(product.clicks),orders:num(product.orders),sum_price:num(product.sum_price)});
+          items.push({nm_id,date,campaign_id,spend:num(product.sum),views:num(product.views),clicks:num(product.clicks),orders:num(product.orders),sum_price:num(product.sum_price),atbs:num(product.atbs)});
         }
       }
     }
