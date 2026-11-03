@@ -6,6 +6,7 @@
 import type {createAdminClient} from "@/lib/supabase/admin";
 import type {VedCalculationInput,VedCalculationResult} from "@/lib/ved-calculation/engine";
 import {displayNewProductName,normalizeNewProductArticle} from "@/lib/products/new-product-identity";
+import {applyProductOverrides,type ProductOverrides} from "./product-overrides";
 import {PRELIMINARY_MODELS,calculatePreliminary,suggestPreliminaryTargetPrice,type PreliminarySettings,type PreliminarySource} from "./prospective-engine";
 type Db=ReturnType<typeof createAdminClient>;
 export type VedEventKind="single"|"whole";
@@ -82,7 +83,7 @@ export async function syncUnitFromVedVersion(db:Db,type:VedEventKind,versionId:s
   for(const list of chunk([...unique.values()],40)){
    const articles=list.map(x=>x.article);
    const {data:existing,error:existingErr}=await db.from("unit_ved_products")
-    .select("id,article,ved_created_at").in("article",articles);
+    .select("id,article,ved_created_at,overrides,edit_revision").in("article",articles);
    if(existingErr)throw existingErr;
    const before=new Map((existing||[]).map(x=>[x.article,x]));
    const relevant=list.filter(x=>{
@@ -92,9 +93,10 @@ export async function syncUnitFromVedVersion(db:Db,type:VedEventKind,versionId:s
    });
    if(!relevant.length)continue;
    const rows=relevant.map(item=>{
-    const first=calculatePreliminary(item,"ozon-fbo");
+    const effective=applyProductOverrides(item,(before.get(item.article)?.overrides||{}) as ProductOverrides);
+    const first=calculatePreliminary(effective,"ozon-fbo");
     return{
-     article:item.article,name:item.name,source_type:type,source_version_id:versionId,
+     article:item.article,name:effective.name,source_type:type,source_version_id:versionId,
      source_item_id:item.itemId,ved_created_at:timestamp,
      input_data:item.input,result_data:item.result,
      cost_gross_rub:first.costGrossRub,purchase_vat_credit_rub:first.purchaseVatCreditRub,
@@ -116,10 +118,12 @@ export async function syncUnitFromVedVersion(db:Db,type:VedEventKind,versionId:s
    const settingsMap=new Map((settings||[]).map(x=>[x.product_id+":"+x.model,x]));
    const rowsCalc:Record<string,unknown>[]=[],rowsHistory:Record<string,unknown>[]=[];
    for(const p of products){
-    const source=relevant.find(x=>x.article===p.article)!;
+    const initial=relevant.find(x=>x.article===p.article)!;
+    const oldProduct=before.get(p.article);
+    const source=applyProductOverrides(initial,(oldProduct?.overrides||{}) as ProductOverrides);
     for(const model of PRELIMINARY_MODELS){
      const config=settingsMap.get(p.id+":"+model);
-     const revision=Number(config?.revision||1);
+     const revision=Number(oldProduct?.edit_revision||1)+Number(config?.revision||1)-1;
      let result:ReturnType<typeof calculatePreliminary>;
      try{
       const settings=(config?.data||{}) as PreliminarySettings;
