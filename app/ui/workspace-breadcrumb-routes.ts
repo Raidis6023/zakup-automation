@@ -48,6 +48,7 @@ const routes: Record<string, RouteSpec> = {
   "/profile": { label: "Профиль" },
   "/admin": { label: "Администрирование" },
   "/admin/users": { label: "Сотрудники", parent: "/admin" },
+  "/admin/api": { label: "API", parent: "/admin" },
   "/admin/tasks": { label: "Задачи", parent: "/admin" },
   "/admin/logs": { label: "История логов", parent: "/admin" },
 };
@@ -74,6 +75,7 @@ const segmentLabels: Record<string, string> = {
   "ozon": "Ozon",
   "admin": "Администрирование",
   "users": "Сотрудники",
+  "api": "API",
   "tasks": "Задачи",
   "logs": "История логов",
   "profile": "Профиль",

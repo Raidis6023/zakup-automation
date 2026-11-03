@@ -173,6 +173,7 @@ type WorkspaceNavKey =
   | "admin-users"
   | "admin-tasks"
   | "admin-logs"
+  | "admin-api"
   | "tasks"
   | "sku-list"
   | "procurement"
@@ -424,6 +425,10 @@ export default function WorkspaceShell({
             "/admin/users/"
           )
         );
+
+
+      case "admin-api":
+        return pathname === "/admin/api" || pathname.startsWith("/admin/api/");
 
 
       case "admin-tasks":
@@ -819,6 +824,18 @@ export default function WorkspaceShell({
                     Сотрудники
                   </span>
 
+                </Link>
+
+                <Link
+                  href="/admin/api"
+                  onClick={event => handleNavClick(event, "admin-api")}
+                  className={navClass("admin-api")}
+                  aria-current={isNavActive("admin-api") ? "page" : undefined}
+                  aria-label="API"
+                  title="API"
+                >
+                  <span className="home-brand-icon"><EmeraldSidebarIcon kind="api" /></span>
+                  <span className="home-workspace-label">API</span>
                 </Link>
 
               </nav>

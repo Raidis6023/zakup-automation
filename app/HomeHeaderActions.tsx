@@ -630,21 +630,7 @@ function isBeforeCalendarDate(
     Date
 ) {
 
-  const dateValue =
-    new Date(
-      date.getFullYear(),
-      date.getMonth(),
-      date.getDate()
-    ).getTime();
-
-  const referenceValue =
-    new Date(
-      reference.getFullYear(),
-      reference.getMonth(),
-      reference.getDate()
-    ).getTime();
-
-  return dateValue < referenceValue;
+  return formatCalendarDateInput(date) < formatCalendarDateInput(reference);
 
 }
 
@@ -4196,11 +4182,7 @@ export default function HomeHeaderActions() {
                             type="button"
 
                             className={
-                              currentDay
-
-                                ? "home-calendar-day today"
-
-                                : "home-calendar-day"
+                              `home-calendar-day${currentDay ? " today" : ""}${pastDay ? " past" : ""}`
                             }
 
                             aria-current={
@@ -4215,11 +4197,18 @@ export default function HomeHeaderActions() {
                               "Создать заметку на " + formatToday(date)
                             }
 
-                            disabled={
-                              pastDay
-                            }
+                            aria-disabled={pastDay}
+                            tabIndex={pastDay ? -1 : 0}
 
-                            onClick={() => {
+                            onPointerDown={event => {
+                              if (pastDay || (event.pointerType === "mouse" && event.button !== 0)) return;
+                              event.stopPropagation();
+                              setQuickNoteDate(formatCalendarDateInput(date));
+                              setOpenPanel(null);
+                            }}
+
+                            onClick={event => {
+                              event.stopPropagation();
                               if (pastDay) return;
                               setQuickNoteDate(formatCalendarDateInput(date));
                               setOpenPanel(null);

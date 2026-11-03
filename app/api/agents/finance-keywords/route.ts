@@ -1,3 +1,4 @@
+import { getOzonCredentials } from "../../../../lib/integrations/secrets";
 import {NextRequest,NextResponse} from 'next/server';
 import {financeAccess} from '../../../../lib/yandex/finance-access';
 import {createAdminClient} from '../../../../lib/supabase/admin';
@@ -84,7 +85,7 @@ export async function GET(req:NextRequest){try{
   }
   return NextResponse.json({ok:true,market,items,source:'WB search-report/product/search-texts + /adv/v0/normquery/stats',coverage:'provider_response',note:'Частота и конверсии по поисковым фразам WB. '+paidNote+' Выкупы по тексту запроса WB не подтверждает: вместо выдуманных чисел показывается прочерк.',limitations:['keyword_buyouts'],paidNote},{headers:{'Cache-Control':'private,no-store'}});
  }
- const client=process.env.OZON_CLIENT_ID,key=process.env.OZON_API_KEY;
+ const {sellerClientId:client,sellerApiKey:key}=await getOzonCredentials();
  if(!client||!key)return NextResponse.json({error:'Не настроены ключи Ozon'},{status:503});
  let sku=article.replace(/^SKU:/,'');
  if(!/^\d+$/.test(sku)){

@@ -944,19 +944,19 @@ html[data-theme="dark"]
 }
 
 
-.home-calendar-day:not(:disabled):not(.empty) {
+.home-calendar-day:not(.past):not(.empty) {
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 
-.home-calendar-day:not(:disabled):not(.empty):hover:not(.today) {
+.home-calendar-day:not(.past):not(.empty):hover:not(.today) {
   background: var(--surface-soft);
   color: var(--home-blue);
 }
 
 
-.home-calendar-day:disabled {
+.home-calendar-day.past {
   color: var(--text-muted);
   opacity: 0.42;
   cursor: not-allowed;

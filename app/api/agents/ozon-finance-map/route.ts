@@ -1,3 +1,4 @@
+import { getOzonCredentials } from "../../../../lib/integrations/secrets";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "../../../../lib/supabase/server";
 import { createAdminClient } from "../../../../lib/supabase/admin";
@@ -27,8 +28,7 @@ async function getAdmin(request?: NextRequest): Promise<Supabase | null> {
   return db;
 }
 async function ozonInfo(skus: string[]): Promise<Info[]> {
-  const clientId = process.env.OZON_CLIENT_ID;
-  const key = process.env.OZON_API_KEY;
+  const { sellerClientId: clientId, sellerApiKey: key } = await getOzonCredentials();
   if (!clientId || !key) throw new Error("Seller API не настроен");
   const http = await fetch("https://api-seller.ozon.ru/v3/product/info/list", {
     method: "POST", headers: {
