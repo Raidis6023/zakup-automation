@@ -1,3 +1,4 @@
+import {syncUnitFromVedVersion} from "@/lib/unit-economics/prospective-sync";
 import {NextResponse} from "next/server";
 import {requireVedAccess,VedAccessError} from "@/lib/ved-calculation/server-access";
 import {calculateVed,VedInputError,type VedCalculationInput} from "@/lib/ved-calculation/engine";
@@ -86,8 +87,12 @@ export async function POST(request:Request){
    }).select("id,version_no,created_at").single();
    if(insertError?.code==="23505")continue;
    if(insertError)throw insertError;
-   return NextResponse.json({ok:true,version:created,readyCount,totalCount:entries.length,
-    warning:readyCount===entries.length?null:"Не все товары рассчитаны. Недостающие поля отмечены; версия сохранена для доработки."},
+   // Обновляем расчётную юнитку по всем позициям КП. При сбое событие остаётся в очереди БД.
+   const unitEconomics=await syncUnitFromVedVersion(admin,"whole",created.id);
+   if(!unitEconomics.ok)console.error("Whole VED unit sync queued for retry:",unitEconomics.error);
+   return NextResponse.json({ok:true,version:created,readyCount,totalCount:entries.length,unitEconomics,
+    warning:!unitEconomics.ok?"ВЭД сохранён. Юнит-экономика в очереди повторной обработки: "+unitEconomics.error:
+      readyCount===entries.length?null:"Не все товары рассчитаны. Недостающие поля отмечены; версия сохранена для доработки."},
     {headers:{"Cache-Control":"private,no-store"}});
   }
   return bad("Не удалось выделить номер версии КП. Повторите сохранение.",409);
