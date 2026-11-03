@@ -16,6 +16,7 @@ require.extensions[".ts"]=(mod,filename)=>{
  mod._compile(output,filename);
 };
 const {PRELIMINARY_MODELS,calculatePreliminary,suggestPreliminaryTargetPrice}=require("../lib/unit-economics/prospective-engine.ts");
+const {calculateUnitWeight}=require("../lib/unit-economics/unit-weight.ts");
 const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-6,"Ожидается "+b+", получено "+a);
 const source=()=>({
  article:"RCAB-TEST-1",name:"Тестовый товар (RCAB-TEST-1)",
@@ -122,4 +123,39 @@ test("Яндекс FBS: акционную доставку считаем от�
  assert.equal(x.logistics.alternativePromo.price,250);
  assert.equal(x.logistics.alternativePromo.middleMile,0);
  assert.equal(x.logistics.alternativePromo.lastMile,0);
+});
+
+test("Расчётный вес товара один для всех маркетплейсов: брутто коробки / вложимость",()=>{
+ const item=source();
+ for(const model of PRELIMINARY_MODELS){
+  const result=calculatePreliminary(item,model,{});
+  close(result.unitWeightKg,19/120);
+  assert.equal(result.unitWeightSource,"carton-gross");
+  assert.match(result.unitWeightFormula,/19 кг \/ 120 шт\./);
+  assert.equal(result.unitWeightWarning,null);
+ }
+});
+test("Вес пересчитывается при обновлении данных ВЭД; исходная точность не теряется",()=>{
+ const item=source();
+ close(calculatePreliminary(item,"ozon-fbo",{}).unitWeightKg,19/120);
+ item.input.product.cartonGrossKg=21;
+ item.input.product.unitsPerCarton=60;
+ close(calculatePreliminary(item,"ozon-fbo",{}).unitWeightKg,.35);
+ const result=calculateUnitWeight(.019,100);
+ close(result.kilograms,.00019);
+ assert.match(result.formula,/0\.00019 кг\/шт\./);
+});
+test("При неизвестном весе коробки или нецелой вложимости вес не выдумывается",()=>{
+ for(const [gross,units] of [[0,120],[undefined,120],[19,0],[19,2.5],[19,NaN],[NaN,120],[-5,100]]){
+  const value=calculateUnitWeight(gross,units);
+  assert.equal(value.kilograms,null);
+  assert.equal(value.formula,null);
+  assert.ok(value.warning);
+ }
+ const item=source();
+ delete item.input.product.cartonGrossKg;
+ const result=calculatePreliminary(item,"ym-fby",{});
+ assert.equal(result.unitWeightKg,null);
+ assert.match(result.unitWeightWarning,/вес брутто/);
+ assert.equal(result.status,"needs_input"); // Воздействия на прибыль из-за веса нет.
 });

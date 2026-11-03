@@ -24,8 +24,12 @@ export async function GET(req:NextRequest){
  const auth=await access();
  if("error" in auth)return NextResponse.json({ok:false,error:auth.error},{status:auth.status,headers});
  const limit=Math.min(150,Math.max(1,Number(req.nextUrl.searchParams.get("limit")||100)||100));
- const {data:products,error:pErr}=await auth.admin.from("unit_ved_products")
-  .select("id,article,name,source_type,source_version_id,ved_created_at,cost_gross_rub,purchase_vat_credit_rub,volume_liters,volume_source")
+ const requestedArticles=(req.nextUrl.searchParams.get("articles")||"").split(",")
+  .map(v=>v.trim().toUpperCase()).filter(v=>/^[A-Z0-9_-]{1,120}$/.test(v)).slice(0,25);
+ let productQuery=auth.admin.from("unit_ved_products")
+  .select("id,article,name,source_type,source_version_id,ved_created_at,cost_gross_rub,purchase_vat_credit_rub,volume_liters,volume_source,unit_weight_kg");
+ if(requestedArticles.length)productQuery=productQuery.in("article",requestedArticles);
+ const {data:products,error:pErr}=await productQuery
   .order("ved_created_at",{ascending:false}).limit(limit);
  if(pErr)return NextResponse.json({ok:false,error:"База расчётов ВЭД не готова: "+pErr.message},
   {status:503,headers});
@@ -41,6 +45,8 @@ export async function GET(req:NextRequest){
   const detail={
    model:item.model,status:item.status,missing:item.missing,
    costGrossRub:value.costGrossRub??null,volumeLiters:value.volumeLiters??null,
+   unitWeightKg:value.unitWeightKg??null,unitWeightFormula:value.unitWeightFormula??null,
+   unitWeightSource:value.unitWeightSource??null,unitWeightWarning:value.unitWeightWarning??null,
    priceRub:value.priceRub??null,priceAfterSppRub:value.priceAfterSppRub??null,
    targetPriceRub:value.targetPriceRub??null,profitRub:value.profitRub??null,
    margin:value.margin??null,roi:value.roi??null,

@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS public.unit_ved_products (
  purchase_vat_credit_rub numeric(20,8),
  volume_liters numeric(20,8),
  volume_source text,
+ unit_weight_kg numeric(20,8) CHECK (unit_weight_kg IS NULL OR unit_weight_kg > 0),
  created_at timestamptz NOT NULL DEFAULT now(),
  updated_at timestamptz NOT NULL DEFAULT now()
 );

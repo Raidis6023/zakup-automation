@@ -6,6 +6,7 @@
  */
 import type {VedCalculationInput,VedCalculationResult} from "@/lib/ved-calculation/engine";
 import {calculateIndividualPackageVolume} from "./individual-package-volume";
+import {calculateUnitWeight} from "./unit-weight";
 import {calculateLogistics,type LogisticsModel,type LogisticsOutput} from "./logistics/engine";
 import {calculateUnitVat} from "./vat";
 import {calculateUnitFinancials,type UnitFinalModel,type UnitExpenseGroup} from "./financial-results";
@@ -52,6 +53,10 @@ export type PreliminaryCalculation={
  missing:string[];assumptions:string[];
  costGrossRub:number|null;purchaseVatCreditRub:number|null;
  costNetRub:number|null;volumeLiters:number|null;
+ unitWeightKg:number|null;
+ unitWeightFormula:string|null;
+ unitWeightSource:"carton-gross"|null;
+ unitWeightWarning:string|null;
  volumeSource:string|null;volumeFormula:string|null;
  sourceCost: string;priceRub:number|null;priceAfterSppRub:number|null;
  commissionRate:number|null;logistics:LogisticsOutput|null;
@@ -88,6 +93,7 @@ export function calculatePreliminary(source:PreliminarySource,model:PreliminaryM
  const group=model.startsWith("ozon")?"ozon":model.startsWith("wb")?"wb":"ym";
  const defaults=rates[group];
  const base=goodsCost(source),p=source.input.product;
+ const unitWeight=calculateUnitWeight(p.cartonGrossKg,p.unitsPerCarton);
  const vol=calculateIndividualPackageVolume({
   individualDimensions:[p.individualLengthCm,p.individualWidthCm,p.individualHeightCm].every(positive)
    ?{length:p.individualLengthCm!,width:p.individualWidthCm!,height:p.individualHeightCm!,unit:"cm"}:undefined,
@@ -125,6 +131,8 @@ export function calculatePreliminary(source:PreliminarySource,model:PreliminaryM
   status:source.result?"needs_input":"invalid_ved",missing,assumptions,
   costGrossRub:base?.gross??null,purchaseVatCreditRub:base?.vat??null,costNetRub:base?.net??null,
   volumeLiters:vol.liters,volumeSource:vol.source,volumeFormula:vol.formula,
+  unitWeightKg:unitWeight.kilograms,unitWeightFormula:unitWeight.formula,
+  unitWeightSource:unitWeight.source,unitWeightWarning:unitWeight.warning,
   sourceCost:"Среднее валовой себестоимости 40HQ и MOQ; входящий импортный НДС отдельно, только при возмещаемости",
   priceRub:price,priceAfterSppRub:null,commissionRate:null,
   logistics:null,expenses:[],outputVatRub:null,inputVatRub:null,profitRub:null,roi:null,margin:null,

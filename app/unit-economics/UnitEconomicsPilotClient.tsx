@@ -230,9 +230,34 @@ export default function UnitEconomicsPilotClient(){
  const [sku,setSku]=useState<string|null>(null);
  const [view,setView]=useState<"summary"|"details">("summary");
  const [overrides,setOverrides]=useState<Record<string,string>>({});
+ const [vedWeights,setVedWeights]=useState<Record<string,{kilograms:number;formula:string|null}>>({});
+ useEffect(()=>{
+  const controller=new AbortController();
+  const articles=DATA.map(p=>p.sku).join(",");
+  fetch("/api/unit-economics/prospective?articles="+encodeURIComponent(articles),
+    {cache:"no-store",signal:controller.signal})
+   .then(async response=>{
+    if(!response.ok)return null;
+    return response.json() as Promise<{ok?:boolean;products?:{article:string;unit_weight_kg:number|null;schemes?:Record<string,{unitWeightFormula?:string|null}>}[]}>;
+   })
+   .then(body=>{
+    if(!body?.ok||controller.signal.aborted)return;
+    const weights:Record<string,{kilograms:number;formula:string|null}>={};
+    for(const p of body.products||[]){
+     const weight=Number(p.unit_weight_kg);
+     if(p.unit_weight_kg!==null&&Number.isFinite(weight)&&weight>0){
+      const formula=Object.values(p.schemes||{}).find(x=>x?.unitWeightFormula)?.unitWeightFormula??null;
+      weights[p.article]={kilograms:weight,formula};
+     }
+    }
+    setVedWeights(weights);
+   }).catch(()=>{}); // В пилотной книге вес не заполнен: не подменяем нулём.
+  return()=>controller.abort();
+ },[]);
  const model=selected[market],c=COLS[model];
  const list=useMemo(()=>DATA.filter(x=>(x.name+" "+x.sku).toLowerCase().includes(search.toLowerCase().trim())),[search]);
  const item=DATA.find(p=>p.sku===sku);
+ const selectedWeight=sku?vedWeights[sku]:undefined;
  const overrideKey=(sku||"")+"@"+model;
  const override=overrides[overrideKey];
  const overrideValue=override!==undefined&&override.trim()!==""&&Number(override)>0?Number(override):undefined;
@@ -305,7 +330,10 @@ export default function UnitEconomicsPilotClient(){
     {(model==="ym-fby"||model==="ym-fbs")&&row.oldYandexRoi!==null&&row.oldYandexRoi!==undefined&&
       <div className="unit-pilot-notice"><strong>ROI Яндекс по прежней методике: {formatUnitPercent(row.oldYandexRoi)}</strong>. Основной ROI рассчитан по единой базе себестоимости без НДС закупки.</div>}{view==="summary"?<>
     <div className="unit-pilot-metrics"><div>ROI <strong className={numeric(row,c.roi)<0?"unit-pilot-red":"unit-pilot-green"}>{fmt(row,c.roi)}</strong></div><div>Чистая прибыль<strong>{fmt(row,c.profit)}</strong></div><div>Маржинальность<strong>{fmt(row,c.margin)}</strong></div></div>
-    <div className="unit-pilot-columns"><section className="unit-pilot-panel"><h3>Исходные данные</h3>{[["Категория",c.category],["Себестоимость, ₽",c.cost],["Цена продажи, ₽",c.price],["Объём, л",c.volume],["Цена с СПП",c.buyer]].map(([label,i])=><label key={String(label)}>{label}{label==="Цена продажи, ₽"&&row.calculated?<input className="unit-pilot-price-input" type="number" min="0.01" step="0.01" value={override??String(numeric(row,c.price))} onChange={e=>setOverrides(old=>({...old,[overrideKey]:e.target.value}))}/>:<output>{fmt(row,i as number|null)}</output>}</label>)}{model==="ozon-fbo"&&<label>Зона размещения<output>Не указана в строке</output></label>}</section>
+    <div className="unit-pilot-columns"><section className="unit-pilot-panel"><h3>Исходные данные</h3>{[["Категория",c.category],["Себестоимость, ₽",c.cost],["Цена продажи, ₽",c.price],["Объём, л",c.volume],["Цена с СПП",c.buyer]].map(([label,i])=><label key={String(label)}>{label}{label==="Цена продажи, ₽"&&row.calculated?<input className="unit-pilot-price-input" type="number" min="0.01" step="0.01" value={override??String(numeric(row,c.price))} onChange={e=>setOverrides(old=>({...old,[overrideKey]:e.target.value}))}/>:<output>{fmt(row,i as number|null)}</output>}</label>)}<label title={selectedWeight?.formula||"Вес транспортировочной коробки брутто / количество штук в коробке. Подтягивается из реестра ВЭД."}>
+    Вес товара, кг (расчётный, только чтение)
+    <output aria-label="Расчётный вес товара из ВЭД">{selectedWeight?formatUnitNumber(selectedWeight.kilograms):"Нет данных ВЭД"}</output>
+   </label>{model==="ozon-fbo"&&<label>Зона размещения<output>Не указана в строке</output></label>}</section>
     <section className="unit-pilot-panel"><h3>Финансовый результат</h3><div>Цена продажи <b>{fmt(row,c.price)}</b></div><div>Себестоимость <b>{fmt(row,c.cost)}</b></div><div>Комиссия маркетплейса <b>{fmt(row,fees.commission)}</b></div><div>Логистика <b>{rub(logistics)}</b></div><div>Реклама <b>{fmt(row,fees.ads)}</b></div><div>Прочие расходы и налоги <b>{rub(other)}</b></div><details className="unit-pilot-vat-mini"><summary>НДС к уплате: {fmt(row,c.vat)}</summary><p>Исходящий НДС: {fmt(row,c.output)} · Входящий НДС: {fmt(row,c.input)}</p></details><div className="unit-pilot-total">Чистая прибыль <b>{fmt(row,c.profit)}</b></div></section></div>
     <section className="unit-pilot-panel"><h3>Подбор цены по ROI <small>Цель 15,001%</small></h3><div className="unit-pilot-price"><span>Текущая цена <b>{fmt(row,c.price)}</b></span><span>Рекомендуемая цена <b>{recommended===null?"Ожидает независимого расчёта":rub(recommended)}</b></span></div></section>
    </>:<><p className="unit-pilot-note">Разделы содержат исходные значения и полные формулы каждой ячейки Google Sheets.</p>{(GROUPS[model]||[]).map(g=><details key={g.name} className="unit-pilot-group"><summary><strong>{g.name}</strong><span>Раскрыть</span></summary><div>{g.cells.map(i=><Field key={i} row={row} model={model} index={i}/>)}</div></details>)}<details className="unit-pilot-group"><summary><strong>Все остальные поля исходного расчёта</strong><span>Раскрыть</span></summary><div>{row.values.map((_,i)=><Field key={i} row={row} model={model} index={i}/>)}</div></details></>}</div>:<div className="unit-pilot-no-data">Для этого товара нет расчёта по выбранной схеме продаж в исходной книге.</div>}

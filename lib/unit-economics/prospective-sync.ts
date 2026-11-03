@@ -99,6 +99,7 @@ export async function syncUnitFromVedVersion(db:Db,type:VedEventKind,versionId:s
      input_data:item.input,result_data:item.result,
      cost_gross_rub:first.costGrossRub,purchase_vat_credit_rub:first.purchaseVatCreditRub,
      volume_liters:first.volumeLiters,volume_source:first.volumeSource,
+     unit_weight_kg:first.unitWeightKg,
      updated_at:new Date().toISOString()
     };
    });

@@ -3,12 +3,13 @@ import {useEffect,useState} from "react";
 type Scheme={
  model:string;status:string;missing:string[];
  costGrossRub:number|null;volumeLiters:number|null;
+ unitWeightKg:number|null;unitWeightFormula:string|null;unitWeightWarning:string|null;
  priceRub:number|null;priceAfterSppRub:number|null;targetPriceRub:number|null;
  profitRub:number|null;roi:number|null;margin:number|null;computedAt:string;
 };
 type Product={
  id:string;article:string;name:string;ved_created_at:string;
- cost_gross_rub:number|null;volume_liters:number|null;
+ cost_gross_rub:number|null;volume_liters:number|null;unit_weight_kg:number|null;
  volume_source:string|null;source_type:string;source_version_id:string;
  schemes:Record<string,Scheme>;
 };
@@ -73,7 +74,7 @@ export default function VedUnitEconomicsLive(){
     </button>
    </div>
   </div>
-  <p className="unit-pilot-notice">После сохранения версии ВЭД подтягиваются себестоимость, габариты и упаковка.
+  <p className="unit-pilot-notice">После сохранения версии ВЭД подтягиваются себестоимость, габариты и упаковка. Вес единицы товара автоматически рассчитывается по брутто-весу транспортной коробки и её вложимости; вручную не редактируется.
    При отсутствии категории, процента выкупа или WB СПП расчёт остаётся незавершённым.
    ЕНОТ новым товарам не присваивается.</p>
   <div className="unit-pilot-tabs" role="tablist" aria-label="Схема продаж">
@@ -86,13 +87,17 @@ export default function VedUnitEconomicsLive(){
    !products.length?<p className="unit-pilot-notice">Пока нет рассчитанных товаров из сохранённых версий ВЭД.</p>:
    <div className="unit-pilot-scroller"><table className="unit-pilot-table">
     <thead><tr><th>Название / артикул</th><th>Себестоимость, ₽</th><th>Литраж ИУ</th>
-     <th>Цена продажи, ₽</th><th>Чистая прибыль, ₽</th><th>ROI</th><th>Статус</th></tr></thead>
+     <th>Вес ед., кг</th><th>Цена продажи, ₽</th><th>Чистая прибыль, ₽</th><th>ROI</th><th>Статус</th></tr></thead>
     <tbody>{products.map(p=>{
      const s=p.schemes[model];
      return <tr key={p.id}>
       <td className="unit-pilot-name">{p.name}<small>{p.article}</small></td>
       <td>{formatNumber(s?.costGrossRub??p.cost_gross_rub)}</td>
       <td>{formatNumber(s?.volumeLiters??p.volume_liters)}</td>
+      <td title={s?.unitWeightFormula||s?.unitWeightWarning||"Вес коробки брутто / количество товаров в коробке. Данных ВЭД пока нет."}>
+       <output aria-label="Расчётный вес единицы товара, кг">{formatNumber(s?.unitWeightKg??p.unit_weight_kg??null)}</output>
+       <small style={{display:"block",opacity:.7}}>Вес коробки / шт.</small>
+      </td>
       <td>{formatNumber(s?.priceRub??null)}</td>
       <td>{formatNumber(s?.profitRub??null)}</td>
       <td>{formatNumber(s?.roi??null,true)}</td>
