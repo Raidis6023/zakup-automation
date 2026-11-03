@@ -44,29 +44,73 @@ async function syncOrders(from:string,to:string){
  return {ok:true,rows:rows.length,received:body.length,complete:body.length<80000,warning:body.length>=80000?'Достигнут условный лимит 80 000 строк заказов':null};
 }
 
-async function syncAds(from:string,to:string,deadline:number){
- const token=(process.env.WB_PROMOTION_TOKEN||'').trim();if(!token)throw Error('Не найден WB_PROMOTION_TOKEN');
- const body=await request('https://advert-api.wildberries.ru/adv/v1/promotion/count',token) as {adverts?:Array<{advert_list?:Array<{advertId:number}>}>}|null;
- const ids=[...new Set((body?.adverts??[]).flatMap(group=>(group.advert_list??[]).map(x=>Number(x.advertId))).filter(Boolean))];
- const grouped=new Map<string,{snapshot_day:string;campaign_id:number;nm_id:number;spend:number;views:number;clicks:number;orders:number;sum_price:number;payload:Json;captured_at:string}>();
- let processedBatches=0;
- for(let i=0;i<ids.length;i+=50){
-  if(i&&Date.now()+21000<deadline)await sleep(20500);if(Date.now()>deadline-45000)break;
-  const url=new URL('https://advert-api.wildberries.ru/adv/v3/fullstats');url.searchParams.set('ids',ids.slice(i,i+50).join(','));url.searchParams.set('beginDate',from);url.searchParams.set('endDate',to);
-  const campaigns=await request(url.toString(),token);if(!Array.isArray(campaigns))throw Error('WB advertising: неожиданный формат ответа');
-  processedBatches++;
-  for(const campaign of campaigns as Json[]){const campaignId=num(campaign.advertId);for(const day of Array.isArray(campaign.days)?campaign.days as Json[]:[]){const d=String(day.date??'').slice(0,10);for(const app of Array.isArray(day.apps)?day.apps as Json[]:[]){for(const item of Array.isArray(app.nms)?app.nms as Json[]:[]){const nmId=num(item.nmId);if(!nmId||d<from||d>to)continue;const key=d+'|'+campaignId+'|'+nmId,old=grouped.get(key);grouped.set(key,{snapshot_day:d,campaign_id:campaignId,nm_id:nmId,spend:num(item.sum)+(old?.spend??0),views:num(item.views)+(old?.views??0),clicks:num(item.clicks)+(old?.clicks??0),orders:num(item.orders)+(old?.orders??0),sum_price:num(item.sum_price)+(old?.sum_price??0),payload:{...item,appType:app.appType},captured_at:new Date().toISOString()});}}}}
- }
- const db=createAdminClient();const records=[...grouped.values()];
- const byDay=new Map<string,number>();for(const row of records)byDay.set(row.snapshot_day,(byDay.get(row.snapshot_day)??0)+1);
- const totalBatches=Math.ceil(ids.length/50),complete=processedBatches===totalBatches;
- if(!complete)return {ok:false,campaigns:ids.length,rows:records.length,batches:processedBatches,total_batches:totalBatches,complete:false,error:'Частичная выгрузка рекламы WB: старый кэш сохранён'};
- const deleted=await db.from('wb_finance_ad_daily').delete().gte('snapshot_day',from).lte('snapshot_day',to);if(deleted.error)throw deleted.error;
- await upsertBatches('wb_finance_ad_daily',records,'snapshot_day,campaign_id,nm_id');
- await upsertBatches('wb_finance_ad_snapshots',days(from,to).map(snapshot_day=>({snapshot_day,row_count:byDay.get(snapshot_day)??0,captured_at:new Date().toISOString()})),'snapshot_day');
- return {ok:true,campaigns:ids.length,rows:records.length,batches:processedBatches,total_batches:totalBatches,complete:true};
-}
 
+async function syncAds(from:string,to:string,deadline:number){
+ const db=createAdminClient(),token=(process.env.WB_PROMOTION_TOKEN||'').trim(),key='wb_ad_fullstats_progress';
+ const save=async(stage:string,info:Json,http:number|null=null)=>{
+  const q=await db.from('wb_sync_state').upsert({sync_key:key,stage,last_message:JSON.stringify(info),last_http_status:http,updated_at:new Date().toISOString()},{onConflict:'sync_key'});if(q.error)throw q.error;};
+ if(!token){await save('failed',{error:'Не найден WB_PROMOTION_TOKEN'});return {ok:false,error:'Не найден WB_PROMOTION_TOKEN'};}
+ try{
+  const listing=await request('https://advert-api.wildberries.ru/adv/v1/promotion/count',token) as {adverts?:Array<{status:number;advert_list?:Array<{advertId:number}>}>}|null;
+  const groups=listing?.adverts??[],allIds=[...new Set(groups.flatMap(g=>(g.advert_list??[]).map(x=>Number(x.advertId))).filter(Boolean))];
+  const ids=[...new Set(groups.filter(g=>[7,9,11].includes(Number(g.status))).flatMap(g=>(g.advert_list??[]).map(x=>Number(x.advertId))).filter(Boolean))].sort((a,b)=>a-b);
+  if(!ids.length){await save('no_eligible',{from,to,campaigns_all:allIds.length,error:'Нет кампаний в статусах 7/9/11'});return {ok:false,error:'Нет доступных для fullstats кампаний со статусом 7/9/11',campaigns_all:allIds.length};}
+  const current=await db.from('wb_sync_state').select('stage,last_message').eq('sync_key',key).maybeSingle();if(current.error)throw current.error;
+  let previous:{from?:string;to?:string;ids?:number[];next?:number}={};
+  try{previous=JSON.parse(current.data?.last_message??'{}');}catch{}
+  const continuing=previous.from===from&&previous.to===to&&JSON.stringify(previous.ids)===JSON.stringify(ids)&&current.data?.stage==='partial';
+  let next=continuing?Math.max(0,Math.min(ids.length,Number(previous.next)||0)):0;
+  let pages=0,recordsSaved=0;
+  for(;next<ids.length;){
+   if(Date.now()>deadline-53000)break;
+   if(pages)await sleep(21000);
+   if(Date.now()>deadline-47000)break;
+   const batch=ids.slice(next,next+50),url=new URL('https://advert-api.wildberries.ru/adv/v3/fullstats');
+   url.searchParams.set('ids',batch.join(','));url.searchParams.set('beginDate',from);url.searchParams.set('endDate',to);
+   const response=await request(url.toString(),token);
+   if(!Array.isArray(response))throw Error('fullstats: ответ не является массивом');
+   const grouped=new Map<string,{snapshot_day:string;campaign_id:number;nm_id:number;spend:number;views:number;clicks:number;orders:number;sum_price:number;payload:Json;captured_at:string}>();
+   for(const campaign of response as Json[]){
+    const campaign_id=num(campaign.advertId);
+    for(const day of Array.isArray(campaign.days)?campaign.days as Json[]:[]){
+     const d=String(day.date??'').slice(0,10);if(d<from||d>to)continue;
+     for(const app of Array.isArray(day.apps)?day.apps as Json[]:[])
+      for(const item of Array.isArray(app.nms)?app.nms as Json[]:[]){
+       const nm_id=num(item.nmId);if(!nm_id)continue;
+       const k=d+'|'+campaign_id+'|'+nm_id,p=grouped.get(k);
+       grouped.set(k,{snapshot_day:d,campaign_id,nm_id,
+        spend:(p?.spend??0)+num(item.sum),views:(p?.views??0)+num(item.views),
+        clicks:(p?.clicks??0)+num(item.clicks),orders:(p?.orders??0)+num(item.orders),
+        sum_price:(p?.sum_price??0)+num(item.sum_price),
+        payload:{atbs:num(p?.payload.atbs)+num(item.atbs),shks:num(p?.payload.shks)+num(item.shks),source:'fullstats'},
+        captured_at:new Date().toISOString()});
+      }
+    }
+   }
+   // Persist each successful batch; retries only replace the same campaign IDs.
+   const deleted=await db.from('wb_finance_ad_daily').delete().gte('snapshot_day',from).lte('snapshot_day',to).in('campaign_id',batch);
+   if(deleted.error)throw deleted.error;
+   await upsertBatches('wb_finance_ad_daily',[...grouped.values()],'snapshot_day,campaign_id,nm_id');
+   next+=batch.length;pages++;recordsSaved+=grouped.size;
+   await save('partial',{from,to,ids,next,campaigns_all:allIds.length,rows_saved:recordsSaved});
+  }
+  if(next<ids.length)return {ok:true,status:'partial',processed:next,total:ids.length,rows_saved:recordsSaved,warning:'Продолжите загрузку рекламы той же кнопкой'};
+  const counter=new Map<string,number>();
+  for(let offset=0;;offset+=1000){
+   const r=await db.from('wb_finance_ad_daily').select('snapshot_day').gte('snapshot_day',from).lte('snapshot_day',to).order('snapshot_day').range(offset,offset+999);
+   if(r.error)throw r.error;for(const v of r.data??[])counter.set(v.snapshot_day,(counter.get(v.snapshot_day)??0)+1);
+   if((r.data?.length??0)<1000)break;
+  }
+  await upsertBatches('wb_finance_ad_snapshots',days(from,to).map(snapshot_day=>({snapshot_day,row_count:counter.get(snapshot_day)??0,captured_at:new Date().toISOString()})),'snapshot_day');
+  await save('complete',{from,to,ids,next,campaigns_all:allIds.length,rows_saved:recordsSaved});
+  return {ok:true,status:'complete',campaigns:ids.length,records_saved:recordsSaved,coverage:from+' — '+to};
+ }catch(e){
+  const error=e instanceof Error?e.message:String(e),r=await db.from('wb_sync_state').select('last_message').eq('sync_key',key).maybeSingle();
+  let state:Json={from,to};try{state=JSON.parse(r.data?.last_message??'{}')}catch{}
+  await save('partial',{...state,last_error:error,failed_at:new Date().toISOString()},error.includes('429')?429:null);
+  return {ok:false,error,progress:state};
+ }
+}
 const storageDay=(row:Json)=>String(row.date??row.dt??row.originalDate??'').slice(0,10);
 async function saveStorage(localId:string,from:string,to:string,remoteId:string,body:unknown){
  const list=Array.isArray(body)?body:Array.isArray((body as {data?:unknown})?.data)?(body as {data:Json[]}).data:[];
@@ -94,8 +138,9 @@ async function syncStorage(from:string,to:string,deadline:number){
  return {ok:true,status:'generating',from:task.date_from,to:task.date_to,remote_task_id:remote};
 }
 
-export async function runAuxiliarySync(){
+export async function runAuxiliarySync(scope:'all'|'ads'='all'){
  const today=date(new Date(Date.now()+7*3600000)),to=shift(today,-1),from=shift(to,-27),deadline=Date.now()+155000;
+ if(scope==='ads'){const advertising=await syncAds(from,to,deadline);return {ok:advertising.ok,from,to,advertising};}
  const orders=await Promise.resolve().then(()=>syncOrders(from,to)).catch(e=>({ok:false,error:e instanceof Error?e.message:String(e)}));
  const [advertising,storage]=await Promise.all([
   Promise.resolve().then(()=>syncAds(from,to,deadline)).catch(e=>({ok:false,error:e instanceof Error?e.message:String(e)})),
@@ -105,4 +150,4 @@ export async function runAuxiliarySync(){
 }
 
 export async function GET(req:NextRequest){if(!process.env.CRON_SECRET||req.headers.get('authorization')!=='Bearer '+process.env.CRON_SECRET)return json({ok:false,error:'Unauthorized'},401);const result=await runAuxiliarySync();return json(result,result.ok?200:503);}
-export async function POST(){try{await adminAccess();const result=await runAuxiliarySync();return json(result,result.ok?200:503);}catch(e){return json({ok:false,error:e instanceof Error?e.message:String(e)},403);}}
+export async function POST(req:NextRequest){try{await adminAccess();const scope=req.nextUrl.searchParams.get('scope')==='ads'?'ads':'all';const result=await runAuxiliarySync(scope);return json(result,result.ok?200:503);}catch(e){return json({ok:false,error:e instanceof Error?e.message:String(e)},403);}}

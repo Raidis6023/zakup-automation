@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 type FinanceLine = Record<string, unknown>;
-type AdItem = { nm_id: number; date: string; campaign_id: number; spend: number; views: number; clicks: number; orders: number; sum_price: number };
+type AdItem = { nm_id: number; date: string; campaign_id: number; spend: number; views: number; clicks: number; orders: number; sum_price: number; atbs:number };
 const num = (v: unknown): number => { const n = Number(v ?? 0); return Number.isFinite(n) ? n : 0; };
 const dateOK = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v+"T00:00:00Z")) && new Date(v+"T00:00:00Z").toISOString().slice(0,10) === v;
 const round = (v: number) => Math.round((v+Number.EPSILON)*100)/100;
@@ -140,7 +140,7 @@ async function adStats(from:string,to:string,token:string):Promise<{items:AdItem
         for(const product of products){
           const nm_id=num(product.nmId);
           if(!nm_id||date<from||date>to) continue;
-          items.push({nm_id,date,campaign_id,spend:num(product.sum),views:num(product.views),clicks:num(product.clicks),orders:num(product.orders),sum_price:num(product.sum_price)});
+          items.push({nm_id,date,campaign_id,spend:num(product.sum),views:num(product.views),clicks:num(product.clicks),orders:num(product.orders),sum_price:num(product.sum_price),atbs:num(product.atbs)});
         }
       }
     }
@@ -246,15 +246,17 @@ export async function GET(request:NextRequest){
     return kind?kind===scheme:srids.has(String(l.srid??''));
    });
   }
-  const grouped=groupFinancial(financialLines,(rates??[]) as Rate[],sharedByNm);
+  const allGrouped=groupFinancial(financialLines,(rates??[]) as Rate[],sharedByNm);
+  const unallocatedFinancial=allGrouped.find(x=>x.nm_id==='unallocated');
+  const grouped=allGrouped.filter(x=>x.nm_id!=='unallocated');
   const daily=Array.from({length:Math.round((Date.parse(to)-Date.parse(from))/86400000)+1},(_,i)=>{
     const day=new Date(Date.parse(from)+i*86400000).toISOString().slice(0,10);
-    return {day,rows:groupFinancial(financialLines.filter(line=>String(line.rrDate??line.rrdDt??line.rrdDate??line.saleDt??'').slice(0,10)===day),(rates??[]) as Rate[],sharedByNm).map(r=>({nm_id:r.nm_id,revenue:r.realization,profit:r.preliminary_result,orders:r.sales_units,buyouts:r.buyouts}))};
+    return {day,rows:groupFinancial(financialLines.filter(line=>String(line.rrDate??line.rrdDt??line.rrdDate??line.saleDt??'').slice(0,10)===day),(rates??[]) as Rate[],sharedByNm).map(r=>({nm_id:r.nm_id,revenue:r.gross_retail,profit:r.preliminary_result,orders:r.sales_units,buyouts:r.buyouts}))};
   });
-  const ads=await readPages<{snapshot_day:string;campaign_id:number;nm_id:number;spend:number;views:number;clicks:number;orders:number;sum_price:number}>(async(a,b)=>{const q=await db.from('wb_finance_ad_daily').select('snapshot_day,campaign_id,nm_id,spend,views,clicks,orders,sum_price').gte('snapshot_day',from).lte('snapshot_day',to).order('snapshot_day').range(a,b);return {data:q.data,error:q.error};});
+  const ads=await readPages<{snapshot_day:string;campaign_id:number;nm_id:number;spend:number;views:number;clicks:number;orders:number;sum_price:number;payload:Record<string,unknown>|null}>(async(a,b)=>{const q=await db.from('wb_finance_ad_daily').select('snapshot_day,campaign_id,nm_id,spend,views,clicks,orders,sum_price,payload').gte('snapshot_day',from).lte('snapshot_day',to).order('snapshot_day').range(a,b);return {data:q.data,error:q.error};});
   const storage=await readPages<{snapshot_day:string;nm_id:number|null;amount:number}>(async(a,b)=>{const q=await db.from('wb_finance_storage_daily').select('snapshot_day,nm_id,amount').gte('snapshot_day',from).lte('snapshot_day',to).order('snapshot_day').range(a,b);return {data:q.data,error:q.error};});
   const orders=await readPages<{nm_id:number;is_cancel:boolean;warehouse_type:string}>(async(a,b)=>{const q=await db.from('wb_orders').select('nm_id,is_cancel,warehouse_type').gte('order_date',from+'T00:00:00Z').lte('order_date',to+'T23:59:59Z').order('order_date').range(a,b);return {data:q.data,error:q.error};});
-  const [adSnapshots,storageSnapshots]=await Promise.all([db.from('wb_finance_ad_snapshots').select('snapshot_day').gte('snapshot_day',from).lte('snapshot_day',to),db.from('wb_finance_storage_snapshots').select('snapshot_day').gte('snapshot_day',from).lte('snapshot_day',to)]);if(adSnapshots.error)throw adSnapshots.error;if(storageSnapshots.error)throw storageSnapshots.error;
+  const [adSnapshots,storageSnapshots,advertisingJob]=await Promise.all([db.from('wb_finance_ad_snapshots').select('snapshot_day').gte('snapshot_day',from).lte('snapshot_day',to),db.from('wb_finance_storage_snapshots').select('snapshot_day').gte('snapshot_day',from).lte('snapshot_day',to),db.from('wb_sync_state').select('stage,last_message,last_http_status,updated_at').eq('sync_key','wb_ad_fullstats_progress').maybeSingle()]);if(adSnapshots.error)throw adSnapshots.error;if(storageSnapshots.error)throw storageSnapshots.error;if(advertisingJob.error)throw advertisingJob.error;
   const orderByNm=new Map<string,{orders:number;cancelled:number}>();for(const row of orders.filter(o=>!scheme||(scheme==='fbw'?o.warehouse_type==='Склад WB':o.warehouse_type==='Склад продавца'))){const key=String(row.nm_id),v=orderByNm.get(key)??{orders:0,cancelled:0};v.orders++;if(row.is_cancel)v.cancelled++;orderByNm.set(key,v);}
   const storageByNm=new Map<string,number>();for(const row of storage)if(row.nm_id)storageByNm.set(String(row.nm_id),(storageByNm.get(String(row.nm_id))??0)+num(row.amount));
   const expectedDays=Math.round((Date.parse(to)-Date.parse(from))/86400000)+1;
@@ -286,9 +288,10 @@ export async function GET(request:NextRequest){
    .reduce((s,l)=>s+Math.abs(num(l.deduction)),0);
   const otherDeductions=financialLines.filter(l=>num(l.deduction)!==0&&!/wb\s*продвижение/i.test(String(l.bonusTypeName??'')))
    .reduce((s,l)=>s+Math.abs(num(l.deduction)),0);
-  const adItems:AdItem[]=scheme?[]:ads.map(row=>({nm_id:Number(row.nm_id),date:row.snapshot_day,campaign_id:Number(row.campaign_id),spend:Number(row.spend),views:Number(row.views),clicks:Number(row.clicks),orders:Number(row.orders),sum_price:Number(row.sum_price)}));
+  const adItems:AdItem[]=scheme?[]:ads.map(row=>({nm_id:Number(row.nm_id),date:row.snapshot_day,campaign_id:Number(row.campaign_id),spend:Number(row.spend),views:Number(row.views),clicks:Number(row.clicks),orders:Number(row.orders),sum_price:Number(row.sum_price),atbs:num((row.payload as Record<string,unknown>|null)?.atbs)}));
   const adsComplete=(adSnapshots.data?.length??0)===expectedDays,storageComplete=(storageSnapshots.data?.length??0)===expectedDays,ordersComplete=orders.length>0;
-  return NextResponse.json({ok:true,from,to,scheme:scheme??null,unallocated,promotion_actual:round(promotionActual),other_deductions:round(otherDeductions),financial_rows:financialLines.length,daily,rows:enriched,
+  let adProgress:Record<string,unknown>={};try{adProgress=JSON.parse(advertisingJob.data?.last_message??'{}');}catch{}
+   return NextResponse.json({ok:true,from,to,scheme:scheme??null,unallocated,unallocated_financial:unallocatedFinancial?.preliminary_result??0,ad_sync:{stage:advertisingJob.data?.stage??'not_started',last_error:adProgress.last_error??null,processed:adProgress.next??0,total:Array.isArray(adProgress.ids)?adProgress.ids.length:0,updated_at:advertisingJob.data?.updated_at??null},promotion_actual:round(promotionActual),other_deductions:round(otherDeductions),financial_rows:financialLines.length,daily,rows:enriched,
     ads:{items:adItems,campaigns:new Set(ads.map(x=>x.campaign_id)).size,coverage:scheme?'not_attributed':adsComplete?'cached_complete':adItems.length?'cached_partial':'not_loaded',warning:scheme?'Не связанные с SRID рекламные списания исключены.':adsComplete?null:'Реклама загружена не за все дни выбранного периода.'},
     orders:{rows:orders.length,coverage:ordersComplete?'cached_partial':'not_loaded'},storage:{rows:storage.length,coverage:storageComplete?'cached_complete':storage.length?'cached_partial':'not_loaded'},
     coverage:{finance:latest.status==='complete'?'cached_complete':'cached_partial',advertising:adsComplete?'cached_complete':adItems.length?'cached_partial':'not_loaded',paid_storage:storageComplete?'cached_complete':storage.length?'cached_partial':'not_loaded',orders:ordersComplete?'cached_partial':'not_loaded',advertising_actual_charges:'not_loaded'},
