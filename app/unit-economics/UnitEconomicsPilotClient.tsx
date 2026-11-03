@@ -260,6 +260,15 @@ export default function UnitEconomicsPilotClient(){
    .finally(()=>{if(!controller.signal.aborted)setVedLoading(false)});
   return ()=>controller.abort();
  },[vedRevision]);
+ // Background revalidation while the new unit-economics page is open.
+ // A VED save creates a server-side version; on returning to this page the
+ // new products appear without clicking "Загрузить ожидающие ВЭД".
+ useEffect(()=>{
+  const refresh=()=>{if(document.visibilityState==="visible")setVedRevision(x=>x+1)};
+  const poll=window.setInterval(refresh,30000);
+  window.addEventListener("focus",refresh);
+  return()=>{window.clearInterval(poll);window.removeEventListener("focus",refresh)};
+ },[]);
  async function reloadPendingVed(){
   setVedBusy(true);
   try{

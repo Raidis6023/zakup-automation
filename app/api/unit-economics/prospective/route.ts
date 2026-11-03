@@ -5,6 +5,7 @@ import {retryPendingUnitVedEvents,syncUnitFromVedVersion} from "@/lib/unit-econo
 import {mergeProductOverrides,applyProductOverrides,type ProductOverrides} from "@/lib/unit-economics/product-overrides";
 import {calculatePreliminary,type PreliminarySource} from "@/lib/unit-economics/prospective-engine";
 import {PRELIMINARY_MODELS} from "@/lib/unit-economics/prospective-engine";
+import {findWbCategory} from "@/lib/unit-economics/wb-category-registry";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const headers={"Cache-Control":"private, no-store"};
@@ -43,6 +44,10 @@ export async function GET(req:NextRequest){
   .select("product_id,model,status,missing,result_data,source_version_id,computed_at")
   .in("product_id",ids).limit(limit*6);
  if(cErr)return NextResponse.json({ok:false,error:cErr.message},{status:500,headers});
+ const {data:configs,error:settingsErr}=await auth.admin.from("unit_ved_settings")
+  .select("product_id,model,data,revision").in("product_id",ids);
+ if(settingsErr)return NextResponse.json({ok:false,error:settingsErr.message},{status:500,headers});
+ const configMap=new Map((configs||[]).map(x=>[x.product_id+":"+x.model,x.data as Record<string,unknown>]));
  const byProduct=new Map<string,Record<string,unknown>>();
  for(const item of calculations||[]){
   const value=item.result_data as Record<string,unknown>;
@@ -54,6 +59,14 @@ export async function GET(req:NextRequest){
    priceRub:value.priceRub??null,priceAfterSppRub:value.priceAfterSppRub??null,
    targetPriceRub:value.targetPriceRub??null,profitRub:value.profitRub??null,
    margin:value.margin??null,roi:value.roi??null,
+   outputVatRub:value.outputVatRub??null,inputVatRub:value.inputVatRub??null,
+   purchaseVatCreditRub:value.purchaseVatCreditRub??null,costNetRub:value.costNetRub??null,
+   commissionRate:value.commissionRate??null,
+   expenses:Array.isArray(value.expenses)?value.expenses:[],
+   logistics:value.logistics??null,
+   volumeSource:value.volumeSource??null,volumeFormula:value.volumeFormula??null,
+   assumptions:Array.isArray(value.assumptions)?value.assumptions:[],
+   settings:configMap.get(item.product_id+":"+item.model)||{},
    sourceVersionId:item.source_version_id,
    computedAt:item.computed_at
   };
@@ -89,14 +102,19 @@ export async function PATCH(request:NextRequest){
   {status:403,headers});
  const body=await request.json().catch(()=>null) as {
   productId?:string;model?:string;productPatch?:Record<string,unknown>;
-  priceRub?:number|null;
+  priceRub?:number|null;wbCategory?:{name:string;group:string};
  }|null;
  if(!body||typeof body.productId!=="string"||!/^[0-9a-f-]{36}$/i.test(body.productId))
   return NextResponse.json({ok:false,error:"Не указан товар"},{status:400,headers});
  const hasShared=body.productPatch&&Object.keys(body.productPatch).length>0;
  const hasPrice=Object.prototype.hasOwnProperty.call(body,"priceRub");
+ const hasWbCategory=!!body.wbCategory;
  const model=body.model||"";
- if(!hasShared&&!hasPrice)return NextResponse.json({ok:false,error:"Нет изменений"},{status:400,headers});
+ const confirmedCategory=hasWbCategory?findWbCategory(body.wbCategory!.name,body.wbCategory!.group):null;
+ if(hasWbCategory&&!confirmedCategory)
+  return NextResponse.json({ok:false,error:"Категория не найдена в справочнике комиссий WB"},
+   {status:400,headers});
+ if(!hasShared&&!hasPrice&&!hasWbCategory)return NextResponse.json({ok:false,error:"Нет изменений"},{status:400,headers});
  if(hasPrice&&!PRELIMINARY_MODELS.includes(model as typeof PRELIMINARY_MODELS[number]))
   return NextResponse.json({ok:false,error:"Неизвестная схема продаж"},{status:400,headers});
  if(hasPrice&&body.priceRub!==null&&(
@@ -141,6 +159,22 @@ export async function PATCH(request:NextRequest){
     updated_at:new Date().toISOString()
    },{onConflict:"product_id,model"});
    if(writeErr)throw Error(writeErr.message);
+  }
+  if(hasWbCategory&&confirmedCategory){
+   // One confirmed WB subject, different commissions for FBW/FBS.
+   for(const [wbModel,rate] of [["wb-fbw",confirmedCategory.fbw],["wb-fbs",confirmedCategory.fbs]] as const){
+    const {data:before,error:beforeErr}=await auth.admin.from("unit_ved_settings")
+     .select("data,revision").eq("product_id",product.id).eq("model",wbModel).maybeSingle();
+    if(beforeErr)throw Error(beforeErr.message);
+    const settings={...((before?.data||{}) as Record<string,unknown>),
+      categoryId:confirmedCategory.name,categoryGroup:confirmedCategory.group,
+      categoryCommissionRate:rate,wbCategoryConfirmedAt:new Date().toISOString()};
+    const {error}=await auth.admin.from("unit_ved_settings").upsert({
+      product_id:product.id,model:wbModel,data:settings,
+      revision:Number(before?.revision||0)+1,updated_at:new Date().toISOString()
+    },{onConflict:"product_id,model"});
+    if(error)throw Error(error.message);
+   }
   }
   const synced=await syncUnitFromVedVersion(
    auth.admin,product.source_type as "single"|"whole",product.source_version_id,{force:true}

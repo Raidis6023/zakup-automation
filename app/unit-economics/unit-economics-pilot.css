@@ -243,3 +243,64 @@
   max-height:100%;
   object-fit:contain;
 }
+
+/* Карточка ВЭД наследует структуру исходного расчётного модального окна. */
+.unit-ved-facts{display:flex;flex-direction:column;gap:0}
+.unit-ved-facts>div{display:flex;align-items:baseline;justify-content:space-between;
+ gap:20px;padding:10px 0;border-bottom:1px solid var(--ws-border-soft);font-size:13px}
+.unit-ved-facts>div:last-child{border-bottom:0}
+.unit-ved-facts span{color:var(--ws-text-secondary);flex:1;min-width:0}
+.unit-ved-facts strong{font-size:14px;font-weight:700;color:var(--ws-text);
+ text-align:right;min-width:0;overflow-wrap:anywhere}
+.unit-ved-facts .unit-ved-total{border-top:1px solid var(--ws-border);margin-top:10px;padding-top:16px}
+.unit-ved-facts .unit-ved-total strong{font-size:19px}
+.unit-ved-edit-link{display:inline-flex;justify-content:center;align-items:center;
+ padding:10px 14px;margin-top:16px;min-height:40px;background:rgba(55,201,142,.1);
+ color:var(--ws-text);border:1px solid rgba(55,201,142,.45);border-radius:9px;
+ font:inherit;font-size:13px;font-weight:650;cursor:pointer}
+.unit-ved-edit-link:hover{background:rgba(55,201,142,.19)}
+.unit-ved-target h3{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.unit-ved-target h3 small{color:var(--ws-text-muted);font-size:12px;font-weight:500}
+.unit-ved-line{display:flex;align-items:baseline;justify-content:space-between;gap:20px;
+ border-bottom:1px solid var(--ws-border-soft);padding:10px 0;font-size:13px}
+.unit-ved-line>span{flex:1}
+.unit-ved-line small{display:block;color:var(--ws-text-muted);font-size:12px;margin-top:4px}
+.unit-ved-line strong{white-space:nowrap;font-size:14px}
+.unit-ved-editor{display:flex;flex-direction:column;gap:17px}
+.unit-ved-name-label{font-size:14px;font-weight:650;color:var(--ws-text)}
+.unit-ved-input-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px 12px}
+.unit-ved-input-grid>label{min-width:0;font-size:13px;font-weight:600;line-height:1.45}
+.unit-ved-input-grid input{display:block;margin-top:7px}
+.unit-ved-derived{display:flex;align-items:center;border:1px solid var(--ws-border);
+ border-radius:9px;min-height:41px;margin-top:7px;padding:10px 12px;
+ background:var(--ws-surface-soft);color:var(--ws-text);font-size:14px;font-weight:750}
+.unit-ved-save-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.unit-ved-save-actions button,.unit-ved-category-panel>button{
+ border:1px solid var(--ws-border);border-radius:9px;min-height:40px;
+ background:var(--ws-surface);color:var(--ws-text);font:inherit;font-size:13px;
+ padding:9px 15px;cursor:pointer}
+.unit-ved-save-actions button:disabled,.unit-ved-category-panel>button:disabled{opacity:.55;cursor:not-allowed}
+.unit-ved-save-actions .unit-ved-primary,.unit-ved-category-panel>.unit-ved-primary{
+ background:rgba(55,201,142,.17);border-color:#37c98e}
+.unit-ved-category-panel{display:flex;flex-direction:column;align-items:stretch;gap:12px}
+.unit-ved-category-panel h3{margin:0}
+.unit-ved-category-panel>label{display:block;font-weight:650;font-size:13px}
+.unit-ved-category-list{max-height:240px;overflow:auto;border:1px solid var(--ws-border);
+ border-radius:9px;background:var(--ws-page)}
+.unit-ved-category-list button{width:100%;display:flex;justify-content:space-between;align-items:center;
+ gap:12px;background:transparent;color:var(--ws-text);padding:9px 12px;
+ border:0;border-bottom:1px solid var(--ws-border-soft);text-align:left;
+ cursor:pointer;font:inherit;font-size:13px}
+.unit-ved-category-list button:hover{background:var(--ws-surface-hover)}
+.unit-ved-category-list small{display:block;font-size:11px;color:var(--ws-text-muted);padding-top:3px}
+.unit-ved-category-choice{border:1px solid rgba(55,201,142,.4);padding:10px 12px;
+ background:rgba(55,201,142,.08);border-radius:9px;font-size:13px}
+.unit-pilot-modal-foot button{padding:8px 14px;border:1px solid var(--ws-border);
+ background:var(--ws-surface);border-radius:8px;color:var(--ws-text);font:inherit;
+ font-size:13px;cursor:pointer}
+@media(max-width:1000px){.unit-ved-input-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){
+ .unit-ved-input-grid,.unit-pilot-columns{grid-template-columns:1fr}
+ .unit-ved-facts>div{gap:10px}
+ .unit-ved-category-list button{flex-wrap:wrap}
+}

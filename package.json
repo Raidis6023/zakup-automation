@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:ved": "node scripts/ved-calculation-tests.cjs && node scripts/ved-excel-template-tests.cjs && node scripts/ved-offer-parser-tests.cjs && node scripts/ved-whole-offer-export-tests.cjs && node scripts/ved-registry-tests.cjs",
-    "test:unit-economics": "node --test scripts/unit-economics-financial-reference.test.cjs scripts/unit-economics-logistics.test.cjs scripts/unit-economics-prospective.test.cjs"
+    "test:unit-economics": "node --test scripts/unit-economics-financial-reference.test.cjs scripts/unit-economics-logistics.test.cjs scripts/unit-economics-prospective.test.cjs scripts/unit-economics-ui-integration.test.cjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",
