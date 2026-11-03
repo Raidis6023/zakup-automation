@@ -181,7 +181,15 @@ return <div className="ozf-layout">
 {data.cache?.status!=="complete"&&<p className="ozf-error" role="alert">НЕПОЛНАЯ ВЫГРУЗКА: сохранено {data.cache?.rowsSaved?.toLocaleString("ru-RU")??"?"} строк. Финансовые итоги предварительные и не пригодны для решений.</p>}
 <p className="ozf-notice" style={{marginTop:16}}>Покрытие: финансы — <b>{data.coverage.finance}</b>, заказы — <b>{data.coverage.orders}</b>, реклама — <b>{data.coverage.advertising}</b>, хранение — <b>{data.coverage.paid_storage}</b>. Неполные разделы не подменяются нулями. {data.ads.warning}</p>
 <p className="ozf-notice">Все расходы WB учитываются в финансовом результате один раз. Хранение и продвижение распределяются по артикулам при наличии подтверждённой детализации.</p>
- {(Boolean(data.pending_allocation?.advertising)||Boolean(data.pending_allocation?.storage))&&<p className="ozf-error">Уже включены в общий финансовый результат, но ожидают распр<div className="ozf-financial-scroll" role="region" aria-label="Финансовый результат WB">
+ {(Boolean(data.pending_allocation?.advertising)||Boolean(data.pending_allocation?.storage))&&<p className="ozf-error">Уже включены в общий финансовый результат, но ожидают распределения по артикулам: реклама {money(data.pending_allocation?.advertising??0)} ₽, хранение {money(data.pending_allocation?.storage??0)} ₽.</p>}
+<p className="ozf-notice">Артикулов с недостающими ставками: <b>{missingRateArticles}</b>. {allRatesFilled?<>Предварительный итог за выбранный период (с нераспределёнными расходами): <b>{money(profitTotal)} ₽</b>. Реклама и хранение ещё не подтверждены.</>:<>После заполнения ставок по всем артикулам здесь появится предварительный итог.</>}</p>
+<OrderFulfillmentPanels market="wb" from={data.from} to={data.to}/>
+ <FinanceDynamics marketplace="wb" from={data.from} to={data.to} provided={wholeSeries} selected="revenue" expectedProfit={allRatesFilled?profitTotal:null}/>
+ <WbAdvertisingCharts rows={data.ads.items} from={data.from} to={data.to} complete={data.ads.coverage==='cached_complete'} revenues={totalAdRevenueByDay}/>
+ <p className="ozf-notice">Статус рекламной выгрузки: <b>{data.ad_sync?.stage??'не запускалась'}</b>{data.ad_sync?.last_error?' · '+data.ad_sync.last_error:''}. В столбце рекламы не показываем ноль, пока нет подтверждённых данных WB.</p>
+
+<div className="ozf-toolbar" style={{marginTop:18}}><input placeholder="Поиск по артикулу, nmId или товару" value={filter} onChange={e=>setFilter(e.target.value)}/><span>Артикулов: {rows.length} · Финансовых операций: {data.financial_rows}</span></div>
+<div className="ozf-financial-scroll" role="region" aria-label="Финансовый результат WB">
 <table className="ozf-table ozf-financial-table" style={{minWidth:1950}}>
 <thead><tr>{columns.map(([k,label])=><th key={k}><button type="button" className="ozf-sort-control" onClick={()=>setSort(old=>({key:k,dir:old.key===k&&old.dir===-1?1:-1}))}>{label}{sort.key===k?(sort.dir===-1?' ↓':' ↑'):' ↕'}</button></th>)}</tr></thead>
 <tbody>{sortedRows.map(r=><Fragment key={r.nm_id}><tr className={selected===r.nm_id?'ozf-row-active':''}>
