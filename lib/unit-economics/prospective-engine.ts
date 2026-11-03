@@ -19,6 +19,7 @@ export type PreliminarySettings={
  priceRub?:number|null;
  categoryId?:string|null;
  categoryCommissionRate?:number|null;
+ ozonCommissionRates?:{upTo100:number;upTo300:number;above300:number}|null;
  commissionSurchargeRate?:number|null;
  buyoutRate?:number|null;
  wbSppRate?:number|null;
@@ -27,6 +28,9 @@ export type PreliminarySettings={
  importVatCreditRub?:number|null;
  mayakRub?:number|null;
  insuranceFactor?:number|null;
+ ozonInsuranceFactors?:{upTo300:number;above300:number}|null;
+ extraBuyerDiscountRate?:number|null;
+ promoPriceRub?:number|null;
  fbsPickupRub?:number|null;
  fbsTravelRub?:number|null;
  fbsPackingRub?:number|null;
@@ -96,12 +100,21 @@ export function calculatePreliminary(source:PreliminarySource,model:PreliminaryM
  if(price===null)missing.push("Цена продажи или рассчитанная целевая цена");
  if(!settings.categoryId?.trim())missing.push("Категория "+group.toUpperCase());
  const catRate=settings.categoryCommissionRate;
- if(!nonnegative(catRate)||catRate>1)missing.push("Комиссия категории "+group.toUpperCase());
+ const ozonTierRates=settings.ozonCommissionRates;
+ const resolvedCategoryRate=group==="ozon"&&price!==null&&ozonTierRates?
+  (price<=100?ozonTierRates.upTo100:price<=300?ozonTierRates.upTo300:ozonTierRates.above300):
+  catRate;
+ if(!nonnegative(resolvedCategoryRate)||resolvedCategoryRate>1)
+  missing.push("Комиссия категории "+group.toUpperCase());
  const buyout=positive(settings.buyoutRate)&&settings.buyoutRate<=1?settings.buyoutRate:null;
  if(group!=="ym"&&buyout===null)missing.push("Процент выкупа "+group.toUpperCase());
  const wbSpp=nonnegative(settings.wbSppRate)&&settings.wbSppRate<=1?settings.wbSppRate:null;
  if(group==="wb"&&wbSpp===null)missing.push("Процент СПП WB");
- if(model==="ozon-fbo"&&!nonnegative(settings.insuranceFactor))missing.push("Коэффициент страхования Ozon по категории");
+ const resolvedInsuranceFactor=price!==null&&settings.ozonInsuranceFactors?
+  (price<300?settings.ozonInsuranceFactors.upTo300:settings.ozonInsuranceFactors.above300):
+  settings.insuranceFactor;
+ if(model==="ozon-fbo"&&!nonnegative(resolvedInsuranceFactor))
+  missing.push("Коэффициент страхования Ozon по категории");
  const rate=nonnegative(settings.advertisingRate)&&settings.advertisingRate<=1
   ?settings.advertisingRate:defaults.advertising;
  if(settings.advertisingRate===undefined)assumptions.push("ДРР "+(rate*100)+"%: норматив исходной юнитки, требует подтверждения");
@@ -128,6 +141,7 @@ export function calculatePreliminary(source:PreliminarySource,model:PreliminaryM
   pickupTravelRub:settings.fbsTravelRub??(model==="ozon-fbs"?0:undefined),
   packingRub:settings.fbsPackingRub??(model==="ozon-fbs"?0:undefined),
   handlingRub:settings.handlingRub,
+  promoPrice:settings.promoPriceRub,
  });
  result.logistics=logistic;
  const items:PreliminaryDetail[]=[];
@@ -148,16 +162,16 @@ export function calculatePreliminary(source:PreliminarySource,model:PreliminaryM
  const defects=base.net*defaults.defect;
  const defectAmount=model==="ozon-fbs"?base.gross*defaults.defect:defects;
  add("defects","Брак",defectAmount,"Себестоимость × "+defaults.defect,"other",0);
- if(model==="ozon-fbo"&&nonnegative(settings.insuranceFactor)){
-  const factor=settings.insuranceFactor!;
+ if(model==="ozon-fbo"&&nonnegative(resolvedInsuranceFactor)){
+  const factor=resolvedInsuranceFactor;
   add("insurance","Страхование",price*.000838*28*factor/1.22,
    "Цена × 0,0838% × 28 × коэффициент категории / 1,22","other",0);
  }
  if(nonnegative(settings.extraRub)&&settings.extraRub>0)
   add("own-extra","Прочие расходы",settings.extraRub,"Ручное значение на единицу товара","other",0);
- const effectiveRate=group==="wb"&&nonnegative(catRate)&&wbSpp!==null?
-  Math.max(.01,catRate+(settings.commissionSurchargeRate??0)-wbSpp):
-  group==="ym"&&price<=300&&vol.liters<=5?.42:catRate;
+ const effectiveRate=group==="wb"&&nonnegative(resolvedCategoryRate)&&wbSpp!==null?
+  Math.max(.01,resolvedCategoryRate+(settings.commissionSurchargeRate??0)-wbSpp):
+  group==="ym"&&price<=300&&vol.liters<=5?.42:resolvedCategoryRate;
  if(nonnegative(effectiveRate)&&effectiveRate<=1){
   add("commission","Комиссия "+group.toUpperCase(),price*effectiveRate,
    group==="wb"?"Цена × max(1%; ставка категории + надбавка − СПП)":group==="ym"&&price<=300&&vol.liters<=5?
@@ -165,8 +179,14 @@ export function calculatePreliminary(source:PreliminarySource,model:PreliminaryM
   result.commissionRate=effectiveRate;
  }
  result.expenses=items;
- if(group==="ozon")result.priceAfterSppRub=calculateOzonSppPrice({priceGross:price}).priceAfterSpp;
- if(group==="wb"&&wbSpp!==null)result.priceAfterSppRub=price*(1-wbSpp);
+ const extraDiscount=settings.extraBuyerDiscountRate??0;
+ if(!nonnegative(extraDiscount)||extraDiscount>1)missing.push("Дополнительная скидка покупателя");
+ else{
+  if(group==="ozon")result.priceAfterSppRub=calculateOzonSppPrice({
+   priceGross:price,additionalDiscountRate:extraDiscount
+  }).priceAfterSpp;
+  if(group==="wb"&&wbSpp!==null)result.priceAfterSppRub=price*(1-wbSpp)*(1-extraDiscount);
+ }
  // Если нет доли выкупа / комиссии / классификации, нельзя рисовать произвольную прибыль.
  if(missing.length)return result;
  const tax=calculateUnitVat({

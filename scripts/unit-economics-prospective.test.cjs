@@ -81,7 +81,7 @@ test("Норматив ДРР 10/15% помечается как допущен�
 test("Озон СПП автоматический, WB СПП обязателен",()=>{
  const s=source();
  const oz=calculatePreliminary(s,"ozon-fbo",full);
- close(oz.priceAfterSppRub,540);
+ close(oz.priceAfterSppRub,580); // 1000 ₽ относится к ступени СПП 42%, не 46%
  const wb=calculatePreliminary(s,"wb-fbw",full);
  close(wb.priceAfterSppRub,800);
  const missing=calculatePreliminary(s,"wb-fbw",{...full,wbSppRate:null});
@@ -104,4 +104,22 @@ test("Габариты ИУ перекрывают готовый литраж �
  const r=calculatePreliminary(s,"ym-fby",{});
  close(r.volumeLiters,.6);
  assert.equal(r.volumeSource,"dimensions");
+});
+
+test("Ozon: комиссия и страхование используют соответствующую ценовую ступень",()=>{
+ const q={...full,ozonCommissionRates:{upTo100:.2,upTo300:.3,above300:.4},
+  ozonInsuranceFactors:{upTo300:.25,above300:.5}};
+ const x=calculatePreliminary(source(),"ozon-fbo",q);
+ close(x.commissionRate,.4);
+ const insurance=x.expenses.find(i=>i.code==="insurance");
+ close(insurance.amount,1000*.000838*28*.5/1.22);
+ const low=calculatePreliminary(source(),"ozon-fbo",{...q,priceRub:290});
+ close(low.commissionRate,.3);
+ close(low.expenses.find(i=>i.code==="insurance").amount,290*.000838*28*.25/1.22);
+});
+test("Яндекс FBS: акционную доставку считаем отдельно от базовой",()=>{
+ const x=calculatePreliminary(source(),"ym-fbs",{...full,promoPriceRub:250});
+ assert.equal(x.logistics.alternativePromo.price,250);
+ assert.equal(x.logistics.alternativePromo.middleMile,0);
+ assert.equal(x.logistics.alternativePromo.lastMile,0);
 });
