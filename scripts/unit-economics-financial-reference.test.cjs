@@ -11,6 +11,11 @@ function importTs(rel){
  const mod=new Module(file,module);mod.filename=file;mod.paths=Module._nodeModulePaths(path.dirname(file));
  mod._compile(compiled.outputText,file);return mod.exports;
 }
+const oldTsHandler=require.extensions[".ts"];
+require.extensions[".ts"]=(mod,filename)=>{
+ const compiled=ts.transpileModule(fs.readFileSync(filename,"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}});
+ mod._compile(compiled.outputText,filename);
+};
 const {calculateUnitFinancials,formatUnitNumber,formatUnitPercent}=importTs("lib/unit-economics/financial-results.ts");
 const {calculateOzonVolume,calculateOzonSppPrice}=importTs("lib/unit-economics/ozon/price-and-volume.ts");
 const ref=require("../data/unit-economics-pilot.json");
@@ -136,11 +141,6 @@ test("Единый финансовый движок допускает обе �
  }
 });
 
-const oldTsHandler=require.extensions[".ts"];
-require.extensions[".ts"]=(mod,filename)=>{
- const compiled=ts.transpileModule(fs.readFileSync(filename,"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}});
- mod._compile(compiled.outputText,filename);
-};
 const {recalculateFinancialReference,recalculateOzonReferenceInputs,recalculateMarketplaceVolume,calculateYandexReferenceVat}=require("../lib/unit-economics/financial-reference.ts");
 const {calculateUnitVat}=require("../lib/unit-economics/vat.ts");
 test("Адаптер сверяет все полные строки Ozon и WB без обращения к Google",()=>{
