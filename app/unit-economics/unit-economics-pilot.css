@@ -16,7 +16,7 @@
 .unit-pilot-table{min-width:1160px;width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:11px;color:var(--ws-text)}
 .unit-pilot-table th{position:sticky;top:0;z-index:2;background:var(--ui-table-header-background,var(--ws-surface-soft));font-weight:750;text-align:left;white-space:normal}
 .unit-pilot-table th,.unit-pilot-table td{border-right:1px solid var(--ws-border-soft);border-bottom:1px solid var(--ws-border-soft);padding:9px 10px;vertical-align:middle}
-.unit-pilot-table th:nth-child(1){width:62px}.unit-pilot-table th:nth-child(2){width:26%}
+.unit-pilot-table th:nth-child(1){width:92px}.unit-pilot-table th:nth-child(2){width:26%}
 .unit-pilot-table th:nth-child(10){width:160px}
 .unit-pilot-table tbody tr.clickable{cursor:pointer}
 .unit-pilot-table tbody tr.clickable:hover td,.unit-pilot-table tbody tr.clickable:focus-visible td{background:var(--ws-surface-hover)}
@@ -210,4 +210,36 @@
   .unit-version-root .unit-pilot .unit-model-tabs button{font-size:13px;min-height:39px;padding:8px 12px}
   .unit-version-root .unit-pilot .unit-table-toolbar input{min-width:min(100%,250px)}
   .unit-version-root .unit-pilot-table{min-width:1050px}
+}
+
+
+/* Фото должны оставаться внутри первой колонки при любом размере окна.
+   Отступы ячейки + размер миниатюры не могут превышать ширину колонки. */
+.unit-version-root .unit-pilot-scroller .unit-pilot-table th:first-child,
+.unit-version-root .unit-pilot-scroller .unit-pilot-table td:first-child{
+  width:92px;
+  min-width:92px;
+  max-width:92px;
+  box-sizing:border-box;
+  padding-left:12px;
+  padding-right:12px;
+  text-align:center;
+}
+.unit-version-root .unit-pilot-scroller .unit-pilot-table td:first-child .unit-pilot-thumb{
+  box-sizing:border-box;
+  width:52px;
+  height:52px;
+  max-width:100%;
+  min-width:0;
+  margin:0 auto;
+  overflow:hidden;
+  flex:0 0 52px;
+}
+.unit-version-root .unit-pilot-scroller .unit-pilot-table td:first-child .unit-pilot-thumb img{
+  display:block;
+  width:100%;
+  height:100%;
+  max-width:100%;
+  max-height:100%;
+  object-fit:contain;
 }
