@@ -8,12 +8,14 @@ import {calculatePilotFbs,pilotFbsMinPrice} from "@/lib/unit-economics/pilot-fbs
 import {displayNewProductName} from "@/lib/products/new-product-identity";
 import {formatUnitNumber,formatUnitPercent} from "@/lib/unit-economics/financial-results";
 import {recalculateFinancialReference,recalculateOzonReferenceInputs,recalculateMarketplaceVolume,LAYOUT} from "@/lib/unit-economics/financial-reference";
+import {compareLogisticsReference} from "@/lib/unit-economics/logistics/reference";
 import type {UnitFinalModel} from "@/lib/unit-economics/financial-results";
 
 type Entry={tab:string;row:number;values:(string|number|null)[];display:string[];formulas:Record<string,string>;calculated?:boolean;notes?:string[];auditStatus?:string;
   engineFormulas?:Record<string,string>;
   oldYandexRoi?:number|null;
   vatAudit?:{outputVat:number;inputVat:number;comparison:number;netVat:number};
+  logisticsAudit?:{status:string;warnings:string[];changes:{name:string;was:number|null;now:number;delta:number|null;formula:string}[];total:number|null};
   volumeAudit?:{volumeFormula:string;volumeSource:string;volumeNotes:string;exactVolume:number|null;previousSheetLiters:number|null;alternatives:string};
   ozonSppFormula?:string;
 };
@@ -99,93 +101,118 @@ function entryFor(p:Product,m:ModelKey,price?:number):Entry|undefined{
  if(!layout)return current;
  const values=current.values.slice(),display=current.display.slice();
  const engineFormulas:Record<string,string>={};
- const check=recalculateFinancialReference(m as UnitFinalModel,current.values);
- const vatAudit=check.vatAudit?{outputVat:check.vatAudit.calculated.outputVat,inputVat:check.vatAudit.calculated.inputVatTotal,comparison:check.vatAudit.maxDifference,netVat:check.vatAudit.calculated.vatPayable}:undefined;
- const isYandex=m==="ym-fby"||m==="ym-fbs";
  let auditStatus="";
- let oldYandexRoi:number|null=null;
- if(check.output){
-  if(check.vatAudit){
-   values[layout.outputVat]=check.output.outputVat;
-   values[layout.inputVat]=check.output.inputVatTotal;
-   display[layout.outputVat]=formatUnitNumber(check.output.outputVat,"₽");
-   display[layout.inputVat]=formatUnitNumber(check.output.inputVatTotal,"₽");
-   engineFormulas[String(layout.outputVat)]="Цена продажи × ставка НДС / (1 + ставка НДС)";
-   engineFormulas[String(layout.inputVat)]="Сумма входящего НДС закупки и разрешённых налоговых вычетов по статьям расходов";
-  }
-  values[layout.profit]=check.output.netProfit;
-  values[layout.margin]=check.output.marginRatio??"";
-  values[layout.roi]=check.output.roiRatio??"";
-  display[layout.profit]=formatUnitNumber(check.output.netProfit,"₽");
-  display[layout.margin]=check.output.marginRatio===null?"—":formatUnitPercent(check.output.marginRatio);
-  display[layout.roi]=check.output.roiRatio===null?"—":formatUnitPercent(check.output.roiRatio);
-  // В Яндекс FBY столбец B дублирует AM (ROI); обновляем оба.
-  // В Яндекс FBS столбец B — КОД ТОВАРА, его не трогаем.
-  if(m==="ym-fby"){
-   values[1]=check.output.roiRatio??"";
-   display[1]=check.output.roiRatio===null?"—":formatUnitPercent(check.output.roiRatio);
-   engineFormulas["1"]="Единый ROI: чистая прибыль / себестоимость без НДС закупки";
-  }
-  engineFormulas[String(layout.profit)]="Цена продажи − себестоимость с НДС − сумма уникальных расходов − (исходящий НДС − входящий НДС)";
-  engineFormulas[String(layout.margin)]="Чистая прибыль / (цена продажи − исходящий НДС)";
-  engineFormulas[String(layout.roi)]="Чистая прибыль / (себестоимость с НДС − входящий НДС закупки)";
-  oldYandexRoi=isYandex?check.previousRoiRatio:null;
-  if(check.status==="roi-method-changed"){
-   auditStatus=(current.calculated?"Сверка с пилотной FBS-моделью":"Сверка с Google Таблицами")+
-    ": прибыль и маржинальность совпадают; ROI изменён на общий для всех МП";
-  }else if(check.status==="matched"){
-   auditStatus="Новый движок: итоги совпали "+(current.calculated?"с предыдущей пилотной FBS-моделью (не с Google)":"с Google Таблицами");
-  }else{
-   auditStatus="ОБНАРУЖЕНО расхождение финансовых показателей; требуется проверка";
-  }
- }else{
-  values[layout.profit]="";values[layout.margin]="";values[layout.roi]="";
-  display[layout.profit]="—";display[layout.margin]="—";display[layout.roi]="—";
-  auditStatus="Недостаточно данных для собственного расчёта: "+check.missingColumns.join(", ");
- }
  let volumeAudit:Entry["volumeAudit"];
  let ozonSppFormula:string|undefined;
- const cartonSource=p.models["ozon-fbo"]?.values;
+ let logisticsAudit:Entry["logisticsAudit"];
+ const box=p.models["ozon-fbo"]?.values;
+ const parse=(v:unknown)=>typeof v==="number"?v:typeof v==="string"?Number(v.replace(/[\\s\\u00a0\\u202f]/g,"").replace(",",".")):NaN;
  try{
-  const volumeCheck=recalculateMarketplaceVolume(m as UnitFinalModel,current.values,cartonSource);
-  const result=volumeCheck.audit;
-  const volIndex=m==="ozon-fbs"?6:9;
-  const tariffLitersIndex=m==="ozon-fbs"?7:m==="ozon-fbo"?10:null;
-  if(result.liters!==null){
-   values[volIndex]=result.liters;
-   display[volIndex]=formatUnitNumber(result.liters);
-   engineFormulas[String(volIndex)]=result.formula??"Литраж ИУ не определён";
-   if(tariffLitersIndex!==null){
-    values[tariffLitersIndex]=result.roundedTariffLiters??"";
-    display[tariffLitersIndex]=result.roundedTariffLiters===null?"—":formatUnitNumber(result.roundedTariffLiters);
-    engineFormulas[String(tariffLitersIndex)]="Округление рассчитанного литража вверх до целого";
+  const check=recalculateMarketplaceVolume(m as UnitFinalModel,current.values,box);
+  const volume=check.audit;
+  const volumeIndex=m==="ozon-fbs"?6:9;
+  if(volume.liters!==null){
+   values[volumeIndex]=volume.liters;
+   display[volumeIndex]=formatUnitNumber(volume.liters);
+   engineFormulas[String(volumeIndex)]=volume.formula??"Не определён";
+   if(m==="ozon-fbo"||m==="ozon-fbs"){
+    const extraIndex=m==="ozon-fbo"?10:7;
+    values[extraIndex]=volume.roundedTariffLiters??"";
+    display[extraIndex]=volume.roundedTariffLiters===null?"—":formatUnitNumber(volume.roundedTariffLiters);
+    engineFormulas[String(extraIndex)]="ceil(точный литраж ИУ)";
    }
-  }else{
-   values[volIndex]="";
-   display[volIndex]="—";
+   if(m==="wb-fbw"||m==="wb-fbs"){
+    values[10]=Math.max(0,volume.liters-1);
+    display[10]=formatUnitNumber(Math.max(0,volume.liters-1));
+    engineFormulas["10"]="max(0; точный литраж ИУ − 1)";
+   }
+  }else{values[volumeIndex]="";display[volumeIndex]="—";}
+  volumeAudit={
+   volumeFormula:volume.formula??"Нет исходных данных",
+   volumeSource:volume.source??"отсутствует",
+   volumeNotes:volume.warnings.join("; "),
+   exactVolume:volume.liters,
+   previousSheetLiters:check.originalSheetLiters,
+   alternatives:volume.comparisons.map(x=>x.otherSource+": "+formatUnitNumber(x.differenceLiters,"л")).join("; ")
+  };
+  if(volume.liters!==null){
+   const cartonVolume=box?parse(box[28]):NaN;
+   const units=box?parse(box[29]):NaN;
+   const logistics=compareLogisticsReference(
+    m as UnitFinalModel,current.values,volume.liters,
+    Number.isFinite(cartonVolume)&&Number.isFinite(units)?
+     {cartonVolumeM3:cartonVolume,unitsPerCarton:units}:undefined,
+    current.formulas
+   );
+   if(logistics.result){
+    const changes=logistics.comparison.map(x=>{
+     const line=logistics.result!.lines.find(e=>e.code===x.code);
+     if(!line)return null;
+     const index=x.sourceIndex;
+     values[index]=line.amount;
+     display[index]=formatUnitNumber(line.amount,"₽");
+     engineFormulas[String(index)]=line.formula;
+     return{name:line.label,was:x.sourceAmount,now:line.amount,delta:x.delta,formula:line.formula};
+    }).filter((v):v is NonNullable<typeof v>=>v!==null);
+    logisticsAudit={status:logistics.status,warnings:[...logistics.result.warnings],changes,total:logistics.result.totals.overall};
+   }else logisticsAudit={status:logistics.status,warnings:["Недостающие входные данные: "+logistics.requiredInputs.join(", ")],changes:[],total:null};
   }
-  const alternatives=result.comparisons.map(v=>v.otherSource+": "+formatUnitNumber(v.differenceLiters,"л")).join("; ");
-  volumeAudit={volumeFormula:result.formula??"Нет исходных данных",volumeSource:result.source??"отсутствует",
-   volumeNotes:result.warnings.join("; "),exactVolume:result.liters,
-   previousSheetLiters:volumeCheck.originalSheetLiters,alternatives};
   if(m==="ozon-fbo"||m==="ozon-fbs"){
-   const src=p.models["ozon-fbo"];
-   if(src){
-    const ozon=recalculateOzonReferenceInputs(m,current.values,src.values);
-    const sppIndex=m==="ozon-fbo"?14:11;
-    const priceWithSppIndex=m==="ozon-fbo"?15:12;
-    values[sppIndex]=ozon.spp.sppRate;display[sppIndex]=formatUnitPercent(ozon.spp.sppRate);
-    values[priceWithSppIndex]=ozon.spp.priceAfterSpp;
-    display[priceWithSppIndex]=formatUnitNumber(ozon.spp.priceAfterSpp,"₽");
-    engineFormulas[String(sppIndex)]="СПП Ozon: цена ≤100 — 18%; ≤300 — 25%; ≤1000 — 42%; выше — 46%";
-    engineFormulas[String(priceWithSppIndex)]=ozon.spp.formula;
-    ozonSppFormula=ozon.spp.formula;
+   if(box){
+    const spp=recalculateOzonReferenceInputs(m,current.values,box).spp;
+    const s=m==="ozon-fbo"?14:11,w=m==="ozon-fbo"?15:12;
+    values[s]=spp.sppRate;display[s]=formatUnitPercent(spp.sppRate);
+    values[w]=spp.priceAfterSpp;display[w]=formatUnitNumber(spp.priceAfterSpp,"₽");
+    engineFormulas[String(s)]="СПП по ценовому диапазону Ozon";
+    engineFormulas[String(w)]=spp.formula;
+    ozonSppFormula=spp.formula;
    }
   }
- }catch(error){
-  auditStatus+="; ошибка вычисления литража/СПП: "+(error instanceof Error?error.message:String(error));
- }
- return {...current,values,display,engineFormulas,auditStatus,oldYandexRoi,volumeAudit,ozonSppFormula,vatAudit};
+ }catch(error){auditStatus="Ошибка расчёта логистики/литража: "+(error instanceof Error?error.message:String(error))}
+ let oldYandexRoi:number|null=null;
+ let vatAudit:Entry["vatAudit"];
+ try{
+  // Все статьи логистики в массиве values теперь пересчитаны самостоятельно.
+  // НДС исчисляется по обновлённым расходам через общий модуль; это не
+  // чтение итоговых сумм из Google.
+  const check=recalculateFinancialReference(m as UnitFinalModel,values);
+  vatAudit=check.vatAudit?{
+   outputVat:check.vatAudit.calculated.outputVat,
+   inputVat:check.vatAudit.calculated.inputVatTotal,
+   comparison:check.vatAudit.maxDifference,
+   netVat:check.vatAudit.calculated.vatPayable
+  }:undefined;
+  if(check.output){
+   const result=check.output;
+   values[layout.outputVat]=result.outputVat;
+   values[layout.inputVat]=result.inputVatTotal;
+   display[layout.outputVat]=formatUnitNumber(result.outputVat,"₽");
+   display[layout.inputVat]=formatUnitNumber(result.inputVatTotal,"₽");
+   engineFormulas[String(layout.outputVat)]="Ставка НДС реализации × цена / (1 + ставка)";
+   engineFormulas[String(layout.inputVat)]="НДС закупки + разрешённые вычеты по статьям расходов";
+   values[layout.profit]=result.netProfit;
+   values[layout.margin]=result.marginRatio??"";
+   values[layout.roi]=result.roiRatio??"";
+   display[layout.profit]=formatUnitNumber(result.netProfit,"₽");
+   display[layout.margin]=result.marginRatio===null?"—":formatUnitPercent(result.marginRatio);
+   display[layout.roi]=result.roiRatio===null?"—":formatUnitPercent(result.roiRatio);
+   engineFormulas[String(layout.profit)]="Цена − себестоимость с НДС − все уникальные расходы − (исходящий НДС − входящий НДС)";
+   engineFormulas[String(layout.margin)]="Чистая прибыль / (цена − исходящий НДС)";
+   engineFormulas[String(layout.roi)]="Чистая прибыль / (себестоимость с НДС − входящий НДС закупки)";
+   oldYandexRoi=check.previousRoiRatio;
+   if(m==="ym-fby"){
+    values[1]=result.roiRatio??"";
+    display[1]=result.roiRatio===null?"—":formatUnitPercent(result.roiRatio);
+    engineFormulas["1"]=engineFormulas[String(layout.roi)];
+   }
+   const changed=logisticsAudit?.changes.some(x=>x.delta!==null&&Math.abs(x.delta)>1e-7);
+   const origin=current.calculated?"ранее рассчитанной FBS-моделью":"исходной Google-юниткой";
+   if(changed) auditStatus+="; Логистика пересчитана: финрезультат может отличаться от "+origin;
+   else auditStatus+="; Логистика и финансовые показатели сопоставлены с "+origin+
+    (check.status==="roi-method-changed"?"; ROI Яндекса стандартизирован":check.status==="matched"?" без расхождений":"; обнаружены расхождения");
+  }else auditStatus+="; Недостаточно исходных данных для финрезультата: "+check.missingColumns.join(", ");
+ }catch(error){auditStatus+="; Ошибка финансового расчёта: "+(error instanceof Error?error.message:String(error))}
+ return {...current,values,display,engineFormulas,auditStatus,oldYandexRoi,volumeAudit,ozonSppFormula,vatAudit,logisticsAudit};
 }
 const fmt=(r:Entry|undefined,i:number|null)=>r&&i!==null&&r.display[i]?r.display[i]:"—";
 const numeric=(r:Entry|undefined,i:number)=>typeof r?.values[i]==="number"?r.values[i] as number:Number(String(r?.values[i]??"0").replace(",",".").replace(/[^0-9.-]/g,""));
@@ -246,7 +273,16 @@ export default function UnitEconomicsPilotClient(){
    <div className="unit-pilot-modal-tabs">{tabs}<div className="unit-pilot-views"><button className={view==="summary"?"active":""} onClick={()=>setView("summary")}>Сводка</button><button className={view==="details"?"active":""} onClick={()=>setView("details")}>Все расчёты</button></div></div>
    {row?<div className="unit-pilot-modal-body" key={sku+model+view}>{row.calculated&&<div className="unit-pilot-notice"><strong>Пробный расчёт FBS.</strong> {row.notes?.join(". ")}.</div>}
     {row.auditStatus&&<div className="unit-pilot-notice"><strong>Проверка финальных показателей:</strong> {row.auditStatus}</div>}
-    {row.vatAudit&&<details className="unit-pilot-group"><summary><strong>Унифицированный НДС: сверка и детализация</strong><span>Раскрыть</span></summary>
+    {row.logisticsAudit&&<details className="unit-pilot-group"><summary><strong>Логистика: самостоятельный расчёт и сверка</strong><span>Раскрыть</span></summary><div style={{padding:"12px",fontSize:"12px"}}>
+   <div>Состояние: {row.logisticsAudit.status}. Общая сумма рассчитанных статей: {row.logisticsAudit.total===null?"Недостаточно данных":formatUnitNumber(row.logisticsAudit.total,"₽")}</div>
+   {row.logisticsAudit.changes.map((line,i)=><div key={i} style={{marginTop:"8px"}}>
+     <strong>{line.name}: {formatUnitNumber(line.now,"₽")}</strong>
+     <div>Формула: {line.formula}</div>
+     <div>Ранее: {line.was===null?"Нет значения":formatUnitNumber(line.was,"₽")}; изменение: {line.delta===null?"Не сравнить":formatUnitNumber(line.delta,"₽")}</div>
+   </div>)}
+   {row.logisticsAudit.warnings.map((msg,i)=><div key={i} style={{marginTop:"8px"}}>Требуется уточнение: {msg}</div>)}
+  </div></details>}
+  {row.vatAudit&&<details className="unit-pilot-group"><summary><strong>Унифицированный НДС: сверка и детализация</strong><span>Раскрыть</span></summary>
       <div style={{padding:"12px",fontSize:"12px"}}>
       <div>Исходящий НДС: {formatUnitNumber(row.vatAudit.outputVat,"₽")}</div>
       <div>Входящий НДС: {formatUnitNumber(row.vatAudit.inputVat,"₽")}</div>

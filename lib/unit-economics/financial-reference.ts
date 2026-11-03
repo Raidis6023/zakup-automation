@@ -46,28 +46,49 @@ function readRate(v:unknown):number|null{
  }
  return null;
 }
-/** Контрольные ставки и доли взяты из «НДС настройки».
- * В дальнейшем они передаются из единого справочника с версией. */
-export function calculateYandexReferenceVat(model:"ym-fby"|"ym-fbs",values:ReferenceValues):VatResult{
+/** Входящий НДС по идентичным правилам для Ozon, WB и Яндекс.
+ * Здесь коды колонок применяются только к импортированным контрольным строкам.
+ * Доли допустимого вычета соответствуют листу «НДС настройки» от 03.11.2026.
+ * Справочник услуг в дальнейшем будет единственным источником ставок.
+ */
+export function calculateMarketplaceReferenceVat(model:UnitFinalModel,values:ReferenceValues):VatResult{
  const n=(i:number)=>readNum(values[i])??NaN;
- const rate=readRate(values[model==="ym-fby"?27:35]);
- if(rate===null)throw Error("Неизвестна ставка НДС Яндекс для товара");
- const add=(code:string,i:number,deductibleShare:number)=>({
-  code,amountGross:n(i),vatRate:0.22,deductibleShare
+ const vatColumns:Record<UnitFinalModel,{salesRate:number;purchaseVat:number;items:readonly(readonly[number,string,number])[]}>={
+  "ozon-fbo":{salesRate:37,purchaseVat:41,items:[
+   [17,"commission",1],[18,"acquiring",0],[22,"delivery",1],[24,"receiving",1],
+   [25,"last-mile",1],[26,"mayak",0],[27,"handling",1],[32,"packing",0],[36,"ads",1]]},
+  "ozon-fbs":{salesRate:35,purchaseVat:39,items:[
+   [14,"commission",1],[15,"acquiring",0],[19,"delivery",1],[21,"receiving",1],
+   [22,"last-mile",1],[23,"processing-fbs",1],[24,"shipment",0],
+   [25,"mayak",0],[31,"packing",0],[34,"ads",1]]},
+  "wb-fbw":{salesRate:30,purchaseVat:34,items:[
+   [17,"commission",1],[18,"acquiring",0],[19,"storage",1],[23,"delivery",1],
+   [25,"receiving",1],[26,"shipment",0],[29,"ads",1]]},
+  "wb-fbs":{salesRate:30,purchaseVat:34,items:[
+   [17,"commission",1],[18,"acquiring",0],[19,"storage",1],[23,"delivery",1],
+   [25,"receiving",1],[26,"shipment",0],[29,"ads",1]]},
+  "ym-fby":{salesRate:27,purchaseVat:31,items:[
+   [16,"commission",1],[17,"acquiring",0],[18,"processing",1],[20,"middle-mile",1],
+   [21,"last-mile",1],[22,"mayak",0],[23,"order-acceptance",1],[26,"ads",1]]},
+  "ym-fbs":{salesRate:35,purchaseVat:39,items:[
+   [16,"commission",1],[17,"acquiring",0],[18,"processing",1],[20,"middle-mile",1],
+   [21,"last-mile",1],[22,"mayak",0],[23,"order-acceptance",1],[34,"ads",1]]}
+ };
+ const cfg=vatColumns[model];
+ if(!cfg)throw Error("Неизвестная схема");
+ const rate=readRate(values[cfg.salesRate]);
+ if(rate===null)throw Error("Не указана ставка НДС реализации: "+model);
+ return calculateUnitVat({
+  sellingPriceGross:n(LAYOUT[model].price),
+  salesVatRate:rate,
+  purchaseInputVat:n(cfg.purchaseVat),
+  expenses:cfg.items.map(([index,code,share])=>({
+   code,amountGross:n(index),vatRate:.22,deductibleShare:share
+  }))
  });
- return calculateUnitVat({sellingPriceGross:n(13),salesVatRate:rate,
-  purchaseInputVat:n(model==="ym-fby"?31:39),
-  expenses:[
-   add("commission",16,1),
-   add("acquiring",17,0),
-   add("fulfillment",18,1),
-   add("middle-mile",20,1),
-   add("last-mile",21,1),
-   add("mayak",22,0),
-   add("order-processing",23,1),
-   add("advertising",model==="ym-fby"?26:34,1)
-  ]
- });
+}
+export function calculateYandexReferenceVat(model:"ym-fby"|"ym-fbs",values:ReferenceValues):VatResult{
+ return calculateMarketplaceReferenceVat(model,values);
 }
 export type FinancialReferenceCheck=Readonly<{
  status:"matched"|"roi-method-changed"|"different"|"missing-input";
@@ -89,7 +110,7 @@ export function recalculateFinancialReference(model:UnitFinalModel,values:Refere
   code:model+":field:"+i,name:"Статья "+i,group:group as UnitExpenseGroup,amount:n(i)
  })));
  const isYandex=model==="ym-fby"||model==="ym-fbs";
- const vat=isYandex?calculateYandexReferenceVat(model,values):null;
+ const vat=calculateMarketplaceReferenceVat(model,values);
  const vatAudit=vat?{
   calculated:vat,sourceOutputVat:n(layout.outputVat),sourceInputVat:n(layout.inputVat),
   maxDifference:Math.max(Math.abs(vat.outputVat-n(layout.outputVat)),Math.abs(vat.inputVatTotal-n(layout.inputVat)))
