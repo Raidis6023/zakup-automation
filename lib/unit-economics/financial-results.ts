@@ -51,7 +51,9 @@ export function calculateUnitFinancials(input:UnitFinancialInput):UnitFinancialO
  if(!Array.isArray(input.expenses))throw new Error("Не переданы статьи расходов");
  const expenseTotals:Record<UnitExpenseGroup,number>={commission:0,logistics:0,advertising:0,other:0};
  const known=new Set<string>();
- for(const expense of input.expenses){
+ // Array.isArray narrows to any[] in TS; preserve the typed expense union.
+ const typedExpenses:readonly UnitExpense[]=input.expenses;
+ for(const expense of typedExpenses){
   if(!expense||typeof expense.code!=="string"||!expense.code.trim())throw new Error("У статьи расходов отсутствует код");
   if(known.has(expense.code))throw new Error("Повторно включён расход: "+expense.code);
   known.add(expense.code);

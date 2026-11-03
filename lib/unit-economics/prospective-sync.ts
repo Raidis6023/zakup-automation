@@ -54,11 +54,14 @@ export async function syncUnitFromVedVersion(db:Db,type:VedEventKind,versionId:s
  if(markErr)return{ok:false,processed:0,skipped:0,error:markErr.message};
  let processed=0,skipped=0;
  try{
-  const table=type==="single"?"ved_calculation_snapshots":"ved_offer_calculation_versions";
-  const {data:saved,error:saveErr}=await db.from(table).select(
-   type==="single"?"id,article,title,created_at,offer_item_id,input_data,result_data":
-   "id,created_at,items_data"
-  ).eq("id",versionId).single();
+  // Literal .select() strings are required for Supabase's typed result parser.
+  const response=type==="single"
+   ?await db.from("ved_calculation_snapshots")
+      .select("id,article,title,created_at,offer_item_id,input_data,result_data")
+      .eq("id",versionId).single()
+   :await db.from("ved_offer_calculation_versions")
+      .select("id,created_at,items_data").eq("id",versionId).single();
+  const {data:saved,error:saveErr}=response;
   if(saveErr||!saved)throw Error("Не найдена версия ВЭД: "+(saveErr?.message||versionId));
   const timestamp=String(saved.created_at);
   const unique=new Map<string,Pending>();
