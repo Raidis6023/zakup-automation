@@ -1,3 +1,4 @@
+import {syncUnitFromVedVersion} from "@/lib/unit-economics/prospective-sync";
 import { NextResponse } from "next/server";
 import {getCbrRates} from "@/lib/cbr/rates";
 import { calculateVed, VedInputError, type VedCalculationInput } from "@/lib/ved-calculation/engine";
@@ -100,6 +101,12 @@ export async function POST(request: Request) {
       if(error.code==="23505")return NextResponse.json({ok:false,error:"Версия уже сохранена другим сотрудником. Обновите список."},{status:409});
       throw error;
     }
-    return NextResponse.json({ok:true,snapshot:data},{status:201,headers:{"Cache-Control":"no-store"}});
+    // ВЭД сохранён независимо от результата последующего расчёта юнитки.
+    // Событие поставлено в очередь триггером БД в одной транзакции с INSERT.
+    const unitEconomics=await syncUnitFromVedVersion(admin,"single",data.id);
+    if(!unitEconomics.ok)console.error("VED unit sync queued for retry:",unitEconomics.error);
+    return NextResponse.json({ok:true,snapshot:data,unitEconomics,
+      ...(unitEconomics.ok?{}:{warning:"Расчёт ВЭД сохранён. Юнит-экономика ожидает повторной обработки: "+unitEconomics.error})
+    },{status:201,headers:{"Cache-Control":"no-store"}});
   }catch(e){return respondError(e);}
 }
