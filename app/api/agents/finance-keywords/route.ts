@@ -11,7 +11,10 @@ async function request(url:string,headers:Record<string,string>,payload:Raw){
  if(!r.ok){const hint=r.status===429?'Лимит запросов маркетплейса':r.status===403?'Нет доступа или платной аналитики':r.status===401?'Неверный ключ доступа':'Ошибка провайдера';throw Error(hint+' (HTTP '+r.status+'): '+JSON.stringify(value).slice(0,220));}
  return value as Raw;
 }
-const n=(x:unknown)=>typeof x==='number'&&Number.isFinite(x)?x:typeof x==='string'&&x.trim()&&Number.isFinite(Number(x))?Number(x):null;
+const n=(x:unknown):number|null=>typeof x==='number'&&Number.isFinite(x)?x:typeof x==='string'&&x.trim()&&Number.isFinite(Number(x))?Number(x):null;
+const current=(x:unknown):number|null=>{const d=n(x);return d!==null?d:x&&typeof x==='object'?n((x as Raw).current):null;};
+const rate=(a:number|null,b:number|null):number|null=>a!==null&&b!==null&&b>0?Math.round(a/b*10000)/100:null;
+const normalize=(x:string)=>x.toLowerCase().replace(/ё/g,'е').replace(/\s+/g,' ').trim();
 export async function GET(req:NextRequest){try{
  await financeAccess();
  const p=req.nextUrl.searchParams,market=p.get('market')??'',article=p.get('article')?.trim()??'',from=p.get('from')??'',to=p.get('to')??'';
@@ -30,16 +33,56 @@ export async function GET(req:NextRequest){try{
   const outer=value.data as Raw|undefined;
   const raw=Array.isArray(outer?.items)?outer.items:Array.isArray(value.items)?value.items:[];
   const items=(raw as unknown[]).filter(x=>x&&typeof x==='object').map(x=>{
-   const r=x as Raw;
-   const period=r.currentPeriod as Raw|undefined;
-   const d=period??r,values:{[key:string]:number|null}={
-    frequency:n(r.frequency??d.frequency),openCard:n(d.openCard),addToCart:n(d.addToCart),
-    openToCart:n(d.openToCart),orders:n(d.orders),cartToOrder:n(d.cartToOrder),
-    avgPosition:n(d.avgPosition)
+   const r=x as Raw,period=r.currentPeriod as Raw|undefined,d=period??r;
+   const freq=current(r.frequency)??current(r.weekFrequency)??current(d.frequency);
+   const views=current(r.visibility)??current(d.visibility);
+   const clicks=current(d.openCard),carts=current(d.addToCart),orders=current(d.orders);
+   const values:Record<string,number|null>={
+    frequency:freq,views,openCard:clicks,ctr:rate(clicks,views),
+    addToCart:carts,cartCR:rate(carts,clicks),
+    orders,orderCR:rate(orders,carts),clickToOrder:rate(orders,clicks),
+    buyouts:null,spend:null,cpc:null,avgPosition:current(d.avgPosition)
    };
-   return {query:String(r.text??r.searchText??''),values,raw:r};
+   return {query:String(r.text??r.searchText??''),values};
   });
-  return NextResponse.json({ok:true,market,items,source:'WB search-report/product/search-texts',coverage:'provider_response',note:'Топ поисковых фраз по артикулу WB. Состав и доступность метрик зависят от тарифа WB Джем и прав токена. Частота, открытия карточки, корзины, заказы и конверсии показываются только если они реально пришли. Расход и выкупы по отдельной фразе этот метод не подтверждает. Лимит может составлять 1 запрос в час на базовом тарифе.',limitations:['keyword_cost','keyword_buyouts']},{headers:{'Cache-Control':'private,no-store'}});
+  // Paid cluster cost is a separate promotion statistic, never guessed from organic frequency.
+  // Only exactly matching normalized labels are joined; otherwise the advertising
+  // cluster appears as its own explicit row.
+  let paidNote='Стоимость поисковых кластеров ещё не получена.';
+  const paidToken=(process.env.WB_PROMOTION_TOKEN||'').trim();
+  if(paidToken){
+   try{
+    const rows=await db.from('wb_finance_ad_daily').select('campaign_id').eq('nm_id',Number(article)).gte('snapshot_day',from).lte('snapshot_day',to).limit(1000);
+    if(rows.error)throw rows.error;
+    const campaignIds=[...new Set((rows.data??[]).map(x=>Number(x.campaign_id)).filter(Boolean))];
+    if(campaignIds.length){
+     const spendByPhrase=new Map<string,{query:string;spend:number;clicks:number;orders:number;carts:number}>();
+     for(let start=0;start<campaignIds.length;start+=100){
+      const results=await request('https://advert-api.wildberries.ru/adv/v0/normquery/stats',{Authorization:paidToken},{
+       from,to,items:campaignIds.slice(start,start+100).map(id=>({advert_id:id,nm_id:Number(article)}))
+      });
+      for(const bucket of Array.isArray(results.stats)?results.stats as Raw[]:[]){
+       for(const x of Array.isArray(bucket.stats)?bucket.stats as Raw[]:[]){
+        const phrase=String(x.norm_query??'').trim(),key=normalize(phrase);if(!key)continue;
+        const old=spendByPhrase.get(key)??{query:phrase,spend:0,clicks:0,orders:0,carts:0};
+        old.spend+=n(x.spend)??0;old.clicks+=n(x.clicks)??0;old.orders+=n(x.orders)??0;old.carts+=n(x.atbs)??0;
+        spendByPhrase.set(key,old);
+       }
+      }
+     }
+     const found=new Set<string>();
+     for(const item of items){const key=normalize(item.query),ad=spendByPhrase.get(key);
+      if(ad){item.values.spend=ad.spend;item.values.cpc=ad.clicks>0?Math.round(ad.spend/ad.clicks*100)/100:null;found.add(key);}
+     }
+     for(const [key,ad] of spendByPhrase)if(!found.has(key))items.push({query:ad.query+' · рекламный кластер',values:{
+      frequency:null,views:null,openCard:null,ctr:null,addToCart:ad.carts,cartCR:null,
+      orders:ad.orders,orderCR:null,clickToOrder:null,buyouts:null,spend:ad.spend,
+      cpc:ad.clicks>0?Math.round(ad.spend/ad.clicks*100)/100:null,avgPosition:null}});
+     paidNote='Добавлена стоимость подтверждённых рекламных поисковых кластеров WB. Органические и рекламные показатели не смешиваются при отсутствии точного совпадения текста.';
+    }else paidNote='Рекламных кампаний для этого nmId в кэше пока нет. Сначала загрузите рекламную статистику WB.';
+   }catch(e){paidNote='Стоимость рекламных кластеров временно недоступна: '+(e instanceof Error?e.message:'ошибка запроса');}
+  }
+  return NextResponse.json({ok:true,market,items,source:'WB search-report/product/search-texts + /adv/v0/normquery/stats',coverage:'provider_response',note:'Частота и конверсии по поисковым фразам WB. '+paidNote+' Выкупы по тексту запроса WB не подтверждает: вместо выдуманных чисел показывается прочерк.',limitations:['keyword_buyouts'],paidNote},{headers:{'Cache-Control':'private,no-store'}});
  }
  const client=process.env.OZON_CLIENT_ID,key=process.env.OZON_API_KEY;
  if(!client||!key)return NextResponse.json({error:'Не настроены ключи Ozon'},{status:503});
