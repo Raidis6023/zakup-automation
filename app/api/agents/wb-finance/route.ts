@@ -272,30 +272,78 @@ export async function GET(request:NextRequest){
       order_count:orderByNm.get(row.nm_id)?.orders??0,cancel_count:orderByNm.get(row.nm_id)?.cancelled??0,
       external_storage:scheme?null:storageByNm.has(row.nm_id)?round(storageByNm.get(row.nm_id)!):null};
   });
+
+  // Financial reports book storage and WB Promotion without nmId. Product-level
+  // snapshots supply only allocation weights, NOT an additional cash expense.
+  const promotionLine=(l:FinanceLine)=>String(l.sellerOperName??'').toLowerCase()==='удержание'&&/wb\s*продвижение/i.test(String(l.bonusTypeName??''));
+  const storageLine=(l:FinanceLine)=>num(l.paidStorage)!==0||/^хранение$/i.test(String(l.sellerOperName??''));
+  const bookedPromo=financialLines.filter(promotionLine).reduce((total,l)=>total+Math.abs(num(l.deduction)),0);
+  const bookedPromoCommon=financialLines.filter(l=>num(l.nmId)===0&&promotionLine(l)).reduce((total,l)=>total+Math.abs(num(l.deduction)),0);
+  const bookedStorageCommon=financialLines.filter(l=>num(l.nmId)===0).reduce((total,l)=>total+Math.abs(num(l.paidStorage)),0);
+  const otherDeductions=financialLines.filter(l=>num(l.deduction)!==0&&!promotionLine(l))
+   .reduce((total,l)=>total+Math.abs(num(l.deduction)),0);
+  const adItems:AdItem[]=scheme?[]:ads.map(row=>({nm_id:Number(row.nm_id),date:row.snapshot_day,campaign_id:Number(row.campaign_id),spend:Number(row.spend),views:Number(row.views),clicks:Number(row.clicks),orders:Number(row.orders),sum_price:Number(row.sum_price),atbs:num((row.payload as Record<string,unknown>|null)?.atbs)}));
+  const adsComplete=!scheme&&(adSnapshots.data?.length??0)===expectedDays;
+  const storageComplete=!scheme&&(storageSnapshots.data?.length??0)===expectedDays;
+  const ordersComplete=orders.length>0;
+  const adWeights=new Map<string,number>();
+  if(adsComplete)for(const a of adItems)adWeights.set(String(a.nm_id),(adWeights.get(String(a.nm_id))??0)+Math.max(0,a.spend));
+  const storageWeights=new Map<string,number>();
+  if(storageComplete)for(const a of storage){if(!a.nm_id)continue;const nm=String(a.nm_id);storageWeights.set(nm,(storageWeights.get(nm)??0)+Math.max(0,num(a.amount)));}
+  // Deterministic largest-remainder split, exactly matches booked invoice cents.
+  const allocate=(rub:number,weights:Map<string,number>)=>{
+   const result=new Map<string,number>(),total=[...weights.values()].reduce((a,b)=>a+b,0),cents=Math.round(rub*100);
+   if(!cents||total<=0)return result;
+   const parts=[...weights].filter(([,n])=>n>0).map(([nm,n])=>{
+    const exact=cents*n/total;return {nm,whole:Math.floor(exact),frac:exact-Math.floor(exact)};
+   });const leftover=cents-parts.reduce((a,x)=>a+x.whole,0);
+   parts.sort((a,b)=>b.frac-a.frac||a.nm.localeCompare(b.nm));
+   parts.forEach((p,i)=>result.set(p.nm,(p.whole+(i<leftover?1:0))/100));
+   return result;
+  };
+  const adSplit=adsComplete?allocate(bookedPromoCommon,adWeights):new Map<string,number>();
+  const storageSplit=storageComplete?allocate(bookedStorageCommon,storageWeights):new Map<string,number>();
+  const recorded=new Set(enriched.map(r=>r.nm_id));
+  // Include products that have storage/advertising fees but no sales this month.
+  for(const nm of new Set([...adSplit.keys(),...storageSplit.keys()])){
+   if(recorded.has(nm))continue;
+   const listing=listingByNm.get(nm);
+   const synthetic=groupFinancial([{nmId:Number(nm),vendorCode:listing?.seller_article??'',subjectName:'',quantity:0}],(rates??[]) as Rate[],sharedByNm)[0];
+   const master=listing?.master_code??null,manager=master?managerByMaster.get(master)??null:null;
+   enriched.push({...synthetic,rows:0,operations:{},master_code:master,manager:manager??'Не назначен',
+    order_count:orderByNm.get(nm)?.orders??0,cancel_count:orderByNm.get(nm)?.cancelled??0,
+    missing_rates:[...(!master?['Код товара (ЕНОТ)']:[]),...(!manager?['КМ']:[])],
+    external_storage:storageByNm.get(nm)??null});
+  }
+  const allocatedRows=enriched.map(row=>{
+   const bookAd=adSplit.get(row.nm_id)??0,bookStorage=storageSplit.get(row.nm_id)??0;
+   const directStorage=row.storage_in_report??0;
+   const financialStorage=storageComplete?bookStorage+directStorage:directStorage;
+   return {...row,allocated_ad:adsComplete?round(bookAd):null,
+    allocated_storage:storageComplete?round(financialStorage):null,
+    external_storage:storageComplete?round(financialStorage):row.external_storage,
+    preliminary_result:row.preliminary_result===null?null:round(row.preliminary_result-bookAd-bookStorage)};
+  });
+  const attributedAd=[...adSplit.values()].reduce((a,b)=>a+b,0),attributedStorage=[...storageSplit.values()].reduce((a,b)=>a+b,0);
+  // Only genuine 'other' fees belong to the unallocated register.
+  // Advertising and storage are accounted for above or explicitly pending.
   const commonMap=new Map<string,{name:string;amount:number;days:Map<string,{date:string;amount:number;count:number}>}>();
   for(const l of financialLines){
-   if(num(l.nmId)!==0)continue;
+   if(num(l.nmId)!==0||promotionLine(l)||storageLine(l))continue;
    const name=String(l.sellerOperName??l.docTypeName??'Прочие операции'),day=String(l.rrDate??l.rrdDt??l.rrdDate??l.saleDt??'').slice(0,10);
    const amount=num(l.forPay)-num(l.deliveryAmount)-num(l.paidStorage)-num(l.paidAcceptance)-num(l.penalty)-num(l.deduction);
+   if(Math.abs(amount)<.005)continue;
    const entry=commonMap.get(name)??{name,amount:0,days:new Map<string,{date:string;amount:number;count:number}>()};
    entry.amount+=amount;const item=entry.days.get(day)??{date:day,amount:0,count:0};item.amount+=amount;item.count++;entry.days.set(day,item);commonMap.set(name,entry);
   }
-  const unallocated=[...commonMap.values()].map(v=>({name:v.name,amount:v.amount,daily:[...v.days.values()].sort((a,b)=>a.date.localeCompare(b.date))}));
-  // Finance document contains actual WB promotion deductions (as opposed to
-  // per-product advertising analytics). Never subtract the same charges twice.
-  const promotionActual=financialLines.filter(l=>
-   String(l.sellerOperName??'').toLowerCase()==='удержание'&&/wb\s*продвижение/i.test(String(l.bonusTypeName??'')))
-   .reduce((s,l)=>s+Math.abs(num(l.deduction)),0);
-  const otherDeductions=financialLines.filter(l=>num(l.deduction)!==0&&!/wb\s*продвижение/i.test(String(l.bonusTypeName??'')))
-   .reduce((s,l)=>s+Math.abs(num(l.deduction)),0);
-  const adItems:AdItem[]=scheme?[]:ads.map(row=>({nm_id:Number(row.nm_id),date:row.snapshot_day,campaign_id:Number(row.campaign_id),spend:Number(row.spend),views:Number(row.views),clicks:Number(row.clicks),orders:Number(row.orders),sum_price:Number(row.sum_price),atbs:num((row.payload as Record<string,unknown>|null)?.atbs)}));
-  const adsComplete=(adSnapshots.data?.length??0)===expectedDays,storageComplete=(storageSnapshots.data?.length??0)===expectedDays,ordersComplete=orders.length>0;
+  const unallocated=[...commonMap.values()].filter(v=>Math.abs(v.amount)>.005).map(v=>({name:v.name,amount:round(v.amount),daily:[...v.days.values()].sort((a,b)=>a.date.localeCompare(b.date))}));
+  const pendingAd=round(Math.max(0,bookedPromoCommon-attributedAd)),pendingStorage=round(Math.max(0,bookedStorageCommon-attributedStorage));
   let adProgress:Record<string,unknown>={};try{adProgress=JSON.parse(advertisingJob.data?.last_message??'{}');}catch{}
-   return NextResponse.json({ok:true,from,to,scheme:scheme??null,unallocated,unallocated_financial:unallocatedFinancial?.preliminary_result??0,ad_sync:{stage:advertisingJob.data?.stage??'not_started',last_error:adProgress.last_error??null,processed:adProgress.next??0,total:Array.isArray(adProgress.ids)?adProgress.ids.length:0,updated_at:advertisingJob.data?.updated_at??null},promotion_actual:round(promotionActual),other_deductions:round(otherDeductions),financial_rows:financialLines.length,daily,rows:enriched,
+   return NextResponse.json({ok:true,from,to,scheme:scheme??null,unallocated,unallocated_financial:round((unallocatedFinancial?.preliminary_result??0)+attributedAd+attributedStorage),pending_allocation:{advertising:pendingAd,storage:pendingStorage},attributed:{advertising:round(attributedAd),storage:round(attributedStorage),storage_method:'invoice_weighted_by_paid_storage_nm_id'},ad_sync:{stage:advertisingJob.data?.stage??'not_started',last_error:adProgress.last_error??null,processed:adProgress.next??0,total:Array.isArray(adProgress.ids)?adProgress.ids.length:0,updated_at:advertisingJob.data?.updated_at??null},promotion_actual:round(bookedPromo),other_deductions:round(otherDeductions),financial_rows:financialLines.length,daily,rows:allocatedRows,
     ads:{items:adItems,campaigns:new Set(ads.map(x=>x.campaign_id)).size,coverage:scheme?'not_attributed':adsComplete?'cached_complete':adItems.length?'cached_partial':'not_loaded',warning:scheme?'Не связанные с SRID рекламные списания исключены.':adsComplete?null:'Реклама загружена не за все дни выбранного периода.'},
     orders:{rows:orders.length,coverage:ordersComplete?'cached_partial':'not_loaded'},storage:{rows:storage.length,coverage:storageComplete?'cached_complete':storage.length?'cached_partial':'not_loaded'},
     coverage:{finance:latest.status==='complete'?'cached_complete':'cached_partial',advertising:adsComplete?'cached_complete':adItems.length?'cached_partial':'not_loaded',paid_storage:storageComplete?'cached_complete':storage.length?'cached_partial':'not_loaded',orders:ordersComplete?'cached_partial':'not_loaded',advertising_actual_charges:'not_loaded'},
     cache:{status:latest.status,runDay:latest.run_day,from:latest.date_from,to:latest.date_to,completedAt:latest.completed_at,rowsSaved:latest.rows_saved},
-    notice:'Реализация — сумма по цене покупателя, продажи за вычетом возвратов. Оборот по розничной цене — до скидок WB. Продвижение уже списано по документам Удержание, повторно рекламная аналитика не списывается.'});
+    notice:'Розничный оборот отражает продажи по полной цене минус возвраты. Рекламные и складские списания из финансового отчёта распределяются по nmId на основе полной статистики, но не списываются дважды. При отсутствии покрытия остаются учтёнными в общем результате со статусом «ожидает распределения».'});
  }catch(e){return NextResponse.json({ok:false,error:e instanceof Error?e.message:String(e)},{status:500});}
 }
