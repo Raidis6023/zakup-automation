@@ -15,10 +15,13 @@ CREATE TABLE IF NOT EXISTS public.unit_ved_products (
  purchase_vat_credit_rub numeric(20,8),
  volume_liters numeric(20,8),
  volume_source text,
- unit_weight_kg numeric(20,8) CHECK (unit_weight_kg IS NULL OR unit_weight_kg > 0),
+ unit_weight_kg numeric CHECK (unit_weight_kg IS NULL OR unit_weight_kg > 0),
  created_at timestamptz NOT NULL DEFAULT now(),
  updated_at timestamptz NOT NULL DEFAULT now()
 );
+-- Если реестр создан ранее, новая производная колонка добавляется безопасно.
+ALTER TABLE public.unit_ved_products
+ ADD COLUMN IF NOT EXISTS unit_weight_kg numeric;
 CREATE TABLE IF NOT EXISTS public.unit_ved_settings (
  product_id uuid NOT NULL REFERENCES public.unit_ved_products(id) ON DELETE CASCADE,
  model text NOT NULL CHECK (model IN ('ozon-fbo','ozon-fbs','wb-fbw','wb-fbs','ym-fby','ym-fbs')),
