@@ -7,7 +7,12 @@ import {
 
 import {
   getWbSeptemberRows,
+  type WbFinancialRow,
 } from "./wbFinancialData";
+
+import {
+  getWbOctoberRows,
+} from "./wbOctoberFinancialData";
 
 import {
   getYandexSeptemberRows,
@@ -448,6 +453,7 @@ SkuListFinancialRow[] {
 
 
 function buildWbRows(
+  financialRows: WbFinancialRow[],
   mappings: MarketplaceListingRow[],
   statuses: ProductStatusRow[]
 ):
@@ -463,6 +469,12 @@ SkuListFinancialRow[] {
     );
 
   const mappingBySellerArticle =
+    new Map<
+      string,
+      MarketplaceListingRow
+    >();
+
+  const mappingByMasterCode =
     new Map<
       string,
       MarketplaceListingRow
@@ -486,19 +498,47 @@ SkuListFinancialRow[] {
       ),
       mapping
     );
+
+    if (
+      !mappingByMasterCode.has(
+        mapping.master_code
+      )
+    ) {
+      mappingByMasterCode.set(
+        mapping.master_code,
+        mapping
+      );
+    }
   }
 
-  return getWbSeptemberRows()
+  return financialRows
     .map(
       row => {
-        const mapping =
+        const exactMapping =
           mappingBySellerArticle.get(
             normalizeForMatch(
               row.article
             )
           );
 
+        const mapping =
+          row.masterCode
+            ? (
+                mappingByMasterCode.get(
+                  row.masterCode
+                )
+                ??
+                (
+                  exactMapping?.master_code === row.masterCode
+                    ? exactMapping
+                    : undefined
+                )
+              )
+            : exactMapping;
+
         const enot =
+          row.masterCode
+          ??
           mapping?.master_code
           ??
           null;
@@ -525,9 +565,7 @@ SkuListFinancialRow[] {
             null,
 
           sellerArticle:
-            capitalizeArticle(
-              row.article
-            ),
+            row.article.trim(),
 
           productName:
             row.name,
@@ -544,7 +582,6 @@ SkuListFinancialRow[] {
       }
     );
 }
-
 
 const YANDEX_ARTICLE_ALIASES =
   new Map<string, string>([
@@ -801,6 +838,14 @@ export default async function SkuListPage() {
 
   const wildberriesRows =
     buildWbRows(
+      getWbSeptemberRows(),
+      wbMappings,
+      statuses
+    );
+
+  const wildberriesOctoberRows =
+    buildWbRows(
+      getWbOctoberRows(),
       wbMappings,
       statuses
     );
@@ -845,6 +890,9 @@ export default async function SkuListPage() {
           }
           wildberriesRows={
             wildberriesRows
+          }
+          wildberriesOctoberRows={
+            wildberriesOctoberRows
           }
           yandexRows={
             yandexRows

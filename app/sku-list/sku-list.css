@@ -135,6 +135,8 @@
   gap: 6px;
   flex: 0 0 auto;
   min-width: 0;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .sku-list-period-control {
@@ -425,13 +427,13 @@
 
 
 .sku-list-col-sku {
-  width: 112px;
+  width: 172px;
 }
 
 
 /*
- * Артикул продавца уменьшается РОВНО на ширину нового
- * столбца Статус относительно прежнего деления 50/50.
+ * SKU расширен на 60 px за счёт столбца артикула продавца.
+ * Общая ширина таблицы при этом не меняется.
  */
 .sku-list-col-seller {
   width:
@@ -439,6 +441,8 @@
       var(--sku-base-flex)
       -
       var(--sku-status-width)
+      -
+      60px
     );
 }
 
@@ -588,7 +592,9 @@
 
 
 .sku-list-sku {
+  overflow: hidden;
   font-weight: 650;
+  text-overflow: ellipsis;
 }
 
 

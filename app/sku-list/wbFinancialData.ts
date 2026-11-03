@@ -10,6 +10,7 @@ export type WbFinancialRow = {
   profit: number;
   revenue: number;
   buys: number;
+  masterCode?: string | null;
 };
 
 

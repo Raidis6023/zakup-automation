@@ -252,6 +252,8 @@ SkuListFinancialRow[] {
     yandexRows,
   ];
 
+  const unlinkedRows: SkuListFinancialRow[] = [];
+
   for (
     const source
     of sources
@@ -261,6 +263,11 @@ SkuListFinancialRow[] {
       of source
     ) {
       if (!row.enot) {
+        unlinkedRows.push({
+          ...row,
+          sku: null,
+          productName: row.productName ?? row.sellerArticle,
+        });
         continue;
       }
 
@@ -322,15 +329,19 @@ SkuListFinancialRow[] {
     }
   }
 
-  return Array.from(
-    byEnot.values()
-  );
+  return [
+    ...Array.from(
+      byEnot.values()
+    ),
+    ...unlinkedRows,
+  ];
 }
 
 
 export default function SkuListTabsClient({
   ozonRows,
   wildberriesRows,
+  wildberriesOctoberRows,
   yandexRows,
   yandexOctoberRows,
 }: {
@@ -338,6 +349,9 @@ export default function SkuListTabsClient({
     SkuListFinancialRow[];
 
   wildberriesRows:
+    SkuListFinancialRow[];
+
+  wildberriesOctoberRows:
     SkuListFinancialRow[];
 
   yandexRows:
@@ -371,7 +385,7 @@ export default function SkuListTabsClient({
       ) {
         return {
           ozon: [] as SkuListFinancialRow[],
-          wildberries: [] as SkuListFinancialRow[],
+          wildberries: wildberriesOctoberRows,
           yandexMarket: yandexOctoberRows,
         };
       }
@@ -387,6 +401,7 @@ export default function SkuListTabsClient({
       selectedMonth,
       ozonRows,
       wildberriesRows,
+      wildberriesOctoberRows,
       yandexRows,
       yandexOctoberRows,
     ]
@@ -1000,7 +1015,18 @@ export default function SkuListTabsClient({
         activeTab
       }
     >
-      <div className="sku-list-toolbar">
+      <div
+        className="sku-list-toolbar"
+        style={{
+          paddingRight: totalsLayout
+            ? 72
+              + totalsLayout.revenueWidth
+              + totalsLayout.profitWidth
+              + totalsLayout.purchasesWidth
+              + 12
+            : 0,
+        }}
+      >
         <div
           className=
             "sku-list-tabs"
