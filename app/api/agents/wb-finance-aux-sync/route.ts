@@ -140,14 +140,23 @@ async function syncStorage(from:string,to:string,deadline:number){
 
 export async function runAuxiliarySync(scope:'all'|'ads'='all'){
  const today=date(new Date(Date.now()+7*3600000)),to=shift(today,-1),from=shift(to,-27),deadline=Date.now()+155000;
- if(scope==='ads'){const advertising=await syncAds(from,to,deadline);return {ok:advertising.ok,from,to,advertising};}
+ // Keep the same interval while a batch is unfinished. Otherwise a rolling
+ // window changes each midnight and the persisted campaign cursor resets.
+ const db=createAdminClient(),state=await db.from('wb_sync_state').select('stage,last_message').eq('sync_key','wb_ad_fullstats_progress').maybeSingle();
+ if(state.error)throw state.error;
+ let previous:{from?:string;to?:string}={};try{previous=JSON.parse(state.data?.last_message??'{}')}catch{}
+ const continuing=state.data?.stage==='partial'&&previous.from&&previous.to&&
+  /^\\d{4}-\\d{2}-\\d{2}$/.test(previous.from)&&/^\\d{4}-\\d{2}-\\d{2}$/.test(previous.to)&&
+  Date.parse(previous.to)>=Date.now()-80*86400000;
+ const adFrom=continuing?previous.from!:from,adTo=continuing?previous.to!:to;
+ if(scope==='ads'){const advertising=await syncAds(adFrom,adTo,deadline);return {ok:advertising.ok,from:adFrom,to:adTo,advertising};}
  const orders=await Promise.resolve().then(()=>syncOrders(from,to)).catch(e=>({ok:false,error:e instanceof Error?e.message:String(e)}));
  const [advertising,storage]=await Promise.all([
-  Promise.resolve().then(()=>syncAds(from,to,deadline)).catch(e=>({ok:false,error:e instanceof Error?e.message:String(e)})),
+  Promise.resolve().then(()=>syncAds(adFrom,adTo,deadline)).catch(e=>({ok:false,error:e instanceof Error?e.message:String(e)})),
   Promise.resolve().then(()=>syncStorage(from,to,deadline)).catch(e=>({ok:false,error:e instanceof Error?e.message:String(e)}))
  ]);
  return {ok:Boolean(orders.ok||advertising.ok||storage.ok),from,to,orders,advertising,storage};
 }
 
-export async function GET(req:NextRequest){if(!process.env.CRON_SECRET||req.headers.get('authorization')!=='Bearer '+process.env.CRON_SECRET)return json({ok:false,error:'Unauthorized'},401);const result=await runAuxiliarySync();return json(result,result.ok?200:503);}
+export async function GET(req:NextRequest){if(!process.env.CRON_SECRET||req.headers.get('authorization')!=='Bearer '+process.env.CRON_SECRET)return json({ok:false,error:'Unauthorized'},401);const scope=req.nextUrl.searchParams.get('scope')==='ads'?'ads':'all';const result=await runAuxiliarySync(scope);return json(result,result.ok?200:503);}
 export async function POST(req:NextRequest){try{await adminAccess();const scope=req.nextUrl.searchParams.get('scope')==='ads'?'ads':'all';const result=await runAuxiliarySync(scope);return json(result,result.ok?200:503);}catch(e){return json({ok:false,error:e instanceof Error?e.message:String(e)},403);}}
