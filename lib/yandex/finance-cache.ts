@@ -77,6 +77,18 @@ export async function readFinance(from:string,to:string,scheme?:'fbo'|'fbs'){
   if(found.error)throw found.error;
   for(const r of found.data??[])verifiedReturns.push({return_id:r.return_id,order_id:r.order_id,article:r.shop_sku,quantity:r.quantity});
  }
+ const fulfillmentByOrder=new Map<string,'fby'|'fbs'|'unknown'>();
+ const orderIds=[...new Set(orders.map(o=>o.order_id))];
+ for(let i=0;i<orderIds.length;i+=150){
+  const r=await db.from('yandex_order_items').select('order_id,warehouse_name').in('order_id',orderIds.slice(i,i+150));
+  if(r.error)throw r.error;
+  for(const item of r.data??[]){
+   const wh=String(item.warehouse_name??''),mode=/яндекс.?маркет/i.test(wh)?'fby':/продавц/i.test(wh)?'fbs':'unknown';
+   const old=fulfillmentByOrder.get(String(item.order_id));
+   fulfillmentByOrder.set(String(item.order_id),old&&old!==mode?'unknown':mode);
+  }
+ }
+ for(const o of orders)o.fulfillment=fulfillmentByOrder.get(o.order_id)??'unknown';
  const result=financialReport(lines,from,to,rates,listings,orders,report.order_units_complete,verifiedReturns);
  const daily=Array.from({length:Math.round((Date.parse(to)-Date.parse(from))/86400000)+1},(_,index)=>{
   const day=new Date(Date.parse(from)+index*86400000).toISOString().slice(0,10);

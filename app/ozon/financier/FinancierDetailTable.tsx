@@ -277,7 +277,7 @@ export default function FinancierDetailTable({
                       ]).join("; ")}. Исправь сведения в настройках финансиста.</td>
                   </tr>}
                   {r.details.map((item,i)=>{
-                    const category=item.is_reference?"Состав начисления · справочно":item.type_id==="SALES"?"Выручка":
+                    const category=item.is_reference?"Начисление Ozon":item.type_id==="SALES"?"Выручка":
                       item.type_id==="COMMISSION"?"Комиссия":
                       item.type_id==="REMAINDER"?"Прочее":
                       item.type_id==="SERVICE"?"Услуга Ozon":"Начисление Ozon";

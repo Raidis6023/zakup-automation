@@ -55,14 +55,14 @@ export async function GET(req:NextRequest){try{
   if(unit&&!v.posted.has(unit)){
    v.posted.add(unit);const quantity=Math.max(0,num(x.raw?.posting?.products?.find(p=>String(p.sku)===sku)?.quantity??1));v.units+=quantity;
    const cost=master?rate(costBy.get(master)??[],x.day):null,trans=master?rate(mayakBy.get(master)??[],x.day):null;
-   if(cost===null||trans===null)v.missing=true;
-   if(cost!==null)v.cogs+=quantity*num(cost);if(trans!==null)v.mayak+=quantity*num(trans);
+   if(cost===null||(kind==='fbo'&&trans===null))v.missing=true;
+   if(cost!==null)v.cogs+=quantity*num(cost);if(kind==='fbo'&&trans!==null)v.mayak+=quantity*num(trans);
   }
   grouped.set(sku,v);
  }
  const rows:Row[]=[...grouped].map(([sku,v])=>{
   const mapping=bySku.get(sku),master=mapping?.master_code??null;
-  return {article:mapping?.offer_id??'SKU:'+sku,name:'',master_code:master,manager:master?byManager.get(master)??'Не назначен':'Не назначен',orders:v.units,cancelled:null,buyouts:null,revenue:v.income,charges:v.expense,cogs:v.missing?null:v.cogs,mayak:v.missing?null:v.mayak,advertising:null,storage:null,profit:v.missing?null:v.income+v.expense-v.cogs-v.mayak,note:'Оценка по уникальным отправлениям, не по подтверждённым выкупам'};
+  return {article:mapping?.offer_id??'SKU:'+sku,name:'',master_code:master,manager:master?byManager.get(master)??'Не назначен':'Не назначен',orders:v.units,cancelled:null,buyouts:null,revenue:v.income,charges:v.expense,cogs:v.missing?null:v.cogs,mayak:kind==='fbs'?0:v.missing?null:v.mayak,advertising:null,storage:null,profit:v.missing?null:v.income+v.expense-v.cogs-v.mayak,note:'Оценка по уникальным отправлениям, не по подтверждённым выкупам'};
  }).sort((a,b)=>num(b.revenue)-num(a.revenue));
- return NextResponse.json({ok:true,source:'ozon_finance_accruals POSTING / delivery_schema',rows,note:'Ozon: начисления по отправлениям выбранной схемы из финансового реестра. Себестоимость и ТК Маяк оценены по уникальным отправлениям, без подтверждения выкупов. Общие ITEM/NON_ITEM, реклама и хранение не распределены, поэтому операционная прибыль является предварительной оценкой.'},{headers:{'Cache-Control':'private,no-store'}});
+ return NextResponse.json({ok:true,source:'ozon_finance_accruals POSTING / delivery_schema',rows,note:'Ozon: начисления по отправлениям выбранной схемы из финансового реестра. Для FBS расходы ТК Маяк нулевые. Для FBO ТК Маяк оценена по отправлениям. Себестоимость оценена по уникальным отправлениям, без подтверждения выкупов. Общие ITEM/NON_ITEM, реклама и хранение не распределены, поэтому операционная прибыль является предварительной оценкой.'},{headers:{'Cache-Control':'private,no-store'}});
  }catch(e){const error=e instanceof Error?e.message:'Ошибка финансового отчёта';return NextResponse.json({error},{status:error==='Требуется авторизация'?401:error.startsWith('Недостаточно прав')?403:500});}}
