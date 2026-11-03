@@ -228,6 +228,10 @@ function StockAlertIcon() {
 
 }
 
+function TaskCancelledIcon() {
+  return <span className="home-task-cancelled-stop">STOP</span>;
+}
+
 
 // ============================================================
 // TYPES
@@ -1294,6 +1298,25 @@ export default function HomeHeaderActions() {
           60 * 1000
         );
 
+      const supabase = createClient();
+      const taskNotificationChannel = currentProfile?.user_id
+        ? supabase
+            .channel(`workspace-task-notifications-header-${currentProfile.user_id}`)
+            .on(
+              "postgres_changes",
+              {
+                event: "INSERT",
+                schema: "public",
+                table: "workspace_task_notifications",
+                filter: `recipient_id=eq.${currentProfile.user_id}`,
+              },
+              () => {
+                void loadSyncNotifications();
+              }
+            )
+            .subscribe()
+        : null;
+
 
       function handleDismissedNotification(
         event:
@@ -1352,6 +1375,10 @@ export default function HomeHeaderActions() {
           SYNC_NOTIFICATION_DISMISSED_EVENT,
           handleDismissedNotification
         );
+
+        if (taskNotificationChannel) {
+          void supabase.removeChannel(taskNotificationChannel);
+        }
 
       };
 
@@ -3615,12 +3642,12 @@ export default function HomeHeaderActions() {
 
                                     className={
                                       `home-header-sync-notification ${
-                                        notification.kind ===
-                                          "stock_zero"
+                                        notification.kind === "stock_zero"
+                                        || notification.kind === "task_cancelled"
 
-                                          ? "home-header-sync-notification--alert"
+                                        ? "home-header-sync-notification--alert"
 
-                                          : ""
+                                        : ""
                                       } ${
                                         exitingSyncNotificationIds.has(
                                           notification.id
@@ -3678,21 +3705,19 @@ export default function HomeHeaderActions() {
 
                                     <span
                                       className={
-                                        notification.kind ===
-                                          "stock_zero"
-
-                                          ? "home-header-sync-notification-icon home-header-sync-notification-icon--alert"
-
-                                          : "home-header-sync-notification-icon"
+                                        notification.kind === "task_cancelled"
+                                          ? "home-header-sync-notification-icon home-header-sync-notification-icon--task-cancelled"
+                                          : notification.kind === "stock_zero"
+                                            ? "home-header-sync-notification-icon home-header-sync-notification-icon--alert"
+                                            : "home-header-sync-notification-icon"
                                       }
                                     >
                                       {
-                                        notification.kind ===
-                                          "stock_zero"
-
-                                          ? <StockAlertIcon />
-
-                                          : <SyncSuccessIcon />
+                                        notification.kind === "task_cancelled"
+                                          ? <TaskCancelledIcon />
+                                          : notification.kind === "stock_zero"
+                                            ? <StockAlertIcon />
+                                            : <SyncSuccessIcon />
                                       }
                                     </span>
 

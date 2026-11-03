@@ -1,7 +1,10 @@
 export type SyncNotificationKind =
   | "sync_success"
-  | "stock_zero";
+  | "stock_zero"
+  | "task_cancelled";
 
+
+import { createClient } from "../lib/supabase/client";
 
 export type SyncNotification = {
   id:
@@ -11,9 +14,10 @@ export type SyncNotification = {
     SyncNotificationKind;
 
   marketplace:
-    "ozon"
+    | "ozon"
     | "wildberries"
-    | "yandex_market";
+    | "yandex_market"
+    | null;
 
   marketplaceLabel:
     string;
@@ -195,70 +199,94 @@ export function dismissSyncNotification(
 
 
 export async function loadVisibleSyncNotifications(
-  userId?:
-    string | null,
+  userId?: string | null,
+  signal?: AbortSignal
+): Promise<SyncNotification[]> {
+  const notifications: SyncNotification[] = [];
 
-  signal?:
-    AbortSignal
-):
-Promise<SyncNotification[]> {
+  try {
+    const response = await fetch("/api/home/sync-notifications", {
+      method: "GET",
+      cache: "no-store",
+      signal,
+    });
 
-  const response =
-    await fetch(
-      "/api/home/sync-notifications",
-      {
-        method:
-          "GET",
+    if (response.ok) {
+      const data = await response.json() as {
+        ok?: boolean;
+        notifications?: SyncNotification[];
+      };
 
-        cache:
-          "no-store",
-
-        signal,
+      if (data.ok === true && Array.isArray(data.notifications)) {
+        notifications.push(...data.notifications);
       }
-    );
-
-
-  const data =
-    await response.json() as {
-      ok?:
-        boolean;
-
-      notifications?:
-        SyncNotification[];
-    };
-
-
-  if (
-    !response.ok
-    ||
-    data.ok !==
-      true
-  ) {
-
-    return [];
-
+    }
+  } catch (cause) {
+    if (signal?.aborted) throw cause;
   }
 
+  if (signal?.aborted) {
+    throw new DOMException("Загрузка уведомлений отменена", "AbortError");
+  }
 
-  const dismissed =
-    getDismissedSyncNotificationIds(
-      userId
+  try {
+    const { data, error } = await createClient()
+      .rpc("workspace_task_notifications_snapshot");
+
+    if (!error && Array.isArray(data)) {
+      const dateFormatter = new Intl.DateTimeFormat("ru-RU", {
+        timeZone: "Asia/Krasnoyarsk",
+        day: "2-digit",
+        month: "2-digit",
+      });
+      const timeFormatter = new Intl.DateTimeFormat("ru-RU", {
+        timeZone: "Asia/Krasnoyarsk",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+
+      for (const row of data as Array<{
+        id: string;
+        kind: "task_cancelled";
+        title: string;
+        description: string;
+        href: string;
+        notificationAt: string;
+      }>) {
+        const createdAt = row.notificationAt;
+        const date = new Date(createdAt);
+        if (!row.id || Number.isNaN(date.getTime())) continue;
+
+        const time = timeFormatter.format(date);
+        notifications.push({
+          id: row.id,
+          kind: "task_cancelled",
+          marketplace: null,
+          marketplaceLabel: "Задачи",
+          title: row.title || "Задача отменена",
+          completedAt: createdAt,
+          notificationAt: createdAt,
+          dataDate: dateFormatter.format(date),
+          updateTime: time,
+          notificationTime: time,
+          notificationDisplay: time,
+          description: row.description,
+          href: row.href || "/tasks",
+        });
+      }
+    }
+  } catch (cause) {
+    if (signal?.aborted) throw cause;
+    console.error("Не удалось загрузить уведомления об отменённых задачах:", cause);
+  }
+
+  const dismissed = getDismissedSyncNotificationIds(userId);
+
+  return notifications
+    .filter(notification => !dismissed.has(notification.id))
+    .sort((left, right) =>
+      new Date(right.notificationAt).getTime()
+      - new Date(left.notificationAt).getTime()
     );
-
-
-  return (
-    Array.isArray(
-      data.notifications
-    )
-
-      ? data.notifications
-
-      : []
-  ).filter(
-    notification =>
-      !dismissed.has(
-        notification.id
-      )
-  );
-
 }

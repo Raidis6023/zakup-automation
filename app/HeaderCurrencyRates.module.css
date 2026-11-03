@@ -61,8 +61,8 @@
   text-align: center;
 }
 
-.up { color: #37c98e; }
-.down { color: #f46b75; }
+.up { color: #f46b75; }
+.down { color: #37c98e; }
 .flat { color: #d6a62e; }
 
 html[data-theme="dark"] .flat { color: #e7b94e; }

@@ -2370,6 +2370,24 @@ html[data-theme="dark"] .home-header-sync-notification-dismiss {
   color: #ffffff;
 }
 
+.home-header-sync-notification-icon--task-cancelled {
+  background: #ef5d64 !important;
+  color: #ffffff !important;
+}
+
+.home-task-cancelled-stop {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: -.35px;
+  line-height: 1;
+}
+
 html[data-theme="dark"] .home-header-sync-notification-icon--alert {
   background: #fff0f1;
   color: #ef4f59;

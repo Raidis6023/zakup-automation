@@ -107,6 +107,10 @@ function StockAlertIcon() {
   );
 }
 
+function TaskCancelledIcon() {
+  return <span className="home-task-cancelled-stop">STOP</span>;
+}
+
 
 function DismissIcon() {
   return (
@@ -160,6 +164,12 @@ export default function HomeRightPanel() {
 
   const [activeTab, setActiveTab] =
     useState<TabId>("my");
+
+  const [busyTaskIds, setBusyTaskIds] =
+    useState<Set<string>>(() => new Set());
+
+  const [taskActionError, setTaskActionError] =
+    useState<string | null>(null);
 
   useEffect(
     () => {
@@ -251,6 +261,25 @@ export default function HomeRightPanel() {
       const controller =
         new AbortController();
 
+      const supabase = createClient();
+      const taskNotificationChannel = profile?.user_id
+        ? supabase
+            .channel(`workspace-task-notifications-panel-${profile.user_id}`)
+            .on(
+              "postgres_changes",
+              {
+                event: "INSERT",
+                schema: "public",
+                table: "workspace_task_notifications",
+                filter: `recipient_id=eq.${profile.user_id}`,
+              },
+              () => {
+                void loadSyncNotifications();
+              }
+            )
+            .subscribe()
+        : null;
+
       async function loadSyncNotifications() {
         setNotificationsLoading(
           true
@@ -300,6 +329,9 @@ export default function HomeRightPanel() {
 
       return () => {
         controller.abort();
+        if (taskNotificationChannel) {
+          void supabase.removeChannel(taskNotificationChannel);
+        }
       };
     },
     [
@@ -436,6 +468,48 @@ export default function HomeRightPanel() {
   }
 
 
+  async function handleTaskAction(task: TaskItem) {
+    if (!task.action || busyTaskIds.has(task.id)) return;
+
+    setBusyTaskIds(current => new Set(current).add(task.id));
+    setTaskActionError(null);
+
+    try {
+      const { error } = await createClient().rpc("workspace_task_action", {
+        p_action: task.action,
+        p_payload: { id: task.id },
+      });
+
+      if (error) throw error;
+
+      if (task.action === "take") {
+        setActiveTab("my");
+      }
+
+      window.dispatchEvent(new CustomEvent("workspace-tasks-updated"));
+    } catch (cause) {
+      const message =
+        cause instanceof Error
+          ? cause.message
+          : "Не удалось изменить задачу";
+
+      setTaskActionError(
+        message.toLowerCase().includes("уже взята")
+          ? "Эту задачу уже взял другой сотрудник. Список обновлён."
+          : message
+      );
+
+      // Refresh even on a conflict: another employee may have won the race.
+      window.dispatchEvent(new CustomEvent("workspace-tasks-updated"));
+    } finally {
+      setBusyTaskIds(current => {
+        const next = new Set(current);
+        next.delete(task.id);
+        return next;
+      });
+    }
+  }
+
   const tabs = TASK_TABS;
 
   const myTasks = useMemo<TaskItem[]>(
@@ -548,6 +622,12 @@ export default function HomeRightPanel() {
           }
         </div>
 
+        {taskActionError && (
+          <div className="home-right-panel-task-error" role="alert">
+            {taskActionError}
+          </div>
+        )}
+
         <div className="home-right-panel-task-list">
           {
             workspaceTasksLoading && !workspaceTaskSnapshot
@@ -594,7 +674,7 @@ export default function HomeRightPanel() {
                               `home-right-panel-status home-right-panel-status--${task.dotColor}`
                             }
                           />
-                          <div>
+                          <div className="home-right-panel-task-copy">
                             <strong>{task.title}</strong>
                             <span>
                               {task.creator}
@@ -602,6 +682,24 @@ export default function HomeRightPanel() {
                               {task.assignee}
                             </span>
                           </div>
+                          <button
+                            type="button"
+                            className={
+                              `home-right-panel-task-action home-right-panel-task-action--${task.action}`
+                            }
+                            disabled={busyTaskIds.has(task.id)}
+                            onClick={() => void handleTaskAction(task)}
+                          >
+                            {
+                              busyTaskIds.has(task.id)
+                                ? "..."
+                                : task.action === "take"
+                                  ? "Взять в работу"
+                                  : task.action === "finish"
+                                    ? "Завершить"
+                                    : "Отменить"
+                            }
+                          </button>
                         </div>
                       ))
                     : (
@@ -664,8 +762,8 @@ export default function HomeRightPanel() {
                         }
                         className={
                           `home-sync-notification ${
-                            notification.kind ===
-                              "stock_zero"
+                            notification.kind === "stock_zero"
+                              || notification.kind === "task_cancelled"
 
                               ? "home-sync-notification--alert"
 
@@ -715,21 +813,19 @@ export default function HomeRightPanel() {
                       >
                         <span
                           className={
-                            notification.kind ===
-                              "stock_zero"
-
-                              ? "home-sync-notification-icon home-sync-notification-icon--alert"
-
-                              : "home-sync-notification-icon"
+                            notification.kind === "task_cancelled"
+                              ? "home-sync-notification-icon home-sync-notification-icon--task-cancelled"
+                              : notification.kind === "stock_zero"
+                                ? "home-sync-notification-icon home-sync-notification-icon--alert"
+                                : "home-sync-notification-icon"
                           }
                         >
                           {
-                            notification.kind ===
-                              "stock_zero"
-
-                              ? <StockAlertIcon />
-
-                              : <SyncSuccessIcon />
+                            notification.kind === "task_cancelled"
+                              ? <TaskCancelledIcon />
+                              : notification.kind === "stock_zero"
+                                ? <StockAlertIcon />
+                                : <SyncSuccessIcon />
                           }
                         </span>
 

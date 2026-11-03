@@ -482,17 +482,18 @@ svg {
     grid;
 
   grid-template-columns:
-    10px
+    9px
     minmax(
       0,
       1fr
-    );
+    )
+    auto;
 
   gap:
-    11px;
+    9px;
 
   align-items:
-    start;
+    center;
 
   padding:
     13px
@@ -519,6 +520,61 @@ svg {
 
   gap:
     0;
+}
+
+.home-right-panel-task-copy {
+  min-width: 0;
+}
+
+.home-right-panel-task-action {
+  flex: none;
+  min-height: 28px;
+  padding: 5px 8px;
+  border: 1px solid var(--ws-border);
+  border-radius: 7px;
+  background: var(--ws-surface-soft);
+  color: var(--ws-text);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color .14s ease, border-color .14s ease, opacity .14s ease;
+}
+
+.home-right-panel-task-action:hover:not(:disabled) {
+  background: var(--ws-surface-hover);
+  border-color: var(--ws-icon);
+}
+
+.home-right-panel-task-action:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
+.home-right-panel-task-action--take {
+  border-color: color-mix(in srgb, #37c98e 40%, transparent);
+  color: #15965f;
+}
+
+.home-right-panel-task-action--finish {
+  border-color: color-mix(in srgb, #37c98e 40%, transparent);
+  color: #15965f;
+}
+
+.home-right-panel-task-action--cancel {
+  border-color: color-mix(in srgb, #ef5d64 40%, transparent);
+  color: #dc454d;
+}
+
+.home-right-panel-task-error {
+  padding: 7px 9px;
+  border: 1px solid color-mix(in srgb, #ef5d64 35%, transparent);
+  border-radius: 7px;
+  color: #dc454d;
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 
@@ -1215,6 +1271,24 @@ html[data-theme="dark"] .home-sync-notification-dismiss {
 .home-sync-notification-icon--alert {
   background: #ef5d64;
   color: #ffffff;
+}
+
+.home-sync-notification-icon--task-cancelled {
+  background: #ef5d64 !important;
+  color: #ffffff !important;
+}
+
+.home-task-cancelled-stop {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #ffffff;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: -.35px;
+  line-height: 1;
 }
 
 html[data-theme="dark"] .home-sync-notification-icon--alert {

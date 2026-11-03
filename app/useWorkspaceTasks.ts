@@ -15,42 +15,67 @@ export default function useWorkspaceTasks() {
   useEffect(() => {
     let active = true;
     let requestInFlight = false;
+    let refreshQueued = false;
+    const supabase = createClient();
 
     async function refresh() {
-      if (requestInFlight) return;
+      if (requestInFlight) {
+        refreshQueued = true;
+        return;
+      }
+
       requestInFlight = true;
 
-      try {
-        const { data, error: fetchError } = await createClient()
-          .rpc("workspace_home_tasks_snapshot");
+      do {
+        refreshQueued = false;
 
-        if (fetchError) throw fetchError;
-        if (
-          !data
-          || !Array.isArray(data.tasks)
-          || !Array.isArray(data.notes)
-        ) {
-          throw new Error("Сервер вернул некорректный список задач и заметок");
-        }
+        try {
+          const { data, error: fetchError } = await supabase
+            .rpc("workspace_home_tasks_snapshot");
 
-        if (active) {
-          setSnapshot(data as WorkspaceTaskSnapshot);
-          setError(null);
+          if (fetchError) throw fetchError;
+          if (
+            !data
+            || !Array.isArray(data.tasks)
+            || !Array.isArray(data.notes)
+          ) {
+            throw new Error("Сервер вернул некорректный список задач и заметок");
+          }
+
+          if (active) {
+            setSnapshot(data as WorkspaceTaskSnapshot);
+            setError(null);
+          }
+        } catch (cause) {
+          if (active) {
+            setError(cause instanceof Error ? cause.message : "Не удалось загрузить задачи");
+            console.error("Не удалось обновить задачи рабочего меню:", cause);
+          }
         }
-      } catch (cause) {
-        if (active) {
-          setError(cause instanceof Error ? cause.message : "Не удалось загрузить задачи");
-          console.error("Не удалось обновить задачи рабочего меню:", cause);
-        }
-      } finally {
-        requestInFlight = false;
-        if (active) setLoading(false);
-      }
+      } while (active && refreshQueued);
+
+      requestInFlight = false;
+      if (active) setLoading(false);
     }
 
     function handleVisibilityChange() {
       if (document.visibilityState === "visible") void refresh();
     }
+
+    const channel = supabase
+      .channel(`workspace-task-events-${Math.random().toString(36).slice(2)}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "workspace_task_events",
+        },
+        () => {
+          void refresh();
+        }
+      )
+      .subscribe();
 
     void refresh();
 
@@ -66,6 +91,7 @@ export default function useWorkspaceTasks() {
       window.clearInterval(intervalId);
       window.removeEventListener(TASKS_UPDATED_EVENT, refresh);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      void supabase.removeChannel(channel);
     };
   }, []);
 

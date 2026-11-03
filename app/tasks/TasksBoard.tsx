@@ -213,12 +213,42 @@ export default function TasksBoard() {
 
   useEffect(() => {
     let active = true;
+
+    const channel = supabase
+      .channel(`workspace-task-board-${Math.random().toString(36).slice(2)}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "workspace_task_events",
+        },
+        () => {
+          void refresh().catch(err => {
+            if (active) setError(err instanceof Error ? err.message : "Не удалось обновить задачи");
+          });
+        }
+      )
+      .subscribe();
+
+    function handleTasksUpdated() {
+      void refresh().catch(err => {
+        if (active) setError(err instanceof Error ? err.message : "Не удалось обновить задачи");
+      });
+    }
+
+    window.addEventListener("workspace-tasks-updated", handleTasksUpdated);
     setLoading(true);
     void refresh().catch(err => {
       if (active) setError(err instanceof Error ? err.message : "Не удалось получить задачи");
     }).finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [refresh]);
+
+    return () => {
+      active = false;
+      window.removeEventListener("workspace-tasks-updated", handleTasksUpdated);
+      void supabase.removeChannel(channel);
+    };
+  }, [refresh, supabase]);
 
   const onAction = useCallback<Action>(async (name, payload) => {
     if (busy) return false;
@@ -244,6 +274,7 @@ export default function TasksBoard() {
       return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Не удалось сохранить изменения");
+      await refresh().catch(() => undefined);
       return false;
     } finally {
       setBusy(false);
