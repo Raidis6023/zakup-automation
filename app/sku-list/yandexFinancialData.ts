@@ -4,6 +4,7 @@ export type YandexFinancialRow = {
   profit: number;
   revenue: number;
   buys: number;
+  name?: string | null;
 };
 
 

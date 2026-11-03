@@ -332,6 +332,7 @@ export default function SkuListTabsClient({
   ozonRows,
   wildberriesRows,
   yandexRows,
+  yandexOctoberRows,
 }: {
   ozonRows:
     SkuListFinancialRow[];
@@ -340,6 +341,9 @@ export default function SkuListTabsClient({
     SkuListFinancialRow[];
 
   yandexRows:
+    SkuListFinancialRow[];
+
+  yandexOctoberRows:
     SkuListFinancialRow[];
 }) {
   const [
@@ -350,29 +354,68 @@ export default function SkuListTabsClient({
       "all"
     );
 
-  const [
-    marketplaceRows,
-    setMarketplaceRows,
-  ] =
-    useState<{
-      ozon:
-        SkuListFinancialRow[];
+  const [selectedYear, setSelectedYear] =
+    useState("2026");
 
-      wildberries:
-        SkuListFinancialRow[];
+  const [selectedMonth, setSelectedMonth] =
+    useState("09");
 
-      yandexMarket:
-        SkuListFinancialRow[];
-    }>({
-      ozon:
-        ozonRows,
+  const [statusOverrides, setStatusOverrides] =
+    useState<Record<string, ProductArticleStatus>>({});
 
-      wildberries:
-        wildberriesRows,
+  const periodMarketplaceRows = useMemo(
+    () => {
+      if (
+        selectedYear === "2026"
+        && selectedMonth === "10"
+      ) {
+        return {
+          ozon: [] as SkuListFinancialRow[],
+          wildberries: [] as SkuListFinancialRow[],
+          yandexMarket: yandexOctoberRows,
+        };
+      }
 
-      yandexMarket:
-        yandexRows,
-    });
+      return {
+        ozon: ozonRows,
+        wildberries: wildberriesRows,
+        yandexMarket: yandexRows,
+      };
+    },
+    [
+      selectedYear,
+      selectedMonth,
+      ozonRows,
+      wildberriesRows,
+      yandexRows,
+      yandexOctoberRows,
+    ]
+  );
+
+  const marketplaceRows = useMemo(
+    () => {
+      const applyStatusOverrides = (
+        source: SkuListFinancialRow[]
+      ) => source.map(row =>
+        row.enot && statusOverrides[row.enot]
+          ? {
+              ...row,
+              status: statusOverrides[row.enot],
+            }
+          : row
+      );
+
+      return {
+        ozon: applyStatusOverrides(periodMarketplaceRows.ozon),
+        wildberries: applyStatusOverrides(periodMarketplaceRows.wildberries),
+        yandexMarket: applyStatusOverrides(periodMarketplaceRows.yandexMarket),
+      };
+    },
+    [
+      periodMarketplaceRows,
+      statusOverrides,
+    ]
+  );
 
 
   const allMarketplaceRows =
@@ -776,54 +819,10 @@ export default function SkuListTabsClient({
       ??
       "Активный";
 
-    setMarketplaceRows(
-      previous => ({
-        ozon:
-          previous.ozon.map(
-            row =>
-              row.enot ===
-                masterCode
-
-                ? {
-                    ...row,
-                    status:
-                      nextStatus,
-                  }
-
-                : row
-          ),
-
-        wildberries:
-          previous.wildberries.map(
-            row =>
-              row.enot ===
-                masterCode
-
-                ? {
-                    ...row,
-                    status:
-                      nextStatus,
-                  }
-
-                : row
-          ),
-
-        yandexMarket:
-          previous.yandexMarket.map(
-            row =>
-              row.enot ===
-                masterCode
-
-                ? {
-                    ...row,
-                    status:
-                      nextStatus,
-                  }
-
-                : row
-          ),
-      })
-    );
+    setStatusOverrides(previous => ({
+      ...previous,
+      [masterCode]: nextStatus,
+    }));
 
     setSavingMasterCodes(
       previous => {
@@ -874,54 +873,10 @@ export default function SkuListTabsClient({
         error
       );
 
-      setMarketplaceRows(
-        previous => ({
-          ozon:
-            previous.ozon.map(
-              row =>
-                row.enot ===
-                  masterCode
-
-                  ? {
-                      ...row,
-                      status:
-                        previousStatus,
-                    }
-
-                  : row
-            ),
-
-          wildberries:
-            previous.wildberries.map(
-              row =>
-                row.enot ===
-                  masterCode
-
-                  ? {
-                      ...row,
-                      status:
-                        previousStatus,
-                    }
-
-                  : row
-            ),
-
-          yandexMarket:
-            previous.yandexMarket.map(
-              row =>
-                row.enot ===
-                  masterCode
-
-                  ? {
-                      ...row,
-                      status:
-                        previousStatus,
-                    }
-
-                  : row
-            ),
-        })
-      );
+      setStatusOverrides(previous => ({
+        ...previous,
+        [masterCode]: previousStatus,
+      }));
     } finally {
       setSavingMasterCodes(
         previous => {
@@ -1045,13 +1000,14 @@ export default function SkuListTabsClient({
         activeTab
       }
     >
-      <div
-        className=
-          "sku-list-tabs"
-        role="tablist"
-        aria-label=
-          "Маркетплейс"
-      >
+      <div className="sku-list-toolbar">
+        <div
+          className=
+            "sku-list-tabs"
+          role="tablist"
+          aria-label=
+            "Маркетплейс"
+        >
         <button
           type="button"
           role="tab"
@@ -1151,6 +1107,32 @@ export default function SkuListTabsClient({
         >
           Яндекс Маркет
         </button>
+        </div>
+
+        <div className="sku-list-period-controls">
+          <label className="sku-list-period-control">
+            <span>Год</span>
+            <select
+              aria-label="Год"
+              value={selectedYear}
+              onChange={event => setSelectedYear(event.target.value)}
+            >
+              <option value="2026">2026</option>
+            </select>
+          </label>
+
+          <label className="sku-list-period-control">
+            <span>Месяц</span>
+            <select
+              aria-label="Месяц"
+              value={selectedMonth}
+              onChange={event => setSelectedMonth(event.target.value)}
+            >
+              <option value="09">Сентябрь</option>
+              <option value="10">Октябрь</option>
+            </select>
+          </label>
+        </div>
       </div>
 
       {
@@ -1420,7 +1402,18 @@ export default function SkuListTabsClient({
 
                   <tbody>
                     {
-                      sortedRows.map(
+                      sortedRows.length === 0
+                        ? (
+                          <tr>
+                            <td
+                              colSpan={activeTab === "all" ? 5 : 8}
+                              className="sku-list-period-empty"
+                            >
+                              Данные за {selectedMonth === "10" ? "октябрь" : "сентябрь"} {selectedYear} для этого маркетплейса ещё не загружены.
+                            </td>
+                          </tr>
+                        )
+                        : sortedRows.map(
                         (
                           row,
                           index

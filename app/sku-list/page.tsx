@@ -11,7 +11,12 @@ import {
 
 import {
   getYandexSeptemberRows,
+  type YandexFinancialRow,
 } from "./yandexFinancialData";
+
+import {
+  getYandexOctoberRows,
+} from "./yandexOctoberFinancialData";
 
 import SkuListTabsClient, {
   type ProductArticleStatus,
@@ -225,6 +230,10 @@ function normalizeForMatch(
     .replace(
       /[‐‑‒–—−]/g,
       "-"
+    )
+    .replace(
+      /\s+/g,
+      " "
     );
 }
 
@@ -559,6 +568,7 @@ const YANDEX_ARTICLE_ALIASES =
 
 
 function buildYandexRows(
+  financialRows: YandexFinancialRow[],
   listings: MarketplaceListingRow[],
   yandexProducts: YandexProductRow[],
   products: ProductMappingRow[],
@@ -686,7 +696,7 @@ SkuListFinancialRow[] {
       )
     );
 
-  return getYandexSeptemberRows()
+  return financialRows
     .map(
       row => {
         const normalizedArticle =
@@ -746,9 +756,8 @@ SkuListFinancialRow[] {
             ),
 
           productName:
-            mapping?.productName
-            ??
-            null,
+            (row.name?.trim() || mapping?.productName)
+            ?? null,
 
           revenue:
             row.revenue,
@@ -799,6 +808,16 @@ export default async function SkuListPage() {
 
   const yandexRows =
     buildYandexRows(
+      getYandexSeptemberRows(),
+      yandexMappings,
+      yandexProducts,
+      mappings,
+      statuses
+    );
+
+  const yandexOctoberRows =
+    buildYandexRows(
+      getYandexOctoberRows(),
       yandexMappings,
       yandexProducts,
       mappings,
@@ -829,6 +848,9 @@ export default async function SkuListPage() {
           }
           yandexRows={
             yandexRows
+          }
+          yandexOctoberRows={
+            yandexOctoberRows
           }
         />
         <VedNewProductsClient />
