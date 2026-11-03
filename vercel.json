@@ -43,6 +43,10 @@
     {
       "path": "/api/agents/wb-finance-history-cron",
       "schedule": "30 2 * * *"
+    },
+    {
+      "path": "/api/agents/wb-finance-ads-cron",
+      "schedule": "10 4 * * *"
     }
   ]
 }
