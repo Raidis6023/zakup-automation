@@ -9,6 +9,7 @@ export type MarketplaceFinancialRow = {
   profit: number;
   revenue: number;
   buys: number;
+  sku?: string | null;
 };
 
 
