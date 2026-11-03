@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
   const {sellerClientId:client,sellerApiKey:key}=await getOzonCredentials();
   if(!client || !key) return reply({
     ok:false,stage:"configuration",
-    error:"Не заданы ключи Ozon Seller. Добавьте их в разделе «Администрирование → API».
+    error:"Не заданы ключи Ozon Seller. Добавьте их в разделе «Администрирование → API»",
   },503);
 
   // Finance planning and loading must not rely on scheduler invocation order.
