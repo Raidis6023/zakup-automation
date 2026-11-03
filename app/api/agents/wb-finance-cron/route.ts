@@ -104,24 +104,20 @@ async function work(req:NextRequest,attempt:number,started:number,history?:{run_
  }
 }
 
+// Daily financial sync and historical recovery are separate requests, so the
+// second report cannot hit the same WB finance rate limit at midnight.
 async function runAll(req:NextRequest){
- const started=Date.now();
- const [financeResponse,auxiliary]=await Promise.all([work(req,0,started),runAuxiliarySync()]);
+ const [financeResponse,auxiliary]=await Promise.all([work(req,0,Date.now()),runAuxiliarySync()]);
  const finance=await financeResponse.json();
- let backfill:Record<string,unknown>|null=null;
- // Restore the two missing October days from a complete historical WB report.
- // Never mark an old partial cache as complete or synthesize missing daily snapshots.
- if(financeResponse.ok&&finance.status==='complete'&&Date.now()-started<210000){
-  const db=createAdminClient(),target=['2026-10-01','2026-10-02'];
-  const stored=await db.from('wb_finance_daily_snapshots').select('snapshot_day').in('snapshot_day',target);
-  if(stored.error)backfill={ok:false,error:stored.error.message};
-  else if((stored.data??[]).length<target.length){
-   const response=await work(req,0,Date.now(),{run_day:'2026-10-30',from:'2026-10-01',to:'2026-10-02'});
-   backfill=await response.json();
-  }else backfill={ok:true,status:'cached'};
- }
  const ok=financeResponse.ok&&auxiliary.ok;
- return reply({ok,finance,auxiliary,backfill},ok?200:503);
+ return reply({ok,finance,auxiliary,backfill:{status:'separate_daily_job',period:'2026-10-01 – 2026-10-02'}},ok?200:503);
 }
-export async function GET(req:NextRequest){return runAll(req);}
+async function runHistoricalWbFinance(req:NextRequest){
+ const db=createAdminClient(),target=['2026-10-01','2026-10-02'];
+ const snapshots=await db.from('wb_finance_daily_snapshots').select('snapshot_day').in('snapshot_day',target);
+ if(snapshots.error)return reply({ok:false,error:snapshots.error.message},503);
+ if((snapshots.data??[]).length===2)return reply({ok:true,status:'complete',period:target});
+ return work(req,0,Date.now(),{run_day:'2026-10-30',from:'2026-10-01',to:'2026-10-02'});
+}
+export async function GET(req:NextRequest){return req.nextUrl.searchParams.get("history")==="1"?runHistoricalWbFinance(req):runAll(req);}
 export async function POST(req:NextRequest){try{await adminAccess();const secret=process.env.CRON_SECRET;if(!secret)return reply({ok:false,error:"Не найден CRON_SECRET"},503);const internal=new NextRequest(req.url,{method:"GET",headers:{authorization:"Bearer "+secret}});return runAll(internal);}catch(e){return reply({ok:false,error:e instanceof Error?e.message:String(e)},403);}}

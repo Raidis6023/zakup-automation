@@ -50,16 +50,16 @@ async function syncAds(from:string,to:string,deadline:number){
  const ids=[...new Set((body?.adverts??[]).flatMap(group=>(group.advert_list??[]).map(x=>Number(x.advertId))).filter(Boolean))];
  const grouped=new Map<string,{snapshot_day:string;campaign_id:number;nm_id:number;spend:number;views:number;clicks:number;orders:number;sum_price:number;payload:Json;captured_at:string}>();
  let processedBatches=0;
- for(let i=0;i<ids.length;i+=100){
+ for(let i=0;i<ids.length;i+=50){
   if(i&&Date.now()+21000<deadline)await sleep(20500);if(Date.now()>deadline-45000)break;
-  const url=new URL('https://advert-api.wildberries.ru/adv/v3/fullstats');url.searchParams.set('ids',ids.slice(i,i+100).join(','));url.searchParams.set('beginDate',from);url.searchParams.set('endDate',to);
+  const url=new URL('https://advert-api.wildberries.ru/adv/v3/fullstats');url.searchParams.set('ids',ids.slice(i,i+50).join(','));url.searchParams.set('beginDate',from);url.searchParams.set('endDate',to);
   const campaigns=await request(url.toString(),token);if(!Array.isArray(campaigns))throw Error('WB advertising: неожиданный формат ответа');
   processedBatches++;
   for(const campaign of campaigns as Json[]){const campaignId=num(campaign.advertId);for(const day of Array.isArray(campaign.days)?campaign.days as Json[]:[]){const d=String(day.date??'').slice(0,10);for(const app of Array.isArray(day.apps)?day.apps as Json[]:[]){for(const item of Array.isArray(app.nms)?app.nms as Json[]:[]){const nmId=num(item.nmId);if(!nmId||d<from||d>to)continue;const key=d+'|'+campaignId+'|'+nmId,old=grouped.get(key);grouped.set(key,{snapshot_day:d,campaign_id:campaignId,nm_id:nmId,spend:num(item.sum)+(old?.spend??0),views:num(item.views)+(old?.views??0),clicks:num(item.clicks)+(old?.clicks??0),orders:num(item.orders)+(old?.orders??0),sum_price:num(item.sum_price)+(old?.sum_price??0),payload:{...item,appType:app.appType},captured_at:new Date().toISOString()});}}}}
  }
  const db=createAdminClient();const records=[...grouped.values()];
  const byDay=new Map<string,number>();for(const row of records)byDay.set(row.snapshot_day,(byDay.get(row.snapshot_day)??0)+1);
- const totalBatches=Math.ceil(ids.length/100),complete=processedBatches===totalBatches;
+ const totalBatches=Math.ceil(ids.length/50),complete=processedBatches===totalBatches;
  if(!complete)return {ok:false,campaigns:ids.length,rows:records.length,batches:processedBatches,total_batches:totalBatches,complete:false,error:'Частичная выгрузка рекламы WB: старый кэш сохранён'};
  const deleted=await db.from('wb_finance_ad_daily').delete().gte('snapshot_day',from).lte('snapshot_day',to);if(deleted.error)throw deleted.error;
  await upsertBatches('wb_finance_ad_daily',records,'snapshot_day,campaign_id,nm_id');

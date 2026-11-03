@@ -35,18 +35,24 @@ async function readPages<T>(load:(from:number,to:number)=>Promise<{data:T[]|null
 type Rate={nm_id:string;valid_from:string;cost_cents:number|null;mayak_cents:number|null;version:number};
 function groupFinancial(lines:FinanceLine[],rates:Rate[]=[],sharedRates:Map<string,Rate[]>=new Map()) {
  const rateMap=new Map<string,Rate[]>();for(const r of rates){const a=rateMap.get(r.nm_id)??[];a.push(r);rateMap.set(r.nm_id,a);}for(const a of rateMap.values())a.sort((x,y)=>y.valid_from.localeCompare(x.valid_from));
-  const byId=new Map<string,{nm_id:string;article:string;name:string;realization:number;to_transfer:number;delivery:number;storage_in_report:number|null;acceptance:number;penalty:number;deduction:number;rows:number;sales_units:number;return_units:number;net_transfer:number;cogs_estimate:number;mayak_estimate:number;cost_missing:boolean;mayak_missing:boolean;cost_rub:number|null;mayak_rub:number|null;operations:Record<string,{amount:number;count:number;realization:number;delivery:number;storage:number;penalty:number;deduction:number}>}>();
+  const byId=new Map<string,{nm_id:string;article:string;name:string;realization:number;gross_retail:number;to_transfer:number;delivery:number;storage_in_report:number|null;acceptance:number;penalty:number;deduction:number;rows:number;sales_units:number;return_units:number;net_transfer:number;cogs_estimate:number;mayak_estimate:number;cost_missing:boolean;mayak_missing:boolean;cost_rub:number|null;mayak_rub:number|null;operations:Record<string,{amount:number;count:number;realization:number;delivery:number;storage:number;penalty:number;deduction:number}>}>();
   for(const l of lines){
     const id=String(l.nmId ?? "0"), article=String(l.vendorCode ?? ""), name=String(l.title ?? l.subjectName ?? "");
     const key=id!=="0" ? id : "unallocated";
     let x=byId.get(key);
-    if(!x){x={nm_id:key,article,name,realization:0,to_transfer:0,delivery:0,storage_in_report:null,acceptance:0,penalty:0,deduction:0,rows:0,sales_units:0,return_units:0,net_transfer:0,cogs_estimate:0,mayak_estimate:0,cost_missing:false,mayak_missing:false,cost_rub:null,mayak_rub:null,operations:{}};byId.set(key,x);}
+    if(!x){x={nm_id:key,article,name,realization:0,gross_retail:0,to_transfer:0,delivery:0,storage_in_report:null,acceptance:0,penalty:0,deduction:0,rows:0,sales_units:0,return_units:0,net_transfer:0,cogs_estimate:0,mayak_estimate:0,cost_missing:false,mayak_missing:false,cost_rub:null,mayak_rub:null,operations:{}};byId.set(key,x);}
     x.rows++;
     const op=String(l.sellerOperName ?? l.docTypeName ?? "Неизвестная операция");
-    const transfer=num(l.forPay),sale=num(l.retailAmount), delivery=num(l.deliveryAmount);
-    x.realization+=sale; x.to_transfer+=transfer; x.delivery+=delivery;
+    const transfer=num(l.forPay),sale=num(l.retailAmount),delivery=num(l.deliveryAmount);
     const doc=String(l.docTypeName??'').toLowerCase(),opName=op.toLowerCase();
     const sold=doc==='продажа'&&opName==='продажа',returned=doc==='возврат'&&opName==='возврат';
+    // WB realization is the final buyer price. Return operations are negative,
+    // regardless of the positive source absolute amounts.
+    const sign=sold?1:returned?-1:0;
+    x.realization+=sign*Math.abs(sale);
+    x.gross_retail+=sign*Math.abs(num(l.retailPrice));
+    x.to_transfer+=returned?-Math.abs(transfer):transfer;
+    x.delivery+=delivery;
     const quantity=Math.max(0,num(l.quantity));
     if(sold)x.sales_units+=quantity;if(returned)x.return_units+=quantity;
     x.net_transfer+=returned?-Math.abs(transfer):transfer;
@@ -68,7 +74,7 @@ function groupFinancial(lines:FinanceLine[],rates:Rate[]=[],sharedRates:Map<stri
   return [...byId.values()].map(x=>{
    const cogs=x.cost_missing?null:round(x.cogs_estimate),mayak_expense=x.mayak_missing?null:round(x.mayak_estimate);
    const preliminary_result=cogs===null||mayak_expense===null?null:round(x.net_transfer-x.delivery-(x.storage_in_report??0)-x.acceptance-x.penalty-x.deduction-cogs-mayak_expense);
-   return {...x,realization:round(x.realization),to_transfer:round(x.to_transfer),delivery:round(x.delivery),storage_in_report:x.storage_in_report==null?null:round(x.storage_in_report),acceptance:round(x.acceptance),penalty:round(x.penalty),deduction:round(x.deduction),buyouts:x.sales_units-x.return_units,cogs,mayak_expense,preliminary_result,missing_rates:[...(x.cost_missing?['Себестоимость']:[]),...(x.mayak_missing?['ТК Маяк']:[])]};
+   return {...x,realization:round(x.realization),gross_retail:round(x.gross_retail),to_transfer:round(x.to_transfer),delivery:round(x.delivery),storage_in_report:x.storage_in_report==null?null:round(x.storage_in_report),acceptance:round(x.acceptance),penalty:round(x.penalty),deduction:round(x.deduction),buyouts:x.sales_units-x.return_units,cogs,mayak_expense,preliminary_result,missing_rates:[...(x.cost_missing?['Себестоимость']:[]),...(x.mayak_missing?['ТК Маяк']:[])]};
   });
 }
 
@@ -273,13 +279,20 @@ export async function GET(request:NextRequest){
    entry.amount+=amount;const item=entry.days.get(day)??{date:day,amount:0,count:0};item.amount+=amount;item.count++;entry.days.set(day,item);commonMap.set(name,entry);
   }
   const unallocated=[...commonMap.values()].map(v=>({name:v.name,amount:v.amount,daily:[...v.days.values()].sort((a,b)=>a.date.localeCompare(b.date))}));
+  // Finance document contains actual WB promotion deductions (as opposed to
+  // per-product advertising analytics). Never subtract the same charges twice.
+  const promotionActual=financialLines.filter(l=>
+   String(l.sellerOperName??'').toLowerCase()==='удержание'&&/wb\s*продвижение/i.test(String(l.bonusTypeName??'')))
+   .reduce((s,l)=>s+Math.abs(num(l.deduction)),0);
+  const otherDeductions=financialLines.filter(l=>num(l.deduction)!==0&&!/wb\s*продвижение/i.test(String(l.bonusTypeName??'')))
+   .reduce((s,l)=>s+Math.abs(num(l.deduction)),0);
   const adItems:AdItem[]=scheme?[]:ads.map(row=>({nm_id:Number(row.nm_id),date:row.snapshot_day,campaign_id:Number(row.campaign_id),spend:Number(row.spend),views:Number(row.views),clicks:Number(row.clicks),orders:Number(row.orders),sum_price:Number(row.sum_price)}));
   const adsComplete=(adSnapshots.data?.length??0)===expectedDays,storageComplete=(storageSnapshots.data?.length??0)===expectedDays,ordersComplete=orders.length>0;
-  return NextResponse.json({ok:true,from,to,scheme:scheme??null,unallocated,financial_rows:financialLines.length,daily,rows:enriched,
+  return NextResponse.json({ok:true,from,to,scheme:scheme??null,unallocated,promotion_actual:round(promotionActual),other_deductions:round(otherDeductions),financial_rows:financialLines.length,daily,rows:enriched,
     ads:{items:adItems,campaigns:new Set(ads.map(x=>x.campaign_id)).size,coverage:scheme?'not_attributed':adsComplete?'cached_complete':adItems.length?'cached_partial':'not_loaded',warning:scheme?'Не связанные с SRID рекламные списания исключены.':adsComplete?null:'Реклама загружена не за все дни выбранного периода.'},
     orders:{rows:orders.length,coverage:ordersComplete?'cached_partial':'not_loaded'},storage:{rows:storage.length,coverage:storageComplete?'cached_complete':storage.length?'cached_partial':'not_loaded'},
     coverage:{finance:latest.status==='complete'?'cached_complete':'cached_partial',advertising:adsComplete?'cached_complete':adItems.length?'cached_partial':'not_loaded',paid_storage:storageComplete?'cached_complete':storage.length?'cached_partial':'not_loaded',orders:ordersComplete?'cached_partial':'not_loaded',advertising_actual_charges:'not_loaded'},
     cache:{status:latest.status,runDay:latest.run_day,from:latest.date_from,to:latest.date_to,completedAt:latest.completed_at,rowsSaved:latest.rows_saved},
-    notice:'Отчёт собран из сохранённых данных Supabase. Статус каждой части указан в coverage; неполные разделы не маскируются нулями.'});
+    notice:'Реализация — сумма по цене покупателя, продажи за вычетом возвратов. Оборот по розничной цене — до скидок WB. Продвижение уже списано по документам Удержание, повторно рекламная аналитика не списывается.'});
  }catch(e){return NextResponse.json({ok:false,error:e instanceof Error?e.message:String(e)},{status:500});}
 }

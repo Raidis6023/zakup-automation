@@ -28,8 +28,12 @@ function SchemeTable({market,scheme,from,to}:{market:Market;scheme:string;from:s
 function SchemePanel({market,scheme,label,from,to,group,note,error}:{market:Market;scheme:string;label:string;from:string;to:string;group?:Group;note:string;error:string}){
  const [open,setOpen]=useState(false);
  return <details className="ozf-panel ozf-collapsible-register" onToggle={e=>setOpen(e.currentTarget.open)} style={{padding:14,minWidth:0,width:"100%",boxSizing:"border-box"}}>
- <summary style={{cursor:'pointer'}}><strong>{label}</strong><span style={{marginLeft:10}}>{error?'Ошибка':!group?'Загрузка…':fmt(group.orders)+' единиц заказа'}</span></summary>
- {error?<p className="ozf-error">{error}</p>:group&&open?<><div style={{display:'flex',gap:12,justifyContent:'space-between',alignItems:'center',margin:'12px 0'}}><a className="ozf-btn" href={market==='ozon'?'#ozf-items':market==='yandex'?'#ymf-results':'#wb-finance-main'}>К общему финрезу ↑</a><span className="ozf-count">Нажми на заголовок, чтобы свернуть</span></div><div className="ozf-metrics"><div><span>Заказы / единицы</span><strong>{fmt(group.orders)}</strong></div><div><span>Отмены</span><strong>{fmt(group.cancelled)}</strong></div><div><span>Стоимость заказов (справочно)</span><strong>{fmt(group.amount,'₽')}</strong></div></div><p className="ozf-notice">{note}</p><SchemeTable market={market} scheme={scheme} from={from} to={to}/></>:<p>Откройте плашку для загрузки финансовых показателей</p>}
+ <summary style={{cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'space-between',gap:16,listStyle:'none',padding:'10px 12px',minHeight:54,margin:'-10px -10px 0',borderRadius:10}}>
+ <span style={{display:'flex',flexDirection:'column',gap:5,minWidth:0}}>
+ <strong style={{fontSize:15,fontWeight:700,lineHeight:1.4}}>{label}</strong>
+ <span style={{fontSize:12,opacity:.8}}>{error?'Ошибка выгрузки':!group?'Загружаем количество заказов…':fmt(group.orders)+' заказанных единиц'}</span>
+ </span><span className="ozf-btn" style={{whiteSpace:'nowrap',flexShrink:0}}>{open?'Свернуть ▲':'Раскрыть ▼'}</span></summary>
+ {error?<p className="ozf-error">{error}</p>:group&&open?<><div style={{display:'flex',gap:12,justifyContent:'space-between',alignItems:'center',margin:'12px 0'}}><a className="ozf-btn" href={market==='ozon'?'#ozf-items':market==='yandex'?'#ymf-results':'#wb-finance-main'}>К общему финрезу ↑</a><span className="ozf-count">Нажми на заголовок, чтобы свернуть</span></div><div className="ozf-metrics"><div><span>Заказы / единицы</span><strong>{fmt(group.orders)}</strong></div><div><span>Отмены</span><strong>{fmt(group.cancelled)}</strong></div><div><span>Стоимость заказов (справочно)</span><strong>{fmt(group.amount,'₽')}</strong></div></div><p className="ozf-notice">{note}</p><SchemeTable market={market} scheme={scheme} from={from} to={to}/></>:null}
  </details>;
 }
 export default function OrderFulfillmentPanels({market,from,to}:{market:Market;from:string;to:string}){
