@@ -32,7 +32,7 @@ test("MPStats: нет токена — не записываем фиктивн�
  const parser=read("lib/unit-economics/mpstats-wb.ts");
  assert.match(auth,/if\(!process\.env\.MPSTATS_TOKEN\)/);
  for(const model of ["wb-fbw","wb-fbs","ozon-fbo","ozon-fbs"])assert.ok(auth.includes('"'+model+'"'));
- assert.match(parser,/buyoutRate:number\\|null=null/);
+ assert.ok(parser.includes("let buyoutRate:number|null=null;"));
  assert.match(parser,/client_sale/);
  assert.ok(parser.includes("purchase_after_return"));
 });
