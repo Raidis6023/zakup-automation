@@ -27,9 +27,12 @@ export function calculateUnitWeight(
   if (!Number.isFinite(kilograms) || kilograms <= 0) {
     return {kilograms: null, formula: null, source: null, warning: "Не удалось рассчитать вес единицы товара"};
   }
+  // Только для текста формулы убираем двоичные артефакты дробных чисел.
+  // Сам kilograms остаётся без округления и используется в дальнейших вычислениях.
+  const shownKilograms = Number(kilograms.toPrecision(15));
   return {
     kilograms,
-    formula: `${cartonGrossKg} кг / ${unitsPerCarton} шт. = ${kilograms} кг/шт.`,
+    formula: `${cartonGrossKg} кг / ${unitsPerCarton} шт. = ${shownKilograms} кг/шт.`,
     source: "carton-gross",
     warning: null
   };
