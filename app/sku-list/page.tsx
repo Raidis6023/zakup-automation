@@ -3,7 +3,12 @@ import VedNewProductsClient from "./VedNewProductsClient";
 
 import {
   getOzonSeptemberRows,
+  type MarketplaceFinancialRow,
 } from "./ozonFinancialData";
+
+import {
+  getOzonOctoberRows,
+} from "./ozonOctoberFinancialData";
 
 import {
   getWbSeptemberRows,
@@ -334,6 +339,7 @@ function capitalizeArticle(
 
 
 function buildOzonRows(
+  financialRows: MarketplaceFinancialRow[],
   mappings: ProductMappingRow[],
   statuses: ProductStatusRow[]
 ):
@@ -388,7 +394,7 @@ SkuListFinancialRow[] {
           left.offerId.length
       );
 
-  return getOzonSeptemberRows()
+  return financialRows
     .map(
       row => {
         const mapping =
@@ -422,6 +428,8 @@ SkuListFinancialRow[] {
               : "Активный",
 
           sku:
+            row.sku
+            ??
             mapping?.sku
             ??
             null,
@@ -832,6 +840,14 @@ export default async function SkuListPage() {
 
   const ozonRows =
     buildOzonRows(
+      getOzonSeptemberRows(),
+      mappings,
+      statuses
+    );
+
+  const ozonOctoberRows =
+    buildOzonRows(
+      getOzonOctoberRows(),
       mappings,
       statuses
     );
@@ -894,6 +910,9 @@ export default async function SkuListPage() {
         <SkuListTabsClient
           ozonRows={
             ozonRows
+          }
+          ozonOctoberRows={
+            ozonOctoberRows
           }
           wildberriesRows={
             wildberriesRows
