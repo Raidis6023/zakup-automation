@@ -198,17 +198,16 @@ return <div className="ozf-layout">
 </td>)}</tr>
 {selected===r.nm_id&&active&&<tr className="ozf-expanded-row"><td colSpan={columns.length} onClick={e=>e.stopPropagation()}><div className="ozf-expanded-content">
 <div className="ozf-pinned-article"><strong>{active.article||active.nm_id} · WB {active.nm_id}</strong><CopyArticle article={active.article||active.nm_id}/><a className="ozf-btn" href={'/finance/keywords?market=wb&article='+encodeURIComponent(active.nm_id)+'&from='+data.from+'&to='+data.to} onClick={e=>e.stopPropagation()}>Ключевые слова товара</a></div>
-<div className="ozf-rate-editor"><h3>Себестоимость, ТК «Маяк» и КМ</h3><div className="ozf-filters"><label>КМ <input value={managerInput} onChange={e=>setManagerInput(e.target.value)} disabled={!active.master_code} placeholder="Не назначен"/></label><button className="ozf-btn" onClick={()=>void saveManager()} disabled={!active.master_code||managerSaving}>{managerSaving?'Сохраняем…':'Сохранить КМ'}</button></div>{!active.master_code&&<p className="ozf-error">Для назначения КМ требуется подтверждённый ЕНОТ.</p>}<div className="ozf-filters">
+<p>{active.name||"Товар WB"} · {active.rows} строк финансового отчёта · {data.from} — {data.to}</p><WbBreakdown row={active}/><details className="ymf-rate-edit"><summary>Изменить КМ, себестоимость и ТК «Маяк»</summary><div className="ozf-rate-editor"><h3>Тарифы и коммерческий менеджер</h3><div className="ozf-filters"><label>КМ <input value={managerInput} onChange={e=>setManagerInput(e.target.value)} disabled={!active.master_code} placeholder="Не назначен"/></label><button className="ozf-btn" onClick={()=>void saveManager()} disabled={!active.master_code||managerSaving}>{managerSaving?'Сохраняем…':'Сохранить КМ'}</button></div>{!active.master_code&&<p className="ozf-error">Для назначения КМ требуется подтверждённый ЕНОТ.</p>}<div className="ozf-filters">
 <label>Действуют с <input type="date" value={validFrom} onChange={e=>setValidFrom(e.target.value)}/></label>
 <label>Себестоимость, ₽/шт <input inputMode="decimal" value={costInput} onChange={e=>setCostInput(e.target.value)} placeholder="Не задана"/></label>
 <label>ТК «Маяк», ₽/шт <input inputMode="decimal" value={mayakInput} onChange={e=>setMayakInput(e.target.value)} placeholder="Не задана"/></label>
 <button className="ozf-btn ozf-primary" disabled={savingRates||busy} onClick={()=>void saveRates()}>{savingRates?"Сохраняем…":"Сохранить и пересчитать"}</button></div>
 <p>Расчёт по датам операций. Продажи {active.sales_units}, возвраты {active.return_units}, выкупы {active.buyouts}. Себестоимость: {money(active.cogs)} ₽; ТК «Маяк»: {money(active.mayak_expense)} ₽. Предварительный результат: {money(active.preliminary_result)} ₽.</p>
 {active.missing_rates.length>0&&<p className="ozf-error">Не хватает: {active.missing_rates.join(', ')}</p>}
-</div><FinanceDynamics marketplace="wb" from={data.from} to={data.to} provided={itemSeries} selected="revenue"/>
+</div></details><FinanceDynamics marketplace="wb" from={data.from} to={data.to} provided={itemSeries} selected="revenue"/>
 <WbAdvertisingCharts rows={data.ads.items} from={data.from} to={data.to} complete={data.ads.coverage==='cached_complete'} nmId={active.nm_id} revenues={totalAdRevenueByDay}/>
-<p>{active.name||""} · nmId {active.nm_id} · {active.rows} строк реализации</p>
-<WbBreakdown row={active}/>
+
 
 </div></td></tr>}</Fragment>)}</tbody>
 <tfoot><tr><th colSpan={4}>Итого · {rows.length} артикулов</th>
