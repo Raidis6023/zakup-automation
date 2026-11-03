@@ -1,5 +1,6 @@
 "use client";
-import {useEffect,useMemo,useState} from "react";
+import {useEffect,useMemo,useState,type MouseEvent} from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {WORKBOOK_URL,type Marketplace,type ModelKey} from "@/lib/unit-economics/model-config";
 import pilot from "@/data/unit-economics-pilot.json";
@@ -9,6 +10,13 @@ type Entry={tab:string;row:number;values:(string|number|null)[];display:string[]
 type Product={sku:string;name:string;models:Record<string,Entry>};
 type Cols={roi:number;margin:number;profit:number;cost:number;volume:number;price:number;buyer:number|null;category:number;vat:number;output:number;input:number};
 const DATA=pilot.products as Product[];
+const PHOTOS:Record<string,string>={
+ "RCAB-AVD26721-1":"/unit-pilot-photos/RCAB-AVD26721-1.png",
+ "RCAB-AVD26708-2":"/unit-pilot-photos/RCAB-AVD26708-2.png",
+ "RCAB-AVD26803-28":"/unit-pilot-photos/RCAB-AVD26803-28.png",
+ "RCAB-AVD26923-1":"/unit-pilot-photos/RCAB-AVD26923-1.png"
+};
+type PhotoPreview={src:string;alt:string;left:number;top:number};
 const HEADERS=pilot.headers as Record<string,string[]>;
 const MARKET_NAMES:Record<Marketplace,string>={ozon:"Ozon",wb:"Wildberries",ym:"Яндекс Маркет"};
 const TABS:Record<Marketplace,ModelKey[]>={ozon:["ozon-fbo","ozon-fbs"],wb:["wb-fbw","wb-fbs"],ym:["ym-fby","ym-fbs"]};
@@ -87,6 +95,7 @@ export default function UnitEconomicsPilotClient(){
  const [market,setMarket]=useState<Marketplace>("ozon");
  const [selected,setSelected]=useState<Record<Marketplace,ModelKey>>({ozon:"ozon-fbo",wb:"wb-fbw",ym:"ym-fby"});
  const [search,setSearch]=useState("");
+ const [photoPreview,setPhotoPreview]=useState<PhotoPreview|null>(null);
  const [sku,setSku]=useState<string|null>(null);
  const [view,setView]=useState<"summary"|"details">("summary");
  const [overrides,setOverrides]=useState<Record<string,string>>({});
@@ -104,6 +113,14 @@ export default function UnitEconomicsPilotClient(){
  const logistics=row?fees.logistics.reduce((sum,i)=>sum+numeric(row,i),0):0;
  const other=row?numeric(row,c.price)-numeric(row,c.cost)-numeric(row,fees.commission)-logistics-numeric(row,fees.ads)-numeric(row,c.profit):0;
  const recommended=item&&(model==="ozon-fbs"||model==="ym-fbs")?pilotFbsMinPrice(item,model):null;
+ function openPhoto(e:MouseEvent<HTMLDivElement>,p:Product){
+  const src=PHOTOS[p.sku];if(!src)return;
+  const rect=e.currentTarget.getBoundingClientRect();
+  const width=300,height=350;
+  const left=rect.right+14+width<=window.innerWidth?rect.right+14:Math.max(12,rect.left-width-14);
+  const top=Math.max(12,Math.min(window.innerHeight-height-12,rect.top-12));
+  setPhotoPreview({src,alt:p.name,left,top});
+ }
  function changeModel(k:ModelKey){setSelected(x=>({...x,[market]:k}));setView("summary");}
  function changeMarket(k:Marketplace){setMarket(k);setView("summary");}
  useEffect(()=>{if(!sku)return;const handler=(e:KeyboardEvent)=>{if(e.key==="Escape")setSku(null)};document.addEventListener("keydown",handler);return()=>document.removeEventListener("keydown",handler)},[sku]);
@@ -114,13 +131,14 @@ export default function UnitEconomicsPilotClient(){
   <div className="unit-pilot-tabs">{tabs}</div>
   <p className="unit-pilot-notice">Контрольные данные Google Таблиц на 02.11.2026. Для FBO/FBW/FBY отображаются исходные результаты, для Ozon FBS и Яндекс FBS — независимый пилотный расчёт по тарифам FBS. Старая версия не изменяется.</p>
   <div className="unit-table-toolbar"><div className="unit-table-title">Пробная таблица <span>{list.length} товаров</span></div><div className="unit-toolbar-right"><input aria-label="Поиск пилотных товаров" placeholder="Поиск товара, артикула..." value={search} onChange={e=>setSearch(e.target.value)}/></div></div>
-  <div className="unit-pilot-scroller"><table className="unit-pilot-table"><thead><tr>{["Фото","Наименование","Рентабельность","Маржинальность","Чистая прибыль","Себестоимость","Литраж","Цена продажи","Цена с СПП","Зона размещения (Ozon FBO)"].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{list.map(p=>{const r=entryFor(p,model);return <tr key={p.sku} className={r?"clickable":""} tabIndex={r?0:-1} onClick={()=>r&&setSku(p.sku)} onKeyDown={e=>{if(r&&e.key==="Enter")setSku(p.sku)}}>
-   <td><div className="unit-pilot-thumb" title="Фотография не передаётся через выгрузку ячеек Google Sheets">Нет фото</div></td><td className="unit-pilot-name">{p.name}<small>{p.sku}</small></td><td className={r&&numeric(r,c.roi)<0?"unit-pilot-red":"unit-pilot-green"}>{fmt(r,c.roi)}</td><td>{fmt(r,c.margin)}</td><td className={r&&numeric(r,c.profit)<0?"unit-pilot-red":""}>{fmt(r,c.profit)}</td><td>{fmt(r,c.cost)}</td><td>{fmt(r,c.volume)}</td><td>{fmt(r,c.price)}</td><td>{fmt(r,c.buyer)}</td><td>{model==="ozon-fbo"?"Не указана":"—"}</td>
+  <div className="unit-pilot-scroller"><table className="unit-pilot-table"><thead><tr>{["Фото","Наименование","Рентабельность","Маржинальность","Чистая прибыль","Себестоимость","Литраж","Цена продажи","Цена с СПП",...(model==="ozon-fbo"?["Зона размещения"]:[])].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{list.map(p=>{const r=entryFor(p,model);return <tr key={p.sku} className={r?"clickable":""} tabIndex={r?0:-1} onClick={()=>r&&setSku(p.sku)} onKeyDown={e=>{if(r&&e.key==="Enter")setSku(p.sku)}}>
+   <td><div className="unit-pilot-thumb" onMouseEnter={e=>openPhoto(e,p)} onMouseLeave={()=>setPhotoPreview(null)}>{PHOTOS[p.sku]?<Image src={PHOTOS[p.sku]} width={46} height={46} alt={p.name} unoptimized/>:<span>Нет фото</span>}</div></td><td className="unit-pilot-name">{p.name}<small>{p.sku}</small></td><td className={r&&numeric(r,c.roi)<0?"unit-pilot-red":"unit-pilot-green"}>{fmt(r,c.roi)}</td><td>{fmt(r,c.margin)}</td><td className={r&&numeric(r,c.profit)<0?"unit-pilot-red":""}>{fmt(r,c.profit)}</td><td>{fmt(r,c.cost)}</td><td>{fmt(r,c.volume)}</td><td>{fmt(r,c.price)}</td><td>{fmt(r,c.buyer)}</td>{model==="ozon-fbo"&&<td>Не определена</td>}
   </tr>})}</tbody></table></div>
   {!list.some(p=>entryFor(p,model))&&<p className="unit-pilot-notice">В этой модели нет строк для выбранных пяти товаров. Нули вместо отсутствующих расчётов не подставляем.</p>}
-  <p className="unit-pilot-note">Для фотографий подготовлен миниатюрный формат; сами изображения из Google Sheets в полученной выгрузке отсутствуют. Увеличение по наведению заработает при подключении реальных URL фото.</p>
+  <p className="unit-pilot-note">Фото четырёх товаров перенесены из встроенных изображений Google Таблиц в файлы сайта. У ватных палочек исходное фото отсутствует в контрольных строках Ozon, WB и Яндекс Маркета.</p>
+  {photoPreview&&<div className="unit-pilot-photo-popover" style={{left:photoPreview.left,top:photoPreview.top}} role="presentation"><Image src={photoPreview.src} alt={photoPreview.alt} width={280} height={320} unoptimized/></div>}
   {item&&<div className="unit-pilot-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setSku(null)}}><div className="unit-pilot-modal" role="dialog" aria-modal="true" aria-labelledby="unit-pilot-modal-title">
-   <header className="unit-pilot-modal-head"><div className="unit-pilot-heading"><div className="unit-pilot-thumb">Фото</div><div><h2 id="unit-pilot-modal-title">{item.name}</h2><p>Артикул: {item.sku}</p></div></div><button onClick={()=>setSku(null)} aria-label="Закрыть модалку">×</button></header>
+   <header className="unit-pilot-modal-head"><div className="unit-pilot-heading"><div className="unit-pilot-thumb">{PHOTOS[item.sku]?<Image src={PHOTOS[item.sku]} width={59} height={59} alt={item.name} unoptimized/>:<span>Нет фото</span>}</div><div><h2 id="unit-pilot-modal-title">{item.name}</h2><p>Артикул: {item.sku}</p></div></div><button onClick={()=>setSku(null)} aria-label="Закрыть модалку">×</button></header>
    <div className="unit-pilot-modal-tabs">{tabs}<div className="unit-pilot-views"><button className={view==="summary"?"active":""} onClick={()=>setView("summary")}>Сводка</button><button className={view==="details"?"active":""} onClick={()=>setView("details")}>Все расчёты</button></div></div>
    {row?<div className="unit-pilot-modal-body" key={sku+model+view}>{row.calculated&&<div className="unit-pilot-notice"><strong>Пробный расчёт FBS.</strong> {row.notes?.join(". ")}.</div>}{view==="summary"?<>
     <div className="unit-pilot-metrics"><div>ROI <strong className={numeric(row,c.roi)<0?"unit-pilot-red":"unit-pilot-green"}>{fmt(row,c.roi)}</strong></div><div>Чистая прибыль<strong>{fmt(row,c.profit)}</strong></div><div>Маржинальность<strong>{fmt(row,c.margin)}</strong></div></div>
