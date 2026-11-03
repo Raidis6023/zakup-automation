@@ -146,7 +146,7 @@ export async function runAuxiliarySync(scope:'all'|'ads'='all'){
  if(state.error)throw state.error;
  let previous:{from?:string;to?:string}={};try{previous=JSON.parse(state.data?.last_message??'{}')}catch{}
  const continuing=state.data?.stage==='partial'&&previous.from&&previous.to&&
-  /^\\d{4}-\\d{2}-\\d{2}$/.test(previous.from)&&/^\\d{4}-\\d{2}-\\d{2}$/.test(previous.to)&&
+  /^\d{4}-\d{2}-\d{2}$/.test(previous.from)&&/^\d{4}-\d{2}-\d{2}$/.test(previous.to)&&
   Date.parse(previous.to)>=Date.now()-80*86400000;
  const adFrom=continuing?previous.from!:from,adTo=continuing?previous.to!:to;
  if(scope==='ads'){const advertising=await syncAds(adFrom,adTo,deadline);return {ok:advertising.ok,from:adFrom,to:adTo,advertising};}
