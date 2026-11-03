@@ -340,12 +340,16 @@ SkuListFinancialRow[] {
 
 export default function SkuListTabsClient({
   ozonRows,
+  ozonOctoberRows,
   wildberriesRows,
   wildberriesOctoberRows,
   yandexRows,
   yandexOctoberRows,
 }: {
   ozonRows:
+    SkuListFinancialRow[];
+
+  ozonOctoberRows:
     SkuListFinancialRow[];
 
   wildberriesRows:
@@ -384,7 +388,7 @@ export default function SkuListTabsClient({
         && selectedMonth === "10"
       ) {
         return {
-          ozon: [] as SkuListFinancialRow[],
+          ozon: ozonOctoberRows,
           wildberries: wildberriesOctoberRows,
           yandexMarket: yandexOctoberRows,
         };
@@ -400,6 +404,7 @@ export default function SkuListTabsClient({
       selectedYear,
       selectedMonth,
       ozonRows,
+      ozonOctoberRows,
       wildberriesRows,
       wildberriesOctoberRows,
       yandexRows,
