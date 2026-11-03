@@ -74,6 +74,27 @@ const sortedRows=[...rows].sort((a,b)=>{const x=value(a,sort.key as Key),y=value
  if(x===null&&y!==null)return 1;if(y===null&&x!==null)return -1;
  return (typeof x==='number'&&typeof y==='number'?x-y:String(x??'').localeCompare(String(y??''),'ru',{numeric:true}))*sort.dir;});
 const wholeSeries=useMemo(()=>(data?.daily??[]).map(d=>({day:d.day,v:{orders:d.rows.reduce((s,r)=>s+r.orders,0),buyouts:d.rows.reduce((s,r)=>s+r.buyouts,0),revenue:d.rows.reduce((s,r)=>s+r.revenue,0),profit:d.rows.some(r=>r.profit===null)?null:d.rows.reduce((s,r)=>s+Number(r.profit),0),marketplace:null,advertising:null,inbound:null}})),[data]);
+
+const display=(r:Row,k:Key)=>{
+ const v=value(r,k);
+ if(k==='master_code'||k==='manager'||k==='nm_id')return String(v||'—');
+ if(k==='orders'||k==='cancels'||k==='buyouts')return qty(Number(v??0));
+ if(k==='drr')return typeof v==='number'?v.toLocaleString('ru-RU',{maximumFractionDigits:2})+' %':'—';
+ if(k==='article')return r.article||r.nm_id;
+ if(v===null)return k==='profit'||k==='cogs'||k==='mayak'?'Нужны ставки':'Нет данных';
+ if(typeof v!=='number')return String(v);
+ return money(['advertising','storage','delivery','acceptance','penalty','cogs','mayak'].includes(k)?-v:v);
+};
+const totalFor=(k:Key):number|null=>{
+ if(k==='profit')return allRatesFilled?profitTotal:null;
+ if(k==='advertising')return data?.ads.coverage==='cached_complete'?data.attributed?.advertising??0:null;
+ if(k==='storage')return data?.storage?.coverage==='cached_complete'?data.attributed?.storage??0:null;
+ if(k==='drr'){const revenue=sum(r=>r.gross_retail),ad=data?.attributed?.advertising;return data?.ads.coverage==='cached_complete'&&ad!==undefined&&revenue>0?100*ad/revenue:null;}
+ if(k==='perUnit'){const u=sum(r=>r.buyouts);return allRatesFilled&&u>0?profitTotal/u:null;}
+ if(['master_code','manager','article','nm_id'].includes(k))return null;
+ if(k==='cogs'||k==='mayak')return allRatesFilled?sum(r=>Number(value(r,k)??0)):null;
+ return sum(r=>Number(value(r,k)??0));
+};
 const itemSeries=useMemo(()=>(data?.daily??[]).map(d=>({day:d.day,v:{orders:d.rows.filter(r=>r.nm_id===selected).reduce((s,r)=>s+r.orders,0),buyouts:d.rows.filter(r=>r.nm_id===selected).reduce((s,r)=>s+r.buyouts,0),revenue:d.rows.filter(r=>r.nm_id===selected).reduce((s,r)=>s+r.revenue,0),profit:d.rows.filter(r=>r.nm_id===selected).some(r=>r.profit===null)?null:d.rows.filter(r=>r.nm_id===selected).reduce((s,r)=>s+Number(r.profit),0),marketplace:null,advertising:null,inbound:null}})),[data,selected]);
 const active=rows.find(r=>r.nm_id===selected);
 function selectRow(r:Row){if(selected===r.nm_id){setSelected('');return;}setSelected(r.nm_id);setCostInput(r.cost_rub==null?'':String(r.cost_rub));setMayakInput(r.mayak_rub==null?'':String(r.mayak_rub));setManagerInput(r.manager==='Не назначен'?'':r.manager);}
@@ -160,25 +181,15 @@ return <div className="ozf-layout">
 {data.cache?.status!=="complete"&&<p className="ozf-error" role="alert">НЕПОЛНАЯ ВЫГРУЗКА: сохранено {data.cache?.rowsSaved?.toLocaleString("ru-RU")??"?"} строк. Финансовые итоги предварительные и не пригодны для решений.</p>}
 <p className="ozf-notice" style={{marginTop:16}}>Покрытие: финансы — <b>{data.coverage.finance}</b>, заказы — <b>{data.coverage.orders}</b>, реклама — <b>{data.coverage.advertising}</b>, хранение — <b>{data.coverage.paid_storage}</b>. Неполные разделы не подменяются нулями. {data.ads.warning}</p>
 <p className="ozf-notice">Все расходы WB учитываются в финансовом результате один раз. Хранение и продвижение распределяются по артикулам при наличии подтверждённой детализации.</p>
- {(Boolean(data.pending_allocation?.advertising)||Boolean(data.pending_allocation?.storage))&&<p className="ozf-error">Уже включены в общий финансовый результат, но ожидают распределения по артикулам: реклама {money(data.pending_allocation?.advertising??0)} ₽, хранение {money(data.pending_allocation?.storage??0)} ₽.</p>}
-<p className="ozf-notice">Артикулов с недостающими ставками: <b>{missingRateArticles}</b>. {allRatesFilled?<>Предварительный итог за выбранный период (с нераспределёнными расходами): <b>{money(profitTotal)} ₽</b>. Реклама и хранение ещё не подтверждены.</>:<>После заполнения ставок по всем артикулам здесь появится предварительный итог.</>}</p>
-<OrderFulfillmentPanels market="wb" from={data.from} to={data.to}/>
- <FinanceDynamics marketplace="wb" from={data.from} to={data.to} provided={wholeSeries} selected="revenue" expectedProfit={allRatesFilled?profitTotal:null}/>
- <WbAdvertisingCharts rows={data.ads.items} from={data.from} to={data.to} complete={data.ads.coverage==='cached_complete'} revenues={totalAdRevenueByDay}/>
- <p className="ozf-notice">Статус рекламной выгрузки: <b>{data.ad_sync?.stage??'не запускалась'}</b>{data.ad_sync?.last_error?' · '+data.ad_sync.last_error:''}. В столбце рекламы не показываем ноль, пока нет подтверждённых данных WB.</p>
- {Boolean(data.unallocated?.length)&&<details className="ozf-panel ozf-collapsible-register" style={{marginTop:14}}><summary>Нераспределённые расходы WB · детализация по датам и ID</summary><AccrualBreakdownList market="wb" from={data.from} to={data.to} items={data.unallocated??[]} total={(data.unallocated??[]).reduce((s,x)=>s+x.amount,0)} totalLabel="Итого нераспределённые операции"/></details>}
-<div className="ozf-toolbar" style={{marginTop:18}}><input placeholder="Поиск по артикулу, nmId или товару" value={filter} onChange={e=>setFilter(e.target.value)}/><span>Артикулов: {rows.length} · Финансовых операций: {data.financial_rows}</span></div>
-<div className="ozf-financial-scroll"><table className="ozf-table ozf-financial-table" style={{minWidth:1980}}>
-<thead><tr>{["Артикул","Артикул WB","Товар","Заказы","Отмены","Оборот розничный, ₽","Реализация, ₽","К перечислению, ₽","Логистика, ₽","Отдельное хранение, ₽","Приёмка, ₽","Штрафы, ₽","Продвижение/удержания, ₽","Реклама по артикулам, ₽","Себес + ТК Маяк, ₽","Предв. результат, ₽"].map(h=><th key={h}>{h}</th>)}</tr></thead>
-<tbody>{rows.map(r=>{const ad=adsByNm.get(r.nm_id)?.spend??0;return <Fragment key={r.nm_id}><tr className={selected===r.nm_id?"ozf-row-active":""} onClick={()=>selectRow(r)}>
-<td style={{color:'#98beff',whiteSpace:'nowrap'}}>▸ {r.article||'Не сопоставлен'} <CopyArticle article={r.article||r.nm_id}/></td><td>{r.nm_id}</td><td>{r.name||'—'}</td>
-<td>{r.order_count}</td><td>{r.cancel_count}</td><td>{money(r.gross_retail)}</td><td>{money(r.realization)}</td><td>{money(r.to_transfer)}</td>
-<td>{money(r.delivery)}</td><td>{r.external_storage==null?'Нет данных':money(r.external_storage)}</td><td>{money(r.acceptance)}</td><td>{money(r.penalty)}</td>
-<td>{money(r.deduction)}</td><td>{adCovered?money(ad):'Нет данных'}</td>
-<td>{r.cogs===null||r.mayak_expense===null?'Нужны ставки':money(r.cogs+r.mayak_expense)}</td>
-<td title="Предварительно; необъективные расходы рекламы по SKU не выдуманы">{r.preliminary_result===null?'Нужны ставки':money(r.preliminary_result)+' *'}</td>
-</tr>{selected===r.nm_id&&active&&<tr className="ozf-expanded-row"><td colSpan={16} onClick={e=>e.stopPropagation()}><div className="ozf-panel" style={{marginTop:18}}>
-<div className="ozf-pinned-article"><strong>Детализация · {active.article||active.nm_id} · WB {active.nm_id}</strong><CopyArticle article={active.article||active.nm_id}/><a className="ozf-btn" href={'/finance/keywords?market=wb&article='+encodeURIComponent(active.nm_id)+'&from='+data.from+'&to='+data.to} onClick={e=>e.stopPropagation()}>Ключевые слова товара</a></div>
+ {(Boolean(data.pending_allocation?.advertising)||Boolean(data.pending_allocation?.storage))&&<p className="ozf-error">Уже включены в общий финансовый результат, но ожидают распр<div className="ozf-financial-scroll" role="region" aria-label="Финансовый результат WB">
+<table className="ozf-table ozf-financial-table" style={{minWidth:1950}}>
+<thead><tr>{columns.map(([k,label])=><th key={k}><button type="button" className="ozf-sort-control" onClick={()=>setSort(old=>({key:k,dir:old.key===k&&old.dir===-1?1:-1}))}>{label}{sort.key===k?(sort.dir===-1?' ↓':' ↑'):' ↕'}</button></th>)}</tr></thead>
+<tbody>{sortedRows.map(r=><Fragment key={r.nm_id}><tr className={selected===r.nm_id?'ozf-row-active':''}>
+{columns.map(([k])=><td key={k} className={['advertising','storage','delivery','acceptance','penalty','cogs','mayak'].includes(k)?'ozf-bad':k==='profit'&&r.preliminary_result!==null?(r.preliminary_result<0?'ozf-bad':'ozf-good'):''}>
+{k==='article'?<><button className="ozf-article-btn" aria-expanded={selected===r.nm_id} onClick={()=>selectRow(r)}>{selected===r.nm_id?'▾':'▸'} {r.article||r.nm_id}</button><CopyArticle article={r.article||r.nm_id}/></>:display(r,k)}
+</td>)}</tr>
+{selected===r.nm_id&&active&&<tr className="ozf-expanded-row"><td colSpan={columns.length} onClick={e=>e.stopPropagation()}><div className="ozf-expanded-content">
+<div className="ozf-pinned-article"><strong>{active.article||active.nm_id} · WB {active.nm_id}</strong><CopyArticle article={active.article||active.nm_id}/><a className="ozf-btn" href={'/finance/keywords?market=wb&article='+encodeURIComponent(active.nm_id)+'&from='+data.from+'&to='+data.to} onClick={e=>e.stopPropagation()}>Ключевые слова товара</a></div>
 <div className="ozf-rate-editor"><h3>Себестоимость, ТК «Маяк» и КМ</h3><div className="ozf-filters"><label>КМ <input value={managerInput} onChange={e=>setManagerInput(e.target.value)} disabled={!active.master_code} placeholder="Не назначен"/></label><button className="ozf-btn" onClick={()=>void saveManager()} disabled={!active.master_code||managerSaving}>{managerSaving?'Сохраняем…':'Сохранить КМ'}</button></div>{!active.master_code&&<p className="ozf-error">Для назначения КМ требуется подтверждённый ЕНОТ.</p>}<div className="ozf-filters">
 <label>Действуют с <input type="date" value={validFrom} onChange={e=>setValidFrom(e.target.value)}/></label>
 <label>Себестоимость, ₽/шт <input inputMode="decimal" value={costInput} onChange={e=>setCostInput(e.target.value)} placeholder="Не задана"/></label>
@@ -189,7 +200,14 @@ return <div className="ozf-layout">
 </div><FinanceDynamics marketplace="wb" from={data.from} to={data.to} provided={itemSeries} selected="revenue"/>
 <WbAdvertisingCharts rows={data.ads.items} from={data.from} to={data.to} complete={data.ads.coverage==='cached_complete'} nmId={active.nm_id} revenues={totalAdRevenueByDay}/>
 <p>{active.name||""} · nmId {active.nm_id} · {active.rows} строк реализации</p>
-<div className="ozf-table-scroll"><table className="ozf-table"><thead><tr>{["Операция","Строк","К перечислению, ₽","Реализация, ₽","Логистика, ₽","Хранение, ₽","Штраф, ₽","Удержание, ₽"].map(x=><th key={x}>{x}</th>)}</tr></thead><tbody>
+<WbBreakdown row={active}/>
+
+</div></td></tr>}</Fragment>)}</tbody>
+<tfoot><tr><th colSpan={4}>Итого · {rows.length} артикулов</th>
+{columns.slice(4).map(([k])=><th key={k} className={['advertising','storage','delivery','acceptance','penalty','cogs','mayak'].includes(k)?'ozf-bad':''}>
+{totalFor(k)===null?'Нет данных':k==='drr'?totalFor(k)!.toLocaleString('ru-RU',{maximumFractionDigits:2})+' %':k==='orders'||k==='cancels'||k==='buyouts'?qty(totalFor(k)!):money(['advertising','storage','delivery','acceptance','penalty','cogs','mayak'].includes(k)?-totalFor(k)!:totalFor(k)!)}
+</th>)}</tr></tfoot>
+</table></div></tr></thead><tbody>
 {Object.entries(active.operations).sort((a,b)=>a[0].localeCompare(b[0],"ru")).map(([name,v])=><tr key={name}><td>{name}</td><td>{v.count}</td><td>{money(v.amount)}</td><td>{money(v.realization)}</td><td>{money(v.delivery)}</td><td>{money(v.storage)}</td><td>{money(v.penalty)}</td><td>{money(v.deduction)}</td></tr>)}
 </tbody></table></div>
 <p className="ozf-footnote">Суммы показаны по полям отчёта реализации, не как рассчитанная прибыль. Рекламная статистика учтётся после сверки фактических списаний WB.</p>
@@ -202,6 +220,7 @@ return <div className="ozf-layout">
 <th>{allRatesFilled?money(sum(r=>(r.cogs??0)+(r.mayak_expense??0))):'Нужны ставки'}</th>
 <th>{allRatesFilled?money(sum(r=>r.preliminary_result??0))+' *':'Нужны ставки'}</th></tr></tfoot></table></div>
 
+ {Boolean(data.unallocated?.length)&&<details className="ozf-panel ozf-collapsible-register" style={{marginTop:14}}><summary>Нераспределённые прочие расходы WB · детализация по датам и ID</summary><AccrualBreakdownList market="wb" from={data.from} to={data.to} items={data.unallocated??[]} total={(data.unallocated??[]).reduce((s,x)=>s+x.amount,0)} totalLabel="Итого нераспределённые операции"/></details>}
 </section>
 </>}
 </div>;
