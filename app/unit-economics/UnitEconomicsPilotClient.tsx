@@ -9,6 +9,7 @@ import {displayNewProductName} from "@/lib/products/new-product-identity";
 import {formatUnitNumber,formatUnitPercent} from "@/lib/unit-economics/financial-results";
 import {recalculateFinancialReference,recalculateOzonReferenceInputs,recalculateMarketplaceVolume,LAYOUT} from "@/lib/unit-economics/financial-reference";
 import {compareLogisticsReference} from "@/lib/unit-economics/logistics/reference";
+import VedUnitEconomicsLive from "./VedUnitEconomicsLive";
 import type {UnitFinalModel} from "@/lib/unit-economics/financial-results";
 
 type Entry={tab:string;row:number;values:(string|number|null)[];display:string[];formulas:Record<string,string>;calculated?:boolean;notes?:string[];auditStatus?:string;
@@ -20,6 +21,17 @@ type Entry={tab:string;row:number;values:(string|number|null)[];display:string[]
   ozonSppFormula?:string;
 };
 type Product={sku:string;name:string;models:Record<string,Entry>};
+type VedScheme={
+ status:"calculated"|"estimated"|"needs_input"|"invalid_ved";
+ missing:string[];costGrossRub:number|null;volumeLiters:number|null;
+ unitWeightKg:number|null;priceRub:number|null;priceAfterSppRub:number|null;
+ profitRub:number|null;roi:number|null;margin:number|null;
+};
+type VedProduct={
+ id:string;article:string;name:string;ved_created_at:string;
+ cost_gross_rub:number|null;volume_liters:number|null;unit_weight_kg:number|null;
+ schemes:Record<string,VedScheme>;
+};
 type Cols={roi:number;margin:number;profit:number;cost:number;volume:number;price:number;buyer:number|null;category:number;vat:number;output:number;input:number};
 const DATA=pilot.products as Product[];
 const PHOTOS:Record<string,string>={
@@ -230,32 +242,49 @@ export default function UnitEconomicsPilotClient(){
  const [sku,setSku]=useState<string|null>(null);
  const [view,setView]=useState<"summary"|"details">("summary");
  const [overrides,setOverrides]=useState<Record<string,string>>({});
- const [vedWeights,setVedWeights]=useState<Record<string,{kilograms:number;formula:string|null}>>({});
+ const [vedProducts,setVedProducts]=useState<VedProduct[]>([]);
+ const [vedLoading,setVedLoading]=useState(true);
+ const [vedError,setVedError]=useState("");
+ const [vedRevision,setVedRevision]=useState(0);
+ const [vedBusy,setVedBusy]=useState(false);
+ const [vedSelected,setVedSelected]=useState<string|null>(null);
  useEffect(()=>{
   const controller=new AbortController();
-  const articles=DATA.map(p=>p.sku).join(",");
-  fetch("/api/unit-economics/prospective?articles="+encodeURIComponent(articles),
-    {cache:"no-store",signal:controller.signal})
+  fetch("/api/unit-economics/prospective?limit=150",{cache:"no-store",signal:controller.signal})
    .then(async response=>{
-    if(!response.ok)return null;
-    return response.json() as Promise<{ok?:boolean;products?:{article:string;unit_weight_kg:number|null;schemes?:Record<string,{unitWeightFormula?:string|null}>}[]}>;
+    const body=await response.json() as {ok?:boolean;products?:VedProduct[];error?:string};
+    if(!response.ok||!body.ok)throw Error(body.error||"Не удалось прочитать расчёты ВЭД");
+    if(!controller.signal.aborted){setVedProducts(body.products||[]);setVedError("");}
    })
-   .then(body=>{
-    if(!body?.ok||controller.signal.aborted)return;
-    const weights:Record<string,{kilograms:number;formula:string|null}>={};
-    for(const p of body.products||[]){
-     const weight=Number(p.unit_weight_kg);
-     if(p.unit_weight_kg!==null&&Number.isFinite(weight)&&weight>0){
-      const formula=Object.values(p.schemes||{}).find(x=>x?.unitWeightFormula)?.unitWeightFormula??null;
-      weights[p.article]={kilograms:weight,formula};
-     }
-    }
-    setVedWeights(weights);
-   }).catch(()=>{}); // В пилотной книге вес не заполнен: не подменяем нулём.
-  return()=>controller.abort();
- },[]);
+   .catch(error=>{if(!controller.signal.aborted)setVedError(error instanceof Error?error.message:String(error))})
+   .finally(()=>{if(!controller.signal.aborted)setVedLoading(false)});
+  return ()=>controller.abort();
+ },[vedRevision]);
+ async function reloadPendingVed(){
+  setVedBusy(true);
+  try{
+   const response=await fetch("/api/unit-economics/prospective",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    credentials:"same-origin",body:JSON.stringify({action:"retry-pending"})
+   });
+   const body=await response.json() as {ok?:boolean;failures?:string[];error?:string};
+   if(!response.ok||!body.ok)throw Error(body.error||"Не удалось обработать версии ВЭД");
+   if(body.failures?.length)throw Error(body.failures.join("; "));
+   setVedError("");setVedLoading(true);setVedRevision(x=>x+1);
+  }catch(error){setVedError(error instanceof Error?error.message:String(error))}
+  finally{setVedBusy(false)}
+ }
+ const vedWeights:Record<string,{kilograms:number;formula:string|null}>={};
+ for(const p of vedProducts){
+  const weight=p.unit_weight_kg;
+  if(weight!==null&&Number.isFinite(weight)&&weight>0)
+   vedWeights[p.article]={kilograms:weight,formula:"Вес коробки брутто / вложимость"};
+ }
  const model=selected[market],c=COLS[model];
- const list=useMemo(()=>DATA.filter(x=>(x.name+" "+x.sku).toLowerCase().includes(search.toLowerCase().trim())),[search]);
+ const normalizedSearch=search.toLowerCase().trim();
+ const vedList=useMemo(()=>vedProducts.filter(x=>(x.name+" "+x.article).toLowerCase().includes(normalizedSearch)),[vedProducts,normalizedSearch]);
+ const knownArticles=new Set(vedProducts.map(x=>x.article));
+ const list=DATA.filter(x=>!knownArticles.has(x.sku)&&(x.name+" "+x.sku).toLowerCase().includes(normalizedSearch));
  const item=DATA.find(p=>p.sku===sku);
  const selectedWeight=sku?vedWeights[sku]:undefined;
  const overrideKey=(sku||"")+"@"+model;
@@ -283,15 +312,58 @@ export default function UnitEconomicsPilotClient(){
  useEffect(()=>{if(!sku)return;const previous=document.body.style.overflow;document.body.style.overflow="hidden";return()=>{document.body.style.overflow=previous}},[sku]);
  const tabs=<><div className="unit-market-tabs" role="tablist">{(["ozon","wb","ym"] as const).map(k=><button key={k} role="tab" aria-selected={k===market} className={k===market?"active":""} onClick={()=>changeMarket(k)}>{MARKET_NAMES[k]}</button>)}</div><div className="unit-model-tabs" role="tablist">{TABS[market].map(k=><button key={k} role="tab" aria-selected={k===model} className={k===model?"active":""} onClick={()=>changeModel(k)}>{LABEL[k]}</button>)}</div></>;
  return <section className="unit-pilot">
-  <div className="unit-pilot-top"><span>Новая юнит-экономика · 5 контрольных товаров</span><Link href={WORKBOOK_URL} target="_blank">Открыть исходные Google Таблицы ↗</Link></div>
+  <div className="unit-pilot-top">
+   <div className="unit-pilot-title-group"><strong>Новая юнит-экономика</strong><span>Все товары в одной таблице</span></div>
+   <div className="unit-pilot-top-actions">
+    <button type="button" disabled={vedLoading||vedBusy} onClick={()=>{setVedLoading(true);setVedRevision(x=>x+1)}}>Обновить</button>
+    <button type="button" disabled={vedBusy} onClick={()=>void reloadPendingVed()}>
+     {vedBusy?"Синхронизация…":"Загрузить ожидающие ВЭД"}
+    </button>
+    <Link href={WORKBOOK_URL} target="_blank">Контрольная книга ↗</Link>
+   </div>
+  </div>
   <div className="unit-pilot-tabs">{tabs}</div>
-  <p className="unit-pilot-notice">Контрольные данные Google Таблиц на 02.11.2026. Для всех МП итоговые показатели пересчитывает единый движок. У Яндекса ROI приведён к общей базе без НДС закупки. Ozon и Яндекс FBS используют предварительные пилотные расходы. Литраж ИУ считается по единой иерархии; логистические тарифы будут пересчитаны отдельным этапом. Старая версия не изменяется.</p>
-  <div className="unit-table-toolbar"><div className="unit-table-title">Пробная таблица <span>{list.length} товаров</span></div><div className="unit-toolbar-right"><input aria-label="Поиск пилотных товаров" placeholder="Поиск товара, артикула..." value={search} onChange={e=>setSearch(e.target.value)}/></div></div>
+  <details className="unit-pilot-help"><summary>Источники и правила расчётов</summary>
+   <p>Новые товары подгружаются из сохранённых расчётов ВЭД. Пять контрольных товаров из Google Таблиц сохраняются для сравнения.
+   Чистая прибыль, НДС и ROI вычисляются новым движком. Отсутствующие категории, выкупы и СПП WB не заменяются нулями.
+   Исходный реестр ВЭД и старая версия юнитки не изменяются.</p>
+  </details>
+  {vedError&&<p className="unit-pilot-error" role="alert"><strong>Синхронизация ВЭД:</strong> {vedError}</p>}
+  <div className="unit-table-toolbar"><div className="unit-table-title">Товары <span>{list.length+vedList.length}{vedLoading?" · обновление…":""}</span></div><div className="unit-toolbar-right"><input aria-label="Поиск пилотных товаров" placeholder="Поиск товара, артикула..." value={search} onChange={e=>setSearch(e.target.value)}/></div></div>
   <div className="unit-pilot-scroller"><table className="unit-pilot-table"><thead><tr>{["Фото","Наименование","Рентабельность","Маржинальность","Чистая прибыль","Себестоимость","Литраж","Цена продажи","Цена с СПП",...(model==="ozon-fbo"?["Зона размещения"]:[])].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{list.map(p=>{const r=entryFor(p,model);return <tr key={p.sku} className={r?"clickable":""} tabIndex={r?0:-1} onClick={()=>r&&setSku(p.sku)} onKeyDown={e=>{if(r&&e.key==="Enter")setSku(p.sku)}}>
    <td><div className="unit-pilot-thumb" onMouseEnter={e=>openPhoto(e,p)} onMouseLeave={()=>setPhotoPreview(null)}>{PHOTOS[p.sku]?<Image src={PHOTOS[p.sku]} width={46} height={46} alt={displayNewProductName(p.name,p.sku)} unoptimized/>:<span>Нет фото</span>}</div></td><td className="unit-pilot-name">{displayNewProductName(p.name,p.sku)}<small>{p.sku}</small></td><td className={r&&numeric(r,c.roi)<0?"unit-pilot-red":"unit-pilot-green"}>{fmt(r,c.roi)}</td><td>{fmt(r,c.margin)}</td><td className={r&&numeric(r,c.profit)<0?"unit-pilot-red":""}>{fmt(r,c.profit)}</td><td>{fmt(r,c.cost)}</td><td>{fmt(r,c.volume)}</td><td>{fmt(r,c.price)}</td><td>{fmt(r,c.buyer)}</td>{model==="ozon-fbo"&&<td>Не определена</td>}
-  </tr>})}</tbody></table></div>
-  {!list.some(p=>entryFor(p,model))&&<p className="unit-pilot-notice">В этой модели нет строк для выбранных пяти товаров. Нули вместо отсутствующих расчётов не подставляем.</p>}
-  <p className="unit-pilot-note">Фото четырёх товаров перенесены из встроенных изображений Google Таблиц в файлы сайта. У ватных палочек исходное фото отсутствует в контрольных строках Ozon, WB и Яндекс Маркета.</p>
+  </tr>})}
+  {vedList.map(p=>{
+   const calc=p.schemes[model];
+   const money=(x:number|null|undefined)=>x===null||x===undefined?"—":formatUnitNumber(x,"₽");
+   const ratio=(x:number|null|undefined)=>x===null||x===undefined?"—":formatUnitPercent(x);
+   const status=calc?.status==="calculated"?"Рассчитано":
+    calc?.status==="estimated"?"Предварительно":
+    calc?.status==="invalid_ved"?"Ошибка ВЭД":"Нужны исходные данные";
+   return <tr key={"ved:"+p.id} className="clickable" tabIndex={0}
+     title={calc?.missing?.join("; ")||"Открыть карточку товара из ВЭД"}
+     onClick={()=>{setSku(null);setVedSelected(p.id);}}
+     onKeyDown={e=>{if(e.key==="Enter")setVedSelected(p.id)}}>
+     <td><div className="unit-pilot-thumb unit-pilot-empty-thumb"><span>Нет фото</span></div></td>
+     <td className="unit-pilot-name">{displayNewProductName(p.name,p.article)}
+      <small>{p.article} <span className="unit-pilot-status">· {status}</span></small>
+     </td>
+     <td className={calc?.roi!==null&&calc?.roi!==undefined&&calc.roi<0?"unit-pilot-red":"unit-pilot-green"}>{ratio(calc?.roi)}</td>
+     <td>{ratio(calc?.margin)}</td>
+     <td className={calc?.profitRub!==null&&calc?.profitRub!==undefined&&calc.profitRub<0?"unit-pilot-red":""}>{money(calc?.profitRub)}</td>
+     <td>{money(calc?.costGrossRub??p.cost_gross_rub)}</td>
+     <td>{calc?.volumeLiters===null||calc?.volumeLiters===undefined?"—":formatUnitNumber(calc.volumeLiters)}</td>
+     <td>{money(calc?.priceRub)}</td>
+     <td>{money(calc?.priceAfterSppRub)}</td>
+     {model==="ozon-fbo"&&<td>Требует уточнения</td>}
+    </tr>;
+  })}
+  </tbody></table></div>
+  {list.length===0&&vedList.length===0&&!vedLoading&&<p className="unit-pilot-no-data">Товаров пока нет. Проверьте сохранённые версии ВЭД или измените поисковый запрос.</p>}
+
+  {vedSelected&&<VedUnitEconomicsLive key={vedSelected} modalProductId={vedSelected} activeModel={model}
+    onClose={()=>setVedSelected(null)}
+    onSaved={()=>{setVedLoading(true);setVedRevision(x=>x+1)}}/>}
   {photoPreview&&<div className="unit-pilot-photo-popover" style={{left:photoPreview.left,top:photoPreview.top}} role="presentation"><Image src={photoPreview.src} alt={photoPreview.alt} width={280} height={320} unoptimized/></div>}
   {item&&<div className="unit-pilot-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setSku(null)}}><div className="unit-pilot-modal" role="dialog" aria-modal="true" aria-labelledby="unit-pilot-modal-title">
    <header className="unit-pilot-modal-head"><div className="unit-pilot-heading"><div className="unit-pilot-thumb">{PHOTOS[item.sku]?<Image src={PHOTOS[item.sku]} width={59} height={59} alt={displayNewProductName(item.name,item.sku)} unoptimized/>:<span>Нет фото</span>}</div><div><h2 id="unit-pilot-modal-title">{displayNewProductName(item.name,item.sku)}</h2><p>Артикул: {item.sku}</p></div></div><button onClick={()=>setSku(null)} aria-label="Закрыть модалку">×</button></header>

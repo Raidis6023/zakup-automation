@@ -2,7 +2,6 @@
 import {useState} from "react";
 import UnitEconomicsClient from "./UnitEconomicsClient";
 import UnitEconomicsPilotClient from "./UnitEconomicsPilotClient";
-import VedUnitEconomicsLive from "./VedUnitEconomicsLive";
 export default function UnitEconomicsVersions(){
  const [version,setVersion]=useState<"classic"|"pilot">("classic");
  return <div className="unit-version-root">
@@ -11,6 +10,6 @@ export default function UnitEconomicsVersions(){
    <button type="button" className={version==="classic"?"active":""} aria-pressed={version==="classic"} onClick={()=>setVersion("classic")}>Текущая</button>
    <button type="button" className={version==="pilot"?"active":""} aria-pressed={version==="pilot"} onClick={()=>setVersion("pilot")}>Новая · пилот</button>
   </div>
-  {version==="classic"?<UnitEconomicsClient/>:<><VedUnitEconomicsLive/><UnitEconomicsPilotClient/></>}
+  {version==="classic"?<UnitEconomicsClient/>:<UnitEconomicsPilotClient/>}
  </div>;
 }

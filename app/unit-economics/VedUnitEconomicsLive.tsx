@@ -36,19 +36,26 @@ function formatNumber(n:number|null,percent=false){
  }
  return String(value);
 }
-export default function VedUnitEconomicsLive(){
+export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose,onSaved}:{
+ modalProductId?:string|null;
+ activeModel?:string;
+ onClose?:()=>void;
+ onSaved?:()=>void;
+}={}){
  const [products,setProducts]=useState<Product[]>([]);
- const [model,setModel]=useState<string>("ozon-fbo");
+ const [localModel,setModel]=useState<string>("ozon-fbo");
+ const model=activeModel||localModel;
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState("");
  const [revision,setRevision]=useState(0);
  const [retrying,setRetrying]=useState(false);
- const [editing,setEditing]=useState<string|null>(null);
+ const [editing,setEditing]=useState<string|null>(modalProductId||null);
  const [draft,setDraft]=useState<Record<string,string>>({});
  const [dirty,setDirty]=useState<string[]>([]);
  const [saving,setSaving]=useState(false);
  const [saveError,setSaveError]=useState("");
  const selectedProduct=products.find(p=>p.id===editing);
+ function closeEditor(){setEditing(null);onClose?.();}
  const editFields=[
   {key:"individualLengthCm",label:"Длина индивидуальной упаковки, см"},
   {key:"individualWidthCm",label:"Ширина индивидуальной упаковки, см"},
@@ -77,7 +84,7 @@ export default function VedUnitEconomicsLive(){
  }
  async function saveEditor(e:React.FormEvent){
   e.preventDefault();
-  if(!selectedProduct||!dirty.length){setEditing(null);return;}
+  if(!selectedProduct||!dirty.length){closeEditor();return;}
   const productPatch:Record<string,unknown>={};
   const shared=new Set(["name","productType","costGrossRub",...editFields.map(x=>x.key)]);
   for(const key of dirty){
@@ -98,7 +105,8 @@ export default function VedUnitEconomicsLive(){
    });
    const answer=await response.json();
    if(!response.ok||!answer.ok)throw Error(answer.error||answer.warning||"Не удалось сохранить");
-   setEditing(null);setLoading(true);setRevision(x=>x+1);
+   if(modalProductId){onSaved?.();closeEditor();}
+   else {setEditing(null);setLoading(true);setRevision(x=>x+1);}
   }catch(e){setSaveError(e instanceof Error?e.message:String(e))}
   finally{setSaving(false)}
  }
@@ -118,7 +126,7 @@ export default function VedUnitEconomicsLive(){
  }
  useEffect(()=>{
   const controller=new AbortController();
-  fetch("/api/unit-economics/prospective",{cache:"no-store",signal:controller.signal})
+  fetch("/api/unit-economics/prospective"+(modalProductId?"?productId="+encodeURIComponent(modalProductId):""),{cache:"no-store",signal:controller.signal})
    .then(async response=>{
     const body=await response.json();
     if(!response.ok||!body.ok)throw Error(body.error||"Не удалось прочитать новые товары");
@@ -126,8 +134,16 @@ export default function VedUnitEconomicsLive(){
    }).catch(e=>{if(!controller.signal.aborted)setError(e instanceof Error?e.message:String(e))})
    .finally(()=>{if(!controller.signal.aborted)setLoading(false)});
   return ()=>controller.abort();
- },[revision]);
- return <section className="unit-pilot" style={{marginBottom:20}}>
+ },[revision,modalProductId]);
+ useEffect(()=>{
+  if(!modalProductId)return;
+  const product=products.find(p=>p.id===modalProductId);
+  if(product&&draft.name===undefined)openEditor(product);
+ // Product rows only reload after save; avoid resetting edits on each keystroke.
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[modalProductId,products]);
+ return <>
+  {!modalProductId&&<section className="unit-pilot" style={{marginBottom:20}}>
   <div className="unit-pilot-top">
    <strong>Товары из реестра ВЭД · автоматическая юнит-экономика</strong>
    <div style={{display:"flex",gap:8}}>
@@ -172,7 +188,10 @@ export default function VedUnitEconomicsLive(){
      </tr>;
     })}</tbody>
    </table></div>}
-  {selectedProduct&&<div className="unit-pilot-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget&&!saving)setEditing(null)}}>
+  </section>}
+  {modalProductId&&error&&<p role="alert" className="unit-pilot-notice">{error}</p>}
+  {modalProductId&&loading&&!selectedProduct&&<p className="unit-pilot-notice">Загрузка товара из ВЭД…</p>}
+  {selectedProduct&&<div className="unit-pilot-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget&&!saving)closeEditor()}}>
    <div className="unit-pilot-modal" role="dialog" aria-modal="true" aria-label="Редактирование исходных данных товара" style={{width:"min(95vw,860px)"}}>
     <form onSubmit={saveEditor} style={{overflow:"auto"}}>
      <header className="unit-pilot-modal-head">
@@ -183,7 +202,7 @@ export default function VedUnitEconomicsLive(){
        </label>
        <p style={{fontSize:12,opacity:.7}}>Артикул: {selectedProduct.article} (не редактируется)</p>
       </div>
-      <button type="button" onClick={()=>setEditing(null)} disabled={saving} aria-label="Закрыть">×</button>
+      <button type="button" onClick={closeEditor} disabled={saving} aria-label="Закрыть">×</button>
      </header>
      <div className="unit-pilot-modal-body">
       <p className="unit-pilot-notice">Исходные данные ВЭД не изменяются. Ручные корректировки сохраняются отдельно
@@ -221,12 +240,12 @@ export default function VedUnitEconomicsLive(){
        процент выкупа и WB СПП нужно определить отдельно, как согласовали ранее.</p>
       {saveError&&<p role="alert" className="unit-pilot-notice">{saveError}</p>}
       <div style={{display:"flex",justifyContent:"flex-end",gap:10}}>
-       <button type="button" disabled={saving} onClick={()=>setEditing(null)}>Отмена</button>
+       <button type="button" disabled={saving} onClick={closeEditor}>Отмена</button>
        <button type="submit" disabled={saving||dirty.length===0}>{saving?"Сохранение…":"Сохранить и пересчитать"}</button>
       </div>
      </div>
     </form>
    </div>
   </div>}
- </section>;
+ </>;
 }

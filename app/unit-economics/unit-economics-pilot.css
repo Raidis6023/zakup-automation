@@ -87,3 +87,127 @@
 .unit-pilot-photo-popover{position:fixed;z-index:1700;width:300px;height:350px;border:1px solid var(--ws-border);background:var(--ws-surface);border-radius:12px;box-shadow:0 15px 35px rgba(0,0,0,.35);padding:11px;display:flex;align-items:center;justify-content:center;pointer-events:none}
 .unit-pilot-photo-popover img{width:100%;height:100%;object-fit:contain}
 @media(hover:none){.unit-pilot-photo-popover{display:none}}
+
+
+/* Единственный интерфейс новой юнитки: читаемая типографика, без второй таблицы и
+   абсолютного позиционирования переключателя над остальными элементами. */
+.unit-version-root .unit-version-controls{
+  position:relative;top:auto;right:auto;z-index:auto;
+  display:flex;justify-content:flex-end;align-items:center;
+  gap:8px;margin:2px 0 16px;padding:0;min-height:42px;
+}
+.unit-version-root .unit-version-controls>span{font-size:13px}
+.unit-version-root .unit-version-controls button{
+  min-height:39px;padding:9px 15px;font-size:13px;line-height:1.2;
+}
+.unit-version-root .unit-pilot{
+  font-size:14px;line-height:1.45;color:var(--ws-text);
+}
+.unit-version-root .unit-pilot-top{
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:16px;margin:0 0 15px;
+  padding:0;font-size:15px;
+}
+.unit-pilot-title-group{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.unit-pilot-title-group>strong{font-size:18px;line-height:1.3;color:var(--ws-text)}
+.unit-pilot-title-group>span{font-size:13px;font-weight:400;color:var(--ws-text-secondary)}
+.unit-pilot-top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.unit-pilot-top-actions button,.unit-pilot-top-actions a{
+  appearance:none;min-height:38px;display:inline-flex;align-items:center;
+  justify-content:center;gap:6px;padding:8px 13px;
+  border:1px solid var(--ws-border);border-radius:9px;
+  background:var(--ws-surface);color:var(--ws-text);
+  cursor:pointer;font:inherit;font-size:13px;font-weight:600;
+  text-decoration:none;transition:background .16s,border-color .16s;
+}
+.unit-pilot-top-actions button:hover:not(:disabled),
+.unit-pilot-top-actions a:hover{background:var(--ws-surface-hover);border-color:#37c98e}
+.unit-pilot-top-actions button:disabled{cursor:wait;opacity:.65}
+.unit-pilot-top-actions a{color:var(--ws-text-secondary)}
+.unit-version-root .unit-pilot-tabs{
+  display:flex;gap:18px;flex-wrap:wrap;align-items:center;
+  padding:3px 0 14px;margin:0 0 12px;
+  border-bottom:1px solid var(--ws-border-soft);
+}
+.unit-version-root .unit-pilot .unit-market-tabs,
+.unit-version-root .unit-pilot .unit-model-tabs{
+  display:flex;gap:8px;flex-wrap:wrap;
+}
+.unit-version-root .unit-pilot .unit-market-tabs button,
+.unit-version-root .unit-pilot .unit-model-tabs button{
+  border-radius:9px;min-height:41px;padding:9px 17px;
+  font-size:14px;line-height:1.25;font-weight:650;
+}
+.unit-pilot-help{
+  margin:0 0 16px;border:1px solid var(--ws-border);
+  background:var(--ws-surface);border-radius:10px;
+}
+.unit-pilot-help>summary{
+  display:flex;align-items:center;cursor:pointer;
+  padding:10px 14px;font-size:13px;font-weight:600;
+  color:var(--ws-text-secondary);
+}
+.unit-pilot-help>summary:hover{background:var(--ws-surface-hover)}
+.unit-pilot-help>p{margin:0;padding:12px 14px 15px;
+  border-top:1px solid var(--ws-border-soft);font-size:13px;line-height:1.55}
+.unit-pilot-error{padding:12px 14px;margin:10px 0;border:1px solid #bb5555;
+  border-radius:9px;color:#f0a3a3;background:rgba(186,66,66,.07);font-size:13px}
+.unit-version-root .unit-pilot .unit-table-toolbar{
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:12px;margin:12px 0 10px;
+}
+.unit-version-root .unit-pilot .unit-table-title{font-size:16px;font-weight:750}
+.unit-version-root .unit-pilot .unit-table-title span{
+  font-size:13px;font-weight:500;color:var(--ws-text-secondary);margin-left:8px
+}
+.unit-version-root .unit-pilot .unit-table-toolbar input{
+  min-height:40px;font-size:14px;border-radius:9px;padding:10px 14px;
+  color:var(--ws-text);background:var(--ws-surface);
+  border:1px solid var(--ws-border);min-width:250px;
+}
+.unit-version-root .unit-pilot-scroller{
+  max-height:min(68vh,900px);border-radius:12px;
+  box-shadow:0 1px 2px rgba(0,0,0,.05);
+}
+.unit-version-root .unit-pilot-table{
+  font-size:13.5px;line-height:1.4;min-width:1160px;
+}
+.unit-version-root .unit-pilot-table th{
+  font-size:13px;line-height:1.35;padding:13px 14px;font-weight:700;
+}
+.unit-version-root .unit-pilot-table td{padding:13px 14px}
+.unit-version-root .unit-pilot-table tbody tr{min-height:66px}
+.unit-version-root .unit-pilot-name{font-size:14px;font-weight:650}
+.unit-version-root .unit-pilot-name small{font-size:12px;line-height:1.5}
+.unit-pilot-status{color:var(--ws-text-muted);font-weight:500}
+.unit-version-root .unit-pilot-thumb{width:52px;height:52px;font-size:12px}
+.unit-pilot-empty-thumb{font-size:11px!important}
+.unit-version-root .unit-pilot-note,
+.unit-version-root .unit-pilot-notice{font-size:13px;line-height:1.5}
+.unit-version-root .unit-pilot-no-data{font-size:14px;padding:36px 20px}
+.unit-version-root .unit-pilot-modal-head{padding:20px 24px 14px}
+.unit-version-root .unit-pilot-heading h2{font-size:20px}
+.unit-version-root .unit-pilot-heading p{font-size:13px}
+.unit-version-root .unit-pilot-modal-tabs{padding:0 24px 15px}
+.unit-version-root .unit-pilot-views button{font-size:13px;padding:9px 15px}
+.unit-version-root .unit-pilot-modal-body{padding:20px 24px 28px;gap:17px}
+.unit-version-root .unit-pilot-metrics>div{font-size:13px}
+.unit-version-root .unit-pilot-panel h3{font-size:16px}
+.unit-version-root .unit-pilot-panel label,
+.unit-version-root .unit-pilot-panel>div:not(.unit-pilot-price):not(.unit-pilot-total),
+.unit-version-root .unit-pilot-price{font-size:13px}
+.unit-version-root .unit-pilot-panel output{font-size:14px;padding:11px 13px}
+.unit-version-root .unit-pilot-group>summary{font-size:14px;padding:15px}
+.unit-version-root .unit-pilot-field>summary{font-size:13px}
+.unit-version-root .unit-pilot-modal-foot{font-size:12px}
+.unit-version-root .unit-pilot-price-input{font-size:14px}
+@media(max-width:900px){
+  .unit-version-root .unit-version-controls{justify-content:flex-start;flex-wrap:wrap}
+  .unit-version-root .unit-pilot-top{align-items:flex-start}
+  .unit-pilot-title-group{flex-direction:column;align-items:flex-start;gap:3px}
+  .unit-version-root .unit-pilot-tabs{gap:10px}
+  .unit-version-root .unit-pilot .unit-market-tabs button,
+  .unit-version-root .unit-pilot .unit-model-tabs button{font-size:13px;min-height:39px;padding:8px 12px}
+  .unit-version-root .unit-pilot .unit-table-toolbar input{min-width:min(100%,250px)}
+  .unit-version-root .unit-pilot-table{min-width:1050px}
+}

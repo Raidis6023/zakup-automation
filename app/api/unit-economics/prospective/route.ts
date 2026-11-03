@@ -30,7 +30,9 @@ export async function GET(req:NextRequest){
   .map(v=>v.trim().toUpperCase()).filter(v=>/^[A-Z0-9_-]{1,120}$/.test(v)).slice(0,25);
  let productQuery=auth.admin.from("unit_ved_products")
   .select("id,article,name,source_type,source_version_id,ved_created_at,cost_gross_rub,purchase_vat_credit_rub,volume_liters,volume_source,unit_weight_kg,overrides,input_data,edit_revision");
- if(requestedArticles.length)productQuery=productQuery.in("article",requestedArticles);
+ const requestedId=req.nextUrl.searchParams.get("productId");
+ if(requestedId&&/^[a-f0-9-]{36}$/i.test(requestedId))productQuery=productQuery.eq("id",requestedId);
+ else if(requestedArticles.length)productQuery=productQuery.in("article",requestedArticles);
  const {data:products,error:pErr}=await productQuery
   .order("ved_created_at",{ascending:false}).limit(limit);
  if(pErr)return NextResponse.json({ok:false,error:"База расчётов ВЭД не готова: "+pErr.message},
