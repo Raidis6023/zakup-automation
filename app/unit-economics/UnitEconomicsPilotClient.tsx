@@ -119,6 +119,13 @@ function entryFor(p:Product,m:ModelKey,price?:number):Entry|undefined{
   display[layout.profit]=formatUnitNumber(check.output.netProfit,"₽");
   display[layout.margin]=check.output.marginRatio===null?"—":formatUnitPercent(check.output.marginRatio);
   display[layout.roi]=check.output.roiRatio===null?"—":formatUnitPercent(check.output.roiRatio);
+  // В Яндекс FBY столбец B дублирует AM (ROI); обновляем оба.
+  // В Яндекс FBS столбец B — КОД ТОВАРА, его не трогаем.
+  if(m==="ym-fby"){
+   values[1]=check.output.roiRatio??"";
+   display[1]=check.output.roiRatio===null?"—":formatUnitPercent(check.output.roiRatio);
+   engineFormulas["1"]="Единый ROI: чистая прибыль / себестоимость без НДС закупки";
+  }
   engineFormulas[String(layout.profit)]="Цена продажи − себестоимость с НДС − сумма уникальных расходов − (исходящий НДС − входящий НДС)";
   engineFormulas[String(layout.margin)]="Чистая прибыль / (цена продажи − исходящий НДС)";
   engineFormulas[String(layout.roi)]="Чистая прибыль / (себестоимость с НДС − входящий НДС закупки)";
