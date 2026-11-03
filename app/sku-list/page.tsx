@@ -845,7 +845,14 @@ export default async function SkuListPage() {
 
   const wildberriesOctoberRows =
     buildWbRows(
-      getWbOctoberRows(),
+      getWbOctoberRows().filter(
+        row =>
+          normalizeForMatch(row.article)
+            !== "НЕОПОЗНАННЫЙ ТОВАР"
+          &&
+          normalizeForMatch(row.name)
+            !== "НЕОПОЗНАННЫЙ ТОВАР"
+      ),
       wbMappings,
       statuses
     );
