@@ -207,19 +207,7 @@ return <div className="ozf-layout">
 {columns.slice(4).map(([k])=><th key={k} className={['advertising','storage','delivery','acceptance','penalty','cogs','mayak'].includes(k)?'ozf-bad':''}>
 {totalFor(k)===null?'Нет данных':k==='drr'?totalFor(k)!.toLocaleString('ru-RU',{maximumFractionDigits:2})+' %':k==='orders'||k==='cancels'||k==='buyouts'?qty(totalFor(k)!):money(['advertising','storage','delivery','acceptance','penalty','cogs','mayak'].includes(k)?-totalFor(k)!:totalFor(k)!)}
 </th>)}</tr></tfoot>
-</table></div></tr></thead><tbody>
-{Object.entries(active.operations).sort((a,b)=>a[0].localeCompare(b[0],"ru")).map(([name,v])=><tr key={name}><td>{name}</td><td>{v.count}</td><td>{money(v.amount)}</td><td>{money(v.realization)}</td><td>{money(v.delivery)}</td><td>{money(v.storage)}</td><td>{money(v.penalty)}</td><td>{money(v.deduction)}</td></tr>)}
-</tbody></table></div>
-<p className="ozf-footnote">Суммы показаны по полям отчёта реализации, не как рассчитанная прибыль. Рекламная статистика учтётся после сверки фактических списаний WB.</p>
-</div></td></tr>}</Fragment>})}</tbody>
-<tfoot><tr><th colSpan={3}>Итого · {rows.length} артикулов</th><th>{sum(r=>r.order_count)}</th><th>{sum(r=>r.cancel_count)}</th>
-<th>{money(sum(r=>r.gross_retail))}</th><th>{money(sum(r=>r.realization))}</th><th>{money(sum(r=>r.to_transfer))}</th>
-<th>{money(sum(r=>r.delivery))}</th><th>{data.coverage.paid_storage==='cached_complete'?money(sum(r=>r.external_storage??0)):'Неполно'}</th>
-<th>{money(sum(r=>r.acceptance))}</th><th>{money(sum(r=>r.penalty))}</th><th>{money(data.promotion_actual)}</th>
-<th>{adCovered?money([...adsByNm.values()].reduce((t,v)=>t+v.spend,0)):'Нет данных'}</th>
-<th>{allRatesFilled?money(sum(r=>(r.cogs??0)+(r.mayak_expense??0))):'Нужны ставки'}</th>
-<th>{allRatesFilled?money(sum(r=>r.preliminary_result??0))+' *':'Нужны ставки'}</th></tr></tfoot></table></div>
-
+</table></div>
  {Boolean(data.unallocated?.length)&&<details className="ozf-panel ozf-collapsible-register" style={{marginTop:14}}><summary>Нераспределённые прочие расходы WB · детализация по датам и ID</summary><AccrualBreakdownList market="wb" from={data.from} to={data.to} items={data.unallocated??[]} total={(data.unallocated??[]).reduce((s,x)=>s+x.amount,0)} totalLabel="Итого нераспределённые операции"/></details>}
 </section>
 </>}
