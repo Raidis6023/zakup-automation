@@ -5,8 +5,11 @@ import Link from "next/link";
 import {WORKBOOK_URL,type Marketplace,type ModelKey} from "@/lib/unit-economics/model-config";
 import pilot from "@/data/unit-economics-pilot.json";
 import {calculatePilotFbs,pilotFbsMinPrice} from "@/lib/unit-economics/pilot-fbs";
+import {formatUnitNumber,formatUnitPercent} from "@/lib/unit-economics/financial-results";
+import {recalculateFinancialReference,recalculateOzonReferenceInputs,LAYOUT} from "@/lib/unit-economics/financial-reference";
+import type {UnitFinalModel} from "@/lib/unit-economics/financial-results";
 
-type Entry={tab:string;row:number;values:(string|number|null)[];display:string[];formulas:Record<string,string>;calculated?:boolean;notes?:string[]};
+type Entry={tab:string;row:number;values:(string|number|null)[];display:string[];formulas:Record<string,string>;calculated?:boolean;notes?:string[];auditStatus?:string;ozonAudit?:{volumeFormula:string;volumeSource:string;volumeNotes:string;exactVolume:number|null;sppFormula:string}};
 type Product={sku:string;name:string;models:Record<string,Entry>};
 type Cols={roi:number;margin:number;profit:number;cost:number;volume:number;price:number;buyer:number|null;category:number;vat:number;output:number;input:number};
 const DATA=pilot.products as Product[];
@@ -82,7 +85,57 @@ const GROUPS:Record<string,{name:string;cells:number[]}[]>={
 const FINANCE:Record<string,{commission:number;logistics:number[];ads:number}>={"ozon-fbo":{commission:17,logistics:[22,25],ads:36},"ozon-fbs":{commission:14,logistics:[19,22,25],ads:34},"wb-fbw":{commission:17,logistics:[23],ads:29},"wb-fbs":{commission:17,logistics:[23],ads:29},"ym-fby":{commission:16,logistics:[20,21],ads:26},"ym-fbs":{commission:16,logistics:[20,21],ads:34}};
 const rub=(n:number)=>Number.isFinite(n)?new Intl.NumberFormat("ru-RU",{maximumFractionDigits:2}).format(n)+" ₽":"—";
 const GIDS:Record<string,string>={"ozon-fbo":"261268990","wb-fbw":"524833130","wb-fbs":"806114489","ym-fby":"395305505"};
-function entryFor(p:Product,m:ModelKey,price?:number):Entry|undefined{if(m==="ozon-fbs"||m==="ym-fbs")return calculatePilotFbs(p,m,price);return p.models[m];}
+function entryFor(p:Product,m:ModelKey,price?:number):Entry|undefined{
+ const current=(m==="ozon-fbs"||m==="ym-fbs")?calculatePilotFbs(p,m,price):p.models[m];
+ if(!current||m==="ym-fby"||m==="ym-fbs")return current; // ЯМ пока не переносим
+ const layout=LAYOUT[m as UnitFinalModel];
+ const values=current.values.slice(),display=current.display.slice();
+ const check=recalculateFinancialReference(m as UnitFinalModel,current.values);
+ let auditStatus="";
+ if(check.output){
+  values[layout.profit]=check.output.netProfit;
+  values[layout.margin]=check.output.marginRatio??"";
+  values[layout.roi]=check.output.roiRatio??"";
+  display[layout.profit]=formatUnitNumber(check.output.netProfit,"₽");
+  display[layout.margin]=check.output.marginRatio===null?"—":formatUnitPercent(check.output.marginRatio);
+  display[layout.roi]=check.output.roiRatio===null?"—":formatUnitPercent(check.output.roiRatio);
+  auditStatus=check.status==="matched"
+   ?(current.calculated?"Новый движок: итоги совпали с предыдущим пробным расчётом FBS (не с Google)":"Новый движок: итоги совпали с Google Таблицами")
+   :"Новый движок: обнаружено расхождение с предыдущим результатом";
+ }else{
+  values[layout.profit]="";values[layout.margin]="";values[layout.roi]="";
+  display[layout.profit]="—";display[layout.margin]="—";display[layout.roi]="—";
+  auditStatus="Неполные исходные данные, самостоятельный расчёт недоступен: "+check.missingColumns.join(", ");
+ }
+ let ozonAudit:Entry["ozonAudit"];
+ if(m==="ozon-fbo"||m==="ozon-fbs"){
+  const source=p.models["ozon-fbo"];
+  if(source){
+   try{
+    const result=recalculateOzonReferenceInputs(m,current.values,source.values);
+    const volumeIndex=m==="ozon-fbo"?9:6;
+    const sppIndex=m==="ozon-fbo"?14:11;
+    const priceWithSppIndex=m==="ozon-fbo"?15:12;
+    if(result.volume.liters!==null){
+     values[volumeIndex]=result.volume.liters;
+     display[volumeIndex]=formatUnitNumber(result.volume.liters);
+     if(m==="ozon-fbo"){values[10]=result.volume.roundedTariffLiters??"";display[10]=formatUnitNumber(result.volume.roundedTariffLiters??0)}
+     if(m==="ozon-fbs"){values[7]=result.volume.roundedTariffLiters??"";display[7]=formatUnitNumber(result.volume.roundedTariffLiters??0)}
+    }
+    values[sppIndex]=result.spp.sppRate;
+    display[sppIndex]=formatUnitPercent(result.spp.sppRate);
+    values[priceWithSppIndex]=result.spp.priceAfterSpp;
+    display[priceWithSppIndex]=formatUnitNumber(result.spp.priceAfterSpp,"₽");
+    const differences=result.volume.comparisons.map(v=>v.otherSource+": "+formatUnitNumber(v.differenceLiters,"л")).join("; ");
+    ozonAudit={volumeFormula:result.volume.formula??"Литраж не определён",
+     volumeSource:result.volume.source??"unknown",
+     volumeNotes:[...result.volume.warnings,differences].filter(Boolean).join("; "),
+     exactVolume:result.volume.liters,sppFormula:result.spp.formula};
+   }catch(error){auditStatus+="; ошибка литража/СПП: "+(error instanceof Error?error.message:String(error))}
+  }
+ }
+ return {...current,values,display,auditStatus,ozonAudit};
+}
 const fmt=(r:Entry|undefined,i:number|null)=>r&&i!==null&&r.display[i]?r.display[i]:"—";
 const numeric=(r:Entry|undefined,i:number)=>typeof r?.values[i]==="number"?r.values[i] as number:Number(String(r?.values[i]??"0").replace(",",".").replace(/[^0-9.-]/g,""));
 function columnName(i:number){let s="";for(let n=i+1;n>0;){n--;s=String.fromCharCode(65+n%26)+s;n=Math.floor(n/26)}return s;}
@@ -140,7 +193,14 @@ export default function UnitEconomicsPilotClient(){
   {item&&<div className="unit-pilot-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setSku(null)}}><div className="unit-pilot-modal" role="dialog" aria-modal="true" aria-labelledby="unit-pilot-modal-title">
    <header className="unit-pilot-modal-head"><div className="unit-pilot-heading"><div className="unit-pilot-thumb">{PHOTOS[item.sku]?<Image src={PHOTOS[item.sku]} width={59} height={59} alt={item.name} unoptimized/>:<span>Нет фото</span>}</div><div><h2 id="unit-pilot-modal-title">{item.name}</h2><p>Артикул: {item.sku}</p></div></div><button onClick={()=>setSku(null)} aria-label="Закрыть модалку">×</button></header>
    <div className="unit-pilot-modal-tabs">{tabs}<div className="unit-pilot-views"><button className={view==="summary"?"active":""} onClick={()=>setView("summary")}>Сводка</button><button className={view==="details"?"active":""} onClick={()=>setView("details")}>Все расчёты</button></div></div>
-   {row?<div className="unit-pilot-modal-body" key={sku+model+view}>{row.calculated&&<div className="unit-pilot-notice"><strong>Пробный расчёт FBS.</strong> {row.notes?.join(". ")}.</div>}{view==="summary"?<>
+   {row?<div className="unit-pilot-modal-body" key={sku+model+view}>{row.calculated&&<div className="unit-pilot-notice"><strong>Пробный расчёт FBS.</strong> {row.notes?.join(". ")}.</div>}
+    {row.auditStatus&&<div className="unit-pilot-notice"><strong>Проверка финальных показателей:</strong> {row.auditStatus}</div>}
+    {row.ozonAudit&&<details className="unit-pilot-group"><summary><strong>Формулы Ozon: СПП и литраж ИУ</strong><span>Раскрыть</span></summary><div style={{padding:"12px",fontSize:"12px"}}>
+      <div>СПП и цена покупателя: {row.ozonAudit.sppFormula}</div>
+      <div style={{marginTop:"8px"}}>Литраж ({row.ozonAudit.volumeSource}): {row.ozonAudit.volumeFormula}</div>
+      <div style={{marginTop:"6px"}}>Точное значение: {row.ozonAudit.exactVolume??"Не определено"} л</div>
+      {row.ozonAudit.volumeNotes&&<div style={{marginTop:"6px"}}>Контрольные альтернативы: {row.ozonAudit.volumeNotes}</div>}
+    </div></details>}{view==="summary"?<>
     <div className="unit-pilot-metrics"><div>ROI <strong className={numeric(row,c.roi)<0?"unit-pilot-red":"unit-pilot-green"}>{fmt(row,c.roi)}</strong></div><div>Чистая прибыль<strong>{fmt(row,c.profit)}</strong></div><div>Маржинальность<strong>{fmt(row,c.margin)}</strong></div></div>
     <div className="unit-pilot-columns"><section className="unit-pilot-panel"><h3>Исходные данные</h3>{[["Категория",c.category],["Себестоимость, ₽",c.cost],["Цена продажи, ₽",c.price],["Объём, л",c.volume],["Цена с СПП",c.buyer]].map(([label,i])=><label key={String(label)}>{label}{label==="Цена продажи, ₽"&&row.calculated?<input className="unit-pilot-price-input" type="number" min="0.01" step="0.01" value={override??String(numeric(row,c.price))} onChange={e=>setOverrides(old=>({...old,[overrideKey]:e.target.value}))}/>:<output>{fmt(row,i as number|null)}</output>}</label>)}{model==="ozon-fbo"&&<label>Зона размещения<output>Не указана в строке</output></label>}</section>
     <section className="unit-pilot-panel"><h3>Финансовый результат</h3><div>Цена продажи <b>{fmt(row,c.price)}</b></div><div>Себестоимость <b>{fmt(row,c.cost)}</b></div><div>Комиссия маркетплейса <b>{fmt(row,fees.commission)}</b></div><div>Логистика <b>{rub(logistics)}</b></div><div>Реклама <b>{fmt(row,fees.ads)}</b></div><div>Прочие расходы и налоги <b>{rub(other)}</b></div><details className="unit-pilot-vat-mini"><summary>НДС к уплате: {fmt(row,c.vat)}</summary><p>Исходящий НДС: {fmt(row,c.output)} · Входящий НДС: {fmt(row,c.input)}</p></details><div className="unit-pilot-total">Чистая прибыль <b>{fmt(row,c.profit)}</b></div></section></div>
