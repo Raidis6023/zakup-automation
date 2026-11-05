@@ -37,7 +37,7 @@ test("MPStats: ключ читается из защищённого храни�
  assert.match(auth,/const token=await getMpStatsToken\(\)/);
  assert.match(auth,/if\(!token\)/);
  assert.doesNotMatch(auth,/process\.env\.MPSTATS_TOKEN/);
- assert.ok(parser.includes("getWbSubjectMpstats(subject:string,fbs:boolean,token:string,subjectGroup?:string)"));
+ assert.ok(parser.includes("getWbSubjectMpstats(subject:string,fbs:boolean,token:string,subjectGroup?:string,confirmed?:MpstatsSelection)"));
  assert.ok(parser.includes("if(!token?.trim())"));
  assert.ok(credentials.includes("workspace_get_integration_secrets"));
  assert.ok(api.includes("workspace_upsert_integration_secrets"));
