@@ -2,11 +2,18 @@ import "server-only";
 
 import { createAdminClient } from "../supabase/admin";
 
-type SecretName =
+export type SecretName =
   | "ozon_seller_client_id"
   | "ozon_seller_api_key"
   | "ozon_performance_client_id"
   | "ozon_performance_client_secret"
+  | "wb_read_token"
+  | "wb_finance_token"
+  | "wb_promotion_token"
+  | "wb_supplies_api_token"
+  | "yandex_api_key"
+  | "yandex_api_key_full"
+  | "yandex_campaign_id"
   | "mpstats_token";
 
 type VaultRow = {
@@ -30,8 +37,30 @@ const SECRET_NAMES: SecretName[] = [
   "ozon_seller_api_key",
   "ozon_performance_client_id",
   "ozon_performance_client_secret",
+  "wb_read_token",
+  "wb_finance_token",
+  "wb_promotion_token",
+  "wb_supplies_api_token",
+  "yandex_api_key",
+  "yandex_api_key_full",
+  "yandex_campaign_id",
   "mpstats_token",
 ];
+
+const ENVIRONMENT_NAMES: Record<SecretName, string> = {
+  ozon_seller_client_id: "OZON_CLIENT_ID",
+  ozon_seller_api_key: "OZON_API_KEY",
+  ozon_performance_client_id: "OZON_PERFORMANCE_CLIENT_ID",
+  ozon_performance_client_secret: "OZON_PERFORMANCE_CLIENT_SECRET",
+  wb_read_token: "WB_READ_TOKEN",
+  wb_finance_token: "WB_FINANCE_TOKEN",
+  wb_promotion_token: "WB_PROMOTION_TOKEN",
+  wb_supplies_api_token: "WB_SUPPLIES_API_TOKEN",
+  yandex_api_key: "YANDEX_API_KEY",
+  yandex_api_key_full: "YANDEX_API_KEY_FULL",
+  yandex_campaign_id: "YANDEX_CAMPAIGN_ID",
+  mpstats_token: "MPSTATS_TOKEN",
+};
 
 async function readVault(force = false): Promise<VaultCache> {
   if (!force && vaultCache && vaultCache.expiresAt > Date.now()) return vaultCache;
@@ -120,6 +149,12 @@ function serviceStatus(items: ResolvedSecret[]) {
   return { configured, source, updatedAt };
 }
 
+export async function getIntegrationSecret(name: SecretName): Promise<string | null> {
+  const cache = await readVault();
+  const resolved = resolveSecret(cache, name, ENVIRONMENT_NAMES[name]);
+  return resolved.value || null;
+}
+
 export async function getOzonCredentials() {
   const cache = await readVault();
   return {
@@ -131,9 +166,7 @@ export async function getOzonCredentials() {
 }
 
 export async function getMpStatsToken(): Promise<string | null> {
-  const cache = await readVault();
-  const token = resolveSecret(cache, "mpstats_token", "MPSTATS_TOKEN").value;
-  return token || null;
+  return getIntegrationSecret("mpstats_token");
 }
 
 export async function getIntegrationStatuses() {
@@ -143,11 +176,20 @@ export async function getIntegrationStatuses() {
   const sellerApiKey = resolveSecret(cache, "ozon_seller_api_key", "OZON_API_KEY");
   const performanceClientId = resolveSecret(cache, "ozon_performance_client_id", "OZON_PERFORMANCE_CLIENT_ID");
   const performanceClientSecret = resolveSecret(cache, "ozon_performance_client_secret", "OZON_PERFORMANCE_CLIENT_SECRET");
+  const wbReadToken = resolveSecret(cache, "wb_read_token", "WB_READ_TOKEN");
+  const wbFinanceToken = resolveSecret(cache, "wb_finance_token", "WB_FINANCE_TOKEN");
+  const wbPromotionToken = resolveSecret(cache, "wb_promotion_token", "WB_PROMOTION_TOKEN");
+  const wbSuppliesToken = resolveSecret(cache, "wb_supplies_api_token", "WB_SUPPLIES_API_TOKEN");
+  const yandexApiKey = resolveSecret(cache, "yandex_api_key", "YANDEX_API_KEY");
+  const yandexFullApiKey = resolveSecret(cache, "yandex_api_key_full", "YANDEX_API_KEY_FULL");
+  const yandexCampaignId = resolveSecret(cache, "yandex_campaign_id", "YANDEX_CAMPAIGN_ID");
   const mpstatsToken = resolveSecret(cache, "mpstats_token", "MPSTATS_TOKEN");
 
   return {
     ozonSeller: serviceStatus([sellerClientId, sellerApiKey]),
     ozonPerformance: serviceStatus([performanceClientId, performanceClientSecret]),
+    wildberries: serviceStatus([wbReadToken, wbFinanceToken, wbPromotionToken, wbSuppliesToken]),
+    yandexMarket: serviceStatus([yandexApiKey, yandexFullApiKey, yandexCampaignId]),
     mpstats: serviceStatus([mpstatsToken]),
   };
 }

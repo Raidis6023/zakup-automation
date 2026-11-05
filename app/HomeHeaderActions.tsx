@@ -1773,10 +1773,10 @@ export default function HomeHeaderActions() {
 
         if (
           target instanceof Node
-          && quickNoteDate
           && !calendarActionRef.current?.contains(target)
         ) {
-          setQuickNoteDate(null);
+          if (quickNoteDate) setQuickNoteDate(null);
+          if (openPanel === "calendar") setOpenPanel(null);
         }
 
 
@@ -1837,6 +1837,7 @@ export default function HomeHeaderActions() {
 
         if (quickNoteDate) {
           setQuickNoteDate(null);
+          setOpenPanel(null);
           return;
         }
 
@@ -1880,6 +1881,7 @@ export default function HomeHeaderActions() {
       selectedNotification,
       requestAction,
       quickNoteDate,
+      openPanel,
     ]
   );
 
@@ -4019,6 +4021,7 @@ export default function HomeHeaderActions() {
           {
             openPanel ===
               "calendar"
+            && !quickNoteDate
             &&
             (
 
@@ -4204,14 +4207,12 @@ export default function HomeHeaderActions() {
                               if (pastDay || (event.pointerType === "mouse" && event.button !== 0)) return;
                               event.stopPropagation();
                               setQuickNoteDate(formatCalendarDateInput(date));
-                              setOpenPanel(null);
                             }}
 
                             onClick={event => {
                               event.stopPropagation();
                               if (pastDay) return;
                               setQuickNoteDate(formatCalendarDateInput(date));
-                              setOpenPanel(null);
                             }}
                           >
                             {

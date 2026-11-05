@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 const headers = { "Cache-Control": "private, no-store" };
 
-type Service = "ozon-seller" | "ozon-performance" | "mpstats";
+type Service = "ozon-seller" | "ozon-performance" | "wildberries" | "yandex-market" | "mpstats";
 
 async function requireAdmin() {
   const session = await createClient();
@@ -72,6 +72,43 @@ export async function POST(request: NextRequest) {
           ozon_performance_client_secret: clean(body.values.clientSecret, 20, 512, "Проверьте Client Secret Ozon Performance"),
         };
         break;
+      case "wildberries": {
+        const optional = (value: unknown, label: string) => {
+          const text = typeof value === "string" ? value.trim() : "";
+          if (!text) return null;
+          if (text.length < 20 || text.length > 8192) throw new Error(label);
+          return text;
+        };
+        secrets = {};
+        const readToken = optional(body.values.readToken, "Проверьте основной токен Wildberries");
+        const financeToken = optional(body.values.financeToken, "Проверьте финансовый токен Wildberries");
+        const promotionToken = optional(body.values.promotionToken, "Проверьте токен продвижения Wildberries");
+        const suppliesToken = optional(body.values.suppliesToken, "Проверьте токен поставок Wildberries");
+        if (readToken) secrets.wb_read_token = readToken;
+        if (financeToken) secrets.wb_finance_token = financeToken;
+        if (promotionToken) secrets.wb_promotion_token = promotionToken;
+        if (suppliesToken) secrets.wb_supplies_api_token = suppliesToken;
+        if (Object.keys(secrets).length === 0) throw new Error("Введите хотя бы один токен Wildberries");
+        break;
+      }
+      case "yandex-market": {
+        const optional = (value: unknown, min: number, max: number, label: string) => {
+          const text = typeof value === "string" ? value.trim() : "";
+          if (!text) return null;
+          if (text.length < min || text.length > max) throw new Error(label);
+          return text;
+        };
+        secrets = {};
+        const apiKey = optional(body.values.apiKey, 20, 512, "Проверьте основной ключ Яндекс Маркета");
+        const apiKeyFull = optional(body.values.apiKeyFull, 20, 512, "Проверьте ключ полного доступа Яндекс Маркета");
+        const campaignId = optional(body.values.campaignId, 1, 32, "Проверьте ID кампании Яндекс Маркета");
+        if (campaignId && !/^\\d+$/.test(campaignId)) throw new Error("ID кампании Яндекс Маркета должен состоять из цифр");
+        if (apiKey) secrets.yandex_api_key = apiKey;
+        if (apiKeyFull) secrets.yandex_api_key_full = apiKeyFull;
+        if (campaignId) secrets.yandex_campaign_id = campaignId;
+        if (Object.keys(secrets).length === 0) throw new Error("Введите хотя бы один параметр Яндекс Маркета");
+        break;
+      }
       case "mpstats":
         secrets = {
           mpstats_token: clean(body.values.apiKey, 20, 512, "Проверьте API-ключ MPStats"),
@@ -85,6 +122,10 @@ export async function POST(request: NextRequest) {
       { ok: false, error: error instanceof Error ? error.message : "Проверьте введённые значения" },
       { status: 400, headers },
     );
+  }
+
+  if (Object.keys(secrets).length === 0) {
+    return NextResponse.json({ ok: false, error: "Не указаны значения для сохранения" }, { status: 400, headers });
   }
 
   const { error } = await access.admin.rpc("workspace_upsert_integration_secrets", {

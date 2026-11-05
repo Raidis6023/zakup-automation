@@ -339,3 +339,28 @@
     width: 100%;
   }
 }
+
+
+.api-settings-card--wide {
+  grid-column: 1 / -1;
+}
+
+.api-settings-service-icon--wb {
+  color: #a34bb4;
+  border-color: color-mix(in srgb, #a34bb4 35%, var(--border));
+  background: color-mix(in srgb, #a34bb4 9%, var(--surface));
+  font-size: 12px;
+  letter-spacing: -.4px;
+}
+
+.api-settings-service-icon--yandex {
+  color: #df4545;
+  border-color: color-mix(in srgb, #df4545 35%, var(--border));
+  background: color-mix(in srgb, #df4545 9%, var(--surface));
+}
+
+@media (max-width: 1120px) {
+  .api-settings-card--wide {
+    grid-column: auto;
+  }
+}
