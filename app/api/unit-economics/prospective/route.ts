@@ -9,6 +9,7 @@ import {findWbCategory} from "@/lib/unit-economics/wb-category-registry";
 import {findMarketplaceCategory,type CategoryMarket} from "@/lib/unit-economics/marketplace-category-registry";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
+export const maxDuration=60;
 const headers={"Cache-Control":"private, no-store"};
 async function access(){
  const session=await createClient();
@@ -81,6 +82,7 @@ export async function GET(req:NextRequest){
   const value=item.result_data as Record<string,unknown>;
   const detail={
    model:item.model,status:item.status,missing:item.missing,
+   costPolicyVersion:value.costPolicyVersion??1,sourceCost:value.sourceCost??null,
    costGrossRub:value.costGrossRub??null,volumeLiters:value.volumeLiters??null,
    unitWeightKg:value.unitWeightKg??null,unitWeightFormula:value.unitWeightFormula??null,
    unitWeightSource:value.unitWeightSource??null,unitWeightWarning:value.unitWeightWarning??null,
@@ -109,7 +111,28 @@ export async function POST(request:NextRequest){
  if("error" in auth)return NextResponse.json({ok:false,error:auth.error},{status:auth.status,headers});
  if(!auth.canRetry)return NextResponse.json({ok:false,error:"Недостаточно прав для повторного расчёта"},
   {status:403,headers});
- const body=await request.json().catch(()=>null) as {action?:string}|null;
+ const body=await request.json().catch(()=>null) as {
+  action?:string;sourceType?:string;sourceVersionId?:string
+ }|null;
+ if(body?.action==="recalculate-cost-policy"){
+  const sourceType=body.sourceType,versionId=body.sourceVersionId;
+  if((sourceType!=="whole"&&sourceType!=="single")||
+   typeof versionId!=="string"||!/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(versionId))
+   return NextResponse.json({ok:false,error:"Некорректная версия расчёта ВЭД"},{status:400,headers});
+  const {data:linked,error:linkedError}=await auth.admin.from("unit_ved_products")
+   .select("id").eq("source_type",sourceType).eq("source_version_id",versionId).limit(1);
+  if(linkedError)return NextResponse.json({ok:false,error:linkedError.message},{status:503,headers});
+  if(!linked?.length)return NextResponse.json({ok:false,error:"Товары версии ВЭД не найдены"},{status:404,headers});
+  const {data:current,error:calcError}=await auth.admin.from("unit_ved_calculations")
+   .select("result_data").eq("product_id",linked[0].id).eq("model","ozon-fbo").maybeSingle();
+  if(calcError)return NextResponse.json({ok:false,error:calcError.message},{status:503,headers});
+  if(Number((current?.result_data as Record<string,unknown>|null)?.costPolicyVersion)===2)
+   return NextResponse.json({ok:true,alreadyCurrent:true,processed:0},{headers});
+  const result=await syncUnitFromVedVersion(auth.admin,sourceType,versionId,{force:true});
+  return NextResponse.json({ok:result.ok,processed:result.processed,skipped:result.skipped,
+   ...(!result.ok?{error:result.error}:{}),
+   ...(result.ok?{recalculated:true}:{})},{status:result.ok?200:503,headers});
+ }
  if(body?.action!=="retry-pending")return NextResponse.json({ok:false,error:"Неизвестная операция"},
   {status:400,headers});
  const results=await retryPendingUnitVedEvents(auth.admin,10).catch(e=>null);

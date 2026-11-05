@@ -24,12 +24,14 @@ type Product={sku:string;name:string;models:Record<string,Entry>};
 type VedScheme={
  status:"calculated"|"estimated"|"needs_input"|"invalid_ved";
  missing:string[];costGrossRub:number|null;volumeLiters:number|null;
+ costPolicyVersion?:number;
  unitWeightKg:number|null;priceRub:number|null;priceAfterSppRub:number|null;
  profitRub:number|null;roi:number|null;margin:number|null;
 };
 type VedProduct={
  id:string;article:string;name:string;ved_created_at:string;
  source_item_id:string|null;source_offer_id:string|null;
+ source_type:"whole"|"single";source_version_id:string;
  cost_gross_rub:number|null;volume_liters:number|null;unit_weight_kg:number|null;
  schemes:Record<string,VedScheme>;
 };
@@ -247,6 +249,9 @@ export default function UnitEconomicsPilotClient(){
  const [vedPhotoUrls,setVedPhotoUrls]=useState<Record<string,string>>({});
  const [vedPhotoError,setVedPhotoError]=useState("");
  const attemptedPhotoOffers=useRef(new Set<string>());
+ const attemptedCostSources=useRef(new Set<string>());
+ const [costUpdating,setCostUpdating]=useState(false);
+ const [costUpdateError,setCostUpdateError]=useState("");
  const [vedLoading,setVedLoading]=useState(true);
  const [vedError,setVedError]=useState("");
  const [vedRevision,setVedRevision]=useState(0);
@@ -264,6 +269,41 @@ export default function UnitEconomicsPilotClient(){
    .finally(()=>{if(!controller.signal.aborted)setVedLoading(false)});
   return ()=>controller.abort();
  },[vedRevision]);
+ // Backfill already imported items once per saved VED version.
+ // The server replays original 40HQ/MOQ costs, so the +15% is never compounded.
+ useEffect(()=>{
+  const pending=new Map<string,{sourceType:"whole"|"single";sourceVersionId:string}>();
+  for(const item of vedProducts){
+   if(!item.source_version_id||!["whole","single"].includes(item.source_type))continue;
+   if(Object.values(item.schemes).every(c=>c.costPolicyVersion===2))continue;
+   const key=item.source_type+":"+item.source_version_id;
+   if(attemptedCostSources.current.has(key))continue;
+   pending.set(key,{sourceType:item.source_type,sourceVersionId:item.source_version_id});
+  }
+  if(!pending.size)return;
+  for(const key of pending.keys())attemptedCostSources.current.add(key);
+  let cancelled=false;
+  void(async()=>{
+   setCostUpdating(true);
+   setCostUpdateError("");
+   try{
+    for(const source of pending.values()){
+     const response=await fetch("/api/unit-economics/prospective",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({action:"recalculate-cost-policy",...source})
+     });
+     const data=await response.json() as {ok:boolean;error?:string};
+     if(!response.ok||!data.ok)throw Error(data.error||"Не удалось пересчитать себестоимость");
+    }
+    if(!cancelled){setVedLoading(true);setVedRevision(n=>n+1);}
+   }catch(error){
+    if(!cancelled)setCostUpdateError(error instanceof Error?error.message:String(error));
+   }finally{
+    if(!cancelled)setCostUpdating(false);
+   }
+  })();
+  return()=>{cancelled=true};
+ },[vedProducts]);
  // Resolve signed URLs for all listed source-KP offers in one request.
  // For missing offers, extract thumbnails once per entire Excel, not once per SKU.
  const photoOfferKey=[...new Set(vedProducts.map(p=>p.source_offer_id).filter(
@@ -396,6 +436,8 @@ export default function UnitEconomicsPilotClient(){
    Исходный реестр ВЭД и старая версия юнитки не изменяются.</p>
   </details>
   {vedError&&<p className="unit-pilot-error" role="alert"><strong>Синхронизация ВЭД:</strong> {vedError}</p>}
+  {costUpdating&&<p className="unit-pilot-notice" role="status">Пересчитываем себестоимость ВЭД с надбавкой 15%…</p>}
+  {costUpdateError&&<p className="unit-pilot-error" role="alert"><strong>Пересчёт себестоимости:</strong> {costUpdateError}</p>}
   {vedPhotoError&&<p className="unit-pilot-error" role="status"><strong>Фото КП:</strong> {vedPhotoError}</p>}
   <div className="unit-table-toolbar"><div className="unit-table-title">Товары <span>{list.length+vedList.length}{vedLoading?" · обновление…":""}</span></div><div className="unit-toolbar-right"><input aria-label="Поиск пилотных товаров" placeholder="Поиск товара, артикула..." value={search} onChange={e=>setSearch(e.target.value)}/></div></div>
   <div className="unit-pilot-scroller"><table className="unit-pilot-table"><thead><tr>{["Фото","Наименование","Рентабельность","Маржинальность","Чистая прибыль","Себестоимость","Литраж","Цена продажи","Цена с СПП",...(model==="ozon-fbo"?["Зона размещения"]:[])].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{list.map(p=>{const r=entryFor(p,model);return <tr key={p.sku} className={r?"clickable":""} tabIndex={r?0:-1} onClick={()=>r&&setSku(p.sku)} onKeyDown={e=>{if(r&&e.key==="Enter")setSku(p.sku)}}>

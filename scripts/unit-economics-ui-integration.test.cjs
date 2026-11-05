@@ -109,3 +109,20 @@ test("Фото товаров из ВЭД не должны оставаться
  assert.ok(route.includes("await (await createClient()).auth.getUser()"));
  assert.ok(!route.includes("getPublicUrl"));
 });
+
+test("15% себестоимости: старые ВЭД версии пересчитываются автоматически и однократно",()=>{
+ const engine=read("lib/unit-economics/prospective-engine.ts");
+ const route=read("app/api/unit-economics/prospective/route.ts");
+ const client=read("app/unit-economics/UnitEconomicsPilotClient.tsx");
+ const sync=read("lib/unit-economics/prospective-sync.ts");
+ assert.match(engine,/UNIT_COST_UPLIFT_RATE=0\.15/);
+ assert.match(engine,/costPolicyVersion:UNIT_COST_POLICY_VERSION/);
+ assert.ok(engine.includes("container+moq"));
+ assert.ok(route.includes('body?.action==="recalculate-cost-policy"'));
+ assert.ok(route.includes('costPolicyVersion:value.costPolicyVersion??1'));
+ assert.ok(route.includes("current?.result_data"));
+ assert.ok(client.includes('action:"recalculate-cost-policy"'));
+ assert.ok(client.includes('attemptedCostSources.current'));
+ assert.ok(sync.includes("extractInputs(type,saved"));
+ assert.ok(!sync.includes("cost_gross_rub*1.15"));
+});

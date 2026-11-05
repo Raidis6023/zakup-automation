@@ -47,7 +47,7 @@ test("Новые товары из ВЭД: без ЕНОТ и без вымыш�
   assert.ok(r.missing.some(x=>x.includes("Категория")));
   close(r.volumeLiters,.101384*1000/120);
   assert.equal(r.volumeSource,"transport-carton");
-  close(r.costGrossRub,125);
+  close(r.costGrossRub,143.75);
   close(r.purchaseVatCreditRub,0);
  }
 });
@@ -56,9 +56,9 @@ test("Импортный НДС ВЭД: возвратный вычет прим
  s.input.customs.importVatRecoverable=true;
  for(const model of PRELIMINARY_MODELS){
   const r=calculatePreliminary(s,model,{});
-  close(r.costGrossRub,125);
+  close(r.costGrossRub,143.75);
   close(r.purchaseVatCreditRub,15.5);
-  close(r.costNetRub,109.5);
+  close(r.costNetRub,128.25);
  }
 });
 test("Все шесть схем после заполнения обязательных полей дают независимый расчёт",()=>{
@@ -70,7 +70,7 @@ test("Все шесть схем после заполнения обязате�
   assert.ok(Number.isFinite(r.margin),model);
   assert.ok(r.expenses.length>=5,model);
   const expenses=r.expenses.reduce((a,c)=>a+c.amount,0);
-  close(r.profitRub,1000-125-expenses-(r.outputVatRub-r.inputVatRub));
+  close(r.profitRub,1000-143.75-expenses-(r.outputVatRub-r.inputVatRub));
   assert.equal(new Set(r.expenses.map(x=>x.code)).size,r.expenses.length);
  }
 });
@@ -208,4 +208,40 @@ test("Ozon FBS и обе схемы Яндекса подбирают цену �
   assert.ok(calculated.roi>=.15001-1e-8,model+": "+JSON.stringify(calculated.missing));
   assert.ok(!calculated.missing.some(x=>x.includes("ТК Маяк")),model);
  }
+});
+
+test("15% прибавляется к 40HQ и MOQ отдельно, затем считается среднее на всех шести схемах",()=>{
+ const input=source();
+ input.result.scenarios["40hq"].totalCostIncludingVatRub=100000; // 100 ₽/шт.
+ input.result.scenarios.moq.totalCostIncludingVatRub=14000; // 140 ₽/шт.
+ input.result.averageCostPerUnitRub=120; // исходная средняя из ВЭД
+ for(const model of PRELIMINARY_MODELS){
+  const result=calculatePreliminary(input,model,{});
+  close(result.costGrossRub,(100*1.15+140*1.15)/2);
+  assert.equal(result.costPolicyVersion,2);
+  assert.match(result.sourceCost,/1,15/);
+ }
+ close(input.result.averageCostPerUnitRub,120);
+ close(input.result.scenarios["40hq"].totalCostIncludingVatRub,100000);
+ close(input.result.scenarios.moq.totalCostIncludingVatRub,14000);
+ close(calculatePreliminary(input,"ozon-fbo",{}).costGrossRub,138);
+});
+test("15% надбавка не начисляется снова на ручную себестоимость",()=>{
+ const input=source();
+ const manual=applyProductOverrides(input,{costGrossRub:130});
+ for(const model of PRELIMINARY_MODELS)close(calculatePreliminary(manual,model,{}).costGrossRub,130);
+ close(calculatePreliminary(input,"ozon-fbo",{}).costGrossRub,143.75);
+});
+test("Целевая цена под ROI должна учитывать себестоимость с надбавкой",()=>{
+ const original=source();
+ const newPrice=suggestPreliminaryTargetPrice(original,"ym-fby",{...full,priceRub:null});
+ assert.ok(newPrice.priceRub>0,JSON.stringify(newPrice.missing));
+ const calculation=calculatePreliminary(original,"ym-fby",{...full,priceRub:newPrice.priceRub});
+ close(calculation.costGrossRub,143.75);
+ assert.ok(calculation.roi>=.15001-1e-8);
+ const before={...original,result:structuredClone(original.result)};
+ before.result.scenarios["40hq"].totalCostIncludingVatRub/=1.15;
+ before.result.scenarios.moq.totalCostIncludingVatRub/=1.15;
+ const earlier=suggestPreliminaryTargetPrice(before,"ym-fby",{...full,priceRub:null});
+ assert.ok(newPrice.priceRub>earlier.priceRub);
 });

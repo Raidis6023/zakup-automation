@@ -16,6 +16,9 @@ export const PRELIMINARY_MODELS=[
  "ozon-fbo","ozon-fbs","wb-fbw","wb-fbs","ym-fby","ym-fbs"
 ] as const satisfies readonly UnitFinalModel[];
 export type PreliminaryModel=typeof PRELIMINARY_MODELS[number];
+/** 15% надбавка к каждому сценарию ВЭД применяется только в юнит-экономике. */
+export const UNIT_COST_UPLIFT_RATE=0.15;
+export const UNIT_COST_POLICY_VERSION=2;
 export type PreliminarySettings={
  priceRub?:number|null;
  categoryId?:string|null;
@@ -49,7 +52,7 @@ export type PreliminaryDetail={
  amount:number;formula:string;vatShare:number;
 };
 export type PreliminaryCalculation={
- model:PreliminaryModel;article:string;name:string;
+ model:PreliminaryModel;article:string;name:string;costPolicyVersion:number;
  status:"calculated"|"estimated"|"needs_input"|"invalid_ved";
  missing:string[];assumptions:string[];
  costGrossRub:number|null;purchaseVatCreditRub:number|null;
@@ -82,7 +85,10 @@ function goodsCost(source:PreliminarySource){
  if(!r)return null;
  const group=[r.scenarios?.["40hq"],r.scenarios?.moq];
  if(group.some(x=>!x||!positive(x.units)||!nonnegative(x.totalCostIncludingVatRub)||!nonnegative(x.importVatRub)))return null;
- const costGross=group.reduce((a,x)=>a+x!.totalCostIncludingVatRub/x!.units,0)/2;
+ // Увеличиваем валовую себестоимость каждого сценария, затем усредняем.
+ // Только из исходного ВЭД: повторная синхронизация не начислит 15% второй раз.
+ const [container,moq]=group.map(x=>x!.totalCostIncludingVatRub/x!.units*(1+UNIT_COST_UPLIFT_RATE));
+ const costGross=(container+moq)/2;
  const importVat=group.reduce((a,x)=>a+x!.importVatRub/x!.units,0)/2;
  // ВЭД managementCostPerUnitRub может уже исключать возмещаемый НДС.
  // НЕ вычитаем его из валовой стоимости дважды.
@@ -130,13 +136,13 @@ export function calculatePreliminary(source:PreliminarySource,model:PreliminaryM
  const vatRate=nonnegative(settings.saleVatRate)?settings.saleVatRate:source.input.customs.vatPercent/100;
  if(!nonnegative(settings.saleVatRate))assumptions.push("Ставка НДС реализации предварительно взята из ВЭД; проверить после выбора категории");
  const result:PreliminaryCalculation={
-  model,article:source.article,name:source.name,
+  model,article:source.article,name:source.name,costPolicyVersion:UNIT_COST_POLICY_VERSION,
   status:source.result?"needs_input":"invalid_ved",missing,assumptions,
   costGrossRub:base?.gross??null,purchaseVatCreditRub:base?.vat??null,costNetRub:base?.net??null,
   volumeLiters:vol.liters,volumeSource:vol.source,volumeFormula:vol.formula,
   unitWeightKg:unitWeight.kilograms,unitWeightFormula:unitWeight.formula,
   unitWeightSource:unitWeight.source,unitWeightWarning:unitWeight.warning,
-  sourceCost:"Среднее валовой себестоимости 40HQ и MOQ; входящий импортный НДС отдельно, только при возмещаемости",
+  sourceCost:"Среднее валовой себестоимости (40HQ × 1,15 и MOQ × 1,15); входящий импортный НДС без надбавки, только при возмещаемости",
   priceRub:price,priceAfterSppRub:null,commissionRate:null,
   logistics:null,expenses:[],outputVatRub:null,inputVatRub:null,profitRub:null,roi:null,margin:null,
   targetPriceRub:null,tariffSnapshotDate:"2026-11-03"
