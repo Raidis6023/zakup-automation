@@ -328,3 +328,13 @@ html[data-theme="dark"] .ozf-page {
 .ozf-accrual-operations table{width:100%;border-collapse:collapse;font-size:12px;}
 .ozf-accrual-operations th,.ozf-accrual-operations td{padding:5px 8px;text-align:left;border-bottom:1px solid rgba(150,160,170,.15);}
 .ozf-accrual-operations th:last-child,.ozf-accrual-operations td:last-child{text-align:right;font-variant-numeric:tabular-nums;}
+
+/* Shared, read-only per-unit cost comparison across marketplace reports */
+.ozf-income-unit-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(340px,.65fr);gap:18px;align-items:start;min-width:0}
+.ozf-cost-unit{min-width:0;border:1px solid var(--ozf-subtle-border,#34465c);background:var(--ozf-soft,#101c30);border-radius:12px;padding:14px}
+.ozf-cost-unit-title{display:flex;flex-direction:column;gap:4px}.ozf-cost-unit-title strong{font-size:13px}.ozf-cost-unit-title span{font-size:11px;opacity:.7}
+.ozf-cost-unit-table{width:100%;border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums;margin-top:12px}
+.ozf-cost-unit-table th,.ozf-cost-unit-table td{padding:9px 5px;border-bottom:1px solid var(--ozf-subtle-border,#334155);text-align:right;white-space:nowrap}
+.ozf-cost-unit-table th:first-child,.ozf-cost-unit-table td:first-child{text-align:left;white-space:normal}
+.ozf-cost-unit-table tfoot th{font-weight:700;background:rgba(92,112,137,.13)}
+@media(max-width:1050px){.ozf-income-unit-grid{grid-template-columns:1fr}}
