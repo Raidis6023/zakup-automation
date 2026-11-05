@@ -19,6 +19,8 @@ export type PreliminaryModel=typeof PRELIMINARY_MODELS[number];
 /** 15% надбавка к каждому сценарию ВЭД применяется только в юнит-экономике. */
 export const UNIT_COST_UPLIFT_RATE=0.15;
 export const UNIT_COST_POLICY_VERSION=2;
+/** Tier-aware lowest-price search. Bump to backfill previously calculated items. */
+export const UNIT_PRICE_POLICY_VERSION=2;
 export type PreliminarySettings={
  priceRub?:number|null;
  categoryId?:string|null;
@@ -52,7 +54,7 @@ export type PreliminaryDetail={
  amount:number;formula:string;vatShare:number;
 };
 export type PreliminaryCalculation={
- model:PreliminaryModel;article:string;name:string;costPolicyVersion:number;
+ model:PreliminaryModel;article:string;name:string;costPolicyVersion:number;pricePolicyVersion:number;
  status:"calculated"|"estimated"|"needs_input"|"invalid_ved";
  missing:string[];assumptions:string[];
  costGrossRub:number|null;purchaseVatCreditRub:number|null;
@@ -137,6 +139,7 @@ export function calculatePreliminary(source:PreliminarySource,model:PreliminaryM
  if(!nonnegative(settings.saleVatRate))assumptions.push("Ставка НДС реализации предварительно взята из ВЭД; проверить после выбора категории");
  const result:PreliminaryCalculation={
   model,article:source.article,name:source.name,costPolicyVersion:UNIT_COST_POLICY_VERSION,
+  pricePolicyVersion:UNIT_PRICE_POLICY_VERSION,
   status:source.result?"needs_input":"invalid_ved",missing,assumptions,
   costGrossRub:base?.gross??null,purchaseVatCreditRub:base?.vat??null,costNetRub:base?.net??null,
   volumeLiters:vol.liters,volumeSource:vol.source,volumeFormula:vol.formula,
@@ -222,41 +225,54 @@ export function calculatePreliminary(source:PreliminarySource,model:PreliminaryM
  return result;
 }
 
-/** Подбор целевой цены с ROI >= 15,001%. Включает тарифные ступени Ozon/Яндекс.
- * Не возвращаем цену, если неизвестна категория, выкупы или WB СПП.
- * Цена проверяется уже тем же движком, не упрощённой формулой.
+/** Наименьшая допустимая цена, обеспечивающая ROI >= 15,001%.
+ * Поиск в КОПЕЙКАХ внутри тарифных диапазонов: в частности,
+ * Ozon 0,01–100, 100,01–299,99, 300,00, затем 301,00+.
+ * Переходы на 100/300 меняют комиссию и логистику; на 300 меняется
+ * также коэффициент страхования, поэтому 299,99 и 300 считаются отдельно.
+ * Первое найденное решение — минимальная цена среди всех сегментов.
+ * Ручная цена из settings.priceRub НЕ влияет на рекомендованную.
  */
 export function suggestPreliminaryTargetPrice(
  source:PreliminarySource,model:PreliminaryModel,settings:PreliminarySettings,
  targetRoi=.15001
 ):{priceRub:number|null;missing:string[]}{
  if(!valid(targetRoi)||targetRoi<0||targetRoi>10)throw Error("Некорректная целевая рентабельность");
- const evaluate=(price:number)=>{
-  const calc=calculatePreliminary(source,model,{...settings,priceRub:price});
+ const settingsWithoutManualPrice={...settings,priceRub:null};
+ const evaluate=(kopecks:number)=>{
+  const calc=calculatePreliminary(source,model,{
+   ...settingsWithoutManualPrice,priceRub:kopecks/100
+  });
   return calc.roi===null?{ok:false,roi:null,missing:calc.missing}:
    {ok:true,roi:calc.roi,missing:[] as string[]};
  };
- const first=evaluate(Math.max(1,source.result?.averageCostPerUnitRub??1));
- if(!first.ok)return{priceRub:null,missing:first.missing.filter(x=>!x.startsWith("Цена продажи"))};
- const limits=[.01,100,300,1000,10000,100000,1000000,10000000];
- for(let i=0;i<limits.length-1;i++){
-  const a=limits[i],b=limits[i+1];
-  const low=evaluate(a),high=evaluate(b);
-  if(!low.ok||!high.ok)return{priceRub:null,missing:low.missing.length?low.missing:high.missing};
-  if((low.roi??-Infinity)>=targetRoi)return{priceRub:Math.ceil(a*100)/100,missing:[]};
+ // Recommendations use whole rubles from 301 as agreed. The 100 and 300
+ // bands retain kopeck precision so prices just below a tariff cliff are found.
+ const ceiling=1_000_000_000; // 10 million rubles, in kopecks
+ const segments:readonly (readonly [number,number])[]=
+  model.startsWith("ozon")?
+   [[1,10000],[10001,29999],[30000,30000],[30100,ceiling]]:
+  model.startsWith("ym")?[[1,30000],[30001,ceiling]]:
+   [[1,ceiling]];
+ for(const [start,end] of segments){
+  const low=evaluate(start);
+  if(!low.ok)return{priceRub:null,missing:low.missing.filter(x=>!x.startsWith("Цена продажи"))};
+  if((low.roi??-Infinity)>=targetRoi)return{priceRub:start/100,missing:[]};
+  if(start===end)continue;
+  const high=evaluate(end);
+  if(!high.ok)return{priceRub:null,missing:high.missing};
   if((high.roi??-Infinity)<targetRoi)continue;
-  let left=a,right=b;
-  for(let iter=0;iter<52;iter++){
-   const mid=(left+right)/2,calc=evaluate(mid);
-   if((calc.roi??-Infinity)>=targetRoi)right=mid;else left=mid;
+  let left=start+1,right=end;
+  while(left<right){
+   const mid=Math.floor((left+right)/2);
+   if((evaluate(mid).roi??-Infinity)>=targetRoi)right=mid;
+   else left=mid+1;
   }
-  // Округляем цену вверх до копейки и проверяем фактический ROI ещё раз.
-  let rounded=Math.ceil((right-1e-9)*100)/100;
-  for(let k=0;k<10;k++,rounded+=.01){
-   if((evaluate(rounded).roi??-Infinity)>=targetRoi)
-    return{priceRub:Math.round(rounded*100)/100,missing:[]};
-  }
-  return{priceRub:null,missing:["Не удалось подобрать цену с подтверждённым ROI"]};
+  // Verify the actual rounded price with the correct commission tier,
+  // since the financial engine, not the search, defines the final ROI.
+  const final=evaluate(left);
+  if(final.ok&&(final.roi??-Infinity)>=targetRoi)
+   return{priceRub:left/100,missing:[]};
  }
  return{priceRub:null,missing:["Целевая ROI не достигается в допустимом диапазоне цен"]};
 }

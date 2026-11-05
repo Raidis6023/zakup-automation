@@ -3,7 +3,7 @@ import {createClient} from "@/lib/supabase/server";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {retryPendingUnitVedEvents,syncUnitFromVedVersion} from "@/lib/unit-economics/prospective-sync";
 import {mergeProductOverrides,applyProductOverrides,type ProductOverrides} from "@/lib/unit-economics/product-overrides";
-import {calculatePreliminary,type PreliminarySource} from "@/lib/unit-economics/prospective-engine";
+import {calculatePreliminary,suggestPreliminaryTargetPrice,type PreliminarySource,type PreliminarySettings} from "@/lib/unit-economics/prospective-engine";
 import {PRELIMINARY_MODELS} from "@/lib/unit-economics/prospective-engine";
 import {findWbCategory} from "@/lib/unit-economics/wb-category-registry";
 import {findMarketplaceCategory,type CategoryMarket} from "@/lib/unit-economics/marketplace-category-registry";
@@ -257,6 +257,8 @@ export async function PATCH(request:NextRequest){
     }
    }
   }
+  let updatedPriceSettings:PreliminarySettings|null=null;
+  let updatedPriceRevision=1;
   if(hasPrice){
    const {data:before,error:beforeErr}=await auth.admin.from("unit_ved_settings")
     .select("data,revision").eq("product_id",product.id).eq("model",model).maybeSingle();
@@ -264,8 +266,10 @@ export async function PATCH(request:NextRequest){
    const settings={...((before?.data||{}) as Record<string,unknown>)};
    if(body.priceRub===null)delete settings.priceRub;
    else settings.priceRub=body.priceRub;
+   updatedPriceSettings=settings as PreliminarySettings;
+   updatedPriceRevision=Number(before?.revision||0)+1;
    const {error:writeErr}=await auth.admin.from("unit_ved_settings").upsert({
-    product_id:product.id,model,data:settings,revision:Number(before?.revision||0)+1,
+    product_id:product.id,model,data:settings,revision:updatedPriceRevision,
     updated_at:new Date().toISOString()
    },{onConflict:"product_id,model"});
    if(writeErr)throw Error(writeErr.message);
@@ -318,6 +322,31 @@ export async function PATCH(request:NextRequest){
      if(error)throw Error(error.message);
     }
    }
+  }
+  // A price-only edit updates just the selected scheme instead of the full KP.
+  if(hasPrice&&!hasShared&&!hasOther&&!hasWbCategory&&updatedPriceSettings){
+   const newSettings=updatedPriceSettings;
+   const target=suggestPreliminaryTargetPrice(effective,model as typeof PRELIMINARY_MODELS[number],newSettings);
+   const chosenPrice=typeof newSettings.priceRub==="number"&&newSettings.priceRub>0?
+    newSettings.priceRub:target.priceRub;
+   const next=calculatePreliminary(effective,model as typeof PRELIMINARY_MODELS[number],{
+    ...newSettings,...(chosenPrice===null?{}:{priceRub:chosenPrice})
+   });
+   next.targetPriceRub=target.priceRub;
+   const {error:calcError}=await auth.admin.from("unit_ved_calculations")
+    .upsert({product_id:product.id,model,source_type:product.source_type,
+     source_version_id:product.source_version_id,status:next.status,
+     missing:next.missing,result_data:next,computed_at:new Date().toISOString()
+    },{onConflict:"product_id,model"});
+   if(calcError)throw Error("Не удалось пересчитать цену: "+calcError.message);
+   const {error:historyError}=await auth.admin.from("unit_ved_history")
+    .upsert({product_id:product.id,model,source_type:product.source_type,
+     source_version_id:product.source_version_id,
+     settings_revision:Number(product.edit_revision||1)+updatedPriceRevision-1,
+     status:next.status,result_data:next
+    },{onConflict:"product_id,model,source_type,source_version_id,settings_revision",ignoreDuplicates:true});
+   if(historyError)throw Error("Не удалось сохранить историю ручной цены: "+historyError.message);
+   return NextResponse.json({ok:true,saved:true,processed:1},{headers});
   }
   const synced=await syncUnitFromVedVersion(
    auth.admin,product.source_type as "single"|"whole",product.source_version_id,{force:true}

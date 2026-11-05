@@ -56,6 +56,8 @@ function fmt(n:number|null|undefined,suffix=""){
  return String(n)+suffix;
 }
 const money=(v:number|null|undefined)=>fmt(v," ₽");
+const priceMoney=(v:number|null|undefined)=>v===null||v===undefined||!Number.isFinite(v)?"—":
+ new Intl.NumberFormat("ru-RU",{minimumFractionDigits:Number.isInteger(v)?0:2,maximumFractionDigits:2}).format(v)+" ₽";
 const percent=(v:number|null|undefined)=>fmt(v===null||v===undefined?null:v*100,"%");
 const rateValue=(v:unknown)=>typeof v==="number"&&Number.isFinite(v)?v:null;
 const groupName=(m:Model)=>m.startsWith("ozon")?"ozon":m.startsWith("wb")?"wb":"ym";
@@ -70,6 +72,10 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState("");
  const [saving,setSaving]=useState(false);
+ const [priceBusy,setPriceBusy]=useState(false);
+ const [manualPrice,setManualPrice]=useState("");
+ const [manualPriceDirty,setManualPriceDirty]=useState(false);
+ const [priceError,setPriceError]=useState("");
  const [draft,setDraft]=useState<Record<string,string>>({});
  const [dirty,setDirty]=useState<string[]>([]);
  const [revision,setRevision]=useState(0);
@@ -96,6 +102,10 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
  const autoAttempt=useRef("");
  const calc=product?.schemes[model];
  const market=groupName(model);
+ useEffect(()=>{
+  setManualPrice(calc?.priceRub===null||calc?.priceRub===undefined?"":String(calc.priceRub));
+  setManualPriceDirty(false);setPriceError("");
+ },[product?.id,model,calc?.priceRub]);
  const viewEntries:[typeof view,string][]=[["summary","Сводка"],["details","Все расчёты"],["inputs","Исходные данные"]];
  function editValues(p:Product,m:Model){
   const obj:Record<string,string>={
@@ -327,6 +337,35 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
   }catch(e){setActionMessage(e instanceof Error?e.message:String(e))}
   finally{setOtherBusy(false)}
  }
+ async function applySellingPrice(next:number|null){
+  if(!product||priceBusy||saving)return;
+  setPriceBusy(true);setPriceError("");setActionMessage("");
+  try{
+   const response=await fetch("/api/unit-economics/prospective",{
+    method:"PATCH",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({productId:product.id,model,priceRub:next})
+   });
+   const data=await response.json() as {ok?:boolean;saved?:boolean;error?:string;warning?:string};
+   if(!response.ok||data.ok===false||!data.saved)
+    throw Error(data.error||data.warning||"Не удалось пересчитать цену продажи");
+   setManualPriceDirty(false);
+   setDraft(old=>({...old,priceRub:next===null?"":String(next)}));
+   setActionMessage(next===null?
+    "Автоматическая цена восстановлена, прибыль и ROI пересчитаны.":
+    "Ручная цена для "+LABELS[model]+" сохранена. Комиссия, расходы, прибыль и ROI пересчитаны.");
+   setRevision(v=>v+1);onSaved?.();
+  }catch(error){setPriceError(error instanceof Error?error.message:String(error))}
+  finally{setPriceBusy(false)}
+ }
+ function submitSellingPrice(event:FormEvent<HTMLFormElement>){
+  event.preventDefault();
+  const value=manualPrice.trim().replace(",",".");
+  if(!/^\d+(?:\.\d{1,2})?$/.test(value)||Number(value)<0.01||Number(value)>1e9){
+   setPriceError("Введите цену от 0,01 ₽ до 1 млрд ₽, не более двух знаков после запятой.");
+   return;
+  }
+  void applySellingPrice(Number(value));
+ }
  async function save(e:FormEvent<HTMLFormElement>){
   e.preventDefault();if(!product||!dirty.length)return;
   const patch:Record<string,unknown>={},fields=new Set<string>(["name","productType","costGrossRub",...INPUTS.map(x=>x.key)]);
@@ -358,7 +397,14 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
  const commission=rateValue(settings.categoryCommissionRate);
  const buyout=rateValue(settings.buyoutRate);
  const spp=rateValue(settings.wbSppRate);
- return <div className="unit-pilot-backdrop" onMouseDown={e=>{if(e.currentTarget===e.target&&!saving)onClose()}}>
+ const manualMode=rateValue(settings.priceRub)!==null&&Number(settings.priceRub)>0;
+ const ozonTierRates=(settings.ozonCommissionRates||{}) as Record<string,unknown>;
+ const tiers=market==="ozon"?[
+  ["До 100 ₽",rateValue(ozonTierRates.upTo100)],
+  ["101–300 ₽",rateValue(ozonTierRates.upTo300)],
+  ["От 301 ₽",rateValue(ozonTierRates.above300)]
+ ] as const:[];
+ return <div className="unit-pilot-backdrop" onMouseDown={e=>{if(e.currentTarget===e.target&&!saving&&!priceBusy)onClose()}}>
   <div className="unit-pilot-modal" role="dialog" aria-modal="true" aria-labelledby="unit-ved-modal-title">
    <header className="unit-pilot-modal-head">
     <div className="unit-pilot-heading">
@@ -404,7 +450,12 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
          <div><span>Тип товара</span><strong>{product.overrides?.productType||"Не указан"}</strong></div>
          <div><span>Категория {market==="wb"?"WB":market==="ozon"?"Ozon":"Яндекс"}</span><strong>{category||"Требует подтверждения"}</strong></div>
          <div><span>Себестоимость с НДС</span><strong>{money(calc?.costGrossRub)}</strong></div>
-         <div><span>Цена продажи</span><strong>{money(calc?.priceRub)}</strong></div>
+         <div><span>Цена продажи, ₽</span>
+          <input className="unit-ved-summary-price-input" type="number" min="0.01" max="1000000000"
+           step="0.01" inputMode="decimal" aria-label="Цена продажи"
+           disabled={priceBusy||saving} value={manualPrice}
+           onChange={e=>{setManualPrice(e.target.value);setManualPriceDirty(true);setPriceError("")}}/>
+         </div>
          <div><span>Литраж ИУ</span><strong>{fmt(calc?.volumeLiters," л")}</strong></div>
          <div><span>Вес единицы (расчётный)</span><strong>{fmt(calc?.unitWeightKg," кг")}</strong></div>
          {market==="wb"&&<>
@@ -413,13 +464,27 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
          </>}
          {market==="ozon"&&<div><span>Прогноз выкупа из WB</span><strong>{percent(buyout)}</strong></div>}
         </div>
+        <form className="unit-ved-price-controls" onSubmit={submitSellingPrice}>
+         <div className="unit-ved-price-actions">
+          <button type="submit" className="unit-ved-price-apply"
+           disabled={priceBusy||saving||!manualPriceDirty}>
+           {priceBusy?"Пересчитываем…":"Применить цену"}
+          </button>
+          <button type="button" disabled={priceBusy||saving||!manualMode}
+           onClick={()=>void applySellingPrice(null)}>Вернуть автоподбор</button>
+         </div>
+         {priceError&&<p className="unit-pilot-error" role="alert">{priceError}</p>}
+         <small>{manualMode?"Ручная цена для выбранной схемы.":"Установлена автоматическая цена."}
+          {" "}После применения пересчитываются комиссия, прибыль и ROI.</small>
+        </form>
         <button className="unit-ved-edit-link" type="button" onClick={()=>setView("inputs")}>Изменить исходные данные</button>
        </section>
        <section className="unit-pilot-panel"><h3>Финансовый результат</h3>
         <div className="unit-ved-facts">
-         <div><span>Цена продажи</span><strong>{money(calc?.priceRub)}</strong></div>
+         <div><span>Цена продажи</span><strong>{priceMoney(calc?.priceRub)}</strong></div>
          <div><span>Себестоимость</span><strong>{money(calc?.costGrossRub)}</strong></div>
          <div><span>Комиссия маркетплейса</span><strong>{money(calc?.expenses?.find(x=>x.code==="commission")?.amount)}</strong></div>
+         <div><span>Ставка комиссии</span><strong>{percent(calc?.commissionRate)}</strong></div>
          <div><span>Логистика и обработка</span><strong>{money(calc?.logistics?.totals.overall)}</strong></div>
          <div><span>Реклама</span><strong>{money(calc?.expenses?.find(x=>x.code==="advertising")?.amount)}</strong></div>
          <div><span>Исходящий НДС</span><strong>{money(calc?.outputVatRub)}</strong></div>
@@ -431,8 +496,20 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
       {calc?.missing?.length?<div className="unit-pilot-notice"><strong>Для полного расчёта не хватает:</strong> {calc.missing.join("; ")}</div>:
        <p className="unit-pilot-note">Расчёт сформирован по сохранённым исходным данным. Результат: {calc?.status==="estimated"?"предварительный":"рассчитан"}.</p>}
       <div className="unit-pilot-panel unit-ved-target"><h3>Подбор цены по ROI <small>Цель 15,001%</small></h3>
-       <div className="unit-ved-facts"><div><span>Текущая цена</span><strong>{money(calc?.priceRub)}</strong></div>
-        <div><span>Рекомендуемая цена</span><strong>{money(calc?.targetPriceRub)}</strong></div></div>
+       <div className="unit-ved-facts">
+        <div><span>Текущая цена {manualMode?"(ручная)":"(автоматическая)"}</span><strong>{priceMoney(calc?.priceRub)}</strong></div>
+        <div><span>Минимальная цена с ROI ≥15,001%</span><strong>{priceMoney(calc?.targetPriceRub)}</strong></div>
+       </div>
+       {tiers.length>0&&<div className="unit-ved-ozon-tiers" aria-label="Три ступени комиссии Ozon">
+        {tiers.map(([label,rate])=><span key={label}>{label}<strong>{percent(rate)}</strong></span>)}
+       </div>}
+       {manualMode&&calc?.roi!==null&&calc?.roi!==undefined&&
+        <p className="unit-pilot-note">{calc.roi>=.15001?
+         "Ручная цена обеспечивает целевую рентабельность.":
+         "При ручной цене ROI ниже целевых 15,001%. Сравните с рекомендованной ценой."}</p>}
+       {market==="ozon"&&<p className="unit-pilot-note">
+        Сначала проверяем ступени до 100 ₽ и до 300 ₽. Третья комиссия применяется при цене от 301 ₽.
+       </p>}
       </div>
      </>}
      {view==="details"&&<>

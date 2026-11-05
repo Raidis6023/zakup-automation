@@ -126,3 +126,23 @@ test("15% себестоимости: старые ВЭД версии пере�
  assert.ok(sync.includes("extractInputs(type,saved"));
  assert.ok(!sync.includes("cost_gross_rub*1.15"));
 });
+
+test("Ozon: три ценовые ступени и ручная цена доступны в сводке",()=>{
+ const engine=read("lib/unit-economics/prospective-engine.ts");
+ const ui=read("app/unit-economics/VedUnitEconomicsLive.tsx");
+ const route=read("app/api/unit-economics/prospective/route.ts");
+ const pilot=read("app/unit-economics/UnitEconomicsPilotClient.tsx");
+ assert.ok(engine.includes("[[1,10000],[10001,29999],[30000,30000],[30100,ceiling]]"));
+ assert.ok(engine.includes("UNIT_PRICE_POLICY_VERSION=2"));
+ assert.ok(engine.includes("settingsWithoutManualPrice"));
+ assert.ok(route.includes("pricePolicyVersion:value.pricePolicyVersion??1"));
+ assert.ok(pilot.includes("c.pricePolicyVersion===2"));
+ assert.ok(ui.includes("unit-ved-summary-price-input"));
+ assert.ok(ui.includes('aria-label="Цена продажи"'));
+ assert.ok(ui.includes("submitSellingPrice"));
+ assert.ok(ui.includes("applySellingPrice(null)"));
+ assert.ok(ui.includes("Вернуть автоподбор"));
+ assert.ok(ui.includes("unit-ved-ozon-tiers"));
+ assert.ok(route.includes("A price-only edit updates just the selected scheme"));
+ assert.ok(route.includes("suggestPreliminaryTargetPrice(effective"));
+});

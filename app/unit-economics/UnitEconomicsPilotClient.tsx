@@ -24,7 +24,7 @@ type Product={sku:string;name:string;models:Record<string,Entry>};
 type VedScheme={
  status:"calculated"|"estimated"|"needs_input"|"invalid_ved";
  missing:string[];costGrossRub:number|null;volumeLiters:number|null;
- costPolicyVersion?:number;
+ costPolicyVersion?:number;pricePolicyVersion?:number;
  unitWeightKg:number|null;priceRub:number|null;priceAfterSppRub:number|null;
  profitRub:number|null;roi:number|null;margin:number|null;
 };
@@ -275,7 +275,7 @@ export default function UnitEconomicsPilotClient(){
   const pending=new Map<string,{sourceType:"whole"|"single";sourceVersionId:string}>();
   for(const item of vedProducts){
    if(!item.source_version_id||!["whole","single"].includes(item.source_type))continue;
-   if(Object.values(item.schemes).every(c=>c.costPolicyVersion===2))continue;
+   if(Object.values(item.schemes).every(c=>c.costPolicyVersion===2&&c.pricePolicyVersion===2))continue;
    const key=item.source_type+":"+item.source_version_id;
    if(attemptedCostSources.current.has(key))continue;
    pending.set(key,{sourceType:item.source_type,sourceVersionId:item.source_version_id});
@@ -436,7 +436,7 @@ export default function UnitEconomicsPilotClient(){
    Исходный реестр ВЭД и старая версия юнитки не изменяются.</p>
   </details>
   {vedError&&<p className="unit-pilot-error" role="alert"><strong>Синхронизация ВЭД:</strong> {vedError}</p>}
-  {costUpdating&&<p className="unit-pilot-notice" role="status">Пересчитываем себестоимость ВЭД с надбавкой 15%…</p>}
+  {costUpdating&&<p className="unit-pilot-notice" role="status">Пересчитываем себестоимость и подбор цен по тарифным ступеням…</p>}
   {costUpdateError&&<p className="unit-pilot-error" role="alert"><strong>Пересчёт себестоимости:</strong> {costUpdateError}</p>}
   {vedPhotoError&&<p className="unit-pilot-error" role="status"><strong>Фото КП:</strong> {vedPhotoError}</p>}
   <div className="unit-table-toolbar"><div className="unit-table-title">Товары <span>{list.length+vedList.length}{vedLoading?" · обновление…":""}</span></div><div className="unit-toolbar-right"><input aria-label="Поиск пилотных товаров" placeholder="Поиск товара, артикула..." value={search} onChange={e=>setSearch(e.target.value)}/></div></div>

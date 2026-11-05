@@ -245,3 +245,74 @@ test("Целевая цена под ROI должна учитывать себ�
  const earlier=suggestPreliminaryTargetPrice(before,"ym-fby",{...full,priceRub:null});
  assert.ok(newPrice.priceRub>earlier.priceRub);
 });
+
+test("Ozon: минимальная цена до 300 рублей важнее дорогой третьей комиссии",()=>{
+ const item=source();
+ item.result.scenarios["40hq"].totalCostIncludingVatRub=40000;
+ item.result.scenarios.moq.totalCostIncludingVatRub=4000;
+ const options={...full,priceRub:949,buyoutRate:1,
+  ozonCommissionRates:{upTo100:.17,upTo300:.23,above300:.75},
+  ozonInsuranceFactors:{upTo300:.25,above300:.6}};
+ for(const model of ["ozon-fbo","ozon-fbs"]){
+  const at100=calculatePreliminary(item,model,{...options,priceRub:100});
+  const at300=calculatePreliminary(item,model,{...options,priceRub:300});
+  assert.ok(at100.roi<.15001,model+": price 100 should not pass");
+  assert.ok(at300.roi>=.15001,model+": price 300 should pass");
+  close(at100.commissionRate,.17);
+  close(at300.commissionRate,.23);
+  const chosen=suggestPreliminaryTargetPrice(item,model,options);
+  assert.ok(chosen.priceRub>100&&chosen.priceRub<=300,model+": "+JSON.stringify(chosen));
+  const actual=calculatePreliminary(item,model,{...options,priceRub:chosen.priceRub});
+  assert.ok(actual.roi>=.15001-1e-8,model);
+  close(actual.commissionRate,.23);
+  const before=calculatePreliminary(item,model,{...options,priceRub:Math.round((chosen.priceRub-.01)*100)/100});
+  assert.ok(before.roi<.15001,model+": lower price should fail target ROI");
+  const withoutManual=suggestPreliminaryTargetPrice(item,model,{...options,priceRub:null});
+  close(withoutManual.priceRub,chosen.priceRub);
+ }
+});
+test("Ozon: цена 300 рублей проверяется отдельно из-за смены страхового коэффициента",()=>{
+ const item=source(),options={...full,buyoutRate:1,
+  ozonCommissionRates:{upTo100:.17,upTo300:.23,above300:.52},
+  ozonInsuranceFactors:{upTo300:0,above300:1}};
+ item.result.scenarios["40hq"].totalCostIncludingVatRub=20000;
+ item.result.scenarios.moq.totalCostIncludingVatRub=2000;
+ const below=calculatePreliminary(item,"ozon-fbo",{...options,priceRub:299.99});
+ const exactly=calculatePreliminary(item,"ozon-fbo",{...options,priceRub:300});
+ close(below.commissionRate,.23);close(exactly.commissionRate,.23);
+ assert.ok(below.roi>exactly.roi,"Страхование меняется на цене 300");
+ const goal=(below.roi+exactly.roi)/2;
+ assert.ok(goal>0&&goal<10);
+ const result=suggestPreliminaryTargetPrice(item,"ozon-fbo",options,goal);
+ assert.ok(result.priceRub<300&&result.priceRub>100,JSON.stringify(result));
+ const validated=calculatePreliminary(item,"ozon-fbo",{...options,priceRub:result.priceRub});
+ assert.ok(validated.roi>=goal-1e-8);
+});
+test("Ozon: от 301 ₽ выбираем только если весь диапазон до 300 не проходит ROI",()=>{
+ const item=source(),options={...full,buyoutRate:1,
+  ozonCommissionRates:{upTo100:.3,upTo300:.43,above300:.52},
+  ozonInsuranceFactors:{upTo300:.58,above300:.3}};
+ for(const model of ["ozon-fbo","ozon-fbs"]){
+  const at300=calculatePreliminary(item,model,{...options,priceRub:300});
+  assert.ok(at300.roi<.15001,model);
+  const suggested=suggestPreliminaryTargetPrice(item,model,options);
+  assert.ok(suggested.priceRub>=301,model+": "+JSON.stringify(suggested));
+  const result=calculatePreliminary(item,model,{...options,priceRub:suggested.priceRub});
+  assert.ok(result.roi>=.15001-1e-8);
+  close(result.commissionRate,.52);
+ }
+});
+test("Ozon: ручная цена меняет процент комиссии, рекомендация остаётся независимой",()=>{
+ const item=source(),options={...full,ozonCommissionRates:{upTo100:.17,upTo300:.23,above300:.52},
+  ozonInsuranceFactors:{upTo300:.25,above300:.6}};
+ for(const model of ["ozon-fbo","ozon-fbs"]){
+  const base=suggestPreliminaryTargetPrice(item,model,options);
+  const low=calculatePreliminary(item,model,{...options,priceRub:299});
+  const high=calculatePreliminary(item,model,{...options,priceRub:301});
+  close(low.commissionRate,.23);close(high.commissionRate,.52);
+  assert.notEqual(low.profitRub,high.profitRub);
+  close(suggestPreliminaryTargetPrice(item,model,{...options,priceRub:299}).priceRub,base.priceRub);
+  close(suggestPreliminaryTargetPrice(item,model,{...options,priceRub:1500}).priceRub,base.priceRub);
+ }
+ assert.equal(calculatePreliminary(item,"ozon-fbo",options).pricePolicyVersion,2);
+});
