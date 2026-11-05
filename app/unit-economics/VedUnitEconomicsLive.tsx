@@ -24,6 +24,7 @@ type Product={
  schemes:Record<string,Scheme>;
 };
 type WbCategory={name:string;group:string;fbw:number;fbs:number};
+type MpstatsCategory={scope:"category"|"subject";path:string;label:string};
 const MODELS:Record<"ozon"|"wb"|"ym",readonly Model[]>={
  ozon:["ozon-fbo","ozon-fbs"],wb:["wb-fbw","wb-fbs"],ym:["ym-fby","ym-fbs"]
 };
@@ -74,6 +75,13 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
  const [providerStatus,setProviderStatus]=useState<"checking"|"connected"|"missing">("checking");
  const [providerMessage,setProviderMessage]=useState("");
  const [mpstatsBusy,setMpstatsBusy]=useState(false);
+ const [mappingOpen,setMappingOpen]=useState(false);
+ const [mpstatsQuery,setMpstatsQuery]=useState("");
+ const [mpstatsOptions,setMpstatsOptions]=useState<MpstatsCategory[]>([]);
+ const [mpstatsSelected,setMpstatsSelected]=useState<MpstatsCategory|null>(null);
+ const [mpstatsSearchError,setMpstatsSearchError]=useState("");
+ const [mpstatsSearching,setMpstatsSearching]=useState(false);
+ const [mpstatsMatches,setMpstatsMatches]=useState(0);
  const [actionMessage,setActionMessage]=useState("");
  const calc=product?.schemes[model];
  const market=groupName(model);
@@ -142,13 +150,36 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
   return()=>{controller.abort();clearTimeout(t)};
  },[categoryQuery]);
  useEffect(()=>{
+  if(!mappingOpen||mpstatsQuery.trim().length<2){setMpstatsOptions([]);return}
+  const controller=new AbortController();
+  const timer=window.setTimeout(()=>{
+   setMpstatsSearching(true);setMpstatsSearchError("");
+   const wbSettings=product?.schemes["wb-fbw"]?.settings||{};
+   const group=typeof wbSettings.categoryGroup==="string"?wbSettings.categoryGroup:"";
+   fetch("/api/unit-economics/mpstats-wb/categories?q="+encodeURIComponent(mpstatsQuery.trim())+
+    "&group="+encodeURIComponent(group),{cache:"no-store",signal:controller.signal})
+    .then(async response=>{
+     const result=await response.json();
+     if(!response.ok||!result.ok)throw Error(result.error||"Не удалось получить справочник MPStats");
+     return result as {items:MpstatsCategory[];matched:number};
+    })
+    .then(result=>{if(!controller.signal.aborted){
+     setMpstatsOptions(result.items||[]);
+     setMpstatsMatches(result.matched||0);
+    }})
+    .catch(e=>{if(!controller.signal.aborted)setMpstatsSearchError(e instanceof Error?e.message:String(e))})
+    .finally(()=>{if(!controller.signal.aborted)setMpstatsSearching(false)});
+  },300);
+  return()=>{controller.abort();window.clearTimeout(timer)};
+ },[mappingOpen,mpstatsQuery,product]);
+ useEffect(()=>{
   const handler=(e:KeyboardEvent)=>{if(e.key==="Escape"&&!saving)onClose()};
   document.addEventListener("keydown",handler);
   const before=document.body.style.overflow;
   document.body.style.overflow="hidden";
   return()=>{document.removeEventListener("keydown",handler);document.body.style.overflow=before};
  },[onClose,saving]);
- async function refreshMpstats(p:Product){
+ async function refreshMpstats(p:Product,selection?:MpstatsCategory){
   // Проверка по фактическому защищённому хранилищу выполняется сервером при
   // каждом запросе. Не блокируем загрузку по устаревшему статусу UI.
   setMpstatsBusy(true);
@@ -156,7 +187,7 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
   try{
    const response=await fetch("/api/unit-economics/mpstats-wb",{
     method:"POST",headers:{"Content-Type":"application/json"},
-    cache:"no-store",body:JSON.stringify({productId:p.id})
+    cache:"no-store",body:JSON.stringify({productId:p.id,...(selection?{mpstatsSelection:selection}:{})})
    });
    const result=await response.json();
    if(!response.ok||!result.ok)throw Error(result.error||"MPStats недоступен");
@@ -166,6 +197,7 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
     return;
    }
    setProviderStatus("connected");
+   setMappingOpen(false);setMpstatsSelected(null);
    setProviderMessage("MPStats: выкуп предмета WB "+percent(result.buyoutRate)+
     " (прогноз для Ozon FBO/FBS), средняя СПП WB "+percent(result.fbwSpp)+
     ". В расчётах сохранены WB FBW/FBS и Ozon FBO/FBS. "+
@@ -173,7 +205,15 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
     (result.sampledProducts?" Выборка СПП: "+result.sampledProducts+" товаров.":""));
    setRevision(n=>n+1);onSaved?.();
   }catch(e){
-   setProviderMessage("Не удалось загрузить MPStats: "+(e instanceof Error?e.message:String(e)));
+   const message=e instanceof Error?e.message:String(e);
+   setProviderMessage("Не удалось загрузить MPStats: "+message);
+   if(/соответств|предмет|категори|привязк/i.test(message)){
+    setMappingOpen(true);
+    const wb= p.schemes["wb-fbw"]?.settings||{};
+    if(!mpstatsQuery)setMpstatsQuery(
+     typeof wb.categoryId==="string"?wb.categoryId:"Ватные палочки"
+    );
+   }
   }finally{setMpstatsBusy(false)}
  }
  async function confirmWbCategory(){
@@ -397,6 +437,45 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
        <p className="unit-pilot-note">MPStats: {providerStatus==="checking"?"проверка подключения":
         providerStatus==="connected"?"подключён":"нет серверного токена"}</p>
        {providerMessage&&<p role="status" className="unit-pilot-notice">{providerMessage}</p>}
+       {typeof settings.categoryId==="string"&&<button type="button"
+        className="unit-ved-edit-link" onClick={()=>{
+         setMappingOpen(v=>!v);
+         if(!mpstatsQuery)setMpstatsQuery(settings.categoryId as string);
+        }}>
+         {mappingOpen?"Скрыть выбор категории MPStats":"Выбрать категорию MPStats вручную"}
+       </button>}
+       {mappingOpen&&<div className="unit-ved-category-panel" style={{display:"flex",flexDirection:"column",gap:12,padding:14,border:"1px solid var(--ws-border)",borderRadius:10}}>
+        <strong>Привязка категории WB к справочнику MPStats</strong>
+        <p className="unit-pilot-note">
+         Поиск идёт по реальным категориям и предметам MPStats. Выбранное соответствие
+         сохранится для всех новых товаров этой категории WB.
+        </p>
+        <label>Название или часть пути категории MPStats
+         <input className="unit-pilot-price-input" value={mpstatsQuery}
+          onChange={e=>{setMpstatsQuery(e.target.value);setMpstatsSelected(null)}} 
+          placeholder="Попробуйте: ватные, палочки, красота, гигиена"/>
+        </label>
+        {mpstatsSearching&&<p className="unit-pilot-note">Поиск в справочнике MPStats…</p>}
+        {mpstatsSearchError&&<p role="alert" className="unit-pilot-error">{mpstatsSearchError}</p>}
+        {!mpstatsSearching&&!mpstatsSearchError&&mpstatsQuery.length>1&&
+         <p className="unit-pilot-note">{mpstatsMatches?"Найдено вариантов: "+mpstatsMatches:
+          "Точного совпадения нет. Показаны доступные варианты из той же группы, если они есть."}</p>}
+        {!!mpstatsOptions.length&&<div className="unit-ved-category-list">
+         {mpstatsOptions.map(c=><button type="button" key={c.scope+":"+c.path}
+          onClick={()=>{setMpstatsSelected(c);setMpstatsOptions([])}}>
+          <span>{c.label}<small>{c.scope==="category"?"Категория MPStats":"Предмет MPStats"}</small></span>
+         </button>)}
+        </div>}
+        {mpstatsSelected&&<div className="unit-ved-category-choice">
+         Выбран источник MPStats: <strong>{mpstatsSelected.label}</strong>
+         <small style={{display:"block"}}>Проверьте соответствие вашему товару перед сохранением.</small>
+        </div>}
+        <button type="button" className="unit-ved-primary"
+         disabled={!mpstatsSelected||mpstatsBusy}
+         onClick={()=>{if(mpstatsSelected)void refreshMpstats(product,mpstatsSelected)}}>
+         {mpstatsBusy?"Загрузка…":"Привязать категорию и получить показатели"}
+        </button>
+       </div>}
        {typeof settings.categoryId==="string"&&<button type="button" disabled={mpstatsBusy} onClick={()=>void refreshMpstats(product)}>
         Обновить показатели MPStats
        </button>}

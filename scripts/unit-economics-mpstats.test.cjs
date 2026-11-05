@@ -8,7 +8,7 @@ require.extensions[".ts"]=(mod,path)=>mod._compile(ts.transpileModule(
  fs.readFileSync(path,"utf8"),{compilerOptions:{
   module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022
  }}).outputText,path);
-const {readSubjectBuyout,averageSubjectSpp,getWbSubjectMpstats,matchMpstatsCategory,MpStatsError}=
+const {readSubjectBuyout,averageSubjectSpp,getWbSubjectMpstats,matchMpstatsCategory,searchMpstatsTaxonomy,validateMpstatsSelection,MpStatsError}=
  require("../lib/unit-economics/mpstats-wb.ts");
 if(savedTs)require.extensions[".ts"]=savedTs;
 const close=(a,b)=>assert.ok(typeof a==="number"&&Math.abs(a-b)<1e-9,
@@ -176,6 +176,43 @@ test("MPStats: no false category matches across groups or ambiguous category tre
  assert.equal(matchMpstatsCategory(categories,"Ватные палочки"),null);
  assert.equal(matchMpstatsCategory(categories,"Ватные диски","Красота"),null);
 });
+
+test("MPStats: explicit reviewed category path bypasses failed subject-name matching",async()=>{
+ const old=global.fetch;
+ const p=providerMock({list:{data:[]}});
+ global.fetch=p.fetch;
+ try{
+  const result=await getWbSubjectMpstats("Ватные палочки",true,"test-secret",
+   "Красота",{scope:"category",path:"Красота/Гигиена/Ватные палочки",
+     label:"Красота/Гигиена/Ватные палочки"});
+  assert.equal(result.scope,"category");
+  assert.equal(result.categoryPath,"Красота/Гигиена/Ватные палочки");
+  close(result.wbSppRate,.308);
+  assert.equal(result.subjectId,"34");
+  assert.ok(!p.calls.some(x=>x.pathname.endsWith("/subject/list")));
+  assert.ok(!p.calls.some(x=>x.pathname.endsWith("/category/list")));
+ }finally{global.fetch=old}
+});
+
+test("MPStats: taxonomy search returns actual provider paths and validates only source-listed selections",async()=>{
+ const old=global.fetch;
+ const p=providerMock({categoryList:{data:[
+  {name:"Красота/Гигиена/Ватные палочки"},
+  {name:"Бытовая химия/Стиральные порошки"},
+  {name:"Женщинам/Красота/Ватные диски"}
+ ]}});
+ global.fetch=p.fetch;
+ try{
+  const options=await searchMpstatsTaxonomy("test-secret","ватные","Красота");
+  assert.ok(options.items.some(x=>x.scope==="category"&&x.path==="Красота/Гигиена/Ватные палочки"));
+  const candidate=options.items.find(x=>x.path==="Красота/Гигиена/Ватные палочки");
+  assert.deepEqual(await validateMpstatsSelection("test-secret",candidate),candidate);
+  assert.equal(await validateMpstatsSelection("test-secret",{
+   scope:"category",path:"Придуманная категория"
+  }),null);
+ }finally{global.fetch=old}
+});
+
 test("MPStats: token is required; never send a request without it",async()=>{
  await assert.rejects(getWbSubjectMpstats("Ватные палочки",true,""),error=>
   error instanceof MpStatsError&&error.kind==="unconfigured");

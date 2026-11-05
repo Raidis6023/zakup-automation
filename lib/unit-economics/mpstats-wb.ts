@@ -86,12 +86,88 @@ export function averageSubjectSpp(rows:readonly Record<string,unknown>[]):{rate:
  return{rate:totalSales>0?weighted/totalSales:null,sampled:count};
 }
 
+
+export type MpstatsSelection=Readonly<{
+ scope:"subject"|"category";
+ path:string;label:string;
+}>;
+type TaxonomyCache={expires:number;categories:MpstatsSelection[];subjects:MpstatsSelection[]};
+let taxonomyCache:TaxonomyCache|null=null;
+function namePath(obj:Record<string,unknown>):string{
+ const path=typeof obj.path==="string"?obj.path.trim():"";
+ const name=typeof obj.name==="string"?obj.name.trim():"";
+ return path||name;
+}
+async function getTaxonomy(token:string):Promise<TaxonomyCache>{
+ if(taxonomyCache&&taxonomyCache.expires>Date.now())return taxonomyCache;
+ const range=dates(30);
+ const categoryURL=new URL("https://mpstats.io/api/analytics/v1/wb/category/list");
+ const subjectURL=new URL("https://mpstats.io/api/analytics/v1/wb/subject/list");
+ subjectURL.searchParams.set("date",range.to);
+ const [rawCategories,rawSubjects]=await Promise.all([
+  provider(categoryURL,token,"POST",{}),provider(subjectURL,token)
+ ]);
+ const categoryMap=new Map<string,MpstatsSelection>();
+ for(const obj of arrayFrom(rawCategories)){
+  const path=namePath(obj);
+  if(!path)continue;
+  categoryMap.set(path,{scope:"category",path,label:path});
+ }
+ const subjectMap=new Map<string,MpstatsSelection>();
+ for(const obj of arrayFrom(rawSubjects)){
+  const item=readSubject(obj);
+  if(!item.id||!item.name)continue;
+  subjectMap.set(item.id,{scope:"subject",path:item.id,
+   label:item.group?item.name+" / "+item.group:item.name});
+ }
+ taxonomyCache={expires:Date.now()+15*60*1000,
+  categories:[...categoryMap.values()],subjects:[...subjectMap.values()]};
+ return taxonomyCache;
+}
+function terms(s:string):string[]{
+ return norm(s).replace(/[^а-яa-z0-9]+/g," ").split(" ")
+  .filter(x=>x.length>2).map(x=>x.slice(0,Math.min(x.length,5)));
+}
+export async function searchMpstatsTaxonomy(token:string,query:string,group?:string,
+ limit=40):Promise<{items:MpstatsSelection[];total:number;matched:number}>{
+ const taxonomy=await getTaxonomy(token);
+ const all=[...taxonomy.subjects,...taxonomy.categories];
+ const needle=norm(query),stem=terms(query);
+ const parent=group?norm(group):"";
+ const scored=all.map(item=>{
+  const full=norm(item.label),leaf=norm(item.label.split("/").at(-1)||"");
+  const hits=stem.filter(w=>terms(full).some(t=>t.startsWith(w)||w.startsWith(t))).length;
+  const exact=full===needle||leaf===needle;
+  const inGroup=parent&&full.includes(parent);
+  const score=(exact?100:0)+(full.includes(needle)&&needle.length>2?38:0)+hits*13+
+   (inGroup?9:0)+(item.scope==="subject"?2:0);
+  return{item,score};
+ }).filter(x=>x.score>0)
+  .sort((a,b)=>b.score-a.score||a.item.label.localeCompare(b.item.label,"ru"));
+ const matched=scored.length;
+ // Even when subject-name variants differ, expose nearby taxonomy entries
+ // from the same broad group for human confirmation; do not auto-select them.
+ if(!matched&&parent){
+  const byGroup=all.filter(item=>norm(item.label).includes(parent));
+  return{items:byGroup.slice(0,limit),total:all.length,matched:0};
+ }
+ return{items:scored.slice(0,limit).map(x=>x.item),total:all.length,matched};
+}
+export async function validateMpstatsSelection(
+ token:string,selection:{scope:string;path:string}
+):Promise<MpstatsSelection|null>{
+ const list=await getTaxonomy(token);
+ return [...list.subjects,...list.categories].find(
+  x=>x.scope===selection.scope&&x.path===selection.path
+ )||null;
+}
+
 type CategoryRef={name:string;path:string};
 export function matchMpstatsCategory(raw:unknown,subject:string,group?:string):CategoryRef|null{
  const target=norm(subject),parent=group?norm(group):"";
  const categories=arrayFrom(raw).map(x=>{
   const name=typeof x.name==="string"?x.name:"";
-  const path=typeof x.path==="string"?x.path:"";
+  const path=namePath(x);
   return{name,path};
  }).filter(x=>x.path&&(
   norm(x.name)===target||
@@ -111,7 +187,7 @@ export function matchMpstatsCategoryRoot(raw:unknown,group:string):CategoryRef|n
  const target=norm(group);
  const options=arrayFrom(raw).map(x=>({
   name:typeof x.name==="string"?x.name:"",
-  path:typeof x.path==="string"?x.path:""
+  path:namePath(x)
  })).filter(x=>x.path&&norm(x.path.split("/").filter(Boolean).at(-1)||"")===target);
  if(!options.length)return null;
  const minDepth=Math.min(...options.map(x=>x.path.split("/").length));
@@ -144,12 +220,12 @@ function readSubject(value:Record<string,unknown>){
  * Buyout must be a documented percent field, NOT `purchase` (which can be
  * counts/add-to-cart) and NOT `purchase_after_return` without a verified unit.
  */
-export async function getWbSubjectMpstats(subject:string,fbs:boolean,token:string,subjectGroup?:string):Promise<WbMpStatsMetrics>{
+export async function getWbSubjectMpstats(subject:string,fbs:boolean,token:string,subjectGroup?:string,confirmed?:MpstatsSelection):Promise<WbMpStatsMetrics>{
  if(!token?.trim())throw new MpStatsError("unconfigured","Ключ MPStats не настроен. Добавьте его в разделе «Администрирование → API».");
  const range=dates(30);
  const listUrl=new URL("https://mpstats.io/api/analytics/v1/wb/subject/list");
  listUrl.searchParams.set("date",range.to);
- const subjects=arrayFrom(await provider(listUrl,token));
+ const subjects=confirmed?[]:arrayFrom(await provider(listUrl,token));
  const named=subjects.map(readSubject).filter(x=>x.id&&norm(x.name)===norm(subject));
  const grouped=named.filter(x=>subjectGroup&&x.group&&norm(x.group)===norm(subjectGroup));
  const matches=grouped.length===1?grouped:named;
@@ -157,7 +233,11 @@ export async function getWbSubjectMpstats(subject:string,fbs:boolean,token:strin
  let subjectId:string;
  let categoryPath:string|null=null;
  let categoryRows:Record<string,unknown>[]|null=null;
- if(matches.length===1){
+ if(confirmed){
+  scope=confirmed.scope;
+  subjectId=confirmed.path;
+  categoryPath=confirmed.scope==="category"?confirmed.path:null;
+ }else if(matches.length===1){
   subjectId=matches[0].id;
  }else{
   // WB commission "subject" and MPStats niche "subject" aren't identical

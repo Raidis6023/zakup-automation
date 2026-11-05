@@ -68,3 +68,19 @@ test("MPStats: manual category confirmation triggers automatic request even with
  assert.ok(patch.includes("buyoutSource"));
  assert.ok(provider.includes("Категория WB изменена во время загрузки"));
 });
+
+test("MPStats: explicit category mapping is controlled, shared and never exposes the token",()=>{
+ const route=read("app/api/unit-economics/mpstats-wb/route.ts");
+ const search=read("app/api/unit-economics/mpstats-wb/categories/route.ts");
+ const page=read("app/unit-economics/VedUnitEconomicsLive.tsx");
+ const migration=read("supabase/migrations/20261105_wb_mpstats_taxonomy_mappings.sql");
+ assert.ok(route.includes("unit_wb_mpstats_mappings"));
+ assert.ok(route.includes("validateMpstatsSelection"));
+ assert.ok(route.includes("mpstatsSelection"));
+ assert.ok(search.includes("getMpStatsToken"));
+ assert.ok(!search.includes("token:token"));
+ assert.ok(page.includes("Привязать категорию и получить показатели"));
+ assert.ok(page.includes("mpstats-wb/categories"));
+ assert.ok(migration.includes("PRIMARY KEY (wb_category,wb_group)"));
+ assert.ok(migration.includes("ENABLE ROW LEVEL SECURITY"));
+});
