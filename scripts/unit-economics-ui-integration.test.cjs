@@ -61,7 +61,7 @@ test("MPStats: manual category confirmation triggers automatic request even with
  const patch=read("app/api/unit-economics/prospective/route.ts");
  assert.ok(ui.includes("await refreshMpstats(product)"));
  assert.ok(!ui.includes('if(providerStatus!=="connected")'));
- assert.ok(provider.includes("const metrics=await getWbSubjectMpstats("));
+ assert.ok(provider.includes("const metrics=await getWbSubjectMpstatsMacro("));
  for(const model of ["wb-fbw","wb-fbs","ozon-fbo","ozon-fbs"])
   assert.ok(provider.includes('"'+model+'"'));
  assert.ok(patch.includes("wbSppSampledProducts"));

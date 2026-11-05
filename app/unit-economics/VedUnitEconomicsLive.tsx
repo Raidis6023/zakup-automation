@@ -198,11 +198,19 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
    }
    setProviderStatus("connected");
    setMappingOpen(false);setMpstatsSelected(null);
-   setProviderMessage("MPStats: выкуп предмета WB "+percent(result.buyoutRate)+
-    " (прогноз для Ozon FBO/FBS), средняя СПП WB "+percent(result.fbwSpp)+
-    ". В расчётах сохранены WB FBW/FBS и Ozon FBO/FBS. "+
-    (result.partial?"Часть данных не получена и осталась незаполненной.":"")+
-    (result.sampledProducts?" Выборка СПП: "+result.sampledProducts+" товаров.":""));
+   const buyoutAvailable=typeof result.buyoutRate==="number";
+   const sppAvailable=typeof result.fbwSpp==="number";
+   setProviderMessage(
+    "MPStats · период: "+(result.period?.from||"последние 30 дней")+" — "+
+    (result.period?.to||"вчера")+". "+
+    (buyoutAvailable?"Выкуп WB "+percent(result.buyoutRate)+
+      " (сохранён в WB и скопирован в Ozon FBO/FBS).":
+      "Процент выкупа отсутствует, Ozon не обновлён.")+" "+
+    (sppAvailable?"СПП WB "+percent(result.fbwSpp)+
+      " (среднее FBO и FBS, сохранено в WB).":
+      "СПП WB отсутствует.")+
+    (result.partial?" Часть показателей не получена.":"")
+   );
    setRevision(n=>n+1);onSaved?.();
   }catch(e){
    const message=e instanceof Error?e.message:String(e);

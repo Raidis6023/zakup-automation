@@ -327,3 +327,101 @@ export async function getWbSubjectMpstats(subject:string,fbs:boolean,token:strin
   sppOrigin:spp===null?null:"MPStats "+scope+"/items, client_sale, 7 completed days, sales-weighted",
   comments};
 }
+
+
+/**
+ * Проверенный в пользовательском Google Apps Script способ получения двух
+ * показателей MPStats. Не путать purchase.purchase (процент выкупа из
+ * агрегированного subject-report) с purchase в товарных таблицах.
+ * Работает поверх токена, который сервер читает из Supabase Vault.
+ */
+export function parseMacroSubjectStats(response:unknown):{
+ buyoutRate:number|null;wbSppRate:number|null;warnings:string[];
+}{
+ const warnings:string[]=[];
+ const d=response&&typeof response==="object"&&!Array.isArray(response)?
+  response as Record<string,unknown>:{};
+ const purchase=d.purchase&&typeof d.purchase==="object"&&!Array.isArray(d.purchase)?
+  d.purchase as Record<string,unknown>:{};
+ const spp=d.spp&&typeof d.spp==="object"&&!Array.isArray(d.spp)?
+  d.spp as Record<string,unknown>:{};
+ // MPStats returns percentage points (e.g. 34.51 means 34.51%), not a ratio.
+ // Keep the exact Google Sheets macro's whole-percent rounding.
+ const pct=(v:unknown):number|null=>
+  typeof v==="number"&&Number.isFinite(v)&&v>=0&&v<=100?v:null;
+ const buyoutPoints=pct(purchase.purchase);
+ const fboPoints=pct(spp.fbo);
+ const fbsPoints=pct(spp.fbs);
+ const buyoutRate=buyoutPoints===null?null:Math.round(buyoutPoints)/100;
+ const wbSppRate=fboPoints===null||fbsPoints===null?null:
+  Math.round((fboPoints+fbsPoints)/2)/100;
+ if(buyoutRate===null)warnings.push("В агрегированном ответе MPStats нет корректного purchase.purchase");
+ if(wbSppRate===null)warnings.push("В агрегированном ответе MPStats отсутствуют spp.fbo и/или spp.fbs");
+ return {buyoutRate,wbSppRate,warnings};
+}
+
+export type LegacyMpStatsSubject=Readonly<{
+ id:string;name:string;category:string;
+}>;
+/** The old /wb/get/subjects catalogue contains exact WB category + subject pairs. */
+export function matchMacroSubject(
+ raw:unknown,subject:string,category:string,confirmed?:MpstatsSelection
+):LegacyMpStatsSubject|null{
+ const subjects=arrayFrom(raw).map(row=>({
+  id:row.id===null||row.id===undefined?"":String(row.id),
+  name:typeof row.name==="string"?row.name:"",
+  category:typeof row.category==="string"?row.category:""
+ })).filter(x=>x.id&&x.name&&x.category);
+ const n=(str:string)=>norm(str).replace(/\s+/g," ");
+ const exact=subjects.filter(x=>n(x.name)===n(subject)&&n(x.category)===n(category));
+ if(exact.length===1)return exact[0];
+ // A manually confirmed numeric subject can be honored only if its WB
+ // subject name and category also match; a category path is not a subject ID.
+ if(confirmed?.scope==="subject"){
+  const linked=subjects.filter(x=>x.id===confirmed.path&&n(x.name)===n(subject)&&n(x.category)===n(category));
+  if(linked.length===1)return linked[0];
+ }
+ return null;
+}
+
+/** Backed by exactly the two MPStats requests used by the user's working macro. */
+export async function getWbSubjectMpstatsMacro(
+ subject:string,token:string,category:string,confirmed?:MpstatsSelection
+):Promise<WbMpStatsMetrics>{
+ if(!token?.trim())throw new MpStatsError("unconfigured","Ключ MPStats не настроен");
+ const period=dates(30);
+ const catalogue=await provider(
+  new URL("https://mpstats.io/api/wb/get/subjects"),token,"GET"
+ );
+ const matched=matchMacroSubject(catalogue,subject,category,confirmed);
+ if(!matched){
+  const all=arrayFrom(catalogue);
+  const near=all.filter(x=>typeof x.name==="string"&&norm(x.name)===norm(subject));
+  throw new MpStatsError("data-missing",
+   "Предмет «"+subject+"» / «"+category+"» не найден однозначно в справочнике "+
+   "MPStats /wb/get/subjects (совпадений по названию: "+near.length+
+   "). Нужна проверка названия и категории, проценты не изменены.");
+ }
+ const url=new URL(
+  "https://mpstats.io/api/analytics/v1/wb/subject/"+encodeURIComponent(matched.id)
+ );
+ url.searchParams.set("d1",period.from);
+ url.searchParams.set("d2",period.to);
+ const report=await provider(url,token,"GET");
+ const parsed=parseMacroSubjectStats(report);
+ return{
+  subject:matched.name,subjectId:matched.id,scope:"subject",categoryPath:null,
+  source:"mpstats",sampledAt:new Date().toISOString(),range:period,
+  sampledProducts:0,buyoutRate:parsed.buyoutRate,wbSppRate:parsed.wbSppRate,
+  buyoutOrigin:parsed.buyoutRate===null?null:
+   "MPStats subject/"+matched.id+" / purchase.purchase / "+period.from+"…"+period.to,
+  sppOrigin:parsed.wbSppRate===null?null:
+   "MPStats subject/"+matched.id+" / average(spp.fbo,spp.fbs) / "+period.from+"…"+period.to,
+  comments:[
+   "Агрегированный отчёт MPStats по предмету «"+matched.name+"» / «"+matched.category+"»",
+   "Выкуп: округление до целого процента по макросу Google Таблиц",
+   "СПП: среднее FBO и FBS, округление до целого процента",
+   ...parsed.warnings
+  ]
+ };
+}

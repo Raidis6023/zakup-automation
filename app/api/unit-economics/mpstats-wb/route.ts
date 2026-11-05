@@ -2,7 +2,7 @@ import { getMpStatsToken } from "../../../../lib/integrations/secrets";
 import {NextRequest,NextResponse} from "next/server";
 import {createClient} from "@/lib/supabase/server";
 import {createAdminClient} from "@/lib/supabase/admin";
-import {getWbSubjectMpstats,validateMpstatsSelection,MpStatsError,type MpstatsSelection} from "@/lib/unit-economics/mpstats-wb";
+import {getWbSubjectMpstatsMacro,validateMpstatsSelection,MpStatsError,type MpstatsSelection} from "@/lib/unit-economics/mpstats-wb";
 import {syncUnitFromVedVersion} from "@/lib/unit-economics/prospective-sync";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -73,7 +73,7 @@ export async function POST(req:NextRequest){
    verifiedSelection=confirmed;
   }
   // fbs=1 includes FBS in the subject selection; not an FBS-only tariff.
-  const metrics=await getWbSubjectMpstats(wbName,true,token,categoryGroup,verifiedSelection||undefined);
+  const metrics=await getWbSubjectMpstatsMacro(wbName,token,categoryGroup,verifiedSelection||undefined);
   // Store the reviewed correspondence independently of the product.
   // Future items with the same commission category will reuse it automatically.
   if(requested&&verifiedSelection){
@@ -124,15 +124,30 @@ export async function POST(req:NextRequest){
      for(const field of ["wbSppRate","wbSppSource","wbSppSampledProducts"])
       delete data[field];
    }
+   // Never retain an obsolete MPStats-derived result when the fresh
+   // report has no confirmed value for that metric.
+   if(buyout===null&&data.buyoutSource==="wb-mpstats-subject-proxy"){
+    for(const field of ["buyoutRate","buyoutSource","buyoutSourceSubject",
+     "buyoutOrigin","buyoutPeriod"])delete data[field];
+   }
+   if(model.startsWith("wb")&&spp===null&&
+     typeof data.wbSppSource==="string"&&data.wbSppSource.startsWith("mpstats-")){
+    for(const field of ["wbSppRate","wbSppSource","wbSppSampledProducts",
+     "wbSppOrigin","wbSppPeriod"])delete data[field];
+   }
    if(buyout!==null){
     data.buyoutRate=buyout;
     data.buyoutSource="wb-mpstats-subject-proxy";
     data.buyoutSourceSubject=metrics.subjectId;
+    data.buyoutOrigin=metrics.buyoutOrigin;
+    data.buyoutPeriod=metrics.range;
    }
    if(model.startsWith("wb")&&spp!==null){
     data.wbSppRate=spp;
-    data.wbSppSource="mpstats-subject-sales-weighted-sample";
+    data.wbSppSource="mpstats-subject-fbo-fbs-average";
     data.wbSppSampledProducts=metrics.sampledProducts;
+    data.wbSppPeriod=metrics.range;
+    data.wbSppOrigin=metrics.sppOrigin;
    }
    data.mpstatsUpdatedAt=now;
    rows.push({product_id:product.id,model,data,
@@ -149,7 +164,7 @@ export async function POST(req:NextRequest){
    source:"mpstats",subject:metrics.subject,subjectId:metrics.subjectId,
    resolvedScope:metrics.scope,resolvedPath:metrics.categoryPath||metrics.subjectId,
    mappingSaved:!!(requested&&verifiedSelection),
-   sampledProducts:metrics.sampledProducts,sampledAt:metrics.sampledAt,
+   sampledProducts:metrics.sampledProducts,sampledAt:metrics.sampledAt,period:metrics.range,
    details:metrics.comments,partial:buyout===null||spp===null},{headers});
  }catch(e){
   if(e instanceof MpStatsError)return NextResponse.json({ok:false,error:e.message,kind:e.kind},
