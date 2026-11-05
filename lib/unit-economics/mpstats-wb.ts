@@ -8,6 +8,8 @@ export type WbMpStatsMetrics=Readonly<{
  subject:string;
  source:"mpstats";
  subjectId:string;
+ scope:"subject"|"category";
+ categoryPath:string|null;
  sampledProducts:number;
  sampledAt:string;
  range:{from:string;to:string};
@@ -83,6 +85,52 @@ export function averageSubjectSpp(rows:readonly Record<string,unknown>[]):{rate:
  }
  return{rate:totalSales>0?weighted/totalSales:null,sampled:count};
 }
+
+type CategoryRef={name:string;path:string};
+export function matchMpstatsCategory(raw:unknown,subject:string,group?:string):CategoryRef|null{
+ const target=norm(subject),parent=group?norm(group):"";
+ const categories=arrayFrom(raw).map(x=>{
+  const name=typeof x.name==="string"?x.name:"";
+  const path=typeof x.path==="string"?x.path:"";
+  return{name,path};
+ }).filter(x=>x.path&&(
+  norm(x.name)===target||
+  norm(x.path.split("/").filter(Boolean).at(-1)||"")===target
+ ));
+ const inGroup=parent?categories.filter(x=>x.path.split("/").some(segment=>norm(segment)===parent)):[];
+ // Never select a different root department merely to obtain a numeric result.
+ if(parent){
+  if(inGroup.length===1)return inGroup[0];
+  if(inGroup.length>1)return null;
+  if(categories.length===1&&norm(categories[0].path).startsWith(parent+"/"))return categories[0];
+  return null;
+ }
+ return categories.length===1?categories[0]:null;
+}
+export function matchMpstatsCategoryRoot(raw:unknown,group:string):CategoryRef|null{
+ const target=norm(group);
+ const options=arrayFrom(raw).map(x=>({
+  name:typeof x.name==="string"?x.name:"",
+  path:typeof x.path==="string"?x.path:""
+ })).filter(x=>x.path&&norm(x.path.split("/").filter(Boolean).at(-1)||"")===target);
+ if(!options.length)return null;
+ const minDepth=Math.min(...options.map(x=>x.path.split("/").length));
+ const nearest=options.filter(x=>x.path.split("/").length===minDepth);
+ return nearest.length===1?nearest[0]:null;
+}
+export function uniqueSubjectIdFromCategoryItems(rows:readonly Record<string,unknown>[],name:string):string|null{
+ // The MPStats WB category/products response includes subject_id and subject.
+ const values=new Set<string>();
+ for(const row of rows){
+  const subject=typeof row.subject==="string"?row.subject:
+   typeof row.subject_name==="string"?row.subject_name:"";
+  const id=row.subject_id??row.subjectId;
+  if(!subject||norm(subject)!==norm(name)||!(typeof id==="string"||typeof id==="number"))continue;
+  values.add(String(id));
+ }
+ return values.size===1?[...values][0]:null;
+}
+
 function readSubject(value:Record<string,unknown>){
  const id=value.id??value.subject_id??value.subjectId;
  const name=value.name??value.subject_name??value.subjectName??value.subject??value.title;
@@ -105,27 +153,97 @@ export async function getWbSubjectMpstats(subject:string,fbs:boolean,token:strin
  const named=subjects.map(readSubject).filter(x=>x.id&&norm(x.name)===norm(subject));
  const grouped=named.filter(x=>subjectGroup&&x.group&&norm(x.group)===norm(subjectGroup));
  const matches=grouped.length===1?grouped:named;
- if(matches.length!==1)throw new MpStatsError("data-missing",
-  "Не удалось однозначно сопоставить предмет MPStats: "+subject+
-  (subjectGroup?" / "+subjectGroup:"")+". Совпадений: "+matches.length);
- const infoUrl=new URL("https://mpstats.io/api/analytics/v1/wb/subject/"+encodeURIComponent(matches[0].id));
- const info=await provider(infoUrl,token,"GET") as Record<string,unknown>;
- const comments:string[]=[];
- const buyout=readSubjectBuyout(info);
- const buyoutRate=buyout.ratio;
- const buyoutOrigin=buyout.field?"MPStats subject/"+matches[0].id+" / "+buyout.field:null;
- if(buyoutRate===null)comments.push("MPStats не вернул однозначно обозначенный процент выкупа предмета; неподтверждённые показатели не используются");
- // SPP = current average client discount (client_sale) of sampled products.
- // This is a *sample estimate*, not MPStats unit-calculator's seven-day average.
+ let scope:"category"|"subject"="subject";
+ let subjectId:string;
+ let categoryPath:string|null=null;
+ let categoryRows:Record<string,unknown>[]|null=null;
+ if(matches.length===1){
+  subjectId=matches[0].id;
+ }else{
+  // WB commission "subject" and MPStats niche "subject" aren't identical
+  // taxonomies. Resolve using the documented WB category tree instead.
+  const categoryListUrl=new URL("https://mpstats.io/api/analytics/v1/wb/category/list");
+  const rawCategories=await provider(categoryListUrl,token,"POST",{});
+  const category=matchMpstatsCategory(rawCategories,subject,subjectGroup);
+  if(category){
+   scope="category";
+   categoryPath=category.path;
+   subjectId=category.path;
+  }else{
+   // Some WB objects are subjects below a broad category, not individual
+   // category tree leaves. Query that category's subject breakdown by ID.
+   const root=subjectGroup?matchMpstatsCategoryRoot(rawCategories,subjectGroup):null;
+   let found:string|null=null;
+   if(root){
+    const url=new URL("https://mpstats.io/api/analytics/v1/wb/category/subjects");
+    for(const [key,value] of Object.entries({d1:range.from,d2:range.to,path:root.path})){
+     url.searchParams.set(key,value);
+    }
+    const siblings=arrayFrom(await provider(url,token,"POST",{})).map(readSubject)
+     .filter(x=>x.id&&norm(x.name)===norm(subject));
+    if(siblings.length===1)found=siblings[0].id;
+   }
+   if(!found)throw new MpStatsError("data-missing",
+    "Не удалось найти предмет «"+subject+"» в MPStats по группе «"+
+    (subjectGroup||"неизвестна")+"»: нет точного соответствия ни в нишах, ни "+
+    "в категориях, ни в списке предметов категории. Данные не подменены. "+
+    "Нужна ручная привязка к категории MPStats.");
+   scope="subject";
+   subjectId=found;
+  }
+ }
  const seven=dates(7);
- const url=new URL("https://mpstats.io/api/analytics/v1/wb/subject/items");
- for(const [k,v] of Object.entries({d1:seven.from,d2:seven.to,path:matches[0].id,fbs:fbs?"1":"0"}))url.searchParams.set(k,v);
- const rows=arrayFrom(await provider(url,token,"POST",{startRow:0,endRow:500,filterModel:{},sortModel:[{colId:"sales",sort:"desc"}]}));
+ const comments:string[]=[];
+ async function items(source:"category"|"subject",path:string){
+  const url=new URL("https://mpstats.io/api/analytics/v1/wb/"+source+"/items");
+  for(const [key,value] of Object.entries({
+   d1:seven.from,d2:seven.to,path,fbs:fbs?"1":"0"
+  }))url.searchParams.set(key,value);
+  return arrayFrom(await provider(url,token,"POST",{
+   startRow:0,endRow:500,filterModel:{},
+   sortModel:[{colId:"sales",sort:"desc"}]
+  }));
+ }
+ const rows=await items(scope,subjectId);
+ categoryRows=scope==="category"?rows:null;
+ // A WB category with a single matching subject_id can be upgraded to a
+ // native subject endpoint; never infer IDs from similarly named products.
+ const inferred=categoryRows?uniqueSubjectIdFromCategoryItems(categoryRows,subject):null;
+ let info:unknown=null;
+ let metricScope=scope;
+ let metricPath=subjectId;
+ if(scope==="subject"||inferred){
+  metricScope="subject";
+  metricPath=inferred||subjectId;
+  const infoUrl=new URL("https://mpstats.io/api/analytics/v1/wb/subject/"+encodeURIComponent(metricPath));
+  try{info=await provider(infoUrl,token,"GET")}
+  catch(error){
+   if(error instanceof MpStatsError&&["rate-limited","invalid"].includes(error.kind))throw error;
+   comments.push("Информация о выкупе предмета MPStats недоступна, СПП рассчитана отдельно");
+  }
+ }
+ let buyout=readSubjectBuyout(info);
+ if(buyout.ratio===null&&rows.length){
+  // Only explicitly named percentage fields are valid.
+  let sum=0,weight=0;
+  for(const row of rows){
+   const current=readSubjectBuyout(row);
+   const sales=row.sales;
+   if(current.ratio===null||typeof sales!=="number"||!Number.isFinite(sales)||sales<=0)continue;
+   sum+=current.ratio*sales;weight+=sales;
+  }
+  if(weight>0)buyout={ratio:sum/weight,field:"items.explicit-buyout-percent-sales-weighted"};
+ }
+ const buyoutRate=buyout.ratio;
+ const buyoutOrigin=buyout.field?"MPStats "+metricScope+"/"+metricPath+" / "+buyout.field:null;
+ if(buyoutRate===null)comments.push("В ответе MPStats нет явно обозначенного процента выкупа. Поле оставлено пустым; Ozon не получает вымышленное значение.");
  const {rate:spp,sampled}=averageSubjectSpp(rows);
- if(spp===null)comments.push("MPStats не вернул достоверных данных о СПП; значение не подставлялось");
- else comments.push("СПП предварительная: взвешенная по продажам оценка по "+sampled+" товарам предмета за 7 завершённых дней. Не официальный средний СПП калькулятора");
- return{subject,subjectId:matches[0].id,sampledProducts:sampled,source:"mpstats",sampledAt:new Date().toISOString(),range,
+ if(spp===null)comments.push("MPStats не вернул достоверных данных о СПП по выбранной категории; значение не подставлялось");
+ else comments.push("СПП предварительная: взвешенная по продажам оценка по "+sampled+" товарам за 7 завершённых дней. Не официальный средний СПП калькулятора");
+ if(scope==="category")comments.push("Категория сопоставлена через дерево MPStats: "+categoryPath);
+ return{subject,subjectId:metricPath,scope,categoryPath,
+  sampledProducts:sampled,source:"mpstats",sampledAt:new Date().toISOString(),range,
   buyoutRate,wbSppRate:spp,buyoutOrigin,
-  sppOrigin:spp===null?null:"MPStats subject/items, client_sale, 7 completed days, sales-weighted",
+  sppOrigin:spp===null?null:"MPStats "+scope+"/items, client_sale, 7 completed days, sales-weighted",
   comments};
 }
