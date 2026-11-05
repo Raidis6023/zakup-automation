@@ -302,6 +302,14 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
   const revenueBySku = new Map((revenueRes.data as RevenueRow[] ?? []).map(r=>[r.sku,Number(r.revenue)]));
   const adCoverage=new Set((adDaysRes.data as AdDay[]??[]).map(x=>x.day));
   const adComplete=days.every(day=>adCoverage.has(day));
+  // Operational CPC SKU data is retained while historical UUID reports
+  // are incomplete. Never count these analytics as an additional P&L charge.
+  const {data:recentAdSync,error:recentAdError}=await db.from('ozon_finance_ad_sku_sync_status')
+   .select('day,status,rows_saved,expense_rub,last_error,checked_at')
+   .eq('account_key',ACCOUNT).eq('source','cpc_sku_current')
+   .gte('day',from).lte('day',to).order('day',{ascending:false});
+  if(recentAdError)throw recentAdError;
+
   const adByOffer=new Map<string,number>();
   for(const item of adRes.data as AdRow[]??[]){
     const offer=mapBySku.get(item.sku)?.offer_id;
@@ -624,6 +632,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     transit_snapshot_ready:transitSnapshotReady,
     crossdock_as_of:crossdockCurrent?.published_at??null,
     source: "supabase_cached_finance",
+    ads_daily_sync:recentAdSync??[],
     ads_covered:adComplete,
     ads_jobs:adJobsRes.data??[],
     ads_covered_days:adCoverage.size,

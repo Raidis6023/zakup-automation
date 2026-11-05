@@ -26,6 +26,7 @@ type FinanceReport = {
   allocated_amount: number; unallocated_amount: number; total_mayak: number; sales_window_covered: boolean;
   profit_status: string; warning: string;
   ads_covered:boolean;ads_covered_days:number;ads_performance_total:number|null;
+   ads_daily_sync?:Array<{day:string;status:string;rows_saved:number;expense_rub:number;last_error:string|null;checked_at:string}>;
   advertising?:{finance_total:number;finance_unallocated:number};
   actual_buyout_days: number; actual_buyouts_covered: boolean;
   unit_method?:string;stock_as_of?:{ozon_at:string|null;main_at:string|null;ox_at:string|null}|null;
@@ -392,10 +393,16 @@ export default function FinancierClient() {
         <button className="ozf-btn ozf-primary" disabled={busy||loading}
           onClick={()=>void formReport()}>{busy?"Формируем…":"Сформировать"}</button>
         <button className="ozf-btn" disabled={!data||loading||busy} onClick={()=>void load()}>Обновить расчёт</button>
-        <button className="ozf-btn" onClick={()=>void queueFinance()} disabled={loading||busy}>Загрузить / продолжить из Ozon</button><button className="ozf-btn" disabled={adsBusy} onClick={async()=>{setAdsBusy(true);setAdsStatus('Обработка очереди рекламы…');try{const r=await fetch('/api/agents/ozon-finance-ads',{method:'POST'}),j=await r.json();setAdsStatus(r.ok?'Реклама Ozon: '+String(j.phase??'выполнено')+'. Отчётов: '+String(j.reports_processed??0):'Ошибка: '+String(j.error??j.phase??r.status));}catch(e){setAdsStatus(String(e))}finally{setAdsBusy(false)}}}>{adsBusy?'Выгружаем рекламу…':'Продолжить рекламу Ozon'}</button><span role="status">{adsStatus}</span>
+        <button className="ozf-btn" onClick={()=>void queueFinance()} disabled={loading||busy}>Загрузить / продолжить из Ozon</button><button className="ozf-btn" disabled={adsBusy} onClick={async()=>{setAdsBusy(true);setAdsStatus('Обработка очереди рекламы…');try{const r=await fetch('/api/agents/ozon-finance-ads',{method:'POST'}),j=await r.json();const daily=j.daily_sku as {ok?:boolean;day?:string;rows_saved?:number;expense_rub?:number;error?:string}|undefined;
+setAdsStatus((daily?(daily.ok?'CPC по SKU за '+daily.day+': '+String(daily.rows_saved??0)+' строк, '+Number(daily.expense_rub??0).toLocaleString('ru-RU')+' ₽. ':'Оперативная реклама: '+String(daily.error??'ошибка')+'. '):'')+
+ 'История кампаний: '+String(j.phase??j.error??'неизвестно')+'. Загружено отчётов: '+String(j.reports_processed??0)+'.');
+if(daily?.ok)void load();}catch(e){setAdsStatus(String(e))}finally{setAdsBusy(false)}}}>{adsBusy?'Выгружаем рекламу…':'Продолжить рекламу Ozon'}</button><span role="status">{adsStatus}</span>
       </div>
       {data&&<p>Показан период: <b>{data.from} — {data.to}</b> включительно. Кэш: {data.cache_updated_at?new Date(data.cache_updated_at).toLocaleString('ru-RU',{timeZone:'Asia/Krasnoyarsk'}):'—'} (Красноярск).</p>}
-      {connectionStatus && <p className="ozf-progress" role="status">{connectionStatus}</p>}
+      {data?.ads_daily_sync?.length?(()=>{const latest=data.ads_daily_sync![0];return <p className={latest.status==='failed'?'ozf-error':'ozf-progress'} role="status">
+ Оперативная реклама Ozon по SKU: {latest.day}, статус {latest.status==='complete'?'загружено':latest.status==='empty'?'пустой ответ площадки':'ошибка'}, строк {latest.rows_saved}, сумма {latest.status==='complete'?Number(latest.expense_rub).toLocaleString('ru-RU')+' ₽':'не подтверждена'}. {latest.last_error||''} Историческая детализация кампаний загружается отдельно.
+ </p>})():null}
+       {connectionStatus && <p className="ozf-progress" role="status">{connectionStatus}</p>}
       {error && <p className="ozf-error" role="alert">{error}</p>}
       {progress && <p className="ozf-progress" role="status">{progress}</p>}
       {(busy||loading)&&<div className="bi-skeleton" role="status">Подготавливаем полный отчёт…</div>}
