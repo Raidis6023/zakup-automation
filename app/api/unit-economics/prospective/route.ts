@@ -335,10 +335,11 @@ export async function PATCH(request:NextRequest){
     ...newSettings,...(chosenPrice===null?{}:{priceRub:chosenPrice})
    });
    next.targetPriceRub=target.priceRub;
+   const computedAt=new Date().toISOString();
    const {error:calcError}=await auth.admin.from("unit_ved_calculations")
     .upsert({product_id:product.id,model,source_type:product.source_type,
      source_version_id:product.source_version_id,status:next.status,
-     missing:next.missing,result_data:next,computed_at:new Date().toISOString()
+     missing:next.missing,result_data:next,computed_at:computedAt
     },{onConflict:"product_id,model"});
    if(calcError)throw Error("Не удалось пересчитать цену: "+calcError.message);
    const {error:historyError}=await auth.admin.from("unit_ved_history")
@@ -348,7 +349,12 @@ export async function PATCH(request:NextRequest){
      status:next.status,result_data:next
     },{onConflict:"product_id,model,source_type,source_version_id,settings_revision",ignoreDuplicates:true});
    if(historyError)throw Error("Не удалось сохранить историю ручной цены: "+historyError.message);
-   return NextResponse.json({ok:true,saved:true,processed:1},{headers});
+   // Return the complete updated scheme, so the modal and table can refresh
+   // instantly without reloading 150 items and then fetching this item again.
+   return NextResponse.json({ok:true,saved:true,processed:1,model,
+    calculation:{...next,settings:newSettings,computedAt,
+     sourceVersionId:product.source_version_id}
+   },{headers});
   }
   const synced=await syncUnitFromVedVersion(
    auth.admin,product.source_type as "single"|"whole",product.source_version_id,{force:true}

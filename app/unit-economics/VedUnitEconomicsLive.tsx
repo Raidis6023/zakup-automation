@@ -4,7 +4,7 @@ import {useEffect,useRef,useState,type FormEvent} from "react";
 
 type Model="ozon-fbo"|"ozon-fbs"|"wb-fbw"|"wb-fbs"|"ym-fby"|"ym-fbs";
 type Expense={code:string;label:string;amount:number;formula:string;group:string};
-type Scheme={
+export type Scheme={
  model:Model;status:string;missing:string[];assumptions:string[];
  costGrossRub:number|null;costNetRub:number|null;purchaseVatCreditRub:number|null;
  volumeLiters:number|null;volumeFormula:string|null;volumeSource:string|null;
@@ -62,14 +62,17 @@ const percent=(v:number|null|undefined)=>fmt(v===null||v===undefined?null:v*100,
 const rateValue=(v:unknown)=>typeof v==="number"&&Number.isFinite(v)?v:null;
 const groupName=(m:Model)=>m.startsWith("ozon")?"ozon":m.startsWith("wb")?"wb":"ym";
 
-export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose,onSaved,photoUrl}:{
+export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose,onSaved,onPriceUpdated,photoUrl}:{
  modalProductId:string|null;activeModel?:string;onClose:()=>void;onSaved?:()=>void;
+ onPriceUpdated?:(productId:string,model:Model,scheme:Scheme)=>void;
  photoUrl?:string|null;
 }){
  const [product,setProduct]=useState<Product|null>(null);
  const [model,setModel]=useState<Model>((activeModel as Model)||"ozon-fbo");
  const [view,setView]=useState<"summary"|"details"|"inputs">("summary");
  const [loading,setLoading]=useState(true);
+ const [refreshing,setRefreshing]=useState(false);
+ const loadedProductId=useRef<string|null>(null);
  const [error,setError]=useState("");
  const [saving,setSaving]=useState(false);
  const [priceBusy,setPriceBusy]=useState(false);
@@ -139,17 +142,20 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
  useEffect(()=>{
   const controller=new AbortController();
   if(!modalProductId)return;
-  setLoading(true);
+  // Keep the modal body visible when revalidating the same product.
+  if(loadedProductId.current===modalProductId)setRefreshing(true);
+  else setLoading(true);
   fetch("/api/unit-economics/prospective?productId="+encodeURIComponent(modalProductId),
    {cache:"no-store",signal:controller.signal})
    .then(async r=>{const j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||"Не удалось получить товар");
     return j.products as Product[];})
    .then(items=>{if(!controller.signal.aborted){
      if(!items.length)throw Error("Товар отсутствует в реестре расчётов");
+     loadedProductId.current=modalProductId;
      setProduct(items[0]);setError("");
    }})
    .catch(e=>{if(!controller.signal.aborted)setError(e instanceof Error?e.message:String(e))})
-   .finally(()=>{if(!controller.signal.aborted)setLoading(false)});
+   .finally(()=>{if(!controller.signal.aborted){setLoading(false);setRefreshing(false);}});
   return()=>controller.abort();
  },[modalProductId,revision]);
  useEffect(()=>{
@@ -345,15 +351,24 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
     method:"PATCH",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({productId:product.id,model,priceRub:next})
    });
-   const data=await response.json() as {ok?:boolean;saved?:boolean;error?:string;warning?:string};
-   if(!response.ok||data.ok===false||!data.saved)
+   const data=await response.json() as {
+    ok?:boolean;saved?:boolean;error?:string;warning?:string;
+    calculation?:Scheme;model?:Model
+   };
+   if(!response.ok||data.ok===false||!data.saved||!data.calculation)
     throw Error(data.error||data.warning||"Не удалось пересчитать цену продажи");
+   const updated=data.calculation,savedId=product.id,savedModel=model;
+   // The server response has the full financial result: no second GET.
+   setProduct(current=>current?.id===savedId?{
+    ...current,schemes:{...current.schemes,[savedModel]:updated}
+   }:current);
+   onPriceUpdated?.(savedId,savedModel,updated);
    setManualPriceDirty(false);
-   setDraft(old=>({...old,priceRub:next===null?"":String(next)}));
+   setDraft(old=>({...old,priceRub:updated.priceRub===null?"":String(updated.priceRub)}));
    setActionMessage(next===null?
     "Автоматическая цена восстановлена, прибыль и ROI пересчитаны.":
     "Ручная цена для "+LABELS[model]+" сохранена. Комиссия, расходы, прибыль и ROI пересчитаны.");
-   setRevision(v=>v+1);onSaved?.();
+   // Do not reload or remount the modal after this single-scheme PATCH.
   }catch(error){setPriceError(error instanceof Error?error.message:String(error))}
   finally{setPriceBusy(false)}
  }
@@ -435,6 +450,7 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
    </div>
    <div className="unit-pilot-modal-body">
     {loading&&<p className="unit-pilot-notice">Загрузка расчёта...</p>}
+    {refreshing&&<p className="unit-pilot-notice" role="status">Обновляем расчёты без закрытия карточки…</p>}
     {error&&<p className="unit-pilot-error" role="alert">{error}</p>}
     {actionMessage&&<p className="unit-pilot-notice" role="status">{actionMessage}</p>}
     {!loading&&product&&<>

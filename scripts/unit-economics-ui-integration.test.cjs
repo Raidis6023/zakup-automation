@@ -146,3 +146,23 @@ test("Ozon: три ценовые ступени и ручная цена дос
  assert.ok(route.includes("A price-only edit updates just the selected scheme"));
  assert.ok(route.includes("suggestPreliminaryTargetPrice(effective"));
 });
+
+test("Цена товара: PATCH возвращает финансовые показатели; окно не исчезает при пересчёте",()=>{
+ const modal=read("app/unit-economics/VedUnitEconomicsLive.tsx");
+ const list=read("app/unit-economics/UnitEconomicsPilotClient.tsx");
+ const api=read("app/api/unit-economics/prospective/route.ts");
+ const start=modal.indexOf("async function applySellingPrice(");
+ const end=modal.indexOf("function submitSellingPrice(",start);
+ assert.ok(start>=0&&end>start,"Не найдена обработка сохранения цены");
+ const apply=modal.slice(start,end);
+ assert.ok(api.includes("calculation:{...next,settings:newSettings,computedAt"));
+ assert.ok(modal.includes("onPriceUpdated?:(productId:string,model:Model,scheme:Scheme)=>void"));
+ assert.ok(apply.includes("onPriceUpdated?.(savedId,savedModel,updated)"));
+ assert.ok(apply.includes("setProduct(current=>current?.id===savedId"));
+ assert.ok(!apply.includes("setRevision("),"PATCH не должен повторно загружать карточку");
+ assert.ok(!apply.includes("onSaved?.()"),"PATCH не должен запрашивать всю таблицу");
+ assert.ok(list.includes("setVedProducts(current=>current.map(p=>p.id===productId"));
+ assert.ok(list.includes("if(vedSelected)return"),"Отключаем таймер обновления при открытой карточке");
+ assert.ok(modal.includes("loadedProductId.current===modalProductId"));
+ assert.ok(modal.includes("refreshing&&<p"),"При обновлении тело карточки остаётся видимым");
+});

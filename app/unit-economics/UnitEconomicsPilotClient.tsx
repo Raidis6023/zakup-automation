@@ -357,11 +357,13 @@ export default function UnitEconomicsPilotClient(){
  // A VED save creates a server-side version; on returning to this page the
  // new products appear without clicking "Загрузить ожидающие ВЭД".
  useEffect(()=>{
+  // Do not interrupt an open calculation modal with polling or focus refresh.
+  if(vedSelected)return;
   const refresh=()=>{if(document.visibilityState==="visible")setVedRevision(x=>x+1)};
   const poll=window.setInterval(refresh,30000);
   window.addEventListener("focus",refresh);
   return()=>{window.clearInterval(poll);window.removeEventListener("focus",refresh)};
- },[]);
+ },[vedSelected]);
  async function reloadPendingVed(){
   setVedBusy(true);
   try{
@@ -479,7 +481,13 @@ export default function UnitEconomicsPilotClient(){
 
   {vedSelected&&<VedUnitEconomicsLive key={vedSelected} modalProductId={vedSelected} activeModel={model} photoUrl={activeVedPhoto}
     onClose={()=>setVedSelected(null)}
-    onSaved={()=>{setVedLoading(true);setVedRevision(x=>x+1)}}/>}
+    onPriceUpdated={(productId,changedModel,updatedScheme)=>{
+     // PATCH already returned all financials: update only the affected row.
+     setVedProducts(current=>current.map(p=>p.id===productId?{
+      ...p,schemes:{...p.schemes,[changedModel]:updatedScheme}
+     }:p));
+    }}
+    onSaved={()=>setVedRevision(x=>x+1)}/>}
   {photoPreview&&<div className="unit-pilot-photo-popover" style={{left:photoPreview.left,top:photoPreview.top}} role="presentation"><Image src={photoPreview.src} alt={photoPreview.alt} width={280} height={320} unoptimized/></div>}
   {item&&<div className="unit-pilot-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setSku(null)}}><div className="unit-pilot-modal" role="dialog" aria-modal="true" aria-labelledby="unit-pilot-modal-title">
    <header className="unit-pilot-modal-head"><div className="unit-pilot-heading"><div className="unit-pilot-thumb">{PHOTOS[item.sku]?<Image src={PHOTOS[item.sku]} width={59} height={59} alt={displayNewProductName(item.name,item.sku)} unoptimized/>:<span>Нет фото</span>}</div><div><h2 id="unit-pilot-modal-title">{displayNewProductName(item.name,item.sku)}</h2><p>Артикул: {item.sku}</p></div></div><button onClick={()=>setSku(null)} aria-label="Закрыть модалку">×</button></header>
