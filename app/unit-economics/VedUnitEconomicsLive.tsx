@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import {useEffect,useRef,useState,type FormEvent} from "react";
 
 type Model="ozon-fbo"|"ozon-fbs"|"wb-fbw"|"wb-fbs"|"ym-fby"|"ym-fbs";
@@ -59,8 +60,9 @@ const percent=(v:number|null|undefined)=>fmt(v===null||v===undefined?null:v*100,
 const rateValue=(v:unknown)=>typeof v==="number"&&Number.isFinite(v)?v:null;
 const groupName=(m:Model)=>m.startsWith("ozon")?"ozon":m.startsWith("wb")?"wb":"ym";
 
-export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose,onSaved}:{
+export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose,onSaved,photoUrl}:{
  modalProductId:string|null;activeModel?:string;onClose:()=>void;onSaved?:()=>void;
+ photoUrl?:string|null;
 }){
  const [product,setProduct]=useState<Product|null>(null);
  const [model,setModel]=useState<Model>((activeModel as Model)||"ozon-fbo");
@@ -360,7 +362,10 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
   <div className="unit-pilot-modal" role="dialog" aria-modal="true" aria-labelledby="unit-ved-modal-title">
    <header className="unit-pilot-modal-head">
     <div className="unit-pilot-heading">
-     <div className="unit-pilot-thumb" aria-hidden="true">Нет фото</div>
+     <div className="unit-pilot-thumb">
+       {photoUrl?<Image src={photoUrl} width={54} height={54}
+        alt={product?.name||"Фото товара из КП"} unoptimized/>:<span>Нет фото</span>}
+      </div>
      <div>
       <h2 id="unit-ved-modal-title">{product?.name||"Расчёт товара из ВЭД"}</h2>
       <p>Артикул: {product?.article||"..."}</p>

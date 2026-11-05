@@ -1,5 +1,5 @@
 "use client";
-import {useEffect,useMemo,useState,type MouseEvent} from "react";
+import {useEffect,useMemo,useRef,useState,type MouseEvent} from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {WORKBOOK_URL,type Marketplace,type ModelKey} from "@/lib/unit-economics/model-config";
@@ -29,6 +29,7 @@ type VedScheme={
 };
 type VedProduct={
  id:string;article:string;name:string;ved_created_at:string;
+ source_item_id:string|null;source_offer_id:string|null;
  cost_gross_rub:number|null;volume_liters:number|null;unit_weight_kg:number|null;
  schemes:Record<string,VedScheme>;
 };
@@ -243,6 +244,9 @@ export default function UnitEconomicsPilotClient(){
  const [view,setView]=useState<"summary"|"details">("summary");
  const [overrides,setOverrides]=useState<Record<string,string>>({});
  const [vedProducts,setVedProducts]=useState<VedProduct[]>([]);
+ const [vedPhotoUrls,setVedPhotoUrls]=useState<Record<string,string>>({});
+ const [vedPhotoError,setVedPhotoError]=useState("");
+ const attemptedPhotoOffers=useRef(new Set<string>());
  const [vedLoading,setVedLoading]=useState(true);
  const [vedError,setVedError]=useState("");
  const [vedRevision,setVedRevision]=useState(0);
@@ -260,6 +264,55 @@ export default function UnitEconomicsPilotClient(){
    .finally(()=>{if(!controller.signal.aborted)setVedLoading(false)});
   return ()=>controller.abort();
  },[vedRevision]);
+ // Resolve signed URLs for all listed source-KP offers in one request.
+ // For missing offers, extract thumbnails once per entire Excel, not once per SKU.
+ const photoOfferKey=[...new Set(vedProducts.map(p=>p.source_offer_id).filter(
+  (x):x is string=>typeof x==="string"&&x.length>0))].sort().slice(0,35).join(",");
+ useEffect(()=>{
+  if(!photoOfferKey)return;
+  const controller=new AbortController();
+  const refresh=async()=>{
+   const res=await fetch("/api/unit-economics/photos?offers="+
+    encodeURIComponent(photoOfferKey),{cache:"no-store",signal:controller.signal});
+   const body=await res.json() as {ok?:boolean;photos?:Record<string,string>;
+    missingOfferIds?:string[];error?:string};
+   if(!res.ok||!body.ok)throw Error(body.error||"Не удалось получить фотографии КП");
+   if(!controller.signal.aborted)setVedPhotoUrls(body.photos||{});
+   return body;
+  };
+  void (async()=>{
+   try{
+    const result=await refresh();
+    for(const offerId of result.missingOfferIds||[]){
+     if(controller.signal.aborted)return;
+     if(attemptedPhotoOffers.current.has(offerId))continue;
+     attemptedPhotoOffers.current.add(offerId);
+     try{
+      const res=await fetch("/api/unit-economics/photos",{
+       method:"POST",headers:{"Content-Type":"application/json"},
+       body:JSON.stringify({offerId}),signal:controller.signal
+      });
+      const body=await res.json() as {ok?:boolean;error?:string};
+      if(!res.ok||!body.ok)throw Error(body.error||"Не удалось извлечь фото из КП");
+      await refresh();
+      if(!controller.signal.aborted)setVedPhotoError("");
+     }catch(error){
+      if(!controller.signal.aborted)setVedPhotoError(
+       error instanceof Error?error.message:String(error));
+     }
+    }
+   }catch(error){
+    if(!controller.signal.aborted)setVedPhotoError(
+     error instanceof Error?error.message:String(error));
+   }
+  })();
+  // Signed URLs last 60 minutes, refresh them while the page stays open.
+  const timer=window.setInterval(()=>{void refresh().catch(error=>{
+   if(!controller.signal.aborted)setVedPhotoError(
+    error instanceof Error?error.message:String(error));
+  })},30*60*1000);
+  return ()=>{controller.abort();window.clearInterval(timer)};
+ },[photoOfferKey]);
  // Background revalidation while the new unit-economics page is open.
  // A VED save creates a server-side version; on returning to this page the
  // new products appear without clicking "Загрузить ожидающие ВЭД".
@@ -307,13 +360,18 @@ export default function UnitEconomicsPilotClient(){
  const logistics=row?fees.logistics.reduce((sum,i)=>sum+numeric(row,i),0):0;
  const other=row?numeric(row,c.price)-numeric(row,c.cost)-numeric(row,fees.commission)-logistics-numeric(row,fees.ads)-numeric(row,c.profit):0;
  const recommended=item&&(model==="ozon-fbs"||model==="ym-fbs")?pilotFbsMinPrice(item,model):null;
- function openPhoto(e:MouseEvent<HTMLDivElement>,p:Product){
-  const src=PHOTOS[p.sku];if(!src)return;
+ const activeVed=vedSelected?vedProducts.find(p=>p.id===vedSelected):null;
+ const activeVedPhoto=activeVed?.source_item_id?vedPhotoUrls[activeVed.source_item_id]||null:null;
+ function openImagePreview(e:MouseEvent<HTMLDivElement>,src:string,alt:string){
+  if(!src)return;
   const rect=e.currentTarget.getBoundingClientRect();
   const width=300,height=350;
   const left=rect.right+14+width<=window.innerWidth?rect.right+14:Math.max(12,rect.left-width-14);
   const top=Math.max(12,Math.min(window.innerHeight-height-12,rect.top-12));
-  setPhotoPreview({src,alt:displayNewProductName(p.name,p.sku),left,top});
+  setPhotoPreview({src,alt,left,top});
+ }
+ function openPhoto(e:MouseEvent<HTMLDivElement>,p:Product){
+  const src=PHOTOS[p.sku];if(src)openImagePreview(e,src,displayNewProductName(p.name,p.sku));
  }
  function changeModel(k:ModelKey){setSelected(x=>({...x,[market]:k}));setView("summary");}
  function changeMarket(k:Marketplace){setMarket(k);setView("summary");}
@@ -338,12 +396,14 @@ export default function UnitEconomicsPilotClient(){
    Исходный реестр ВЭД и старая версия юнитки не изменяются.</p>
   </details>
   {vedError&&<p className="unit-pilot-error" role="alert"><strong>Синхронизация ВЭД:</strong> {vedError}</p>}
+  {vedPhotoError&&<p className="unit-pilot-error" role="status"><strong>Фото КП:</strong> {vedPhotoError}</p>}
   <div className="unit-table-toolbar"><div className="unit-table-title">Товары <span>{list.length+vedList.length}{vedLoading?" · обновление…":""}</span></div><div className="unit-toolbar-right"><input aria-label="Поиск пилотных товаров" placeholder="Поиск товара, артикула..." value={search} onChange={e=>setSearch(e.target.value)}/></div></div>
   <div className="unit-pilot-scroller"><table className="unit-pilot-table"><thead><tr>{["Фото","Наименование","Рентабельность","Маржинальность","Чистая прибыль","Себестоимость","Литраж","Цена продажи","Цена с СПП",...(model==="ozon-fbo"?["Зона размещения"]:[])].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{list.map(p=>{const r=entryFor(p,model);return <tr key={p.sku} className={r?"clickable":""} tabIndex={r?0:-1} onClick={()=>r&&setSku(p.sku)} onKeyDown={e=>{if(r&&e.key==="Enter")setSku(p.sku)}}>
    <td><div className="unit-pilot-thumb" onMouseEnter={e=>openPhoto(e,p)} onMouseLeave={()=>setPhotoPreview(null)}>{PHOTOS[p.sku]?<Image src={PHOTOS[p.sku]} width={46} height={46} alt={displayNewProductName(p.name,p.sku)} unoptimized/>:<span>Нет фото</span>}</div></td><td className="unit-pilot-name">{displayNewProductName(p.name,p.sku)}<small>{p.sku}</small></td><td className={r&&numeric(r,c.roi)<0?"unit-pilot-red":"unit-pilot-green"}>{fmt(r,c.roi)}</td><td>{fmt(r,c.margin)}</td><td className={r&&numeric(r,c.profit)<0?"unit-pilot-red":""}>{fmt(r,c.profit)}</td><td>{fmt(r,c.cost)}</td><td>{fmt(r,c.volume)}</td><td>{fmt(r,c.price)}</td><td>{fmt(r,c.buyer)}</td>{model==="ozon-fbo"&&<td>Не определена</td>}
   </tr>})}
   {vedList.map(p=>{
    const calc=p.schemes[model];
+   const photoSrc=p.source_item_id?vedPhotoUrls[p.source_item_id]:undefined;
    const money=(x:number|null|undefined)=>x===null||x===undefined?"—":formatUnitNumber(x,"₽");
    const ratio=(x:number|null|undefined)=>x===null||x===undefined?"—":formatUnitPercent(x);
    const status=calc?.status==="calculated"?"Рассчитано":
@@ -353,7 +413,12 @@ export default function UnitEconomicsPilotClient(){
      title={calc?.missing?.join("; ")||"Открыть карточку товара из ВЭД"}
      onClick={()=>{setSku(null);setVedSelected(p.id);}}
      onKeyDown={e=>{if(e.key==="Enter")setVedSelected(p.id)}}>
-     <td><div className="unit-pilot-thumb unit-pilot-empty-thumb"><span>Нет фото</span></div></td>
+     <td><div className="unit-pilot-thumb"
+      onMouseEnter={e=>{if(photoSrc)openImagePreview(e,photoSrc,displayNewProductName(p.name,p.article))}}
+      onMouseLeave={()=>setPhotoPreview(null)}>
+      {photoSrc?<Image src={photoSrc} width={46} height={46}
+       alt={displayNewProductName(p.name,p.article)} unoptimized/>:<span>Нет фото</span>}
+     </div></td>
      <td className="unit-pilot-name">{displayNewProductName(p.name,p.article)}
       <small>{p.article} <span className="unit-pilot-status">· {status}</span></small>
      </td>
@@ -370,7 +435,7 @@ export default function UnitEconomicsPilotClient(){
   </tbody></table></div>
   {list.length===0&&vedList.length===0&&!vedLoading&&<p className="unit-pilot-no-data">Товаров пока нет. Проверьте сохранённые версии ВЭД или измените поисковый запрос.</p>}
 
-  {vedSelected&&<VedUnitEconomicsLive key={vedSelected} modalProductId={vedSelected} activeModel={model}
+  {vedSelected&&<VedUnitEconomicsLive key={vedSelected} modalProductId={vedSelected} activeModel={model} photoUrl={activeVedPhoto}
     onClose={()=>setVedSelected(null)}
     onSaved={()=>{setVedLoading(true);setVedRevision(x=>x+1)}}/>}
   {photoPreview&&<div className="unit-pilot-photo-popover" style={{left:photoPreview.left,top:photoPreview.top}} role="presentation"><Image src={photoPreview.src} alt={photoPreview.alt} width={280} height={320} unoptimized/></div>}

@@ -31,7 +31,7 @@ export async function GET(req:NextRequest){
  const requestedArticles=(req.nextUrl.searchParams.get("articles")||"").split(",")
   .map(v=>v.trim().toUpperCase()).filter(v=>/^[A-Z0-9_-]{1,120}$/.test(v)).slice(0,25);
  let productQuery=auth.admin.from("unit_ved_products")
-  .select("id,article,name,source_type,source_version_id,ved_created_at,cost_gross_rub,purchase_vat_credit_rub,volume_liters,volume_source,unit_weight_kg,overrides,input_data,edit_revision");
+  .select("id,article,name,source_type,source_version_id,source_item_id,ved_created_at,cost_gross_rub,purchase_vat_credit_rub,volume_liters,volume_source,unit_weight_kg,overrides,input_data,edit_revision");
  const requestedId=req.nextUrl.searchParams.get("productId");
  if(requestedId&&/^[a-f0-9-]{36}$/i.test(requestedId))productQuery=productQuery.eq("id",requestedId);
  else if(requestedArticles.length)productQuery=productQuery.in("article",requestedArticles);
@@ -40,6 +40,14 @@ export async function GET(req:NextRequest){
  if(pErr)return NextResponse.json({ok:false,error:"База расчётов ВЭД не готова: "+pErr.message},
   {status:503,headers});
  const ids=(products||[]).map(p=>p.id);
+ const sourceItemIds=[...new Set((products||[]).map(p=>p.source_item_id).filter((x):x is string=>!!x))];
+ const sourceOfferIds=new Map<string,string>();
+ if(sourceItemIds.length){
+  const {data:sourceItems,error:sourceError}=await auth.admin.from("ved_commercial_offer_items")
+   .select("id,offer_id").in("id",sourceItemIds).limit(500);
+  if(sourceError)return NextResponse.json({ok:false,error:sourceError.message},{status:503,headers});
+  (sourceItems||[]).forEach(x=>sourceOfferIds.set(x.id,x.offer_id));
+ }
  if(!ids.length)return NextResponse.json({ok:true,products:[],models:PRELIMINARY_MODELS},{headers});
  const {data:calculations,error:cErr}=await auth.admin.from("unit_ved_calculations")
   .select("product_id,model,status,missing,result_data,source_version_id,computed_at")
@@ -94,7 +102,7 @@ export async function GET(req:NextRequest){
   existing[item.model]=detail;byProduct.set(item.product_id,existing);
  }
  return NextResponse.json({ok:true,models:PRELIMINARY_MODELS,
-  products:(products||[]).map(p=>({...p,schemes:byProduct.get(p.id)||{}}))},{headers});
+  products:(products||[]).map(p=>({...p,source_offer_id:sourceOfferIds.get(p.source_item_id||"")||null,schemes:byProduct.get(p.id)||{}}))},{headers});
 }
 export async function POST(request:NextRequest){
  const auth=await access();

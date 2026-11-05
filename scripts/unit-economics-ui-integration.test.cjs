@@ -92,3 +92,20 @@ test("Карточка сохраняет все шесть схем прода�
  assert.match(ui,/ym:\["ym-fby","ym-fbs"\]/);
  assert.ok(!ui.includes('activeModel==="ym-fbs"?"ym-fby"'));
 });
+
+test("Фото товаров из ВЭД не должны оставаться жёсткой заглушкой",()=>{
+ const pilot=read("app/unit-economics/UnitEconomicsPilotClient.tsx");
+ const modal=read("app/unit-economics/VedUnitEconomicsLive.tsx");
+ const route=read("app/api/unit-economics/photos/route.ts");
+ const prospective=read("app/api/unit-economics/prospective/route.ts");
+ assert.ok(pilot.includes("vedPhotoUrls[p.source_item_id]"));
+ assert.ok(pilot.includes('fetch("/api/unit-economics/photos"'));
+ assert.ok(pilot.includes("photoUrl={activeVedPhoto}"));
+ assert.ok(modal.includes("photoUrl?<Image"));
+ assert.ok(prospective.includes("source_offer_id:sourceOfferIds"));
+ assert.ok(route.includes("findSupplierPhotos(file,items)"));
+ assert.ok(route.includes('BUCKET="ved-product-photos"'));
+ assert.ok(route.includes("createSignedUrls"));
+ assert.ok(route.includes("await (await createClient()).auth.getUser()"));
+ assert.ok(!route.includes("getPublicUrl"));
+});

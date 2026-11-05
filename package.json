@@ -4,10 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/ved-calculation-tests.cjs && node scripts/ved-excel-template-tests.cjs && node scripts/ved-offer-parser-tests.cjs && node scripts/ved-whole-offer-export-tests.cjs && node scripts/ved-export-filename-tests.cjs && node scripts/ved-registry-tests.cjs && node scripts/prepare-login-panda.mjs && npm run test:unit-economics && next build",
+    "build": "node scripts/ved-calculation-tests.cjs && node scripts/ved-excel-template-tests.cjs && node scripts/ved-offer-parser-tests.cjs && node scripts/ved-offer-photo-tests.cjs && node scripts/ved-whole-offer-export-tests.cjs && node scripts/ved-export-filename-tests.cjs && node scripts/ved-registry-tests.cjs && node scripts/prepare-login-panda.mjs && npm run test:unit-economics && next build",
     "start": "next start",
     "lint": "eslint",
-    "test:ved": "node scripts/ved-calculation-tests.cjs && node scripts/ved-excel-template-tests.cjs && node scripts/ved-offer-parser-tests.cjs && node scripts/ved-whole-offer-export-tests.cjs && node scripts/ved-registry-tests.cjs",
+    "test:ved": "node scripts/ved-calculation-tests.cjs && node scripts/ved-excel-template-tests.cjs && node scripts/ved-offer-parser-tests.cjs && node scripts/ved-offer-photo-tests.cjs && node scripts/ved-whole-offer-export-tests.cjs && node scripts/ved-registry-tests.cjs",
     "test:unit-economics": "node --test scripts/unit-economics-financial-reference.test.cjs scripts/unit-economics-logistics.test.cjs scripts/unit-economics-prospective.test.cjs scripts/unit-economics-ui-integration.test.cjs scripts/unit-economics-mpstats.test.cjs scripts/unit-economics-mpstats-macro.test.cjs"
   },
   "dependencies": {
