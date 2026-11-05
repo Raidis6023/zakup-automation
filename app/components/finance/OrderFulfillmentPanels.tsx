@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import {downloadFinanceWorkbook} from './export-xlsx';
+import './order-fulfillment.css';
 type Item={article:string;orders:number;cancelled:number|null;amount:number|null};
 type Group={orders:number;cancelled:number|null;amount:number|null;knownAmount:number;articles:Item[]};
 type Payload={ok:boolean;note:string;schemes:{fbo?:Group;fbw?:Group;fbs?:Group};error?:string};
@@ -27,21 +28,38 @@ function SchemeTable({market,scheme,from,to}:{market:Market;scheme:string;from:s
 }
 function SchemePanel({market,scheme,label,from,to,group,note,error}:{market:Market;scheme:string;label:string;from:string;to:string;group?:Group;note:string;error:string}){
  const [open,setOpen]=useState(false);
- return <details className="ozf-panel ozf-collapsible-register" onToggle={e=>setOpen(e.currentTarget.open)} style={{padding:14,minWidth:0,width:"100%",boxSizing:"border-box"}}>
- <summary style={{cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'space-between',gap:16,listStyle:'none',padding:'10px 12px',minHeight:54,margin:'-10px -10px 0',borderRadius:10}}>
- <span style={{display:'flex',flexDirection:'column',gap:5,minWidth:0}}>
- <strong style={{fontSize:15,fontWeight:700,lineHeight:1.4}}>{label}</strong>
- <span style={{fontSize:12,opacity:.8}}>{error?'Ошибка выгрузки':!group?'Загружаем количество заказов…':fmt(group.orders)+' заказанных единиц'}</span>
- </span><span className="ozf-btn" style={{whiteSpace:'nowrap',flexShrink:0}}>{open?'Свернуть ▲':'Раскрыть ▼'}</span></summary>
- {error?<p className="ozf-error">{error}</p>:group&&open?<><div style={{display:'flex',gap:12,justifyContent:'space-between',alignItems:'center',margin:'12px 0'}}><a className="ozf-btn" href={market==='ozon'?'#ozf-items':market==='yandex'?'#ymf-results':'#wb-finance-main'}>К общему финрезу ↑</a><span className="ozf-count">Нажми на заголовок, чтобы свернуть</span></div><div className="ozf-metrics"><div><span>Заказы / единицы</span><strong>{fmt(group.orders)}</strong></div><div><span>Отмены</span><strong>{fmt(group.cancelled)}</strong></div><div><span>Стоимость заказов (справочно)</span><strong>{fmt(group.amount,'₽')}</strong></div></div><p className="ozf-notice">{note}</p><SchemeTable market={market} scheme={scheme} from={from} to={to}/></>:null}
+ const [title,description='Склад продавца']=label.split(' · ');
+ return <details className="ozf-scheme-panel" open={open} onToggle={e=>setOpen(e.currentTarget.open)}>
+  <summary className="ozf-scheme-summary" aria-label={title+' — '+description+'. '+(open?'Свернуть':'Раскрыть')+' финансовый отчёт'}>
+   <div className="ozf-scheme-identity">
+    <span className="ozf-scheme-icon" aria-hidden="true">{scheme==='fbs'?'▤':'▦'}</span>
+    <span><strong>{title}</strong><small>{description}</small></span>
+   </div>
+   <div className="ozf-scheme-stats">
+    <span><small>Заказы</small><strong>{group?fmt(group.orders):'—'}</strong></span>
+    <span><small>Отмены</small><strong>{group?fmt(group.cancelled):'—'}</strong></span>
+    <span><small>Сумма заказов</small><strong>{group?fmt(group.amount,'₽'):'—'}</strong></span>
+   </div>
+   <span className="ozf-scheme-action">{open?'Свернуть':'Финансовый отчёт'} <span aria-hidden="true">{open?'⌃':'⌄'}</span></span>
+  </summary>
+  {open&&<div className="ozf-scheme-content">
+   {error?<p className="ozf-error" role="alert">{error}</p>:!group?<p className="ozf-notice">Загружаем данные о заказах…</p>:<>
+    <div className="ozf-scheme-detail-head">
+     <div><h3>{title}: отчёт по финансовым показателям</h3><p>Только операции схемы {title} за {from} — {to}</p></div>
+     <a className="ozf-btn" href={market==='ozon'?'#ozf-items':market==='yandex'?'#ymf-results':'#wb-finance-main'}>К общему финрезу ↑</a>
+    </div>
+    <p className="ozf-notice">{note}</p>
+    <SchemeTable market={market} scheme={scheme} from={from} to={to}/>
+   </>}
+  </div>}
  </details>;
 }
 export default function OrderFulfillmentPanels({market,from,to}:{market:Market;from:string;to:string}){
  const [data,setData]=useState<Payload|null>(null),[error,setError]=useState('');
  useEffect(()=>{const ac=new AbortController();setData(null);setError('');fetch('/api/agents/finance-order-schemes?'+new URLSearchParams({market,from,to}),{cache:'no-store',signal:ac.signal}).then(async r=>{const d=await r.json() as Payload;if(!r.ok)throw Error(d.error??'Ошибка заказов');return d;}).then(d=>{if(!ac.signal.aborted)setData(d)}).catch(e=>{if(!ac.signal.aborted)setError(e instanceof Error?e.message:'Ошибка');});return()=>ac.abort()},[market,from,to]);
  const first=market==='wb'?'fbw':'fbo';
- return <div style={{display:'flex',flexDirection:'column',width:'100%',minWidth:0,gap:12,margin:'12px 0'}}>
+ return <section className="ozf-scheme-panels" aria-label="Финансовые отчёты по схемам отгрузки">
  <SchemePanel market={market} scheme={first} label={market==='wb'?'FBW · склад Wildberries':market==='yandex'?'FBY · склад Яндекс Маркета':'FBO · склад Ozon'} from={from} to={to} group={data?.schemes[first]} note={data?.note??''} error={error}/>
  <SchemePanel market={market} scheme="fbs" label="FBS · склад продавца" from={from} to={to} group={data?.schemes.fbs} note={data?.note??''} error={error}/>
- </div>;
+ </section>;
 }
