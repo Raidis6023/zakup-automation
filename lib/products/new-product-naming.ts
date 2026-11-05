@@ -64,7 +64,7 @@ export function buildNewProductNaming(description:string,article:string):NewProd
   .filter(Boolean);
  if(!lines.length)return{shortName:"",fullName:"",attributes:{}};
  const base=displayNewProductName(lines[0],article).replace(/\s+,/g,",").trim();
- const full=lines.join("; ");
+ const full=lines.map(x=>x.replace(/\s+,/g,",")).join("; ");
  const attrs=attrList(lines);
  const dims=extractDimensions(String(description||""));
  const all=lines.join("\n");
@@ -73,16 +73,21 @@ export function buildNewProductNaming(description:string,article:string):NewProd
  if(/рулетк[аи-]?[- ]?поводок|поводок[- ]?рулетк/i.test(base)){
   const len=first(all,/длина\s+троса\s*:\s*(\d+(?:[.,]\d+)?)\s*м/i);
   name=add("Рулетка-поводок"+(/автоматич/i.test(base)?" автоматическая":"")+" для животных",len?amount(len)+" м":null,dims);
+  if(len)attrs["Длина троса"]=amount(len)+" м";
  }else if(/кормушк/i.test(base)&&/поилк/i.test(base)){
   const food=first(all,/для\s+корма\s*(\d+(?:[.,]\d+)?)\s*л/i);
   const water=first(all,/для\s+воды\s*(\d+(?:[.,]\d+)?)\s*л/i);
   name=add("Кормушка-поилка"+(/2\s*в\s*1/i.test(base)?" 2 в 1":"")+" для животных",food?"корм "+amount(food)+" л":null,
    water?"вода "+amount(water)+" л":null);
+  if(food)attrs["Объём для корма"]=amount(food)+" л";
+  if(water)attrs["Объём для воды"]=amount(water)+" л";
  }else if(/миск/i.test(base)){
   const ceramic=/керамич/i.test(base)?"керамическая":null;
   const size=first(base,/\(([SMLX]{1,4})\)/i);
   name=add("Миска"+(ceramic?" "+ceramic:"")+" для животных",
    size?"размер "+size.toUpperCase():null,dims);
+  if(ceramic)attrs["Материал"]="керамика";
+  if(size)attrs["Размерный ряд"]=size.toUpperCase();
  }else if(/подставк/i.test(base)&&/ноутбук/i.test(base)&&/охлажден|охлаждающ/i.test(base)){
   const model=first(all,/модель\s*:\s*([a-zа-я0-9-]+)/i);
   const count=first(all,/количество\s+вентиляторов\s*:\s*(\d+)\s*шт/i);
@@ -101,17 +106,29 @@ export function buildNewProductNaming(description:string,article:string):NewProd
   }else if(fanSize)name=add(prefix,fanSize+" мм");
   name=add(name,speed?amount(speed)+" об/мин":null,led&&!model?"LED":null,dims);
  }else if(/бритв|брить/i.test(base)){
-  const cartridges=first(all,/(\d+)\s*сменн\w*\s+кассет/i);
+  const cartridges=first(all,/(\d+)\s*сменн[а-яё]*\s+кассет/i);
   const blades=first(all,/(\d+)\s*лезви(?:я|й|е)/i);
   const qty=first(all,/(?:упаковка)\s*(\d+)\s*шт/i);
-  name=add(base,cartridges?
-   (/ручка/i.test(all)?"ручка + ":"")+cartridges+" сменные кассеты":qty?qty+" шт. в упаковке":null,
-   blades?blades+" лезвий":null,dims);
- }else if(/ватн.*палочк/i.test(base)){
+  const decl=(value:string,one:string,few:string,many:string)=>{
+   const n=Number(value);
+   return n%10===1&&n%100!==11?one:
+    n%10>=2&&n%10<=4&&(n%100<12||n%100>14)?few:many;
+  };
+  const cartridgeText=cartridges?
+   (/ручка/i.test(all)?"ручка + ":"")+cartridges+" "+
+    decl(cartridges,"сменная кассета","сменные кассеты","сменных кассет"):null;
+  name=add(base,cartridgeText|| (qty?qty+" шт. в упаковке":null),
+   blades?blades+" "+decl(blades,"лезвие","лезвия","лезвий"):null,dims);
+  if(cartridges)attrs["Сменные кассеты"]=cartridges+" шт.";
+  if(blades)attrs["Лезвий на бритве"]=blades;
+  if(qty)attrs["Штук в упаковке"]=qty;
+ }else if(/ватн.*палоч/i.test(base)){
   const qty=first(all,/(\d+)\s*(?:штук|шт\.)/i);
   const zip=all.match(/(\d+)\s*зип[\s-]*лок\s+по\s+(\d+)\s*(?:штук|шт\.)/i);
   name=add(base,qty?qty+" шт.":null,
    zip?zip[1]+" зип-лок по "+zip[2]+" шт.":null);
+  if(qty)attrs["Количество палочек"]=qty+" шт.";
+  if(zip)attrs["Разделение по упаковкам"]=zip[1]+" зип-лок по "+zip[2]+" шт.";
  }else{
   name=fallbackShort(base,lines);
  }

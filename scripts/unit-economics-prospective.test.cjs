@@ -362,3 +362,16 @@ test("Ручные короткое и полное названия не зат
  assert.equal(edited.fullName,"Моё подробное название, 5 лезвий");
  assert.throws(()=>mergeProductOverrides({},{fullName:""}),/Недопустимое/);
 });
+
+test("Существующие КП: правильные падежи, кассеты и состав упаковки",()=>{
+ const two=buildNewProductNaming("Бритвенный набор\nУпаковка 5 шт.\n2 лезвия\nРазмер: 4 * 11 см","KL-2003_1");
+ assert.match(two.shortName,/2 лезвия/);
+ assert.doesNotMatch(two.shortName,/2 лезвий/);
+ const six=buildNewProductNaming("Бритвенный набор\nРучка + 3 сменные кассеты (6 лезвий)\nРазмер: 4 * 13 см","KL-B608LO");
+ assert.match(six.shortName,/3 сменные кассеты, 6 лезвий/);
+ assert.equal(six.attributes["Сменные кассеты"],"3 шт.");
+ const cotton=buildNewProductNaming("Набор ватных палочек\n1000 штук (5зип лок по 200 штук в общей ПЭ упаковке)","RCAB-AVD26828-3");
+ assert.equal(cotton.shortName,"Набор ватных палочек, 1000 шт., 5 зип-лок по 200 шт.");
+ assert.equal(cotton.attributes["Количество палочек"],"1000 шт.");
+ assert.match(cotton.fullName,/в общей ПЭ упаковке/);
+});
