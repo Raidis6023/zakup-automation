@@ -82,7 +82,8 @@ export async function GET(req:NextRequest){
   const value=item.result_data as Record<string,unknown>;
   const detail={
    model:item.model,status:item.status,missing:item.missing,
-   costPolicyVersion:value.costPolicyVersion??1,sourceCost:value.sourceCost??null,
+   costPolicyVersion:value.costPolicyVersion??1,pricePolicyVersion:value.pricePolicyVersion??1,
+   sourceCost:value.sourceCost??null,
    costGrossRub:value.costGrossRub??null,volumeLiters:value.volumeLiters??null,
    unitWeightKg:value.unitWeightKg??null,unitWeightFormula:value.unitWeightFormula??null,
    unitWeightSource:value.unitWeightSource??null,unitWeightWarning:value.unitWeightWarning??null,
@@ -126,7 +127,8 @@ export async function POST(request:NextRequest){
   const {data:current,error:calcError}=await auth.admin.from("unit_ved_calculations")
    .select("result_data").eq("product_id",linked[0].id).eq("model","ozon-fbo").maybeSingle();
   if(calcError)return NextResponse.json({ok:false,error:calcError.message},{status:503,headers});
-  if(Number((current?.result_data as Record<string,unknown>|null)?.costPolicyVersion)===2)
+  if(Number((current?.result_data as Record<string,unknown>|null)?.costPolicyVersion)===2&&
+   Number((current?.result_data as Record<string,unknown>|null)?.pricePolicyVersion)===2)
    return NextResponse.json({ok:true,alreadyCurrent:true,processed:0},{headers});
   const result=await syncUnitFromVedVersion(auth.admin,sourceType,versionId,{force:true});
   return NextResponse.json({ok:result.ok,processed:result.processed,skipped:result.skipped,
