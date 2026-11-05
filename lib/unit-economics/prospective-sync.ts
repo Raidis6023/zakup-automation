@@ -5,7 +5,7 @@
  */
 import type {createAdminClient} from "@/lib/supabase/admin";
 import type {VedCalculationInput,VedCalculationResult} from "@/lib/ved-calculation/engine";
-import {displayNewProductName,normalizeNewProductArticle} from "@/lib/products/new-product-identity";
+import {informativeNewProductName,normalizeNewProductArticle} from "@/lib/products/new-product-identity";
 import {withUniqueOfferArticles} from "@/lib/ved-commercial-offers/article-identities";
 import {applyProductOverrides,type ProductOverrides} from "./product-overrides";
 import {PRELIMINARY_MODELS,calculatePreliminary,suggestPreliminaryTargetPrice,type PreliminarySettings,type PreliminarySource} from "./prospective-engine";
@@ -74,6 +74,17 @@ export async function syncUnitFromVedVersion(db:Db,type:VedEventKind,versionId:s
     source:row,id:row.itemId||String(index),supplier_article:row.article,
     source_sheet:"",source_row:index+1
    }))).map(row=>({...row.source,article:row.supplier_article})):sourceRows;
+  // Use the original full item description, never the shortened VED calculator
+  // productName (which contains only the first line of the quotation).
+  const sourceDescriptions=new Map<string,string>();
+  const itemIds=[...new Set(identities.map(x=>x.itemId).filter((x):x is string=>!!x))];
+  for(const ids of chunk(itemIds,100)){
+   const {data:sourceItems,error:sourceError}=await db.from("ved_commercial_offer_items")
+    .select("id,description_original").in("id",ids);
+   if(sourceError)throw Error("Не удалось прочитать полные описания товаров КП: "+sourceError.message);
+   for(const entry of sourceItems||[])
+    sourceDescriptions.set(entry.id,entry.description_original);
+  }
   const unique=new Map<string,Pending>();
   for(const row of identities){
    const sku=normalizeNewProductArticle(row.article);
@@ -86,7 +97,7 @@ export async function syncUnitFromVedVersion(db:Db,type:VedEventKind,versionId:s
    }
    unique.set(sku,{
     ...row,article:sku,
-    name:displayNewProductName(row.input.product.productName||row.name,sku)
+    name:informativeNewProductName((row.itemId&&sourceDescriptions.get(row.itemId))||row.name||row.input.product.productName,sku)
    });
   }
   for(const list of chunk([...unique.values()],40)){

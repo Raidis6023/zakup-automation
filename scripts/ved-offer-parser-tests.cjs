@@ -64,3 +64,37 @@ assert.deepEqual(["a","b","c","d"].map(x=>collisionMap.get(x)),
 assert.deepEqual(withUniqueOfferArticles(duplicates).slice(0,7).map(x=>x.supplier_article),
  Array.from({length:7},(_,i)=>"KL-R655L_"+(i+1)));
 console.log("PASS VED КП: duplicate supplier SKUs numbered _1/_2 by sheet row, no source mutations");
+
+
+// Full КП product descriptions must survive the VED -> unit economics transfer.
+const fullNamesCode=fs.readFileSync(require("node:path").join(__dirname,
+ "../lib/products/new-product-identity.ts"),"utf8");
+const fullNames={exports:{}};
+new Function("require","exports","module",ts.transpileModule(fullNamesCode,{
+ compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}
+}).outputText)(require,fullNames.exports,fullNames);
+const nice=fullNames.exports.informativeNewProductName;
+const examples=[
+ ["Бритвенный набор\nРучка + 3 сменные кассеты (6 лезвий)\nРазмер: 4 * 13 см",
+  "KL-B608LO","Бритвенный набор, Ручка + 3 сменные кассеты (6 лезвий), размер 4×13 см"],
+ ["Бритвенный набор\nУпаковка 2 шт.\nРазмер: 4 * 11 см\n5 лезвий",
+  "KL-R551L_1","Бритвенный набор, 2 шт. в упаковке, 5 лезвий, размер 4×11 см"],
+ ["Бритвенный набор\nУпаковка 8 шт.\nРазмер: 4 * 11 см\n5 лезвий",
+  "KL-R551L_4","Бритвенный набор, 8 шт. в упаковке, 5 лезвий, размер 4×11 см"],
+ ["Бритвенный набор\nУпаковка 2 шт.\nРазмер: 4 * 12 см\n5 лезвий",
+  "KL-R655L_6","Бритвенный набор, 2 шт. в упаковке, 5 лезвий, размер 4×12 см"],
+ ["Набор ватных палочек\n600 штук (2 зип лок по 300 шт. в общей ПЭ упаковке)",
+  "RCAB-AVD26828-1","Набор ватных палочек, 600 шт. (2 зип-лок по 300 шт. в общей ПЭ упаковке)"],
+ ["Подставка для ноутбука","F2","Подставка для ноутбука"]
+];
+for(const [raw,article,expected] of examples)
+ assert.equal(nice(raw,article),expected,article+" should retain all distinguishing characteristics");
+assert.ok(!nice("Бритвенный набор\n3 сменные кассеты","R").includes("6 лезвий"),
+ "Never invent blade count from cartridge count");
+const syncCode=fs.readFileSync(require("node:path").join(__dirname,
+ "../lib/unit-economics/prospective-sync.ts"),"utf8");
+assert.ok(syncCode.includes('select("id,description_original")'));
+assert.ok(syncCode.includes("sourceDescriptions.get(row.itemId)"));
+assert.ok(syncCode.includes("applyProductOverrides(item,"));
+assert.ok(syncCode.includes("overrides:before.get(item.article)?.overrides||{}"));
+console.log("PASS VED -> unit economics: full descriptive names from source, manual overrides preserved");
