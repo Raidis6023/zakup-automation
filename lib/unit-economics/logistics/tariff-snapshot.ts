@@ -359,6 +359,7 @@ export const logisticsTariffSnapshot = {
     "lowPriceMaxLiters": 5,
     "fulfillmentFbyRub": 15,
     "processingFbsRub": 25,
-    "orderAcceptanceRub": 0.12
+    "orderAcceptanceRub": 0.12,
+    "mayakDefaultFbyRub": 15
   }
 } as const;

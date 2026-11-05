@@ -49,8 +49,27 @@ export async function GET(req:NextRequest){
   .select("product_id,model,data,revision").in("product_id",ids);
  if(settingsErr)return NextResponse.json({ok:false,error:settingsErr.message},{status:500,headers});
  const configMap=new Map((configs||[]).map(x=>[x.product_id+":"+x.model,x.data as Record<string,unknown>]));
+ // Repair previously cached price-less calculations once when their remaining inputs are present.
+ // Only on an individual product request: do not trigger large-scale writes from a list view.
+ let resolvedCalculations=calculations||[];
+ if(requestedId&&/^[a-f0-9-]{36}$/i.test(requestedId)&&products?.length===1){
+  const p=products[0];
+  const stuck=resolvedCalculations.some(c=>c.product_id===p.id&&
+   c.missing?.length===1&&c.missing[0]==="Цена продажи или рассчитанная целевая цена"&&
+   !!(configMap.get(p.id+":"+c.model)?.categoryId));
+  if(stuck&&(p.source_type==="single"||p.source_type==="whole")&&p.source_version_id){
+   const refreshed=await syncUnitFromVedVersion(auth.admin,p.source_type,
+    p.source_version_id,{force:true});
+   if(refreshed.ok){
+    const {data:newRows,error:refreshErr}=await auth.admin.from("unit_ved_calculations")
+     .select("product_id,model,status,missing,result_data,source_version_id,computed_at")
+     .eq("product_id",p.id).limit(6);
+    if(!refreshErr&&newRows)resolvedCalculations=newRows;
+   }
+  }
+ }
  const byProduct=new Map<string,Record<string,unknown>>();
- for(const item of calculations||[]){
+ for(const item of resolvedCalculations){
   const value=item.result_data as Record<string,unknown>;
   const detail={
    model:item.model,status:item.status,missing:item.missing,

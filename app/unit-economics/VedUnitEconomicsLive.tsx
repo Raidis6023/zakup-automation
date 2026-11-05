@@ -29,7 +29,7 @@ type OtherCategory={key:string;market:"ozon"|"ym";name:string;category:string;gr
  rates:{fbo?:number[];fbs?:number[];fby?:number;ymFbs?:number};
  insuranceFactors?:{upTo300:number;above300:number};live:boolean;asOf:string;};
 const MODELS:Record<"ozon"|"wb"|"ym",readonly Model[]>={
- ozon:["ozon-fbo","ozon-fbs"],wb:["wb-fbw","wb-fbs"],ym:["ym-fby"]
+ ozon:["ozon-fbo","ozon-fbs"],wb:["wb-fbw","wb-fbs"],ym:["ym-fby","ym-fbs"]
 };
 const MARKETS:ReadonlyArray<readonly["ozon"|"wb"|"ym",string]>=
  [["ozon","Ozon"],["wb","Wildberries"],["ym","Яндекс Маркет"]];
@@ -63,7 +63,7 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
  modalProductId:string|null;activeModel?:string;onClose:()=>void;onSaved?:()=>void;
 }){
  const [product,setProduct]=useState<Product|null>(null);
- const [model,setModel]=useState<Model>(activeModel==="ym-fbs"?"ym-fby":(activeModel as Model)||"ozon-fbo");
+ const [model,setModel]=useState<Model>((activeModel as Model)||"ozon-fbo");
  const [view,setView]=useState<"summary"|"details"|"inputs">("summary");
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState("");

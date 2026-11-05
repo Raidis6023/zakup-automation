@@ -108,7 +108,10 @@ export function calculateLogistics(input:LogisticsInput):LogisticsOutput{
   }else{
    manual("pickup-processing","Обработка отправления FBS",input.pickupProcessingRub,"Норматив или фактический расход Ozon FBS");
    manual("pickup-travel","Доставка до пункта отгрузки FBS",input.pickupTravelRub,"ГСМ и упаковка Ozon FBS");
-   manual("mayak","ТК Маяк FBS",input.mayakRub,"Из строки FBS");
+   // FBS товары отправляются со своего склада: входящий ТК Маяк не обязателен.
+   // Если расходы заданы вручную, сохраняем их в расчёте.
+   if(input.mayakRub!==undefined&&input.mayakRub!==null)
+    manual("mayak","ТК Маяк FBS",input.mayakRub,"Подтверждённый ручной тариф FBS");
    manual("packing","Упаковка и стикеровка FBS",input.packingRub,"Из строки FBS");
   }
  }else if(input.model==="wb-fbw"||input.model==="wb-fbs"){
@@ -156,7 +159,13 @@ export function calculateLogistics(input:LogisticsInput):LogisticsOutput{
   const processingDefault=input.model==="ym-fbs"?t.processingFbsRub:t.fulfillmentFbyRub;
   add("processing","Обработка заказа",optional(input.receivingRub,"Обработка Яндекс")??processingDefault,
    "Обработка заказа FBY/FBS",input.receivingRub===undefined||input.receivingRub===null?"formula":"manual");
-  manual("mayak","ТК Маяк",input.mayakRub,"Ручной тариф из юнитки или ВЭД; подтверждается отдельно");
+  if(input.mayakRub!==undefined&&input.mayakRub!==null){
+   manual("mayak","ТК Маяк",input.mayakRub,"Заданный тариф из юнитки или расчёта");
+  }else if(input.model==="ym-fby"){
+   add("mayak","ТК Маяк",t.mayakDefaultFbyRub,
+    "Норматив FBY из ЯМ Юнитки: 15 ₽ на товар");
+  }
+  // Для Яндекс FBS без заданных расходов на ТК Маяк нет обязательного поля.
   add("order-acceptance","Приём заказа от покупателя",
    optional(input.orderAcceptanceRub,"Приём заказа")??t.orderAcceptanceRub,"Норматив Яндекс 0,12 ₽",
    input.orderAcceptanceRub===undefined||input.orderAcceptanceRub===null?"formula":"manual");

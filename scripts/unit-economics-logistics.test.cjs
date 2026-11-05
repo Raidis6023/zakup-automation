@@ -115,3 +115,22 @@ test("Нельзя скрывать отсутствие объёма или н�
  assert.ok(!partial.lines.some(x=>x.code==="delivery"));
 });
 if(oldHandler)require.extensions[".ts"]=oldHandler;
+
+test("FBS без заданного ТК Маяк не блокирует расчёт, ручной тариф по-прежнему учитывается",()=>{
+ for(const model of ["ozon-fbs","ym-fbs"]){
+  const x=calculateLogistics({model,price:250,volumeLiters:1,buyoutRatio:.93,
+   pickupProcessingRub:0,pickupTravelRub:0,packingRub:0});
+  assert.ok(!x.warnings.some(t=>t.includes("ТК Маяк")),model);
+  assert.ok(!x.lines.some(t=>t.code==="mayak"),model);
+  const y=calculateLogistics({model,price:250,volumeLiters:1,buyoutRatio:.93,
+   pickupProcessingRub:0,pickupTravelRub:0,packingRub:0,mayakRub:19});
+  assert.equal(y.lines.find(t=>t.code==="mayak")?.amount,19,model);
+ }
+});
+test("Яндекс FBY получает норматив ТК Маяк 15 ₽ из исходной юнитки",()=>{
+ const auto=calculateLogistics({model:"ym-fby",price:200,volumeLiters:1});
+ assert.equal(auto.lines.find(x=>x.code==="mayak")?.amount,15);
+ assert.ok(auto.warnings.every(x=>!x.includes("ТК Маяк")));
+ const manual=calculateLogistics({model:"ym-fby",price:200,volumeLiters:1,mayakRub:7.5});
+ assert.equal(manual.lines.find(x=>x.code==="mayak")?.amount,7.5);
+});

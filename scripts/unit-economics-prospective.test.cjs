@@ -193,3 +193,19 @@ test("Редактирование: корректировка себестои�
  const over=mergeProductOverrides({}, {costGrossRub:5});
  assert.throws(()=>calculatePreliminary(applyProductOverrides(x,over),"ozon-fbo",{}),/ниже входящего НДС/);
 });
+
+test("Ozon FBS и обе схемы Яндекса подбирают цену автоматически без ручного ТК Маяк",()=>{
+ const s=source();
+ const rates={categoryId:"Ватные палочки",categoryCommissionRate:.47,buyoutRate:.93};
+ for(const model of ["ozon-fbs","ym-fby","ym-fbs"]){
+  const settings=model==="ozon-fbs"?{
+   ...rates,ozonCommissionRates:{upTo100:.17,upTo300:.23,above300:.52},
+   categoryCommissionRate:.52
+  }:rates;
+  const target=suggestPreliminaryTargetPrice(s,model,settings);
+  assert.ok(target.priceRub>0,model+": "+JSON.stringify(target.missing));
+  const calculated=calculatePreliminary(s,model,{...settings,priceRub:target.priceRub});
+  assert.ok(calculated.roi>=.15001-1e-8,model+": "+JSON.stringify(calculated.missing));
+  assert.ok(!calculated.missing.some(x=>x.includes("ТК Маяк")),model);
+ }
+});
