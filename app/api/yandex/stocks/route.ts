@@ -1,3 +1,4 @@
+import { getIntegrationSecret } from "@/lib/integrations/secrets";
 import {
   NextResponse,
 } from "next/server";
@@ -190,17 +191,13 @@ type SyncRunInsertResponse = {
 // CONFIG
 // ============================================================
 
-function getConfig() {
+async function getConfig() {
   const yandexApiKey =
-    process.env
-      .YANDEX_API_KEY
-      ?.trim();
+    await getIntegrationSecret("yandex_api_key");
 
 
   const campaignId =
-    process.env
-      .YANDEX_CAMPAIGN_ID
-      ?.trim();
+    await getIntegrationSecret("yandex_campaign_id");
 
 
   const supabaseUrl =
@@ -1247,7 +1244,7 @@ async function prepareStockData() {
     supabaseUrl,
     supabaseSecretKey,
   } =
-    getConfig();
+    await getConfig();
 
 
   const [
@@ -1861,7 +1858,7 @@ export async function POST() {
           supabaseUrl,
           supabaseSecretKey,
         } =
-          getConfig();
+          await getConfig();
 
 
         await deleteSyncRun(

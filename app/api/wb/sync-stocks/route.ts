@@ -1,3 +1,4 @@
+import { getIntegrationSecret } from "@/lib/integrations/secrets";
 import {
   NextRequest,
   NextResponse,
@@ -245,10 +246,10 @@ function getSupabaseConfig() {
 }
 
 
-function getWBToken() {
+async function getWBToken() {
 
   const token =
-    process.env.WB_READ_TOKEN;
+    await getIntegrationSecret("wb_read_token");
 
 
   if (!token) {
@@ -1328,7 +1329,7 @@ export async function GET(
 
 
     const wbToken =
-      getWBToken();
+      await getWBToken();
 
 
     const {

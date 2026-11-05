@@ -1,3 +1,4 @@
+import { getIntegrationSecret } from "@/lib/integrations/secrets";
 import {createHash} from 'node:crypto';
 import {NextRequest,NextResponse} from 'next/server';
 import {createClient} from '../../../../lib/supabase/server';
@@ -35,7 +36,7 @@ async function upsertBatches(table:string,rows:Json[],onConflict:string){
 }
 
 async function syncOrders(from:string,to:string){
- const token=(process.env.WB_READ_TOKEN||process.env.WB_TEST_TOKEN||'').trim();if(!token)throw Error('Не найден WB_READ_TOKEN');
+ const token=((await getIntegrationSecret("wb_read_token"))||process.env.WB_TEST_TOKEN||'').trim();if(!token)throw Error('Не найден WB_READ_TOKEN');
  const url=new URL('https://statistics-api.wildberries.ru/api/v1/supplier/orders');url.searchParams.set('dateFrom',from+'T00:00:00');url.searchParams.set('flag','0');
  const body=await request(url.toString(),token);if(!Array.isArray(body))throw Error('WB orders: неожиданный формат ответа');
  const selected=(body as Json[]).filter(row=>{const d=String(row.date??row.orderDate??'').slice(0,10);return d>=from&&d<=to&&row.srid;});
@@ -46,7 +47,7 @@ async function syncOrders(from:string,to:string){
 
 
 async function syncAds(from:string,to:string,deadline:number){
- const db=createAdminClient(),token=(process.env.WB_PROMOTION_TOKEN||'').trim(),key='wb_ad_fullstats_progress';
+ const db=createAdminClient(),token=((await getIntegrationSecret("wb_promotion_token"))||'').trim(),key='wb_ad_fullstats_progress';
  const save=async(stage:string,info:Json,http:number|null=null)=>{
   const q=await db.from('wb_sync_state').upsert({sync_key:key,stage,last_message:JSON.stringify(info),last_http_status:http,updated_at:new Date().toISOString()},{onConflict:'sync_key'});if(q.error)throw q.error;};
  if(!token){await save('failed',{error:'Не найден WB_PROMOTION_TOKEN'});return {ok:false,error:'Не найден WB_PROMOTION_TOKEN'};}

@@ -1,3 +1,4 @@
+import { getIntegrationSecret } from "@/lib/integrations/secrets";
 import {
   NextResponse,
 } from "next/server";
@@ -314,9 +315,7 @@ function addSeconds(
 
 export async function GET() {
 
-  const wbToken =
-    process.env.WB_READ_TOKEN
-    ?.trim();
+  const wbToken = await getIntegrationSecret("wb_read_token");
 
 
   const supabaseUrl =

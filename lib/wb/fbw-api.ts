@@ -1,3 +1,4 @@
+import { getIntegrationSecret } from "@/lib/integrations/secrets";
 /**
  * Server-only WB FBW API wrapper.
  * FBW supplies API is NOT FBS supplies API: never use /api/v3/supplies here.
@@ -15,7 +16,7 @@ export class WbFbwApiError extends Error {
 }
 
 async function request<T>(path: string, options: { method?: "GET" | "POST" | "DELETE"; body?: unknown } = {}): Promise<T> {
-  const token = process.env.WB_SUPPLIES_API_TOKEN;
+  const token = await getIntegrationSecret("wb_supplies_api_token");
   if (!token) throw new Error("Не задан WB_SUPPLIES_API_TOKEN (персональный/сервисный, Поставки)");
   const response = await fetch(BASE + path, {
     method: options.method ?? "GET",

@@ -1,3 +1,4 @@
+import { getIntegrationSecret } from "@/lib/integrations/secrets";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -928,15 +929,11 @@ function buildPrecisionCheck(
 
 export async function GET() {
   try {
-    const apiKey =
-      getRequiredEnv(
-        "YANDEX_API_KEY"
-      );
+    const apiKey = await getIntegrationSecret("yandex_api_key");
+    if (!apiKey) throw new Error("Не найдена YANDEX_API_KEY");
 
-    const campaignId =
-      getRequiredEnv(
-        "YANDEX_CAMPAIGN_ID"
-      );
+    const campaignId = await getIntegrationSecret("yandex_campaign_id");
+    if (!campaignId) throw new Error("Не найдена YANDEX_CAMPAIGN_ID");
 
     const businessId =
       await getBusinessId(

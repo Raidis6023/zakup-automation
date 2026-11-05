@@ -1,3 +1,4 @@
+import { getIntegrationSecret } from "@/lib/integrations/secrets";
 import { getOzonCredentials } from "../../../../lib/integrations/secrets";
 import {NextRequest,NextResponse} from 'next/server';
 import {financeAccess} from '../../../../lib/yandex/finance-access';
@@ -25,7 +26,7 @@ export async function GET(req:NextRequest){try{
  const db=createAdminClient();
  if(market==='wb'){
   if(!/^\d{5,15}$/.test(article))return NextResponse.json({error:'Для WB нужен числовой Артикул WB (nmId)'},{status:400});
-  const key=(process.env.WB_ANALYTICS_TOKEN||process.env.WB_READ_TOKEN||process.env.WB_TEST_TOKEN||'').trim();
+  const key=(process.env.WB_ANALYTICS_TOKEN||(await getIntegrationSecret("wb_read_token"))||process.env.WB_TEST_TOKEN||'').trim();
   if(!key)return NextResponse.json({error:'Не настроен токен аналитики WB'},{status:503});
   const value=await request('https://seller-analytics-api.wildberries.ru/api/v2/search-report/product/search-texts',{Authorization:key},{
    currentPeriod:{start:from,end:to},nmIds:[Number(article)],topOrderBy:'openCard',includeSubstitutedSKUs:true,includeSearchTexts:true,
@@ -50,7 +51,7 @@ export async function GET(req:NextRequest){try{
   // Only exactly matching normalized labels are joined; otherwise the advertising
   // cluster appears as its own explicit row.
   let paidNote='Стоимость поисковых кластеров ещё не получена.';
-  const paidToken=(process.env.WB_PROMOTION_TOKEN||'').trim();
+  const paidToken=((await getIntegrationSecret("wb_promotion_token"))||'').trim();
   if(paidToken){
    try{
     const rows=await db.from('wb_finance_ad_daily').select('campaign_id').eq('nm_id',Number(article)).gte('snapshot_day',from).lte('snapshot_day',to).limit(1000);

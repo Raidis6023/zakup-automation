@@ -1,3 +1,4 @@
+import { getIntegrationSecret } from "@/lib/integrations/secrets";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "../../../../../lib/supabase/server";
 import directory from "../../../../../lib/wb/public-warehouses-directory.json";
@@ -34,9 +35,9 @@ function errorText(e:unknown):string{
 async function wb(path:string,category:"fbw"|"rates",method:"GET"|"POST"="GET",body?:unknown):Promise<unknown> {
   // Supply token is needed for FBW. Tariff token accepts any category, but a
   // valid integration token must be configured; never expose it client-side.
-  const token=(category==="rates"
-    ?(process.env.WB_READ_TOKEN||process.env.WB_SUPPLIES_API_TOKEN)
-    :(process.env.WB_SUPPLIES_API_TOKEN||process.env.WB_READ_TOKEN))?.trim();
+  const readToken=await getIntegrationSecret("wb_read_token");
+  const suppliesToken=await getIntegrationSecret("wb_supplies_api_token");
+  const token=(category==="rates"?(readToken||suppliesToken):(suppliesToken||readToken))?.trim();
   if(!token)throw new Error("Не настроен токен WB в Vercel");
   const http=await fetch((category==="fbw"?WB_BASE:RATE_BASE)+path,{
     method,headers:{Authorization:token,Accept:"application/json",...(body===undefined?{}:{"Content-Type":"application/json"})},

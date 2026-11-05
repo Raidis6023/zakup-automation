@@ -1,3 +1,4 @@
+import { getIntegrationSecret } from "@/lib/integrations/secrets";
 import {NextRequest,NextResponse} from 'next/server';
 import * as XLSX from 'xlsx';
 import {financeAccess} from '../../../../lib/yandex/finance-access';
@@ -7,7 +8,7 @@ import {validDate} from '../../../../lib/yandex/finance';
 export const runtime='nodejs';export const dynamic='force-dynamic';export const maxDuration=300;
 const base='https://api.partner.market.yandex.ru';
 async function yandex(path:string,body?:unknown){
- const keys=[...new Set((process.env.YANDEX_API_KEY_FULL??'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean))];if(keys.length!==1)throw new Error('Проверьте YANDEX_API_KEY_FULL: нужен один ключ');
+ const keys=[...new Set(((await getIntegrationSecret("yandex_api_key_full"))??'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean))];if(keys.length!==1)throw new Error('Проверьте YANDEX_API_KEY_FULL: нужен один ключ');
  const r=await fetch(base+path,{method:body===undefined?'GET':'POST',headers:{'Api-Key':keys[0],'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),cache:'no-store',signal:AbortSignal.timeout(60000)});
  if(!r.ok)throw new Error('ЯМ: HTTP '+r.status+' при запросе '+path.split('?')[0]);return r.json();
 }
@@ -35,7 +36,7 @@ export async function POST(req:NextRequest){
    const promotion=await db.from('yandex_promotion_jobs').select('day').eq('status','requested').limit(1);if(promotion.error)throw promotion.error;if(promotion.data.length)return NextResponse.json({...job,waiting_for:'promotion_report'});
    const control=await db.from('yandex_promotion_control').select('next_request_at').eq('id',1).maybeSingle();if(control.error)throw control.error;if(control.data?.next_request_at&&Date.parse(control.data.next_request_at)>Date.now())return NextResponse.json(job);
    const services=job.phase==='services_request';
-   const campaign=await yandex('/v2/campaigns/'+process.env.YANDEX_CAMPAIGN_ID?.trim());const businessId=campaign.campaign?.business?.id;if(!businessId)throw new Error('Не найден businessId');
+   const campaign=await yandex('/v2/campaigns/'+await getIntegrationSecret("yandex_campaign_id"));const businessId=campaign.campaign?.business?.id;if(!businessId)throw new Error('Не найден businessId');
    const report=await yandex('/v2/reports/'+(services?'united-marketplace-services':'united-orders')+'/generate?format=FILE&language=RU',{businessId,dateFrom:job.date_from,dateTo:job.date_to});if(!report.result?.reportId)throw new Error('ЯМ не вернул reportId');
    await update({business_id:businessId,phase:services?'services_poll':'orders_poll',report_id:report.result.reportId,[services?'services_report_id':'orders_report_id']:report.result.reportId,next_request_at:new Date(Date.now()+125000).toISOString()});
   }else if(job.phase==='services_poll'||job.phase==='orders_poll'){

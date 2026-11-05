@@ -1,3 +1,4 @@
+import { getIntegrationSecret } from "@/lib/integrations/secrets";
 import {
   NextResponse,
 } from "next/server";
@@ -64,17 +65,13 @@ type WarehouseResponse = {
 // CONFIG
 // ============================================================
 
-function getConfig() {
+async function getConfig() {
   const apiKey =
-    process.env
-      .YANDEX_API_KEY
-      ?.trim();
+    await getIntegrationSecret("yandex_api_key");
 
 
   const campaignId =
-    process.env
-      .YANDEX_CAMPAIGN_ID
-      ?.trim();
+    await getIntegrationSecret("yandex_campaign_id");
 
 
   if (!apiKey) {
@@ -187,7 +184,7 @@ export async function GET() {
       apiKey,
       campaignId,
     } =
-      getConfig();
+      await getConfig();
 
 
     // ========================================================

@@ -1,3 +1,4 @@
+import { getIntegrationSecret } from "@/lib/integrations/secrets";
 export const runtime =
   "nodejs";
 
@@ -188,17 +189,13 @@ type ItemsResponse = {
 };
 
 
-function getConfig() {
+async function getConfig() {
 
   const apiKey =
-    process.env
-      .YANDEX_API_KEY
-      ?.trim();
+    await getIntegrationSecret("yandex_api_key");
 
   const campaignId =
-    process.env
-      .YANDEX_CAMPAIGN_ID
-      ?.trim();
+    await getIntegrationSecret("yandex_campaign_id");
 
 
   if (
@@ -234,7 +231,7 @@ Promise<T> {
   const {
     apiKey,
   } =
-    getConfig();
+    await getConfig();
 
 
   const response =
@@ -576,7 +573,7 @@ async function getOverview() {
   const {
     campaignId,
   } =
-    getConfig();
+    await getConfig();
 
 
   const response =
@@ -622,7 +619,7 @@ async function getItems(
   const {
     campaignId,
   } =
-    getConfig();
+    await getConfig();
 
 
   const result:

@@ -1,3 +1,4 @@
+import { getIntegrationSecret } from "@/lib/integrations/secrets";
 import {
   NextResponse,
 } from "next/server";
@@ -59,18 +60,14 @@ type YandexOrdersResponse = {
 // CONFIG
 // ============================================================
 
-function getConfig() {
+async function getConfig() {
 
   const apiKey =
-    process.env
-      .YANDEX_API_KEY
-      ?.trim();
+    await getIntegrationSecret("yandex_api_key");
 
 
   const campaignId =
-    process.env
-      .YANDEX_CAMPAIGN_ID
-      ?.trim();
+    await getIntegrationSecret("yandex_campaign_id");
 
 
   const supabaseUrl =
@@ -503,7 +500,7 @@ export async function GET() {
       supabaseUrl,
       supabaseSecretKey,
     } =
-      getConfig();
+      await getConfig();
 
 
     const [
