@@ -323,7 +323,7 @@ export default function FinancierDetailTable({
                       ]).join("; ")}. Исправь сведения в настройках финансиста.</td>
                   </tr>}
                   {ozonBreakdownLines(r).map(item=>
-                    <tr key={item.id} className={item.reference?'ozf-info-only':''}>
+                    <tr key={item.id} className={item.reference?'ozf-item-reference':''}>
                       <td>{item.name}</td><td>{item.category}</td>
                       <td title={item.count===null?'Число отдельных списаний по SKU не подтверждено':undefined}>{item.count??'—'}</td>
                       <td className={moneyTone(item.amount)}>{money(item.amount)}</td>
