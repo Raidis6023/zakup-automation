@@ -1,10 +1,11 @@
+import { getIntegrationSecret } from "@/lib/integrations/secrets";
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const token = process.env.WB_READ_TOKEN;
+  const token = await getIntegrationSecret("wb_read_token");
 
   if (!token) {
     return NextResponse.json(

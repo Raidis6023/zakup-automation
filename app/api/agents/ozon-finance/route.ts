@@ -1,3 +1,4 @@
+import { getOzonCredentials } from "../../../../lib/integrations/secrets";
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "../../../../lib/supabase/admin";
@@ -129,8 +130,7 @@ async function requireFinanceAccess() {
   return admin;
 }
 async function ozonPost<T>(path: string, body: unknown): Promise<T> {
-  const client = process.env.OZON_CLIENT_ID;
-  const key = process.env.OZON_API_KEY;
+  const {sellerClientId:client,sellerApiKey:key}=await getOzonCredentials();
   if (!client || !key) throw new Error("Не настроены ключи Ozon в Vercel");
   let last = "";
   for (let attempt = 0; attempt < 5; attempt++) {

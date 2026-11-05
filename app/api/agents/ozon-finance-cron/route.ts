@@ -1,3 +1,4 @@
+import { getOzonCredentials } from "../../../../lib/integrations/secrets";
 import { NextRequest, NextResponse } from "next/server";
 import { POST as processOneFinancePage } from "../ozon-finance-sync/route";
 import { GET as planFinanceWindow } from "../ozon-finance-plan/route";
@@ -16,11 +17,10 @@ export async function GET(request: NextRequest) {
   if(!cronSecret || request.headers.get("authorization")!=="Bearer "+cronSecret)
     return reply({ok:false,error:"Unauthorized scheduler"},401);
 
-  const client=process.env.OZON_CLIENT_ID;
-  const key=process.env.OZON_API_KEY;
+  const {sellerClientId:client,sellerApiKey:key}=await getOzonCredentials();
   if(!client || !key) return reply({
     ok:false,stage:"configuration",
-    error:"Нужны OZON_CLIENT_ID и OZON_API_KEY в Production. Performance API не подходит."
+    error:"Не заданы ключи Ozon Seller. Добавьте их в разделе «Администрирование → API»",
   },503);
 
   // Finance planning and loading must not rely on scheduler invocation order.

@@ -1,3 +1,4 @@
+import { getIntegrationSecret } from "@/lib/integrations/secrets";
 import "server-only";
 import {createHash} from "node:crypto";
 import {NextRequest,NextResponse} from "next/server";
@@ -52,7 +53,7 @@ export async function POST(req:NextRequest){
   if(accessError||!access||access.is_blocked||
      !["admin","senior_admin"].includes(access.admin_level??""))
     return respond({ok:false,error:"Недостаточно прав для создания поставок WB"},403);
-  if(!process.env.WB_SUPPLIES_API_TOKEN?.trim())
+  if(!(await getIntegrationSecret("wb_supplies_api_token")))
     return respond({ok:false,error:"Для создания черновика настройте в Vercel Production переменную WB_SUPPLIES_API_TOKEN. Нужен токен WB с правами записи в категории «Поставки»; текущий WB_READ_TOKEN для синхронизации не заменяет этот токен."},503);
   // Validate against live demand, not browser-supplied values.
   const {data:dash,error:dashError}=await db.rpc("get_wb_sync_dashboard");

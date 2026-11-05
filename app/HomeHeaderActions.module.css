@@ -1327,3 +1327,112 @@
 
 /* Keep the disabled approve label readable on both themes. */
 .approveButton:disabled { opacity: 1; }
+
+
+/* ============================================================
+   QUICK NOTE FROM THE HEADER CALENDAR
+   ============================================================ */
+
+.noteForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.noteField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.noteField > span {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.noteControl {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  outline: none;
+  background: var(--input);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.noteControl:focus {
+  border-color: #15966b;
+  box-shadow: 0 0 0 3px rgba(21, 150, 107, 0.12);
+}
+
+.noteControl:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.noteTextarea {
+  min-height: 118px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.noteDateGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.noteDateControl[readonly] {
+  cursor: default;
+}
+
+.noteHint {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.noteFooter {
+  display: flex;
+  align-items: stretch;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 6px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.noteFooterActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  width: 100%;
+}
+
+@media (max-width: 600px) {
+  .noteDateGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .noteFooter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .noteFooterActions {
+    width: 100%;
+  }
+
+  .noteFooterActions button {
+    flex: 1;
+  }
+}

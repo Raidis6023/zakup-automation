@@ -27,10 +27,21 @@ test("Норма для целой вложимости и MOQ: min=1 step=1",()
  assert.equal(inputs.length,2);
  assert.ok(inputs.every(x=>x.includes("integer:true")));
 });
-test("MPStats: нет токена — не записываем фиктивные показатели; выкуп переносится в Ozon",()=>{
+test("MPStats: ключ читается из защищённого хранилища; без ключа показатели не записываются",()=>{
  const auth=read("app/api/unit-economics/mpstats-wb/route.ts");
  const parser=read("lib/unit-economics/mpstats-wb.ts");
- assert.match(auth,/if\(!process\.env\.MPSTATS_TOKEN\)/);
+ const credentials=read("lib/integrations/secrets.ts");
+ const api=read("app/api/admin/integrations/route.ts");
+ const page=read("app/admin/api/ApiConnectionsClient.tsx");
+ assert.ok(auth.includes("getMpStatsToken"));
+ assert.match(auth,/const token=await getMpStatsToken\(\)/);
+ assert.match(auth,/if\(!token\)/);
+ assert.doesNotMatch(auth,/process\.env\.MPSTATS_TOKEN/);
+ assert.ok(parser.includes("getWbSubjectMpstats(subject:string,fbs:boolean,token:string)"));
+ assert.ok(parser.includes("if(!token?.trim())"));
+ assert.ok(credentials.includes("workspace_get_integration_secrets"));
+ assert.ok(api.includes("workspace_upsert_integration_secrets"));
+ assert.ok(page.includes("API-ключ MPStats"));
  for(const model of ["wb-fbw","wb-fbs","ozon-fbo","ozon-fbs"])assert.ok(auth.includes('"'+model+'"'));
  assert.ok(parser.includes("let buyoutRate:number|null=null;"));
  assert.match(parser,/client_sale/);

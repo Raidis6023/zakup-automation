@@ -1,3 +1,4 @@
+import { getOzonCredentials } from "../../../../lib/integrations/secrets";
 import {NextRequest,NextResponse} from "next/server";
 import {createAdminClient} from "../../../../lib/supabase/admin";
 export const dynamic="force-dynamic";export const runtime="nodejs";export const maxDuration=180;
@@ -16,10 +17,11 @@ async function ozon<T>(path:string,body:unknown,client:string,key:string):Promis
  return await response.json() as T;
 }
 export async function GET(request:NextRequest){
- const secret=process.env.CRON_SECRET,client=process.env.OZON_CLIENT_ID,key=process.env.OZON_API_KEY;
+ const secret=process.env.CRON_SECRET;
  if(!secret||request.headers.get("authorization")!=="Bearer "+secret)
   return result({ok:false,error:"Unauthorized"},401);
- if(!client||!key)return result({ok:false,error:"Ozon Seller API not configured"},503);
+ const {sellerClientId:client,sellerApiKey:key}=await getOzonCredentials();
+ if(!client||!key)return result({ok:false,error:"Ozon Seller API не настроен в разделе «Администрирование → API»"},503);
  const db=createAdminClient();
  const {data:current,error:curError}=await db.from("ozon_finance_crossdock_current")
   .select("published_at").eq("account_key","main").maybeSingle();

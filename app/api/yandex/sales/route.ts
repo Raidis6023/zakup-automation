@@ -1,3 +1,4 @@
+import { getIntegrationSecret } from "@/lib/integrations/secrets";
 import {
   NextResponse,
 } from "next/server";
@@ -272,18 +273,14 @@ type PreparedData = {
 // ENV
 // ============================================================
 
-function getConfig() {
+async function getConfig() {
 
   const yandexApiKey =
-    process.env
-      .YANDEX_API_KEY
-      ?.trim();
+    await getIntegrationSecret("yandex_api_key");
 
 
   const campaignId =
-    process.env
-      .YANDEX_CAMPAIGN_ID
-      ?.trim();
+    await getIntegrationSecret("yandex_campaign_id");
 
 
   const supabaseUrl =
@@ -1406,7 +1403,7 @@ Promise<PreparedData> {
     supabaseUrl,
     supabaseSecretKey,
   } =
-    getConfig();
+    await getConfig();
 
 
   // Берём 28 полных календарных дней по Красноярску.

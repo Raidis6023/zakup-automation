@@ -1,3 +1,4 @@
+import { getMpStatsToken } from "../../../../lib/integrations/secrets";
 import {NextRequest,NextResponse} from "next/server";
 import {createClient} from "@/lib/supabase/server";
 import {createAdminClient} from "@/lib/supabase/admin";
@@ -19,14 +20,16 @@ async function access(){
 export async function GET(){
  const auth=await access();
  if("error" in auth)return NextResponse.json({ok:false,error:auth.error},{status:auth.status,headers});
- return NextResponse.json({ok:true,configured:!!process.env.MPSTATS_TOKEN,
-  note:process.env.MPSTATS_TOKEN?"Готов к запросу после подтверждения предмета":"Требуется MPSTATS_TOKEN в настройках Vercel"},{headers});
+ const token=await getMpStatsToken();
+ return NextResponse.json({ok:true,configured:!!token,
+  note:token?"Готов к запросу после подтверждения предмета":"Добавьте ключ MPStats в разделе «Администрирование → API»"},{headers});
 }
 export async function POST(req:NextRequest){
  const auth=await access();
  if("error" in auth)return NextResponse.json({ok:false,error:auth.error},{status:auth.status,headers});
- if(!process.env.MPSTATS_TOKEN)return NextResponse.json({ok:false,configured:false,
-  error:"MPStats пока не подключён: у сайта отсутствует MPSTATS_TOKEN"},{status:503,headers});
+ const token=await getMpStatsToken();
+ if(!token)return NextResponse.json({ok:false,configured:false,
+  error:"MPStats пока не подключён: добавьте API-ключ в разделе «Администрирование → API»"},{status:503,headers});
  const body=await req.json().catch(()=>null) as {productId?:string}|null;
  if(!body?.productId||!/^[\da-f-]{36}$/i.test(body.productId))
   return NextResponse.json({ok:false,error:"Не указан товар"},{status:400,headers});
@@ -42,8 +45,8 @@ export async function POST(req:NextRequest){
  if(typeof wbName!=="string"||!wbName||wbName!==fbName)
   return NextResponse.json({ok:false,error:"Сначала подтвердите одну категорию WB для FBW и FBS"},{status:409,headers});
  try{
-  const fbw=await getWbSubjectMpstats(wbName,false);
-  const fbs=await getWbSubjectMpstats(wbName,true);
+  const fbw=await getWbSubjectMpstats(wbName,false,token);
+  const fbs=await getWbSubjectMpstats(wbName,true,token);
   const buyout=fbw.buyoutRate??fbs.buyoutRate;
   const toWrite:Record<string,unknown>[]=[];
   const updates=[

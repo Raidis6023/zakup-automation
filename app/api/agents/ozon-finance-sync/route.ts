@@ -1,3 +1,4 @@
+import { getOzonCredentials } from "../../../../lib/integrations/secrets";
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "../../../../lib/supabase/admin";
@@ -65,8 +66,7 @@ async function admin(request?: NextRequest) {
   return db;
 }
 async function fetchPage(day: string, cursor: string): Promise<Page> {
-  const clientId = process.env.OZON_CLIENT_ID;
-  const apiKey = process.env.OZON_API_KEY;
+  const {sellerClientId:clientId,sellerApiKey:apiKey}=await getOzonCredentials();
   if (!clientId || !apiKey) throw new Error("Отсутствуют ключи Seller API в Vercel");
   for (let attempt = 0; attempt < 2; attempt++) {
     let response: Response;
@@ -309,10 +309,11 @@ export async function GET(request: NextRequest) {
         ok: false, stage: "database", project_ref: projectRef,
         error: "Контрольная таблица недоступна: " + database.error.message.slice(0,220),
       }, 503);
+      const ozonCredentials = await getOzonCredentials();
       return result({
         ok: true, stage: "ready", project_ref: projectRef,
-        credentials: { seller_id_present: !!process.env.OZON_CLIENT_ID,
-          seller_api_key_present: !!process.env.OZON_API_KEY },
+        credentials: { seller_id_present: !!ozonCredentials.sellerClientId,
+          seller_api_key_present: !!ozonCredentials.sellerApiKey },
         checkpoint_records: database.count ?? 0,
         server_latency_ms: Date.now() - started,
         note: "Браузер, Vercel и Supabase доступны. Сервис Ozon ещё не проверялся.",

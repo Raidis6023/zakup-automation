@@ -1,3 +1,4 @@
+import { getOzonCredentials } from "./integrations/secrets";
 import {
   MAX_BOXES_PER_REQUEST,
   MAX_PALLETS_PER_REQUEST,
@@ -110,9 +111,8 @@ function chunk<T>(values: T[], size: number) {
 }
 
 
-function getConfig() {
-  const ozonClientId = process.env.OZON_CLIENT_ID?.trim();
-  const ozonApiKey = process.env.OZON_API_KEY?.trim();
+async function getConfig() {
+  const { sellerClientId: ozonClientId, sellerApiKey: ozonApiKey } = await getOzonCredentials();
   const supabaseUrl =
     process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
   const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY?.trim();
@@ -131,7 +131,7 @@ function getConfig() {
 
 
 async function supabaseGet<T>(path: string): Promise<T> {
-  const { supabaseUrl, supabaseSecretKey } = getConfig();
+  const { supabaseUrl, supabaseSecretKey } = await getConfig();
 
   const response = await fetch(
     `${supabaseUrl}/rest/v1/${path}`,
@@ -157,7 +157,7 @@ async function supabaseGet<T>(path: string): Promise<T> {
 
 
 async function ozonPost<T>(path: string, body: unknown): Promise<T> {
-  const { ozonClientId, ozonApiKey } = getConfig();
+  const { ozonClientId, ozonApiKey } = await getConfig();
 
   for (let attempt = 1; attempt <= 4; attempt++) {
     const response = await fetch(

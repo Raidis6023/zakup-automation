@@ -1,7 +1,8 @@
+import { getIntegrationSecret } from "@/lib/integrations/secrets";
 import * as XLSX from 'xlsx';
 import {createAdminClient} from '../../../../lib/supabase/admin';
 import {parsePromotionWorkbook,type PromotionKind} from '../../../../lib/yandex/campaign-metrics';
-async function yandex(path:string,body?:unknown){const keys=[...new Set((process.env.YANDEX_API_KEY_FULL??'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean))];if(keys.length!==1)throw Error('Проверьте YANDEX_API_KEY_FULL: нужен один ключ');const r=await fetch('https://api.partner.market.yandex.ru'+path,{method:body?'POST':'GET',headers:{'Api-Key':keys[0],'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,cache:'no-store',signal:AbortSignal.timeout(45000)});if(!r.ok)throw Error('ЯМ: HTTP '+r.status);const d=await r.json();if(d.status==='ERROR')throw Error('ЯМ отклонил запрос рекламного отчёта');return d;}
+async function yandex(path:string,body?:unknown){const keys=[...new Set(((await getIntegrationSecret("yandex_api_key_full"))??'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean))];if(keys.length!==1)throw Error('Проверьте YANDEX_API_KEY_FULL: нужен один ключ');const r=await fetch('https://api.partner.market.yandex.ru'+path,{method:body?'POST':'GET',headers:{'Api-Key':keys[0],'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,cache:'no-store',signal:AbortSignal.timeout(45000)});if(!r.ok)throw Error('ЯМ: HTTP '+r.status);const d=await r.json();if(d.status==='ERROR')throw Error('ЯМ отклонил запрос рекламного отчёта');return d;}
 export async function advancePromotion(){
  const db=createAdminClient(),now=new Date().toISOString();let locked=false;type Task={day:string;kind:PromotionKind;status:string;report_id:string|null};let task:Task|null=null;
  try{
@@ -12,7 +13,7 @@ export async function advancePromotion(){
  if(task.status==='pending'){
  if(finance.data.length)return {ok:true,phase:'finance_loading'};
  if(c.data.next_request_at&&Date.parse(c.data.next_request_at)>Date.now())return {ok:true,phase:'cooldown'};
- const campaign=await yandex('/v2/campaigns/'+process.env.YANDEX_CAMPAIGN_ID?.trim());const businessId=campaign.campaign?.business?.id;if(!businessId)throw Error('Не найден businessId ЯМ');
+ const campaign=await yandex('/v2/campaigns/'+await getIntegrationSecret("yandex_campaign_id"));const businessId=campaign.campaign?.business?.id;if(!businessId)throw Error('Не найден businessId ЯМ');
  const generated=await yandex('/v2/reports/'+(task.kind==='sales'?'boost-consolidated':'shows-boost')+'/generate?format=FILE',{businessId,dateFrom:task.day,dateTo:task.day,...(task.kind==='shows'?{attributionType:'CLICKS'}:{})});
  if(!generated.result?.reportId)throw Error('ЯМ не вернул reportId');
  const save=await db.from('yandex_promotion_jobs').update({status:'requested',report_id:generated.result.reportId,error:null,updated_at:now}).eq('day',task.day).eq('kind',task.kind);if(save.error)throw save.error;

@@ -1,3 +1,4 @@
+import { getIntegrationSecret } from "@/lib/integrations/secrets";
 export const runtime =
   "nodejs";
 
@@ -194,12 +195,10 @@ type WbBox = {
 };
 
 
-function getToken() {
+async function getToken() {
 
   const token =
-    process.env
-      .WB_READ_TOKEN
-      ?.trim();
+    await getIntegrationSecret("wb_read_token");
 
 
   if (!token) {
@@ -240,7 +239,7 @@ Promise<T> {
 
         headers: {
           Authorization:
-            getToken(),
+            await getToken(),
 
           Accept:
             "application/json",

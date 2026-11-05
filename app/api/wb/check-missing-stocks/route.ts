@@ -1,3 +1,4 @@
+import { getIntegrationSecret } from "@/lib/integrations/secrets";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -275,8 +276,7 @@ async function getLastStocksSuccess():
 
 export async function GET() {
 
-  const wbToken =
-    process.env.WB_READ_TOKEN;
+  const wbToken = await getIntegrationSecret("wb_read_token");
 
 
   if (!wbToken) {

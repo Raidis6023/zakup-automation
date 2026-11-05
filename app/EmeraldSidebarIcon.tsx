@@ -12,7 +12,8 @@ type Kind =
   | "offers"
   | "registry"
   | "documents"
-  | "references";
+  | "references"
+  | "api";
 
 export default function EmeraldSidebarIcon({ kind }: { kind: Kind }) {
   if (kind === "ozon" || kind === "wb" || kind === "ym") {
@@ -130,6 +131,16 @@ export default function EmeraldSidebarIcon({ kind }: { kind: Kind }) {
         <path d="M10 10h6.5M10 13.5h6.5" />
         <circle cx="22" cy="21.5" r="3" />
         <path d="m24.2 23.7 2.7 2.7" />
+      </svg>
+    );
+  }
+
+  if (kind === "api") {
+    return (
+      <svg className="emerald-sidebar-glyph" viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="10.5" cy="20.5" r="6" />
+        <circle cx="10.5" cy="20.5" r="1.7" />
+        <path d="m15 16 11-11 3 3-3 3 2 2-3 3-2-2-4 4" />
       </svg>
     );
   }

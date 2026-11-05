@@ -54,9 +54,8 @@ function readSubject(value:Record<string,unknown>){
  * Buyout must be a documented percent field, NOT `purchase` (which can be
  * counts/add-to-cart) and NOT `purchase_after_return` without a verified unit.
  */
-export async function getWbSubjectMpstats(subject:string,fbs:boolean):Promise<WbMpStatsMetrics>{
- const token=process.env.MPSTATS_TOKEN;
- if(!token)throw new MpStatsError("unconfigured","В Vercel не задан MPSTATS_TOKEN");
+export async function getWbSubjectMpstats(subject:string,fbs:boolean,token:string):Promise<WbMpStatsMetrics>{
+ if(!token?.trim())throw new MpStatsError("unconfigured","Ключ MPStats не настроен. Добавьте его в разделе «Администрирование → API».");
  const range=dates(30);
  const listUrl=new URL("https://mpstats.io/api/analytics/v1/wb/subject/list");
  listUrl.searchParams.set("date",range.to);

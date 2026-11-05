@@ -1,3 +1,4 @@
+import { getIntegrationSecret } from "@/lib/integrations/secrets";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 import { createClient } from "../../../../lib/supabase/server";
@@ -17,7 +18,7 @@ const reply=(obj:object,status=200)=>NextResponse.json(obj,{status,headers:{"Cac
 async function adminAccess(){const session=await createClient();const {data:{user}}=await session.auth.getUser();if(!user)throw Error("Требуется авторизация");const db=createAdminClient();const {data,error}=await db.from("app_user_access").select("admin_level,is_blocked").eq("user_id",user.id).maybeSingle();if(error||!data||data.is_blocked||!["admin","senior_admin"].includes(data.admin_level??""))throw Error("Недостаточно прав для финансовой аналитики");}
 async function work(req:NextRequest,attempt:number,started:number,history?:{run_day:string;from:string;to:string}){
  if(!process.env.CRON_SECRET||req.headers.get("authorization")!=="Bearer "+process.env.CRON_SECRET)return reply({ok:false,error:"Unauthorized"},401);
- const token=process.env.WB_FINANCE_TOKEN?.trim();
+ const token=await getIntegrationSecret("wb_finance_token");
  if(!token)return reply({ok:false,error:"Missing WB_FINANCE_TOKEN"},503);
  const db=createAdminClient();
  const currentDay=todayKras(),day=history?.run_day??currentDay,from=history?.from??shift(currentDay,-31),to=history?.to??shift(currentDay,-1);

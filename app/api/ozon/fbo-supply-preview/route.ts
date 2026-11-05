@@ -1,3 +1,4 @@
+import { getOzonCredentials } from "../../../../lib/integrations/secrets";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -238,9 +239,8 @@ class OzonApiError extends Error {
   }
 }
 
-function getConfig() {
-  const ozonClientId = process.env.OZON_CLIENT_ID?.trim();
-  const ozonApiKey = process.env.OZON_API_KEY?.trim();
+async function getConfig() {
+  const { sellerClientId: ozonClientId, sellerApiKey: ozonApiKey } = await getOzonCredentials();
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY?.trim();
 
@@ -334,7 +334,7 @@ function parseRetryAfter(response: Response) {
 }
 
 async function supabaseRequest<T>(path: string, init: RequestInit): Promise<T> {
-  const { supabaseUrl, supabaseSecretKey } = getConfig();
+  const { supabaseUrl, supabaseSecretKey } = await getConfig();
 
   const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
     ...init,
@@ -365,7 +365,7 @@ async function supabaseRpc<T>(name: string, body: Record<string, unknown>) {
 }
 
 async function ozonPost<T>(path: string, body: unknown): Promise<T> {
-  const { ozonClientId, ozonApiKey } = getConfig();
+  const { ozonClientId, ozonApiKey } = await getConfig();
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     const controller = new AbortController();

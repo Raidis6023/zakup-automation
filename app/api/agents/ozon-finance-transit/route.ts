@@ -1,3 +1,4 @@
+import { getOzonCredentials } from "../../../../lib/integrations/secrets";
 import { NextRequest,NextResponse } from "next/server";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 export const runtime="nodejs";
@@ -17,7 +18,7 @@ export async function GET(request:NextRequest) {
  const secret=process.env.CRON_SECRET;
  if(!secret || request.headers.get("authorization")!=="Bearer "+secret)
    return reply({ok:false,error:"Unauthorized"},401);
- const sellerId=process.env.OZON_CLIENT_ID,key=process.env.OZON_API_KEY;
+ const {sellerClientId:sellerId,sellerApiKey:key}=await getOzonCredentials();
  if(!sellerId||!key)return reply({ok:false,error:"Seller API credentials missing"},503);
  const db=createAdminClient();
  const {data:active}=await db.from("ozon_finance_transit_current")

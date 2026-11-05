@@ -1,3 +1,4 @@
+import { getOzonCredentials } from "../../../../lib/integrations/secrets";
 import { NextRequest, NextResponse } from "next/server";
 import {parseCampaignCSV,campaignHeaders,type CampaignLine} from "../../../../lib/ozon/campaign-metrics";
 import { inflateRawSync } from "node:zlib";
@@ -87,8 +88,7 @@ function reportCsvFiles(binary:Buffer,expectedCampaigns:string[]):Map<string,str
  return out;
 }
 async function token():Promise<string>{
- const id=process.env.OZON_PERFORMANCE_CLIENT_ID;
- const secret=process.env.OZON_PERFORMANCE_CLIENT_SECRET;
+ const {performanceClientId:id,performanceClientSecret:secret}=await getOzonCredentials();
  if(!id||!secret)throw new Error("Performance OAuth credentials missing");
  const r=await fetch(BASE+"/api/client/token",{method:"POST",cache:"no-store",
    headers:{"Content-Type":"application/json","Accept":"application/json"},
