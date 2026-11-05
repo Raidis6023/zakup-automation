@@ -47,6 +47,34 @@
     {
       "path": "/api/agents/wb-finance-ads-cron",
       "schedule": "10 4 * * *"
+    },
+    {
+      "path": "/api/agents/ozon-finance-ads-retry-morning",
+      "schedule": "20 4 * * *"
+    },
+    {
+      "path": "/api/agents/ozon-finance-ads-retry-afternoon",
+      "schedule": "20 10 * * *"
+    },
+    {
+      "path": "/api/agents/ozon-finance-ads-retry-evening",
+      "schedule": "20 16 * * *"
+    },
+    {
+      "path": "/api/agents/ozon-finance-retry",
+      "schedule": "20 11 * * *"
+    },
+    {
+      "path": "/api/agents/yandex-finance-campaigns-retry-morning",
+      "schedule": "20 7 * * *"
+    },
+    {
+      "path": "/api/agents/yandex-finance-campaigns-retry-evening",
+      "schedule": "20 17 * * *"
+    },
+    {
+      "path": "/api/agents/yandex-finance-retry",
+      "schedule": "20 13 * * *"
     }
   ]
 }
