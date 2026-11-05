@@ -67,8 +67,15 @@ async function syncAds(from:string,to:string,deadline:number){
    if(Date.now()>deadline-47000)break;
    const batch=ids.slice(next,next+50),url=new URL('https://advert-api.wildberries.ru/adv/v3/fullstats');
    url.searchParams.set('ids',batch.join(','));url.searchParams.set('beginDate',from);url.searchParams.set('endDate',to);
-   const response=await request(url.toString(),token);
-   if(!Array.isArray(response))throw Error('fullstats: ответ не является массивом');
+   const raw=await request(url.toString(),token);
+   const response=Array.isArray(raw)?raw:raw&&typeof raw==='object'?
+    Array.isArray((raw as Json).data)?(raw as Json).data:
+    Array.isArray((raw as Json).stats)?(raw as Json).stats:
+    Array.isArray((raw as Json).items)?(raw as Json).items:null:null;
+   if(!Array.isArray(response)){
+    const diagnostic=raw===null?'пустой ответ HTTP 204':JSON.stringify(raw).slice(0,270);
+    throw Error('WB fullstats: неожиданный ответ (не массив): '+diagnostic);
+   }
    const grouped=new Map<string,{snapshot_day:string;campaign_id:number;nm_id:number;spend:number;views:number;clicks:number;orders:number;sum_price:number;payload:Json;captured_at:string}>();
    for(const campaign of response as Json[]){
     const campaign_id=num(campaign.advertId);
@@ -88,8 +95,7 @@ async function syncAds(from:string,to:string,deadline:number){
     }
    }
    // Persist each successful batch; retries only replace the same campaign IDs.
-   const deleted=await db.from('wb_finance_ad_daily').delete().gte('snapshot_day',from).lte('snapshot_day',to).in('campaign_id',batch);
-   if(deleted.error)throw deleted.error;
+   // Never erase historical SKU advertising rows before successful replacement.
    await upsertBatches('wb_finance_ad_daily',[...grouped.values()],'snapshot_day,campaign_id,nm_id');
    next+=batch.length;pages++;recordsSaved+=grouped.size;
    await save('partial',{from,to,ids,next,campaigns_all:allIds.length,rows_saved:recordsSaved});
@@ -148,7 +154,18 @@ export async function runAuxiliarySync(scope:'all'|'ads'='all'){
  const continuing=state.data?.stage==='partial'&&previous.from&&previous.to&&
   /^\d{4}-\d{2}-\d{2}$/.test(previous.from)&&/^\d{4}-\d{2}-\d{2}$/.test(previous.to)&&
   Date.parse(previous.to)>=Date.now()-80*86400000;
- const adFrom=continuing?previous.from!:from,adTo=continuing?previous.to!:to;
+ let adFrom=continuing?previous.from!:from,adTo=continuing?previous.to!:to;
+ if(!continuing){
+  // Backfill starts at the first day not successfully stored; after catching
+  // up, refresh the recent week so corrections do not disappear.
+  const first='2026-10-01',saved=await db.from('wb_finance_ad_snapshots')
+   .select('snapshot_day').gte('snapshot_day',first).lte('snapshot_day',to).order('snapshot_day');
+  if(saved.error)throw saved.error;
+  const covered=new Set((saved.data??[]).map(r=>r.snapshot_day));
+  const gap=days(first,to).find(day=>!covered.has(day));
+  adFrom=gap??shift(to,-6);
+  adTo=gap?shift(adFrom,Math.min(27,days(adFrom,to).length-1)):to;
+ }
  if(scope==='ads'){const advertising=await syncAds(adFrom,adTo,deadline);return {ok:advertising.ok,from:adFrom,to:adTo,advertising};}
  const orders=await Promise.resolve().then(()=>syncOrders(from,to)).catch(e=>({ok:false,error:e instanceof Error?e.message:String(e)}));
  const [advertising,storage]=await Promise.all([
