@@ -93,6 +93,51 @@ function valueFor(r:FinancialRow,key:SortKey):number|string|null{
     case "discontinued":return r.discontinued?1:0;
   }
 }
+type FinanceBreakdownLine={id:string;name:string;category:string;amount:number;count:number|null;reference?:boolean};
+function ozonExpenseAndAdCount(r:FinancialRow){
+ const linked=r.details.filter(x=>x.is_advertising&&!x.is_reference&&x.amount<0);
+ const directlyCharged=linked.reduce((sum,x)=>sum+Math.abs(x.amount),0);
+ const allocated=Math.max(0,-Number(r.allocated_seller_ppc??0));
+ const actual=round(directlyCharged+allocated);
+ const operations=linked.reduce((sum,x)=>sum+Math.max(0,x.count),0);
+ return {actual,operations:operations||null,fromPerformance:r.performance_ad_expense===null?null:Math.abs(r.performance_ad_expense)};
+}
+function ozonBreakdownLines(r:FinancialRow):FinanceBreakdownLine[]{
+ const entries:FinanceBreakdownLine[]=r.details.map((item,i)=>({
+  id:item.type_id+'-'+i,
+  name:item.name==='ITEM'?'Товарное начисление Ozon (ITEM)':item.name,
+  category:item.is_reference?'Начисление Ozon':item.type_id==='SALES'?'Выручка':
+   item.type_id==='COMMISSION'?'Комиссия':item.type_id==='REMAINDER'?'Прочее':
+   item.type_id==='SERVICE'?'Услуга Ozon':'Начисление Ozon',
+  amount:item.amount,count:item.count,reference:!!item.is_reference
+ }));
+ if(r.cogs!==null)entries.push({id:'cogs',name:'Цена закупа × расчётные выкупы',category:'Цена закупа',amount:-Math.abs(r.cogs),count:r.buyout_units});
+ if(r.mayak_expense!==null)entries.push({id:'mayak',name:'ТК Маяк × заказанные единицы',category:'Внешний расход',amount:-Math.abs(r.mayak_expense),count:r.order_count});
+ if(r.performance_ad_expense!==null){
+  const {operations}=ozonExpenseAndAdCount(r);
+  entries.push({id:'performance-reference',name:'Реклама по SKU (Performance, справочно)',
+   category:'Распределение рекламы',amount:-Math.abs(r.performance_ad_expense),
+   count:operations,reference:true});
+ }
+ return entries.sort((a,b)=>{
+  const incomeA=a.amount>0,incomeB=b.amount>0;
+  if(incomeA!==incomeB)return incomeA?-1:1;
+  if(incomeA)return b.amount-a.amount;
+  // For outflows largest debit first, independent of the negative sign.
+  return Math.abs(b.amount)-Math.abs(a.amount);
+ });
+}
+function ozonPerUnitItems(r:FinancialRow){
+ const ad=ozonExpenseAndAdCount(r);
+ const advertisingAmount=ad.actual>0?ad.actual:ad.fromPerformance;
+ return [
+  ...r.details.filter(item=>!item.is_reference&&!item.is_advertising&&item.amount<0)
+    .map(item=>({name:item.name,amount:-item.amount})),
+  {name:ad.actual>0?'Реклама (по финансовым списаниям)':ad.fromPerformance!==null?'Реклама (доступная статистика, справочно)':'Реклама (нет подтверждённой детализации)',
+   amount:advertisingAmount},
+  {name:'Себестоимость',amount:r.cogs},{name:'ТК Маяк',amount:r.mayak_expense}
+ ];
+}
 export default function FinancierDetailTable({
   data,rows,includeUnallocated,onToggle,onSaved
 }:{
@@ -277,38 +322,18 @@ export default function FinancierDetailTable({
                         "Нет подтверждённой себестоимости или данных заказов"
                       ]).join("; ")}. Исправь сведения в настройках финансиста.</td>
                   </tr>}
-                  {r.details.map((item,i)=>{
-                    const category=item.is_reference?"Начисление Ozon":item.type_id==="SALES"?"Выручка":
-                      item.type_id==="COMMISSION"?"Комиссия":
-                      item.type_id==="REMAINDER"?"Прочее":
-                      item.type_id==="SERVICE"?"Услуга Ozon":"Начисление Ozon";
-                    return <tr key={item.type_id+"-"+i} className={item.is_reference?"ozf-info-only":""}>
-                      <td>{item.name==='ITEM'?'Товарное начисление Ozon (ITEM)':item.name}</td><td title={"Код Ozon: "+item.type_id}>{category}</td>
-                      <td>{item.count}</td><td className={moneyTone(item.amount)}>{money(item.amount)}</td>
-                    </tr>;
-                  })}
-                  {r.cogs!=null&&<tr>
-                    <td>Цена закупа × расчётные выкупы</td><td>Цена закупа</td>
-                    <td>{qty(r.buyout_units)}</td><td className="ozf-bad">{money(-Math.abs(r.cogs))}</td>
-                  </tr>}
-                  {r.mayak_expense!=null&&<tr>
-                    <td>ТК Маяк × заказанные единицы</td><td>Внешний расход</td>
-                    <td>{qty(r.order_count)}</td>
-                    <td className="ozf-bad">{money(-Math.abs(r.mayak_expense))}</td>
-                  </tr>}
-                  {r.performance_ad_expense!=null&&<tr className="ozf-info-only">
-                    <td>Реклама по SKU (Performance API, справочно)</td>
-                    <td>Распределение рекламы</td><td>—</td>
-                    <td>{money(-Math.abs(r.performance_ad_expense))}</td>
-                  </tr>}
+                  {ozonBreakdownLines(r).map(item=>
+                    <tr key={item.id} className={item.reference?'ozf-item-reference':''}>
+                      <td>{item.name}</td><td>{item.category}</td>
+                      <td title={item.count===null?'Число отдельных списаний по SKU не подтверждено':undefined}>{item.count??'—'}</td>
+                      <td className={moneyTone(item.amount)}>{money(item.amount)}</td>
+                    </tr>
+                  )}
                   <tr className="ozf-breakdown-total"><td>Операционная прибыль</td>
                     <td>Итог</td><td>—</td><td className={moneyTone(r.estimated_result)}>
                     {money(r.estimated_result)}</td>
                   </tr>
-                </tbody></table></div><CostPerUnitComparison market="Ozon" units={r.buyout_units} items={[
- ...r.details.filter(x=>!x.is_reference&&x.amount<0).map(x=>({name:x.name,amount:-x.amount})),
- {name:"Себестоимость",amount:r.cogs},{name:"ТК Маяк",amount:r.mayak_expense}
- ]}/></div>
+                </tbody></table></div><CostPerUnitComparison market="Ozon" units={r.buyout_units} items={ozonPerUnitItems(r)}/></div>
                 <details><summary>{r.offer_id} · КМ, себестоимость и ТК Маяк</summary><OzonRowRates master={r.master_code} onSaved={onSaved}/></details><FinanceDynamics marketplace="ozon" revision={data?.cache_updated_at??''} from={data?.from??''} to={data?.to??''} offer={r.offer_id}/>
                 <CampaignCharts offer={r.offer_id} from={data?.from??''} to={data?.to??''}/>
               </div>

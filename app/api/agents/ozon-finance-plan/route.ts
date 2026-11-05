@@ -25,35 +25,35 @@ export async function GET(request: NextRequest) {
     });
     if (error) throw new Error("Failed to plan 28 days: " + error.message);
 
-    // The advertising dimension is separate from the Seller money ledger.
-    // Enqueue ONLY if there is no active campaign-report job, preventing
-    // duplicate historical downloads and Ozon Performance HTTP 429 storms.
-    const { count, error: adQueueError } = await db.from("ozon_finance_ad_sync_jobs")
-      .select("id", { head: true, count: "exact" })
-      .eq("account_key", "main").in("status", ["pending", "running", "failed"]);
-    if (adQueueError) throw new Error("Ad queue status: " + adQueueError.message);
-    let newAdvertisingJob = false;
-    if (!count) {
-      const to = new Date(krasnoyarskToday + "T00:00:00Z");
-      const from = new Date(to.getTime() - 28 * 86_400_000);
-      const periodFrom = from.toISOString().slice(0, 10);
-      const periodTo = new Date(to.getTime() - 86_400_000).toISOString().slice(0, 10);
-      const { data:adCovered,error:coverageError } = await db
-        .from("ozon_finance_ad_coverage").select("day")
-        .eq("account_key", "main").gte("day", periodFrom).lte("day", periodTo);
-      if (coverageError) throw coverageError;
-      if ((adCovered?.length ?? 0) < 28) {
-        const {error: insertError} = await db.from("ozon_finance_ad_sync_jobs")
-          .upsert({account_key:"main",date_from:periodFrom,date_to:periodTo,
-            status:"pending",last_error:null},
-            {onConflict:"account_key,date_from,date_to",ignoreDuplicates:true});
-        if(insertError)throw insertError;
-        newAdvertisingJob=true;
-      }
+    // Advertising is independent of the Seller accrual ledger.
+    // NEVER postpone fresh days because an old 28-day campaign report is
+    // unfinished: that was the cause of the October 28–November gaps.
+    const yesterday=new Date(Date.parse(krasnoyarskToday+'T00:00:00Z')-86400000);
+    const currentTo=yesterday.toISOString().slice(0,10);
+    const recentFrom=new Date(yesterday.getTime()-6*86400000).toISOString().slice(0,10);
+    const {data:alreadyCovered,error:coverageError}=await db.from('ozon_finance_ad_coverage')
+      .select('day').eq('account_key','main').gte('day',recentFrom).lte('day',currentTo);
+    if(coverageError)throw coverageError;
+    const covered=new Set((alreadyCovered??[]).map(x=>x.day));
+    const {data:existing,error:jobsError}=await db.from('ozon_finance_ad_sync_jobs')
+      .select('date_from,date_to,status').eq('account_key','main')
+      .gte('date_to',recentFrom).lte('date_from',currentTo);
+    if(jobsError)throw jobsError;
+    const existingSingles=new Set((existing??[]).filter(x=>x.date_from===x.date_to).map(x=>x.date_from));
+    const newDays:string[]=[];
+    for(let t=Date.parse(recentFrom+'T00:00:00Z');t<=Date.parse(currentTo+'T00:00:00Z');t+=86400000){
+      const day=new Date(t).toISOString().slice(0,10);
+      if(covered.has(day)||existingSingles.has(day))continue;
+      const insert=await db.from('ozon_finance_ad_sync_jobs').upsert({
+       account_key:'main',date_from:day,date_to:day,status:'pending',last_error:null
+      },{onConflict:'account_key,date_from,date_to',ignoreDuplicates:true});
+      if(insert.error)throw insert.error;
+      newDays.push(day);
     }
+    const newAdvertisingJob=newDays.length>0;
     return json({ok:true,timezone:"Asia/Krasnoyarsk",scheduled_local_time:"05:00",
       cache:"supabase",period_days:28,
-      seller: data,advertising_job_created:newAdvertisingJob,
+      seller:data,advertising_job_created:newAdvertisingJob,advertising_new_days:newDays,
       advertising_progress:"independent; no double deduction of Seller PPC"});
   } catch(error) {
     const message = error instanceof Error ? error.message : "Unexpected error";

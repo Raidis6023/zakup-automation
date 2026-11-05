@@ -22,12 +22,6 @@ export default function BiChart({points,series,unit='₽',stacked=false,zero=fal
  const y=(v:number)=>h-bottom-(v-lo)/(hi-lo)*(h-top-bottom);
  const selected=active===null?null:points[active],barWidth=plot/Math.max(1,points.length);
  const missing=points.some(p=>series.some(s=>p.values[s.key]===null||p.values[s.key]===undefined));
- const flowLabels=selected&&stacked?series.map((s,i)=>{
-  const start=series.slice(0,i).reduce((sum,v)=>sum+Math.max(0,selected.values[v.key]??0),0);
-  const value=Math.max(0,selected.values[s.key]??0),side=i%2===0?'left':'right';
-  const tipY=[108,142,314,348][i]??(88+i*43);
-  return {series:s,value,sourceY:y(Math.min(100,start+value/2)),side,tipY};
- }):[];
  return <div className="bi-chart-viewport" ref={ref}><div className="bi-chart-canvas" style={{width:w,height:h,margin:"0 auto"}}>
  <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="img" aria-label={label} tabIndex={0}
   onKeyDown={e=>{if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();setActive(i=>Math.max(0,Math.min(points.length-1,(i??0)+(e.key==='ArrowRight'?1:-1))))}if(e.key==='Escape')setActive(null)}}
@@ -58,28 +52,24 @@ export default function BiChart({points,series,unit='₽',stacked=false,zero=fal
  })}
  {points.map((p,i)=>i%labelInterval!==0&&i!==points.length-1?null:<text className="bi-axis" x={x(i)} y={h-12} textAnchor="middle" key={p.day}>{p.day.slice(8)}.{p.day.slice(5,7)}</text>)}
  {selected&&active!==null&&<g pointerEvents="none">
-  {stacked&&<>
-   <rect x={left} y={top} width={Math.max(0,x(active)-barWidth/2-left)} height={h-bottom-top} fill="#02050b" opacity=".69"/>
-   <rect x={x(active)+barWidth/2} y={top} width={Math.max(0,w-right-x(active)-barWidth/2)} height={h-bottom-top} fill="#02050b" opacity=".69"/>
-   <rect x={x(active)-barWidth/2} y={top} width={barWidth} height={h-bottom-top} fill="none" stroke="#d8e5fa" strokeWidth="1.2" strokeOpacity=".85"/>
-   {flowLabels.map(({series:s,value,sourceY,side,tipY})=>{
-    const sign=side==='left'?-1:1,sourceX=x(active)+sign*barWidth/2;
-    const endX=Math.max(125,Math.min(w-125,x(active)+sign*205));
-    const elbowX=x(active)+sign*65;
-    return <g key={s.key}>
-     <polyline points={`${sourceX},${sourceY} ${elbowX},${tipY} ${endX},${tipY}`} fill="none" stroke={s.color} strokeWidth="1.8"/>
-     <circle cx={sourceX} cy={sourceY} r="3.2" fill={s.color}/>
-     <text x={endX+sign*7} y={tipY-7} fill="#e5edfb" textAnchor={side==='left'?'end':'start'} fontSize="13" fontWeight="650">{Math.round(value*100)/100}% {s.label}</text>
-    </g>;
-   })}
-   <rect x={x(active)-61} y={217} width="122" height="42" rx="10" fill="#081321" stroke="#a6bfd7" strokeOpacity=".8"/>
-   <text x={x(active)} y={243} fill="#fff" textAnchor="middle" fontSize="14" fontWeight="700">{selected.day.split('-').reverse().join('.')}</text>
-  </>}
+  {stacked&&<rect x={x(active)-barWidth/2} y={top} width={barWidth} height={h-bottom-top} fill="none" stroke="#d6e4ff" strokeWidth="2" strokeOpacity=".9"/>}
   {!stacked&&<><line x1={x(active)} x2={x(active)} y1={top} y2={h-bottom} stroke="#b9c9e6" opacity=".55" strokeDasharray="3 4"/>
    {series.map(s=>selected.values[s.key]===null||selected.values[s.key]===undefined?null:<circle key={s.key} cx={x(active)} cy={y(selected.values[s.key]!)} r="5" fill={s.color} stroke="#0d1729" strokeWidth="2"/>)}</>}
  </g>}
  {!points.length&&<text x={w/2} y={h/2} textAnchor="middle" className="bi-axis">Нет подтверждённых данных</text>}
  </svg>
+ {stacked&&selected&&active!==null&&<div className="bi-structure-backdrop" role="status" aria-live="off">
+  <div className="bi-structure-modal">
+   <div className="bi-structure-head"><span>Структура финансового результата</span><strong>{selected.day.split('-').reverse().join('.')}</strong></div>
+   <div className="bi-structure-metrics">{series.map(item=>{
+    const percent=selected.values[item.key];
+    return <div className="bi-structure-metric" key={item.key}>
+     <div className="bi-structure-metric-label"><i style={{background:item.color}} aria-hidden="true"/><span>{item.label}</span></div>
+     <strong>{percent===null||percent===undefined?'Нет данных':new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(percent)+' %'}</strong>
+    </div>;
+   })}</div>
+  </div>
+ </div>}
  {!stacked&&selected&&active!==null&&<div className="bi-tooltip" role="status" style={{left:Math.max(8,Math.min(w-235,x(active)+14)),top:12}}>
  <time>{selected.day.split('-').reverse().join('.')}</time>
  {series.map(s=><div key={s.key}><span><i style={{background:s.color}}/>{s.label}</span><b>{chartNumber(selected.values[s.key]??null,unit)}</b></div>)}</div>}

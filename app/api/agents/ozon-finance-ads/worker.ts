@@ -241,11 +241,20 @@ export async function runHistoricalAdvertising(request:NextRequest){
    "Account-level Performance report is already running or rate-limited"});
  let phase="starting",failure:string|null=null,delay=0;
  try{
-  const {data:job,error:jobError}=await db.from("ozon_finance_ad_sync_jobs")
-   .select("id,date_from,date_to,status,last_error").eq("account_key","main")
-   .in("status",["pending","running","failed"])
-   .order("date_to",{ascending:false}).order("date_from",{ascending:true})
-   .limit(1).maybeSingle();
+  // A live UUID report must be polled and finalized BEFORE requesting a
+  // new day. Then prioritize freshest missing dates over stale historical jobs.
+  // This prevents both overlapping account reports and starvation of today.
+  const inflight=await db.from("ozon_finance_ad_campaign_tasks")
+    .select("job_id").eq("status","requested")
+    .order("updated_at",{ascending:true}).limit(1).maybeSingle();
+  if(inflight.error)throw inflight.error;
+  let jobsQuery=db.from("ozon_finance_ad_sync_jobs")
+    .select("id,date_from,date_to,status,last_error").eq("account_key","main")
+    .in("status",["pending","running","failed"]);
+  if(inflight.data?.job_id)jobsQuery=jobsQuery.eq("id",inflight.data.job_id);
+  const {data:job,error:jobError}=await jobsQuery
+    .order("date_to",{ascending:false}).order("date_from",{ascending:false})
+    .limit(1).maybeSingle();
   if(jobError)throw jobError;
   if(!job){phase="idle";return json({ok:true,phase})}
   const selected=job as Job;
