@@ -20,7 +20,7 @@ export async function readFinance(from:string,to:string,scheme?:'fbo'|'fbs'){
   }
  }else{
   const days=Math.round((Date.parse(to)-Date.parse(from))/86400000)+1;
-  if(days<1||days>91)return null;
+  if(days<1||days>366)return null;
   const {data:snapshots,error:snapshotError}=await db.from('yandex_finance_daily_snapshots')
    .select('snapshot_day,line_count,order_count,captured_at,source_report_id')
    .gte('snapshot_day',from).lte('snapshot_day',to).order('snapshot_day');

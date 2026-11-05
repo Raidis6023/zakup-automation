@@ -12,11 +12,21 @@ export async function GET(req:NextRequest){
   const tasks=days.flatMap(day=>(['sales','shows'] as const).map(kind=>({day,kind})));
   const seeded=await db.from('yandex_promotion_jobs').upsert(tasks,{onConflict:'day,kind',ignoreDuplicates:true});
   if(seeded.error)throw seeded.error;
-  let result=await advancePromotion();
-  // Process the generated report after its mandated 125-second cooldown.
-  // Previously a daily cron only advanced a single queue state.
-  if(result.ok&&result.phase==='requested'){await new Promise(resolve=>setTimeout(resolve,130000));result=await advancePromotion();}
-  return NextResponse.json({...result,window_from:from,window_to:to},{headers:{'Cache-Control':'no-store'}});
+  const deadline=Date.now()+250000;
+  let result=await advancePromotion(),steps=1,finished=Number(result.phase==='saved');
+  // A single daily invocation must clear more than one step of the
+  // two-report-per-day queue. Retain the provider's 125-second quota gap.
+  while(result.ok&&Date.now()<deadline-15000&&steps<7){
+   const phase=String(result.phase);
+   if(['busy','finance_loading','idle','waiting'].includes(phase))break;
+   if(phase==='requested'||phase==='cooldown'){
+    if(deadline-Date.now()<137000)break;
+    await new Promise(resolve=>setTimeout(resolve,129000));
+   }
+   result=await advancePromotion();steps++;
+   if(result.phase==='saved')finished++;
+  }
+  return NextResponse.json({...result,steps,finished,window_from:from,window_to:to},{headers:{'Cache-Control':'no-store'}});
  }catch(e){return NextResponse.json({ok:false,error:e instanceof Error?e.message:'Ошибка выгрузки рекламы ЯМ'},{status:503});}
 }
 
