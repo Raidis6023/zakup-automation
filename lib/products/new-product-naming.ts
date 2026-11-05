@@ -101,7 +101,7 @@ export function buildNewProductNaming(description:string,article:string):NewProd
   }else if(fanSize)name=add(prefix,fanSize+" мм");
   name=add(name,speed?amount(speed)+" об/мин":null,led&&!model?"LED":null,dims);
  }else if(/бритв|брить/i.test(base)){
-  const cartridges=first(all,/(\d+)\s*сменн\w*\s+кассет/i);
+  const cartridges=first(all,/(\d+)\s*сменн[а-яё]*\s+кассет/i);
   const blades=first(all,/(\d+)\s*лезви(?:я|й|е)/i);
   const qty=first(all,/(?:упаковка)\s*(\d+)\s*шт/i);
   name=add(base,cartridges?
