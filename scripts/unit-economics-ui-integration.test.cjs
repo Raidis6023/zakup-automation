@@ -166,3 +166,14 @@ test("Цена товара: PATCH возвращает финансовые п�
  assert.ok(modal.includes("loadedProductId.current===modalProductId"));
  assert.ok(modal.includes("refreshing&&<p"),"При обновлении тело карточки остаётся видимым");
 });
+
+test("Фото КП в предпросмотре: рамка подстраивается под реальный размер без пустых полей",()=>{
+ const css=read("app/unit-economics/unit-economics-pilot.css");
+ const ui=read("app/unit-economics/UnitEconomicsPilotClient.tsx");
+ assert.match(css,/\.unit-pilot-photo-popover\{[^}]*width:max-content;height:max-content;/);
+ assert.match(css,/\.unit-pilot-photo-popover img\{[^}]*width:auto;height:auto;/);
+ assert.doesNotMatch(css,/\.unit-pilot-photo-popover\{[^}]*width:300px;height:350px;/);
+ assert.match(ui,/fitImagePreview\(image:HTMLImageElement\)/);
+ assert.match(ui,/onLoad=\{e=>fitImagePreview\(e\.currentTarget\)\}/);
+ assert.ok(ui.includes("image.parentElement?.getBoundingClientRect()"));
+});

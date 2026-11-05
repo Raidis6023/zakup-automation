@@ -43,7 +43,7 @@ const PHOTOS:Record<string,string>={
  "RCAB-AVD26803-28":"/unit-pilot-photos/RCAB-AVD26803-28.png",
  "RCAB-AVD26923-1":"/unit-pilot-photos/RCAB-AVD26923-1.png"
 };
-type PhotoPreview={src:string;alt:string;left:number;top:number};
+type PhotoPreview={src:string;alt:string;left:number;top:number;anchorLeft:number;anchorRight:number;anchorTop:number};
 const HEADERS=pilot.headers as Record<string,string[]>;
 const MARKET_NAMES:Record<Marketplace,string>={ozon:"Ozon",wb:"Wildberries",ym:"Яндекс Маркет"};
 const TABS:Record<Marketplace,ModelKey[]>={ozon:["ozon-fbo","ozon-fbs"],wb:["wb-fbw","wb-fbs"],ym:["ym-fby","ym-fbs"]};
@@ -407,10 +407,23 @@ export default function UnitEconomicsPilotClient(){
  function openImagePreview(e:MouseEvent<HTMLDivElement>,src:string,alt:string){
   if(!src)return;
   const rect=e.currentTarget.getBoundingClientRect();
-  const width=300,height=350;
-  const left=rect.right+14+width<=window.innerWidth?rect.right+14:Math.max(12,rect.left-width-14);
-  const top=Math.max(12,Math.min(window.innerHeight-height-12,rect.top-12));
-  setPhotoPreview({src,alt,left,top});
+  const maxWidth=Math.min(374,window.innerWidth-24);
+  const maxHeight=Math.min(374,window.innerHeight-24);
+  const left=rect.right+12+maxWidth<=window.innerWidth-8?
+   rect.right+12:Math.max(8,rect.left-maxWidth-12);
+  const top=Math.max(8,Math.min(window.innerHeight-maxHeight-8,rect.top-8));
+  setPhotoPreview({src,alt,left,top,anchorLeft:rect.left,anchorRight:rect.right,anchorTop:rect.top});
+ }
+ function fitImagePreview(image:HTMLImageElement){
+  const bounds=image.parentElement?.getBoundingClientRect();
+  if(!bounds)return;
+  setPhotoPreview(prev=>{
+   if(!prev||prev.src!==image.getAttribute("src"))return prev;
+   const left=prev.anchorRight+12+bounds.width<=window.innerWidth-8?
+    prev.anchorRight+12:Math.max(8,prev.anchorLeft-bounds.width-12);
+   const top=Math.max(8,Math.min(window.innerHeight-bounds.height-8,prev.anchorTop-8));
+   return prev.left===left&&prev.top===top?prev:{...prev,left,top};
+  });
  }
  function openPhoto(e:MouseEvent<HTMLDivElement>,p:Product){
   const src=PHOTOS[p.sku];if(src)openImagePreview(e,src,displayNewProductName(p.name,p.sku));
@@ -488,7 +501,7 @@ export default function UnitEconomicsPilotClient(){
      }:p));
     }}
     onSaved={()=>setVedRevision(x=>x+1)}/>}
-  {photoPreview&&<div className="unit-pilot-photo-popover" style={{left:photoPreview.left,top:photoPreview.top}} role="presentation"><Image src={photoPreview.src} alt={photoPreview.alt} width={280} height={320} unoptimized/></div>}
+  {photoPreview&&<div className="unit-pilot-photo-popover" style={{left:photoPreview.left,top:photoPreview.top}} role="presentation"><Image src={photoPreview.src} alt={photoPreview.alt} width={360} height={360} unoptimized onLoad={e=>fitImagePreview(e.currentTarget)}/></div>}
   {item&&<div className="unit-pilot-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setSku(null)}}><div className="unit-pilot-modal" role="dialog" aria-modal="true" aria-labelledby="unit-pilot-modal-title">
    <header className="unit-pilot-modal-head"><div className="unit-pilot-heading"><div className="unit-pilot-thumb">{PHOTOS[item.sku]?<Image src={PHOTOS[item.sku]} width={59} height={59} alt={displayNewProductName(item.name,item.sku)} unoptimized/>:<span>Нет фото</span>}</div><div><h2 id="unit-pilot-modal-title">{displayNewProductName(item.name,item.sku)}</h2><p>Артикул: {item.sku}</p></div></div><button onClick={()=>setSku(null)} aria-label="Закрыть модалку">×</button></header>
    <div className="unit-pilot-modal-tabs">{tabs}<div className="unit-pilot-views"><button className={view==="summary"?"active":""} onClick={()=>setView("summary")}>Сводка</button><button className={view==="details"?"active":""} onClick={()=>setView("details")}>Все расчёты</button></div></div>
