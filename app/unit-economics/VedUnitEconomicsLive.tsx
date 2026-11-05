@@ -5,7 +5,7 @@ import {useEffect,useRef,useState,type FormEvent} from "react";
 type Model="ozon-fbo"|"ozon-fbs"|"wb-fbw"|"wb-fbs"|"ym-fby"|"ym-fbs";
 type Expense={code:string;label:string;amount:number;formula:string;group:string};
 export type Scheme={
- model:Model;status:string;missing:string[];assumptions:string[];
+ model:Model;status:"calculated"|"estimated"|"needs_input"|"invalid_ved";missing:string[];assumptions:string[];
  costGrossRub:number|null;costNetRub:number|null;purchaseVatCreditRub:number|null;
  volumeLiters:number|null;volumeFormula:string|null;volumeSource:string|null;
  unitWeightKg:number|null;unitWeightFormula:string|null;unitWeightWarning:string|null;
