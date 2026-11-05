@@ -2,7 +2,7 @@
 
 .bi-chart-viewport{width:100%;overflow:auto hidden;scrollbar-width:thin;scrollbar-color:#3b557c transparent;margin-top:10px}
 .bi-chart-canvas{position:relative}
-.bi-chart-canvas svg{display:block!important;width:100%!important;height:476px!important;min-height:0!important;margin:0!important;color:#d4e2f7;outline-offset:-2px}
+.bi-chart-canvas svg{display:block!important;width:100%!important;height:100%!important;min-height:0!important;margin:0!important;color:#d4e2f7;outline-offset:-2px}
 .bi-axis{fill:#8ea3bf;font-size:10px;font-weight:500;font-family:inherit}
 .bi-tooltip{position:absolute;z-index:9;pointer-events:none;background:#091323f5;border:1px solid #9dbbef38;box-shadow:0 12px 28px #0006;border-radius:10px;padding:12px;min-width:200px;max-width:230px;font-size:11px;color:#e6edf9;white-space:normal}
 .bi-tooltip time{display:block;color:#8ea3bf;margin-bottom:9px;font-variant-numeric:tabular-nums}
