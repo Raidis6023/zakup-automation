@@ -28,3 +28,39 @@ assert.equal(m[0].detected_data.cartonGrossKg,19);
 assert.equal(m[0].detected_data.incoterm,"FOB");
 assert.equal(m[0].missing_fields.length,0);
 console.log("PASS VED КП: ROYAUMANN 2026 and MARKET UNION 2025 supplier rows, MOQ 1*20GP, volume, weight");
+
+const identityCode=fs.readFileSync(require("node:path").join(__dirname,
+ "../lib/ved-commercial-offers/article-identities.ts"),"utf8");
+const identities={exports:{}};
+new Function("require","exports","module",ts.transpileModule(identityCode,
+ {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)
+ (require,identities.exports,identities);
+const {offerArticleAliases,withUniqueOfferArticles}=identities.exports;
+const raw=(id,code,source_row,offer_id="offer1")=>({
+ id,supplier_article:code,source_sheet:"Лист1",source_row,offer_id
+});
+const duplicates=[
+ ...Array.from({length:7},(_,i)=>raw("655-"+i,"KL-R655L",[5,6,7,8,9,24,25][i])),
+ ...Array.from({length:5},(_,i)=>raw("551-"+i,"KL-R551L",i+10)),
+ ...Array.from({length:5},(_,i)=>raw("308-"+i,"KL-R308L",i+15)),
+ raw("other","KL-B608LO",4),raw("different-offer","KL-R308L",4,"offer2")
+];
+const ids=offerArticleAliases(duplicates);
+assert.deepEqual(Array.from({length:7},(_,i)=>ids.get("655-"+i)),
+ Array.from({length:7},(_,i)=>"KL-R655L_"+(i+1)));
+assert.deepEqual(Array.from({length:5},(_,i)=>ids.get("308-"+i)),
+ Array.from({length:5},(_,i)=>"KL-R308L_"+(i+1)));
+assert.deepEqual(Array.from({length:5},(_,i)=>ids.get("551-"+i)),
+ Array.from({length:5},(_,i)=>"KL-R551L_"+(i+1)));
+assert.equal(ids.get("other"),"KL-B608LO");
+assert.equal(ids.get("different-offer"),"KL-R308L");
+assert.deepEqual([...offerArticleAliases([...duplicates].reverse())].sort(),
+ [...ids].sort(),"Database row order must not alter aliases");
+assert.equal(duplicates[0].supplier_article,"KL-R655L","Supplier article is immutable");
+const reserved=[raw("a","KL-X",1),raw("b","KL-X",2),raw("c","KL-X_1",3),raw("d","kl-x",4)];
+const collisionMap=offerArticleAliases(reserved);
+assert.deepEqual(["a","b","c","d"].map(x=>collisionMap.get(x)),
+ ["KL-X_2","KL-X_3","KL-X_1","KL-X_4"]);
+assert.deepEqual(withUniqueOfferArticles(duplicates).slice(0,7).map(x=>x.supplier_article),
+ Array.from({length:7},(_,i)=>"KL-R655L_"+(i+1)));
+console.log("PASS VED КП: duplicate supplier SKUs numbered _1/_2 by sheet row, no source mutations");

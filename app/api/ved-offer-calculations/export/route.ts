@@ -3,6 +3,7 @@ import {requireVedAccess,VedAccessError} from "@/lib/ved-calculation/server-acce
 import {buildVedExport,type VedExportItem} from "@/lib/ved-calculation/excel-export";
 import {findSupplierPhotos} from "@/lib/ved-calculation/offer-photos";
 import {vedExcelContentDisposition} from "@/lib/ved-calculation/download-filename";
+import {offerArticleAliases} from "@/lib/ved-commercial-offers/article-identities";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -27,9 +28,10 @@ export async function POST(request:Request){
   if(!entries.length||entries.length>100)
    return NextResponse.json({ok:false,error:"Для экспорта поддерживается до 100 товаров в одном КП"},{status:422});
   const {data:originalItems,error:itemError}=await admin.from("ved_commercial_offer_items")
-   .select("id,source_sheet,source_row,detected_data,raw_row").eq("offer_id",offer.id).limit(450);
+   .select("id,offer_id,supplier_article,source_sheet,source_row,detected_data,raw_row").eq("offer_id",offer.id).limit(450);
   if(itemError)throw itemError;
   const itemIndex=new Map((originalItems||[]).map(item=>[item.id,item]));
+  const aliases=offerArticleAliases(originalItems||[]);
   const {data:file,error:storageError}=await admin.storage.from("ved-commercial-offers").download(offer.storage_path);
   if(storageError||!file)
    return NextResponse.json({ok:false,error:"Исходный Excel КП недоступен в архиве"},{status:424});
@@ -47,7 +49,7 @@ export async function POST(request:Request){
    const raw=(original?.raw_row||[]) as unknown[];
    const getText=(x:unknown)=>typeof x==="string"?x:"";
    return {
-    id:e.itemId,title:e.title,article:e.article,version_no:version.version_no,
+    id:e.itemId,title:e.title,article:aliases.get(e.itemId)||e.article,version_no:version.version_no,
     calculation_date:version.calculation_date,input_data:e.input,result_data:e.result,errors:e.errors,
     source:{
      quoteCode:offer.quote_code,sheet:original?.source_sheet,row:original?.source_row,

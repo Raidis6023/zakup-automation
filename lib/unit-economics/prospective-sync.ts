@@ -6,6 +6,7 @@
 import type {createAdminClient} from "@/lib/supabase/admin";
 import type {VedCalculationInput,VedCalculationResult} from "@/lib/ved-calculation/engine";
 import {displayNewProductName,normalizeNewProductArticle} from "@/lib/products/new-product-identity";
+import {withUniqueOfferArticles} from "@/lib/ved-commercial-offers/article-identities";
 import {applyProductOverrides,type ProductOverrides} from "./product-overrides";
 import {PRELIMINARY_MODELS,calculatePreliminary,suggestPreliminaryTargetPrice,type PreliminarySettings,type PreliminarySource} from "./prospective-engine";
 type Db=ReturnType<typeof createAdminClient>;
@@ -65,8 +66,16 @@ export async function syncUnitFromVedVersion(db:Db,type:VedEventKind,versionId:s
   const {data:saved,error:saveErr}=response;
   if(saveErr||!saved)throw Error("Не найдена версия ВЭД: "+(saveErr?.message||versionId));
   const timestamp=String(saved.created_at);
+  const sourceRows=extractInputs(type,saved as Record<string,unknown>);
+  // Old immutable versions may still contain duplicate supplier codes.
+  // Resolve by original item order; no source version is rewritten.
+  const identities=type==="whole"?
+   withUniqueOfferArticles(sourceRows.map((row,index)=>({
+    source:row,id:row.itemId||String(index),supplier_article:row.article,
+    source_sheet:"",source_row:index+1
+   }))).map(row=>({...row.source,article:row.supplier_article})):sourceRows;
   const unique=new Map<string,Pending>();
-  for(const row of extractInputs(type,saved as Record<string,unknown>)){
+  for(const row of identities){
    const sku=normalizeNewProductArticle(row.article);
    if(!validArticle(sku)||!row.input?.product){
     skipped++;continue;

@@ -3,6 +3,7 @@ import {NextResponse} from "next/server";
 import {requireVedAccess,VedAccessError} from "@/lib/ved-calculation/server-access";
 import {calculateVed,VedInputError,type VedCalculationInput} from "@/lib/ved-calculation/engine";
 import {isValidTariffDate} from "@/lib/ved-calculation/tariffs";
+import {offerArticleAliases,withUniqueOfferArticles} from "@/lib/ved-commercial-offers/article-identities";
 
 export const dynamic="force-dynamic";
 export const runtime="nodejs";
@@ -32,7 +33,17 @@ export async function GET(request:Request){
    if(lookupError)throw lookupError;
    if(exact)versions.push(exact);
   }
-  return NextResponse.json({ok:true,versions},{headers:{"Cache-Control":"private,no-store"}});
+  const {data:quoteItems,error:quoteError}=await admin.from("ved_commercial_offer_items")
+   .select("id,offer_id,source_sheet,source_row,supplier_article").eq("offer_id",offerId).limit(450);
+  if(quoteError)throw quoteError;
+  const aliases=offerArticleAliases(quoteItems||[]);
+  // Historical version JSON stays immutable; returned article labels are unique.
+  const projected=versions.map(version=>({...version,
+   items_data:Array.isArray(version.items_data)?version.items_data.map(
+    (row:{itemId?:string;article?:string})=>({...row,article:aliases.get(row.itemId||"")||row.article})
+   ):version.items_data
+  }));
+  return NextResponse.json({ok:true,versions:projected},{headers:{"Cache-Control":"private,no-store"}});
  }catch(e){return failure(e);}
 }
 export async function POST(request:Request){
@@ -48,9 +59,11 @@ export async function POST(request:Request){
   if(offerError)throw offerError;
   if(!offer)return bad("Коммерческое предложение не найдено",404);
   const {data:stored,error:itemError}=await admin.from("ved_commercial_offer_items")
-   .select("id,supplier_article,description_original").eq("offer_id",offerId).limit(450);
+   .select("id,offer_id,source_sheet,source_row,supplier_article,description_original").eq("offer_id",offerId).limit(450);
   if(itemError)throw itemError;
-  const storedIds=new Set((stored||[]).map(x=>x.id));
+  const items=withUniqueOfferArticles(stored||[]);
+  const byId=new Map(items.map(x=>[x.id,x]));
+  const storedIds=new Set(items.map(x=>x.id));
   const source=payload.items as Entry[];
   const givenIds=source.map(x=>x?.itemId);
   if(source.length!==storedIds.size||new Set(givenIds).size!==source.length||
@@ -58,7 +71,7 @@ export async function POST(request:Request){
   const entries=source.map((raw)=>{
    if(!raw||typeof raw.input!=="object"||raw.input===null||Array.isArray(raw.input))
     throw new Error("Некорректная структура входных данных");
-   const item=stored!.find(i=>i.id===raw.itemId)!;
+   const item=byId.get(raw.itemId)!;
    const input=raw.input;
    if(JSON.stringify(input).length>18000)throw new Error("Слишком длинные исходные данные товара");
    try{

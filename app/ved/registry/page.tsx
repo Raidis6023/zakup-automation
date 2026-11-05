@@ -3,6 +3,7 @@ import VedRegistryTable from "./VedRegistryTable";
 import {buildVedRegistry,type VedRegistryOffer,type VedRegistrySavedVersion,
  type VedRegistrySourceItem,type VedRegistrySingleSnapshot} from "@/lib/ved-calculation/registry";
 import {requireVedAccess,VedAccessError} from "@/lib/ved-calculation/server-access";
+import {withUniqueOfferArticles} from "@/lib/ved-commercial-offers/article-identities";
 import "./ved-registry.css";
 
 export const dynamic="force-dynamic";
@@ -54,7 +55,7 @@ export default async function VedRegistryPage(){
      .in("offer_id",ids).order("created_at",{ascending:false}).limit(200),
    ]);
    if(versionResult.error)throw versionResult.error;
-   items=itemsFromDb;
+   items=withUniqueOfferArticles(itemsFromDb);
    versions=(versionResult.data||[]) as VedRegistrySavedVersion[];
   }
   rows=buildVedRegistry(list,items,versions,savedSingles);

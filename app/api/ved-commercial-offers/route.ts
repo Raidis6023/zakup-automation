@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import {requireVedAccess,VedAccessError} from "@/lib/ved-calculation/server-access";
 import {isValidTariffDate} from "@/lib/ved-calculation/tariffs";
 import {summariseParsedSheets,type VedSupplier} from "@/lib/ved-commercial-offers/parser";
+import {withUniqueOfferArticles} from "@/lib/ved-commercial-offers/article-identities";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -37,17 +38,23 @@ export async function GET(request:Request){
     .select("id,offer_id,source_sheet,source_row,supplier_article,description_original,detected_data,missing_fields,warnings")
     .eq("offer_id",wholeOfferId).order("source_row",{ascending:true}).limit(450);
    if(itemsError)throw itemsError;
-   return NextResponse.json({ok:true,offer,items:items||[]},{headers:{"Cache-Control":"private,no-store"}});
+   return NextResponse.json({ok:true,offer,items:withUniqueOfferArticles(items||[])},{headers:{"Cache-Control":"private,no-store"}});
   }
   if(itemId){
    if(!UUID.test(itemId))return fail("Неверный код товара");
    const {data:item,error}=await admin.from("ved_commercial_offer_items").select("*").eq("id",itemId).maybeSingle();
    if(error)throw error;
    if(!item)return fail("Товар КП не найден",404);
+   const {data:siblings,error:siblingError}=await admin.from("ved_commercial_offer_items")
+    .select("id,offer_id,source_sheet,source_row,supplier_article")
+    .eq("offer_id",item.offer_id).limit(450);
+   if(siblingError)throw siblingError;
+   const visible=withUniqueOfferArticles(siblings||[]).find(x=>x.id===item.id);
+   const projectedItem={...item,supplier_article:visible?.supplier_article||item.supplier_article};
    const {data:offer,error:offerError}=await admin.from("ved_commercial_offers")
     .select("id,quote_code,quote_date,supplier_code").eq("id",item.offer_id).single();
    if(offerError)throw offerError;
-   return NextResponse.json({ok:true,item,offer},{headers:{"Cache-Control":"private,no-store"}});
+   return NextResponse.json({ok:true,item:projectedItem,offer},{headers:{"Cache-Control":"private,no-store"}});
   }
   if(download){
    if(!UUID.test(download))return fail("Неверный номер КП");
@@ -68,7 +75,7 @@ export async function GET(request:Request){
    .select("id,offer_id,source_sheet,source_row,supplier_article,description_original,detected_data,missing_fields,warnings")
    .in("offer_id",ids).order("source_row",{ascending:true}).limit(450);
   if(itemsError)throw itemsError;
-  return NextResponse.json({ok:true,offers,items:items||[]},{headers:{"Cache-Control":"private,no-store"}});
+  return NextResponse.json({ok:true,offers,items:withUniqueOfferArticles(items||[])},{headers:{"Cache-Control":"private,no-store"}});
  }catch(e){return handleError(e);}
 }
 export async function POST(request:Request){
