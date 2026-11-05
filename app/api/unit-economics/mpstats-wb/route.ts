@@ -42,37 +42,66 @@ export async function POST(req:NextRequest){
  const current=new Map((settings||[]).map(x=>[x.model,x]));
  const wbName=(current.get("wb-fbw")?.data as Record<string,unknown>|undefined)?.categoryId;
  const fbName=(current.get("wb-fbs")?.data as Record<string,unknown>|undefined)?.categoryId;
- if(typeof wbName!=="string"||!wbName||wbName!==fbName)
+ const wbGroup=(current.get("wb-fbw")?.data as Record<string,unknown>|undefined)?.categoryGroup;
+ const fbsGroup=(current.get("wb-fbs")?.data as Record<string,unknown>|undefined)?.categoryGroup;
+ if(typeof wbName!=="string"||!wbName||wbName!==fbName||wbGroup!==fbsGroup)
   return NextResponse.json({ok:false,error:"Сначала подтвердите одну категорию WB для FBW и FBS"},{status:409,headers});
  try{
-  const fbw=await getWbSubjectMpstats(wbName,false,token);
-  const fbs=await getWbSubjectMpstats(wbName,true,token);
-  const buyout=fbw.buyoutRate??fbs.buyoutRate;
-  const toWrite:Record<string,unknown>[]=[];
-  const updates=[
-   ["wb-fbw",fbw.wbSppRate,buyout],
-   ["wb-fbs",fbs.wbSppRate,buyout],
-   ["ozon-fbo",null,buyout],
-   ["ozon-fbs",null,buyout]
-  ] as const;
-  for(const [model,spp,buyoutRate] of updates){
-   if(spp===null&&buyoutRate===null)continue;
-   const previous=current.get(model);
+  // fbs=1 in MPStats includes FBS in the subject selection; it is not an FBS-only filter.
+  // We use one niche-wide SPP and one niche-wide buyout for both WB schemes.
+  const metrics=await getWbSubjectMpstats(wbName,true,token,typeof wbGroup==="string"?wbGroup:undefined);
+  const buyout=metrics.buyoutRate;
+  const spp=metrics.wbSppRate;
+  if(buyout===null&&spp===null){
+   return NextResponse.json({ok:true,saved:false,partial:true,
+    buyoutRate:null,fbwSpp:null,fbsSpp:null,
+    details:metrics.comments,
+    error:"MPStats ответил, но в ответах нет достоверных процентов для сохранения"},{headers});
+  }
+  // Category can be changed while provider request is running. Never write metrics
+  // from an earlier confirmed subject into a newly selected category.
+  const {data:fresh,error:freshError}=await auth.admin.from("unit_ved_settings")
+   .select("model,data,revision").eq("product_id",product.id)
+   .in("model",["wb-fbw","wb-fbs","ozon-fbo","ozon-fbs"]);
+  if(freshError)throw Error("Не удалось проверить актуальную категорию WB: "+freshError.message);
+  const latest=new Map((fresh||[]).map(x=>[x.model,x]));
+  for(const model of ["wb-fbw","wb-fbs"]){
+   const selected=(latest.get(model)?.data as Record<string,unknown>|undefined)?.categoryId;
+   const selectedGroup=(latest.get(model)?.data as Record<string,unknown>|undefined)?.categoryGroup;
+   if(selected!==wbName||selectedGroup!==wbGroup)return NextResponse.json({
+    ok:false,error:"Категория WB изменена во время загрузки MPStats. Повторите получение показателей."},
+    {status:409,headers});
+  }
+  const rows:Record<string,unknown>[]=[];
+  const now=new Date().toISOString();
+  for(const model of ["wb-fbw","wb-fbs","ozon-fbo","ozon-fbs"]){
+   const previous=latest.get(model);
    const data={...((previous?.data||{}) as Record<string,unknown>)};
-   if(spp!==null){data.wbSppRate=spp;data.wbSppSource="mpstats-sample"; }
-   if(buyoutRate!==null){data.buyoutRate=buyoutRate;data.buyoutSource="wb-mpstats-subject-proxy";}
-   data.mpstatsUpdatedAt=new Date().toISOString();
-   toWrite.push({product_id:product.id,model,data,revision:Number(previous?.revision||0)+1,updated_at:new Date().toISOString()});
+   if(buyout!==null){
+    data.buyoutRate=buyout;
+    data.buyoutSource="wb-mpstats-subject-proxy";
+    data.buyoutSourceSubject=metrics.subjectId;
+   }
+   if(model.startsWith("wb")&&spp!==null){
+    data.wbSppRate=spp;
+    data.wbSppSource="mpstats-subject-sales-weighted-sample";
+    data.wbSppSampledProducts=metrics.sampledProducts;
+   }
+   data.mpstatsUpdatedAt=now;
+   rows.push({product_id:product.id,model,data,
+    revision:Number(previous?.revision||0)+1,updated_at:now});
   }
-  if(toWrite.length){
-   const {error}=await auth.admin.from("unit_ved_settings").upsert(toWrite,{onConflict:"product_id,model"});
-   if(error)throw Error("Ошибка сохранения параметров: "+error.message);
-   const refreshed=await syncUnitFromVedVersion(auth.admin,product.source_type as "single"|"whole",product.source_version_id,{force:true});
-   if(!refreshed.ok)throw Error("Параметры сохранены, но пересчёт не завершён: "+refreshed.error);
-  }
-  return NextResponse.json({ok:true,saved:toWrite.length>0,buyoutRate:buyout,
-   fbwSpp:fbw.wbSppRate,fbsSpp:fbs.wbSppRate,details:[...fbw.comments,...fbs.comments],
-   partial:buyout===null||fbw.wbSppRate===null||fbs.wbSppRate===null},{headers});
+  const {error}=await auth.admin.from("unit_ved_settings")
+   .upsert(rows,{onConflict:"product_id,model"});
+  if(error)throw Error("Ошибка сохранения MPStats: "+error.message);
+  const refreshed=await syncUnitFromVedVersion(auth.admin,
+   product.source_type as "single"|"whole",product.source_version_id,{force:true});
+  if(!refreshed.ok)throw Error("Показатели сохранены, но пересчёт не завершён: "+refreshed.error);
+  return NextResponse.json({ok:true,saved:true,
+   buyoutRate:buyout,fbwSpp:spp,fbsSpp:spp,
+   source:"mpstats",subject:metrics.subject,subjectId:metrics.subjectId,
+   sampledProducts:metrics.sampledProducts,sampledAt:metrics.sampledAt,
+   details:metrics.comments,partial:buyout===null||spp===null},{headers});
  }catch(e){
   if(e instanceof MpStatsError)return NextResponse.json({ok:false,error:e.message,kind:e.kind},
    {status:e.kind==="rate-limited"?429:e.kind==="invalid"?401:502,headers});

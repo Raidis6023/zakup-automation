@@ -37,13 +37,13 @@ test("MPStats: ключ читается из защищённого храни�
  assert.match(auth,/const token=await getMpStatsToken\(\)/);
  assert.match(auth,/if\(!token\)/);
  assert.doesNotMatch(auth,/process\.env\.MPSTATS_TOKEN/);
- assert.ok(parser.includes("getWbSubjectMpstats(subject:string,fbs:boolean,token:string)"));
+ assert.ok(parser.includes("getWbSubjectMpstats(subject:string,fbs:boolean,token:string,subjectGroup?:string)"));
  assert.ok(parser.includes("if(!token?.trim())"));
  assert.ok(credentials.includes("workspace_get_integration_secrets"));
  assert.ok(api.includes("workspace_upsert_integration_secrets"));
  assert.ok(page.includes("API-ключ MPStats"));
  for(const model of ["wb-fbw","wb-fbs","ozon-fbo","ozon-fbs"])assert.ok(auth.includes('"'+model+'"'));
- assert.ok(parser.includes("let buyoutRate:number|null=null;"));
+ assert.ok(parser.includes("readSubjectBuyout(info)"));
  assert.match(parser,/client_sale/);
  assert.ok(parser.includes("purchase_after_return"));
 });
@@ -53,4 +53,18 @@ test("Цена и исходные данные ВЭД редактируютс�
  const pilot=read("app/unit-economics/UnitEconomicsPilotClient.tsx");
  assert.ok(pilot.includes("modalProductId={vedSelected}"));
  assert.ok(pilot.includes("visibilityState"));
+});
+
+test("MPStats: manual category confirmation triggers automatic request even with stale UI status",()=>{
+ const ui=read("app/unit-economics/VedUnitEconomicsLive.tsx");
+ const provider=read("app/api/unit-economics/mpstats-wb/route.ts");
+ const patch=read("app/api/unit-economics/prospective/route.ts");
+ assert.ok(ui.includes("await refreshMpstats(product)"));
+ assert.ok(!ui.includes('if(providerStatus!=="connected")'));
+ assert.ok(provider.includes("const metrics=await getWbSubjectMpstats("));
+ for(const model of ["wb-fbw","wb-fbs","ozon-fbo","ozon-fbs"])
+  assert.ok(provider.includes('"'+model+'"'));
+ assert.ok(patch.includes("wbSppSampledProducts"));
+ assert.ok(patch.includes("buyoutSource"));
+ assert.ok(provider.includes("Категория WB изменена во время загрузки"));
 });

@@ -73,6 +73,7 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
  const [categoryBusy,setCategoryBusy]=useState(false);
  const [providerStatus,setProviderStatus]=useState<"checking"|"connected"|"missing">("checking");
  const [providerMessage,setProviderMessage]=useState("");
+ const [mpstatsBusy,setMpstatsBusy]=useState(false);
  const [actionMessage,setActionMessage]=useState("");
  const calc=product?.schemes[model];
  const market=groupName(model);
@@ -148,22 +149,32 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
   return()=>{document.removeEventListener("keydown",handler);document.body.style.overflow=before};
  },[onClose,saving]);
  async function refreshMpstats(p:Product){
-  if(providerStatus!=="connected"){
-   setProviderMessage("MPStats не подключён. В настройках Vercel отсутствует MPSTATS_TOKEN. Категория сохранена.");
-   return;
-  }
+  // Проверка по фактическому защищённому хранилищу выполняется сервером при
+  // каждом запросе. Не блокируем загрузку по устаревшему статусу UI.
+  setMpstatsBusy(true);
+  setProviderMessage("Получаем выкуп и среднюю СПП категории из MPStats…");
   try{
    const response=await fetch("/api/unit-economics/mpstats-wb",{
-    method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId:p.id})
+    method:"POST",headers:{"Content-Type":"application/json"},
+    cache:"no-store",body:JSON.stringify({productId:p.id})
    });
    const result=await response.json();
    if(!response.ok||!result.ok)throw Error(result.error||"MPStats недоступен");
-   setProviderMessage("MPStats: СПП FBW "+percent(result.fbwSpp)+
-    ", СПП FBS "+percent(result.fbsSpp)+
-    ", выкуп WB "+percent(result.buyoutRate)+". "+
-    (result.partial?"Часть значений требует проверки; нули не подставлены.":"Значения сохранены."));
+   if(!result.saved){
+    setProviderMessage("MPStats: "+(result.error||"Подтверждённые показатели отсутствуют.")+
+     " Существующие значения не заменены нулями.");
+    return;
+   }
+   setProviderStatus("connected");
+   setProviderMessage("MPStats: выкуп предмета WB "+percent(result.buyoutRate)+
+    " (прогноз для Ozon FBO/FBS), средняя СПП WB "+percent(result.fbwSpp)+
+    ". В расчётах сохранены WB FBW/FBS и Ozon FBO/FBS. "+
+    (result.partial?"Часть данных не получена и осталась незаполненной.":"")+
+    (result.sampledProducts?" Выборка СПП: "+result.sampledProducts+" товаров.":""));
    setRevision(n=>n+1);onSaved?.();
-  }catch(e){setProviderMessage(e instanceof Error?e.message:String(e))}
+  }catch(e){
+   setProviderMessage("Не удалось загрузить MPStats: "+(e instanceof Error?e.message:String(e)));
+  }finally{setMpstatsBusy(false)}
  }
  async function confirmWbCategory(){
   if(!product||!categorySelected)return;
@@ -379,14 +390,14 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
         Выбрано: <strong>{categorySelected.name}</strong> ({categorySelected.group}),
         комиссия FBW {percent(categorySelected.fbw)}, FBS {percent(categorySelected.fbs)}.
        </div>}
-       <button type="button" className="unit-ved-primary" disabled={!categorySelected||categoryBusy}
+       <button type="button" className="unit-ved-primary" disabled={!categorySelected||categoryBusy||mpstatsBusy}
         onClick={()=>void confirmWbCategory()}>
-        {categoryBusy?"Подтверждение…":"Подтвердить категорию и получить MPStats"}
+        {categoryBusy||mpstatsBusy?"Загрузка и пересчёт…":"Подтвердить категорию и получить MPStats"}
        </button>
        <p className="unit-pilot-note">MPStats: {providerStatus==="checking"?"проверка подключения":
         providerStatus==="connected"?"подключён":"нет серверного токена"}</p>
        {providerMessage&&<p role="status" className="unit-pilot-notice">{providerMessage}</p>}
-       {typeof settings.categoryId==="string"&&<button type="button" onClick={()=>void refreshMpstats(product)}>
+       {typeof settings.categoryId==="string"&&<button type="button" disabled={mpstatsBusy} onClick={()=>void refreshMpstats(product)}>
         Обновить показатели MPStats
        </button>}
       </section>}

@@ -161,19 +161,52 @@ export async function PATCH(request:NextRequest){
    if(writeErr)throw Error(writeErr.message);
   }
   if(hasWbCategory&&confirmedCategory){
-   // One confirmed WB subject, different commissions for FBW/FBS.
+   // Категория относится к обеим схемам WB. При замене категории запрещено
+   // оставлять старые выкуп и СПП: они относятся к другому предмету.
+   let changed=false;
    for(const [wbModel,rate] of [["wb-fbw",confirmedCategory.fbw],["wb-fbs",confirmedCategory.fbs]] as const){
     const {data:before,error:beforeErr}=await auth.admin.from("unit_ved_settings")
      .select("data,revision").eq("product_id",product.id).eq("model",wbModel).maybeSingle();
     if(beforeErr)throw Error(beforeErr.message);
-    const settings={...((before?.data||{}) as Record<string,unknown>),
-      categoryId:confirmedCategory.name,categoryGroup:confirmedCategory.group,
-      categoryCommissionRate:rate,wbCategoryConfirmedAt:new Date().toISOString()};
+    const data={...((before?.data||{}) as Record<string,unknown>)};
+    const categoryChanged=data.categoryId!==confirmedCategory.name||
+     data.categoryGroup!==confirmedCategory.group;
+    if(categoryChanged){
+     changed=true;
+     for(const field of ["buyoutRate","buyoutSource","buyoutSourceSubject",
+      "wbSppRate","wbSppSource","wbSppSampledProducts","mpstatsUpdatedAt"]){
+      delete data[field];
+     }
+    }
+    Object.assign(data,{
+     categoryId:confirmedCategory.name,categoryGroup:confirmedCategory.group,
+     categoryCommissionRate:rate,wbCategoryConfirmedAt:new Date().toISOString()
+    });
     const {error}=await auth.admin.from("unit_ved_settings").upsert({
-      product_id:product.id,model:wbModel,data:settings,
+      product_id:product.id,model:wbModel,data,
       revision:Number(before?.revision||0)+1,updated_at:new Date().toISOString()
     },{onConflict:"product_id,model"});
     if(error)throw Error(error.message);
+   }
+   if(changed){
+    // Оzоn использует именно прогноз выкупа WB, а не собственный показатель.
+    // Сброс возможен только когда значение ранее скопировано из MPStats.
+    for(const ozonModel of ["ozon-fbo","ozon-fbs"]){
+     const {data:before,error:beforeErr}=await auth.admin.from("unit_ved_settings")
+      .select("data,revision").eq("product_id",product.id)
+      .eq("model",ozonModel).maybeSingle();
+     if(beforeErr)throw Error(beforeErr.message);
+     if(!before)continue;
+     const data={...(before.data as Record<string,unknown>)};
+     if(data.buyoutSource!=="wb-mpstats-subject-proxy")continue;
+     for(const field of ["buyoutRate","buyoutSource","buyoutSourceSubject","mpstatsUpdatedAt"]){
+      delete data[field];
+     }
+     const {error}=await auth.admin.from("unit_ved_settings").update({
+      data,revision:Number(before.revision||0)+1,updated_at:new Date().toISOString()
+     }).eq("product_id",product.id).eq("model",ozonModel);
+     if(error)throw Error(error.message);
+    }
    }
   }
   const synced=await syncUnitFromVedVersion(
