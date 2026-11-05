@@ -84,3 +84,12 @@ test("MPStats: explicit category mapping is controlled, shared and never exposes
  assert.ok(migration.includes("PRIMARY KEY (wb_category,wb_group)"));
  assert.ok(migration.includes("ENABLE ROW LEVEL SECURITY"));
 });
+
+test("Схемы в карточке: Ozon FBO/FBS слева направо, Яндекс только FBY",()=>{
+ const ui=read("app/unit-economics/VedUnitEconomicsLive.tsx");
+ assert.match(ui,/ozon:\["ozon-fbo","ozon-fbs"\]/);
+ assert.match(ui,/ym:\["ym-fby"\]/);
+ assert.match(ui,/activeModel==="ym-fbs"\?"ym-fby"/);
+ const engine=read("lib/unit-economics/prospective-engine.ts");
+ assert.ok(engine.includes('"ym-fbs"'),"Историческую схему Яндекс FBS нельзя удалять из движка");
+});
