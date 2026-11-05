@@ -1,5 +1,6 @@
 "use client";
 import FinanceDynamics from "../../components/finance/FinanceDynamics";
+import CostPerUnitComparison from '../../components/finance/CostPerUnitComparison';
 import WbAdvertisingCharts from "../../components/finance/WbAdvertisingCharts";
 import CopyArticle from "../../components/finance/CopyArticle";
 import OrderFulfillmentPanels from "../../components/finance/OrderFulfillmentPanels";
@@ -23,10 +24,16 @@ function WbBreakdown({row}:{row:Row}){
  {name:'Себестоимость товаров',category:'Внешний расход',count:row.buyouts,amount:row.cogs===null?null:-row.cogs},
  {name:'ТК Маяк',category:'Внешний расход',count:row.sales_units,amount:row.mayak_expense===null?null:-row.mayak_expense}
  ];
- return <table className="ozf-breakdown-table"><thead><tr><th>Статья доходов / расходов</th><th>Категория</th><th>Операций</th><th>Общая сумма за период, ₽</th></tr></thead><tbody>
+ return <div className="ozf-income-unit-grid"><div><table className="ozf-breakdown-table"><thead><tr><th>Статья доходов / расходов</th><th>Категория</th><th>Операций</th><th>Общая сумма за период, ₽</th></tr></thead><tbody>
  {items.filter(x=>x.amount===null||Math.abs(x.amount)>.005).map((x,i)=><tr key={x.name+i}><td>{x.name}</td><td>{x.category}</td><td>{x.count||'—'}</td><td className={x.amount===null?'':x.amount<0?'ozf-bad':'ozf-good'}>{x.amount===null?'Нет данных':money(x.amount)}</td></tr>)}
  <tr className="ozf-breakdown-total"><td>Операционная прибыль</td><td>Итог, предварительно</td><td>—</td><td className={row.preliminary_result!==null&&row.preliminary_result<0?'ozf-bad':'ozf-good'}>{row.preliminary_result===null?'Нужны ставки':money(row.preliminary_result)}</td></tr>
- </tbody></table>;
+ </tbody></table></div><CostPerUnitComparison market="Wildberries" units={row.buyouts} items={[
+  {name:'Комиссии и корректировки WB',amount:Math.max(0,row.realization-row.to_transfer)},
+  {name:'Логистика',amount:row.delivery},{name:'Приёмка',amount:row.acceptance},
+  {name:'Штрафы',amount:row.penalty},{name:'Другие удержания',amount:row.deduction},
+  {name:'Хранение',amount:row.allocated_storage},{name:'Реклама',amount:row.allocated_ad},
+  {name:'Себестоимость',amount:row.cogs},{name:'ТК Маяк',amount:row.mayak_expense}
+ ]}/></div>;
 }
 const money=(v:number|null)=>v==null?"—":v.toLocaleString("ru-RU",{minimumFractionDigits:2,maximumFractionDigits:2});
 const day=(offset:number)=>{const d=new Date();d.setUTCDate(d.getUTCDate()+offset);return d.toISOString().slice(0,10);};

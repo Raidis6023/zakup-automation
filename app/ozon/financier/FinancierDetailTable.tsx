@@ -1,5 +1,6 @@
 "use client";
 import FinanceDynamics,{type FinanceMetric} from '../../components/finance/FinanceDynamics';
+import CostPerUnitComparison from '../../components/finance/CostPerUnitComparison';
 import CopyArticle from '../../components/finance/CopyArticle';
 import { Fragment, useMemo, useState } from "react";
 import dynamic from 'next/dynamic';
@@ -267,7 +268,7 @@ export default function FinancierDetailTable({
           {expanded===r.offer_id&&<tr key={r.offer_id+"-detail"} className="ozf-expanded-row">
             <td colSpan={25}>
               <div className="ozf-expanded-content"><div className="ozf-pinned-article"><strong>{r.offer_id}</strong><CopyArticle article={r.offer_id}/><a className="ozf-btn" href={'/finance/keywords?market=ozon&article='+encodeURIComponent(r.offer_id)+'&from='+(data?.from??'')+'&to='+(data?.to??'')} onClick={e=>e.stopPropagation()}>Ключевые слова</a></div>{r.offer_id.startsWith('SKU:')&&<p className="ozf-error">Нет подтверждённой связки SKU {r.offer_id.slice(4)} с артикулом продавца. Скопируй SKU и найди его в кабинете Ozon в списке товаров. Автоматическое сопоставление с чужой карточкой отключено.</p>}
-                <p className="ozf-notice">* Расчётные выкупы = заказы минус отмены. Возвраты на дату исходного заказа пока не загружены, поэтому прибыль предварительная. Баллы и поддержка программ уже входят в начисления Ozon; справочные строки нельзя прибавлять повторно.</p><table className="ozf-breakdown-table"><thead><tr>
+                <p className="ozf-notice">* Расчётные выкупы = заказы минус отмены. Возвраты на дату исходного заказа пока не загружены, поэтому прибыль предварительная. Баллы и поддержка программ уже входят в начисления Ozon; справочные строки нельзя прибавлять повторно.</p><div className="ozf-income-unit-grid"><div><table className="ozf-breakdown-table"><thead><tr>
                   <th>Статья</th><th>Категория</th><th>Операций</th><th>Сумма, ₽</th>
                 </tr></thead><tbody>
                   {r.estimated_result===null&&<tr className="ozf-missing-explainer">
@@ -304,7 +305,10 @@ export default function FinancierDetailTable({
                     <td>Итог</td><td>—</td><td className={moneyTone(r.estimated_result)}>
                     {money(r.estimated_result)}</td>
                   </tr>
-                </tbody></table>
+                </tbody></table></div><CostPerUnitComparison market="Ozon" units={r.buyout_units} items={[
+ ...r.details.filter(x=>!x.is_reference&&x.amount<0).map(x=>({name:x.name,amount:-x.amount})),
+ {name:"Себестоимость",amount:r.cogs},{name:"ТК Маяк",amount:r.mayak_expense}
+ ]}/></div>
                 <details><summary>{r.offer_id} · КМ, себестоимость и ТК Маяк</summary><OzonRowRates master={r.master_code} onSaved={onSaved}/></details><FinanceDynamics marketplace="ozon" revision={data?.cache_updated_at??''} from={data?.from??''} to={data?.to??''} offer={r.offer_id}/>
                 <CampaignCharts offer={r.offer_id} from={data?.from??''} to={data?.to??''}/>
               </div>
