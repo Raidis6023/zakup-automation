@@ -66,8 +66,14 @@ async function syncAdvertising(){
 const adsByNm=new Map<string,{spend:number;views:number;clicks:number;orders:number;sum_price:number}>();
 for(const a of data?.ads.items??[]){const k=String(a.nm_id),v=adsByNm.get(k)??{spend:0,views:0,clicks:0,orders:0,sum_price:0};v.spend+=a.spend;v.views+=a.views;v.clicks+=a.clicks;v.orders+=a.orders;v.sum_price+=a.sum_price;adsByNm.set(k,v);}
 const rows=(data?.rows??[]).filter(r=>r.nm_id!=='unallocated').filter(r=>(r.article+" "+r.nm_id+" "+r.name).toLowerCase().includes(filter.toLowerCase()));
-const columns=[['master_code','ЕНОТ'],['manager','КМ'],['article','Артикул'],['nm_id','Артикул WB'],['profit','Операционная прибыль, ₽'],['revenue','Выручка, ₽'],['advertising','Реклама, ₽'],['drr','ДРР'],['storage','Хранение, ₽'],['orders','Заказы'],['cancels','Отмены'],['buyouts','Выкупы'],['delivery','Логистика, ₽'],['acceptance','Приёмка, ₽'],['penalty','Штрафы, ₽'],['cogs','Себестоимость, ₽'],['mayak','ТК Маяк, ₽'],['perUnit','Прибыль/ед., ₽']] as const;
+const columns=[['master_code','ЕНОТ'],['manager','КМ'],['article','Артикул'],['nm_id','Артикул WB'],['profit','Операционная прибыль, ₽'],['revenue','Выручка, ₽'],['advertising','Реклама, ₽'],['drr','ДРР'],['storage','Хранение, ₽'],['orders','Заказы'],['cancels','Отмены'],['buyouts','Выкупы'],['roas','ROAS'],['inTransit','Товары в пути'],['transitRevenue','Выручка с товарами в пути'],['transitDrr','ДРР с товарами в пути'],['wbStock','Остатки WB'],['crossdock','В пути на склады'],['mainStock','Аведэкс основной'],['oxStock','Аведэкс ОХ'],['totalStock','Итого остатки'],['delivery','Логистика, ₽'],['acceptance','Приёмка, ₽'],['penalty','Штрафы, ₽'],['cogs','Себестоимость, ₽'],['mayak','ТК Маяк, ₽'],['perUnit','Прибыль/ед., ₽'],['china','В пути из Китая'],['abc','ABC'],['discontinued','Выведено из продажи']] as const;
 type Key=typeof columns[number][0];
+const abcRanks=(()=>{
+ const sorted=[...rows].filter(r=>r.gross_retail>0).sort((a,b)=>b.gross_retail-a.gross_retail);
+ const total=sorted.reduce((n,r)=>n+r.gross_retail,0),out=new Map<string,string>();let running=0;
+ for(const r of sorted){out.set(r.nm_id,total>0&&running/total<.8?'A':total>0&&running/total<.95?'B':'C');running+=r.gross_retail;}
+ return out;
+})();
 const value=(r:Row,k:Key):number|string|null=>{
  switch(k){case 'master_code':case 'manager':case 'article':case 'nm_id':return r[k]??'';
  case 'profit':return r.preliminary_result;case 'revenue':return r.gross_retail;case 'advertising':return r.allocated_ad;
@@ -75,7 +81,10 @@ const value=(r:Row,k:Key):number|string|null=>{
  case 'storage':return r.allocated_storage;case 'orders':return r.order_count;case 'cancels':return r.cancel_count;
  case 'buyouts':return r.buyouts;case 'delivery':return r.delivery;case 'acceptance':return r.acceptance;
  case 'penalty':return r.penalty;case 'cogs':return r.cogs;case 'mayak':return r.mayak_expense;
- case 'perUnit':return r.preliminary_result===null||r.buyouts<=0?null:r.preliminary_result/r.buyouts;}
+ case 'perUnit':return r.preliminary_result===null||r.buyouts<=0?null:r.preliminary_result/r.buyouts;
+ case 'roas':return r.preliminary_result!==null&&r.allocated_ad!==null&&r.allocated_ad>0?r.preliminary_result/r.allocated_ad:null;
+ case 'abc':return abcRanks.get(r.nm_id)??null;
+ default:return null;}
 };
 const sortedRows=[...rows].sort((a,b)=>{const x=value(a,sort.key as Key),y=value(b,sort.key as Key);
  if(x===null&&y!==null)return 1;if(y===null&&x!==null)return -1;
@@ -85,8 +94,10 @@ const wholeSeries=useMemo(()=>(data?.daily??[]).map(d=>({day:d.day,v:{orders:d.o
 const display=(r:Row,k:Key)=>{
  const v=value(r,k);
  if(k==='master_code'||k==='manager'||k==='nm_id')return String(v||'—');
- if(k==='orders'||k==='cancels'||k==='buyouts')return qty(Number(v??0));
+ if(k==='abc'||k==='discontinued')return v===null?'—':String(v);
+ if(['orders','cancels','buyouts','inTransit','wbStock','crossdock','mainStock','oxStock','totalStock','china'].includes(k))return v===null?'—':qty(Number(v));
  if(k==='drr')return typeof v==='number'?v.toLocaleString('ru-RU',{maximumFractionDigits:2})+' %':'—';
+ if(k==='roas')return typeof v==='number'?v.toLocaleString('ru-RU',{maximumFractionDigits:2})+' ×':'—';
  if(k==='article')return r.article||r.nm_id;
  if(v===null)return k==='profit'||k==='cogs'||k==='mayak'?'Нужны ставки':'Нет данных';
  if(typeof v!=='number')return String(v);
@@ -97,6 +108,7 @@ const totalFor=(k:Key):number|null=>{
  if(k==='advertising')return data?.ads.coverage==='cached_complete'?data.attributed?.advertising??0:null;
  if(k==='storage')return data?.storage?.coverage==='cached_complete'?data.attributed?.storage??0:null;
  if(k==='drr'){const revenue=sum(r=>r.gross_retail),ad=data?.attributed?.advertising;return data?.ads.coverage==='cached_complete'&&ad!==undefined&&revenue>0?100*ad/revenue:null;}
+ if(['roas','inTransit','transitRevenue','transitDrr','wbStock','crossdock','mainStock','oxStock','totalStock','china','abc','discontinued'].includes(k))return null;
  if(k==='perUnit'){const u=sum(r=>r.buyouts);return allRatesFilled&&u>0?profitTotal/u:null;}
  if(['master_code','manager','article','nm_id'].includes(k))return null;
  if(k==='cogs'||k==='mayak')return allRatesFilled?sum(r=>Number(value(r,k)??0)):null;
