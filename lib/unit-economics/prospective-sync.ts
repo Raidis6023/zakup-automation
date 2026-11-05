@@ -97,7 +97,7 @@ export async function syncUnitFromVedVersion(db:Db,type:VedEventKind,versionId:s
    }
    unique.set(sku,{
     ...row,article:sku,
-    name:informativeNewProductName((row.itemId&&sourceDescriptions.get(row.itemId))||row.name||row.input.product.productName,sku)
+    name:informativeNewProductName((row.itemId&&sourceDescriptions.get(row.itemId))||row.name||row.input.product.productName||"",sku)
    });
   }
   for(const list of chunk([...unique.values()],40)){
