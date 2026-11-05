@@ -1,9 +1,11 @@
 import {NextRequest,NextResponse} from 'next/server';
 import {runHistoricalAdvertising} from './worker';
+import {runDailySkuAdvertising} from '../ozon-finance-ads-daily/worker';
 import {financeAccess} from '../../../../lib/yandex/finance-access';
 export const runtime='nodejs';export const dynamic='force-dynamic';export const maxDuration=300;
 /** Account-level serialized Ozon ads report request and delayed poll. */
 export async function GET(request:NextRequest){
+ const recent=await runDailySkuAdvertising();
  const started=Date.now();let processed=0,last:Record<string,unknown>={phase:'idle'},status=200;
  for(let i=0;i<18&&Date.now()-started<235000;i++){
   const response=await runHistoricalAdvertising(request),result=await response.json() as Record<string,unknown>;
@@ -15,7 +17,7 @@ export async function GET(request:NextRequest){
    await new Promise(resolve=>setTimeout(resolve,125000));
   }
  }
- return NextResponse.json({...last,reports_processed:processed},{status,headers:{'Cache-Control':'no-store'}});
+ return NextResponse.json({...last,reports_processed:processed,daily_sku:recent},{status,headers:{'Cache-Control':'no-store'}});
 }
 
 export async function POST(request:NextRequest){try{await financeAccess();const secret=process.env.CRON_SECRET;if(!secret)return NextResponse.json({error:'Не настроен CRON_SECRET'},{status:503});return GET(new NextRequest(request.url,{headers:{authorization:'Bearer '+secret}}));}catch(e){return NextResponse.json({error:e instanceof Error?e.message:'Нет доступа'},{status:403});}}

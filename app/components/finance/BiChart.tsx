@@ -8,7 +8,14 @@ export function chartDomain(values:number[],zero=false){if(!values.length)return
 export default function BiChart({points,series,unit='₽',stacked=false,zero=false,label}:{points:ChartPoint[];series:ChartSeries[];unit?:string;stacked?:boolean;zero?:boolean;label:string}){
  const ref=useRef<HTMLDivElement>(null),[width,setWidth]=useState(900),[active,setActive]=useState<number|null>(null),id=useId().replace(/:/g,'');
  useEffect(()=>{const el=ref.current;if(!el)return;const observer=new ResizeObserver(([e])=>setWidth(e.contentRect.width));observer.observe(el);return()=>observer.disconnect()},[]);
- const w=Math.max(width,points.length*36+100,340),h=476,left=76,right=20,top=22,bottom=48,plot=w-left-right;
+ // A handful of days should not stretch into a two-metre-wide chart.
+ // Long ranges retain enough space per day and scroll only when necessary.
+ const count=Math.max(1,points.length),measured=Math.max(320,width);
+ const w=count<=8?Math.min(measured,Math.max(340,150+count*90)):
+  count<=42?measured:Math.max(measured,140+count*24);
+ const h=!stacked&&count<=8?340:476;
+ const left=76,right=20,top=22,bottom=48,plot=w-left-right;
+ const labelInterval=Math.max(1,Math.ceil(count/Math.max(1,Math.floor(plot/55))));
  const values=points.flatMap(p=>series.map(s=>p.values[s.key]).filter((v):v is number=>v!==null&&v!==undefined&&Number.isFinite(v)));
  const [lo,hi]=stacked?[0,100]:chartDomain(values,zero||values.some(v=>v<0));
  const x=(i:number)=>left+(i+.5)/Math.max(1,points.length)*plot;
@@ -21,7 +28,7 @@ export default function BiChart({points,series,unit='₽',stacked=false,zero=fal
   const tipY=[108,142,314,348][i]??(88+i*43);
   return {series:s,value,sourceY:y(Math.min(100,start+value/2)),side,tipY};
  }):[];
- return <div className="bi-chart-viewport" ref={ref}><div className="bi-chart-canvas" style={{width:w,height:h}}>
+ return <div className="bi-chart-viewport" ref={ref}><div className="bi-chart-canvas" style={{width:w,height:h,margin:"0 auto"}}>
  <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="img" aria-label={label} tabIndex={0}
   onKeyDown={e=>{if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();setActive(i=>Math.max(0,Math.min(points.length-1,(i??0)+(e.key==='ArrowRight'?1:-1))))}if(e.key==='Escape')setActive(null)}}
   onPointerMove={e=>{const r=e.currentTarget.getBoundingClientRect();setActive(Math.max(0,Math.min(points.length-1,Math.floor((e.clientX-r.left-left)/plot*points.length))))}}
@@ -49,7 +56,7 @@ export default function BiChart({points,series,unit='₽',stacked=false,zero=fal
    <path d={d} fill="none" stroke={s.negativeColor??'#ef4444'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" clipPath={`url(#${id+s.key+'negative-clip'})`}/>
    </g>})}</g>;
  })}
- {points.map((p,i)=><text className="bi-axis" x={x(i)} y={h-12} textAnchor="middle" key={p.day}>{p.day.slice(8)}.{p.day.slice(5,7)}</text>)}
+ {points.map((p,i)=>i%labelInterval!==0&&i!==points.length-1?null:<text className="bi-axis" x={x(i)} y={h-12} textAnchor="middle" key={p.day}>{p.day.slice(8)}.{p.day.slice(5,7)}</text>)}
  {selected&&active!==null&&<g pointerEvents="none">
   {stacked&&<>
    <rect x={left} y={top} width={Math.max(0,x(active)-barWidth/2-left)} height={h-bottom-top} fill="#02050b" opacity=".69"/>
