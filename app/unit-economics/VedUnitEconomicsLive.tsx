@@ -1,5 +1,5 @@
 "use client";
-import {useEffect,useState,type FormEvent} from "react";
+import {useEffect,useRef,useState,type FormEvent} from "react";
 
 type Model="ozon-fbo"|"ozon-fbs"|"wb-fbw"|"wb-fbs"|"ym-fby"|"ym-fbs";
 type Expense={code:string;label:string;amount:number;formula:string;group:string};
@@ -25,6 +25,9 @@ type Product={
 };
 type WbCategory={name:string;group:string;fbw:number;fbs:number};
 type MpstatsCategory={scope:"category"|"subject";path:string;label:string};
+type OtherCategory={key:string;market:"ozon"|"ym";name:string;category:string;group:string;path:string;
+ rates:{fbo?:number[];fbs?:number[];fby?:number;ymFbs?:number};
+ insuranceFactors?:{upTo300:number;above300:number};live:boolean;asOf:string;};
 const MODELS:Record<"ozon"|"wb"|"ym",readonly Model[]>={
  ozon:["ozon-fbo","ozon-fbs"],wb:["wb-fbw","wb-fbs"],ym:["ym-fby","ym-fbs"]
 };
@@ -83,6 +86,12 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
  const [mpstatsSearching,setMpstatsSearching]=useState(false);
  const [mpstatsMatches,setMpstatsMatches]=useState(0);
  const [actionMessage,setActionMessage]=useState("");
+ const [otherQuery,setOtherQuery]=useState("");
+ const [otherMatches,setOtherMatches]=useState<OtherCategory[]>([]);
+ const [otherSelected,setOtherSelected]=useState<OtherCategory|null>(null);
+ const [otherBusy,setOtherBusy]=useState(false);
+ const [otherError,setOtherError]=useState("");
+ const autoAttempt=useRef("");
  const calc=product?.schemes[model];
  const market=groupName(model);
  const viewEntries:[typeof view,string][]=[["summary","Сводка"],["details","Все расчёты"],["inputs","Исходные данные"]];
@@ -111,6 +120,8 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
   }
   setModel(next);
   if(product)editValues(product,next);
+  setOtherQuery(product?.overrides?.productType||"");
+  setOtherSelected(null);setOtherMatches([]);
   setActionMessage("");
  }
  useEffect(()=>{
@@ -134,6 +145,62 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
  // Intentional initialization after a new product loads.
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[product]);
+ useEffect(()=>{
+  if(!product||product.id!==modalProductId)return;
+  const type=product.overrides?.productType?.trim();
+  if(!type)return;
+  const missing=(["ozon","ym"] as const).filter(m=>!product.schemes[MODELS[m][0]]?.settings?.categoryId);
+  if(!missing.length)return;
+  const signature=product.id+"|"+type+"|"+missing.join(",");
+  if(autoAttempt.current===signature)return;
+  autoAttempt.current=signature;
+  const controller=new AbortController();
+  void (async()=>{
+   const picks:{market:"ozon"|"ym";key:string}[]=[];
+   for(const m of missing){
+    const response=await fetch("/api/unit-economics/marketplace-categories?market="+m+
+     "&q="+encodeURIComponent(type),{cache:"no-store",signal:controller.signal});
+    const value=await response.json() as {ok:boolean;items?:OtherCategory[]};
+    if(!response.ok||!value.ok)continue;
+    const norm=(s:string)=>s.toLocaleLowerCase("ru-RU").replace(/ё/g,"е").trim();
+    const exact=(value.items||[]).filter(c=>norm(c.name)===norm(type));
+    if(exact.length===1&&exact[0].live&&(m!=="ozon"||!!exact[0].insuranceFactors))
+     picks.push({market:m,key:exact[0].key});
+   }
+   if(!picks.length||controller.signal.aborted)return;
+   const response=await fetch("/api/unit-economics/prospective",{
+    method:"PATCH",headers:{"Content-Type":"application/json"},signal:controller.signal,
+    body:JSON.stringify({productId:product.id,marketCategories:picks})
+   });
+   const result=await response.json();
+   if(!response.ok||!result.saved)throw Error(result.error||"Ошибка автоподбора категорий");
+   if(!controller.signal.aborted){
+    setActionMessage("Автоматически определены категории: "+
+     picks.map(x=>x.market==="ozon"?"Ozon":"Яндекс Маркет").join(", ")+".");
+    setRevision(x=>x+1);onSaved?.();
+   }
+  })().catch(e=>{if(!controller.signal.aborted)setActionMessage(
+   "Не удалось подобрать категории автоматически: "+(e instanceof Error?e.message:String(e)))});
+  return()=>controller.abort();
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[product,modalProductId]);
+ useEffect(()=>{
+  setOtherQuery(product?.overrides?.productType||"");
+  setOtherSelected(null);setOtherMatches([]);
+ },[product?.id,market]);
+ useEffect(()=>{
+  if(market==="wb"||view!=="inputs"||otherQuery.trim().length<2){setOtherMatches([]);return}
+  const controller=new AbortController();
+  const timer=window.setTimeout(()=>{
+   setOtherError("");
+   fetch("/api/unit-economics/marketplace-categories?market="+market+"&q="+
+    encodeURIComponent(otherQuery.trim()),{cache:"no-store",signal:controller.signal})
+    .then(async r=>{const j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||"Ошибка чтения справочника");return j})
+    .then(j=>{if(!controller.signal.aborted)setOtherMatches(j.items||[])})
+    .catch(e=>{if(!controller.signal.aborted)setOtherError(e instanceof Error?e.message:String(e))});
+  },250);
+  return()=>{controller.abort();window.clearTimeout(timer)};
+ },[market,view,otherQuery]);
  useEffect(()=>{
   fetch("/api/unit-economics/mpstats-wb",{cache:"no-store"})
    .then(r=>r.json()).then(x=>setProviderStatus(x.configured?"connected":"missing"))
@@ -240,6 +307,23 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
    await refreshMpstats(product);
   }catch(e){setActionMessage(e instanceof Error?e.message:String(e))}
   finally{setCategoryBusy(false)}
+ }
+ async function confirmOtherCategory(){
+  if(!product||!otherSelected||market==="wb")return;
+  setOtherBusy(true);setActionMessage("");
+  try{
+   const response=await fetch("/api/unit-economics/prospective",{
+    method:"PATCH",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({productId:product.id,marketCategories:[{market,key:otherSelected.key}]})
+   });
+   const value=await response.json();
+   if(!response.ok||!value.saved)throw Error(value.error||"Ошибка сохранения категории");
+   setOtherSelected(null);setOtherMatches([]);
+   setActionMessage("Категория "+(market==="ozon"?"Ozon":"Яндекс Маркета")+
+    " сохранена для обеих схем; расчёты обновлены.");
+   setRevision(n=>n+1);onSaved?.();
+  }catch(e){setActionMessage(e instanceof Error?e.message:String(e))}
+  finally{setOtherBusy(false)}
  }
  async function save(e:FormEvent<HTMLFormElement>){
   e.preventDefault();if(!product||!dirty.length)return;
@@ -418,6 +502,42 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
         {saving?"Сохранение…":"Сохранить и пересчитать"}
        </button>
       </div>
+      {market!=="wb"&&<section className="unit-pilot-panel unit-ved-category-panel">
+       <h3>Категория {market==="ozon"?"Ozon":"Яндекс Маркета"}</h3>
+       <p className="unit-pilot-note">Однозначное точное совпадение назначается автоматически.
+        Неоднозначные категории можно подтвердить вручную. Комиссии сохраняются сразу для двух схем.</p>
+       <label>Поиск категории
+        <input className="unit-pilot-price-input" value={otherQuery}
+         onChange={e=>{setOtherQuery(e.target.value);setOtherSelected(null)}}
+         placeholder="Введите название товара или категории"/>
+       </label>
+       {otherError&&<p className="unit-pilot-error" role="alert">{otherError}</p>}
+       {!!otherMatches.length&&<div className="unit-ved-category-list">
+        {otherMatches.map(c=><button type="button" key={c.key}
+         onClick={()=>{setOtherSelected(c);setOtherMatches([]);setOtherQuery(c.name)}}>
+         <span>{c.name}<small>{c.path}</small></span>
+         <small>{c.market==="ozon"?"FBO "+(c.rates.fbo||[]).map(v=>percent(v)).join(" / ")+
+          " · FBS "+(c.rates.fbs||[]).map(v=>percent(v)).join(" / "):
+          "FBY "+percent(c.rates.fby)+" · FBS "+percent(c.rates.ymFbs)}</small>
+        </button>)}
+       </div>}
+       <p className="unit-pilot-note">Сохранённая категория: <strong>{category||"не выбрана"}</strong></p>
+       {otherSelected&&<div className="unit-ved-category-choice">
+        Выбрано: <strong>{otherSelected.path}</strong>
+        {otherSelected.market==="ozon"&&<small style={{display:"block"}}>
+         Коэффициенты страхования: {otherSelected.insuranceFactors?
+          percent(otherSelected.insuranceFactors.upTo300)+" / "+
+          percent(otherSelected.insuranceFactors.above300):"не найдены"}
+        </small>}
+        {!otherSelected.live&&<small style={{display:"block"}}>
+         Резервный снимок ставок, проверьте актуальность перед подтверждением.
+        </small>}
+       </div>}
+       <button type="button" className="unit-ved-primary" disabled={!otherSelected||otherBusy}
+        onClick={()=>void confirmOtherCategory()}>
+        {otherBusy?"Пересчёт…":"Подтвердить категорию и пересчитать"}
+       </button>
+      </section>}
       {market==="wb"&&<section className="unit-pilot-panel unit-ved-category-panel">
        <h3>Подтверждение категории Wildberries</h3>
        <p className="unit-pilot-note">Выбирайте предмет из реального справочника комиссий WB.

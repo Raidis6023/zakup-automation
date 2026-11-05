@@ -56,6 +56,12 @@ export async function getTariffData(key:string){
  }
  return {data:fallback,live:false,asOf:tariffSnapshot.asOf,partial:true};
 }
+/** Категория/предмет и коэффициенты FBO из листа «Ozon Возмещение». */
+export async function getOzonCompensationData():Promise<string[][]|null>{
+ if(!googleEnabled())return null;
+ try{return await getSheetValues("Ozon Возмещение","A1:H9310")}
+ catch{return null}
+}
 export async function writeConstant(key:ModelKey,cell:string,value:number){
  if(!googleEnabled())throw new Error("Прямое подключение Google Sheets ещё не настроено");
  if(!/^[A-Z]{1,2}2$/.test(cell)||!Number.isFinite(value)||Math.abs(value)>1000000)throw new Error("Недопустимое значение");

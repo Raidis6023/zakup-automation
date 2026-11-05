@@ -6,6 +6,7 @@ import {mergeProductOverrides,applyProductOverrides,type ProductOverrides} from 
 import {calculatePreliminary,type PreliminarySource} from "@/lib/unit-economics/prospective-engine";
 import {PRELIMINARY_MODELS} from "@/lib/unit-economics/prospective-engine";
 import {findWbCategory} from "@/lib/unit-economics/wb-category-registry";
+import {findMarketplaceCategory,type CategoryMarket} from "@/lib/unit-economics/marketplace-category-registry";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const headers={"Cache-Control":"private, no-store"};
@@ -103,18 +104,25 @@ export async function PATCH(request:NextRequest){
  const body=await request.json().catch(()=>null) as {
   productId?:string;model?:string;productPatch?:Record<string,unknown>;
   priceRub?:number|null;wbCategory?:{name:string;group:string};
+  marketCategories?:{market:CategoryMarket;key:string}[];
  }|null;
  if(!body||typeof body.productId!=="string"||!/^[0-9a-f-]{36}$/i.test(body.productId))
   return NextResponse.json({ok:false,error:"Не указан товар"},{status:400,headers});
  const hasShared=body.productPatch&&Object.keys(body.productPatch).length>0;
  const hasPrice=Object.prototype.hasOwnProperty.call(body,"priceRub");
  const hasWbCategory=!!body.wbCategory;
+ const choices=body.marketCategories;
+ const hasOther=Array.isArray(choices)&&choices.length>0;
+ if(choices!==undefined&&(!Array.isArray(choices)||choices.length>2||
+  new Set(choices.map(x=>x?.market)).size!==choices.length||
+  choices.some(x=>!x||(x.market!=="ozon"&&x.market!=="ym")||typeof x.key!=="string"||x.key.length>450)))
+  return NextResponse.json({ok:false,error:"Некорректные категории"},{status:400,headers});
  const model=body.model||"";
  const confirmedCategory=hasWbCategory?findWbCategory(body.wbCategory!.name,body.wbCategory!.group):null;
  if(hasWbCategory&&!confirmedCategory)
   return NextResponse.json({ok:false,error:"Категория не найдена в справочнике комиссий WB"},
    {status:400,headers});
- if(!hasShared&&!hasPrice&&!hasWbCategory)return NextResponse.json({ok:false,error:"Нет изменений"},{status:400,headers});
+ if(!hasShared&&!hasPrice&&!hasWbCategory&&!hasOther)return NextResponse.json({ok:false,error:"Нет изменений"},{status:400,headers});
  if(hasPrice&&!PRELIMINARY_MODELS.includes(model as typeof PRELIMINARY_MODELS[number]))
   return NextResponse.json({ok:false,error:"Неизвестная схема продаж"},{status:400,headers});
  if(hasPrice&&body.priceRub!==null&&(
@@ -146,6 +154,58 @@ export async function PATCH(request:NextRequest){
    if(updateErr)throw Error(updateErr.message);
    if(!updated)return NextResponse.json({ok:false,error:"Карточка была изменена другим пользователем. Обновите данные."},
     {status:409,headers});
+  }
+  if(hasShared&&Object.prototype.hasOwnProperty.call(body.productPatch,"productType")&&
+   String(((product.overrides||{}) as Record<string,unknown>).productType||"").trim()!==
+   String(overrides.productType||"").trim()){
+   for(const oldModel of ["ozon-fbo","ozon-fbs","ym-fby","ym-fbs"]){
+    const {data:old,error:oldErr}=await auth.admin.from("unit_ved_settings")
+     .select("data,revision").eq("product_id",product.id).eq("model",oldModel).maybeSingle();
+    if(oldErr)throw oldErr;
+    if(!old)continue;
+    const data={...((old.data||{}) as Record<string,unknown>)};
+    for(const field of ["categoryId","categoryType","categoryGroup","categoryPath",
+     "categoryCommissionRate","ozonCommissionRates","ozonInsuranceFactors",
+     "insuranceFactor","categorySource","categoryConfirmedAt"])delete data[field];
+    const {error}=await auth.admin.from("unit_ved_settings").update({
+     data,revision:Number(old.revision||0)+1,updated_at:new Date().toISOString()
+    }).eq("product_id",product.id).eq("model",oldModel);
+    if(error)throw error;
+   }
+  }
+  if(hasOther){
+   for(const choice of choices!){
+    const category=await findMarketplaceCategory(choice.market,choice.key);
+    if(!category)throw Error("Категория отсутствует в справочнике "+choice.market);
+    const modelRates=category.market==="ozon"
+     ?[["ozon-fbo",category.rates.fbo],["ozon-fbs",category.rates.fbs]] as const
+     :[["ym-fby",category.rates.fby],["ym-fbs",category.rates.ymFbs]] as const;
+    for(const [modelName,commission] of modelRates){
+     const {data:old,error:oldErr}=await auth.admin.from("unit_ved_settings")
+      .select("data,revision").eq("product_id",product.id).eq("model",modelName).maybeSingle();
+     if(oldErr)throw oldErr;
+     const data={...((old?.data||{}) as Record<string,unknown>)};
+     Object.assign(data,{categoryId:category.category,categoryType:category.name,
+      categoryGroup:category.group,categoryPath:category.path,
+      categorySource:category.live?"google-live":"tariff-snapshot",
+      categoryConfirmedAt:new Date().toISOString()});
+     if(category.market==="ozon"){
+      if(!Array.isArray(commission)||commission.length!==3)throw Error("Нет комиссии Ozon");
+      data.ozonCommissionRates={upTo100:commission[0],upTo300:commission[1],above300:commission[2]};
+      data.categoryCommissionRate=commission[2];
+      if(category.insuranceFactors)data.ozonInsuranceFactors=category.insuranceFactors;
+      else delete data.ozonInsuranceFactors;
+     }else{
+      if(typeof commission!=="number")throw Error("Нет комиссии Яндекс Маркета");
+      data.categoryCommissionRate=commission;
+     }
+     const {error}=await auth.admin.from("unit_ved_settings").upsert({
+      product_id:product.id,model:modelName,data,revision:Number(old?.revision||0)+1,
+      updated_at:new Date().toISOString()
+     },{onConflict:"product_id,model"});
+     if(error)throw error;
+    }
+   }
   }
   if(hasPrice){
    const {data:before,error:beforeErr}=await auth.admin.from("unit_ved_settings")
