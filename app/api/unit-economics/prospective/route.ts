@@ -32,7 +32,7 @@ export async function GET(req:NextRequest){
  const requestedArticles=(req.nextUrl.searchParams.get("articles")||"").split(",")
   .map(v=>v.trim().toUpperCase()).filter(v=>/^[A-Z0-9_-]{1,120}$/.test(v)).slice(0,25);
  let productQuery=auth.admin.from("unit_ved_products")
-  .select("id,article,name,source_type,source_version_id,source_item_id,ved_created_at,cost_gross_rub,purchase_vat_credit_rub,volume_liters,volume_source,unit_weight_kg,overrides,input_data,edit_revision");
+  .select("id,article,name,full_name,attributes,source_type,source_version_id,source_item_id,ved_created_at,cost_gross_rub,purchase_vat_credit_rub,volume_liters,volume_source,unit_weight_kg,overrides,input_data,edit_revision");
  const requestedId=req.nextUrl.searchParams.get("productId");
  if(requestedId&&/^[a-f0-9-]{36}$/i.test(requestedId))productQuery=productQuery.eq("id",requestedId);
  else if(requestedArticles.length)productQuery=productQuery.in("article",requestedArticles);
@@ -43,11 +43,12 @@ export async function GET(req:NextRequest){
  const ids=(products||[]).map(p=>p.id);
  const sourceItemIds=[...new Set((products||[]).map(p=>p.source_item_id).filter((x):x is string=>!!x))];
  const sourceOfferIds=new Map<string,string>();
+ const sourceDescriptions=new Map<string,string>();
  if(sourceItemIds.length){
   const {data:sourceItems,error:sourceError}=await auth.admin.from("ved_commercial_offer_items")
-   .select("id,offer_id").in("id",sourceItemIds).limit(500);
+   .select("id,offer_id,description_original").in("id",sourceItemIds).limit(500);
   if(sourceError)return NextResponse.json({ok:false,error:sourceError.message},{status:503,headers});
-  (sourceItems||[]).forEach(x=>sourceOfferIds.set(x.id,x.offer_id));
+  (sourceItems||[]).forEach(x=>{sourceOfferIds.set(x.id,x.offer_id);sourceDescriptions.set(x.id,x.description_original)});
  }
  if(!ids.length)return NextResponse.json({ok:true,products:[],models:PRELIMINARY_MODELS},{headers});
  const {data:calculations,error:cErr}=await auth.admin.from("unit_ved_calculations")
@@ -105,7 +106,9 @@ export async function GET(req:NextRequest){
   existing[item.model]=detail;byProduct.set(item.product_id,existing);
  }
  return NextResponse.json({ok:true,models:PRELIMINARY_MODELS,
-  products:(products||[]).map(p=>({...p,source_offer_id:sourceOfferIds.get(p.source_item_id||"")||null,schemes:byProduct.get(p.id)||{}}))},{headers});
+  products:(products||[]).map(p=>({...p,source_offer_id:sourceOfferIds.get(p.source_item_id||"")||null,
+    source_description:requestedId?sourceDescriptions.get(p.source_item_id||"")||null:null,
+    schemes:byProduct.get(p.id)||{}}))},{headers});
 }
 export async function POST(request:NextRequest){
  const auth=await access();
@@ -181,7 +184,7 @@ export async function PATCH(request:NextRequest){
   typeof body.priceRub!=="number"||!Number.isFinite(body.priceRub)||body.priceRub<=0||body.priceRub>1e9
  ))return NextResponse.json({ok:false,error:"Некорректная цена продажи"},{status:400,headers});
  const {data:product,error:readErr}=await auth.admin.from("unit_ved_products")
-  .select("id,article,name,overrides,edit_revision,source_type,source_version_id,input_data,result_data")
+  .select("id,article,name,full_name,attributes,overrides,edit_revision,source_type,source_version_id,input_data,result_data")
   .eq("id",body.productId).single();
  if(readErr||!product)return NextResponse.json({ok:false,error:"Товар не найден"},{status:404,headers});
  try{
@@ -190,22 +193,32 @@ export async function PATCH(request:NextRequest){
   ):(product.overrides||{}) as ProductOverrides;
   const original:PreliminarySource={
    article:product.article,
-   name:(product.input_data as PreliminarySource["input"])?.product?.productName||product.name,
+   name:product.name,
    input:product.input_data as PreliminarySource["input"],
    result:product.result_data as PreliminarySource["result"]
   };
   const effective=applyProductOverrides(original,overrides);
-  // Проверка допустимости себестоимости/упаковки ДО записи в БД.
-  for(const m of PRELIMINARY_MODELS)calculatePreliminary(effective,m,{});
+  const onlyNames=!!hasShared&&!hasPrice&&!hasWbCategory&&!hasOther&&
+   Object.keys(body.productPatch!).every(field=>field==="name"||field==="fullName");
+  // A pure metadata change must not recompute all 26 KP items.
+  if(!onlyNames){
+   for(const m of PRELIMINARY_MODELS)calculatePreliminary(effective,m,{});
+  }
   if(hasShared){
    const {data:updated,error:updateErr}=await auth.admin.from("unit_ved_products")
     .update({overrides,edit_revision:product.edit_revision+1,name:effective.name,
+      full_name:overrides.fullName||product.full_name||effective.name,
       updated_at:new Date().toISOString()})
     .eq("id",product.id).eq("edit_revision",product.edit_revision)
     .select("id").maybeSingle();
    if(updateErr)throw Error(updateErr.message);
    if(!updated)return NextResponse.json({ok:false,error:"Карточка была изменена другим пользователем. Обновите данные."},
     {status:409,headers});
+  }
+  if(onlyNames){
+   return NextResponse.json({ok:true,saved:true,processed:1,
+    name:effective.name,fullName:overrides.fullName||product.full_name||effective.name
+   },{headers});
   }
   if(hasShared&&Object.prototype.hasOwnProperty.call(body.productPatch,"productType")&&
    String(((product.overrides||{}) as Record<string,unknown>).productType||"").trim()!==

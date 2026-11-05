@@ -5,13 +5,14 @@
  */
 import type {createAdminClient} from "@/lib/supabase/admin";
 import type {VedCalculationInput,VedCalculationResult} from "@/lib/ved-calculation/engine";
-import {informativeNewProductName,normalizeNewProductArticle} from "@/lib/products/new-product-identity";
+import {normalizeNewProductArticle} from "@/lib/products/new-product-identity";
+import {buildNewProductNaming,type NewProductNaming} from "@/lib/products/new-product-naming";
 import {withUniqueOfferArticles} from "@/lib/ved-commercial-offers/article-identities";
 import {applyProductOverrides,type ProductOverrides} from "./product-overrides";
 import {PRELIMINARY_MODELS,calculatePreliminary,suggestPreliminaryTargetPrice,type PreliminarySettings,type PreliminarySource} from "./prospective-engine";
 type Db=ReturnType<typeof createAdminClient>;
 export type VedEventKind="single"|"whole";
-type Pending=PreliminarySource&{itemId:string|null};
+type Pending=PreliminarySource&{itemId:string|null;naming?:NewProductNaming};
 const chunk=<T>(items:readonly T[],size:number):T[][]=>{
  const out:T[][]=[];for(let n=0;n<items.length;n+=size)out.push(items.slice(n,n+size));return out;
 };
@@ -95,9 +96,12 @@ export async function syncUnitFromVedVersion(db:Db,type:VedEventKind,versionId:s
     // Нельзя незаметно объединять две строки КП с одним артикулом.
     throw Error("В сохранённой версии есть две позиции с одним артикулом: "+sku);
    }
+   const originalDescription=(row.itemId&&sourceDescriptions.get(row.itemId))||
+    row.name||row.input.product.productName||"";
+   const naming=buildNewProductNaming(originalDescription,sku);
    unique.set(sku,{
-    ...row,article:sku,
-    name:informativeNewProductName((row.itemId&&sourceDescriptions.get(row.itemId))||row.name||row.input.product.productName||"",sku)
+    ...row,article:sku,naming,
+    name:naming.shortName||row.name||row.input.product.productName||sku
    });
   }
   for(const list of chunk([...unique.values()],40)){
@@ -116,7 +120,11 @@ export async function syncUnitFromVedVersion(db:Db,type:VedEventKind,versionId:s
     const effective=applyProductOverrides(item,(before.get(item.article)?.overrides||{}) as ProductOverrides);
     const first=calculatePreliminary(effective,"ozon-fbo");
     return{
-     article:item.article,name:effective.name,source_type:type,source_version_id:versionId,
+     article:item.article,name:effective.name,
+     full_name:(before.get(item.article)?.overrides as ProductOverrides|undefined)?.fullName||
+      item.naming?.fullName||effective.name,
+     attributes:item.naming?.attributes||{},
+     source_type:type,source_version_id:versionId,
      source_item_id:item.itemId,ved_created_at:timestamp,
      input_data:item.input,result_data:item.result,
      cost_gross_rub:first.costGrossRub,purchase_vat_credit_rub:first.purchaseVatCreditRub,

@@ -333,3 +333,28 @@
 .unit-ved-ozon-tiers strong{display:block;color:var(--ws-text);font-size:14px;margin-top:5px}
 @media(max-width:650px){.unit-ved-ozon-tiers{grid-template-columns:1fr 1fr}
  .unit-ved-summary-price-input{width:115px}}
+
+/* Details are intentionally collapsed when a product card opens. */
+.unit-ved-full-description{border:1px solid var(--ws-border);border-radius:10px;
+ background:var(--ws-surface);overflow:hidden;margin-top:14px}
+.unit-ved-full-description>summary{cursor:pointer;padding:14px 16px;
+ font-size:14px;font-weight:700;color:var(--ws-text);list-style-position:inside}
+.unit-ved-full-description[open]>summary{border-bottom:1px solid var(--ws-border-soft)}
+.unit-ved-full-description-content{display:flex;flex-direction:column;gap:9px;padding:14px 16px;
+ min-width:0;overflow-wrap:anywhere}
+.unit-ved-full-description-content>strong{font-size:12px;color:var(--ws-text-secondary)}
+.unit-ved-full-description-content>p{margin:0;line-height:1.5;font-size:13px}
+.unit-ved-full-description-content dl{margin:0;display:grid;gap:0}
+.unit-ved-full-description-content dl>div{display:grid;grid-template-columns:minmax(125px,1fr) minmax(0,2fr);
+ border-bottom:1px solid var(--ws-border-soft);padding:7px 0;gap:10px;font-size:12px}
+.unit-ved-full-description-content dt{font-weight:650;color:var(--ws-text-secondary)}
+.unit-ved-full-description-content dd{margin:0;color:var(--ws-text);overflow-wrap:anywhere}
+.unit-ved-full-description-content pre{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;
+ padding:10px 12px;border-radius:8px;background:var(--ws-surface-soft);
+ color:var(--ws-text-secondary);font:inherit;font-size:12px;line-height:1.5}
+.unit-ved-full-name-input{display:block;box-sizing:border-box;width:100%;margin-top:7px;min-height:100px;
+ border:1px solid var(--ws-border);border-radius:9px;background:var(--ws-surface);
+ color:var(--ws-text);padding:10px 12px;font:inherit;font-size:13px;line-height:1.5;
+ resize:vertical}
+.unit-ved-full-name-input:focus{outline:2px solid #37c98e;outline-offset:1px}
+@media(max-width:650px){.unit-ved-full-description-content dl>div{grid-template-columns:1fr;gap:3px}}

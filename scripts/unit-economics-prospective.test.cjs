@@ -316,3 +316,49 @@ test("Ozon: ручная цена меняет процент комиссии, 
  }
  assert.equal(calculatePreliminary(item,"ozon-fbo",options).pricePolicyVersion,2);
 });
+
+const {buildNewProductNaming}=require("../lib/products/new-product-naming.ts");
+test("Краткие названия: пять реальных примеров КП с главными характеристиками",()=>{
+ const examples=[
+  ["Автоматический рулетка-поводок для домашних животных\nРазмер: 13 * 9 * 3,2 см, длина троса: 3 м/",
+   "Рулетка-поводок автоматическая для животных, 3 м, 13×9×3,2 см"],
+  ["Кормушка и поилка 2 в 1 для домашних животных\nРазмер: 32 * 28,5 * 26 см\nОбъем: для корма 1,5 л, для воды 1,3 л",
+   "Кормушка-поилка 2 в 1 для животных, корм 1,5 л, вода 1,3 л"],
+  ["Миска для домашних животных (керамическая), средний размер (M)\nРазмер: 15 * 15 * 7 см, вес: около 570 г",
+   "Миска керамическая для животных, размер M, 15×15×7 см"],
+  ["Подставка для охлаждения ноутбука\nКоличество вентиляторов: 2 шт.\nСкорость вращения: 1000 ± 10% об/мин\nРазмер вентиляторов: 125 * 125 * 15 мм\nДлина кабеля: 540 мм\nВход: 5 В\nВыходной ток: 0,6 А ± 10%\nМощность: 3 Вт\nС 4 синими светодиодами (LED)\nРазмер изделия: 360 * 255 * 30 мм\nВес изделия: 0,57 кг (включая упаковку)\nКабель питания: USB – USB",
+   "Подставка охлаждающая для ноутбука, 2 вентилятора 125 мм, 1000 об/мин, LED, 360×255×30 мм"],
+  ["Подставка для охлаждения ноутбука , USB-USB\nМодель: XF-785\nНапряжение: 5 В, номинальный ток: 0,85 А, мощность: 4,25 Вт\nКоличество вентиляторов: 5 шт., размер вентилятора: 10 см\nСкорость вращения: 1600 ± 10% об/мин\nРазмер изделия: 45,5 * 32 * 3 см\nВес нетто: 1041 г, вес брутто: 1135 г",
+   "Подставка охлаждающая для ноутбука XF-785, 5 вентиляторов 100 мм, 1600 об/мин, 45,5×32×3 см"]
+ ];
+ for(const [description,expected] of examples){
+  const result=buildNewProductNaming(description,"TEST");
+  assert.equal(result.shortName,expected);
+  assert.ok(result.shortName.length<=300);
+  assert.ok(result.fullName.length>=result.shortName.length-12);
+  assert.ok(Object.keys(result.attributes).length>=1);
+ }
+ const laptop=buildNewProductNaming(examples[3][0],"TEST");
+ assert.match(laptop.fullName,/Длина кабеля: 540 мм/);
+ assert.match(laptop.fullName,/Выходной ток: 0,6 А ± 10%/);
+ assert.match(laptop.fullName,/Вес изделия: 0,57 кг/);
+ assert.equal(laptop.attributes["Количество вентиляторов"],"2 шт.");
+ assert.equal(laptop.attributes["Мощность"],"3 Вт");
+ assert.ok(!laptop.shortName.includes("Длина кабеля"));
+});
+test("Бритвы: не смешиваем кассеты, лезвия и количество в упаковке",()=>{
+ const a=buildNewProductNaming("Бритвенный набор\nРучка + 3 сменные кассеты (6 лезвий)\nРазмер: 4 * 13 см","KL-B608LO");
+ assert.equal(a.shortName,"Бритвенный набор, ручка + 3 сменные кассеты, 6 лезвий, 4×13 см");
+ const b=buildNewProductNaming("Бритвенный набор\nУпаковка 8 шт.\nРазмер: 4 * 11 см\n5 лезвий","KL-R551L_4");
+ assert.equal(b.shortName,"Бритвенный набор, 8 шт. в упаковке, 5 лезвий, 4×11 см");
+ const c=buildNewProductNaming("Бритвенный набор\n3 сменные кассеты","TEST");
+ assert.ok(!c.shortName.includes("лезвий"),"Не выводить лезвия из числа кассет");
+ assert.ok(!c.shortName.includes("ручка"),"Не выдумывать ручку");
+});
+test("Ручные короткое и полное названия не затираются",()=>{
+ const edited=mergeProductOverrides({},{name:"Моё название",fullName:"Моё подробное название, 5 лезвий"});
+ const result=applyProductOverrides(source(),edited);
+ assert.equal(result.name,"Моё название");
+ assert.equal(edited.fullName,"Моё подробное название, 5 лезвий");
+ assert.throws(()=>mergeProductOverrides({},{fullName:""}),/Недопустимое/);
+});

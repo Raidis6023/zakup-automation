@@ -8,7 +8,7 @@ export const UNIT_EDITABLE_PRODUCT_FIELDS=[
 ] as const;
 export type EditableUnitProductField=typeof UNIT_EDITABLE_PRODUCT_FIELDS[number];
 export type ProductOverrides={
- name?:string;productType?:string;costGrossRub?:number;
+ name?:string;fullName?:string;productType?:string;costGrossRub?:number;
  product?:Partial<Record<EditableUnitProductField,number>>;
 };
 const fields=new Set<string>(UNIT_EDITABLE_PRODUCT_FIELDS);
@@ -22,9 +22,9 @@ export function mergeProductOverrides(original:ProductOverrides|undefined,patch:
  if(!patch||typeof patch!=="object"||Array.isArray(patch))throw Error("Изменения товара должны быть объектом");
  const next:ProductOverrides={...original,product:{...(original?.product||{})}};
  for(const [key,value] of Object.entries(patch)){
-  if(key==="name"||key==="productType"){
+  if(key==="name"||key==="fullName"||key==="productType"){
    if(value===null){delete next[key];continue}
-   if(typeof value!=="string"||!value.trim()||value.trim().length>(key==="name"?300:150))
+   if(typeof value!=="string"||!value.trim()||value.trim().length>(key==="name"?300:key==="fullName"?10000:150))
     throw Error("Недопустимое поле "+key);
    next[key]=value.trim();continue;
   }

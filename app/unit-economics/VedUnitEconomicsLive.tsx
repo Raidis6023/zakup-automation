@@ -18,8 +18,9 @@ export type Scheme={
  settings:Record<string,unknown>;computedAt:string;
 };
 type Product={
- id:string;article:string;name:string;ved_created_at:string;edit_revision:number;
- overrides?:{name?:string;productType?:string;costGrossRub?:number;product?:Record<string,number>};
+ id:string;article:string;name:string;full_name:string|null;attributes?:Record<string,string>;
+ source_description?:string|null;ved_created_at:string;edit_revision:number;
+ overrides?:{name?:string;fullName?:string;productType?:string;costGrossRub?:number;product?:Record<string,number>};
  input_data?:{product?:Record<string,string|number|null|undefined>};
  cost_gross_rub:number|null;volume_liters:number|null;unit_weight_kg:number|null;
  schemes:Record<string,Scheme>;
@@ -112,7 +113,8 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
  const viewEntries:[typeof view,string][]=[["summary","Сводка"],["details","Все расчёты"],["inputs","Исходные данные"]];
  function editValues(p:Product,m:Model){
   const obj:Record<string,string>={
-   name:p.overrides?.name??p.name,productType:p.overrides?.productType||"",
+   name:p.overrides?.name??p.name,fullName:p.overrides?.fullName??p.full_name??p.name,
+   productType:p.overrides?.productType||"",
    costGrossRub:p.overrides?.costGrossRub!==undefined?String(p.overrides.costGrossRub):
      p.cost_gross_rub===null?"":String(p.cost_gross_rub),
    priceRub:p.schemes[m]?.priceRub===null||p.schemes[m]?.priceRub===undefined?"":String(p.schemes[m]?.priceRub)
@@ -383,11 +385,12 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
  }
  async function save(e:FormEvent<HTMLFormElement>){
   e.preventDefault();if(!product||!dirty.length)return;
-  const patch:Record<string,unknown>={},fields=new Set<string>(["name","productType","costGrossRub",...INPUTS.map(x=>x.key)]);
+  const patch:Record<string,unknown>={},fields=new Set<string>(["name","fullName","productType","costGrossRub",...INPUTS.map(x=>x.key)]);
   for(const key of dirty){
    if(!fields.has(key))continue;
-   const value=(draft[key]||"").trim().replace(",",".");
-   patch[key]=key==="name"||key==="productType"?(value||null):value===""?null:Number(value);
+   const value=(draft[key]||"").trim();
+   patch[key]=key==="name"||key==="fullName"||key==="productType"?(value||null):
+    value===""?null:Number(value.replace(",","."));
   }
   const body:Record<string,unknown>={productId:product.id,model,productPatch:patch};
   if(dirty.includes("priceRub")){
@@ -527,6 +530,23 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
         Сначала проверяем ступени до 100 ₽ и до 300 ₽. Третья комиссия применяется при цене от 301 ₽.
        </p>}
       </div>
+      <details className="unit-ved-full-description">
+       <summary>Полное наименование и характеристики</summary>
+       <div className="unit-ved-full-description-content">
+        <strong>Полное наименование</strong>
+        <p>{product.full_name||product.name}</p>
+        <strong>Характеристики из КП</strong>
+        {Object.keys(product.attributes||{}).length?
+         <dl>{Object.entries(product.attributes||{}).map(([label,value])=>
+          <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>:
+         <p className="unit-pilot-note">Отдельные характеристики в КП не выделены.</p>}
+        <strong>Оригинальное описание поставщика</strong>
+        <pre>{product.source_description||"Нет исходного описания в архиве КП"}</pre>
+        <button type="button" className="unit-ved-edit-link" onClick={()=>setView("inputs")}>
+         Редактировать краткое и полное названия
+        </button>
+       </div>
+      </details>
      </>}
      {view==="details"&&<>
       <section className="unit-pilot-panel"><h3>Все расчёты · {LABELS[model]}</h3>
@@ -565,9 +585,14 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
      {view==="inputs"&&<form className="unit-ved-editor" onSubmit={save}>
       <div className="unit-pilot-notice">Поля автоматически заполняются из последнего сохранённого расчёта ВЭД.
        Ручные изменения хранятся отдельно и не переписывают исходник. Вес товара вычисляется, редактировать его нельзя.</div>
-      <label className="unit-ved-name-label">Название товара
+      <label className="unit-ved-name-label">Краткое название для таблицы
        <input className="unit-pilot-price-input" required maxLength={300} value={draft.name||""} onChange={e=>changeValue("name",e.target.value)}/>
       </label>
+      <label className="unit-ved-name-label">Полное наименование
+       <textarea className="unit-ved-full-name-input" required maxLength={10000}
+        rows={4} value={draft.fullName||""} onChange={e=>changeValue("fullName",e.target.value)}/>
+      </label>
+      <p className="unit-pilot-note">Ручные изменения обоих названий сохраняются при следующих переносах из ВЭД.</p>
       <p className="unit-pilot-note">Артикул: {product.article} (общий идентификатор, не редактируется)</p>
       <div className="unit-ved-input-grid">
        <label>Тип товара (заполняем вручную)

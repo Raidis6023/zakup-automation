@@ -29,7 +29,8 @@ type VedScheme={
  profitRub:number|null;roi:number|null;margin:number|null;
 };
 type VedProduct={
- id:string;article:string;name:string;ved_created_at:string;
+ id:string;article:string;name:string;full_name?:string|null;attributes?:Record<string,string>;
+ ved_created_at:string;
  source_item_id:string|null;source_offer_id:string|null;
  source_type:"whole"|"single";source_version_id:string;
  cost_gross_rub:number|null;volume_liters:number|null;unit_weight_kg:number|null;
@@ -386,7 +387,7 @@ export default function UnitEconomicsPilotClient(){
  }
  const model=selected[market],c=COLS[model];
  const normalizedSearch=search.toLowerCase().trim();
- const vedList=useMemo(()=>vedProducts.filter(x=>(x.name+" "+x.article).toLowerCase().includes(normalizedSearch)),[vedProducts,normalizedSearch]);
+ const vedList=useMemo(()=>vedProducts.filter(x=>(x.name+" "+x.article+" "+(x.full_name||"")+" "+Object.values(x.attributes||{}).join(" ")).toLowerCase().includes(normalizedSearch)),[vedProducts,normalizedSearch]);
  const knownArticles=new Set(vedProducts.map(x=>x.article));
  const list=DATA.filter(x=>!knownArticles.has(x.sku)&&(x.name+" "+x.sku).toLowerCase().includes(normalizedSearch));
  const item=DATA.find(p=>p.sku===sku);

@@ -177,3 +177,31 @@ test("Фото КП в предпросмотре: рамка подстраив
  assert.match(ui,/onLoad=\{e=>fitImagePreview\(e\.currentTarget\)\}/);
  assert.ok(ui.includes("image.parentElement?.getBoundingClientRect()"));
 });
+
+test("Система хранит краткое название, полное название и исходное КП раздельно",()=>{
+ const migration=read("supabase/migrations/20261105_unit_ved_product_full_names.sql");
+ const sync=read("lib/unit-economics/prospective-sync.ts");
+ const route=read("app/api/unit-economics/prospective/route.ts");
+ const editor=read("app/unit-economics/VedUnitEconomicsLive.tsx");
+ const pilot=read("app/unit-economics/UnitEconomicsPilotClient.tsx");
+ const overrides=read("lib/unit-economics/product-overrides.ts");
+ assert.match(migration,/ADD COLUMN IF NOT EXISTS full_name text/);
+ assert.match(migration,/attributes jsonb NOT NULL DEFAULT/);
+ assert.ok(sync.includes("buildNewProductNaming(originalDescription,sku)"));
+ assert.ok(sync.includes("name:naming.shortName"));
+ assert.ok(sync.includes("item.naming?.fullName"));
+ assert.ok(sync.includes("item.naming?.attributes"));
+ assert.ok(sync.includes("?.overrides as ProductOverrides"));
+ assert.ok(route.includes("full_name,attributes"));
+ assert.ok(route.includes("source_description:requestedId?"));
+ assert.ok(route.includes("description_original"));
+ assert.ok(route.includes('field==="name"||field==="fullName"'));
+ assert.ok(route.includes("if(onlyNames)"));
+ assert.ok(editor.includes("<details className=\"unit-ved-full-description\">"));
+ assert.ok(!editor.includes('<details open className="unit-ved-full-description">'));
+ assert.ok(editor.includes("Полное наименование и характеристики"));
+ assert.ok(editor.includes("source_description"));
+ assert.ok(editor.includes("textarea className=\"unit-ved-full-name-input\""));
+ assert.ok(pilot.includes("x.full_name||"));
+ assert.ok(overrides.includes('key==="fullName"'));
+});
