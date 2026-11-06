@@ -234,6 +234,14 @@ export default function LoginForm({ onRequestAccess }: { onRequestAccess: (email
 
 
         if (
+          signInError.status === 429 ||
+          signInError.code === "over_request_rate_limit" ||
+          message.includes("rate limit")
+        ) {
+          setError(
+            "Сервис авторизации временно ограничил число запросов. Пароль менять не нужно. Повторите вход позже."
+          );
+        } else if (
           message.includes(
             "invalid login credentials"
           )

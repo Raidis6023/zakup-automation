@@ -44,14 +44,16 @@ export default async function LoginPage({
     await createClient();
 
 
-  const {
-    data: {
-      user,
-    },
-  } =
-    await supabase
-      .auth
-      .getUser();
+  // Verify the signed JWT without a remote Auth request on every visit.
+  // An unauthenticated user can render the login form even during a
+  // temporary Auth rate limit; sign-in itself will report the rate limit.
+  let signedIn = false;
+  try {
+    const { data: { claims } } = await supabase.auth.getClaims();
+    signedIn = Boolean(claims?.sub);
+  } catch {
+    // The login form must still render during a temporary Auth outage.
+  }
 
 
   /*
@@ -60,7 +62,7 @@ export default async function LoginPage({
    * не показываем.
    */
   if (
-    user
+    signedIn
   ) {
 
     redirect(

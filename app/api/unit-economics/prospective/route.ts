@@ -13,7 +13,8 @@ export const maxDuration=60;
 const headers={"Cache-Control":"private, no-store"};
 async function access(){
  const session=await createClient();
- const {data:{user},error}=await session.auth.getUser();
+ const {data:{claims},error}=await session.auth.getClaims();
+ const user=!error&&claims?.sub?{id:claims.sub}:null;
  if(error||!user)return {error:"Необходим вход в WorkSpace",status:401} as const;
  const admin=createAdminClient();
  const {data:profile,error:accessErr}=await admin.from("app_user_access")

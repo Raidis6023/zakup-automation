@@ -2,6 +2,8 @@ import {
   createServerClient,
 } from "@supabase/ssr";
 
+import { isTemporaryAuthFailure } from "./auth-rate-limit";
+
 import {
   NextResponse,
   type NextRequest,
@@ -106,6 +108,28 @@ boolean {
 }
 
 
+// If Auth's rate limit or network is temporarily unavailable, preserve
+// cookies and reply 503 instead of discarding a legitimate session.
+function temporaryAuthUnavailable(
+  isApiRoute: boolean,
+  cookiesResponse: NextResponse
+): NextResponse {
+  const headers = {
+    "Cache-Control": "no-store",
+    "Retry-After": "30",
+  };
+  const response = isApiRoute
+    ? NextResponse.json({
+        ok: false,
+        error: "Сервис авторизации временно перегружен. Повторите запрос позже.",
+      }, { status: 503, headers })
+    : new NextResponse(
+        "Сервис авторизации временно перегружен. Обновите страницу немного позже. Сессия сохранена.",
+        { status: 503, headers: { ...headers, "Content-Type": "text/plain; charset=utf-8" } }
+      );
+  return copyCookies(cookiesResponse, response);
+}
+
 // ============================================================
 // SESSION / ACCESS PROXY
 // ============================================================
@@ -138,6 +162,20 @@ export async function updateSession(
     pathname.startsWith(
       "/api/"
     );
+
+  // Guest-only pages and registration endpoints must never call GoTrue
+  // from proxy. Previously even a visit to /login triggered getUser().
+  // LoginPage checks valid, signed claims before redirecting logged-in users.
+  const noAuthNeeded =
+    normalizedPathname === "/login" ||
+    normalizedPathname === "/request-access" ||
+    normalizedPathname === "/api/registration/submit" ||
+    normalizedPathname === "/api/registration/status" ||
+    normalizedPathname === "/api/registration/complete";
+
+  if (noAuthNeeded) {
+    return supabaseResponse;
+  }
 
 
   // ==========================================================
@@ -262,14 +300,29 @@ export async function updateSession(
   // ТЕКУЩИЙ ПОЛЬЗОВАТЕЛЬ
   // ==========================================================
 
-  const {
-    data: {
-      user,
-    },
-  } =
-    await supabase
-      .auth
-      .getUser();
+  // A remote getUser() on EVERY request caused an Auth request storm:
+  // page prefetches + background polling + route calls exhausted GoTrue,
+  // leading to 429 and everyone being sent back to login.
+  //
+  // getClaims() validates the signed access token locally with cached JWKS
+  // for modern asymmetric Supabase signing keys. Token refresh is still
+  // handled by the SSR cookie adapter above.
+  let claims: { sub?: string } | null = null;
+  try {
+    const checked = await supabase.auth.getClaims();
+    if (checked.error && isTemporaryAuthFailure(checked.error)) {
+      return temporaryAuthUnavailable(isApiRoute, supabaseResponse);
+    }
+    claims = checked.data?.claims ?? null;
+  } catch (error) {
+    // Never treat a 429 / network failure as a logged-out user.
+    // Otherwise middleware would redirect legitimate sessions to /login.
+    console.error("Session verification temporarily unavailable",
+      error instanceof Error ? error.name : "unknown");
+    return temporaryAuthUnavailable(isApiRoute, supabaseResponse);
+  }
+
+  const user = claims?.sub ? { id: claims.sub } : null;
 
 
   // ==========================================================

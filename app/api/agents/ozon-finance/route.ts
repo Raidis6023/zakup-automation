@@ -119,7 +119,8 @@ function uniqSkus(row: Entry): string[] {
 }
 async function requireFinanceAccess() {
   const session = await createClient();
-  const { data: { user }, error } = await session.auth.getUser();
+  const { data: { claims }, error } = await session.auth.getClaims();
+  const user = !error && claims?.sub ? { id: claims.sub } : null;
   if (error || !user) return null;
   // app_user_access is intentionally blocked by RLS for browser sessions.
   // Verify JWT first, then resolve permissions on the trusted server client.
