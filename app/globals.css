@@ -1226,3 +1226,61 @@ button {
   background:
     rgba(220, 70, 70, 0.13);
 }
+
+
+/* One consistent export control across Ozon, Wildberries and Yandex Market.
+   It is a sibling of the panel toggle, never a nested button. */
+.mp-products-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.mp-products-header > .ozon-products-toggle,
+.mp-products-header > .wb-products-toggle,
+.mp-products-header > .ym-products-toggle {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+}
+.mp-products-export-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  gap: 8px;
+  margin-right: 12px;
+  border: 1px solid var(--ws-border, #2d4758);
+  border-radius: 8px;
+  padding: 9px 14px;
+  min-height: 36px;
+  color: var(--ws-text, inherit);
+  background: var(--ws-surface, transparent);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color .15s ease, background-color .15s ease;
+}
+.mp-products-export-button:hover:not(:disabled) {
+  background: var(--ws-surface-hover, rgba(75,130,165,.12));
+  border-color: var(--ws-icon, #338cc6);
+}
+.mp-products-export-button:focus-visible {
+  outline: 2px solid var(--ws-icon, #338cc6);
+  outline-offset: 2px;
+}
+.mp-products-export-button:disabled { opacity: .55; cursor: wait; }
+.mp-products-export-error {
+  padding: 8px 14px;
+  color: #e97d7d;
+  font-size: 12px;
+}
+@media (max-width: 560px) {
+  .mp-products-header { flex-wrap: wrap; gap: 0; }
+  .mp-products-header > .ozon-products-toggle,
+  .mp-products-header > .wb-products-toggle,
+  .mp-products-header > .ym-products-toggle { flex: 1 0 100%; }
+  .mp-products-export-button { margin: 0 12px 12px auto; }
+}

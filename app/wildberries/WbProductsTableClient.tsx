@@ -1,6 +1,7 @@
 "use client";
 
 import { useWorkspaceDisclosure } from "../ui/useWorkspaceDisclosure";
+import type {ProductExportRow} from "@/lib/marketplace-products-excel";
 
 import {
   useEffect,
@@ -395,6 +396,8 @@ export default function WbProductsTableClient({
   // ==========================================================
 
   const { expanded, toggle: toggleExpanded } = useWorkspaceDisclosure();
+  const [excelBusy,setExcelBusy]=useState(false);
+  const [excelError,setExcelError]=useState<string|null>(null);
 
 
   const [
@@ -810,6 +813,25 @@ export default function WbProductsTableClient({
   // RENDER
   // ==========================================================
 
+  async function exportExcel(){
+    if(excelBusy)return;
+    setExcelBusy(true);
+    setExcelError(null);
+    try{
+      const products:ProductExportRow[]=sortedItems.map(item=>({
+        masterCode:item.masterCode,sku:item.nmId,article:item.sellerArticle,
+        name:item.productName||item.sellerArticle||String(item.nmId),
+        sales:item.sales28Days,average:item.avgSalesPerDay,
+        cancellations:item.cancelled28Days,stock:item.fbwStock,
+        stockDays:item.daysOfStock
+      }));
+      const {downloadProductsExcel}=await import("@/lib/marketplace-products-excel");
+      await downloadProductsExcel("wildberries",products,28);
+    }catch(error){
+      setExcelError(error instanceof Error?error.message:"Не удалось выгрузить Excel");
+    }finally{setExcelBusy(false)}
+  }
+
   return (
 
     <section
@@ -820,6 +842,7 @@ export default function WbProductsTableClient({
           COLLAPSE HEADER
           ====================================================== */}
 
+      <div className="mp-products-header">
       <button
         type="button"
 
@@ -866,7 +889,13 @@ export default function WbProductsTableClient({
 
 
       </button>
-
+      <button type="button" className="mp-products-export-button" onClick={exportExcel}
+        disabled={excelBusy||sortedItems.length===0}
+        aria-label="Выгрузить данные Wildberries по товарам в Excel">
+        {excelBusy?"Создаём Excel…":"Выгрузить Excel"}
+      </button>
+      </div>
+      {excelError&&<div role="alert" className="mp-products-export-error">{excelError}</div>}
 
       {/* ======================================================
           TABLE

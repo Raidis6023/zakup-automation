@@ -1696,7 +1696,7 @@ export default async function YandexMarketPage() {
             PRODUCTS
             =================================== */}
 
-        <YandexProductsSectionClient>
+        <YandexProductsSectionClient items={productTableItems} periodDays={salesPeriodDays}>
 
           <YandexProductsTableClient
             items={

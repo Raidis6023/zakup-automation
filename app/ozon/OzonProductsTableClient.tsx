@@ -1,6 +1,7 @@
 "use client";
 
 import { useWorkspaceDisclosure } from "../ui/useWorkspaceDisclosure";
+import type {ProductExportRow} from "@/lib/marketplace-products-excel";
 
 import {
   Fragment,
@@ -255,6 +256,8 @@ export default function OzonProductsTableClient({
     setReady(true);
   }, []);
 
+  const [excelBusy,setExcelBusy]=useState(false);
+  const [excelError,setExcelError]=useState<string|null>(null);
   const sortedProducts = useMemo(
     () => products.map((item, index) => ({ item, index }))
       .sort((a, b) => compareOzon(a.item, b.item, sortKey, sortDirection) || a.index - b.index)
@@ -528,8 +531,41 @@ export default function OzonProductsTableClient({
     );
 
 
+  async function exportExcel(){
+    if(excelBusy)return;
+    setExcelBusy(true);
+    setExcelError(null);
+    try{
+      const productsForExport:ProductExportRow[]=sortedProducts.map(product=>{
+        const rows=normalizedClusterRows[product.master_code]||[];
+        const sku=product.listings.map(x=>x.ozon_product_id).filter(x=>x!==null&&x!==undefined).join(", ");
+        const articles=product.listings.map(x=>x.offer_id).filter((x):x is string=>Boolean(x)).join(", ");
+        return{
+          masterCode:product.master_code,sku,article:articles,
+          name:product.product_name||"",
+          sales:product.sales_28_days,average:product.average_sales_per_day,
+          cancellations:product.cancelled_28_days,stock:product.stock_quantity,
+          stockDays:product.stock_days,
+          details:rows.map(row=>({
+            sku:row.ozon_sku||row.ozon_product_id,
+            article:row.offer_id,
+            cluster:row.cluster_name||row.cluster_id,
+            sales:row.sales_28_days,average:row.average_sales_per_day,
+            cancellations:row.cancelled_28_days,stock:row.stock_quantity,
+            stockDays:row.stock_days
+          }))
+        };
+      });
+      const {downloadProductsExcel}=await import("@/lib/marketplace-products-excel");
+      await downloadProductsExcel("ozon",productsForExport,28);
+    }catch(error){
+      setExcelError(error instanceof Error?error.message:"Не удалось выгрузить Excel");
+    }finally{setExcelBusy(false)}
+  }
+
   return (
     <div className="ozon-products-collapsible">
+      <div className="mp-products-header">
       <button type="button" className="ozon-products-toggle"
         onClick={toggleTable} aria-expanded={expanded} aria-controls="ozon-products-table">
         <span className="ozon-products-toggle-icon" aria-hidden="true">
@@ -544,6 +580,13 @@ export default function OzonProductsTableClient({
           {calculationLabel && <span className="ozon-products-calculation-label">{calculationLabel}</span>}
         </span>
       </button>
+      <button type="button" className="mp-products-export-button" onClick={exportExcel}
+        disabled={excelBusy||sortedProducts.length===0}
+        aria-label="Выгрузить данные Ozon по товарам в Excel">
+        {excelBusy?"Создаём Excel…":"Выгрузить Excel"}
+      </button>
+      </div>
+      {excelError&&<div role="alert" className="mp-products-export-error">{excelError}</div>}
       {ready && expanded ? (
       <div id="ozon-products-table" className="ozon-products-table-content">
     <div className="ozon-products-table-shell ozon-products-scroll">

@@ -1,6 +1,8 @@
 "use client";
 
 import { useWorkspaceDisclosure } from "../ui/useWorkspaceDisclosure";
+import type {YandexProductsTableItem} from "./YandexProductsTableClient";
+import type {ProductExportRow} from "@/lib/marketplace-products-excel";
 
 import {
   useEffect,
@@ -63,12 +65,17 @@ function ProductsTableIcon() {
 
 export default function YandexProductsSectionClient({
   children,
+  items,
+  periodDays,
 }: {
-  children:
-    ReactNode;
+  children:ReactNode;
+  items:YandexProductsTableItem[];
+  periodDays:number;
 }) {
 
   const { expanded, toggle: toggleExpanded } = useWorkspaceDisclosure();
+  const [excelBusy,setExcelBusy]=useState(false);
+  const [excelError,setExcelError]=useState<string|null>(null);
 
 
   const [
@@ -96,12 +103,42 @@ export default function YandexProductsSectionClient({
 
 
 
+  async function exportExcel(){
+    if(excelBusy)return;
+    setExcelBusy(true);
+    setExcelError(null);
+    try{
+      const data:ProductExportRow[]=[...items].sort((a,b)=>b.sales-a.sales).map(item=>{
+        const avg=periodDays>0?item.sales/periodDays:0;
+        return{
+          masterCode:item.master_code,sku:item.market_sku,article:item.offer_id,
+          name:item.name,sales:item.sales,average:avg,
+          cancellations:item.cancellations,stock:item.stock,
+          stockDays:avg>0?item.stock/avg:null,
+          details:item.warehouses.map(w=>{
+            const wavg=periodDays>0?w.sales/periodDays:0;
+            return{
+              warehouse:w.warehouseName,sales:w.sales,
+              average:wavg,cancellations:w.cancellations,stock:w.stock,
+              stockDays:wavg>0?w.stock/wavg:null,
+            };
+          })
+        };
+      });
+      const {downloadProductsExcel}=await import("@/lib/marketplace-products-excel");
+      await downloadProductsExcel("yandex",data,periodDays);
+    }catch(error){
+      setExcelError(error instanceof Error?error.message:"Не удалось выгрузить Excel");
+    }finally{setExcelBusy(false)}
+  }
+
   return (
     <section
       className=
         "section ym-products-section ym-products-collapsible"
     >
 
+      <div className="mp-products-header">
       <button
         type="button"
 
@@ -153,7 +190,12 @@ export default function YandexProductsSectionClient({
         </span>
 
       </button>
-
+      <button type="button" className="mp-products-export-button" onClick={exportExcel}
+        disabled={excelBusy||items.length===0} aria-label="Выгрузить данные Яндекс Маркета по товарам в Excel">
+        {excelBusy?"Создаём Excel…":"Выгрузить Excel"}
+      </button>
+      </div>
+      {excelError&&<div role="alert" className="mp-products-export-error">{excelError}</div>}
 
       {
         storageLoaded
