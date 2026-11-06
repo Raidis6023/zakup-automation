@@ -49,7 +49,8 @@ export default async function LoginPage({
   // temporary Auth rate limit; sign-in itself will report the rate limit.
   let signedIn = false;
   try {
-    const { data: { claims } } = await supabase.auth.getClaims();
+    const { data: verified } = await supabase.auth.getClaims();
+    const claims = verified?.claims;
     signedIn = Boolean(claims?.sub);
   } catch {
     // The login form must still render during a temporary Auth outage.

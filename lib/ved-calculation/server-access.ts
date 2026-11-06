@@ -11,7 +11,8 @@ export class VedAccessError extends Error {
 /** Verified session and non-user-editable server-side role. */
 export async function requireVedAccess(write = false) {
   const session = await createSessionClient();
-  const { data: { claims }, error: authError } = await session.auth.getClaims();
+  const { data: verified, error: authError } = await session.auth.getClaims();
+  const claims = verified?.claims;
   const user = !authError && claims?.sub ? { id: claims.sub } : null;
   if (authError || !user) throw new VedAccessError(401, "Требуется вход в WorkSpace");
   const admin = createAdminClient();

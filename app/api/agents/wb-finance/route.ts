@@ -14,7 +14,8 @@ const round = (v: number) => Math.round((v+Number.EPSILON)*100)/100;
 
 async function access() {
   const session = await createClient();
-  const { data: { claims }, error: authError } = await session.auth.getClaims();
+  const { data: verified, error: authError } = await session.auth.getClaims();
+  const claims = verified?.claims;
   const user = !authError && claims?.sub ? { id: claims.sub } : null;
   if (!user) throw new Error("Требуется авторизация");
   const db = createAdminClient();

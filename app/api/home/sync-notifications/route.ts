@@ -470,8 +470,9 @@ export async function GET() {
     await createSessionClient();
 
 
-  const { data: { claims }, error: authError } =
+  const { data: verified, error: authError } =
     await session.auth.getClaims();
+  const claims = verified?.claims;
   const user = !authError && claims?.sub ? { id: claims.sub } : null;
 
 
