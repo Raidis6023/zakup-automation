@@ -24,9 +24,17 @@ const HEADER=[
 ] as const;
 const numeric=(value:number|null|undefined):number|null=>
  typeof value==="number"&&Number.isFinite(value)?value:null;
+// Supplier and marketplace descriptions can contain control characters
+// rejected by XML 1.0 (Excel repairs sheet1.xml in that case).
+// Keep line breaks and other valid Unicode, discard only forbidden scalars.
+const xmlSafe=(input:string):string=>Array.from(input).filter(character=>{
+ const cp=character.codePointAt(0)!;
+ return cp===9||cp===10||cp===13||(cp>=32&&cp<=0xD7FF)||
+  (cp>=0xE000&&cp<=0xFFFD)||(cp>=0x10000&&cp<=0x10FFFF);
+}).join("");
 const text=(value:string|number|null|undefined):string|null=>{
  if(value===null||value===undefined)return null;
- const s=String(value).trim();
+ const s=xmlSafe(String(value)).trim();
  // Keep supplier-controlled names as literal strings (not formulas).
  return s ? (/^[=+\-@]/.test(s)?"'"+s:s) : null;
 };
@@ -44,10 +52,12 @@ export function buildProductsWorkbook(
  book.creator="WorkSpace КПК МИА";
  book.title="Данные по товарам — "+c.title;
  book.created=date;
+ // ExcelJS issue #1348: fitToPage in combination with outlineProperties
+ // produces an XLSX that Microsoft Excel opens only after XML repair.
+ // This workbook needs interactive grouped rows, not print scaling.
  const sh=book.addWorksheet("Данные по товарам",{
   properties:{outlineLevelRow:1,outlineProperties:{summaryBelow:false,summaryRight:false}},
   views:[{state:"frozen",ySplit:7}],
-  pageSetup:{orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0}
  });
  sh.columns=[16,15,23,25,55,24,24,19,17,17,17,18,17].map(width=>({width}));
  sh.mergeCells("A1:M2");
@@ -126,8 +136,8 @@ export function buildProductsWorkbook(
   for(const n of [6,7,13])sh.getColumn(n).hidden=true;
  }
  for(const n of [2,3,4])sh.getColumn(n).numFmt="@";
- for(const n of [8,10,11])sh.getColumn(n).numFmt="#,##0;[Red](#,##0);–";
- for(const n of [9,12])sh.getColumn(n).numFmt="#,##0.0;[Red](#,##0.0);–";
+ for(const n of [8,10,11])sh.getColumn(n).numFmt='#,##0;[Red](#,##0);"-"';
+ for(const n of [9,12])sh.getColumn(n).numFmt='#,##0.0;[Red](#,##0.0);"-"';
  sh.getColumn(13).numFmt="0.0%";
  for(let i=8;i<=sh.rowCount;i++){
   for(const n of [8,9,10,11,12,13]){

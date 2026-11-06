@@ -5,6 +5,8 @@ const fs=require("node:fs");
 const path=require("node:path");
 const ts=require("typescript");
 const ExcelJS=require("exceljs");
+const JSZip=require("jszip");
+const {SaxesParser}=require("saxes");
 const root=path.resolve(__dirname,"..");
 const read=(file)=>fs.readFileSync(path.join(root,file),"utf8");
 const module_={exports:{}};
@@ -92,4 +94,43 @@ test("Marketplace exports have independent buttons and no nested interactive con
  assert.ok(read("app/yandex-market/page.tsx").includes(
   "<YandexProductsSectionClient items={productTableItems} periodDays={salesPeriodDays}>"
  ));
+});
+
+test("Office-compatible XLSX: all 3 marketplaces have well-formed worksheet and style XML",async()=>{
+ for(const market of ["ozon","wildberries","yandex"]){
+  const product={...sample,
+   name:"Набор\u0000 с контрольным символом \u0007 и кириллицей",
+   details:market==="wildberries"?[]:sample.details};
+  const book=buildProductsWorkbook(market,[product],28);
+  const buffer=await book.xlsx.writeBuffer();
+  const zip=await JSZip.loadAsync(buffer);
+  for(const location of [
+   "xl/worksheets/sheet1.xml",
+   "xl/styles.xml",
+   "xl/workbook.xml",
+   "xl/sharedStrings.xml",
+  ]){
+   const item=zip.file(location);
+   if(!item)continue;
+   const xml=await item.async("string");
+   let roots=0;
+   const parser=new SaxesParser({xmlns:true});
+   parser.on("opentag",()=>{roots++});
+   parser.on("error",error=>{throw new Error(
+    market+" "+location+": malformed XML: "+error.message
+   )});
+   parser.write(xml).close();
+   assert.ok(roots>0,market+" "+location+" must have XML elements");
+   assert.ok(!/[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(xml),
+    market+" "+location+" contains illegal XML 1.0 control characters");
+  }
+  const sheet=await zip.file("xl/worksheets/sheet1.xml").async("string");
+  assert.ok(/<outlinePr\b/.test(sheet),
+   market+" must keep collapsible row outline settings");
+  // ExcelJS bug #1348 corrupts sheet1.xml when both are active.
+  assert.ok(!/<pageSetUpPr[^>]*fitToPage="1"/.test(sheet),
+   market+" must never use fit-to-page print scaling with row outlines");
+  assert.ok(!sheet.includes("контрольным символом \u0007"),
+   "Bad control character must be removed, not serialized");
+ }
 });
