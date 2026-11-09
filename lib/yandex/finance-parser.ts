@@ -1,7 +1,15 @@
 import * as XLSX from 'xlsx';
 import {rules,date,numeric,cents,type Line} from './finance';
 type Cells=Record<string,unknown>;
-function rows(w:XLSX.WorkBook,name:string):Cells[]{const s=w.Sheets[name];if(!s)throw new Error(`Отсутствует лист «${name}»`);const a=XLSX.utils.sheet_to_json<unknown[]>(s,{header:1,raw:true,defval:null,range:0});return a.map((r,i)=>Object.fromEntries([['__row',i+1],...r.map((v,j)=>[XLSX.utils.encode_col(j),v]) ]));}
+function rows(w:XLSX.WorkBook,name:string):Cells[]{
+ const storage=name==='Платное хранение с 01.09.26';
+ const actual=w.Sheets[name]?name:storage?w.SheetNames.find(n=>/^Платное хранение с 01\.09\.26\s*$/.test(n.trim())):undefined;
+ const s=actual?w.Sheets[actual]:null;
+ // The provider can omit an empty service sheet. Do not discard other charges.
+ if(!s){if(storage)return [];throw new Error(`Отсутствует лист «${name}»`);}
+ const a=XLSX.utils.sheet_to_json<unknown[]>(s,{header:1,raw:true,defval:null,range:0});
+ return a.map((r,i)=>Object.fromEntries([['__row',i+1],...r.map((v,j)=>[XLSX.utils.encode_col(j),v])]));
+}
 const text=(x:unknown)=>String(x??'').trim();
 function header(rs:Cells[],col:string,expected:string){const n=rs.findIndex(r=>text(r[col]).startsWith(expected));if(n<0)throw new Error(`Изменена структура: столбец ${col}, ожидается «${expected}»`);return n;}
 export function parseWorkbooks(services:XLSX.WorkBook,orders:XLSX.WorkBook):Line[]{
@@ -15,7 +23,7 @@ export function parseWorkbooks(services:XLSX.WorkBook,orders:XLSX.WorkBook):Line
   result.push({source:'income',sheet:'Транзакции по заказам и товарам',row:Number(r.__row),article,name:text(r.M),orderId,orderDate:d,serviceDate:'',status:text(r.Y),quantity,price,amount:quantity===null?0:Math.round(price*quantity),allocation:'sku'});
  }
  for(const [sheet,col,label,sku,order,created,service,allocation] of rules){
-  const sr=rows(services,sheet);const start=header(sr,col,label);
+  const sr=rows(services,sheet);if(!sr.length)continue;const start=header(sr,col,label);
   for(const r of sr.slice(start+1)){
    if(!numeric(r.A)||r[col]===null||r[col]===undefined||r[col]==='')continue;
    const orderId=order?text(r[order]):'';
@@ -23,6 +31,26 @@ export function parseWorkbooks(services:XLSX.WorkBook,orders:XLSX.WorkBook):Line
    const article=sku?text(r[sku]):'';
    const name=sku?text(r[XLSX.utils.encode_col(XLSX.utils.decode_col(sku)+1)]):'';
    result.push({source:'expense',sheet,row:Number(r.__row),article,name,orderId,orderDate,serviceDate:date(r[service]),status:'',quantity:null,price:0,amount:cents(r[col]),allocation});
+  }
+ }
+ // Advertising billed for the whole campaign has no truthful SKU allocation.
+ // This sheet is separate from the historical sales-boost and banner sheets.
+ const marketingSheet='Реклама на Маркете';
+ if(services.Sheets[marketingSheet]){
+  const sr=rows(services,marketingSheet);
+  const findCol=(label:string):string|undefined=>{
+   for(const r of sr.slice(0,30))for(const [col,value] of Object.entries(r))
+    if(/^[A-Z]+$/.test(col)&&text(value)===label)return col;
+   return undefined;
+  };
+  const costCol=findCol('Стоимость услуги'),dateCol=findCol('Дата оказания услуги');
+  if(!costCol||!dateCol)throw new Error('Изменена структура листа «Реклама на Маркете»');
+  const start=sr.findIndex(r=>text(r[costCol])==='Стоимость услуги');
+  for(const r of sr.slice(start+1)){
+   if(!numeric(r.A)||r[costCol]===null||r[costCol]===undefined||r[costCol]==='')continue;
+   const serviceDate=date(r[dateCol]);
+   if(!serviceDate)throw new Error('Не указана дата услуги на листе «Реклама на Маркете», строка '+r.__row);
+   result.push({source:'expense',sheet:marketingSheet,row:Number(r.__row),article:'',name:'',orderId:'',orderDate:'',serviceDate,status:'',quantity:null,price:0,amount:cents(r[costCol]),allocation:'common'});
   }
  }
  return result;
