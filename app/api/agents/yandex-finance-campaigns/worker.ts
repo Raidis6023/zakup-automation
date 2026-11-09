@@ -3,15 +3,17 @@ import * as XLSX from 'xlsx';
 import {createAdminClient} from '../../../../lib/supabase/admin';
 import {parsePromotionWorkbook,type PromotionKind} from '../../../../lib/yandex/campaign-metrics';
 async function yandex(path:string,body?:unknown){const keys=[...new Set(((await getIntegrationSecret("yandex_api_key_full"))??'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean))];if(keys.length!==1)throw Error('Проверьте YANDEX_API_KEY_FULL: нужен один ключ');const r=await fetch('https://api.partner.market.yandex.ru'+path,{method:body?'POST':'GET',headers:{'Api-Key':keys[0],'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,cache:'no-store',signal:AbortSignal.timeout(45000)});if(!r.ok)throw Error('ЯМ: HTTP '+r.status);const d=await r.json();if(d.status==='ERROR')throw Error('ЯМ отклонил запрос рекламного отчёта');return d;}
-export async function advancePromotion(){
+export async function advancePromotion(scope?:{from:string;to:string}){
  const db=createAdminClient(),now=new Date().toISOString();let locked=false;type Task={day:string;kind:PromotionKind;status:string;report_id:string|null};let task:Task|null=null;
  try{
  const c=await db.from('yandex_promotion_control').update({locked_until:new Date(Date.now()+240000).toISOString()}).eq('id',1).or('locked_until.is.null,locked_until.lt.'+now).select('next_request_at').maybeSingle();if(c.error)throw c.error;if(!c.data)return {ok:true,phase:'busy'};locked=true;
  // Financial report generation has priority: the basic Yandex plan permits one report at a time.
- const finance=await db.from('yandex_finance_reports').select('id').eq('status','loading').limit(1);if(finance.error)throw finance.error;
- const q=await db.from('yandex_promotion_jobs').select('day,kind,status,report_id').in('status',['requested','pending']).order('status',{ascending:false}).order('day',{ascending:false}).order('kind').limit(1).maybeSingle();if(q.error)throw q.error;if(!q.data)return {ok:true,phase:'idle'};task=q.data as Task;
+ const finance=await db.from('yandex_finance_reports').select('id,phase').eq('status','loading').limit(1);if(finance.error)throw finance.error;
+ let queue=db.from('yandex_promotion_jobs').select('day,kind,status,report_id').in('status',['requested','pending']).order('status',{ascending:false}).order('day',{ascending:!!scope}).order('kind');
+ if(scope)queue=queue.gte('day',scope.from).lte('day',scope.to);
+ const q=await queue.limit(1).maybeSingle();if(q.error)throw q.error;if(!q.data)return {ok:true,phase:'idle'};task=q.data as Task;
  if(task.status==='pending'){
- if(finance.data.length)return {ok:true,phase:'finance_loading'};
+ if(finance.data.some(x=>x.phase!=='order_units_pull'))return {ok:true,phase:'finance_loading'};
  if(c.data.next_request_at&&Date.parse(c.data.next_request_at)>Date.now())return {ok:true,phase:'cooldown'};
  const campaign=await yandex('/v2/campaigns/'+await getIntegrationSecret("yandex_campaign_id"));const businessId=campaign.campaign?.business?.id;if(!businessId)throw Error('Не найден businessId ЯМ');
  const generated=await yandex('/v2/reports/'+(task.kind==='sales'?'boost-consolidated':'shows-boost')+'/generate?format=FILE',{businessId,dateFrom:task.day,dateTo:task.day,...(task.kind==='shows'?{attributionType:'CLICKS'}:{})});
