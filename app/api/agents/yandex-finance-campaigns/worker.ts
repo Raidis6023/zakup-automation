@@ -13,7 +13,9 @@ export async function advancePromotion(scope?:{from:string;to:string}){
  if(scope)queue=queue.gte('day',scope.from).lte('day',scope.to);
  const q=await queue.limit(1).maybeSingle();if(q.error)throw q.error;if(!q.data)return {ok:true,phase:'idle'};task=q.data as Task;
  if(task.status==='pending'){
- if(finance.data.some(x=>x.phase!=='order_units_pull'))return {ok:true,phase:'finance_loading'};
+ // A manually selected recovery may start while the finance job is only waiting
+ // to request a report. An actively generating finance report still blocks it.
+ if(finance.data.some(x=>scope?['services_poll','orders_poll'].includes(x.phase):x.phase!=='order_units_pull'))return {ok:true,phase:'finance_loading'};
  if(c.data.next_request_at&&Date.parse(c.data.next_request_at)>Date.now())return {ok:true,phase:'cooldown'};
  const campaign=await yandex('/v2/campaigns/'+await getIntegrationSecret("yandex_campaign_id"));const businessId=campaign.campaign?.business?.id;if(!businessId)throw Error('Не найден businessId ЯМ');
  const generated=await yandex('/v2/reports/'+(task.kind==='sales'?'boost-consolidated':'shows-boost')+'/generate?format=FILE',{businessId,dateFrom:task.day,dateTo:task.day,...(task.kind==='shows'?{attributionType:'CLICKS'}:{})});
