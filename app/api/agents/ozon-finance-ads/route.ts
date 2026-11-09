@@ -5,6 +5,9 @@ import {financeAccess} from '../../../../lib/yandex/finance-access';
 export const runtime='nodejs';export const dynamic='force-dynamic';export const maxDuration=300;
 /** Account-level serialized Ozon ads report request and delayed poll. */
 export async function GET(request:NextRequest){
+ const cronSecret=process.env.CRON_SECRET;
+ if(!cronSecret||request.headers.get('authorization')!=='Bearer '+cronSecret)
+  return NextResponse.json({ok:false,error:'Unauthorized'},{status:401});
  const started=Date.now();
  const recent=await runDailySkuAdvertising();
  let processed=0,last:Record<string,unknown>={phase:'idle'},status=200;
