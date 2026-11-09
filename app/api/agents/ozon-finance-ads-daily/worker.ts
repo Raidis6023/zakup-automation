@@ -149,8 +149,15 @@ export async function runDailySkuAdvertising(){
   };
   // Explicit campaignIds is REQUIRED in practice: Ozon responds
   // with HTTP 400 "empty campaigns" if omitted.
+  const batchErrors:string[]=[];
   for(let i=0;i<discovery.ids.length;i+=30){
-   await fetchBatch(discovery.ids.slice(i,i+30));
+   try{await fetchBatch(discovery.ids.slice(i,i+30));}
+   catch(e){
+    const m=e instanceof Error?e.message:'Ошибка рекламного пакета';
+    batchErrors.push(m);
+    // Throttling or a time limit must not discard the successful batches.
+    if(/HTTP 429|HTTP 503|Лимит времени|timeout/i.test(m))break;
+   }
   }
   for(const part of Array.from(rows.values()).reduce<StoredRow[][]>((out,row,i)=>{
    if(i%150===0)out.push([]);out[out.length-1].push(row);return out;
@@ -161,8 +168,8 @@ export async function runDailySkuAdvertising(){
    if(insert.error)throw Error('Ozon CPC: запись в Supabase: '+insert.error.message);
   }
   saved=rows.size;cost=[...rows.values()].reduce((v,row)=>v+row.expense_rub,0);
-  const partial=!discovery.authoritative||invalidIds.size>0||exhausted;
-  const reason=partial?discovery.note+(invalidIds.size?'; Ozon отклонил кампаний: '+invalidIds.size:''):'';
+  const partial=!discovery.authoritative||invalidIds.size>0||exhausted||batchErrors.length>0;
+  const reason=partial?discovery.note+(invalidIds.size?'; Ozon отклонил кампаний: '+invalidIds.size:'')+(batchErrors.length?'; ошибки: '+batchErrors.slice(0,2).join(' / '):''):'';
   await log(partial?'failed':saved?'complete':'empty',saved,cost,reason||undefined);
   return {ok:!partial,day,rows_saved:saved,expense_rub:Math.round(cost*100)/100,
    campaign_ids:discovery.ids.length,rejected_campaign_ids:invalidIds.size,
