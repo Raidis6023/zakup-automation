@@ -248,13 +248,23 @@ export async function runHistoricalAdvertising(request:NextRequest){
     .select("job_id").eq("status","requested")
     .order("updated_at",{ascending:true}).limit(1).maybeSingle();
   if(inflight.error)throw inflight.error;
-  let jobsQuery=db.from("ozon_finance_ad_sync_jobs")
+  // Finish existing running jobs before discovering newly queued periods.
+  // Otherwise an HTTP 429 from GET /campaign on the newest empty job
+  // starves dozens of already downloaded/report-requested older campaigns.
+  const jobColumns="id,date_from,date_to,status,last_error";
+  const runningQuery=db.from("ozon_finance_ad_sync_jobs")
+    .select(jobColumns).eq("account_key","main");
+  const {data:running,error:runningError}=await (
+   inflight.data?.job_id?runningQuery.eq("id",inflight.data.job_id).limit(1).maybeSingle():
+   runningQuery.eq("status","running").order("date_to",{ascending:false}).limit(1).maybeSingle()
+  );
+  if(runningError)throw runningError;
+  const {data:pending,error:pendingError}=running?{data:null,error:null}:
+   await db.from("ozon_finance_ad_sync_jobs")
     .select("id,date_from,date_to,status,last_error").eq("account_key","main")
-    .in("status",["pending","running","failed"]);
-  if(inflight.data?.job_id)jobsQuery=jobsQuery.eq("id",inflight.data.job_id);
-  const {data:job,error:jobError}=await jobsQuery
-    .order("date_to",{ascending:false}).order("date_from",{ascending:false})
-    .limit(1).maybeSingle();
+    .in("status",["pending","failed"])
+    .order("date_to",{ascending:false}).limit(1).maybeSingle();
+  const job=running??pending,jobError=pendingError;
   if(jobError)throw jobError;
   if(!job){phase="idle";return json({ok:true,phase})}
   const selected=job as Job;
