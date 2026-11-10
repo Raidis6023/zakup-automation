@@ -3,20 +3,45 @@ import * as XLSX from 'xlsx';
 import {createAdminClient} from '../../../../lib/supabase/admin';
 import {parsePromotionWorkbook,type PromotionKind} from '../../../../lib/yandex/campaign-metrics';
 async function yandex(path:string,body?:unknown){const keys=[...new Set(((await getIntegrationSecret("yandex_api_key_full"))??'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean))];if(keys.length!==1)throw Error('Проверьте YANDEX_API_KEY_FULL: нужен один ключ');const r=await fetch('https://api.partner.market.yandex.ru'+path,{method:body?'POST':'GET',headers:{'Api-Key':keys[0],'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,cache:'no-store',signal:AbortSignal.timeout(45000)});if(!r.ok)throw Error('ЯМ: HTTP '+r.status);const d=await r.json();if(d.status==='ERROR')throw Error('ЯМ отклонил запрос рекламного отчёта');return d;}
-export async function advancePromotion(scope?:{from:string;to:string}){
+export async function advancePromotion(scope?:{from?:string;to?:string;priority?:'oldest'|'newest'}){
  const db=createAdminClient(),now=new Date().toISOString();let locked=false;type Task={day:string;kind:PromotionKind;status:string;report_id:string|null};let task:Task|null=null;
  try{
  const c=await db.from('yandex_promotion_control').update({locked_until:new Date(Date.now()+240000).toISOString()}).eq('id',1).or('locked_until.is.null,locked_until.lt.'+now).select('next_request_at').maybeSingle();if(c.error)throw c.error;if(!c.data)return {ok:true,phase:'busy'};locked=true;
- // Financial report generation has priority: the basic Yandex plan permits one report at a time.
- const finance=await db.from('yandex_finance_reports').select('id,phase').eq('status','loading').limit(1);if(finance.error)throw finance.error;
- let queue=db.from('yandex_promotion_jobs').select('day,kind,status,report_id').in('status',['requested','pending']).order('status',{ascending:false}).order('day',{ascending:!!scope}).order('kind');
- if(scope)queue=queue.gte('day',scope.from).lte('day',scope.to);
- const q=await queue.limit(1).maybeSingle();if(q.error)throw q.error;if(!q.data)return {ok:true,phase:'idle'};task=q.data as Task;
+ // Always poll an existing provider report before generating anything new.
+ // This is account-wide, even for manually selected date windows.
+ const inflight=await db.from('yandex_promotion_jobs')
+  .select('day,kind,status,report_id').eq('status','requested')
+  .order('updated_at',{ascending:true}).limit(1).maybeSingle();
+ if(inflight.error)throw inflight.error;
+ let candidate:Task|null=(inflight.data as Task|null)??null;
+ if(!candidate){
+  const oldest=scope?.priority==='oldest'||!!(scope?.from&&scope?.to);
+  let pending=db.from('yandex_promotion_jobs')
+   .select('day,kind,status,report_id').eq('status','pending')
+   .order('day',{ascending:oldest}).order('kind');
+  if(scope?.from&&scope?.to)pending=pending.gte('day',scope.from).lte('day',scope.to);
+  const next=await pending.limit(1).maybeSingle();
+  if(next.error)throw next.error;
+  candidate=(next.data as Task|null)??null;
+ }
+ if(!candidate)return {ok:true,phase:'idle'};
+ task=candidate;
  if(task.status==='pending'){
- // A manually selected recovery may start while the finance job is only waiting
- // to request a report. An actively generating finance report still blocks it.
- if(finance.data.some(x=>scope?['services_poll','orders_poll'].includes(x.phase):x.phase!=='order_units_pull'))return {ok:true,phase:'finance_loading'};
- if(c.data.next_request_at&&Date.parse(c.data.next_request_at)>Date.now())return {ok:true,phase:'cooldown'};
+  // A fresh financial generation has priority for the one-report-at-a-time
+  // plan. A stale *local* loading flag must not block advertising forever.
+  // A report that still runs at the provider will be rejected and retried.
+  const finance=await db.from('yandex_finance_reports')
+   .select('id,phase,created_at,locked_until,next_request_at')
+   .eq('status','loading').order('created_at',{ascending:false}).limit(1);
+  if(finance.error)throw finance.error;
+  const financeBusy=(finance.data??[]).some(x=>{
+   const lease=x.locked_until?Date.parse(x.locked_until):0;
+   if(lease>Date.now())return true;
+   const age=Date.now()-Date.parse(x.created_at);
+   return ['services_poll','orders_poll'].includes(x.phase)&&age<90*60000;
+  });
+  if(financeBusy)return {ok:true,phase:'finance_loading'};
+  if(c.data.next_request_at&&Date.parse(c.data.next_request_at)>Date.now())return {ok:true,phase:'cooldown'};
  const campaign=await yandex('/v2/campaigns/'+await getIntegrationSecret("yandex_campaign_id"));const businessId=campaign.campaign?.business?.id;if(!businessId)throw Error('Не найден businessId ЯМ');
  const generated=await yandex('/v2/reports/'+(task.kind==='sales'?'boost-consolidated':'shows-boost')+'/generate?format=FILE',{businessId,dateFrom:task.day,dateTo:task.day,...(task.kind==='shows'?{attributionType:'CLICKS'}:{})});
  if(!generated.result?.reportId)throw Error('ЯМ не вернул reportId');
