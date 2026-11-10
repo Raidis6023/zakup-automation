@@ -1850,3 +1850,124 @@ html[data-theme="dark"]
   line-height: 1.35;
   color: var(--ws-red, #c34b55);
 }
+
+/* Единая кнопка расчёта и локальная справка. Без модального экрана. */
+.zakup-reference-page .zakup-v2-calculation-layout {
+  display: grid;
+  gap: var(--zakup-v2-gap);
+  margin-bottom: var(--zakup-v2-gap);
+}
+
+.zakup-reference-page .zakup-v2-result-grid--single-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.zakup-reference-page .zakup-v2-action-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 0 0 auto;
+}
+
+.zakup-reference-page .zakup-calc-info {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.zakup-reference-page .zakup-calc-info-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--ws-border);
+  border-radius: 50%;
+  background: var(--ws-surface-soft);
+  color: var(--ws-text);
+  font-size: 17px;
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+
+.zakup-reference-page .zakup-calc-info-trigger::-webkit-details-marker {
+  display: none;
+}
+
+.zakup-reference-page .zakup-calc-info-trigger:hover,
+.zakup-reference-page .zakup-calc-info[open] .zakup-calc-info-trigger {
+  border-color: var(--ws-blue);
+  background: var(--ws-surface-hover);
+}
+
+.zakup-reference-page .zakup-calc-info-panel {
+  position: absolute;
+  z-index: 45;
+  top: calc(100% + 9px);
+  right: 0;
+  width: min(350px, calc(100vw - 40px));
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border: 1px solid var(--ws-border);
+  border-radius: 10px;
+  background: var(--ws-surface);
+  box-shadow: var(--shadow);
+  color: var(--ws-text);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.zakup-reference-page .zakup-calc-info-heading {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.zakup-reference-page .zakup-calc-info-panel dl {
+  margin: 0;
+}
+
+.zakup-reference-page .zakup-calc-info-panel dl > div {
+  display: grid;
+  grid-template-columns: minmax(90px, 32%) minmax(0, 1fr);
+  column-gap: 10px;
+  padding: 6px 0;
+  border-top: 1px solid var(--ws-border-soft);
+}
+
+.zakup-reference-page .zakup-calc-info-panel dt {
+  font-weight: 650;
+}
+
+.zakup-reference-page .zakup-calc-info-panel dd {
+  margin: 0;
+  color: var(--ws-text-muted);
+}
+
+.zakup-reference-page .zakup-calc-info-panel p {
+  margin: 10px 0 0;
+  color: var(--ws-text-muted);
+}
+
+@media (max-width: 900px) {
+  .zakup-reference-page .zakup-v2-result-grid--single-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .zakup-reference-page .zakup-v2-action-controls {
+    width: 100%;
+  }
+  .zakup-reference-page .zakup-v2-action-controls form {
+    flex: 1 1 auto;
+  }
+  .zakup-reference-page .zakup-v2-result-grid--single-row {
+    grid-template-columns: 1fr;
+  }
+}
