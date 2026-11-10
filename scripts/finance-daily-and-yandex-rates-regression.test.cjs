@@ -29,7 +29,7 @@ assert.equal(clean.rows[0].result,null);
 const report={rows:[{offer_id:'known',revenue:1000,cogs:200,mayak_expense:30,estimated_result:500,advertising_amount:0,order_count:4,buyout_units:3},
  {offer_id:'missing',revenue:250,cogs:null,mayak_expense:null,estimated_result:null,advertising_amount:0,order_count:1,buyout_units:1}],
  advertising:{finance_total:0},ads_covered:false,unallocated_amount:0,missing_days:[]};
-const whole=amounts(report,'ozon');assert.equal(whole.advertising,0);
+const whole=amounts(report,'ozon');assert.ok(whole.advertising===0);
 assert.equal(whole.profit,null);
 const view=compositionAmounts(report,'ozon');
 assert.equal(view.provisional,true);
