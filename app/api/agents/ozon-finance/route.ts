@@ -518,10 +518,16 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     if(!salesWindowCovered)g.data_gaps.push("Не подтверждена полнота заказов и отмен");
     if(g.cogs===null && salesWindowCovered)g.data_gaps.push("Не вся цена закупа известна");
     if(g.mayak_expense===null)g.data_gaps.push("Нет полного расчёта ТК Маяк");
+    // Seller accruals may lag order statistics. A delivered sale without a
+    // confirmed commission/payment charge is NOT a finished SKU P&L.
+    const saleWithoutFees=(g.buyout_units??0)>0&&(g.revenue??0)>0&&
+      !g.details.some(d=>/комисси|эквайр|вознагражд|при[её]м плат[её]ж|продаж.*комисс/i.test(d.name));
+    if(saleWithoutFees)g.data_gaps.push("Комиссия и эквайринг Ozon не подтверждены в начислениях за период");
+
     // An unassigned KM/master_code must not erase a valid financial result.
     // Keep it in the exception register, but calculate whenever actual direct
     // costs (including proven zero-unit costs) are known.
-    if(g.cogs!==null && g.mayak_expense!==null) {
+    if(g.cogs!==null && g.mayak_expense!==null && !saleWithoutFees) {
       g.estimated_result=provisionalResult(g.ozon_amount,g.cogs,g.mayak_expense);
     }else g.estimated_result=null;
     g.details = g.details.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
