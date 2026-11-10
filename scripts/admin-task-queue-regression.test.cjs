@@ -87,5 +87,10 @@ assert.match(panelCss, /\.home-right-panel--work \.home-right-panel-tab--active\
 assert.match(panelCss, /\.home-right-panel-admin-count-number\s*\{[^}]*translateY\(-1px\)/s);
 assert.ok(right.includes('className="home-right-panel-admin-count-number"'), "badge digit needs its own alignment rule");
 console.log("PASS Admin task UI: silent deletion, one action column, centered date and one-row tabs");
+const rolesSource = fs.readFileSync(path.join(root, "app/tasks/TasksBoard.tsx"), "utf8");
+assert.ok(rolesSource.includes('["category_manager", "Все КМ"]'), "common KM must be called Все КМ");
+assert.ok(!rolesSource.includes('commercial_director'), "obsolete commercial director role must be unavailable to task authors");
+assert.ok(!rolesSource.includes('Категорийные менеджеры (общий)'), "obsolete title must not show in the UI");
+console.log("PASS Task departments: removed commercial director and renamed common category managers");
 console.log("PASS Admin task refinements: centered action/header, compact single-row tabs, badge alignment and selected state");
 console.log("PASS Admin queue: mixed statuses, badge, anonymous department assignment, work separation and styles");

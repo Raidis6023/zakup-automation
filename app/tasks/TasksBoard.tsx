@@ -33,8 +33,7 @@ const DEPARTMENTS = [
   ["category_manager:wildberries", "КМ Wildberries"],
   ["category_manager:yandex_market", "КМ Яндекс Маркет"],
   ["marketing", "Маркетинг"], ["manager", "Руководство"],
-  ["commercial_director", "Коммерческий директор"],
-  ["category_manager", "Категорийные менеджеры (общий)"],
+  ["category_manager", "Все КМ"],
 ] as const;
 const URGENCIES: { value: Urgency; label: string }[] = [
   { value: "current", label: "Текущая" },
