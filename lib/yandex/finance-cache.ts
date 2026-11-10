@@ -102,7 +102,25 @@ export async function readFinance(from:string,to:string,scheme?:'fbo'|'fbs'){
     return (l.orderId?l.orderDate:l.serviceDate)===day;
   }).map(l=>l.source==='expense'?{...l,serviceDate:day}:l);
   const item=financialReport(dayLines,day,day,rates,listings,orders,report.order_units_complete,verifiedReturns);
-  return {day,orders:item.totals.orders,buyouts:item.totals.buyouts,income:item.totals.income,result:item.totals.result};
+  // A full-day report includes common marketplace charges. If some SKUs lack
+  // cost/transport, construct a separately labeled provisional structure
+  // from only fully costed SKUs. Never attribute unknown costs to the MP.
+  const included=item.rows.filter(r=>r.result!==null&&r.cogs!==null&&r.mayak!==null);
+  const totals=(key:'income'|'result'|'cogs'|'mayak'|'advertising')=>
+   included.reduce((sum,r)=>sum+Number(r[key]??0),0);
+  const complete=item.totals.result!==null;
+  const structureIncome=complete?item.totals.income:totals('income');
+  const structureProfit=complete?Number(item.totals.result):totals('result');
+  const structureInbound=complete?item.totals.cogs+item.totals.mayak:totals('cogs')+totals('mayak');
+  const structureAd=complete?item.totals.advertising:totals('advertising');
+  const hasKnownStructure=complete||included.length>0;
+  const structure=hasKnownStructure?{
+   income:structureIncome,profit:structureProfit,inbound:structureInbound,
+   advertising:structureAd,marketplace:structureIncome-structureProfit-structureInbound-structureAd
+  }:null;
+  return {day,orders:item.totals.orders,buyouts:item.totals.buyouts,
+   income:item.totals.income,result:item.totals.result,
+   composition:structure,compositionPartial:!complete};
  });
  const dailyResult=daily.every(x=>x.result!==null)?daily.reduce((sum,x)=>sum+Number(x.result),0):null;
  const dailyReconciled=result.totals.result!==null&&dailyResult!==null&&dailyResult===result.totals.result;
