@@ -653,7 +653,7 @@ export default function HomeRightPanel() {
                   {tab.label}
                   {tab.id === "admin" && adminTasksCount > 0 && (
                     <span className="home-right-panel-admin-count" aria-label={`Всего незавершённых задач: ${adminTasksCount}`}>
-                      {adminTasksCount}
+                      <span className="home-right-panel-admin-count-number">{adminTasksCount}</span>
                     </span>
                   )}
                 </button>

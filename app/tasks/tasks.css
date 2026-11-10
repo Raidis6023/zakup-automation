@@ -223,7 +223,8 @@ select.tasks-pill { cursor: pointer; padding-right: 18px; }
 .tasks-actions-cell {
   position: relative;
   text-align: center;
-  padding-right: 54px !important;
+  /* Trash is absolutely positioned, not part of button centering. */
+  padding-right: 9px;
 }
 .tasks-action-button {
   display: inline-flex;
@@ -318,5 +319,8 @@ select.tasks-pill { cursor: pointer; padding-right: 18px; }
   text-align: center;
 }
 
-/* Action and delete occupy one 202px column. Preserve the former total table width. */
-.tasks-table:not(.tasks-notes-table) thead th:last-child { text-align: center; }
+/* Keep header alignment consistent with the cell underneath. */
+.tasks-table:not(.tasks-notes-table) thead th:nth-child(10),
+.tasks-table:not(.tasks-notes-table) thead th:last-child {
+  text-align: center;
+}

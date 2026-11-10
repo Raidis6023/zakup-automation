@@ -1376,12 +1376,14 @@ html[data-theme="dark"] .home-sync-notification-icon--alert {
 }
 
 
-/* The five work-mode tabs must always stay in one row. */
+/* Compact, left-aligned tabs with the original active-pill appearance.
+   Never wrap; horizontally scroll only if the panel is exceptionally narrow. */
 .home-right-panel--work .home-right-panel-tabs {
   flex-wrap: nowrap;
-  justify-content: space-between;
-  gap: 2px;
-  overflow-x: visible;
+  justify-content: flex-start;
+  gap: 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 .home-right-panel--work .home-right-panel-tab {
   display: inline-flex;
@@ -1389,15 +1391,34 @@ html[data-theme="dark"] .home-sync-notification-icon--alert {
   justify-content: center;
   flex: 0 0 auto;
   min-width: 0;
-  padding: 6px clamp(2px, .25vw, 4px);
-  font-size: clamp(9px, .85vw, 11.5px);
+  padding: 6px 6px;
+  font-size: clamp(10px, .8vw, 12px);
   white-space: nowrap;
 }
+.home-right-panel--work .home-right-panel-tab--active {
+  border-color: color-mix(in srgb, var(--ws-blue) 22%, transparent);
+  background: var(--ws-blue-soft);
+  color: var(--ws-blue);
+}
 .home-right-panel--work .home-right-panel-admin-count {
-  flex: 0 0 auto;
-  min-width: 17px;
-  height: 17px;
-  margin-left: 3px;
+  flex: 0 0 18px;
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 4px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  vertical-align: middle;
+  line-height: 1;
   font-size: 10px;
+}
+.home-right-panel-admin-count-number {
+  display: block;
+  color: #fff;
+  font-size: inherit;
+  font-weight: 800;
+  line-height: 1;
+  transform: translateY(-1px);
 }
 
