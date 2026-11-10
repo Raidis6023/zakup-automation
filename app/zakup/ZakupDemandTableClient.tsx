@@ -92,7 +92,6 @@ function PurchaseRow({ item, scenario }: { item: DemandItem; scenario: Scenario 
       <td className="center">{perCarton > 0 ? formatInteger(perCarton) : "Нет данных"}</td>
       <td className="center">
         <label className="zakup-demand-quantity">
-          <span className="sr-only">Количество к заказу для {item.offer_id}</span>
           <input
             type="number"
             className="input"
