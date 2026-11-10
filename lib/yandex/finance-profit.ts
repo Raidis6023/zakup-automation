@@ -27,14 +27,27 @@ export function financialReport(lines:Line[],from:string,to:string,rates:Rate[],
   let cogs:number|null=0,mayak:number|null=ordersComplete?0:null;
   for(const [day,qty] of dailyBuyouts.get(p.article)??[]){if(!qty)continue;const cost=rateAt(master,day,p.article)?.cost_cents;if(cost==null){cogs=null;gaps.push('Нет себестоимости на '+day);}else if(cogs!==null)cogs+=Math.round(qty*cost);}
   const ownOrders=orderByArticle.get(p.article)??[];
+  // Some recent orders exist in the authoritative finance order report, but
+  // their warehouse sync is delayed. Reuse a fulfillment model only when all
+  // other orders of THIS article have the same confirmed model. If FBY/FBS
+  // are mixed, never guess or fabricate a transport expense.
+  const observedSchemes=new Set(ownOrders.map(o=>o.fulfillment).filter(
+   (mode):mode is 'fby'|'fbs'=>mode==='fby'||mode==='fbs'));
+  const inferredScheme=observedSchemes.size===1?[...observedSchemes][0]:null;
+  let inferredOrders=0;
   if(!ordersComplete)gaps.push('Нет полного количества заказанных единиц');
   for(const o of ownOrders){
-   if(!o.quantity||o.fulfillment==='fbs')continue;
-   if(o.fulfillment==='unknown'||!o.fulfillment){mayak=null;gaps.push('Не определена схема доставки для ТК Маяк: '+o.order_id);continue;}
+   if(!o.quantity)continue;
+   const missingScheme=o.fulfillment==='unknown'||!o.fulfillment;
+   const fulfillment=missingScheme?inferredScheme:o.fulfillment;
+   if(fulfillment==='fbs')continue;
+   if(fulfillment!=='fby'){mayak=null;gaps.push('Не определена схема доставки для ТК Маяк: '+o.order_id);continue;}
+   if(missingScheme)inferredOrders+=o.quantity;
    const cost=rateAt(master,o.order_date,p.article)?.mayak_cents;
    if(cost==null){mayak=null;gaps.push('Нет ТК Маяк на '+o.order_date);}
    else if(mayak!==null)mayak+=Math.round(o.quantity*cost);
   }
+  if(inferredOrders)gaps.push('Схема доставки '+inferredOrders+' заказанных ед. уточнена по другим подтверждённым заказам этого артикула (предварительно)');
   const orderCount=ordersComplete?ownOrders.reduce((s,o)=>s+o.quantity,0):null;
   const result=cogs===null||mayak===null?null:p.income-p.expense-cogs-mayak;
   let inTransit:number|null=ordersComplete?0:null,openValue:number|null=ordersComplete?0:null;
