@@ -24,7 +24,7 @@ export function parseHistoricCSV(text:string,from:string,to:string):Parsed[] {re
  * requesting 2-10 campaigns. Decode central directory, verify CRC and
  * require all expected CSVs before marking any campaign complete.
  * Never extract ZIP filenames to disk or trust paths from the archive. */
-function reportCsvFiles(binary:Buffer,expectedCampaigns:string[]):Map<string,string>{
+export function reportCsvFiles(binary:Buffer,expectedCampaigns:string[],allowMissing=false):Map<string,string>{
  if(expectedCampaigns.length<1||expectedCampaigns.length>10)
    throw new Error("Invalid Ozon campaign batch size");
  if(expectedCampaigns.length===1 && binary.subarray(0,2).toString("utf8")!=="PK")
@@ -38,7 +38,7 @@ function reportCsvFiles(binary:Buffer,expectedCampaigns:string[]):Map<string,str
  if(end<0)throw new Error("ZIP end-of-directory not found");
  const total=binary.readUInt16LE(end+10),centralSize=binary.readUInt32LE(end+12);
  const centralOffset=binary.readUInt32LE(end+16);
- if(total<expectedCampaigns.length||total>20 ||
+ if((!allowMissing&&total<expectedCampaigns.length)||total>20 ||
    centralOffset+centralSize>binary.length)throw new Error("Invalid ZIP central directory");
  const expected=new Set(expectedCampaigns),out=new Map<string,string>(),seenFilenames:string[]=[];
  let p=centralOffset,totalBytes=0;
@@ -82,9 +82,11 @@ function reportCsvFiles(binary:Buffer,expectedCampaigns:string[]):Map<string,str
       throw new Error("ZIP CRC or uncompressed length mismatch for "+campaignId);
    totalBytes+=data.length;out.set(campaignId,data.toString("utf8"));
  }
- if(out.size!==expectedCampaigns.length)
+ if(out.size!==expectedCampaigns.length&&!allowMissing)
    throw new Error("ZIP_MISSING: "+(expectedCampaigns.length-out.size)+
      " missing; ZIP entries: "+seenFilenames.slice(0,8).join(", "));
+ if(allowMissing&&!out.size)throw new Error(
+   "ZIP_MISSING: no campaign CSV; ZIP entries: "+seenFilenames.slice(0,8).join(", "));
  return out;
 }
 async function token():Promise<string>{
@@ -227,9 +229,11 @@ async function finishedJob(db:Db,job:Job):Promise<object>{
   note:"Performance is an allocation weight, Seller PPC is charged only once."};
 }
 export async function runHistoricalAdvertising(request:NextRequest){
- const secret=process.env.CRON_SECRET;
- if(!secret||request.headers.get("authorization")!=="Bearer "+secret)
-   return json({ok:false,error:"Unauthorized"},401);
+ const tokenHeader=request.headers.get("authorization");
+ const authorized=Boolean(tokenHeader&&(
+  (process.env.CRON_SECRET&&tokenHeader==="Bearer "+process.env.CRON_SECRET)||
+  (process.env.OZON_AD_CRON_SECRET&&tokenHeader==="Bearer "+process.env.OZON_AD_CRON_SECRET)));
+ if(!authorized)return json({ok:false,error:"Unauthorized"},401);
  const db=createAdminClient(),now=new Date(),started=Date.now();
  const leaseUntil=new Date(started+180000).toISOString();
  const claim=await db.from("ozon_finance_ad_worker_control")
@@ -268,11 +272,20 @@ export async function runHistoricalAdvertising(request:NextRequest){
     .eq("account_key","main").in("status",["running","pending","failed"])
     .order("status",{ascending:false}).order("date_to",{ascending:false}).limit(1).maybeSingle();
   }else{
-   const active=await queued.eq("status","running")
-    .order("date_to",{ascending:false}).limit(1).maybeSingle();
-   if(active.error)throw active.error;
-   chosen=active.data?active:await db.from("ozon_finance_ad_sync_jobs").select(columns)
-    .eq("account_key","main").in("status",["pending","failed"])
+   // Prioritize RECENT missing historical dates. Previously a months-old
+   // running job permanently blocked every newer day even with 100+ pending
+   // campaigns, leaving the dashboard advertising column empty.
+   const krasnoyarskToday=new Date(Date.now()+7*3600000).toISOString().slice(0,10);
+   const lastHistorical=new Date(Date.parse(krasnoyarskToday+'T00:00:00Z')-2*86400000)
+     .toISOString().slice(0,10);
+   const firstHistorical=new Date(Date.parse(lastHistorical+'T00:00:00Z')-14*86400000)
+     .toISOString().slice(0,10);
+   const recent=await queued.gte("date_to",firstHistorical)
+    .lte("date_to",lastHistorical).order("date_to",{ascending:false})
+    .limit(1).maybeSingle();
+   if(recent.error)throw recent.error;
+   chosen=recent.data?recent:await db.from("ozon_finance_ad_sync_jobs").select(columns)
+    .eq("account_key","main").in("status",["pending","running","failed"])
     .order("date_to",{ascending:false}).limit(1).maybeSingle();
   }
   if(chosen.error)throw chosen.error;
@@ -327,13 +340,16 @@ export async function runHistoricalAdvertising(request:NextRequest){
     // up to ten campaign CSVs packed into a single verified ZIP archive.
     // Group only identical report periods so day attribution remains valid.
     const forceSingle=task.last_error==="FORCE_SINGLE_AFTER_ZIP_MISSING";
-    const batchQuery=await db.from("ozon_finance_ad_campaign_tasks")
+    let batchQuery=db.from("ozon_finance_ad_campaign_tasks")
       .select("id,job_id,campaign_id,day,date_to,status,report_uuid,last_error")
       .eq("job_id",selected.id).eq("status","pending")
-      .eq("day",task.day).eq("date_to",task.date_to)
-      .order("campaign_id",{ascending:true}).limit(forceSingle?1:10);
-    if(batchQuery.error)throw batchQuery.error;
-    const batch=(batchQuery.data??[]) as Task[];
+      .eq("day",task.day).eq("date_to",task.date_to);
+    batchQuery=forceSingle?batchQuery.eq("last_error","FORCE_SINGLE_AFTER_ZIP_MISSING"):
+      batchQuery.is("last_error",null);
+    const batchResult=await batchQuery.order("campaign_id",{ascending:true})
+      .limit(forceSingle?1:10);
+    if(batchResult.error)throw batchResult.error;
+    const batch=(batchResult.data??[]) as Task[];
     if(!batch.length)throw new Error("Pending batch disappeared");
     const campaigns=batch.map(x=>x.campaign_id);
     const created=await api(access,"/api/client/statistics",{
@@ -379,34 +395,16 @@ export async function runHistoricalAdvertising(request:NextRequest){
   const csvResponse=await api(access,"/api/client/statistics/report?UUID="+
     encodeURIComponent(task.report_uuid));
   const archive=Buffer.from(await csvResponse.arrayBuffer());
-  let files:Map<string,string>;
-  try{
-    files=reportCsvFiles(archive,batch.map(x=>x.campaign_id));
-  }catch(err){
-    if(batch.length>1 && message(err).startsWith("ZIP_MISSING:")){
-      // Ozon omitted expected campaign files or provided unexpected names.
-      // Do not spin on the same irreconcilable ZIP; reuse proven single-CSV
-      // path for every campaign in this batch, preserving accounting.
-      const recovered=await db.from("ozon_finance_ad_campaign_tasks")
-        .update({status:"pending",report_uuid:null,
-          last_error:"FORCE_SINGLE_AFTER_ZIP_MISSING",
-          updated_at:new Date().toISOString()})
-        .eq("job_id",selected.id).eq("status","requested")
-        .eq("report_uuid",task.report_uuid)
-        .in("id",batch.map(x=>x.id)).select("id");
-      if(recovered.error||recovered.data?.length!==batch.length)
-        throw new Error("Could not safely mark ZIP campaigns for single-file retry");
-      phase="fallback_to_individual_campaign_reports";
-      console.warn("Ozon Performance ZIP fallback",message(err).slice(0,250));
-      return json({ok:true,phase,campaigns_requeued:batch.length,
-        cause:message(err).slice(0,250)});
-    }
-    throw err;
-  }
+  // Ozon may omit individual CSVs from an otherwise valid ZIP. Preserve
+  // every verified campaign instead of discarding the whole ten-campaign
+  // request. Missing files remain UNKNOWN and are retried individually.
+  const files=reportCsvFiles(archive,batch.map(x=>x.campaign_id),batch.length>1);
+  const present=batch.filter(x=>files.has(x.campaign_id));
+  const absent=batch.filter(x=>!files.has(x.campaign_id));
   const allLines:Array<{account_key:string;day:string;sku:string;
     campaign_id:string;expense_rub:number;views:number|null;clicks:number|null;carts:number|null;orders:number|null;revenue_rub:number|null;metrics_version:number}>=[];
   const perCampaign=new Map<number,number>();
-  for(const item of batch){
+  for(const item of present){
     let parsed:Parsed[];
     try{
       parsed=parseHistoricCSV(files.get(item.campaign_id)!,item.day,item.date_to);
@@ -432,15 +430,21 @@ export async function runHistoricalAdvertising(request:NextRequest){
   }
   // Publish batch completion only after ALL ten CSVs validate and every
   // Ozon SKU/day/campaign row has been stored in the database.
-  for(const item of batch)
+  for(const item of present)
     await markTask(db,item.id,{status:"complete",
-      rows_saved:perCampaign.get(item.id)??0,metrics_ready:true,source_headers:campaignHeaders(files.get(item.campaign_id)!),last_error:null});
-  await db.from("ozon_finance_ad_sync_jobs")
+      rows_saved:perCampaign.get(item.id)??0,metrics_ready:true,
+      source_headers:campaignHeaders(files.get(item.campaign_id)!),last_error:null});
+  for(const item of absent)
+    await markTask(db,item.id,{status:"pending",report_uuid:null,
+      last_error:"FORCE_SINGLE_AFTER_ZIP_MISSING"});
+  const {error:jobUpdateError}=await db.from("ozon_finance_ad_sync_jobs")
     .update({status:"running",last_error:null,updated_at:new Date().toISOString()})
     .eq("id",selected.id);
+  if(jobUpdateError)throw jobUpdateError;
   phase="report_saved";
-  return json({ok:true,phase,batch_size:batch.length,
-    campaigns:batch.map(x=>x.campaign_id),sku_day_rows:allLines.length,
+  return json({ok:true,phase,batch_size:present.length,
+    requested_campaigns:batch.length,missing_campaigns:absent.length,
+    campaigns:present.map(x=>x.campaign_id),sku_day_rows:allLines.length,
     spend_rub:Math.round(allLines.reduce((sum,row)=>sum+row.expense_rub,0)*100)/100});
  }catch(error){
   failure=message(error).slice(0,350);
