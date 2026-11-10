@@ -338,6 +338,22 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     vedByProduct.set(v.product_id,(vedByProduct.get(v.product_id)??0)+Number(v.order_quantity??v.quantity??0));
   }
   const productById = new Map((productsRes.data as Product[]??[]).map(p=>[p.id,p]));
+  // Own warehouses are tracked by internal product ID, while several offers
+  // can share one master_code. Resolve once per ENOT, never sum duplicate
+  // representations of the same physical stock.
+  const ownByMaster = new Map<string,{main:number|null;ox:number|null}>();
+  for(const p of productsRes.data as Product[]??[]){
+    if(!p.master_code)continue;
+    const item=stocksByProduct.get(p.id);
+    if(!item)continue;
+    const previous=ownByMaster.get(p.master_code)??{main:null,ox:null};
+    const maxKnown=(left:number|null,right:number|null|undefined)=>
+      right==null?left:left==null?Number(right):Math.max(left,Number(right));
+    ownByMaster.set(p.master_code,{
+      main:maxKnown(previous.main,item.main_stock),
+      ox:maxKnown(previous.ox,item.ox_stock)
+    });
+  }
   const unknownChinaStatuses = ![...vedOrderStatus.values()].some(v=>["in_transit","dispatched","shipping","on_the_way"].includes(v));
   const mayakHistory = new Map<string, Cost[]>();
   for (const m of mayakRes.data as Cost[] ?? []) {
@@ -476,8 +492,9 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     const product=productByOffer.get(g.offer_id);
     const stock=product ? stocksByProduct.get(product.id) : null;
     g.ozon_stock=stock?.ozon_stock==null?null:Number(stock.ozon_stock);
-    g.main_stock=stock?.main_stock==null?null:Number(stock.main_stock);
-    g.ox_stock=stock?.ox_stock==null?null:Number(stock.ox_stock);
+    const shared=g.master_code?ownByMaster.get(g.master_code):undefined;
+    g.main_stock=shared?.main??(stock?.main_stock==null?null:Number(stock.main_stock));
+    g.ox_stock=shared?.ox??(stock?.ox_stock==null?null:Number(stock.ox_stock));
     g.in_china=product && !unknownChinaStatuses ? (vedByProduct.get(product.id)??0):null;
     // Transit to buyers and cross-docking need real shipping statuses; current
     // stock snapshots and replenishment CALCULATIONS do not prove in-transit units.
