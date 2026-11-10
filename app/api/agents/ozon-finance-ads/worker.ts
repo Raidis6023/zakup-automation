@@ -270,11 +270,20 @@ export async function runHistoricalAdvertising(request:NextRequest){
     .eq("account_key","main").in("status",["running","pending","failed"])
     .order("status",{ascending:false}).order("date_to",{ascending:false}).limit(1).maybeSingle();
   }else{
-   const active=await queued.eq("status","running")
-    .order("date_to",{ascending:false}).limit(1).maybeSingle();
-   if(active.error)throw active.error;
-   chosen=active.data?active:await db.from("ozon_finance_ad_sync_jobs").select(columns)
-    .eq("account_key","main").in("status",["pending","failed"])
+   // Prioritize RECENT missing historical dates. Previously a months-old
+   // running job permanently blocked every newer day even with 100+ pending
+   // campaigns, leaving the dashboard advertising column empty.
+   const krasnoyarskToday=new Date(Date.now()+7*3600000).toISOString().slice(0,10);
+   const lastHistorical=new Date(Date.parse(krasnoyarskToday+'T00:00:00Z')-2*86400000)
+     .toISOString().slice(0,10);
+   const firstHistorical=new Date(Date.parse(lastHistorical+'T00:00:00Z')-14*86400000)
+     .toISOString().slice(0,10);
+   const recent=await queued.gte("date_to",firstHistorical)
+    .lte("date_to",lastHistorical).order("date_to",{ascending:false})
+    .limit(1).maybeSingle();
+   if(recent.error)throw recent.error;
+   chosen=recent.data?recent:await db.from("ozon_finance_ad_sync_jobs").select(columns)
+    .eq("account_key","main").in("status",["pending","running","failed"])
     .order("date_to",{ascending:false}).limit(1).maybeSingle();
   }
   if(chosen.error)throw chosen.error;
