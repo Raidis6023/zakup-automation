@@ -8,7 +8,7 @@ import {
   classifyAdvertisingAccrual,
   emptyAccrualReconciliation,
   fromKopecks,
-  provisionalResult,
+  calculateProvisionalSkuProfit,
   toKopecks,
 } from "../../../../lib/ozon/financeAdvertising";
 
@@ -518,13 +518,10 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     if(!salesWindowCovered)g.data_gaps.push("Не подтверждена полнота заказов и отмен");
     if(g.cogs===null && salesWindowCovered)g.data_gaps.push("Не вся цена закупа известна");
     if(g.mayak_expense===null)g.data_gaps.push("Нет полного расчёта ТК Маяк");
-    // Settlement completeness is checked AFTER the nested itemized accrual
-    // lines are attached below. Checking it here produced false "no commission"
-    // warnings for SKUs that clearly have a COMMISSION line.
-    // Unassigned KM/master_code must not erase valid Seller accounting.
-    if(g.cogs!==null && g.mayak_expense!==null) {
-      g.estimated_result=provisionalResult(g.ozon_amount,g.cogs,g.mayak_expense);
-    }else g.estimated_result=null;
+    // Seller ledger + COGS + Mayak are the source of profit. Fee-detail
+    // labels are descriptive, not required inputs to this calculation.
+    g.estimated_result=calculateProvisionalSkuProfit(
+      g.ozon_amount,g.cogs,g.mayak_expense,salesWindowCovered);
     g.details = g.details.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
   }
   // Attribution of the REAL Seller PPC charge to SKU. The Performance
@@ -591,19 +588,10 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
         name:"Оплата за клик (распределено из общих начислений Seller API)",
         amount:row.allocated_seller_ppc,count:0,is_advertising:true});
     row.details.sort((a,b)=>Math.abs(b.amount)-Math.abs(a.amount));
-    // Check the FINAL itemized fees, not the earlier ledger placeholder.
-    if((row.buyout_units??0)>0){
-      const observed=new Set(row.details.filter(x=>!x.is_reference).map(x=>x.type_id));
-      const missingSettlement:string[]=[];
-      if(!observed.has('SALES'))missingSettlement.push('продажа');
-      if(!observed.has('COMMISSION'))missingSettlement.push('комиссия');
-      if(!observed.has('1'))missingSettlement.push('эквайринг');
-      if(missingSettlement.length){
-        row.data_gaps.push('Не подтверждены начисления Ozon: '+missingSettlement.join(', ')+
-          '. Заказы есть, финрез ещё предварительный');
-        row.estimated_result=null;
-      }
-    }
+    // No fee-type completeness gate: Ozon books sale, commission and
+    // acquiring on accounting dates that need not match order dates.
+    // Missing type-specific lines never erase a valid ledger-backed profit.
+    // Missing actual COGS, Mayak or order coverage remain blockers above.
   }
   // Reference data completeness is independent of whether a finance day
   // was imported. Product listings without master_code must remain visible.
