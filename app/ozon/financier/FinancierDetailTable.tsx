@@ -262,6 +262,11 @@ export default function FinancierDetailTable({
         {['Выручка','Операционная прибыль'].includes(k.name)?<button type="button" className="ozf-kpi-link" onClick={()=>setGraphMetric(k.name==='Выручка'?'revenue':'profit')}>{k.name}</button>:<span>{k.name}</span>}<strong>{k.value}</strong>
       </div>)}
     </div>
+    {data?.stock_as_of?.main_at&&<p className="ozf-notice" style={{marginTop:8}}>
+      Аведэкс основной: снимок от {data.stock_as_of.main_at.split('-').reverse().join('.')}.
+      {data.stock_as_of.ox_at&&<> Аведэкс ОХ: снимок от {data.stock_as_of.ox_at.split('-').reverse().join('.')}.</>}
+      {' '}Остатки собственных складов не обновляются вместе с остатками маркетплейса.
+    </p>}
     <FinanceDynamics key={graphMetric} marketplace="ozon" revision={data?.cache_updated_at??''} from={data?.from??''} to={data?.to??''} offers={includeUnallocated?undefined:rows.map(r=>r.offer_id)} selected={graphMetric} expectedProfit={operatingProfit}/><div className="ozf-section-tools">
       <input placeholder="Поиск по артикулу, коду или КМ" aria-label="Поиск товаров" value={search}
         onChange={e=>setSearch(e.target.value)} />
