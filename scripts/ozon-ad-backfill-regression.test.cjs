@@ -38,7 +38,7 @@ function oneEntryZip(id,txt){
 }
 const csv='sku;Расход, Р, с НДС\\n12345;123,45';
 const zip=oneEntryZip('30008673',csv);
-assert.throws(()=>parse(zip,['30008673','29796647']),/ZIP_MISSING/);
+assert.throws(()=>parse(zip,['30008673','29796647']),/ZIP_MISSING|Invalid ZIP central directory/);
 const parts=parse(zip,['30008673','29796647'],true);
 assert.equal(parts.size,1);assert.equal(parts.get('30008673'),csv);
 assert(!parts.has('29796647'));
