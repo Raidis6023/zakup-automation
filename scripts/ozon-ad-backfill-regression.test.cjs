@@ -42,7 +42,7 @@ assert.throws(()=>parse(zip,['30008673','29796647']),/ZIP_MISSING/);
 const parts=parse(zip,['30008673','29796647'],true);
 assert.equal(parts.size,1);assert.equal(parts.get('30008673'),csv);
 assert(!parts.has('29796647'));
-const bad=Buffer.from(zip);bad[35]^=1;
+const bad=Buffer.from(zip);bad[44]^=1;
 assert.throws(()=>parse(bad,['30008673','29796647'],true),/ZIP CRC/);
 assert.equal(parse(Buffer.from(csv),['30008673']).get('30008673'),csv);
 assert(src.includes('const absent=batch.filter(x=>!files.has(x.campaign_id))'));
