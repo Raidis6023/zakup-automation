@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       const denied = authenticated(request, "catalog");
       if (denied) return denied;
       return result({
-        name: "Наше API-хуяпи v1",
+        name: "Интеграция с 1С v1",
         endpoint: "/api/v1/1c/export",
         authentication: "Authorization: Bearer <access_key>",
         datasets: {

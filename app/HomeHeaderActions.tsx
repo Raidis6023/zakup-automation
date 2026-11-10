@@ -981,7 +981,7 @@ export default function HomeHeaderActions() {
     snapshot: workspaceTaskSnapshot,
     loading: workspaceTasksLoading,
     error: workspaceTasksError,
-  } = useWorkspaceTasks();
+  } = useWorkspaceTasks(adminMode ? "admin" : "work");
 
 
   const [
@@ -3375,7 +3375,7 @@ export default function HomeHeaderActions() {
                     "home-popup-header"
                 >
                   <strong>
-                    Мои задачи
+                    {adminMode ? "Активные задачи администрирования" : "Мои задачи"}
                   </strong>
                 </div>
 

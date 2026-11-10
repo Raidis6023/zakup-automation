@@ -7,13 +7,15 @@ import type { WorkspaceTaskSnapshot } from "./HomeTasksData";
 const TASKS_REFRESH_INTERVAL = 10_000;
 const TASKS_UPDATED_EVENT = "workspace-tasks-updated";
 
-export default function useWorkspaceTasks() {
+export default function useWorkspaceTasks(mode: "work" | "admin" = "work") {
   const [snapshot, setSnapshot] = useState<WorkspaceTaskSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
+    setSnapshot(null);
+    setLoading(true);
     let requestInFlight = false;
     let refreshQueued = false;
     const supabase = createClient();
@@ -31,7 +33,7 @@ export default function useWorkspaceTasks() {
 
         try {
           const { data, error: fetchError } = await supabase
-            .rpc("workspace_home_tasks_snapshot");
+            .rpc("workspace_home_tasks_snapshot_v2", { p_mode: mode });
 
           if (fetchError) throw fetchError;
           if (
@@ -93,7 +95,7 @@ export default function useWorkspaceTasks() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       void supabase.removeChannel(channel);
     };
-  }, []);
+  }, [mode]);
 
   return { snapshot, loading, error };
 }

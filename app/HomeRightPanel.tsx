@@ -22,6 +22,8 @@ import {
 
 import {
   buildCreatedByMeWorkspaceTasks,
+  buildAdminActiveWorkspaceTasks,
+  buildAdminUnacceptedWorkspaceTasks,
   buildMyWorkspaceTasks,
   buildPersonalNotes,
   buildUnacceptedWorkspaceTasks,
@@ -48,12 +50,18 @@ type CurrentUserProfileRow = {
   admin_role_name: string | null;
 };
 
-type TabId = "my" | "unaccepted" | "created" | "notes";
+type TabId = "my" | "unaccepted" | "created" | "notes" | "admin" | "active";
 
 const TASK_TABS: Array<{ id: TabId; label: string }> = [
   { id: "my", label: "Мои" },
   { id: "unaccepted", label: "Непринятые" },
   { id: "created", label: "Поставленные мной" },
+  { id: "notes", label: "Заметки" },
+  { id: "admin", label: "Админ" },
+];
+const ADMIN_TASK_TABS: Array<{ id: TabId; label: string }> = [
+  { id: "active", label: "Активные" },
+  { id: "unaccepted", label: "Непринятые" },
   { id: "notes", label: "Заметки" },
 ];
 
@@ -145,7 +153,7 @@ export default function HomeRightPanel() {
     snapshot: workspaceTaskSnapshot,
     loading: workspaceTasksLoading,
     error: workspaceTasksError,
-  } = useWorkspaceTasks();
+  } = useWorkspaceTasks(adminHomeMode ? "admin" : "work");
 
   const [syncNotifications, setSyncNotifications] =
     useState<SyncNotification[]>([]);
@@ -174,9 +182,9 @@ export default function HomeRightPanel() {
   useEffect(
     () => {
       setOpen(false);
-      setActiveTab("my");
+      setActiveTab(adminHomeMode ? "active" : "my");
     },
-    [pathname]
+    [pathname, adminHomeMode]
   );
 
   useEffect(
@@ -475,7 +483,9 @@ export default function HomeRightPanel() {
     setTaskActionError(null);
 
     try {
-      const { error } = await createClient().rpc("workspace_task_action", {
+      const actionMode = adminHomeMode || activeTab === "admin" ? "admin" : "work";
+      const { error } = await createClient().rpc("workspace_task_action_v2", {
+        p_mode: actionMode,
         p_action: task.action,
         p_payload: { id: task.id },
       });
@@ -483,7 +493,9 @@ export default function HomeRightPanel() {
       if (error) throw error;
 
       if (task.action === "take") {
-        setActiveTab("my");
+        setActiveTab(actionMode === "admin"
+          ? (adminHomeMode ? "active" : "admin")
+          : "my");
       }
 
       window.dispatchEvent(new CustomEvent("workspace-tasks-updated"));
@@ -510,7 +522,12 @@ export default function HomeRightPanel() {
     }
   }
 
-  const tabs = TASK_TABS;
+  const tabs = adminHomeMode
+    ? ADMIN_TASK_TABS
+    : TASK_TABS.filter(tab => tab.id !== "admin" || workspaceTaskSnapshot?.is_admin);
+  const adminTasksCount = (workspaceTaskSnapshot?.admin_tasks ?? []).filter(
+    task => task.status === "not_started" || task.status === "in_progress"
+  ).length;
 
   const myTasks = useMemo<TaskItem[]>(
     () => buildMyWorkspaceTasks(workspaceTaskSnapshot),
@@ -528,20 +545,36 @@ export default function HomeRightPanel() {
     () => buildPersonalNotes(workspaceTaskSnapshot),
     [workspaceTaskSnapshot]
   );
+  const adminActiveTasks = useMemo<TaskItem[]>(
+    () => buildAdminActiveWorkspaceTasks(workspaceTaskSnapshot),
+    [workspaceTaskSnapshot]
+  );
+  const adminUnacceptedTasks = useMemo<TaskItem[]>(
+    () => buildAdminUnacceptedWorkspaceTasks(workspaceTaskSnapshot),
+    [workspaceTaskSnapshot]
+  );
 
-  const filteredTasks =
-    activeTab === "my"
-      ? myTasks
-      : activeTab === "unaccepted"
-        ? unacceptedTasks
-        : createdTasks;
+  const filteredTasks = adminHomeMode
+    ? (activeTab === "active" ? adminActiveTasks : adminUnacceptedTasks)
+    : activeTab === "admin"
+      ? adminUnacceptedTasks
+      : activeTab === "my"
+        ? myTasks
+        : activeTab === "unaccepted"
+          ? unacceptedTasks
+          : createdTasks;
 
-  const emptyMessage =
-    activeTab === "my"
-      ? "Задач, взятых вами в работу, пока нет."
-      : activeTab === "unaccepted"
-        ? "Непринятых задач для вашего отдела нет."
-        : "Вы пока не поставили задач другим отделам.";
+  const emptyMessage = adminHomeMode
+    ? (activeTab === "active"
+        ? "Активных задач отдела администрирования пока нет."
+        : "Непринятых задач отдела администрирования пока нет.")
+    : activeTab === "admin"
+      ? "Непринятых задач администрирования нет."
+      : activeTab === "my"
+        ? "Задач, взятых вами в работу, пока нет."
+        : activeTab === "unaccepted"
+          ? "Непринятых задач для вашего отдела нет."
+          : "Вы пока не поставили задач другим отделам.";
 
   return (
     <aside
@@ -616,6 +649,11 @@ export default function HomeRightPanel() {
                   }
                 >
                   {tab.label}
+                  {tab.id === "admin" && (
+                    <span className="home-right-panel-admin-count" aria-label={`Всего незавершённых задач: ${adminTasksCount}`}>
+                      {adminTasksCount}
+                    </span>
+                  )}
                 </button>
               )
             )

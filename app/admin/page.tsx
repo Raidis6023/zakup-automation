@@ -17,7 +17,7 @@ export default function AdminPage() {
       <PageHeader variant="admin" title="Администрирование" description="Управление сотрудниками, доступами и настройками WorkSpace" />
 
       <section
-        aria-label="Наше API-хуяпи v1"
+        aria-label="Интеграция с 1С v1"
         style={{
           marginTop: 24,
           padding: 24,
@@ -28,7 +28,7 @@ export default function AdminPage() {
       >
         <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
           <div>
-            <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Наше API-хуяпи v1</h2>
+            <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Интеграция с 1С v1</h2>
             <p style={{ marginTop: 8, opacity: 0.75 }}>
               Единая интеграция с 1С. Один защищённый адрес для всех четырёх разделов.
             </p>

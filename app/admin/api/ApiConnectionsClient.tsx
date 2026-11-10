@@ -215,7 +215,7 @@ export default function ApiConnectionsClient() {
         <article className="api-settings-card">
           <div className="api-settings-card-head">
             <div className="api-settings-service">
-              <span className="api-settings-service-icon">O</span>
+              <span className="api-settings-service-icon api-settings-service-icon--ozon-performance">O</span>
               <div><h2>Ozon Seller</h2><p>Товары, поставки, складские и финансовые данные</p></div>
             </div>
             {statusCard(services.ozonSeller)}

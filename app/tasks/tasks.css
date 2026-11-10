@@ -285,3 +285,17 @@ select.tasks-pill { cursor: pointer; padding-right: 18px; }
   .tasks-department-picker { width: 100%; justify-content: space-between; }
   .tasks-tab { padding: 7px 11px; min-height: 34px; }
 }
+
+
+.tasks-table .tasks-dash { text-align: center; vertical-align: middle; font-variant-numeric: tabular-nums; }
+.tasks-delete-cell { text-align: center; }
+.tasks-delete-task {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 29px; height: 29px;
+  border: 1px solid color-mix(in srgb, #dc3545 40%, var(--ws-border));
+  border-radius: 7px; color: #d72b3a; background: transparent; cursor: pointer;
+}
+.tasks-delete-task svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
+.tasks-delete-task:hover:not(:disabled) { color: #fff; border-color: #bf2935; background: #bf2935; }
+.tasks-delete-task:disabled { cursor: not-allowed; opacity: .4; }
+

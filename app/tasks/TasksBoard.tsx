@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "../../lib/supabase/client";
+import { usePathname } from "next/navigation";
 import "./tasks.css";
 
 type Urgency = "current" | "urgent" | "critical";
@@ -25,6 +26,7 @@ type Snapshot = {
 type Action = (name: string, payload: Record<string, unknown>) => Promise<boolean>;
 
 const DEPARTMENTS = [
+  ["admin", "Администрирование"],
   ["analyst", "Аналитика"], ["procurement", "Закуп"],
   ["ved", "ВЭД"], ["category_manager:ozon", "КМ Ozon"],
   ["category_manager:wildberries", "КМ Wildberries"],
@@ -101,9 +103,16 @@ function StatusCell({ value, editable, onChange }: {
   </select>;
 }
 
-function TaskRow({ task, tab, snapshot, busy, onAction }: {
+
+function TaskTrashIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M5 7h14" /><path d="M9 7V5h6v2" />
+    <path d="M7 7l1 13h8l1-13" /><path d="M10 11v5" /><path d="M14 11v5" />
+  </svg>;
+}
+function TaskRow({ task, tab, snapshot, busy, adminMode, onAction }: {
   task: WorkTask; tab: "my" | "other"; snapshot: Snapshot;
-  busy: boolean; onAction: Action;
+  busy: boolean; adminMode: boolean; onAction: Action;
 }) {
   const [title, setTitle] = useState(task.title);
   const [urgency, setUrgency] = useState<Urgency>(task.urgency);
@@ -113,7 +122,7 @@ function TaskRow({ task, tab, snapshot, busy, onAction }: {
   useEffect(() => setComment(task.comment), [task.comment]);
 
   const canEdit = tab === "other" && task.created_by === snapshot.user_id && task.status === "not_started";
-  const canComment = tab === "my" || task.created_by === snapshot.user_id;
+  const canComment = task.created_by === snapshot.user_id || (!adminMode && tab === "my");
   const saveDetails = () => {
     if (!canEdit || busy || (!title.trim() && task.title)) return;
     if (title.trim() !== task.title || urgency !== task.urgency) {
@@ -145,13 +154,26 @@ function TaskRow({ task, tab, snapshot, busy, onAction }: {
     <td>{canComment ? <textarea className="tasks-inline-input tasks-comment"
       aria-label="Комментарий" maxLength={4000} value={comment} disabled={busy}
       rows={1} onChange={e => setComment(e.target.value)} onBlur={saveComment} /> :
-      <span className="tasks-comment-text">{task.comment || "—"}</span>}</td>
+      <span className={task.comment ? "tasks-comment-text" : "tasks-comment-text tasks-dash"}>{task.comment || "—"}</span>}</td>
     <td className="tasks-actions-cell">{tab === "my" && task.status === "not_started" ?
       <button className="tasks-action-button" type="button" disabled={busy}
         onClick={() => void onAction("take", { id: task.id })}>Взять в работу</button> :
-      tab === "my" && task.status === "in_progress" && task.taken_by === snapshot.user_id ?
+      tab === "my" && task.status === "in_progress" && (adminMode || task.taken_by === snapshot.user_id) ?
         <button className="tasks-action-button tasks-finish-button" type="button" disabled={busy}
           onClick={() => void onAction("finish", { id: task.id })}>Завершить</button> : null}
+    </td>
+    <td className="tasks-delete-cell">
+      <button type="button" className="tasks-delete-task"
+        title={task.created_by === snapshot.user_id ? "Удалить задачу" : "Удаление доступно только постановщику"}
+        aria-label={task.created_by === snapshot.user_id ? "Удалить задачу" : "Удаление недоступно"}
+        disabled={busy || task.created_by !== snapshot.user_id}
+        onClick={() => {
+          if (window.confirm("Удалить задачу? Она исчезнет из списков всех участников.")) {
+            void onAction("delete", { id: task.id });
+          }
+        }}>
+        <TaskTrashIcon />
+      </button>
     </td>
   </tr>;
 }
@@ -189,6 +211,7 @@ function NotesRow({ note, busy, onAction }: {
 }
 
 export default function TasksBoard() {
+  const adminMode = (usePathname() ?? "").startsWith("/admin");
   const supabase = useMemo(() => createClient(), []);
   const [data, setData] = useState<Snapshot | null>(null);
   const [tab, setTab] = useState<Tab>("my");
@@ -204,12 +227,12 @@ export default function TasksBoard() {
   const [newNoteDate, setNewNoteDate] = useState("");
 
   const refresh = useCallback(async () => {
-    const { data: result, error: fetchError } = await supabase.rpc("workspace_tasks_snapshot");
+    const { data: result, error: fetchError } = await supabase.rpc("workspace_tasks_snapshot_v2", { p_mode: adminMode ? "admin" : "work" });
     if (fetchError) throw fetchError;
     if (!result || !Array.isArray((result as Snapshot).tasks))
       throw new Error("Сервер вернул некорректный список задач");
     setData(result as Snapshot);
-  }, [supabase]);
+  }, [supabase, adminMode]);
 
   useEffect(() => {
     let active = true;
@@ -255,8 +278,8 @@ export default function TasksBoard() {
     setBusy(true);
     setError("");
     try {
-      const { error: actionError } = await supabase.rpc("workspace_task_action", {
-        p_action: name, p_payload: payload,
+      const { error: actionError } = await supabase.rpc("workspace_task_action_v2", {
+        p_mode: adminMode ? "admin" : "work", p_action: name, p_payload: payload,
       });
       if (actionError) throw actionError;
       await refresh();
@@ -268,6 +291,9 @@ export default function TasksBoard() {
         "note_add",
         "note_update",
         "note_delete",
+        "delete",
+        "cancel",
+        "comment",
       ].includes(name)) {
         window.dispatchEvent(new CustomEvent("workspace-tasks-updated"));
       }
@@ -279,11 +305,15 @@ export default function TasksBoard() {
     } finally {
       setBusy(false);
     }
-  }, [busy, refresh, supabase]);
+  }, [busy, refresh, supabase, adminMode]);
 
   const myTasks = useMemo(() => data?.tasks.filter(row =>
-    row.target_department === data.department) ?? [], [data]);
+    row.target_department === data.department ||
+    (data.department.startsWith("category_manager:") &&
+      row.target_department === "category_manager")) ?? [], [data]);
   const otherTasks = useMemo(() => data?.tasks.filter(row =>
+    row.created_by === data.user_id &&
+    row.created_department === data.department &&
     row.target_department !== data.department) ?? [], [data]);
   const visible = tab === "my" ? myTasks : otherTasks;
   const canCreate = newTitle.trim().length > 0 && !!newUrgency && !!target && !busy;
@@ -337,10 +367,11 @@ export default function TasksBoard() {
             <col style={{ width: 166 }} /><col style={{ width: 125 }} />
             <col style={{ width: 115 }} /><col style={{ width: 115 }} /><col style={{ width: 115 }} />
             <col style={{ width: 92 }} /><col style={{ width: 220 }} /><col style={{ width: 148 }} />
+            <col style={{ width: 54 }} />
           </colgroup>
           <thead><tr>
             {["Задача", "Срочность", "Кто поставил", "Кто выполняет", "Статус",
-              "Дата постановки", "Дата начала", "Дата окончания", "Дней в работе", "Комментарий", "Действие"]
+              "Дата постановки", "Дата начала", "Дата окончания", "Дней в работе", "Комментарий", "Действие", "Удалить"]
               .map(label => <th key={label}>{label}</th>)}
           </tr></thead>
           <tbody>
@@ -358,9 +389,9 @@ export default function TasksBoard() {
               <td className="tasks-placeholder">Назначит отдел</td>
               <td><StatusCell value="not_started" /></td>
               <td className="tasks-placeholder">Автоматически</td>
-              <td className="tasks-placeholder">—</td>
-              <td className="tasks-placeholder">—</td>
-              <td className="tasks-placeholder">—</td>
+              <td className="tasks-placeholder tasks-dash">—</td>
+              <td className="tasks-placeholder tasks-dash">—</td>
+              <td className="tasks-placeholder tasks-dash">—</td>
               <td><textarea className="tasks-inline-input tasks-comment" rows={1} maxLength={4000}
                 aria-label="Комментарий к новой задаче" placeholder="Комментарий"
                 disabled={busy} value={newComment}
@@ -369,10 +400,12 @@ export default function TasksBoard() {
                 className="tasks-action-button" disabled={!canCreate} onClick={() => void submitTask()}>
                 Поставить задачу
               </button></td>
+              <td className="tasks-delete-cell" />
             </tr>}
             {visible.map(task => <TaskRow key={task.id} task={task}
-              tab={tab as "my" | "other"} snapshot={data} busy={busy} onAction={onAction} />)}
-            {visible.length === 0 && <tr><td colSpan={11} className="tasks-empty">
+              tab={tab as "my" | "other"} snapshot={data} busy={busy}
+              adminMode={adminMode} onAction={onAction} />)}
+            {visible.length === 0 && <tr><td colSpan={12} className="tasks-empty">
               {tab === "my" ? "Вашему отделу пока не поставлено задач." : "Задач другим отделам пока нет."}
             </td></tr>}
           </tbody>
