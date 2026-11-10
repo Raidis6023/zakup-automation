@@ -229,9 +229,11 @@ async function finishedJob(db:Db,job:Job):Promise<object>{
   note:"Performance is an allocation weight, Seller PPC is charged only once."};
 }
 export async function runHistoricalAdvertising(request:NextRequest){
- const secret=process.env.CRON_SECRET;
- if(!secret||request.headers.get("authorization")!=="Bearer "+secret)
-   return json({ok:false,error:"Unauthorized"},401);
+ const tokenHeader=request.headers.get("authorization");
+ const authorized=Boolean(tokenHeader&&(
+  (process.env.CRON_SECRET&&tokenHeader==="Bearer "+process.env.CRON_SECRET)||
+  (process.env.OZON_AD_CRON_SECRET&&tokenHeader==="Bearer "+process.env.OZON_AD_CRON_SECRET)));
+ if(!authorized)return json({ok:false,error:"Unauthorized"},401);
  const db=createAdminClient(),now=new Date(),started=Date.now();
  const leaseUntil=new Date(started+180000).toISOString();
  const claim=await db.from("ozon_finance_ad_worker_control")
