@@ -19,4 +19,9 @@ assert(worker.includes(".eq('status','requested')"));
 assert(worker.indexOf(".eq('status','requested')")<worker.indexOf(".eq('status','pending')"));
 assert(worker.includes("scope?.priority==='oldest'"));
 assert(worker.includes("if(financeBusy)return"));
-console.log('PASS Ozon KPI Seller vs Performance; Yandex serialized pending queue safety');
+const finance=fs.readFileSync('app/api/agents/ozon-finance/route.ts','utf8');
+assert(finance.includes("const observed=new Set(row.details.filter(x=>!x.is_reference).map(x=>x.type_id))"));
+assert(finance.indexOf("const observed=new Set(row.details.filter")>
+ finance.indexOf("for(const [offer,map] of drillByOffer)"));
+assert(!finance.includes("const saleWithoutFees="));
+console.log('PASS Ozon KPI Seller vs Performance; Ozon fee completeness after itemization; Yandex queue safety');
