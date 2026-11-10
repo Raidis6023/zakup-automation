@@ -520,9 +520,16 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     if(g.mayak_expense===null)g.data_gaps.push("Нет полного расчёта ТК Маяк");
     // Seller accruals may lag order statistics. A delivered sale without a
     // confirmed commission/payment charge is NOT a finished SKU P&L.
-    const saleWithoutFees=(g.buyout_units??0)>0&&(g.revenue??0)>0&&
-      !g.details.some(d=>/комисси|эквайр|вознагражд|при[её]м плат[её]ж|продаж.*комисс/i.test(d.name));
-    if(saleWithoutFees)g.data_gaps.push("Комиссия и эквайринг Ozon не подтверждены в начислениях за период");
+    const hasOrder=(g.buyout_units??0)>0;
+    const missingSettlement:string[]=[];
+    if(hasOrder){
+      if(!g.details.some(d=>d.type_id==='SALES'))missingSettlement.push('продажа');
+      if(!g.details.some(d=>d.type_id==='COMMISSION'))missingSettlement.push('комиссия');
+      if(!g.details.some(d=>d.type_id==='1'))missingSettlement.push('эквайринг');
+    }
+    const saleWithoutFees=missingSettlement.length>0;
+    if(saleWithoutFees)g.data_gaps.push("Не подтверждены начисления Ozon: "+missingSettlement.join(', ')+
+      ". Заказы есть, финрез ещё предварительный");
 
     // An unassigned KM/master_code must not erase a valid financial result.
     // Keep it in the exception register, but calculate whenever actual direct
