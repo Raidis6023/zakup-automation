@@ -82,6 +82,32 @@ declare
   definition text;
   original_anchor text := '  -- The latest simulation must belong to exactly the same calculation.';
   guard text := $guard$
+  -- A rounded-to-zero purchase must be explicitly accepted or adjusted by a buyer.
+  IF EXISTS (
+    SELECT 1 FROM public.china_calculation_items i
+    WHERE i.calculation_run_id = v_run_id
+      AND (
+        (p_scenario = 'container'
+          AND i.container_order_units > 0
+          AND i.container_final_units = 0
+          AND NOT EXISTS (
+            SELECT 1 FROM public.china_manual_adjustments a
+            WHERE a.calculation_item_id = i.id AND a.scenario = 'container'
+          ))
+        OR
+        (p_scenario = 'truck'
+          AND i.truck_order_units > 0
+          AND i.truck_final_units = 0
+          AND NOT EXISTS (
+            SELECT 1 FROM public.china_manual_adjustments a
+            WHERE a.calculation_item_id = i.id AND a.scenario = 'truck'
+          ))
+      )
+  ) THEN
+    RAISE EXCEPTION
+      'Заказ заблокирован: есть товары с неполной коробкой. Подтвердите количество вручную в Закупе.';
+  END IF;
+
   IF NOT EXISTS (
     SELECT 1 FROM public.china_calculation_runs r
     WHERE r.id = v_run_id

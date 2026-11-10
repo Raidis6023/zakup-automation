@@ -3,6 +3,8 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import Button from "../ui/Button";
+import { useRouter } from "next/navigation";
+import { saveChinaManualAdjustment } from "../actions";
 
 // ============================================================
 // ТИП ТОВАРА
@@ -375,6 +377,36 @@ export default function ZakupProductsTableClient({
 }: {
   items: ZakupTableItem[];
 }) {
+  const router = useRouter();
+  const [editing, setEditing] = useState<{
+    itemId: string; offerId: string; scenario: "container" | "truck";
+    quantity: number; comment: string;
+  } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const unresolvedContainer = items.filter(item =>
+    item.container_order_units > 0 && item.container_final_units === 0 &&
+    item.container_manual_quantity == null
+  ).length;
+  const unresolvedTruck = items.filter(item =>
+    item.truck_order_units > 0 && item.truck_final_units === 0 &&
+    item.truck_manual_quantity == null
+  ).length;
+
+  async function submitManualAdjustment(formData: FormData) {
+    setSaving(true);
+    setSaveError("");
+    try {
+      await saveChinaManualAdjustment(formData);
+      setEditing(null);
+      router.refresh();
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Не удалось сохранить решение");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const [sortKey, setSortKey] =
     useState<SortKey>(DEFAULT_SORT_KEY);
 
@@ -498,6 +530,43 @@ export default function ZakupProductsTableClient({
         </Button>
       </div>
 
+      {unresolvedContainer > 0 || unresolvedTruck > 0 ? (
+        <div className="error-box" role="status">
+          <strong>Позиции с неполной коробкой требуют решения</strong>
+          <p>Контейнер: {unresolvedContainer}; фура: {unresolvedTruck}.
+            Они не будут незаметно пропущены при создании заказа.
+            Для каждого товара нажмите «Изменить», укажите количество от 0
+            (сознательно не закупать) либо не меньше полной коробки и сохраните.
+          </p>
+        </div>
+      ) : null}
+
+      {editing ? (
+        <section className="section" aria-label="Ручная корректировка товара">
+          <strong>Изменение количества: {editing.offerId} ({editing.scenario === "container" ? "контейнер" : "фура"})</strong>
+          <form key={editing.itemId + editing.scenario} action={submitManualAdjustment}
+            style={{ display: "flex", alignItems: "end", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
+            <input type="hidden" name="calculationItemId" value={editing.itemId}/>
+            <input type="hidden" name="scenario" value={editing.scenario}/>
+            <label>
+              Количество, шт.
+              <input className="input" type="number" name="manualQuantity" min="0" step="1"
+                defaultValue={editing.quantity} required style={{ display: "block", width: 160 }} />
+            </label>
+            <label>
+              Причина / комментарий
+              <input className="input" type="text" name="comment" defaultValue={editing.comment}
+                maxLength={400} placeholder="Причина решения" style={{ display: "block", width: 280 }} />
+            </label>
+            <Button type="submit" disabled={saving}>{saving ? "Сохранение…" : "Сохранить"}</Button>
+            <Button type="button" variant="secondary" onClick={() => { setEditing(null); setSaveError(""); }}>
+              Отмена
+            </Button>
+          </form>
+          {saveError ? <p role="alert">{saveError}</p> : null}
+        </section>
+      ) : null}
+
       <div
         className="table-wrapper"
         style={{ overflowX: "auto" }}
@@ -551,6 +620,33 @@ export default function ZakupProductsTableClient({
                     className={column.align}
                   >
                     {renderCell(item, column.key)}
+                    {(column.key === "container_effective_final_units" ||
+                      column.key === "truck_effective_final_units") ? (
+                      <div>
+                        <Button type="button" variant="secondary" onClick={() => {
+                          const scenario = column.key === "container_effective_final_units"
+                            ? "container" : "truck";
+                          setSaveError("");
+                          setEditing({
+                            itemId: item.calculation_item_id, offerId: item.offer_id, scenario,
+                            quantity: scenario === "container"
+                              ? (item.container_manual_quantity ?? item.container_order_units)
+                              : (item.truck_manual_quantity ?? item.truck_order_units),
+                            comment: scenario === "container"
+                              ? (item.container_manual_comment ?? "")
+                              : (item.truck_manual_comment ?? ""),
+                          });
+                        }}>Изменить</Button>
+                      </div>
+                    ) : null}
+                    {((column.key === "container_effective_final_units" &&
+                        item.container_order_units > 0 && item.container_final_units === 0 &&
+                        item.container_manual_quantity == null) ||
+                      (column.key === "truck_effective_final_units" &&
+                        item.truck_order_units > 0 && item.truck_final_units === 0 &&
+                        item.truck_manual_quantity == null)) ? (
+                      <small style={{ display: "block" }}>Требует решения</small>
+                    ) : null}
                   </td>
                 ))}
               </tr>
