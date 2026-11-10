@@ -16,6 +16,7 @@ import ZakupProductsTableClient, {
 
 import "./zakup-reference.css";
 import CreateVedDraftSubmitButton from "./CreateVedDraftSubmitButton";
+import WbSalesRefreshButton from "./WbSalesRefreshButton";
 
 import "./zakup-layout-v2.css";
 
@@ -904,6 +905,8 @@ export default async function Home() {
                 </button>
 
               </form>
+
+              <WbSalesRefreshButton />
 
             </section>
 

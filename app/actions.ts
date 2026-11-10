@@ -55,6 +55,32 @@ async function requireAuthenticatedUser() {
 }
 
 
+// Изменять расчёты Китая может только отдел Закуп или администратор.
+async function requireChinaEditor() {
+  const supabase = await createSupabaseAuthClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) throw new Error("Для работы с закупом необходимо войти в WorkSpace");
+
+  const { data, error } = await supabase.rpc("app_get_my_profile");
+  if (error) throw new Error("Не удалось проверить права на закуп");
+  const profile = (Array.isArray(data) ? data[0] : data) as {
+    user_id?: string; role_name?: string; has_admin_access?: boolean;
+    first_name?: string; last_name?: string;
+  } | null;
+
+  if (!profile || profile.user_id !== user.id ||
+      (!profile.has_admin_access && profile.role_name !== "Закуп")) {
+    throw new Error("Недостаточно прав для изменения закупа");
+  }
+
+  const displayName = [profile.first_name, profile.last_name]
+    .map(value => String(value ?? "").trim()).filter(Boolean).join(" ");
+  if (!displayName) {
+    throw new Error("Для создания заказа заполните имя и фамилию в профиле");
+  }
+  return { user, displayName };
+}
+
 // ============================================
 // НАСТРОЙКИ SUPABASE
 // ============================================
@@ -163,7 +189,7 @@ async function callSupabaseRpc(
 
 export async function runChinaCalculation() {
 
-  await requireAuthenticatedUser();
+  await requireChinaEditor();
 
 
   await callSupabaseRpc(
@@ -190,7 +216,7 @@ export async function simulateChinaTransport(
   formData: FormData
 ) {
 
-  await requireAuthenticatedUser();
+  await requireChinaEditor();
 
 
   const rawValue =
@@ -250,7 +276,7 @@ export async function saveChinaManualAdjustment(
   formData: FormData
 ) {
 
-  await requireAuthenticatedUser();
+  const actor = await requireChinaEditor();
 
 
   const calculationItemId =
@@ -342,7 +368,7 @@ export async function saveChinaManualAdjustment(
         comment || null,
 
       p_adjusted_by:
-        "test-user",
+        actor.displayName,
     }
   );
 
@@ -395,7 +421,7 @@ export async function createVedOrderDraft(
   formData: FormData
 ) {
 
-  await requireAuthenticatedUser();
+  const actor = await requireChinaEditor();
 
 
   const scenario =
@@ -464,10 +490,10 @@ export async function createVedOrderDraft(
           "procurement",
 
         p_created_by_name:
-          "Тест Сайта",
+          actor.displayName,
 
         p_created_by_user_id:
-          null,
+          actor.user.id,
 
         p_new_products_volume_m3:
           newProductsVolume,

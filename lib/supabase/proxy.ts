@@ -17,6 +17,7 @@ import {
 const CRON_API_ROUTES =
   new Set<string>([
     "/api/ozon/daily-sync",
+    "/api/wb/sync-sales",
 
     "/api/yandex/daily-sync",
     "/api/yandex/products/sync",
