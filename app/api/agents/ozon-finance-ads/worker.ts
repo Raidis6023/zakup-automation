@@ -65,7 +65,7 @@ export function reportCsvFiles(binary:Buffer,expectedCampaigns:string[],allowMis
    const filename=binary.subarray(p+46,p+46+nameLength).toString("utf8");
    seenFilenames.push(filename.slice(0,100));
    p+=46+nameLength+extra+comment;
-   const campaignId=filename.match(/(?:^|\/)(\d{4,20})\.csv$/i)?.[1];
+   const campaignId=filename.match(/(?:^|\/)(\d{4,20})(?:_\d{2}\.\d{2}\.\d{4}-\d{2}\.\d{2}\.\d{4})?\.csv$/i)?.[1];
    if(!campaignId||!expected.has(campaignId))continue;
    if(out.has(campaignId))throw new Error("Duplicate campaign in ZIP: "+campaignId);
    if(flags&1||![0,8].includes(method)||compressed>20*1024*1024||

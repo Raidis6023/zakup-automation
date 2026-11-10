@@ -38,6 +38,11 @@ function oneEntryZip(id,txt){
 }
 const csv='sku;Расход, Р, с НДС\\n12345;123,45';
 const zip=oneEntryZip('30008673',csv);
+const providerZip=oneEntryZip('30008673_08.11.2026-08.11.2026',csv);
+const recovered=parse(providerZip,['30008673','29796647'],true);
+assert.equal(recovered.size,1);
+assert.equal(recovered.get('30008673'),csv);
+assert(!recovered.has('29796647'));
 assert.throws(()=>parse(zip,['30008673','29796647']),/ZIP_MISSING|Invalid ZIP central directory/);
 const parts=parse(zip,['30008673','29796647'],true);
 assert.equal(parts.size,1);assert.equal(parts.get('30008673'),csv);
@@ -49,4 +54,4 @@ assert(src.includes('const absent=batch.filter(x=>!files.has(x.campaign_id))'));
 assert(src.includes('for(const item of absent)'));
 assert(src.includes('OZON_AD_CRON_SECRET'));
 assert(src.includes('lastHistorical'));
-console.log('PASS Ozon ads: preserve verified partial ZIP campaigns, retry missing ones only, guard cron auth and prioritize recent history');
+console.log('PASS Ozon ads: parse real Ozon dated ZIP filename, preserve verified CSVs, retry missing IDs, guard cron auth and prioritize recent history');
