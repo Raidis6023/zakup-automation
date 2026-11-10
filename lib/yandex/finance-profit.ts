@@ -34,15 +34,16 @@ export function financialReport(lines:Line[],from:string,to:string,rates:Rate[],
   const observedSchemes=new Set(ownOrders.map(o=>o.fulfillment).filter(
    (mode):mode is 'fby'|'fbs'=>mode==='fby'||mode==='fbs'));
   const inferredScheme=observedSchemes.size===1?[...observedSchemes][0]:null;
-  let inferredOrders=0;
+  let inferredOrders=0,mayakUnits=0;
   if(!ordersComplete)gaps.push('Нет полного количества заказанных единиц');
   for(const o of ownOrders){
    if(!o.quantity)continue;
    const missingScheme=o.fulfillment==='unknown'||!o.fulfillment;
    const fulfillment=missingScheme?inferredScheme:o.fulfillment;
+   if(missingScheme&&fulfillment)inferredOrders+=o.quantity;
    if(fulfillment==='fbs')continue;
    if(fulfillment!=='fby'){mayak=null;gaps.push('Не определена схема доставки для ТК Маяк: '+o.order_id);continue;}
-   if(missingScheme)inferredOrders+=o.quantity;
+   mayakUnits+=o.quantity;
    const cost=rateAt(master,o.order_date,p.article)?.mayak_cents;
    if(cost==null){mayak=null;gaps.push('Нет ТК Маяк на '+o.order_date);}
    else if(mayak!==null)mayak+=Math.round(o.quantity*cost);
@@ -60,7 +61,7 @@ export function financialReport(lines:Line[],from:string,to:string,rates:Rate[],
   }
   const transitRevenue=openValue===null?null:p.income+openValue;
   const advertising=p.expenses['Буст продаж, оплата за продажи']??0,storage=p.expenses['Платное хранение с 01.09.26']??0;
-  const details:Detail[]=[{name:'Доставленные товары',category:'Доход',count:p.deliveredQty,amount:p.delivered},{name:'Отмены (другие заказы)',category:'Справочно · уже исключены',count:p.cancelledQty,amount:0},{name:'Подтверждённые возвраты доставленного',category:'Корректировка выручки',count:p.deliveredQty-p.buyouts,amount:p.income-p.delivered},{name:'Невыкупы (другие заказы)',category:'Справочно · уже исключены',count:p.unredeemedQty,amount:0},...Object.entries(p.expenses).map(([name,amount])=>({name,category:name==='Подписки'?'Распределение по выкупам':'Услуга ЯМ',count:feeCounts.get(p.article)?.[name]??null,amount:-amount})),{name:'Цена закупа × расчётные выкупы',category:'Цена закупа',count:p.buyouts,amount:cogs===null?null:-cogs},{name:'ТК Маяк × заказы FBY',category:'Внешний расход',count:ownOrders.filter(x=>x.fulfillment==='fby').reduce((s,x)=>s+x.quantity,0),amount:mayak===null?null:-mayak}];
+  const details:Detail[]=[{name:'Доставленные товары',category:'Доход',count:p.deliveredQty,amount:p.delivered},{name:'Отмены (другие заказы)',category:'Справочно · уже исключены',count:p.cancelledQty,amount:0},{name:'Подтверждённые возвраты доставленного',category:'Корректировка выручки',count:p.deliveredQty-p.buyouts,amount:p.income-p.delivered},{name:'Невыкупы (другие заказы)',category:'Справочно · уже исключены',count:p.unredeemedQty,amount:0},...Object.entries(p.expenses).map(([name,amount])=>({name,category:name==='Подписки'?'Распределение по выкупам':'Услуга ЯМ',count:feeCounts.get(p.article)?.[name]??null,amount:-amount})),{name:'Цена закупа × расчётные выкупы',category:'Цена закупа',count:p.buyouts,amount:cogs===null?null:-cogs},{name:'ТК Маяк × заказы FBY',category:'Внешний расход',count:mayakUnits,amount:mayak===null?null:-mayak}];
   if(result!==null&&details.reduce((s,d)=>s+(d.amount??0),0)!==result)throw new Error('Не сошлась детализация '+p.article);
   rows.push({...p,master_code:master,orders:orderCount,cancelledTotal:p.cancelledQty+p.unredeemedQty,unitCost:current?.cost_cents??null,mayakUnit:current?.mayak_cents??null,cogs,mayak,result,advertising,storage,drr:p.income>0?advertising/p.income:null,roas:advertising!==0&&result!==null?result/Math.abs(advertising):null,profitPerUnit:p.buyouts>0&&result!==null?result/p.buyouts:null,inTransit,transitRevenue,transitDrr:transitRevenue!==null&&transitRevenue>0?Math.abs(advertising)/transitRevenue:null,dataGaps:[...new Set(gaps)],details,rateHistory:histories.get(master??'article:'+p.article)??[]});
  }
