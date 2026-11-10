@@ -97,8 +97,8 @@ export async function runDailySkuAdvertising(requestedDay?:string){
  const day=requestedDay??yesterday,start=Date.now();
  if(!/^\d{4}-\d{2}-\d{2}$/.test(day)||!Number.isFinite(Date.parse(day))||
   new Date(day+'T00:00:00Z').toISOString().slice(0,10)!==day||
-  day>yesterday||day<dayShift(today,-31))
-  return {ok:false,day,error:'Ozon CPC: дата должна быть в пределах последних 31 суток до вчера',rows_saved:0};
+  day!==yesterday)
+  return {ok:false,day,error:'Оперативный метод CPC Ozon доступен только за вчера; для истории нужен асинхронный отчёт кампаний',rows_saved:0};
  const log=async(status:'complete'|'empty'|'failed',n:number,expense:number,error?:string)=>{
   const q=await db.from('ozon_finance_ad_sku_sync_status').upsert({
    account_key:'main',day,source:'cpc_sku_current',status,rows_saved:n,
