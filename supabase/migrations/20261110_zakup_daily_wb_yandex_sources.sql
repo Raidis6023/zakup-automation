@@ -120,7 +120,7 @@ begin
      barcode,warehouse_name,warehouse_type,income_id,raw,synced_at)
   select
     case when l.payload->>'sellerOperName'='Продажа' then 'SFIN:' else 'RFIN:' end ||
-       l.payload->>'rrdId',
+       (l.payload->>'rrdId'),
     l.payload->>'srid',
     ((l.payload->>'saleDt')::timestamptz at time zone 'Europe/Moscow')::timestamp,
     ((l.payload->>'saleDt')::timestamptz at time zone 'Europe/Moscow')::timestamp,
