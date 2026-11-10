@@ -1376,8 +1376,28 @@ html[data-theme="dark"] .home-sync-notification-icon--alert {
 }
 
 
-/* Keep the entire Admin tab visible, including its right rounded corner. */
-.home-right-panel-tabs {
-  flex-wrap: wrap;
+/* The five work-mode tabs must always stay in one row. */
+.home-right-panel--work .home-right-panel-tabs {
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  gap: 2px;
   overflow-x: visible;
 }
+.home-right-panel--work .home-right-panel-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-width: 0;
+  padding: 6px clamp(2px, .25vw, 4px);
+  font-size: clamp(9px, .85vw, 11.5px);
+  white-space: nowrap;
+}
+.home-right-panel--work .home-right-panel-admin-count {
+  flex: 0 0 auto;
+  min-width: 17px;
+  height: 17px;
+  margin-left: 3px;
+  font-size: 10px;
+}
+

@@ -66,4 +66,18 @@ assert.ok(board.includes("isTaskIssuedToAnotherDepartment(row, data.user_id, dat
 const css = fs.readFileSync(path.join(root, "app/tasks/tasks.css"), "utf8");
 assert.match(css, /thead th:nth-child\(n\+6\):nth-child\(-n\+9\)/);
 assert.match(css, /\.tasks-finish-button \{ background: #11865d/);
+// UI regressions: one action column, no browser confirmation and no tab wrapping.
+assert.ok(!board.includes('"Действие", "Удалить"'), "remove the dedicated delete heading");
+assert.ok(!board.includes('tasks-delete-cell'), "delete must use the action column");
+assert.ok(board.includes('width: 202'), "action + delete widths must remain unchanged");
+assert.ok(board.includes('colSpan={11}'), "empty task row must span 11 columns");
+assert.ok(!board.includes('window.confirm("Удалить задачу'), "task deletion must not show a browser dialog");
+assert.ok(board.includes('onClick={() => void onAction("delete", { id: task.id })}'));
+assert.ok(board.includes('className="tasks-placeholder tasks-center">Автоматически'));
+assert.ok(css.includes('padding-right: 54px !important'), "preserve trash position");
+assert.ok(css.includes('.tasks-table:not(.tasks-notes-table) thead th:last-child { text-align: center; }'));
+const panelCss = fs.readFileSync(path.join(root, "app/HomeRightPanel.css"), "utf8");
+assert.match(panelCss, /home-right-panel--work \.home-right-panel-tabs\s*\{[^}]*flex-wrap: nowrap/s);
+assert.match(panelCss, /home-right-panel--work \.home-right-panel-tab\s*\{[^}]*white-space: nowrap/s);
+console.log("PASS Admin task UI: silent deletion, one action column, centered date and one-row tabs");
 console.log("PASS Admin queue: mixed statuses, badge, anonymous department assignment, work separation and styles");

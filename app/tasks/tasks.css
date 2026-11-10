@@ -220,7 +220,11 @@ select.tasks-pill { cursor: pointer; padding-right: 18px; }
 .tasks-status-not_started { background: #e4e7eb; color: #46515c; }
 .tasks-status-in_progress { background: #ffe6a2; color: #775e0c; }
 .tasks-status-completed { background: #a8edba; color: #086139; }
-.tasks-actions-cell { text-align: center; }
+.tasks-actions-cell {
+  position: relative;
+  text-align: center;
+  padding-right: 54px !important;
+}
 .tasks-action-button {
   display: inline-flex;
   align-items: center;
@@ -288,8 +292,9 @@ select.tasks-pill { cursor: pointer; padding-right: 18px; }
 
 
 .tasks-table .tasks-dash { text-align: center; vertical-align: middle; font-variant-numeric: tabular-nums; }
-.tasks-delete-cell { text-align: center; }
+.tasks-center { text-align: center; vertical-align: middle; }
 .tasks-delete-task {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
   display: inline-flex; align-items: center; justify-content: center;
   width: 30px; height: 30px; padding: 0;
   border: 0; border-radius: 0; color: #ef4e4e;
@@ -312,3 +317,6 @@ select.tasks-pill { cursor: pointer; padding-right: 18px; }
 .tasks-table thead th:nth-child(n+6):nth-child(-n+9) {
   text-align: center;
 }
+
+/* Action and delete occupy one 202px column. Preserve the former total table width. */
+.tasks-table:not(.tasks-notes-table) thead th:last-child { text-align: center; }

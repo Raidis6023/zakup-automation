@@ -162,17 +162,11 @@ function TaskRow({ task, tab, snapshot, busy, adminMode, onAction }: {
       tab === "my" && task.status === "in_progress" && (adminMode || task.taken_by === snapshot.user_id) ?
         <button className="tasks-action-button tasks-finish-button" type="button" disabled={busy}
           onClick={() => void onAction("finish", { id: task.id })}>Завершить</button> : null}
-    </td>
-    <td className="tasks-delete-cell">
       {task.created_by === snapshot.user_id && (
         <button type="button" className="tasks-delete-task"
           title="Удалить задачу" aria-label="Удалить задачу"
           disabled={busy}
-          onClick={() => {
-            if (window.confirm("Удалить задачу? Она исчезнет из списков всех участников.")) {
-              void onAction("delete", { id: task.id });
-            }
-          }}>
+          onClick={() => void onAction("delete", { id: task.id })}>
           <TaskTrashIcon />
         </button>
       )}
@@ -367,12 +361,11 @@ export default function TasksBoard() {
             <col style={{ width: 365 }} /><col style={{ width: 126 }} /><col style={{ width: 130 }} />
             <col style={{ width: 166 }} /><col style={{ width: 125 }} />
             <col style={{ width: 115 }} /><col style={{ width: 115 }} /><col style={{ width: 115 }} />
-            <col style={{ width: 92 }} /><col style={{ width: 220 }} /><col style={{ width: 148 }} />
-            <col style={{ width: 54 }} />
+            <col style={{ width: 92 }} /><col style={{ width: 220 }} /><col style={{ width: 202 }} />
           </colgroup>
           <thead><tr>
             {["Задача", "Срочность", "Кто поставил", "Кто выполняет", "Статус",
-              "Дата постановки", "Дата начала", "Дата окончания", "Дней в работе", "Комментарий", "Действие", "Удалить"]
+              "Дата постановки", "Дата начала", "Дата окончания", "Дней в работе", "Комментарий", "Действие"]
               .map(label => <th key={label}>{label}</th>)}
           </tr></thead>
           <tbody>
@@ -389,7 +382,7 @@ export default function TasksBoard() {
               <td className="tasks-placeholder">Автоматически</td>
               <td className="tasks-placeholder">{target === "admin" ? "Администраторы" : "Назначит отдел"}</td>
               <td><StatusCell value="not_started" /></td>
-              <td className="tasks-placeholder">Автоматически</td>
+              <td className="tasks-placeholder tasks-center">Автоматически</td>
               <td className="tasks-placeholder tasks-dash">—</td>
               <td className="tasks-placeholder tasks-dash">—</td>
               <td className="tasks-placeholder tasks-dash">—</td>
@@ -401,12 +394,11 @@ export default function TasksBoard() {
                 className="tasks-action-button" disabled={!canCreate} onClick={() => void submitTask()}>
                 Поставить задачу
               </button></td>
-              <td className="tasks-delete-cell" />
             </tr>}
             {visible.map(task => <TaskRow key={task.id} task={task}
               tab={tab as "my" | "other"} snapshot={data} busy={busy}
               adminMode={adminMode} onAction={onAction} />)}
-            {visible.length === 0 && <tr><td colSpan={12} className="tasks-empty">
+            {visible.length === 0 && <tr><td colSpan={11} className="tasks-empty">
               {tab === "my" ? "Вашему отделу пока не поставлено задач." : "Задач другим отделам пока нет."}
             </td></tr>}
           </tbody>
