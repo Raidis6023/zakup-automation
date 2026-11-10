@@ -24,6 +24,22 @@ export async function POST(req:NextRequest){
   if(input.action==='start'){
    const {from,to}=input;if(!validDate(from)||!validDate(to)||from>to||Date.parse(to)-Date.parse(from)>90*86400000)return NextResponse.json({error:'Выберите период не более 91 дня'},{status:400});
    const {data:active,error:findError}=await db.from('yandex_finance_reports').select('id,date_from,date_to,status,phase').eq('status','loading').order('created_at',{ascending:false}).limit(1).maybeSingle();if(findError)throw findError;if(active)return NextResponse.json(active);
+   // Retry a failed XLSX parse from the saved provider reports instead of
+   // consuming the shared report-generation quota all over again.
+   const previous=await db.from('yandex_finance_reports')
+    .select('id,status,phase,date_from,date_to,report_id')
+    .eq('date_from',from).eq('date_to',to).eq('status','failed').eq('phase','orders_poll')
+    .not('report_id','is',null).not('services_base64','is',null)
+    .order('created_at',{ascending:false}).limit(1).maybeSingle();
+   if(previous.error)throw previous.error;
+   if(previous.data){
+    const retry=await db.from('yandex_finance_reports').update({
+     status:'loading',error:null,locked_until:null,next_request_at:null
+    }).eq('id',previous.data.id).eq('status','failed')
+     .select('id,status,phase,date_from,date_to').maybeSingle();
+    if(retry.error)throw retry.error;
+    if(retry.data)return NextResponse.json(retry.data);
+   }
    const {data,error}=await db.from('yandex_finance_reports').insert({date_from:from,date_to:to,status:'loading',phase:'services_request'}).select('id,status,phase,date_from,date_to').single();if(error)throw error;return NextResponse.json(data);
   }
   if(input.action!=='advance'||!/^[-a-f0-9]{36}$/.test(input.id??''))return NextResponse.json({error:'Некорректный запрос'},{status:400});
@@ -47,11 +63,18 @@ export async function POST(req:NextRequest){
     if(job.phase==='services_poll')await update({services_base64:binary.toString('base64'),phase:'orders_request'});
     else{
      const {data:saved,error}=await db.from('yandex_finance_reports').select('services_base64').eq('id',id).single();if(error)throw error;if(!saved?.services_base64)throw new Error('Не сохранён отчёт услуг');
-     const lines=parseWorkbooks(XLSX.read(Buffer.from(saved.services_base64,'base64'),{type:'buffer'}),XLSX.read(binary,{type:'buffer'}));
+     let missingSheets:string[]=[];
+     const lines=parseWorkbooks(
+      XLSX.read(Buffer.from(saved.services_base64,'base64'),{type:'buffer'}),
+      XLSX.read(binary,{type:'buffer'}),
+      missing=>{missingSheets=missing;}
+     );
+     const warning=missingSheets.length?'Предупреждение: ЯМ не включил листы услуг: '+missingSheets.join('; ')+'. Их суммы не подтверждены; проверьте источник.':null;
+     if(warning)console.warn('[yandex-finance] '+warning);
      const removed=await db.from('yandex_finance_lines').delete().eq('report_id',id);if(removed.error)throw removed.error;
      for(let i=0;i<lines.length;i+=500){const {error}=await db.from('yandex_finance_lines').insert(lines.slice(i,i+500).map((payload,j)=>({report_id:id,line_index:i+j,payload})));if(error)throw error;}
      const count=await db.from('yandex_finance_lines').select('*',{count:'exact',head:true}).eq('report_id',id);if(count.error||count.count!==lines.length)throw new Error('Не совпало количество сохранённых строк');
-     await update({phase:'order_units_pull',line_count:lines.length,services_base64:null,order_state:{},error:null});
+     await update({phase:'order_units_pull',line_count:lines.length,services_base64:null,order_state:{},error:warning});
     }
    }
   }
@@ -74,7 +97,7 @@ export async function POST(req:NextRequest){
     if(next&&next===state.pageToken)throw new Error('ЯМ повторил токен страницы заказов');
     if(next)state={from:windowFrom,end:windowEnd,pageToken:next,pages};
     else if(windowEnd<endExclusive)state={from:windowEnd,pages};
-    else {await update({status:'ready',phase:'done',order_units_complete:true,order_state:{pages},completed_at:new Date().toISOString(),error:null});const publish=await db.rpc('finance_publish_yandex_daily',{p_report_id:id});if(publish.error)throw Error('Не удалось опубликовать дневные данные: '+publish.error.message);break;}
+    else {await update({status:'ready',phase:'done',order_units_complete:true,order_state:{pages},completed_at:new Date().toISOString()});const publish=await db.rpc('finance_publish_yandex_daily',{p_report_id:id});if(publish.error)throw Error('Не удалось опубликовать дневные данные: '+publish.error.message);break;}
     await update({order_state:state});
     await new Promise(resolve=>setTimeout(resolve,350));
    }

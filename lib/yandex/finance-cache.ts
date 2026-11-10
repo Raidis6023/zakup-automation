@@ -3,7 +3,7 @@ import type {Line,ConfirmedReturn} from './finance';
 import {financialReport,type Rate,type Listing,type OrderQuantity} from './finance-profit';
 export async function readFinance(from:string,to:string,scheme?:'fbo'|'fbs'){
  const db=createAdminClient();
- let {data:report,error}=await db.from('yandex_finance_reports').select('id,date_from,date_to,status,line_count,completed_at,order_units_complete')
+ let {data:report,error}=await db.from('yandex_finance_reports').select('id,date_from,date_to,status,line_count,completed_at,order_units_complete,error')
   .eq('status','ready').lte('date_from',from).gte('date_to',to).order('created_at',{ascending:false}).limit(1).maybeSingle();
  if(error)throw error;
  const lines:Line[]=[],orders:OrderQuantity[]=[];
@@ -44,7 +44,7 @@ export async function readFinance(from:string,to:string,scheme?:'fbo'|'fbs'){
    }
    if(orders.length-ordersBefore!==snapshot.order_count)throw Error('Неполные дневные заказы ЯМ '+day);
   }
-  report={id:'daily-history',date_from:from,date_to:to,status:'ready',line_count:lines.length,completed_at:snapshots![snapshots!.length-1].captured_at,order_units_complete:true};
+  report={id:'daily-history',date_from:from,date_to:to,status:'ready',line_count:lines.length,completed_at:snapshots![snapshots!.length-1].captured_at,order_units_complete:true,error:null};
  }
  if(!report)return null;
  if(scheme){
