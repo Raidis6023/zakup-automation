@@ -11,7 +11,7 @@ export default function ZakupCalculationInfo({ rules }: { rules: Rules }) {
   const containerDays = rules?.container_order_point_days ?? 100;
   const truckDays = rules?.truck_order_point_days ?? 70;
   const containerCapacity = rules?.container_capacity_m3 ?? 68;
-  const containerTolerance = rules?.container_tolerance_m3 ?? 68.5;
+  const containerTolerance = containerCapacity + (rules?.container_tolerance_m3 ?? 0.5);
 
   return (
     <details className="zakup-calc-info">
@@ -27,7 +27,7 @@ export default function ZakupCalculationInfo({ rules }: { rules: Rules }) {
           <div><dt>Порог отбора</dt><dd>Запас меньше 60 дней продаж</dd></div>
           <div><dt>Контейнер</dt><dd>Пополнение до {containerDays} дней (90 + 10 буфер)</dd></div>
           <div><dt>Фура</dt><dd>Пополнение до {truckDays} дней (60 + 10 буфер)</dd></div>
-          <div><dt>Вместимость</dt><dd>Контейнер {containerCapacity} м³ (до {containerTolerance} м³ на проверку), фура 90/100 м³</dd></div>
+          <div><dt>Вместимость</dt><dd>Контейнер {containerCapacity} м³ (до {containerTolerance.toLocaleString("ru-RU")} м³ на проверку), фура 90/100 м³</dd></div>
           <div><dt>Остатки</dt><dd>Склад, ОХ, три маркетплейса и заказы ВЭД, сопоставленные по ЕНОТ</dd></div>
           <div><dt>Кубатура</dt><dd>Из вложимости и габаритов транспортных коробок товаров с потребностью</dd></div>
         </dl>
