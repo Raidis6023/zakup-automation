@@ -1,4 +1,4 @@
--- Frequent Ozon Performance backfill without exceeding the one-live-report quota.
+-- Frequent Ozon Performance backfill: 10-minute cadence, below the 2000-campaign daily report quota and one-live-report constraint.
 -- The credential is generated and stored in Supabase Vault separately.
 -- Never put its plaintext value into SQL migration files or cron.job.
 -- CRON_SECRET remains valid for existing Vercel crons.
@@ -11,8 +11,8 @@ begin
   end if;
 end $$;
 select cron.schedule(
-  'ozon_finance_ads_backfill_5min',
-  '*/5 * * * *',
+  'ozon_finance_ads_backfill_10min',
+  '*/10 * * * *',
   $job$
     select net.http_get(
       url:='https://zakup-automation.vercel.app/api/agents/ozon-finance-ads',
