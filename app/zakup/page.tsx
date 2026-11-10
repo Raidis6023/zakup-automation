@@ -16,6 +16,7 @@ import ZakupProductsTableClient, {
 
 import "./zakup-reference.css";
 import CreateVedDraftSubmitButton from "./CreateVedDraftSubmitButton";
+import WbSalesRefreshButton from "./WbSalesRefreshButton";
 
 import "./zakup-layout-v2.css";
 
@@ -688,6 +689,20 @@ export default async function Home() {
       : false;
 
 
+  const pendingDecisions = orderScenario === "container"
+    ? dashboard.items.filter(item =>
+        item.container_order_units > 0 &&
+        item.container_final_units === 0 &&
+        item.container_manual_quantity == null
+      ).length
+    : orderScenario === "truck"
+      ? dashboard.items.filter(item =>
+          item.truck_order_units > 0 &&
+          item.truck_final_units === 0 &&
+          item.truck_manual_quantity == null
+        ).length
+      : 0;
+
   const canCreateOrder =
     Boolean(
       run
@@ -697,6 +712,8 @@ export default async function Home() {
       orderScenario
       &&
       hasOrderItems
+      &&
+      pendingDecisions === 0
     );
 
 
@@ -748,7 +765,10 @@ export default async function Home() {
     simulation
   ) {
 
-    if (
+    if (pendingDecisions > 0) {
+      orderDescription = "Требуется решение по " + pendingDecisions +
+        " позициям с неполной коробкой. Откройте таблицу «Товары» и укажите количество вручную.";
+    } else if (
       canCreateOrder
       &&
       orderScenario
@@ -904,6 +924,8 @@ export default async function Home() {
                 </button>
 
               </form>
+
+              <WbSalesRefreshButton />
 
             </section>
 

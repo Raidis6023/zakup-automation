@@ -2,6 +2,7 @@ import {
   NextRequest,
   NextResponse,
 } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 
 // ============================================================
@@ -330,6 +331,20 @@ export async function POST(
 
   try {
 
+    const session = await createClient();
+    const { data: { user }, error: authError } = await session.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ ok: false, error: "Требуется авторизация" }, { status: 401 });
+    }
+    const { data: rawProfile, error: profileError } = await session.rpc("app_get_my_profile");
+    const profile = (Array.isArray(rawProfile) ? rawProfile[0] : rawProfile) as {
+      user_id?: string; role_name?: string; has_admin_access?: boolean;
+      first_name?: string; last_name?: string;
+    } | null;
+    if (profileError || !profile || profile.user_id !== user.id) {
+      return NextResponse.json({ ok: false, error: "Не удалось проверить права доступа" }, { status: 403 });
+    }
+
     const body:
       CreateOrderRequest =
         await request.json();
@@ -405,9 +420,17 @@ export async function POST(
     // 3. RESPONSIBLE
     // ========================================================
 
-    const createdByName =
-      body.createdByName
-        ?.trim();
+    const allowedToCreate = profile.has_admin_access ||
+      (department === "procurement" && profile.role_name === "Закуп") ||
+      (department === "analytics" && profile.role_name === "Аналитик");
+    if (!allowedToCreate) {
+      return NextResponse.json(
+        { ok: false, error: "Недостаточно прав для создания заказа" },
+        { status: 403 },
+      );
+    }
+    const createdByName = [profile.first_name, profile.last_name]
+      .map(value => String(value ?? "").trim()).filter(Boolean).join(" ");
 
 
     if (!createdByName) {
@@ -515,9 +538,7 @@ export async function POST(
                   createdByName,
 
                 p_created_by_user_id:
-                  body.createdByUserId
-                  ??
-                  null,
+                   user.id,
 
                 p_new_products_volume_m3:
                   newProductsVolumeM3,
