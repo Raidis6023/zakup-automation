@@ -721,11 +721,6 @@ export default function HomeRightPanel() {
                               {" → "}
                               {task.assignee}
                             </span>
-                            {task.isAdminTask && (
-                              <span className="home-right-panel-admin-status">
-                                {task.status === "in_progress" ? "В работе" : "Не принята"}
-                              </span>
-                            )}
                           </div>
                           <button
                             type="button"

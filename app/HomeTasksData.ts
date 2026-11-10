@@ -73,6 +73,16 @@ function toTaskItem(
   };
 }
 
+/** Author-based outbox: department changes must not hide previously assigned tasks. */
+export function isTaskIssuedToAnotherDepartment(
+  task: Pick<WorkspaceTaskRecord, "created_by" | "target_department">,
+  userId: string,
+  currentDepartment: string
+): boolean {
+  return task.created_by === userId &&
+    task.target_department !== currentDepartment;
+}
+
 export function buildMyWorkspaceTasks(
   snapshot: WorkspaceTaskSnapshot | null
 ): TaskItem[] {

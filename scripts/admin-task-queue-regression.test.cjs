@@ -17,7 +17,8 @@ loaded._compile(js, sourcePath);
 
 const {
   buildAdminWorkspaceTasks, buildAdminActiveWorkspaceTasks,
-  buildAdminUnacceptedWorkspaceTasks, buildMyWorkspaceTasks
+  buildAdminUnacceptedWorkspaceTasks, buildMyWorkspaceTasks,
+  isTaskIssuedToAnotherDepartment
 } = loaded.exports;
 
 const task = (id, target, status, takenBy = null) => ({
@@ -47,11 +48,21 @@ assert.equal(buildAdminUnacceptedWorkspaceTasks(snapshot).length, 1);
 assert.equal(buildMyWorkspaceTasks(snapshot).length, 1);
 assert.equal(buildMyWorkspaceTasks(snapshot)[0].id, "working");
 assert.equal(buildAdminWorkspaceTasks({ ...snapshot, is_admin: false }).length, 0);
+// Regression: historical procurement task must remain visible to author after role changes to analyst.
+const priorRoleTask = task("historical-admin-task", "admin", "in_progress", "admin2");
+priorRoleTask.created_by = "admin1";
+priorRoleTask.created_department = "procurement";
+assert.equal(isTaskIssuedToAnotherDepartment(priorRoleTask, "admin1", "analyst"), true);
+assert.equal(isTaskIssuedToAnotherDepartment(priorRoleTask, "someone-else", "analyst"), false);
+assert.equal(isTaskIssuedToAnotherDepartment(task("mine", "analyst", "not_started"), "author", "analyst"), false);
 const right = fs.readFileSync(path.join(root, "app/HomeRightPanel.tsx"), "utf8");
+assert.ok(!right.includes("home-right-panel-admin-status"), "no status line under task title");
 assert.ok(right.includes("? adminAllTasks"), "work-mode Admin tab must use all admin tasks");
 assert.ok(right.includes("tab.id === \"admin\" && adminTasksCount > 0"), "zero badge must disappear");
 const board = fs.readFileSync(path.join(root, "app/tasks/TasksBoard.tsx"), "utf8");
 assert.ok(board.includes('task.target_department === "admin" ? "Администраторы"'));
+assert.ok(board.includes("task.created_by === snapshot.user_id && ("), "delete action only mounted for author");
+assert.ok(board.includes("isTaskIssuedToAnotherDepartment(row, data.user_id, data.department)"));
 const css = fs.readFileSync(path.join(root, "app/tasks/tasks.css"), "utf8");
 assert.match(css, /thead th:nth-child\(n\+6\):nth-child\(-n\+9\)/);
 assert.match(css, /\.tasks-finish-button \{ background: #11865d/);

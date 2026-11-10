@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "../../lib/supabase/client";
+import { isTaskIssuedToAnotherDepartment } from "../HomeTasksData";
 import { usePathname } from "next/navigation";
 import "./tasks.css";
 
@@ -163,17 +164,18 @@ function TaskRow({ task, tab, snapshot, busy, adminMode, onAction }: {
           onClick={() => void onAction("finish", { id: task.id })}>Завершить</button> : null}
     </td>
     <td className="tasks-delete-cell">
-      <button type="button" className="tasks-delete-task"
-        title={task.created_by === snapshot.user_id ? "Удалить задачу" : "Удаление доступно только постановщику"}
-        aria-label={task.created_by === snapshot.user_id ? "Удалить задачу" : "Удаление недоступно"}
-        disabled={busy || task.created_by !== snapshot.user_id}
-        onClick={() => {
-          if (window.confirm("Удалить задачу? Она исчезнет из списков всех участников.")) {
-            void onAction("delete", { id: task.id });
-          }
-        }}>
-        <TaskTrashIcon />
-      </button>
+      {task.created_by === snapshot.user_id && (
+        <button type="button" className="tasks-delete-task"
+          title="Удалить задачу" aria-label="Удалить задачу"
+          disabled={busy}
+          onClick={() => {
+            if (window.confirm("Удалить задачу? Она исчезнет из списков всех участников.")) {
+              void onAction("delete", { id: task.id });
+            }
+          }}>
+          <TaskTrashIcon />
+        </button>
+      )}
     </td>
   </tr>;
 }
@@ -312,9 +314,8 @@ export default function TasksBoard() {
     (data.department.startsWith("category_manager:") &&
       row.target_department === "category_manager")) ?? [], [data]);
   const otherTasks = useMemo(() => data?.tasks.filter(row =>
-    row.created_by === data.user_id &&
-    row.created_department === data.department &&
-    row.target_department !== data.department) ?? [], [data]);
+    isTaskIssuedToAnotherDepartment(row, data.user_id, data.department)
+  ) ?? [], [data]);
   const visible = tab === "my" ? myTasks : otherTasks;
   const canCreate = newTitle.trim().length > 0 && !!newUrgency && !!target && !busy;
 

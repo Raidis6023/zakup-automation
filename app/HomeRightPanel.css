@@ -1381,10 +1381,3 @@ html[data-theme="dark"] .home-sync-notification-icon--alert {
   flex-wrap: wrap;
   overflow-x: visible;
 }
-.home-right-panel-task .home-right-panel-task-copy .home-right-panel-admin-status {
-  display: block;
-  margin-top: 3px;
-  color: var(--ws-icon);
-  font-size: 10.5px;
-  font-weight: 750;
-}
