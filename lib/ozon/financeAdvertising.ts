@@ -100,3 +100,21 @@ export function provisionalResult(
 ): number {
   return Math.round((sellerFinanceAmount - cogs - mayak + Number.EPSILON) * 100) / 100;
 }
+
+/**
+ * Profit uses authoritative Ozon Seller ledger postings, never the presence
+ * of optional fee-detail types. A SKU can have posted revenue without a
+ * distinct SALES/COMMISSION/acquiring line in the requested date range:
+ * those accruals may be booked in different periods or be absent by scheme.
+ * Do not fabricate missing cost, or report the result if order coverage fails.
+ */
+export function calculateProvisionalSkuProfit(
+  sellerNet: number,
+  cogs: number | null,
+  mayak: number | null,
+  salesCovered: boolean,
+): number | null {
+  if (!salesCovered || cogs === null || mayak === null) return null;
+  if (![sellerNet,cogs,mayak].every(Number.isFinite)) return null;
+  return provisionalResult(sellerNet,cogs,mayak);
+}
