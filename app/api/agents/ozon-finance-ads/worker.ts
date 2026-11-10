@@ -248,24 +248,35 @@ export async function runHistoricalAdvertising(request:NextRequest){
     .select("job_id").eq("status","requested")
     .order("updated_at",{ascending:true}).limit(1).maybeSingle();
   if(inflight.error)throw inflight.error;
-  // Finish existing running jobs before discovering newly queued periods.
-  // Otherwise an HTTP 429 from GET /campaign on the newest empty job
-  // starves dozens of already downloaded/report-requested older campaigns.
-  const jobColumns="id,date_from,date_to,status,last_error";
-  const runningQuery=db.from("ozon_finance_ad_sync_jobs")
-    .select(jobColumns).eq("account_key","main");
-  const {data:running,error:runningError}=await (
-   inflight.data?.job_id?runningQuery.eq("id",inflight.data.job_id).limit(1).maybeSingle():
-   runningQuery.eq("status","running").order("date_to",{ascending:false}).limit(1).maybeSingle()
-  );
-  if(runningError)throw runningError;
-  const {data:pending,error:pendingError}=running?{data:null,error:null}:
-   await db.from("ozon_finance_ad_sync_jobs")
-    .select("id,date_from,date_to,status,last_error").eq("account_key","main")
-    .in("status",["pending","failed"])
+  // Always finish the already requested UUID first. Manual range selection
+  // can then prioritize its own pending historical jobs without discarding
+  // an older running job or generating two concurrent provider reports.
+  const periodFrom=request.nextUrl.searchParams.get('from');
+  const periodTo=request.nextUrl.searchParams.get('to');
+  const scoped=!!periodFrom&&!!periodTo;
+  const columns="id,date_from,date_to,status,last_error";
+  const queued=db.from("ozon_finance_ad_sync_jobs").select(columns)
+    .eq("account_key","main").in("status",["running","pending","failed"]);
+  let chosen;
+  if(inflight.data?.job_id){
+   chosen=await queued.eq("id",inflight.data.job_id).limit(1).maybeSingle();
+  }else if(scoped){
+   const preferred=await queued.gte("date_from",periodFrom).lte("date_to",periodTo)
     .order("date_to",{ascending:false}).limit(1).maybeSingle();
-  const job=running??pending,jobError=pendingError;
-  if(jobError)throw jobError;
+   if(preferred.error)throw preferred.error;
+   chosen=preferred.data?preferred:await db.from("ozon_finance_ad_sync_jobs").select(columns)
+    .eq("account_key","main").in("status",["running","pending","failed"])
+    .order("status",{ascending:false}).order("date_to",{ascending:false}).limit(1).maybeSingle();
+  }else{
+   const active=await queued.eq("status","running")
+    .order("date_to",{ascending:false}).limit(1).maybeSingle();
+   if(active.error)throw active.error;
+   chosen=active.data?active:await db.from("ozon_finance_ad_sync_jobs").select(columns)
+    .eq("account_key","main").in("status",["pending","failed"])
+    .order("date_to",{ascending:false}).limit(1).maybeSingle();
+  }
+  if(chosen.error)throw chosen.error;
+  const job=chosen.data;
   if(!job){phase="idle";return json({ok:true,phase})}
   const selected=job as Job;
   const covered=await db.from("ozon_finance_ad_coverage").select("day")

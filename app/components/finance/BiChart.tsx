@@ -8,11 +8,10 @@ export function chartDomain(values:number[],zero=false){if(!values.length)return
 export default function BiChart({points,series,unit='₽',stacked=false,zero=false,label}:{points:ChartPoint[];series:ChartSeries[];unit?:string;stacked?:boolean;zero?:boolean;label:string}){
  const ref=useRef<HTMLDivElement>(null),[width,setWidth]=useState(900),[active,setActive]=useState<number|null>(null),id=useId().replace(/:/g,'');
  useEffect(()=>{const el=ref.current;if(!el)return;const observer=new ResizeObserver(([e])=>setWidth(e.contentRect.width));observer.observe(el);return()=>observer.disconnect()},[]);
- // A handful of days should not stretch into a two-metre-wide chart.
- // Long ranges retain enough space per day and scroll only when necessary.
+ // All selected days fill the available viewport. Long periods scroll when
+ // necessary; short ones use the entire monitor instead of a narrow strip.
  const count=Math.max(1,points.length),measured=Math.max(320,width);
- const w=count<=8?Math.min(measured,Math.max(340,150+count*90)):
-  count<=42?measured:Math.max(measured,140+count*24);
+ const w=Math.max(measured,140+count*24);
  const h=!stacked&&count<=8?340:476;
  const left=76,right=20,top=22,bottom=48,plot=w-left-right;
  const labelInterval=Math.max(1,Math.ceil(count/Math.max(1,Math.floor(plot/55))));

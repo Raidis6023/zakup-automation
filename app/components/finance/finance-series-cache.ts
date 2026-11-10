@@ -1,7 +1,7 @@
 import type {Report} from './finance-series';
 type Bundle=Array<{day:string;report:Report}>;
 const pending=new Map<string,Promise<Bundle>>(),ready=new Map<string,{at:number;data:Bundle}>();
-const ttl=30*60*1000,prefix='finance-series-v4-daily:';
+const ttl=2*60*1000,prefix='finance-series-v5-coverage-aware:';
 const fields=['article','offer_id','income','revenue','cogs','mayak','mayak_expense','result','estimated_result','advertising','advertising_amount','orders','order_count','buyouts','buyout_units'];
 let generation=0;let running=0;const waiting:Array<()=>void>=[];
 async function report(url:string):Promise<Report>{if(running>=2)await new Promise<void>(r=>waiting.push(r));else running++;try{const r=await fetch(url,{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error??'Не удалось загрузить динамику');return {...d,rows:d.rows.map((row:Record<string,unknown>)=>Object.fromEntries(fields.map(k=>[k,row[k]])))};}finally{const next=waiting.shift();if(next)next();else running--;}}
