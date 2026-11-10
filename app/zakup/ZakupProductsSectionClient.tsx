@@ -68,12 +68,17 @@ function ProductsTableIcon() {
 export default function ZakupProductsSectionClient({
   skuCount,
   children,
+  title = "Товары",
+  subtitle = "Итоговые значения текущего расчёта",
+  sectionId = "zakup-products-table",
+  showLinks = true,
 }: {
-  skuCount:
-    number;
-
-  children:
-    ReactNode;
+  skuCount: number;
+  children: ReactNode;
+  title?: string;
+  subtitle?: string;
+  sectionId?: string;
+  showLinks?: boolean;
 }) {
 
   const { expanded, toggle: toggleExpanded } = useWorkspaceDisclosure();
@@ -125,8 +130,7 @@ export default function ZakupProductsSectionClient({
             expanded
           }
   
-          aria-controls=
-            "zakup-products-table"
+          aria-controls={sectionId}
         >
   
           <span
@@ -148,9 +152,7 @@ export default function ZakupProductsSectionClient({
               className=
                 "zakup-products-toggle-title"
             >
-              Товары ({
-                skuCount
-              })
+              {title} ({skuCount})
             </strong>
   
   
@@ -158,13 +160,14 @@ export default function ZakupProductsSectionClient({
               className=
                 "muted zakup-products-toggle-subtitle"
             >
-              Итоговые значения текущего расчёта
+              {subtitle}
             </span>
   
           </span>
   
         </button>
 
+        {showLinks && (
         <nav className="zakup-products-header-links" aria-label="Связанные разделы товаров">
           <ButtonLink href="/stocks" variant="secondary" className="navigation-button">
             Остатки
@@ -173,6 +176,7 @@ export default function ZakupProductsSectionClient({
             Габариты
           </ButtonLink>
         </nav>
+        )}
       </div>
 
 
@@ -184,8 +188,7 @@ export default function ZakupProductsSectionClient({
           ? (
 
             <div
-              id=
-                "zakup-products-table"
+              id={sectionId}
 
               className=
                 "zakup-products-table-content"

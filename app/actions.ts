@@ -352,6 +352,30 @@ export async function saveChinaManualAdjustment(
   }
 
 
+  const dashboard = await callSupabaseRpc("get_china_dashboard") as {
+    simulation?: { new_products_volume_m3?: number | string } | null;
+    items?: Array<{
+      calculation_item_id: string;
+      needs_china_order?: boolean;
+      units_per_carton?: number | null;
+    }>;
+  };
+
+  const row = dashboard.items?.find(item =>
+    item.calculation_item_id === calculationItemId
+  );
+  if (!row || row.needs_china_order !== true) {
+    throw new Error("Редактировать можно только актуальные позиции с потребностью в закупке");
+  }
+
+  const unitsPerCarton = Number(row.units_per_carton ?? 0);
+  if (!Number.isSafeInteger(unitsPerCarton) || unitsPerCarton <= 0) {
+    throw new Error("Для товара не установлена вложимость транспортной коробки");
+  }
+  if (quantity > 0 && (quantity < unitsPerCarton || quantity % unitsPerCarton !== 0)) {
+    throw new Error("Количество должно быть кратно " + unitsPerCarton + " шт. в коробке");
+  }
+
   await callSupabaseRpc(
     "save_china_manual_adjustment",
     {
@@ -371,17 +395,6 @@ export async function saveChinaManualAdjustment(
         actor.displayName,
     }
   );
-
-
-  const dashboard =
-    await callSupabaseRpc(
-      "get_china_dashboard"
-    ) as {
-      simulation?: {
-        new_products_volume_m3?:
-          number | string;
-      } | null;
-    };
 
 
   const currentNewProductsVolume =

@@ -13,6 +13,7 @@ from "./ZakupProductsSectionClient";
 import ZakupProductsTableClient, {
   type ZakupTableItem,
 } from "./ZakupProductsTableClient";
+import ZakupDemandTableClient from "./ZakupDemandTableClient";
 
 import "./zakup-reference.css";
 import CreateVedDraftSubmitButton from "./CreateVedDraftSubmitButton";
@@ -542,10 +543,10 @@ function getSelectedSkuCount(
   ) {
 
     return items.filter(
-      item =>
-        item
-          .container_effective_final_units >
-        0
+      item => item.needs_china_order === true &&
+        item.container_manual_quantity != null &&
+        item.container_manual_quantity > 0 &&
+        item.container_effective_final_units > 0
     ).length;
 
   }
@@ -563,10 +564,10 @@ function getSelectedSkuCount(
   ) {
 
     return items.filter(
-      item =>
-        item
-          .truck_effective_final_units >
-        0
+      item => item.needs_china_order === true &&
+        item.truck_manual_quantity != null &&
+        item.truck_manual_quantity > 0 &&
+        item.truck_effective_final_units > 0
     ).length;
 
   }
@@ -689,19 +690,20 @@ export default async function Home() {
       : false;
 
 
-  const pendingDecisions = orderScenario === "container"
-    ? dashboard.items.filter(item =>
-        item.container_order_units > 0 &&
-        item.container_final_units === 0 &&
-        item.container_manual_quantity == null
-      ).length
-    : orderScenario === "truck"
-      ? dashboard.items.filter(item =>
-          item.truck_order_units > 0 &&
-          item.truck_final_units === 0 &&
-          item.truck_manual_quantity == null
-        ).length
-      : 0;
+  const demandItems = dashboard.items.filter(item => item.needs_china_order === true);
+  const reviewScenario: "container" | "truck" =
+    simulation?.transport_scenario === "truck_90" ||
+    simulation?.transport_scenario === "truck_100" ||
+    simulation?.transport_scenario === "manual_review_over_100"
+      ? "truck" : "container";
+
+  // An item with positive calculated demand is NEVER implicitly approved.
+  // A manual quantity of 0 means explicitly excluded from the new VED draft.
+  const pendingDecisions = demandItems.filter(item =>
+    (orderScenario ?? reviewScenario) === "container"
+      ? item.container_manual_quantity == null
+      : item.truck_manual_quantity == null
+  ).length;
 
   const canCreateOrder =
     Boolean(
@@ -766,8 +768,8 @@ export default async function Home() {
   ) {
 
     if (pendingDecisions > 0) {
-      orderDescription = "Требуется решение по " + pendingDecisions +
-        " позициям с неполной коробкой. Откройте таблицу «Товары» и укажите количество вручную.";
+      orderDescription = "Осталось принять решение по " + pendingDecisions +
+        " товарам. Откройте отдельную таблицу «Потребность в закупке»: включите нужные позиции или исключите их.";
     } else if (
       canCreateOrder
       &&
@@ -1464,7 +1466,7 @@ export default async function Home() {
                     className=
                       "card-label"
                   >
-                    Выбранный объём
+                    {pendingDecisions > 0 ? "Предварительный объём" : "Выбранный объём"}
                   </div>
 
 
@@ -1485,7 +1487,7 @@ export default async function Home() {
                     className=
                       "muted zakup-v2-result-subtitle"
                   >
-                    Количество выбранных SKU:{" "}
+                    Подтверждено к закупке SKU:{" "}
                     {
                       selectedSkuCount
                     }
@@ -1501,6 +1503,19 @@ export default async function Home() {
 
         </div>
 
+
+        {/* ===================================
+            ПОТРЕБНОСТЬ В ЗАКУПКЕ / РЕШЕНИЯ
+            =================================== */}
+        <ZakupProductsSectionClient
+          skuCount={demandItems.length}
+          title="Потребность в закупке"
+          subtitle="Отдельный список для включения и исключения товаров из заказа"
+          sectionId="zakup-demand-table"
+          showLinks={false}
+        >
+          <ZakupDemandTableClient items={demandItems} scenario={reviewScenario} />
+        </ZakupProductsSectionClient>
 
         {/* ===================================
             ФОРМИРОВАНИЕ ЗАКАЗА + РЕШЕНИЕ
