@@ -38,7 +38,7 @@ export function reportCsvFiles(binary:Buffer,expectedCampaigns:string[],allowMis
  if(end<0)throw new Error("ZIP end-of-directory not found");
  const total=binary.readUInt16LE(end+10),centralSize=binary.readUInt32LE(end+12);
  const centralOffset=binary.readUInt32LE(end+16);
- if(total<expectedCampaigns.length||total>20 ||
+ if((!allowMissing&&total<expectedCampaigns.length)||total>20 ||
    centralOffset+centralSize>binary.length)throw new Error("Invalid ZIP central directory");
  const expected=new Set(expectedCampaigns),out=new Map<string,string>(),seenFilenames:string[]=[];
  let p=centralOffset,totalBytes=0;
