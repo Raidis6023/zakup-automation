@@ -5,6 +5,7 @@ import CopyArticle from '../../components/finance/CopyArticle';
 import { Fragment, useMemo, useState } from "react";
 import dynamic from 'next/dynamic';
 import {knownSum,ratioTotal,uniqueStock} from '../../../lib/finance-totals';
+import {advertisingDisplay} from '../../../lib/ozon/advertising-presentation';
 import OzonRowRates from './OzonRowRates';
 import {downloadFinanceWorkbook} from '../../components/finance/export-xlsx';
 const CampaignCharts=dynamic(()=>import('./CampaignCharts'),{ssr:false});
@@ -31,7 +32,7 @@ type Data = {
   ads_partial_spend?:number;ads_partial_skus?:number;
   ads_jobs?:Array<{status:string;last_error:string|null;date_from:string;date_to:string}>;
   cache_updated_at?:string|null;
-  advertising?:{finance_total:number;finance_unallocated:number};
+  advertising?:{finance_total:number;finance_unallocated:number;partial_performance_total?:number;performance_complete?:boolean};
 };
 type SortKey =
   "master_code"|"manager"|"offer_id"|"estimated_result"|"revenue"|"ad"|"drr"|
@@ -180,7 +181,15 @@ export default function FinancierDetailTable({
   const marketingBySku=numericSum(rows,advertising);
   const sellerAdGlobal=includeUnallocated && data?.advertising
     ?Number(data.advertising.finance_total):null;
-  const adAmount=sellerAdGlobal!=null?sellerAdGlobal:marketingBySku;
+  const referenceBySku=includeUnallocated?
+    (data?.advertising?.partial_performance_total??data?.ads_partial_spend??null):
+    numericSum(rows,r=>r.performance_ad_expense===null?null:Math.abs(r.performance_ad_expense));
+  const globalAdvertising=advertisingDisplay(sellerAdGlobal,referenceBySku,!!data?.ads_covered);
+  const hasLocalReference=rows.some(r=>r.performance_ad_expense!==null&&r.advertising_amount===0);
+  const adAmount=includeUnallocated?globalAdvertising.amount:marketingBySku;
+  const adReferenceOnly=includeUnallocated
+    ?globalAdvertising.kind==='performance_partial':hasLocalReference;
+  const adUnknown=includeUnallocated?globalAdvertising.kind==='unknown':adAmount===null;
   const directStorage=numericSum(rows,storage);
   const unallocatedStorage=includeUnallocated?
     (data?.unallocated_details??[]).filter(x=>/хранени|размещени/i.test(x.name))
@@ -202,7 +211,7 @@ export default function FinancierDetailTable({
           "ТК Маяк, ₽/шт":r.mayak_unit,"Чего не хватает":r.data_gaps.join("; ")};
       })},
       {name:"Итоги",rows:[{"Период с":data?.from,"Период по":data?.to,"Операционная прибыль, ₽":operatingProfit,
-        "Выручка, ₽":sumRevenue,"Реклама, ₽":adAmount,"Хранение, ₽":storageAmount,"Артикулов":rows.length}]}
+        "Выручка, ₽":sumRevenue,"Реклама по начислениям Seller, ₽":sellerAdGlobal??numericSum(rows,r=>r.advertising_amount),"Реклама по SKU Performance (справочно), ₽":referenceBySku,"Хранение, ₽":storageAmount,"Артикулов":rows.length}]}
     ]);
   }
   function exportMissingData(){
@@ -226,7 +235,7 @@ export default function FinancierDetailTable({
     {name:"Операционная прибыль",value:money(operatingProfit),tone:moneyTone(operatingProfit)},
     {name:"Выручка",value:money(sumRevenue),tone:moneyTone(sumRevenue)},
     {name:"Рентабельность",value:pct(profitability),tone:moneyTone(profitability)},
-    {name:data?.ads_covered?"Реклама":"Реклама"+(includeUnallocated?"":" (часть)"),
+    {name:adReferenceOnly?"Реклама по SKU (неполная)":adUnknown?"Реклама (нет данных)":data?.ads_covered?"Реклама":"Реклама"+(includeUnallocated?"":" (часть)"),
       value:money(adAmount),tone:adAmount==null?"":Math.abs(adAmount)>0?"ozf-bad":"ozf-good"},
     {name:"Платное хранение",value:money(storageAmount),tone:storageAmount==null?"":Math.abs(storageAmount)>0?"ozf-bad":"ozf-good"},
     {name:"Положительные позиции",value:qty(positionsPositive),tone:positionsPositive>0?"ozf-good":"ozf-bad"},
@@ -262,6 +271,14 @@ export default function FinancierDetailTable({
         {['Выручка','Операционная прибыль'].includes(k.name)?<button type="button" className="ozf-kpi-link" onClick={()=>setGraphMetric(k.name==='Выручка'?'revenue':'profit')}>{k.name}</button>:<span>{k.name}</span>}<strong>{k.value}</strong>
       </div>)}
     </div>
+    {adReferenceOnly&&<p className="ozf-notice" role="status" style={{marginTop:8}}>
+      В рекламной карточке показаны доступные расходы Performance по SKU, справочно.
+      В финансовых начислениях Seller за этот период реклама ещё не подтверждена.
+      Эти расходы не списываются из прибыли второй раз; сумма может увеличиться после завершения истории РК.
+    </p>}
+    {adUnknown&&<p className="ozf-notice" role="status" style={{marginTop:8}}>
+      Расходы на рекламу пока не подтверждены, ноль не означает отсутствие кампаний.
+    </p>}
     {data?.stock_as_of?.main_at&&<p className="ozf-notice" style={{marginTop:8}}>
       Аведэкс основной: снимок от {data.stock_as_of.main_at.split('-').reverse().join('.')}.
       {data.stock_as_of.ox_at&&<> Аведэкс ОХ: снимок от {data.stock_as_of.ox_at.split('-').reverse().join('.')}.</>}
