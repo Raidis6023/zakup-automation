@@ -18,8 +18,10 @@ export default function WbSalesRefreshButton() {
       if (!response.ok || !result.ok) {
         throw new Error(result.error || "Ошибка загрузки продаж WB");
       }
-      setMessage("WB: продажи проверены, " + result.rowsSaved +
-        " записей. Можно пересчитать закуп.");
+      setMessage("WB: " + result.fbwSales + " продаж, " +
+        result.fbwReturns + " возвратов; период " +
+        result.dateFrom + " – " + result.dateTo +
+        ". Источник: ежедневный финансовый отчёт. Можно пересчитать закуп.");
       router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Ошибка синхронизации WB");
