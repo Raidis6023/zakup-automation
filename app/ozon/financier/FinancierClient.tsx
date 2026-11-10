@@ -4,7 +4,7 @@ import OzonMissingRateEditor from "./OzonMissingRateEditor";
 import OrderFulfillmentPanels from "../../components/finance/OrderFulfillmentPanels";
 import FinancierDetailTable from "./FinancierDetailTable";
 import AccrualBreakdownList from '../../components/finance/AccrualBreakdownList';
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type Detail = { type_id: string; name: string; amount: number; count: number };
 type FinanceRow = {
@@ -18,6 +18,10 @@ type FinanceRow = {
   ozon_stock:number|null;main_stock:number|null;ox_stock:number|null;
   in_china:number|null;in_crossdock:number|null;in_transit:number|null;
   transit_revenue:number|null;transit_drr:number|null;discontinued:boolean;
+};
+type AdsProgress={
+ latest_sku_update:string|null;campaigns_total:number;campaigns_confirmed:number;
+ campaigns_pending:number;unstarted_job_windows:number;complete_days:number;expected_days:number;
 };
 type FinanceReport = {
   cache_updated_at?:string|null;
@@ -65,6 +69,9 @@ export default function FinancierClient() {
   const [managerOptions,setManagerOptions]=useState<string[]>([]);
   const [data, setData] = useState<FinanceReport | null>(null);
   const [adsBusy,setAdsBusy]=useState(false),[adsStatus,setAdsStatus]=useState('');
+  const [adsProgress,setAdsProgress]=useState<AdsProgress|null>(null);
+  const lastAdsSeen=useRef<string|null>(null);
+  const autoRefreshActive=useRef(false);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [diagnosing, setDiagnosing] = useState(false);
@@ -94,6 +101,31 @@ export default function FinancierClient() {
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setLoading(false); }
   }, [appliedFrom,appliedTo]);
+  useEffect(()=>{
+    if(!data)return;
+    let alive=true;
+    lastAdsSeen.current=null;
+    const refresh=async()=>{
+      try{
+        const url='/api/agents/ozon-finance-ads/status?'+new URLSearchParams({from:data.from,to:data.to});
+        const res=await fetch(url,{cache:'no-store'});
+        const report=await res.json() as AdsProgress&{ok?:boolean};
+        if(!alive||!res.ok||!report.ok)return;
+        setAdsProgress(report);
+        const seen=lastAdsSeen.current;
+        lastAdsSeen.current=report.latest_sku_update;
+        if(report.latest_sku_update&&!autoRefreshActive.current&&
+          (seen?Date.parse(report.latest_sku_update)>Date.parse(seen):
+           Date.parse(report.latest_sku_update)>Date.parse(data.cache_updated_at??'1970-01-01'))){
+          autoRefreshActive.current=true;
+          try{await load()}finally{autoRefreshActive.current=false}
+        }
+      }catch{/* Refresh is advisory; leave the confirmed figures visible. */}
+    };
+    void refresh();
+    const timer=setInterval(()=>void refresh(),60000);
+    return ()=>{alive=false;clearInterval(timer)};
+  },[data?.from,data?.to,load]);
   useEffect(()=>{fetch(API+'?mode=managers',{cache:'no-store'}).then(r=>r.json()).then(d=>{if(d.ok)setManagerOptions(d.managers)}).catch(()=>{});},[]);
   const managers = useMemo(() => ["Все КМ",
     ...new Set([...managerOptions,...(data?.rows ?? []).map(r => r.manager)].sort((a, b) => a.localeCompare(b, "ru")))],
@@ -398,10 +430,22 @@ setAdsStatus((daily?(daily.ok?'CPC по SKU за '+daily.day+': '+String(daily.r
  'История кампаний: '+String(j.phase??j.error??'неизвестно')+'. Загружено отчётов: '+String(j.reports_processed??0)+'.');
 if(daily?.ok||['report_saved','complete','already_cached'].includes(String(j.phase))){clearFinanceSeries();void load();}}catch(e){setAdsStatus(String(e))}finally{setAdsBusy(false)}}}>{adsBusy?'Выгружаем рекламу…':'Продолжить рекламу Ozon'}</button><span role="status">{adsStatus}</span>
       </div>
-      {data&&<p>Показан период: <b>{data.from} — {data.to}</b> включительно. Кэш: {data.cache_updated_at?new Date(data.cache_updated_at).toLocaleString('ru-RU',{timeZone:'Asia/Krasnoyarsk'}):'—'} (Красноярск).</p>}
-      {data?.ads_daily_sync?.length?(()=>{const latest=data.ads_daily_sync![0];return <p className={latest.status==='failed'?'ozf-error':'ozf-progress'} role="status">
- Оперативная реклама Ozon по SKU: {latest.day}, статус {latest.status==='complete'?'загружено':latest.status==='empty'?'пустой ответ площадки':'ошибка'}, строк {latest.rows_saved}, сумма {latest.status==='complete'?Number(latest.expense_rub).toLocaleString('ru-RU')+' ₽':'не подтверждена'}. {latest.last_error||''} Историческая детализация кампаний загружается отдельно.
- </p>})():null}
+      {data&&<p>Показан период: <b>{data.from} — {data.to}</b> включительно. Финансовые начисления Seller обновлены: {data.cache_updated_at?new Date(data.cache_updated_at).toLocaleString('ru-RU',{timeZone:'Asia/Krasnoyarsk'}):'—'} (Красноярск). Рекламные отчёты имеют собственное время обновления.</p>}
+      {data?.ads_daily_sync?.length?(()=>{const yesterday=new Date(Date.now()+7*3600000-86400000).toISOString().slice(0,10);
+       const latest=data.ads_daily_sync!.find(s=>s.status==='complete'||s.day===yesterday);
+       if(!latest)return null;
+       return <p className="ozf-progress" role="status">
+        Оперативная реклама Ozon по SKU: {latest.day}. {latest.status==='complete'?
+         'Загружено '+latest.rows_saved+' строк, '+Number(latest.expense_rub).toLocaleString('ru-RU')+' ₽.':
+         'Оперативный отчёт недоступен, используем историческую выгрузку. '}
+        {latest.status==='complete'?'':'Расходы не приравниваются к нулю.'}
+       </p>})():null}
+      {adsProgress&&data&&!data.ads_covered&&<p className="ozf-progress" role="status">
+        Историческая реклама: проверено {adsProgress.campaigns_confirmed} из {adsProgress.campaigns_total} поставленных в очередь кампаний;
+        полностью подтверждено дней {adsProgress.complete_days} из {adsProgress.expected_days}.
+        {adsProgress.unstarted_job_windows>0?' Ожидают создания очереди ещё '+adsProgress.unstarted_job_windows+' периодов.':''}
+        {' '}Данные по SKU обновляются автоматически по мере загрузки. Неподтверждённые расходы не считаются нулём.
+      </p>}
        {connectionStatus && <p className="ozf-progress" role="status">{connectionStatus}</p>}
       {error && <p className="ozf-error" role="alert">{error}</p>}
       {progress && <p className="ozf-progress" role="status">{progress}</p>}
