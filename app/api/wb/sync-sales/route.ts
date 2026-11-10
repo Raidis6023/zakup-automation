@@ -150,9 +150,17 @@ async function syncSales(request: NextRequest) {
     }
 
     const unique = new Map<string, Record<string, unknown>>();
-    let fbwSales = 0;
-    let fbwReturns = 0;
+    let ignoredOtherSchemes = 0;
     for (const entry of body as WbSale[]) {
+      // wb_sales is an intentionally FBW-only source for China procurement.
+      // FBS sales must never enter this table or the v9 FBW demand model.
+      const warehouseType = typeof entry.warehouseType === "string"
+        ? entry.warehouseType.trim()
+        : "";
+      if (warehouseType !== "Склад WB") {
+        ignoredOtherSchemes++;
+        continue;
+      }
       const saleId = String(entry.saleID ?? "").trim();
       const saleDate = validTimestamp(entry.date);
       const changedAt = validTimestamp(entry.lastChangeDate);
@@ -161,7 +169,9 @@ async function syncSales(request: NextRequest) {
           (!saleId.startsWith("S") && !saleId.startsWith("R"))) {
         throw new Error("WB вернул некорректную запись продажи/возврата; импорт не подтверждён");
       }
-      if (saleDate.slice(0, 10) > requestedTo) continue;
+      // Only the verified 28-day window is used for procurement.
+      const operationDay = saleDate.slice(0, 10);
+      if (operationDay < ozonRun.date_from || operationDay > requestedTo) continue;
       // Полный 28-дневный отрезок читается единым запросом по lastChangeDate.
       const row = {
         sale_id: saleId,
@@ -172,24 +182,29 @@ async function syncSales(request: NextRequest) {
         supplier_article: typeof entry.supplierArticle === "string" ? entry.supplierArticle : null,
         barcode: typeof entry.barcode === "string" ? entry.barcode : null,
         warehouse_name: typeof entry.warehouseName === "string" ? entry.warehouseName : null,
-        warehouse_type: typeof entry.warehouseType === "string" ? entry.warehouseType : null,
+        warehouse_type: warehouseType,
         income_id: Number.isSafeInteger(Number(entry.incomeID)) ? Number(entry.incomeID) : null,
         raw: { source: "supplier/sales", saleID: saleId },
         synced_at: new Date().toISOString(),
       };
-      if (row.warehouse_type === "Склад WB" &&
-          saleDate.slice(0, 10) >= ozonRun.date_from) {
-        if (saleId.startsWith("S")) fbwSales += 1;
-        else fbwReturns += 1;
-      }
       unique.set(saleId, row);
     }
 
+    const values = Array.from(unique.values());
+    const fbwSales = values.filter(row => String(row.sale_id).startsWith("S")).length;
+    const fbwReturns = values.length - fbwSales;
+    const coveredDays = new Set(values.map(row => String(row.sale_date).slice(0, 10))).size;
     if (fbwSales === 0) {
       throw new Error("Выгрузка WB не содержит ни одной продажи FBW за расчётный период");
     }
-
-    const values = Array.from(unique.values());
+    // An empty or heavily truncated data window is never accepted as a
+    // successful source for a 28-day purchase calculation.
+    if (coveredDays < 26) {
+      throw new Error(
+        "Недостаточно дней операций FBW для расчёта 28 дней: " + coveredDays +
+        ". Проверьте полноту отчёта WB",
+      );
+    }
     for (let i = 0; i < values.length; i += BATCH_SIZE) {
       const { error: saveError } = await db.from("wb_sales").upsert(
         values.slice(i, i + BATCH_SIZE), { onConflict: "sale_id" },
@@ -210,11 +225,11 @@ async function syncSales(request: NextRequest) {
 
     console.info("[WB SALES] verified", {
       dateFrom: requestedFrom, dateTo: requestedTo,
-      rowsReceived: body.length, rowsSaved: values.length, fbwSales, fbwReturns,
+      rowsReceived: body.length, rowsSaved: values.length, fbwSales, fbwReturns, ignoredOtherSchemes, coveredDays,
     });
     return NextResponse.json({
       ok: true, dateFrom: requestedFrom, dateTo: requestedTo,
-      rowsReceived: body.length, rowsSaved: values.length, fbwSales, fbwReturns,
+      rowsReceived: body.length, rowsSaved: values.length, fbwSales, fbwReturns, ignoredOtherSchemes, coveredDays,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Неизвестная ошибка WB";
