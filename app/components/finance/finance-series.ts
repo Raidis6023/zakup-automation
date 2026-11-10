@@ -1,16 +1,17 @@
 export type FinanceMetric='orders'|'buyouts'|'revenue'|'profit';
 export type Values=Record<FinanceMetric|'marketplace'|'advertising'|'inbound',number|null>;
 export type Report={rows:Array<Record<string,unknown>>;totals?:Record<string,number|null>;unallocated_amount?:number;ads_covered?:boolean;advertising?:{finance_total:number};missing_days?:string[]};
-export type FinancePoint={day:string;v:Values};
+export type FinancePoint={day:string;v:Values;composition?:Values;provisional?:boolean;adUnconfirmed?:boolean};
 export function amounts(d:Report,market:string,offer?:string,offers?:string[]):Values{const rows=d.rows.filter(r=>offer?(r.article??r.offer_id)===offer:offers?offers.includes(String(r.article??r.offer_id)):true),ym=market==='yandex',whole=!offer&&!offers;
  const sum=(key:string)=>rows.some(r=>r[key]==null)?null:rows.reduce((s,r)=>s+Number(r[key]),0)/(ym?100:1),qty=(key:string)=>rows.some(r=>r[key]==null)?null:rows.reduce((s,r)=>s+Number(r[key]),0);
  const revenue=sum(ym?'income':'revenue'),cogs=sum('cogs'),mayak=sum(ym?'mayak':'mayak_expense');let profit=sum(ym?'result':'estimated_result');
  if(whole)profit=ym?d.totals?.result==null?null:d.totals.result/100:profit===null?null:profit+Number(d.unallocated_amount??0);
  const ledgerAd=sum('advertising_amount');
  let advertising=ym?sum('advertising'):whole?d.advertising?.finance_total==null?null:-d.advertising.finance_total:ledgerAd===null?null:-ledgerAd;
- // An absent Ozon Seller advertising charge is not a confirmed zero while
- // the Performance historical reports are incomplete.
- if(market==='ozon'&&d.ads_covered!==true&&advertising===0)advertising=null;
+ // This composition describes actual Seller ledger charges, not the
+ // independent Performance campaign spend. A booked zero is valid here when
+ // the Seller ledger day is loaded; its campaign completeness is flagged
+ // separately and must never be presented as "no advertising campaigns".
  const inbound=cogs===null||mayak===null?null:cogs+mayak;
  const marketplace=revenue===null||profit===null||inbound===null||advertising===null?null:revenue-profit-inbound-advertising;
  return {orders:qty(ym?'orders':'order_count'),buyouts:qty(ym?'buyouts':'buyout_units'),revenue,profit,advertising,inbound,marketplace};}
@@ -27,14 +28,34 @@ export function percentageComposition(v:Values):Record<string,number|null>{
  const total=keys.reduce((sum,k)=>sum+normalized[k],0);
  return Object.fromEntries(keys.map(k=>[k,total>0?normalized[k]/total*100:null]));
 }
+/** A partial structure is calculated only over rows with known COGS,
+ * Mayak and Seller profit. Other rows are excluded, never silently assigned
+ * zero costs or included in the marketplace residual. */
+export function compositionAmounts(d:Report,market:string,offer?:string,offers?:string[]):{v:Values;provisional:boolean;adUnconfirmed:boolean}{
+ const all=amounts(d,market,offer,offers);
+ if(market!=='ozon')return {v:all,provisional:false,adUnconfirmed:false};
+ const chosen=d.rows.filter(r=>offer?(r.article??r.offer_id)===offer:offers?offers.includes(String(r.article??r.offer_id)):true);
+ const adUnconfirmed=d.ads_covered!==true;
+ const incomplete=chosen.some(r=>r.estimated_result==null||r.cogs==null||r.mayak_expense==null||r.revenue==null);
+ if(!incomplete)return {v:all,provisional:adUnconfirmed,adUnconfirmed};
+ const known=chosen.filter(r=>r.estimated_result!=null&&r.cogs!=null&&r.mayak_expense!=null&&r.revenue!=null);
+ if(!known.length)return {v:all,provisional:true,adUnconfirmed};
+ const total=(field:string)=>known.reduce((sum,r)=>sum+Number(r[field]??0),0);
+ const revenue=total('revenue'),profit=total('estimated_result');
+ const inbound=total('cogs')+total('mayak_expense'),advertising=-total('advertising_amount');
+ return {v:{...all,revenue,profit,inbound,advertising,
+  marketplace:revenue-profit-inbound-advertising},provisional:true,adUnconfirmed};
+}
 export function dailyChanges(reports:Array<{day:string;report:Report}>,market:string,offer?:string,offers?:string[]):FinancePoint[]{
  return reports.map(({day,report})=>{
   const cur=amounts(report,market,offer,offers);
-  const v=Object.fromEntries(Object.keys(cur).map(k=>{
-   const key=k as keyof Values;
-   return [key,report.missing_days?.length||cur[key]===null?null:cur[key]];
+  const comp=compositionAmounts(report,market,offer,offers);
+  const invalid=Boolean(report.missing_days?.length);
+  const mask=(values:Values)=>Object.fromEntries(Object.keys(values).map(k=>{
+   const key=k as keyof Values;return [key,invalid?null:values[key]];
   })) as Values;
-  return {day,v};
+  return {day,v:mask(cur),composition:mask(comp.v),
+   provisional:comp.provisional||invalid,adUnconfirmed:comp.adUnconfirmed};
  });
 }
 
