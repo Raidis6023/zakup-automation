@@ -1,12 +1,16 @@
 export type FinanceMetric='orders'|'buyouts'|'revenue'|'profit';
 export type Values=Record<FinanceMetric|'marketplace'|'advertising'|'inbound',number|null>;
-export type Report={rows:Array<Record<string,unknown>>;totals?:Record<string,number|null>;unallocated_amount?:number;advertising?:{finance_total:number};missing_days?:string[]};
+export type Report={rows:Array<Record<string,unknown>>;totals?:Record<string,number|null>;unallocated_amount?:number;ads_covered?:boolean;advertising?:{finance_total:number};missing_days?:string[]};
 export type FinancePoint={day:string;v:Values};
 export function amounts(d:Report,market:string,offer?:string,offers?:string[]):Values{const rows=d.rows.filter(r=>offer?(r.article??r.offer_id)===offer:offers?offers.includes(String(r.article??r.offer_id)):true),ym=market==='yandex',whole=!offer&&!offers;
  const sum=(key:string)=>rows.some(r=>r[key]==null)?null:rows.reduce((s,r)=>s+Number(r[key]),0)/(ym?100:1),qty=(key:string)=>rows.some(r=>r[key]==null)?null:rows.reduce((s,r)=>s+Number(r[key]),0);
  const revenue=sum(ym?'income':'revenue'),cogs=sum('cogs'),mayak=sum(ym?'mayak':'mayak_expense');let profit=sum(ym?'result':'estimated_result');
  if(whole)profit=ym?d.totals?.result==null?null:d.totals.result/100:profit===null?null:profit+Number(d.unallocated_amount??0);
- const ledgerAd=sum('advertising_amount');const advertising=ym?sum('advertising'):whole?d.advertising?.finance_total==null?null:-d.advertising.finance_total:ledgerAd===null?null:-ledgerAd;
+ const ledgerAd=sum('advertising_amount');
+ let advertising=ym?sum('advertising'):whole?d.advertising?.finance_total==null?null:-d.advertising.finance_total:ledgerAd===null?null:-ledgerAd;
+ // An absent Ozon Seller advertising charge is not a confirmed zero while
+ // the Performance historical reports are incomplete.
+ if(market==='ozon'&&d.ads_covered!==true&&advertising===0)advertising=null;
  const inbound=cogs===null||mayak===null?null:cogs+mayak;
  const marketplace=revenue===null||profit===null||inbound===null||advertising===null?null:revenue-profit-inbound-advertising;
  return {orders:qty(ym?'orders':'order_count'),buyouts:qty(ym?'buyouts':'buyout_units'),revenue,profit,advertising,inbound,marketplace};}
