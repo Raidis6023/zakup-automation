@@ -1,0 +1,18 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const ui=fs.readFileSync('app/ozon/financier/FinancierClient.tsx','utf8');
+const status=fs.readFileSync('app/api/agents/ozon-finance-ads/status/route.ts','utf8');
+assert(ui.includes('Историческая реклама: проверено'));
+assert(ui.includes('latest_sku_update'));
+assert(ui.includes('setInterval(()=>void refresh(),60000)'));
+assert(ui.includes('Рекламные отчёты имеют собственное время обновления'));
+assert(!ui.includes("Кэш: {data.cache_updated_at"));
+assert(!ui.includes("{latest.last_error||''} Историческая"));
+assert(ui.includes("s.status==='complete'||s.day===yesterday"));
+assert(status.includes('await financeAccess()'));
+assert(status.includes("const from=request.nextUrl.searchParams.get('from')"));
+assert(status.includes("campaigns_confirmed:loaded"));
+assert(status.includes("complete_days:(covered.data??[]).length"));
+assert(status.includes("Cache-Control':'private, no-store"));
+assert(!status.includes('CRON_SECRET'));
+console.log('PASS Ozon ads live progress: authorization, fresh status, auto-refresh, stale CPC failures not advertised as current');
