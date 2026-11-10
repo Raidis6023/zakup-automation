@@ -14,5 +14,5 @@ assert.equal(percentageComposition(missing).advertising,null);
 const billed=amounts({...initial,advertising:{finance_total:-12}},'ozon');
 assert.equal(billed.advertising,12);
 const confirmed=amounts({...initial,ads_covered:true},'ozon');
-assert.equal(confirmed.advertising,0);
+assert.ok(confirmed.advertising===0);
 console.log('PASS Ozon ads: incomplete coverage cannot render zero; confirmed charges preserved');
