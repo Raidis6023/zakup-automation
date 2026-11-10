@@ -266,7 +266,8 @@ export async function runHistoricalAdvertising(request:NextRequest){
    chosen=await queued.eq("id",inflight.data.job_id).limit(1).maybeSingle();
   }else if(scoped){
    const preferred=await queued.gte("date_from",periodFrom).lte("date_to",periodTo)
-    .order("date_to",{ascending:false}).limit(1).maybeSingle();
+    .order("date_to",{ascending:false})
+    .order("date_from",{ascending:true}).limit(1).maybeSingle();
    if(preferred.error)throw preferred.error;
    chosen=preferred.data?preferred:await db.from("ozon_finance_ad_sync_jobs").select(columns)
     .eq("account_key","main").in("status",["running","pending","failed"])
@@ -280,8 +281,12 @@ export async function runHistoricalAdvertising(request:NextRequest){
      .toISOString().slice(0,10);
    const firstHistorical=new Date(Date.parse(lastHistorical+'T00:00:00Z')-14*86400000)
      .toISOString().slice(0,10);
+   // For the same latest missing date, prioritize the longer DATE-grouped
+   // job: one provider archive covers several days, unlike N daily batches.
+   // The parser verifies each day in every line, splitting only if needed.
    const recent=await queued.gte("date_to",firstHistorical)
     .lte("date_to",lastHistorical).order("date_to",{ascending:false})
+    .order("date_from",{ascending:true})
     .limit(1).maybeSingle();
    if(recent.error)throw recent.error;
    chosen=recent.data?recent:await db.from("ozon_finance_ad_sync_jobs").select(columns)
@@ -299,7 +304,11 @@ export async function runHistoricalAdvertising(request:NextRequest){
   const pendingMetrics=await db.from("ozon_finance_ad_campaign_tasks").select('id',{head:true,count:'exact'}).eq('job_id',selected.id).eq('metrics_ready',false);
   if(pendingMetrics.error)throw pendingMetrics.error;
   const taskCheck=await db.from('ozon_finance_ad_campaign_tasks').select('id',{head:true,count:'exact'}).eq('job_id',selected.id);if(taskCheck.error)throw taskCheck.error;
-  if((covered.data?.length??0)>=requiredDays && Number(taskCheck.count)>0 && pendingMetrics.count===0){
+  // Coverage verified by a completed multi-day job also satisfies an older
+  // daily job that has never requested any report. Never replay its campaigns.
+  // Retain pending tasks when their own coverage remains unconfirmed.
+  if((covered.data?.length??0)>=requiredDays &&
+    (Number(taskCheck.count)===0 || pendingMetrics.count===0)){
     await db.from("ozon_finance_ad_sync_jobs")
       .update({status:"complete",last_error:null,updated_at:new Date().toISOString()})
       .eq("id",selected.id);
