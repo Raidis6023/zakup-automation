@@ -1466,7 +1466,7 @@ export default async function Home() {
                     className=
                       "card-label"
                   >
-                    Выбранный объём
+                    {pendingDecisions > 0 ? "Предварительный объём" : "Выбранный объём"}
                   </div>
 
 
@@ -1487,7 +1487,7 @@ export default async function Home() {
                     className=
                       "muted zakup-v2-result-subtitle"
                   >
-                    Количество выбранных SKU:{" "}
+                    Подтверждено к закупке SKU:{" "}
                     {
                       selectedSkuCount
                     }
