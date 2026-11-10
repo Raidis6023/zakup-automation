@@ -24,6 +24,7 @@ import {
   buildCreatedByMeWorkspaceTasks,
   buildAdminActiveWorkspaceTasks,
   buildAdminUnacceptedWorkspaceTasks,
+  buildAdminWorkspaceTasks,
   buildMyWorkspaceTasks,
   buildPersonalNotes,
   buildUnacceptedWorkspaceTasks,
@@ -525,10 +526,6 @@ export default function HomeRightPanel() {
   const tabs = adminHomeMode
     ? ADMIN_TASK_TABS
     : TASK_TABS.filter(tab => tab.id !== "admin" || workspaceTaskSnapshot?.is_admin);
-  const adminTasksCount = (workspaceTaskSnapshot?.admin_tasks ?? []).filter(
-    task => task.status === "not_started" || task.status === "in_progress"
-  ).length;
-
   const myTasks = useMemo<TaskItem[]>(
     () => buildMyWorkspaceTasks(workspaceTaskSnapshot),
     [workspaceTaskSnapshot]
@@ -553,11 +550,16 @@ export default function HomeRightPanel() {
     () => buildAdminUnacceptedWorkspaceTasks(workspaceTaskSnapshot),
     [workspaceTaskSnapshot]
   );
+  const adminAllTasks = useMemo<TaskItem[]>(
+    () => buildAdminWorkspaceTasks(workspaceTaskSnapshot),
+    [workspaceTaskSnapshot]
+  );
+  const adminTasksCount = adminAllTasks.length;
 
   const filteredTasks = adminHomeMode
     ? (activeTab === "active" ? adminActiveTasks : adminUnacceptedTasks)
     : activeTab === "admin"
-      ? adminUnacceptedTasks
+      ? adminAllTasks
       : activeTab === "my"
         ? myTasks
         : activeTab === "unaccepted"
@@ -569,7 +571,7 @@ export default function HomeRightPanel() {
         ? "Активных задач отдела администрирования пока нет."
         : "Непринятых задач отдела администрирования пока нет.")
     : activeTab === "admin"
-      ? "Непринятых задач администрирования нет."
+      ? "Активных и непринятых задач администрирования нет."
       : activeTab === "my"
         ? "Задач, взятых вами в работу, пока нет."
         : activeTab === "unaccepted"
@@ -649,7 +651,7 @@ export default function HomeRightPanel() {
                   }
                 >
                   {tab.label}
-                  {tab.id === "admin" && (
+                  {tab.id === "admin" && adminTasksCount > 0 && (
                     <span className="home-right-panel-admin-count" aria-label={`Всего незавершённых задач: ${adminTasksCount}`}>
                       {adminTasksCount}
                     </span>
@@ -719,6 +721,11 @@ export default function HomeRightPanel() {
                               {" → "}
                               {task.assignee}
                             </span>
+                            {task.isAdminTask && (
+                              <span className="home-right-panel-admin-status">
+                                {task.status === "in_progress" ? "В работе" : "Не принята"}
+                              </span>
+                            )}
                           </div>
                           <button
                             type="button"

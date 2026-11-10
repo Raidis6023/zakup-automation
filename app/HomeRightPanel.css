@@ -374,8 +374,11 @@ svg {
   padding-bottom:
     10px;
 
+  flex-wrap:
+    wrap;
+
   overflow-x:
-    auto;
+    visible;
 
   border-bottom:
     1px solid
@@ -1370,4 +1373,18 @@ html[data-theme="dark"] .home-sync-notification-icon--alert {
   border-radius: 999px; background: #ec424a; color: #fff;
   font-size: 11px; font-weight: 800; line-height: 1;
   font-variant-numeric: tabular-nums;
+}
+
+
+/* Keep the entire Admin tab visible, including its right rounded corner. */
+.home-right-panel-tabs {
+  flex-wrap: wrap;
+  overflow-x: visible;
+}
+.home-right-panel-task .home-right-panel-task-copy .home-right-panel-admin-status {
+  display: block;
+  margin-top: 3px;
+  color: var(--ws-icon);
+  font-size: 10.5px;
+  font-weight: 750;
 }

@@ -10,6 +10,8 @@ export type TaskItem = {
   assignee: string;
   dotColor: TaskDotColor;
   action: TaskAction;
+  status?: TaskStatus;
+  isAdminTask?: boolean;
 };
 
 export type PersonalNote = {
@@ -61,11 +63,13 @@ function toTaskItem(
     id: task.id,
     title: task.title,
     creator: task.creator_name || "Сотрудник",
-    assignee:
-      task.assignee_name
-      || (accepted ? "Исполнитель" : "Ожидает исполнителя"),
+    assignee: task.target_department === "admin"
+      ? "Администраторы"
+      : task.assignee_name || (accepted ? "Исполнитель" : "Ожидает исполнителя"),
     dotColor: accepted ? getUrgencyDotColor(task.urgency) : "gray",
     action,
+    status: task.status,
+    isAdminTask: task.target_department === "admin",
   };
 }
 
@@ -142,4 +146,20 @@ export function buildAdminActiveWorkspaceTasks(snapshot: WorkspaceTaskSnapshot |
   return (snapshot.admin_tasks ?? [])
     .filter(task => task.target_department === "admin" && task.status === "in_progress")
     .map(task => toTaskItem(task, true, "finish"));
+}
+
+
+/** Shared administration inbox: taken and untaken tasks stay visible until finished. */
+export function buildAdminWorkspaceTasks(
+  snapshot: WorkspaceTaskSnapshot | null
+): TaskItem[] {
+  if (!snapshot?.is_admin) return [];
+  return (snapshot.admin_tasks ?? [])
+    .filter(task => task.target_department === "admin" &&
+      (task.status === "not_started" || task.status === "in_progress"))
+    .map(task => toTaskItem(
+      task,
+      task.status === "in_progress",
+      task.status === "in_progress" ? "finish" : "take"
+    ));
 }

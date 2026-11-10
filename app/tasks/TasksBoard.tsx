@@ -143,7 +143,7 @@ function TaskRow({ task, tab, snapshot, busy, adminMode, onAction }: {
     <td><UrgencyCell value={urgency} editable={canEdit && !busy}
       onChange={next => { setUrgency(next); void onAction("edit", { id: task.id, title: title.trim(), urgency: next }); }} /></td>
     <td><span>{task.creator_name}</span></td>
-    <td><div><span>{task.assignee_name || "Не назначен"}</span>
+    <td><div><span>{task.target_department === "admin" ? "Администраторы" : (task.assignee_name || "Не назначен")}</span>
       {tab === "other" && <span className="tasks-subtext">{deptLabel(task.target_department)}</span>}
     </div></td>
     <td><StatusCell value={task.status} /></td>
@@ -386,7 +386,7 @@ export default function TasksBoard() {
                 {URGENCIES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
               </select></td>
               <td className="tasks-placeholder">Автоматически</td>
-              <td className="tasks-placeholder">Назначит отдел</td>
+              <td className="tasks-placeholder">{target === "admin" ? "Администраторы" : "Назначит отдел"}</td>
               <td><StatusCell value="not_started" /></td>
               <td className="tasks-placeholder">Автоматически</td>
               <td className="tasks-placeholder tasks-dash">—</td>
