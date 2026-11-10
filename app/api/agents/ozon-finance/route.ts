@@ -518,23 +518,11 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     if(!salesWindowCovered)g.data_gaps.push("Не подтверждена полнота заказов и отмен");
     if(g.cogs===null && salesWindowCovered)g.data_gaps.push("Не вся цена закупа известна");
     if(g.mayak_expense===null)g.data_gaps.push("Нет полного расчёта ТК Маяк");
-    // Seller accruals may lag order statistics. A delivered sale without a
-    // confirmed commission/payment charge is NOT a finished SKU P&L.
-    const hasOrder=(g.buyout_units??0)>0;
-    const missingSettlement:string[]=[];
-    if(hasOrder){
-      if(!g.details.some(d=>d.type_id==='SALES'))missingSettlement.push('продажа');
-      if(!g.details.some(d=>d.type_id==='COMMISSION'))missingSettlement.push('комиссия');
-      if(!g.details.some(d=>d.type_id==='1'))missingSettlement.push('эквайринг');
-    }
-    const saleWithoutFees=missingSettlement.length>0;
-    if(saleWithoutFees)g.data_gaps.push("Не подтверждены начисления Ozon: "+missingSettlement.join(', ')+
-      ". Заказы есть, финрез ещё предварительный");
-
-    // An unassigned KM/master_code must not erase a valid financial result.
-    // Keep it in the exception register, but calculate whenever actual direct
-    // costs (including proven zero-unit costs) are known.
-    if(g.cogs!==null && g.mayak_expense!==null && !saleWithoutFees) {
+    // Settlement completeness is checked AFTER the nested itemized accrual
+    // lines are attached below. Checking it here produced false "no commission"
+    // warnings for SKUs that clearly have a COMMISSION line.
+    // Unassigned KM/master_code must not erase valid Seller accounting.
+    if(g.cogs!==null && g.mayak_expense!==null) {
       g.estimated_result=provisionalResult(g.ozon_amount,g.cogs,g.mayak_expense);
     }else g.estimated_result=null;
     g.details = g.details.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
@@ -603,6 +591,19 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
         name:"Оплата за клик (распределено из общих начислений Seller API)",
         amount:row.allocated_seller_ppc,count:0,is_advertising:true});
     row.details.sort((a,b)=>Math.abs(b.amount)-Math.abs(a.amount));
+    // Check the FINAL itemized fees, not the earlier ledger placeholder.
+    if((row.buyout_units??0)>0){
+      const observed=new Set(row.details.filter(x=>!x.is_reference).map(x=>x.type_id));
+      const missingSettlement:string[]=[];
+      if(!observed.has('SALES'))missingSettlement.push('продажа');
+      if(!observed.has('COMMISSION'))missingSettlement.push('комиссия');
+      if(!observed.has('1'))missingSettlement.push('эквайринг');
+      if(missingSettlement.length){
+        row.data_gaps.push('Не подтверждены начисления Ozon: '+missingSettlement.join(', ')+
+          '. Заказы есть, финрез ещё предварительный');
+        row.estimated_result=null;
+      }
+    }
   }
   // Reference data completeness is independent of whether a finance day
   // was imported. Product listings without master_code must remain visible.
