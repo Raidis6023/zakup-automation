@@ -20,8 +20,7 @@ assert(worker.indexOf(".eq('status','requested')")<worker.indexOf(".eq('status',
 assert(worker.includes("scope?.priority==='oldest'"));
 assert(worker.includes("if(financeBusy)return"));
 const finance=fs.readFileSync('app/api/agents/ozon-finance/route.ts','utf8');
-assert(finance.includes("const observed=new Set(row.details.filter(x=>!x.is_reference).map(x=>x.type_id))"));
-assert(finance.indexOf("const observed=new Set(row.details.filter")>
- finance.indexOf("for(const [offer,map] of drillByOffer)"));
-assert(!finance.includes("const saleWithoutFees="));
-console.log('PASS Ozon KPI Seller vs Performance; Ozon fee completeness after itemization; Yandex queue safety');
+assert(finance.includes("g.estimated_result=calculateProvisionalSkuProfit("));
+assert(!finance.includes("missingSettlement"));
+assert(!finance.includes("row.estimated_result=null;"));
+console.log('PASS Ozon KPI Seller vs Performance; Ozon profit not gated by optional fees; Yandex queue safety');

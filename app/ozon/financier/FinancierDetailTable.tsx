@@ -175,7 +175,11 @@ export default function FinancierDetailTable({
 
   // The summary is scoped to the selected KM, not the free-text search.
   const sumProfit=numericSum(rows,r=>r.estimated_result);
+  const missingProfitCount=rows.filter(r=>r.estimated_result===null).length;
+  const profitIsPartial=missingProfitCount>0;
   const globalAdjustment=includeUnallocated?Number(data?.unallocated_amount??0):0;
+  // This is the known subtotal, never a confirmed whole-company P&L when
+  // any SKU has missing order coverage or acquisition cost.
   const operatingProfit=sumProfit==null?null:round(sumProfit+globalAdjustment);
   const sumRevenue=numericSum(rows,r=>r.revenue);
   const marketingBySku=numericSum(rows,advertising);
@@ -211,7 +215,7 @@ export default function FinancierDetailTable({
           "ТК Маяк, ₽/шт":r.mayak_unit,"Чего не хватает":r.data_gaps.join("; ")};
       })},
       {name:"Итоги",rows:[{"Период с":data?.from,"Период по":data?.to,"Операционная прибыль, ₽":operatingProfit,
-        "Выручка, ₽":sumRevenue,"Реклама по начислениям Seller, ₽":sellerAdGlobal??numericSum(rows,r=>r.advertising_amount),"Реклама по SKU Performance (справочно), ₽":referenceBySku,"Хранение, ₽":storageAmount,"Артикулов":rows.length}]}
+        "Выручка, ₽":sumRevenue,"Статус прибыли":profitIsPartial?"Неполный расчёт":"Расчёт по всем артикулам","Артикулов без прибыли":missingProfitCount,"Реклама по начислениям Seller, ₽":sellerAdGlobal??numericSum(rows,r=>r.advertising_amount),"Реклама по SKU Performance (справочно), ₽":referenceBySku,"Хранение, ₽":storageAmount,"Артикулов":rows.length}]}
     ]);
   }
   function exportMissingData(){
@@ -223,7 +227,7 @@ export default function FinancierDetailTable({
   }
   const positionsPositive=rows.filter(r=>r.estimated_result!=null&&r.estimated_result>0).length;
   const positionsNegative=rows.filter(r=>r.estimated_result!=null&&r.estimated_result<0).length;
-  const profitability=operatingProfit!=null&&sumRevenue!=null&&sumRevenue>0
+  const profitability=!profitIsPartial&&operatingProfit!=null&&sumRevenue!=null&&sumRevenue>0
     ?operatingProfit/sumRevenue:null;
   const totalRoas=ratioTotal(rows,r=>advertising(r)===null?null:r.estimated_result,r=>{const ad=advertising(r);return ad===null?null:Math.abs(ad)});
   const transitDrr=ratioTotal(rows,r=>{const ad=advertising(r);return ad===null?null:Math.abs(ad)},r=>r.transit_revenue);
@@ -232,7 +236,8 @@ export default function FinancierDetailTable({
   const totalMain=uniqueStock(rows,stockKey,r=>r.main_stock),totalOx=uniqueStock(rows,stockKey,r=>r.ox_stock),totalChina=uniqueStock(rows,stockKey,r=>r.in_china);
   const totalOzon=knownSum(rows,r=>r.ozon_stock),totalBalance=[totalMain,totalOx,totalOzon].every(x=>x!==null)?Number(totalMain)+Number(totalOx)+Number(totalOzon):null;
   const kpis=[
-    {name:"Операционная прибыль",value:money(operatingProfit),tone:moneyTone(operatingProfit)},
+    {name:profitIsPartial?"Операционная прибыль (известная часть)":"Операционная прибыль",
+      value:money(operatingProfit),tone:moneyTone(operatingProfit)},
     {name:"Выручка",value:money(sumRevenue),tone:moneyTone(sumRevenue)},
     {name:"Рентабельность",value:pct(profitability),tone:moneyTone(profitability)},
     {name:adReferenceOnly?"Реклама по SKU (неполная)":adUnknown?"Реклама (нет данных)":data?.ads_covered?"Реклама":"Реклама"+(includeUnallocated?"":" (часть)"),
@@ -271,6 +276,11 @@ export default function FinancierDetailTable({
         {['Выручка','Операционная прибыль'].includes(k.name)?<button type="button" className="ozf-kpi-link" onClick={()=>setGraphMetric(k.name==='Выручка'?'revenue':'profit')}>{k.name}</button>:<span>{k.name}</span>}<strong>{k.value}</strong>
       </div>)}
     </div>
+    {profitIsPartial&&<p className="ozf-notice" role="status" style={{marginTop:8}}>
+      Общий финансовый результат предварительный: прибыль не рассчитана для {missingProfitCount} из {rows.length} артикулов.
+      Показана только известная часть с нераспределёнными начислениями.
+      Для оставшихся позиций проверь себестоимость, ТК Маяк и полноту заказов.
+    </p>}
     {adReferenceOnly&&<p className="ozf-notice" role="status" style={{marginTop:8}}>
       В рекламной карточке показаны доступные расходы Performance по SKU, справочно.
       В финансовых начислениях Seller за этот период реклама ещё не подтверждена.
@@ -284,7 +294,7 @@ export default function FinancierDetailTable({
       {data.stock_as_of.ox_at&&<> Аведэкс ОХ: снимок от {data.stock_as_of.ox_at.split('-').reverse().join('.')}.</>}
       {' '}Остатки собственных складов не обновляются вместе с остатками маркетплейса.
     </p>}
-    <FinanceDynamics key={graphMetric} marketplace="ozon" revision={data?.cache_updated_at??''} from={data?.from??''} to={data?.to??''} offers={includeUnallocated?undefined:rows.map(r=>r.offer_id)} selected={graphMetric} expectedProfit={operatingProfit}/><div className="ozf-section-tools">
+    <FinanceDynamics key={graphMetric} marketplace="ozon" revision={data?.cache_updated_at??''} from={data?.from??''} to={data?.to??''} offers={includeUnallocated?undefined:rows.map(r=>r.offer_id)} selected={graphMetric} expectedProfit={profitIsPartial?null:operatingProfit}/><div className="ozf-section-tools">
       <input placeholder="Поиск по артикулу, коду или КМ" aria-label="Поиск товаров" value={search}
         onChange={e=>setSearch(e.target.value)} />
       <span>Сортировка: {defs.find(d=>d[0]===sort.key)?.[1]} {sort.dir===-1?"↓":"↑"}</span>
@@ -366,7 +376,7 @@ export default function FinancierDetailTable({
         {!display.length&&<tr><td colSpan={25} className="ozf-empty">Нет артикулов для выбранного фильтра.</td></tr>}
         </tbody>
         <tfoot><tr title="Итоги по известным значениям. Проценты взвешены по соответствующим суммам; собственные остатки учтены один раз на ЕНОТ.">
-          <td>Итого за период</td><td colSpan={2}>{qty(rows.length)} артикулов</td>
+          <td title={profitIsPartial?'Прибыль известна не для всех артикулов: это промежуточная сумма':'Сверка по всем выбранным артикулам'}>{profitIsPartial?'Итого (неполное)':'Итого за период'}</td><td colSpan={2}>{qty(rows.length)} артикулов</td>
           <td className={moneyTone(operatingProfit)}>{money(operatingProfit)}</td>
           <td>{money(sumRevenue)}</td>
           <td>{money(marketingBySku)}</td>
