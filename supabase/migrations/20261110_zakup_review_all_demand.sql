@@ -47,3 +47,25 @@ BEGIN
   EXECUTE substr(v_definition,1,v_start-1) || v_guard || substr(v_definition,v_end);
 END;
 $review_guard$;
+
+-- The demand table needs carton multiplicity from the same audited run.
+-- Older dashboard JSON omitted this field even though calculation items have it.
+DO $carton_fields$
+DECLARE
+  v_definition text;
+  v_old text := '''calculation_item_id'', i.id,';
+  v_new text := $fields$'calculation_item_id', i.id,
+                        'units_per_carton', i.units_per_carton,$fields$;
+BEGIN
+  SELECT replace(pg_get_functiondef(p.oid),E'\r\n',E'\n')
+    INTO v_definition
+  FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+  WHERE n.nspname='public' AND p.proname='get_china_dashboard';
+  IF v_definition IS NULL THEN RAISE EXCEPTION 'Dashboard RPC missing'; END IF;
+  IF position('''units_per_carton'', i.units_per_carton' IN v_definition)>0 THEN RETURN; END IF;
+  IF position(v_old IN v_definition)=0 THEN
+    RAISE EXCEPTION 'Dashboard JSON format changed; refusing to modify';
+  END IF;
+  EXECUTE replace(v_definition,v_old,v_new);
+END;
+$carton_fields$;
