@@ -5,6 +5,7 @@ import type {readFinance} from '../../../lib/yandex/finance-cache';
 import YandexFinanceTable,{type RateInput} from './YandexFinanceTable';
 import AccrualBreakdownList from '../../components/finance/AccrualBreakdownList';
 import {downloadFinanceWorkbook} from '../../components/finance/export-xlsx';
+import {clearFinanceSeries} from '../../components/finance/finance-series-cache';
 import OrderFulfillmentPanels from '../../components/finance/OrderFulfillmentPanels';
 type Data=NonNullable<Awaited<ReturnType<typeof readFinance>>>;
 const money=(n:number)=>new Intl.NumberFormat('ru-RU',{minimumFractionDigits:0,maximumFractionDigits:0}).format(Math.sign(n)*Math.round(Math.abs(n)/100)||0)+' ₽';
@@ -14,6 +15,7 @@ export default function YandexFinancierClient({initial,initialError}:{initial:Da
  const defaultTo=shift(localDay(),-1),defaultFrom=shift(defaultTo,-27);
  const [from,setFrom]=useState(initial?.from??defaultFrom),[to,setTo]=useState(initial?.to??defaultTo);
  const [adBusy,setAdBusy]=useState(false),[adStatus,setAdStatus]=useState('');
+ const [rateRevision,setRateRevision]=useState(0);
   const [data,setData]=useState(initial),[error,setError]=useState(initialError),[busy,setBusy]=useState(false),[progress,setProgress]=useState(''),[savingRate,setSavingRate]=useState(false),[statusSaving,setStatusSaving]=useState(false);
  const alive=useRef(true);useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[]);
  async function request(url:string,body?:unknown){const r=await fetch(url,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:undefined,body:body?JSON.stringify(body):undefined,cache:'no-store'});const d=await r.json();if(!r.ok)throw new Error(d.error??'Ошибка запроса');return d;}
@@ -29,7 +31,21 @@ export default function YandexFinancierClient({initial,initialError}:{initial:Da
   if(job.status==='failed')throw new Error(job.error??'Не удалось загрузить отчёты');
   if(alive.current){setProgress(job.error?'Отчёты загружены. '+job.error:'Отчёты загружены');setData(await request(`/api/agents/yandex-finance?from=${from}&to=${to}`));}
  }catch(e){if(alive.current)setError(e instanceof Error?e.message:'Ошибка');}finally{if(alive.current)setBusy(false);}}
- async function saveRate(value:RateInput){setSavingRate(true);setBusy(true);setError('');try{await request('/api/agents/yandex-finance-rates',value);if(data&&alive.current){setData(await request(`/api/agents/yandex-finance?from=${data.from}&to=${data.to}`));setProgress(value.valid_from>data.to?'Тариф сохранён с '+value.valid_from+'. Он не меняет выбранный период.':'Тариф сохранён. Расчёт обновлён.');}}catch(e){if(alive.current)setError(e instanceof Error?e.message:'Ошибка сохранения');}finally{if(alive.current){setSavingRate(false);setBusy(false);}}}
+ async function saveRate(value:RateInput){setSavingRate(true);setBusy(true);setError('');try{
+  await request('/api/agents/yandex-finance-rates',value);
+  clearFinanceSeries();
+  setRateRevision(n=>n+1);
+  if(data&&alive.current){
+   const fresh:Data=await request(`/api/agents/yandex-finance?from=${data.from}&to=${data.to}`);
+   setData(fresh);
+   const target=fresh.rows.find(r=>r.article===value.article);
+   const stillMissing=target?.result===null&&target.dataGaps.length>0;
+   setProgress(value.valid_from>data.to?'Тариф сохранён с '+value.valid_from+'. Он не меняет выбранный период.':
+    stillMissing?'Тариф сохранён. Прибыль пока не полная: '+target.dataGaps.join('; '):
+    'Тариф сохранён. Финансовый расчёт и графики обновлены.');
+  }
+ }catch(e){if(alive.current)setError(e instanceof Error?e.message:'Ошибка сохранения');}
+ finally{if(alive.current){setSavingRate(false);setBusy(false);}}}
  async function toggleStatus(master:string,checked:boolean){setStatusSaving(true);setError('');try{await request('/api/agents/yandex-finance-status',{master_code:master,discontinued:checked});if(alive.current)setData(current=>current?{...current,rows:current.rows.map(r=>r.master_code===master?{...r,discontinued:checked}:r)}:current);}catch(e){if(alive.current)setError(e instanceof Error?e.message:'Не удалось сохранить статус');}finally{if(alive.current)setStatusSaving(false);}}
  async function saveManager(article:string,manager:string){await request('/api/agents/yandex-finance-manager',{article,manager});if(data)setData(await request(`/api/agents/yandex-finance?from=${data.from}&to=${data.to}`));}
  function exportFinancialResult(){
@@ -67,7 +83,7 @@ export default function YandexFinancierClient({initial,initialError}:{initial:Da
 
  <div className="ozf-toolbar"><button className="ozf-btn" onClick={()=>void exportFinancialResult()}>Скачать финрез XLSX</button><button className="ozf-btn" onClick={()=>void exportMissingData()}>Недостающие данные XLSX · {data.rows.filter(r=>r.dataGaps.length>0||!r.master_code||r.manager==="Не назначен").length}</button></div>
  <OrderFulfillmentPanels market="yandex" from={data.from} to={data.to}/>
- <YandexFinanceTable data={data} onSave={saveRate} saving={savingRate} onToggle={toggleStatus} statusSaving={statusSaving} onManager={saveManager}/>
+ <YandexFinanceTable data={data} onSave={saveRate} saving={savingRate} onToggle={toggleStatus} statusSaving={statusSaving} onManager={saveManager} rateRevision={rateRevision}/>
  <section className="ozf-panel" id="ymf-unallocated"><h2>Нераспределённые расходы</h2><AccrualBreakdownList
    items={Object.entries(data.common).map(([name,amount])=>({name,amount,daily:data.commonDetails?.[name]??[]}))} market="yandex" from={data.from} to={data.to}
    total={data.totals.common} totalLabel="Итого" minorUnits invert/></section>
