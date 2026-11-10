@@ -27,9 +27,11 @@ async function advance(request:NextRequest,manual=false){
 }
 /** Automatic daily CPC and serialized historical campaign report processing. */
 export async function GET(request:NextRequest){
- const secret=process.env.CRON_SECRET;
- if(!secret||request.headers.get('authorization')!=='Bearer '+secret)
-  return NextResponse.json({ok:false,error:'Unauthorized'},{status:401});
+ const supplied=request.headers.get('authorization');
+ const authorized=Boolean(supplied&&(
+  (process.env.CRON_SECRET&&supplied==='Bearer '+process.env.CRON_SECRET)||
+  (process.env.OZON_AD_CRON_SECRET&&supplied==='Bearer '+process.env.OZON_AD_CRON_SECRET)));
+ if(!authorized)return NextResponse.json({ok:false,error:'Unauthorized'},{status:401});
  return advance(request);
 }
 /** Load exactly the historical campaign period the user selected, not yesterday. */
