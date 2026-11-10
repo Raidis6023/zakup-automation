@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx';
 import {rules,date,numeric,cents,type Line} from './finance';
 type Cells=Record<string,unknown>;
-const normalizedSheet=(name:string)=>name.toLowerCase().replace(/ё/g,'е').replace(/[\\u00a0\\s]+/g,' ').trim();
+const normalizedSheet=(name:string)=>name.toLowerCase().replace(/ё/g,'е').replace(/[\u00a0\s]+/g,' ').trim();
 function rows(w:XLSX.WorkBook,name:string,optional=false,missing?:string[]):Cells[]{
  const expected=normalizedSheet(name);
  const actual=w.SheetNames.find(n=>normalizedSheet(n)===expected)
