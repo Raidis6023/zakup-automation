@@ -184,93 +184,25 @@ async function callSupabaseRpc(
 
 
 // ============================================
-// 1. РАССЧИТАТЬ ПОТРЕБНОСТЬ КИТАЙ
+// 1. РАССЧИТАТЬ ПОТРЕБНОСТЬ И ТРАНСПОРТ
 // ============================================
 
 export async function runChinaCalculation() {
-
   await requireChinaEditor();
 
+  // One transactional database call: demand by SKU + automatic transport
+  // volume. There is no manual input for "new products" on this screen.
+  await callSupabaseRpc("run_china_calculation_with_transport");
 
-  await callSupabaseRpc(
-    "run_china_calculation"
-  );
-
-
-  revalidatePath(
-    "/zakup"
-  );
-
-  revalidatePath(
-    "/"
-  );
-
+  revalidatePath("/zakup");
+  revalidatePath("/");
 }
 
 
 // ============================================
-// 2. ПЕРЕСЧИТАТЬ ТРАНСПОРТ
+// 2. РУЧНАЯ КОРРЕКТИРОВКА SKU
 // ============================================
 
-export async function simulateChinaTransport(
-  formData: FormData
-) {
-
-  await requireChinaEditor();
-
-
-  const rawValue =
-    formData.get(
-      "newProductsVolume"
-    );
-
-
-  const volume =
-    Number(
-      String(
-        rawValue ?? ""
-      ).replace(
-        ",",
-        "."
-      )
-    );
-
-
-  if (
-    Number.isNaN(volume) ||
-    volume < 0
-  ) {
-
-    throw new Error(
-      "Введите корректный объём новых товаров"
-    );
-
-  }
-
-
-  await callSupabaseRpc(
-    "simulate_china_transport",
-    {
-      p_new_products_volume_m3:
-        volume,
-    }
-  );
-
-
-  revalidatePath(
-    "/zakup"
-  );
-
-  revalidatePath(
-    "/"
-  );
-
-}
-
-
-// ============================================
-// 3. РУЧНАЯ КОРРЕКТИРОВКА SKU
-// ============================================
 
 export async function saveChinaManualAdjustment(
   formData: FormData
@@ -397,20 +329,14 @@ export async function saveChinaManualAdjustment(
   );
 
 
-  const currentNewProductsVolume =
-    Number(
-      dashboard
-        ?.simulation
-        ?.new_products_volume_m3
-      ?? 0
-    );
+  // Any manual SKU decision updates the exact transport volume automatically.
+  // New products are not estimated by an unrelated free-text m³ input.
 
 
   await callSupabaseRpc(
     "simulate_china_transport",
     {
-      p_new_products_volume_m3:
-        currentNewProductsVolume,
+      p_new_products_volume_m3: 0,
     }
   );
 
@@ -445,22 +371,8 @@ export async function createVedOrderDraft(
     ).trim();
 
 
-  const rawNewProductsVolume =
-    String(
-      formData.get(
-        "newProductsVolume"
-      ) ?? "0"
-    );
-
-
-  const newProductsVolume =
-    Number(
-      rawNewProductsVolume.replace(
-        ",",
-        "."
-      )
-    );
-
+  // New items have no separate manual volume input in procurement.
+  const newProductsVolume = 0;
 
   if (
     scenario !== "container" &&
@@ -469,20 +381,6 @@ export async function createVedOrderDraft(
 
     throw new Error(
       "Нельзя сформировать заказ: транспортный сценарий не определён"
-    );
-
-  }
-
-
-  if (
-    Number.isNaN(
-      newProductsVolume
-    ) ||
-    newProductsVolume < 0
-  ) {
-
-    throw new Error(
-      "Некорректный объём новых товаров"
     );
 
   }

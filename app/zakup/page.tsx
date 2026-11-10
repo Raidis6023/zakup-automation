@@ -3,7 +3,6 @@ import PageHeader from "../ui/PageHeader";
 
 import {
   runChinaCalculation,
-  simulateChinaTransport,
   createVedOrderDraft,
 } from "../actions";
 
@@ -17,7 +16,8 @@ import ZakupDemandTableClient from "./ZakupDemandTableClient";
 
 import "./zakup-reference.css";
 import CreateVedDraftSubmitButton from "./CreateVedDraftSubmitButton";
-import WbSalesRefreshButton from "./WbSalesRefreshButton";
+import ZakupCalculationInfo from "./ZakupCalculationInfo";
+import ZakupCalculateButton from "./ZakupCalculateButton";
 
 import "./zakup-layout-v2.css";
 
@@ -719,13 +719,6 @@ export default async function Home() {
     );
 
 
-  const newProductsVolume =
-    simulation
-      ?.new_products_volume_m3
-    ??
-    0;
-
-
   const containerTotalVolume =
     simulation
       ?.container_total_volume_m3
@@ -755,12 +748,8 @@ export default async function Home() {
     );
 
 
-  const newProductsCount =
-    0;
-
-
   let orderDescription =
-    "Сначала выполните расчёт транспорта.";
+    "Сначала рассчитайте потребность и транспорт одной кнопкой.";
 
 
   if (
@@ -848,504 +837,29 @@ export default async function Home() {
             ОСНОВНАЯ СЕТКА
             =================================== */}
 
-        <div
-          className=
-            "zakup-v2-main-grid"
-        >
-
-          {/* =================================
-              ЛЕВАЯ ПОЛОВИНА
-              ================================= */}
-
-          <div
-            className=
-              "zakup-v2-column"
-          >
-
-            <section
-              className=
-                "zakup-v2-action-strip"
-            >
-
-              <div
-                className=
-                  "zakup-v2-action-copy"
-              >
-
-                <span
-                  className=
-                    "zakup-v2-section-icon"
-                >
-
-                  <ReferenceIcon
-                    name="calculate"
-                  />
-
-                </span>
-
-
-                <div
-                  className=
-                    "zakup-v2-action-text"
-                >
-
-                  <h2
-                    className=
-                      "controls-title"
-                  >
-                    Управление расчётом
-                  </h2>
-
-
-                  <div
-                    className=
-                      "muted"
-                  >
-                    Создайте новый расчёт потребности
-                    по текущим данным
-                  </div>
-
+        {/* Единый расчёт: потребность и транспорт запускаются одной операцией */}
+        <div className="zakup-v2-calculation-layout">
+          <section className="zakup-v2-action-strip">
+            <div className="zakup-v2-action-copy">
+              <span className="zakup-v2-section-icon">
+                <ReferenceIcon name="calculate" />
+              </span>
+              <div className="zakup-v2-action-text">
+                <h2 className="controls-title">Расчёт закупки</h2>
+                <div className="muted">
+                  Потребность по товарам и кубатура транспорта рассчитываются вместе
                 </div>
-
               </div>
-
-
-              <form
-                action={
-                  runChinaCalculation
-                }
-              >
-
-                <button
-                  type="submit"
-
-                  className=
-                    "primary-button"
-                >
-                  Рассчитать потребность Китай
-                </button>
-
+            </div>
+            <div className="zakup-v2-action-controls">
+              <form action={runChinaCalculation}>
+                <ZakupCalculateButton />
               </form>
-
-              <WbSalesRefreshButton />
-
-            </section>
-
-
-            <section
-              className=
-                "zakup-v2-left-metrics"
-            >
-
-              <div
-                className=
-                  "zakup-v2-metric-card"
-              >
-
-                <span
-                  className=
-                    "zakup-v2-metric-icon zakup-v2-metric-icon--green"
-                >
-
-                  <ReferenceIcon
-                    name="sales"
-                  />
-
-                </span>
-
-
-                <div
-                  className=
-                    "zakup-v2-metric-copy"
-                >
-
-                  <div
-                    className=
-                      "card-label"
-                  >
-                    Продажи
-                  </div>
-
-
-                  <div
-                    className=
-                      "zakup-v2-metric-value"
-                  >
-                    {
-                      run
-                        ?.sales_window_days
-                      ??
-                      28
-                    } дней
-                  </div>
-
-
-                  <div
-                    className=
-                      "muted zakup-v2-metric-subtitle"
-                  >
-                    Период среднего значения
-                  </div>
-
-                </div>
-
-              </div>
-
-
-              <div
-                className=
-                  "zakup-v2-metric-card zakup-v2-metric-card--transport"
-              >
-
-                <span
-                  className=
-                    "zakup-v2-metric-icon zakup-v2-metric-icon--purple"
-                >
-
-                  <ReferenceIcon
-                    name="truck"
-                  />
-
-                </span>
-
-
-                <div
-                  className=
-                    "zakup-v2-metric-copy zakup-v2-metric-copy--transport"
-                >
-
-                  <div
-                    className=
-                      "zakup-v2-transport-options"
-                  >
-
-                    <span>
-                      Контейнер 68 м³
-                    </span>
-
-                    <span>
-                      Фура 90 м³
-                    </span>
-
-                    <span>
-                      Фура 100 м³
-                    </span>
-
-                  </div>
-
-                </div>
-
-              </div>
-
-
-              <div
-                className=
-                  "zakup-v2-metric-card"
-              >
-
-                <span
-                  className=
-                    "zakup-v2-metric-icon zakup-v2-metric-icon--blue"
-                >
-
-                  <ReferenceIcon
-                    name="box"
-                  />
-
-                </span>
-
-
-                <div
-                  className=
-                    "zakup-v2-metric-copy"
-                >
-
-                  <div
-                    className=
-                      "card-label"
-                  >
-                    Фура
-                  </div>
-
-
-                  <div
-                    className=
-                      "zakup-v2-metric-value"
-                  >
-                    {
-                      run
-                        ?.truck_order_point_days
-                      ??
-                      70
-                    } дней
-                  </div>
-
-
-                  <div
-                    className=
-                      "muted zakup-v2-metric-subtitle"
-                  >
-                    60 дней плечо + 10 дней буфер
-                  </div>
-
-                </div>
-
-              </div>
-
-
-              <div
-                className=
-                  "zakup-v2-metric-card"
-              >
-
-                <span
-                  className=
-                    "zakup-v2-metric-icon zakup-v2-metric-icon--red"
-                >
-
-                  <ReferenceIcon
-                    name="box"
-                  />
-
-                </span>
-
-
-                <div
-                  className=
-                    "zakup-v2-metric-copy"
-                >
-
-                  <div
-                    className=
-                      "card-label"
-                  >
-                    Контейнер
-                  </div>
-
-
-                  <div
-                    className=
-                      "zakup-v2-metric-value"
-                  >
-                    {
-                      run
-                        ?.container_order_point_days
-                      ??
-                      100
-                    } дней
-                  </div>
-
-
-                  <div
-                    className=
-                      "muted zakup-v2-metric-subtitle"
-                  >
-                    90 дней плечо + 10 дней буфер
-                  </div>
-
-                </div>
-
-              </div>
-
-            </section>
-
-          </div>
-
-
-          {/* =================================
-              ПРАВАЯ ПОЛОВИНА
-              ================================= */}
-
-          <div
-            className=
-              "zakup-v2-column"
-          >
-
-            <section
-              className=
-                "zakup-v2-simulation-strip"
-            >
-
-              <div
-                className=
-                  "zakup-v2-simulation-copy"
-              >
-
-                <span
-                  className=
-                    "zakup-v2-section-icon"
-                >
-
-                  <ReferenceIcon
-                    name="truck"
-                  />
-
-                </span>
-
-
-                <div
-                  className=
-                    "zakup-v2-simulation-text"
-                >
-
-                  <h2
-                    className=
-                      "section-title"
-                  >
-                    Симуляция транспорта
-                  </h2>
-
-
-                  <div
-                    className=
-                      "muted zakup-v2-simulation-description"
-                  >
-                    Укажите общий объём новых товаров.
-                    <br />
-                    SKU системы считаются автоматически.
-                  </div>
-
-                </div>
-
-              </div>
-
-
-              <form
-                action={
-                  simulateChinaTransport
-                }
-
-                className=
-                  "zakup-v2-simulation-controls"
-              >
-
-                <div
-                  className=
-                    "zakup-v2-simulation-input"
-                >
-
-                  <label
-                    htmlFor=
-                      "newProductsVolume"
-
-                    className=
-                      "input-label"
-                  >
-                    Новые товары, м³
-                  </label>
-
-
-                  <input
-                    id=
-                      "newProductsVolume"
-
-                    name=
-                      "newProductsVolume"
-
-                    type="number"
-
-                    step=
-                      "0.001"
-
-                    min="0"
-
-                    defaultValue={
-                      newProductsVolume
-                    }
-
-                    className=
-                      "input"
-
-                    required
-                  />
-
-                </div>
-
-
-                <div
-                  className=
-                    "zakup-v2-simulation-button"
-                >
-
-                  <button
-                    type="submit"
-
-                    className=
-                      "primary-button"
-                  >
-                    Пересчитать транспорт
-                  </button>
-
-                </div>
-
-              </form>
-
-            </section>
-
-
-            <section
-              className=
-                "zakup-v2-result-grid"
-            >
-
-              <div
-                className=
-                  "zakup-v2-result-card"
-              >
-
-                <span
-                  className=
-                    "zakup-v2-result-icon zakup-v2-result-icon--green"
-                >
-
-                  <ReferenceIcon
-                    name="box"
-                  />
-
-                </span>
-
-
-                <div
-                  className=
-                    "zakup-v2-result-copy"
-                >
-
-                  <div
-                    className=
-                      "card-label"
-                  >
-                    Новые товары
-                  </div>
-
-
-                  <strong
-                    className=
-                      "zakup-v2-result-value"
-                  >
-                    {
-                      formatNumber(
-                        newProductsVolume,
-                        3
-                      )
-                    } м³
-                  </strong>
-
-
-                  <div
-                    className=
-                      "muted zakup-v2-result-subtitle"
-                  >
-                    Количество новых артикулов:{" "}
-                    {
-                      newProductsCount
-                    }
-                  </div>
-
-                </div>
-
-              </div>
-
-
+              <ZakupCalculationInfo rules={run} />
+            </div>
+          </section>
+
+          <section className="zakup-v2-result-grid zakup-v2-result-grid--single-row">
               <div
                 className=
                   "zakup-v2-result-card"
@@ -1419,7 +933,7 @@ export default async function Home() {
                     className=
                       "card-label"
                   >
-                    После перевоза под фуру
+                    Объём фуры
                   </div>
 
 
@@ -1497,12 +1011,9 @@ export default async function Home() {
 
               </div>
 
-            </section>
 
-          </div>
-
+          </section>
         </div>
-
 
         {/* ===================================
             ПОТРЕБНОСТЬ В ЗАКУПКЕ / РЕШЕНИЯ
@@ -1598,19 +1109,6 @@ export default async function Home() {
 
                       value={
                         orderScenario
-                      }
-                    />
-
-
-                    <input
-                      type="hidden"
-
-                      name=
-                        "newProductsVolume"
-
-                      value={
-                        simulation
-                          .new_products_volume_m3
                       }
                     />
 
