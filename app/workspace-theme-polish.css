@@ -234,3 +234,50 @@ html.dark
   }
 
 }
+
+
+/* ============================================================
+   ПАНДА: чистая надпись без серого ореола, отдельная от маскота.
+   Исходную картинку с пандой не масштабируем.
+   ============================================================ */
+
+.home-shell .workspace-panda-horizontal {
+  box-sizing: border-box;
+  display: flex;
+  flex: 0 1 194px;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 5px;
+  width: 194px;
+  max-width: 100%;
+  height: 65px;
+  overflow: hidden;
+}
+
+.home-shell .workspace-panda-illustration-window {
+  display: block;
+  width: 73px;
+  height: 65px;
+  flex: 0 0 73px;
+  overflow: hidden;
+}
+
+.home-shell .workspace-panda-illustration-original {
+  display: block;
+  width: 194px;
+  max-width: none;
+  min-width: 194px;
+  height: 65px;
+  object-fit: fill;
+}
+
+.home-shell .workspace-panda-clean-wordmark {
+  display: block;
+  width: 108px;
+  height: 26px;
+  flex: 0 0 108px;
+  object-fit: contain;
+  filter: none;
+  box-shadow: none;
+  transform: none;
+}
