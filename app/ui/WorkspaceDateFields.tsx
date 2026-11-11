@@ -162,7 +162,7 @@ function PickerPopover({
 }
 
 function CalendarPanel({
-  value, min, max, choose,
+  value, min, max, choose, clear,
 }: {
   value: string;
   min?: string;
