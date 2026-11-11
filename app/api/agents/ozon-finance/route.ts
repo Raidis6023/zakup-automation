@@ -313,10 +313,20 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
   if(recentAdError)throw recentAdError;
 
   const adByOffer=new Map<string,number>();
-  for(const item of adRes.data as AdRow[]??[]){
+  const performanceRows=(adRes.data as AdRow[]??[]);
+  let performanceTotal=0,unmappedPerformance=0;
+  const unmappedAdvertisingSkus=new Set<string>();
+  for(const item of performanceRows){
+    const expense=Number(item.expense);
+    performanceTotal+=expense;
     const offer=mapBySku.get(item.sku)?.offer_id;
-    if(offer)adByOffer.set(offer,(adByOffer.get(offer)??0)+Number(item.expense));
+    if(offer)adByOffer.set(offer,(adByOffer.get(offer)??0)+expense);
+    else {unmappedPerformance+=expense;unmappedAdvertisingSkus.add(item.sku);}
   }
+  // Whole-company campaign spend must include even advertising SKU IDs
+  // which aren't linked to an offer today. Never silently drop this cost.
+  performanceTotal=round(performanceTotal);
+  unmappedPerformance=round(unmappedPerformance);
   const transitBySku = new Map((transitRes.data as TransitRow[] ?? []).map(r=>[r.sku,r]));
   const transitSnapshotReady = (transitRes.data as TransitRow[] ?? []).length>0;
   const transitAsOf = (transitRes.data as TransitRow[] ?? [])[0]?.as_of??null;
@@ -634,7 +644,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
       unknown_type_operations: accounting.unknownTypeOperations,
       performance_total: adComplete
         ?round([...adByOffer.values()].reduce((a,b)=>a+b,0)):null,
-      partial_performance_total:round([...adByOffer.values()].reduce((a,b)=>a+b,0)),
+      partial_performance_total:performanceTotal,
       performance_complete:adComplete,
       discrepancy: null,
       reconciliation_status: accounting.unknownTypeOperations > 0
@@ -642,7 +652,9 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     },
     ads_campaigns_total:(adTasksRes.data??[]).length,
     ads_campaigns_complete:(adTasksRes.data??[]).filter(x=>x.status==="complete").length,
-    ads_partial_spend:round([...adByOffer.values()].reduce((a,b)=>a+b,0)),
+    ads_partial_spend:performanceTotal,
+    ads_unmapped_spend:unmappedPerformance,
+    ads_unmapped_skus:unmappedAdvertisingSkus.size,
     ads_partial_skus:adByOffer.size,
     sales_window_covered: salesWindowCovered,
     actual_buyout_days: 0,
@@ -657,7 +669,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     ads_covered:adComplete,
     ads_jobs:adJobsRes.data??[],
     ads_covered_days:adCoverage.size,
-    ads_performance_total:adComplete?round([...adByOffer.values()].reduce((a,b)=>a+b,0)):null,
+    ads_performance_total:adComplete?performanceTotal:null,
     background_jobs: jobsRes.data ?? [],
     calculation_includes_api_calls: false,
     profit_status: salesWindowCovered ? "provisional_missing_return_order_dates" : "missing_sales_coverage",
