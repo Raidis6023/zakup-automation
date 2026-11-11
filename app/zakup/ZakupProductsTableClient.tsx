@@ -1,16 +1,14 @@
-
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
 import Button from "../ui/Button";
 
-// ============================================================
-// ТИП ТОВАРА
-// Новые поля v9 необязательны для совместимости с v8.
-// ============================================================
-
+// The main procurement calculation is unchanged. Both table modes
+// show the same ENOT-linked products and the same inventory snapshot.
 export type ZakupTableItem = {
   calculation_item_id: string;
+  master_code?: string | null;
+  ozon_name?: string | null;
   offer_id: string;
   name: string | null;
 
@@ -56,504 +54,384 @@ export type ZakupTableItem = {
   truck_effective_volume_m3: number;
 };
 
-// ============================================================
-// КОЛОНКИ И СОРТИРОВКА
-// ============================================================
-
+type SortDirection = "asc" | "desc";
+type SortValue = number | string | null;
 type SortKey =
+  | "master_code"
   | "offer_id"
   | "name"
-  | "sales_28_days"
-  | "ozon_sales_28_days"
-  | "wb_sales_28_days"
-  | "yandex_sales_28_days"
+  | "ozon_name"
   | "avg_sales_per_day"
+  | "marketplace_stock"
   | "own_stock_quantity"
   | "responsible_storage_quantity"
-  | "ozon_stock_quantity"
-  | "wb_stock_quantity"
-  | "yandex_stock_quantity"
   | "active_ved_quantity"
-  | "effective_stock"
+  | "overall_stock"
   | "coverage_days"
-  | "container_effective_final_units"
-  | "container_effective_volume_m3"
-  | "truck_effective_final_units"
-  | "truck_effective_volume_m3";
-
-type SortDirection = "asc" | "desc";
-type SortValue = string | number | null;
+  | "ozon_sales_28_days"
+  | "ozon_daily_sales"
+  | "ozon_stock_quantity"
+  | "wb_sales_28_days"
+  | "wb_daily_sales"
+  | "wb_stock_quantity"
+  | "yandex_sales_28_days"
+  | "yandex_daily_sales"
+  | "yandex_stock_quantity";
 
 type Column = {
   key: SortKey;
   label: string;
   align: "left" | "center";
-  detail?: boolean;
   hint?: string;
 };
 
-const DEFAULT_SORT_KEY: SortKey = "avg_sales_per_day";
-const DEFAULT_SORT_DIRECTION: SortDirection = "desc";
-
-// detail: true = показывать в подробном режиме.
-// Остальные колонки видны всегда.
-
-const COLUMNS: readonly Column[] = [
-  {
-    key: "offer_id",
-    label: "Артикул",
-    align: "left",
-  },
-  {
-    key: "name",
-    label: "Товар",
-    align: "left",
-  },
-  {
-    key: "sales_28_days",
-    label: "Всего, 28 дн.",
-    align: "center",
-    detail: true,
-    hint: "Сумма продаж Ozon, WB и Яндекс Маркета за 28 дней",
-  },
-  {
-    key: "ozon_sales_28_days",
-    label: "Ozon, прод.",
-    align: "center",
-    detail: true,
-    hint: "Неотменённые FBO-отправления за 28 дней",
-  },
-  {
-    key: "wb_sales_28_days",
-    label: "WB, прод.",
-    align: "center",
-    detail: true,
-    hint: "Фактические FBW-продажи за вычетом возвратов за 28 дней",
-  },
-  {
-    key: "yandex_sales_28_days",
-    label: "ЯМ, прод.",
-    align: "center",
-    detail: true,
-    hint: "Чистые продажи FBY за 28 дней",
-  },
+// Exactly 10 columns. Stock order is intentionally fixed:
+// marketplace stock, AVEDEX, responsible storage, VED, total, coverage.
+const SUMMARY_COLUMNS: readonly Column[] = [
+  { key: "master_code", label: "ЕНОТ", align: "left" },
+  { key: "offer_id", label: "Артикул", align: "left" },
+  { key: "name", label: "Товар", align: "left" },
   {
     key: "avg_sales_per_day",
     label: "Продажи/сутки",
     align: "center",
+    hint: "Сумма продаж Ozon, WB и ЯМ за 28 дней / 28; сопоставление по ЕНОТ",
   },
   {
-    key: "own_stock_quantity",
-    label: "Наш склад",
+    key: "marketplace_stock",
+    label: "Остатки на МП",
     align: "center",
+    hint: "Остатки на складах Ozon + Wildberries + Яндекс Маркета",
   },
-  {
-    key: "responsible_storage_quantity",
-    label: "Отв. хранение",
-    align: "center",
-    detail: true,
-  },
-  {
-    key: "ozon_stock_quantity",
-    label: "Ozon, остаток",
-    align: "center",
-  },
-  {
-    key: "wb_stock_quantity",
-    label: "WB, остаток",
-    align: "center",
-    detail: true,
-  },
-  {
-    key: "yandex_stock_quantity",
-    label: "ЯМ, остаток",
-    align: "center",
-    detail: true,
-  },
+  { key: "own_stock_quantity", label: "АВЕДЭКС", align: "center" },
+  { key: "responsible_storage_quantity", label: "ОХ", align: "center" },
   {
     key: "active_ved_quantity",
     label: "Заказано ВЭД",
     align: "center",
-    hint: "Товары, уже заказанные в ВЭД (в том числе импортированные проформы в работе), но ещё не отражённые в складе. Это не физический остаток.",
+    hint: "Действующие заказы ВЭД, ещё не включённые в физический остаток",
   },
   {
-    key: "effective_stock",
-    label: "Запас с ВЭД",
+    key: "overall_stock",
+    label: "Общий запас",
     align: "center",
-    hint: "Расчётный запас: физические остатки нашего склада, ОХ, Ozon, WB, ЯМ плюс учтённые заказы ВЭД. Товары в ВЭД не являются наличием на складе.",
+    hint: "Ozon + WB + ЯМ + АВЕДЭКС + ОХ + Заказано ВЭД",
   },
-  {
-    key: "coverage_days",
-    label: "Покрытие",
-    align: "center",
-  },
-  {
-    key: "container_effective_final_units",
-    label: "Контейнер, шт.",
-    align: "center",
-  },
-  {
-    key: "container_effective_volume_m3",
-    label: "Контейнер, м³",
-    align: "center",
-  },
-  {
-    key: "truck_effective_final_units",
-    label: "Фура, шт.",
-    align: "center",
-  },
-  {
-    key: "truck_effective_volume_m3",
-    label: "Фура, м³",
-    align: "center",
-  },
+  { key: "coverage_days", label: "Покрытие", align: "center" },
 ];
 
-// ============================================================
-// НАПРАВЛЕНИЕ ПЕРВОГО КЛИКА
-// ============================================================
+// Exactly 17 columns: 3 common, 3*3 marketplace, 5 inventory.
+const BREAKDOWN_COLUMNS: readonly Column[] = [
+  { key: "master_code", label: "ЕНОТ", align: "left" },
+  { key: "offer_id", label: "Артикул", align: "left" },
+  {
+    key: "ozon_name",
+    label: "Название товара",
+    align: "left",
+    hint: "Наименование из того же каталога, который показывается на странице Ozon",
+  },
+  {
+    key: "ozon_sales_28_days",
+    label: "Выкуплено товаров",
+    align: "center",
+    hint: "Текущий источник Ozon: неотменённые FBO-отправления за 28 дней. Не финансовый отчёт о выкупах.",
+  },
+  { key: "ozon_daily_sales", label: "Средние продажи в день", align: "center" },
+  { key: "ozon_stock_quantity", label: "На складах", align: "center" },
+  {
+    key: "wb_sales_28_days",
+    label: "Выкуплено товаров",
+    align: "center",
+    hint: "Подтверждённые FBW-выкупы за 28 дней с учётом возвратов",
+  },
+  { key: "wb_daily_sales", label: "Средние продажи в день", align: "center" },
+  { key: "wb_stock_quantity", label: "На складах", align: "center" },
+  {
+    key: "yandex_sales_28_days",
+    label: "Выкуплено товаров",
+    align: "center",
+    hint: "Чистые FBY-продажи Яндекс Маркета за 28 дней",
+  },
+  { key: "yandex_daily_sales", label: "Средние продажи в день", align: "center" },
+  { key: "yandex_stock_quantity", label: "На складах", align: "center" },
+  { key: "own_stock_quantity", label: "АВЕДЭКС", align: "center" },
+  { key: "responsible_storage_quantity", label: "ОХ", align: "center" },
+  {
+    key: "active_ved_quantity",
+    label: "Заказано ВЭД",
+    align: "center",
+    hint: "Заказано в Китае и ещё не отражено в складском остатке",
+  },
+  {
+    key: "overall_stock",
+    label: "Общий запас",
+    align: "center",
+    hint: "Ozon + WB + ЯМ + АВЕДЭКС + ОХ + Заказано ВЭД",
+  },
+  { key: "coverage_days", label: "Покрытие", align: "center" },
+];
 
-function getInitialDirection(key: SortKey): SortDirection {
-  // Артикул и Товар: от А до Я.
-  // Числовые показатели: от большего к меньшему.
-  return key === "offer_id" || key === "name"
-    ? "asc"
-    : "desc";
+function quantity(value: number | null | undefined): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
-// ============================================================
-// ФОРМАТИРОВАНИЕ
-// ============================================================
-
-function formatRoundedInteger(
-  value: number | null | undefined
-): string {
-  if (value == null || !Number.isFinite(Number(value))) {
-    return "—";
-  }
-
-  return Math.round(Number(value)).toLocaleString("ru-RU");
+function marketplaceStock(item: ZakupTableItem): number {
+  return (
+    quantity(item.ozon_stock_quantity) +
+    quantity(item.wb_stock_quantity) +
+    quantity(item.yandex_stock_quantity)
+  );
 }
 
-function formatOneDecimal(
-  value: number | null | undefined
-): string {
-  if (value == null || !Number.isFinite(Number(value))) {
-    return "—";
-  }
+function overallStock(item: ZakupTableItem): number {
+  return (
+    marketplaceStock(item) +
+    quantity(item.own_stock_quantity) +
+    quantity(item.responsible_storage_quantity) +
+    quantity(item.active_ved_quantity)
+  );
+}
 
-  return Number(value).toLocaleString("ru-RU", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
+// Remove ONLY the exact seller article in trailing parentheses/brackets.
+// Parentheses describing dimensions, quantities, colors, etc. remain intact.
+function cleanTitle(value: string | null | undefined, article: string): string {
+  const title = (value ?? "").trim();
+  const expectedArticle = article.trim().toLocaleLowerCase("ru-RU");
+  if (!title || !expectedArticle) return title;
+
+  for (const [open, close] of [["(", ")"], ["[", "]"]]) {
+    if (!title.endsWith(close)) continue;
+    const start = title.lastIndexOf(open);
+    if (start < 0) continue;
+    const suffixArticle = title.slice(start + 1, -1).trim().toLocaleLowerCase("ru-RU");
+    if (suffixArticle === expectedArticle) {
+      return title.slice(0, start).replace(/[\s,;:\-–]+$/u, "").trim();
+    }
+  }
+  return title;
+}
+
+function getValue(item: ZakupTableItem, key: SortKey): SortValue {
+  switch (key) {
+    case "name":
+      return cleanTitle(item.name ?? item.ozon_name, item.offer_id);
+    case "ozon_name":
+      return cleanTitle(item.ozon_name ?? item.name, item.offer_id);
+    case "master_code":
+      return item.master_code ?? null;
+    case "marketplace_stock":
+      return marketplaceStock(item);
+    case "overall_stock":
+      return overallStock(item);
+    case "avg_sales_per_day":
+      return item.sales_28_days == null
+        ? item.avg_sales_per_day
+        : quantity(item.sales_28_days) / 28;
+    case "ozon_daily_sales":
+      return item.ozon_sales_28_days == null ? null : quantity(item.ozon_sales_28_days) / 28;
+    case "wb_daily_sales":
+      return item.wb_sales_28_days == null ? null : quantity(item.wb_sales_28_days) / 28;
+    case "yandex_daily_sales":
+      return item.yandex_sales_28_days == null ? null : quantity(item.yandex_sales_28_days) / 28;
+    default: {
+      const value = item[key as keyof ZakupTableItem];
+      return typeof value === "string" || typeof value === "number" ? value : null;
+    }
+  }
+}
+
+function formatInteger(value: SortValue): string {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.round(value).toLocaleString("ru-RU")
+    : "—";
+}
+
+function formatDaily(value: SortValue): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "—";
+  if (value === 0) return "0";
+  const decimals = Math.abs(value) < 0.1 ? 2 : 1;
+  return value.toLocaleString("ru-RU", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
   });
 }
 
-// ============================================================
-// ЗНАЧЕНИЕ ДЛЯ СОРТИРОВКИ
-// ============================================================
-
-function getSortValue(
-  item: ZakupTableItem,
-  key: SortKey
-): SortValue {
-  const value = item[key];
-
-  return typeof value === "number" || typeof value === "string"
-    ? value
-    : null;
+function renderCell(item: ZakupTableItem, key: SortKey): ReactNode {
+  const value = getValue(item, key);
+  if (key === "master_code" || key === "offer_id") {
+    return <strong>{value || "—"}</strong>;
+  }
+  if (key === "name" || key === "ozon_name") {
+    return value || "—";
+  }
+  if (key === "coverage_days") {
+    return value == null ? "—" : <><strong>{formatInteger(value)}</strong> дн.</>;
+  }
+  if (
+    key === "avg_sales_per_day" ||
+    key === "ozon_daily_sales" ||
+    key === "wb_daily_sales" ||
+    key === "yandex_daily_sales"
+  ) {
+    return formatDaily(value);
+  }
+  return formatInteger(value);
 }
 
-// ============================================================
-// СРАВНЕНИЕ
-// ============================================================
-
-function compareValues(
-  left: SortValue,
-  right: SortValue,
-  direction: SortDirection
-): number {
-  // Пустые значения всегда внизу.
-  if (left === null && right === null) {
-    return 0;
-  }
-
-  if (left === null) {
-    return 1;
-  }
-
-  if (right === null) {
-    return -1;
-  }
-
-  const comparison =
-    typeof left === "number" && typeof right === "number"
-      ? left - right
-      : String(left).localeCompare(String(right), ["ru", "en"], {
+function compareValues(a: SortValue, b: SortValue, direction: SortDirection): number {
+  if (a == null || a === "") return b == null || b === "" ? 0 : 1;
+  if (b == null || b === "") return -1;
+  const result =
+    typeof a === "number" && typeof b === "number"
+      ? a - b
+      : String(a).localeCompare(String(b), ["ru", "en"], {
           numeric: true,
           sensitivity: "base",
         });
-
-  return direction === "asc"
-    ? comparison
-    : -comparison;
+  return direction === "asc" ? result : -result;
 }
 
-// ============================================================
-// ОТОБРАЖЕНИЕ ЯЧЕЙКИ
-// ============================================================
-
-function renderCell(
-  item: ZakupTableItem,
-  key: SortKey
-): ReactNode {
-  switch (key) {
-    case "offer_id":
-      return <strong>{item.offer_id}</strong>;
-
-    case "name":
-      return item.name ?? "—";
-
-    case "coverage_days":
-      return item.coverage_days == null ? (
-        "—"
-      ) : (
-        <>
-          <strong>
-            {formatRoundedInteger(item.coverage_days)}
-          </strong>{" "}
-          дн.
-        </>
-      );
-
-    case "container_effective_final_units":
-      return (
-        <>
-          <strong>
-            {formatRoundedInteger(
-              item.container_effective_final_units
-            )}
-          </strong>
-
-          {item.container_manual_quantity != null && (
-            <div className="muted">вручную</div>
-          )}
-        </>
-      );
-
-    case "truck_effective_final_units":
-      return (
-        <>
-          <strong>
-            {formatRoundedInteger(
-              item.truck_effective_final_units
-            )}
-          </strong>
-
-          {item.truck_manual_quantity != null && (
-            <div className="muted">вручную</div>
-          )}
-        </>
-      );
-
-    case "container_effective_volume_m3":
-      return formatOneDecimal(
-        item.container_effective_volume_m3
-      );
-
-    case "truck_effective_volume_m3":
-      return formatOneDecimal(
-        item.truck_effective_volume_m3
-      );
-
-    default:
-      return formatRoundedInteger(item[key]);
-  }
-}
-
-// ============================================================
-// ТАБЛИЦА
-// ============================================================
-
-export default function ZakupProductsTableClient({
-  items,
+function SortableHeader({
+  column,
+  sortKey,
+  sortDirection,
+  onSort,
+  rowSpan,
 }: {
-  items: ZakupTableItem[];
+  column: Column;
+  sortKey: SortKey;
+  sortDirection: SortDirection;
+  onSort: (key: SortKey) => void;
+  rowSpan?: number;
 }) {
-  const [sortKey, setSortKey] =
-    useState<SortKey>(DEFAULT_SORT_KEY);
-
-  const [sortDirection, setSortDirection] =
-    useState<SortDirection>(DEFAULT_SORT_DIRECTION);
-
-  // При первом открытии показываем все маркетплейсы.
-  const [showBreakdown, setShowBreakdown] =
-    useState(true);
-
-  // ==========================================================
-  // ВИДИМЫЕ КОЛОНКИ
-  // ==========================================================
-
-  const visibleColumns = useMemo(
-    () =>
-      COLUMNS.filter(
-        (column) => showBreakdown || !column.detail
-      ),
-    [showBreakdown]
+  const active = sortKey === column.key;
+  return (
+    <th
+      scope="col"
+      rowSpan={rowSpan}
+      className={column.align}
+      aria-sort={active ? (sortDirection === "desc" ? "descending" : "ascending") : "none"}
+    >
+      <button
+        type="button"
+        title={column.hint}
+        className={[
+          "zakup-sort-button",
+          column.align === "center" ? "zakup-sort-button--center" : "zakup-sort-button--left",
+          active ? "zakup-sort-button--active" : "",
+        ].filter(Boolean).join(" ")}
+        onClick={() => onSort(column.key)}
+      >
+        <span>{column.label}</span>
+        {active && <span className="zakup-sort-indicator" aria-hidden="true">
+          {sortDirection === "desc" ? "↓" : "↑"}
+        </span>}
+      </button>
+    </th>
   );
+}
 
-  // ==========================================================
-  // СОРТИРОВАННЫЕ ДАННЫЕ
-  // ==========================================================
+function columnClass(key: SortKey): string {
+  if (key === "master_code") return "zakup-products-col-enot";
+  if (key === "offer_id") return "zakup-products-col-article";
+  if (key === "name" || key === "ozon_name") return "zakup-products-col-title";
+  return "zakup-products-col-number";
+}
+
+export default function ZakupProductsTableClient({ items }: { items: ZakupTableItem[] }) {
+  const [showBreakdown, setShowBreakdown] = useState(true);
+  const [sortKey, setSortKey] = useState<SortKey>("avg_sales_per_day");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
+  const visibleColumns = showBreakdown ? BREAKDOWN_COLUMNS : SUMMARY_COLUMNS;
 
   const sortedItems = useMemo(() => {
-    const nextItems = [...items];
-
-    nextItems.sort((left, right) => {
-      const result = compareValues(
-        getSortValue(left, sortKey),
-        getSortValue(right, sortKey),
+    return [...items].sort((left, right) => {
+      const comparison = compareValues(
+        getValue(left, sortKey),
+        getValue(right, sortKey),
         sortDirection
       );
-
-      if (result !== 0) {
-        return result;
-      }
-
-      // Вторичная сортировка по артикулу.
-      return left.offer_id.localeCompare(
-        right.offer_id,
-        ["ru", "en"],
-        {
-          numeric: true,
-          sensitivity: "base",
-        }
-      );
+      return comparison || left.offer_id.localeCompare(right.offer_id, ["ru", "en"], {
+        numeric: true,
+        sensitivity: "base",
+      });
     });
-
-    return nextItems;
   }, [items, sortKey, sortDirection]);
-
-  // ==========================================================
-  // НАЖАТИЕ НА ЗАГОЛОВОК
-  // ==========================================================
 
   function changeSort(key: SortKey) {
     if (key === sortKey) {
-      setSortDirection((current) =>
-        current === "desc" ? "asc" : "desc"
-      );
-
-      return;
+      setSortDirection(current => current === "desc" ? "asc" : "desc");
+    } else {
+      setSortKey(key);
+      setSortDirection(key === "master_code" || key === "offer_id" ||
+        key === "name" || key === "ozon_name" ? "asc" : "desc");
     }
-
-    setSortKey(key);
-    setSortDirection(getInitialDirection(key));
   }
-
-  // ==========================================================
-  // ПЕРЕКЛЮЧЕНИЕ РЕЖИМА ТАБЛИЦЫ
-  // ==========================================================
 
   function toggleBreakdown() {
-    // Если скрываем колонку, по которой сортировали,
-    // возвращаем сортировку по средним продажам.
-    if (
-      showBreakdown &&
-      COLUMNS.some(
-        (column) => column.key === sortKey && column.detail
-      )
-    ) {
-      setSortKey(DEFAULT_SORT_KEY);
-      setSortDirection(DEFAULT_SORT_DIRECTION);
+    const next = !showBreakdown;
+    const nextColumns = next ? BREAKDOWN_COLUMNS : SUMMARY_COLUMNS;
+    if (!nextColumns.some(column => column.key === sortKey)) {
+      setSortKey(next ? "ozon_sales_28_days" : "avg_sales_per_day");
+      setSortDirection("desc");
     }
-
-    setShowBreakdown(!showBreakdown);
+    setShowBreakdown(next);
   }
 
-  // ==========================================================
-  // JSX
-  // ==========================================================
+  function headerFor(column: Column, rowSpan?: number) {
+    return (
+      <SortableHeader
+        key={column.key}
+        column={column}
+        rowSpan={rowSpan}
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onSort={changeSort}
+      />
+    );
+  }
 
   return (
     <>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "12px",
-          flexWrap: "wrap",
-          marginBottom: "12px",
-        }}
-      >
-        <span className="muted">
-          Продажи за 28 дней, остатки в штуках
-        </span>
-
-        <Button
-          type="button"
-          variant="secondary"
-          aria-expanded={showBreakdown}
-          onClick={toggleBreakdown}
-        >
-          {showBreakdown
-            ? "Скрыть разбивку по маркетплейсам"
-            : "Показать разбивку по маркетплейсам"}
+      <div className="zakup-products-view-toolbar">
+        <span className="muted">Продажи за 28 дней, остатки в штуках. Данные объединены по ЕНОТ.</span>
+        <Button type="button" variant="secondary" aria-expanded={showBreakdown} onClick={toggleBreakdown}>
+          {showBreakdown ? "Скрыть разбивку по маркетплейсам" : "Показать разбивку по маркетплейсам"}
         </Button>
       </div>
 
-      <div
-        className="table-wrapper"
-        style={{ overflowX: "auto" }}
-      >
+      <div className="table-wrapper" style={{ overflowX: "auto" }}>
         <table
-          className="table zakup-sortable-table"
-          style={
-            showBreakdown
-              ? { minWidth: "2250px" }
-              : undefined
-          }
+          className={"table zakup-sortable-table " +
+            (showBreakdown ? "zakup-sortable-table--breakdown" : "zakup-sortable-table--summary")}
         >
           <colgroup>
-            {visibleColumns.map((column) => (
-              <col
-                key={column.key}
-                className={
-                  column.key === "offer_id"
-                    ? "zakup-col-article"
-                    : column.key === "name"
-                      ? "zakup-col-product"
-                      : "zakup-col-number"
-                }
-              />
-            ))}
+            {visibleColumns.map(column => <col key={column.key} className={columnClass(column.key)} />)}
           </colgroup>
-
           <thead>
-            <tr>
-              {visibleColumns.map((column) => (
-                <SortableHeader
-                  key={column.key}
-                  label={column.label}
-                  hint={column.hint}
-                  sortKey={column.key}
-                  currentKey={sortKey}
-                  direction={sortDirection}
-                  onSort={changeSort}
-                  align={column.align}
-                />
-              ))}
-            </tr>
+            {showBreakdown ? (
+              <>
+                <tr className="zakup-products-group-row">
+                  {BREAKDOWN_COLUMNS.slice(0, 3).map(column => headerFor(column, 2))}
+                  <th className="zakup-products-mp-group zakup-products-mp-group--ozon" colSpan={3} scope="colgroup">Ozon</th>
+                  <th className="zakup-products-mp-group zakup-products-mp-group--wb" colSpan={3} scope="colgroup">Wildberries</th>
+                  <th className="zakup-products-mp-group zakup-products-mp-group--ym" colSpan={3} scope="colgroup">Яндекс Маркет</th>
+                  {BREAKDOWN_COLUMNS.slice(12).map(column => headerFor(column, 2))}
+                </tr>
+                <tr className="zakup-products-subheader-row">
+                  {BREAKDOWN_COLUMNS.slice(3, 12).map(column => headerFor(column))}
+                </tr>
+              </>
+            ) : (
+              <tr>{SUMMARY_COLUMNS.map(column => headerFor(column))}</tr>
+            )}
           </thead>
-
           <tbody>
-            {sortedItems.map((item) => (
+            {sortedItems.map(item => (
               <tr key={item.calculation_item_id}>
-                {visibleColumns.map((column) => (
-                  <td
-                    key={column.key}
-                    className={column.align}
-                  >
+                {visibleColumns.map(column => (
+                  <td key={column.key} className={column.align}>
                     {renderCell(item, column.key)}
                   </td>
                 ))}
@@ -563,70 +441,5 @@ export default function ZakupProductsTableClient({
         </table>
       </div>
     </>
-  );
-}
-
-// ============================================================
-// КЛИКАБЕЛЬНЫЙ ЗАГОЛОВОК
-// ============================================================
-
-function SortableHeader({
-  label,
-  hint,
-  sortKey,
-  currentKey,
-  direction,
-  onSort,
-  align,
-}: {
-  label: string;
-  hint?: string;
-  sortKey: SortKey;
-  currentKey: SortKey;
-  direction: SortDirection;
-  onSort: (key: SortKey) => void;
-  align: "left" | "center";
-}) {
-  const active = sortKey === currentKey;
-
-  const ariaSort = active
-    ? direction === "desc"
-      ? "descending"
-      : "ascending"
-    : "none";
-
-  return (
-    <th
-      className={align}
-      aria-sort={ariaSort}
-    >
-      <button
-        type="button"
-        title={hint}
-        className={[
-          "zakup-sort-button",
-          align === "center"
-            ? "zakup-sort-button--center"
-            : "zakup-sort-button--left",
-          active
-            ? "zakup-sort-button--active"
-            : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-        onClick={() => onSort(sortKey)}
-      >
-        <span>{label}</span>
-
-        {active && (
-          <span
-            className="zakup-sort-indicator"
-            aria-hidden="true"
-          >
-            {direction === "desc" ? "↓" : "↑"}
-          </span>
-        )}
-      </button>
-    </th>
   );
 }

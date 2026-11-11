@@ -2126,3 +2126,112 @@ html[data-theme="dark"]
     text-align: left;
   }
 }
+
+
+/* ============================================================
+   PROCUREMENT PRODUCTS: APPROVED SUMMARY / MARKETPLACE BREAKDOWN
+   The two views use the same ENOT-linked inventory snapshot.
+   ============================================================ */
+
+.zakup-reference-page .zakup-products-view-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.zakup-reference-page .zakup-products-table-content .table.zakup-sortable-table--summary {
+  min-width: 1600px;
+}
+
+.zakup-reference-page .zakup-products-table-content .table.zakup-sortable-table--breakdown {
+  min-width: 2500px;
+}
+
+.zakup-reference-page .zakup-sortable-table col.zakup-products-col-enot {
+  width: 102px;
+}
+
+.zakup-reference-page .zakup-sortable-table col.zakup-products-col-article {
+  width: 158px;
+}
+
+.zakup-reference-page .zakup-sortable-table col.zakup-products-col-title {
+  width: 350px;
+}
+
+.zakup-reference-page .zakup-sortable-table col.zakup-products-col-number {
+  width: 135px;
+}
+
+.zakup-reference-page .zakup-sortable-table td:nth-child(2) {
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+.zakup-reference-page .zakup-sortable-table td:nth-child(3) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.zakup-reference-page .zakup-products-table-content .table
+thead tr.zakup-products-group-row th {
+  top: 0;
+  height: 46px;
+  z-index: 21;
+  vertical-align: middle;
+}
+
+.zakup-reference-page .zakup-products-table-content .table
+thead tr.zakup-products-subheader-row th {
+  top: 46px;
+  height: 62px;
+  z-index: 20;
+  vertical-align: middle;
+}
+
+.zakup-reference-page .zakup-products-table-content .table
+thead tr.zakup-products-group-row th.zakup-products-mp-group {
+  padding: 10px 8px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  border-bottom: 2px solid var(--ws-border-soft);
+}
+
+.zakup-reference-page .zakup-products-table-content .table
+thead th.zakup-products-mp-group--ozon {
+  background: rgba(36, 112, 210, 0.13);
+}
+
+.zakup-reference-page .zakup-products-table-content .table
+thead th.zakup-products-mp-group--wb {
+  background: rgba(140, 77, 190, 0.13);
+}
+
+.zakup-reference-page .zakup-products-table-content .table
+thead th.zakup-products-mp-group--ym {
+  background: rgba(217, 164, 40, 0.15);
+}
+
+.zakup-reference-page .zakup-sortable-table thead th .zakup-sort-button {
+  width: 100%;
+  min-height: 44px;
+  padding: 7px 8px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.zakup-reference-page .zakup-sortable-table
+thead tr.zakup-products-subheader-row th .zakup-sort-button {
+  min-height: 62px;
+}
+
+@media (max-width: 720px) {
+  .zakup-reference-page .zakup-products-view-toolbar .primary-button,
+  .zakup-reference-page .zakup-products-view-toolbar button {
+    max-width: 100%;
+  }
+}
