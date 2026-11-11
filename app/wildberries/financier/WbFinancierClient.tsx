@@ -1,5 +1,6 @@
 "use client";
 import { DateField } from "@/app/ui/WorkspaceDateFields";
+import { FINANCE_TARIFF_EFFECTIVE_FROM } from "@/lib/finance-tariff-date";
 import FinanceDynamics from "../../components/finance/FinanceDynamics";
 import CostPerUnitComparison from '../../components/finance/CostPerUnitComparison';
 import WbAdvertisingCharts from "../../components/finance/WbAdvertisingCharts";
@@ -46,7 +47,7 @@ useEffect(()=>{const id=setInterval(()=>setNow(Date.now()),1000);return ()=>clea
 const blocked=Boolean(retryAt&&Date.parse(retryAt)>now);
 const [data,setData]=useState<Data|null>(null),[error,setError]=useState(""),[busy,setBusy]=useState(false),[syncing,setSyncing]=useState(false),[progress,setProgress]=useState(""),[filter,setFilter]=useState(""),[selected,setSelected]=useState("");
 const [sort,setSort]=useState<{key:string;dir:1|-1}>({key:"profit",dir:-1});
-const [validFrom,setValidFrom]=useState(()=>day(-28)),[costInput,setCostInput]=useState(""),[mayakInput,setMayakInput]=useState(""),[savingRates,setSavingRates]=useState(false);
+const [validFrom,setValidFrom]=useState<string>(FINANCE_TARIFF_EFFECTIVE_FROM),[costInput,setCostInput]=useState(""),[mayakInput,setMayakInput]=useState(""),[savingRates,setSavingRates]=useState(false);
 const [managerInput,setManagerInput]=useState(''),[managerSaving,setManagerSaving]=useState(false),[historyBusy,setHistoryBusy]=useState(false),[adsSyncing,setAdsSyncing]=useState(false);
 async function load(refresh=false){if(blocked)return;setBusy(true);setError("");try{
 const q=new URLSearchParams({from,to});const cached=reportCache.get(q.toString());if(!refresh&&cached&&Date.now()-cached.at<30*60*1000){setData(cached.data);setSelected('');return;}const r=await fetch("/api/agents/wb-finance?"+q,{cache:"no-store"});

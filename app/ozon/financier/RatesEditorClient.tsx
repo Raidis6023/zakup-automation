@@ -1,5 +1,6 @@
 "use client";
 import { DateField } from "@/app/ui/WorkspaceDateFields";
+import { FINANCE_TARIFF_EFFECTIVE_FROM } from '@/lib/finance-tariff-date';
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type Rate = {
@@ -7,7 +8,6 @@ type Rate = {
   cost: number | null; cost_date: string | null;
   mayak: number | null; mayak_date: string | null;
 };
-function today() { return new Date().toISOString().slice(0,10); }
 function asNumericCell(value: unknown): number | null {
   if (value === null || value === undefined || String(value).trim() === "") return null;
   const n=Number(String(value).trim().replace(",","."));
@@ -32,7 +32,7 @@ export default function RatesEditorClient() {
   const [query,setQuery]=useState("");
   const [showMissingOnly,setShowMissingOnly]=useState(false);
   const [selected,setSelected]=useState("");
-  const [effectiveDate,setEffectiveDate]=useState(today);
+  const [effectiveDate,setEffectiveDate]=useState<string>(FINANCE_TARIFF_EFFECTIVE_FROM);
   const [manager,setManager]=useState("");
   const [cost,setCost]=useState("");
   const [mayak,setMayak]=useState("");
