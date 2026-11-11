@@ -59,6 +59,11 @@ export async function GET(req:NextRequest){
      if(existing.data){
       const result=await advancePromotion();
       if(result.ok&&result.phase==='saved'){
+       // Respect the account's shared report-generation cooldown before
+       // advancing finance. The next scheduler tick will resume.
+       const ctl=await db.from('yandex_promotion_control').select('next_request_at').eq('id',1).maybeSingle();
+       if(ctl.error)throw ctl.error;
+       if(ctl.data?.next_request_at&&Date.parse(ctl.data.next_request_at)>Date.now())break;
        job={...job,waiting_for:undefined};
        continue;
       }
@@ -74,8 +79,12 @@ export async function GET(req:NextRequest){
     continue;
    }
    const phase=job.phase;job=await step(req,{action:'advance',id:job.id});steps++;
-   if(job.status==='loading'&&job.phase===phase&&!job.busy)
+   if(job.status==='loading'&&job.phase===phase&&!job.busy){
+    // A generation phase with no state change is usually rate-limited by a
+    // DIFFERENT report. Release the function slot instead of spinning 4 min.
+    if(['services_request','orders_request'].includes(phase))break;
     await new Promise(resolve=>setTimeout(resolve,Math.min(3000,Math.max(0,until-Date.now()-10000))));
+   }
   }
   if(job.status==='ready'){
    const published=await db.rpc('finance_publish_yandex_daily',{p_report_id:job.id});
