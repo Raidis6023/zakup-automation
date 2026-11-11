@@ -1,5 +1,5 @@
 import {createAdminClient} from '../supabase/admin';
-import type {Line,ConfirmedReturn} from './finance';
+import {rules,type Line,type ConfirmedReturn} from './finance';
 import {financialReport,type Rate,type Listing,type OrderQuantity} from './finance-profit';
 export async function readFinance(from:string,to:string,scheme?:'fbo'|'fbs'){
  const db=createAdminClient();
@@ -140,5 +140,22 @@ export async function readFinance(from:string,to:string,scheme?:'fbo'|'fbs'){
  const chinaByMaster=new Map<string,number>();const chinaReady=!products.error&&!vedOrders.error&&!vedItems.error&&[...vedStates.values()].some(v=>['in_transit','dispatched','shipping','on_the_way'].includes(v));
  if(chinaReady)for(const x of vedItems.data??[]){if(!['in_transit','dispatched','shipping','on_the_way'].includes(vedStates.get(x.ved_order_id)??'')||['cancelled','received','rejected'].includes(x.status))continue;const code=productCodes.get(String(x.product_id));if(code)chinaByMaster.set(code,(chinaByMaster.get(code)??0)+Number(x.order_quantity??x.quantity??0));}
  const rows=result.rows.map(p=>{const own=p.master_code?ownByMaster.get(p.master_code):null;const manager=managerByKey.get(p.master_code??'article:'+p.article);return {...p,manager:manager??'Не назначен',dataGaps:manager?p.dataGaps:[...p.dataGaps,'Нет КМ'],marketplaceStock:stockAvailable?marketplaceStock.get(p.article)??0:null,mainStock:own?.main??null,oxStock:own?.ox??null,inChina:chinaReady&&p.master_code?chinaByMaster.get(p.master_code)??0:null,inCrossdock:null as number|null,discontinued:!!(p.master_code&&/выведен|выводится/i.test(statusByMaster.get(p.master_code)??''))};});
- return {...result,rows,report,daily,dailyReconciled,scheme:scheme??null,stockDate:stockAvailable?stockRun.data?.snapshot_date??null:null};
+ // Per-source coverage audit. A sheet omitted by Yandex is UNKNOWN,
+ // not an implicit zero-cost service; every source and income is visible.
+ const audit=new Map<string,{rows:number;amount:number}>();
+ for(const line of lines){
+  const day=line.source==='income'?line.orderDate:line.serviceDate;
+  if(day<from||day>to)continue;
+  const source=line.source==='income'?'Транзакции по заказам и товарам':line.sheet;
+  const old=audit.get(source)??{rows:0,amount:0};
+  audit.set(source,{rows:old.rows+1,amount:old.amount+line.amount});
+ }
+ const expectedSources=['Транзакции по заказам и товарам',...rules.map(([name])=>name)];
+ const sourceAudit=expectedSources.map(name=>({
+  name,kind:name==='Транзакции по заказам и товарам'?'income':'expense',
+  rows:audit.get(name)?.rows??0,amount:audit.get(name)?.amount??null,
+  status:audit.has(name)?'present':'not_provided'
+ }));
+ return {...result,rows,report,daily,dailyReconciled,sourceAudit,
+  scheme:scheme??null,stockDate:stockAvailable?stockRun.data?.snapshot_date??null:null};
 }
