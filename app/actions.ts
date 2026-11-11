@@ -15,7 +15,7 @@ import {
 import {
   syncVedOrderPhotos,
 } from "@/lib/ved-order-photo-sync";
-import { syncChinaWbOrderFeed } from "@/lib/china/wb-order-feed";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 
 // ============================================
@@ -200,18 +200,36 @@ export async function runChinaCalculation(
   try {
     await requireChinaEditor();
 
-    // Verify the last two completed days from WB Order Feed before selecting
-    // the common 28-day period. One order / srid, FBO-only buyout statuses.
-    // Never replace missing WB data with zero or use unconfirmed orders.
-    const wb = await syncChinaWbOrderFeed({ maxPages: 2 });
-    await callSupabaseRpc("run_china_calculation_with_transport");
+    // NEVER request WB here. Its Order Feed can be limited to one request
+    // per three hours, so user clicks must not consume its rate-limit budget.
+    // The secured cron imports verified FBW buyout statuses independently.
+    const result = await callSupabaseRpc("run_china_calculation_with_transport") as {
+      calculation_run_id?: string;
+    };
+
+    const admin = createAdminClient();
+    const [latestRun, latestFeed] = await Promise.all([
+      result?.calculation_run_id
+        ? admin.from("china_calculation_runs").select("sales_date_from,sales_date_to")
+            .eq("id", result.calculation_run_id).maybeSingle()
+        : Promise.resolve({ data: null }),
+      admin.from("china_wb_feed_days").select("sale_day")
+        .order("sale_day", { ascending: false }).limit(1).maybeSingle(),
+    ]);
+
+    const salesTo = latestRun.data?.sales_date_to
+      ? String(latestRun.data.sales_date_to).split("T")[0]
+      : "не установлен";
+    const lastVerifiedWb = latestFeed.data?.sale_day
+      ? String(latestFeed.data.sale_day).split("T")[0] : null;
 
     revalidatePath("/zakup");
     revalidatePath("/");
     return {
       ok: true,
-      message:
-        `Потребность и транспорт рассчитаны. WB Лента: ${wb.fbwBuyouts} подтверждённых FBW-выкупов за ${wb.from} – ${wb.to}. Возвраты: ${wb.fbwReturns}.`,
+      message: lastVerifiedWb
+        ? `Потребность и кубатура пересчитаны по продажам до ${salesTo}. WB: Лента подтверждена по ${lastVerifiedWb}. Обновление Ленты выполняется автоматически.`
+        : `Потребность и кубатура пересчитаны по последним подтверждённым данным до ${salesTo}. Лента WB ещё не загружена из-за ограничения частоты; автоматическая загрузка настроена. Предварительные заказы не подставлялись.`,
     };
   } catch (error) {
     console.error("[ZAKUP_CALCULATION] failed", error);
