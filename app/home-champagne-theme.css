@@ -143,16 +143,18 @@ html[data-theme="dark"] .home-shell.home-shell--dashboard[data-accent-area="gene
   --ws-decor-4-to: #6d513d;
 }
 
-/* Background treatment: no DOM nodes or layout changes.
- * In light mode the original dark lines become quiet anthracite curves.
- * Ivory glows and a very soft slate halo behind the panda add depth. */
+/* Light mode: layered champagne light, ivory reflections and slate depth.
+ * The two vector arcs deliberately remain behind every interactive element.
+ * Geometry, cards, assistant, navigation and dark theme are unchanged. */
 .home-shell--dashboard > .home-main > .home-content {
   background:
     url("/panda/home-anthracite-waves.svg") center bottom / 100% 100% no-repeat,
-    radial-gradient(ellipse 43% 34% at 16% 100%, rgba(255, 249, 239, .92), transparent 80%),
-    radial-gradient(ellipse 32% 30% at 90% 97%, rgba(247, 249, 251, .78), transparent 75%),
-    radial-gradient(ellipse 28% 30% at 95% 100%, rgba(61, 83, 107, .12), transparent 80%),
-    linear-gradient(180deg, var(--ws-page) 0%, var(--ws-page) 68%, #ebdfcd 100%);
+    radial-gradient(ellipse 42% 38% at 22% 88%, rgba(255, 253, 247, .98) 0%, rgba(255, 249, 237, .61) 37%, transparent 82%),
+    radial-gradient(ellipse 39% 41% at 7% 103%, rgba(177, 135, 87, .30) 0%, rgba(194, 158, 115, .18) 42%, transparent 82%),
+    radial-gradient(ellipse 25% 34% at 86% 82%, rgba(255, 252, 244, .86) 0%, rgba(255, 250, 240, .35) 44%, transparent 86%),
+    radial-gradient(ellipse 35% 43% at 97% 103%, rgba(53, 73, 93, .26) 0%, rgba(67, 89, 108, .11) 44%, transparent 83%),
+    radial-gradient(ellipse 55% 35% at 61% 112%, rgba(213, 185, 151, .15), transparent 85%),
+    linear-gradient(180deg, var(--ws-page) 0%, var(--ws-page) 51%, #ebddc9 100%);
 }
 html[data-theme="dark"] .home-shell--dashboard > .home-main > .home-content {
   /* The two vector curves live behind the cards and the assistant.
