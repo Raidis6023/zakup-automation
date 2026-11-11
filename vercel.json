@@ -25,10 +25,6 @@
       "schedule": "0 23 * * *"
     },
     {
-      "path": "/api/wb/sync-sales",
-      "schedule": "20 0 * * *"
-    },
-    {
       "path": "/api/agents/wb-finance-cron",
       "schedule": "10 23 * * *"
     },
