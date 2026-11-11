@@ -8,7 +8,7 @@ import AccrualBreakdownList from '../../components/finance/AccrualBreakdownList'
 import {downloadFinanceWorkbook} from '../../components/finance/export-xlsx';
 import {clearFinanceSeries} from '../../components/finance/finance-series-cache';
 import OrderFulfillmentPanels from '../../components/finance/OrderFulfillmentPanels';
-type Data=NonNullable<Awaited<ReturnType<typeof readFinance>>>;
+type Data=NonNullable<Awaited<ReturnType<typeof readFinance>>>&{partial_coverage?:boolean;requested_from?:string;requested_to?:string;coverage_warning?:string};
 const money=(n:number)=>new Intl.NumberFormat('ru-RU',{minimumFractionDigits:0,maximumFractionDigits:0}).format(Math.sign(n)*Math.round(Math.abs(n)/100)||0)+' ₽';
 const localDay=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Krasnoyarsk',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 const shift=(day:string,delta:number)=>new Date(Date.parse(day+'T00:00:00Z')+delta*86400000).toISOString().slice(0,10);
@@ -20,8 +20,9 @@ export default function YandexFinancierClient({initial,initialError}:{initial:Da
   const [data,setData]=useState(initial),[error,setError]=useState(initialError),[busy,setBusy]=useState(false),[progress,setProgress]=useState(''),[savingRate,setSavingRate]=useState(false),[statusSaving,setStatusSaving]=useState(false);
  const alive=useRef(true);useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[]);
  async function request(url:string,body?:unknown){const r=await fetch(url,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:undefined,body:body?JSON.stringify(body):undefined,cache:'no-store'});const d=await r.json();if(!r.ok)throw new Error(d.error??'Ошибка запроса');return d;}
- async function load(){setError('');setBusy(true);try{const d=await request(`/api/agents/yandex-finance?from=${from}&to=${to}`);if(alive.current)setData(d);}catch(e){if(alive.current)setError(e instanceof Error?e.message:'Ошибка');}finally{if(alive.current)setBusy(false);}}
+ async function load(){setError('');setBusy(true);try{const d=await request(`/api/agents/yandex-finance?from=${from}&to=${to}`);if(alive.current){setData(d);setProgress(d.coverage_warning??'');}}catch(e){if(alive.current)setError(e instanceof Error?e.message:'Ошибка');}finally{if(alive.current)setBusy(false);}}
  async function sync(){setBusy(true);setError('');try{
+  if(to>shift(localDay(),-1))throw new Error('Нельзя выгружать будущие даты. Последний полный календарный день: '+shift(localDay(),-1)+'.');
   let job=await request('/api/agents/yandex-finance-sync',{action:'start',from,to});
   const phases:Record<string,string>={services_request:'Запрос отчёта услуг',services_poll:'ЯМ формирует отчёт услуг',orders_request:'Ожидание лимита перед запросом заказов',orders_poll:'ЯМ формирует отчёт заказов',order_units_pull:'Загрузка количества заказанных единиц',done:'Готово'};
   while(alive.current&&job.status==='loading'){
@@ -76,13 +77,23 @@ export default function YandexFinancierClient({initial,initialError}:{initial:Da
   ]);
  }
  return <>
- <section className="ozf-panel ozf-filters"><label>С даты<DateField  value={from} onChange={e=>setFrom(e.target.value)} disabled={busy}/></label><label>По дату (включительно)<DateField  value={to} onChange={e=>setTo(e.target.value)} disabled={busy}/></label><button className="ozf-btn ozf-primary" onClick={load} disabled={busy}>Сформировать</button><button className="ozf-btn" onClick={sync} disabled={busy}>Загрузить / продолжить из ЯМ</button><button className="ozf-btn" disabled={adBusy} onClick={async()=>{setAdBusy(true);setAdStatus('Загружаем рекламные отчёты…');try{const r=await fetch('/api/agents/yandex-finance-campaigns-cron',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({from,to})}),j=await r.json();setAdStatus(r.ok?'Реклама ЯМ '+from+' — '+to+': '+String(j.phase??'обработка')+'; готово за запуск: '+String(j.finished??0):'Ошибка рекламы: '+String(j.error??r.status));}catch(e){setAdStatus(String(e))}finally{setAdBusy(false)}}}>{adBusy?'Выгружаем рекламу…':'Продолжить рекламу ЯМ'}</button><span role="status">{adStatus}</span><span role="status">{busy?'Загрузка… ':''}{progress}</span></section>
+ <section className="ozf-panel ozf-filters"><label>С даты<DateField value={from} onChange={e=>setFrom(e.target.value)} max={shift(localDay(),-1)} disabled={busy}/></label><label>По дату (включительно)<DateField value={to} onChange={e=>setTo(e.target.value)} max={shift(localDay(),-1)} disabled={busy}/></label><button className="ozf-btn ozf-primary" onClick={load} disabled={busy}>Сформировать</button><button className="ozf-btn" onClick={sync} disabled={busy}>Загрузить / продолжить из ЯМ</button><button className="ozf-btn" disabled={adBusy} onClick={async()=>{setAdBusy(true);setAdStatus('Загружаем рекламные отчёты…');try{const r=await fetch('/api/agents/yandex-finance-campaigns-cron',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({from,to})}),j=await r.json();setAdStatus(r.ok?'Реклама ЯМ '+from+' — '+to+': '+String(j.phase??'обработка')+'; готово за запуск: '+String(j.finished??0):'Ошибка рекламы: '+String(j.error??r.status));}catch(e){setAdStatus(String(e))}finally{setAdBusy(false)}}}>{adBusy?'Выгружаем рекламу…':'Продолжить рекламу ЯМ'}</button><span role="status">{adStatus}</span><span role="status">{busy?'Загрузка… ':''}{progress}</span></section>
  {error&&<p role="alert" className="ymf-warning">{error}</p>}
  {data&&<>
+ {data.coverage_warning&&<p className="ymf-warning" role="alert">{data.coverage_warning}</p>}
  {data.report.error&&<p className="ymf-warning" role="status">{data.report.error}</p>}
  <p>Показан период: <b>{data.from} — {data.to}</b> включительно. Кэш: {data.report.completed_at?new Date(data.report.completed_at).toLocaleString('ru-RU',{timeZone:'Asia/Krasnoyarsk'}):'—'} (Красноярск).</p>
 
  <div className="ozf-toolbar"><button className="ozf-btn" onClick={()=>void exportFinancialResult()}>Скачать финрез XLSX</button><button className="ozf-btn" onClick={()=>void exportMissingData()}>Недостающие данные XLSX · {data.rows.filter(r=>r.dataGaps.length>0||!r.master_code||r.manager==="Не назначен").length}</button></div>
+ <details className="ozf-panel" style={{marginTop:10,marginBottom:10}}>
+  <summary style={{cursor:'pointer',fontWeight:600}}>Проверка всех источников доходов и расходов ЯМ · {data.sourceAudit.filter(x=>x.status==='present').length}/{data.sourceAudit.length} с операциями</summary>
+  <p className="ymf-warning">Отсутствующий лист или статья не считаются подтверждённым нулём. ЯМ может не формировать пустые листы; для недостающих сумм нужна сверка с кабинетом.</p>
+  <div className="ozf-scroll"><table className="ozf-table"><thead><tr><th>Статья</th><th>Источник</th><th>Строк</th><th>Сумма</th><th>Статус</th></tr></thead><tbody>
+   {data.sourceAudit.map(x=><tr key={x.name}><td>{x.name}</td><td>{x.kind==='income'?'Доход':'Расход'}</td><td>{x.rows||'—'}</td>
+    <td>{x.amount===null?'Не подтверждено':money(x.amount)}</td>
+    <td>{x.status==='present'?'Есть операции':'Нет листа/операций в отчёте'}</td></tr>)}
+  </tbody></table></div>
+ </details>
  <OrderFulfillmentPanels market="yandex" from={data.from} to={data.to}/>
  <YandexFinanceTable data={data} onSave={saveRate} saving={savingRate} onToggle={toggleStatus} statusSaving={statusSaving} onManager={saveManager} rateRevision={rateRevision}/>
  <section className="ozf-panel" id="ymf-unallocated"><h2>Нераспределённые расходы</h2><AccrualBreakdownList

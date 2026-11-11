@@ -5,7 +5,10 @@ import {financeAccess} from '../../../../lib/yandex/finance-access';
 export const runtime='nodejs';export const dynamic='force-dynamic';export const maxDuration=300;
 const shift=(day:string,n:number)=>new Date(Date.parse(day+'T00:00:00Z')+n*86400000).toISOString().slice(0,10);
 export async function GET(req:NextRequest){
- if(!process.env.CRON_SECRET||req.headers.get('authorization')!=='Bearer '+process.env.CRON_SECRET)return NextResponse.json({ok:false,error:'Unauthorized'},{status:401});
+ const auth=req.headers.get('authorization');
+ if(!auth||!((process.env.CRON_SECRET&&auth==='Bearer '+process.env.CRON_SECRET)||
+   (process.env.YANDEX_FINANCE_CRON_SECRET&&auth==='Bearer '+process.env.YANDEX_FINANCE_CRON_SECRET)))
+  return NextResponse.json({ok:false,error:'Unauthorized'},{status:401});
  try{
   const db=createAdminClient(),today=new Date(Date.now()+7*3600000).toISOString().slice(0,10);
   const yesterday=shift(today,-1),selectedFrom=req.nextUrl.searchParams.get('from'),selectedTo=req.nextUrl.searchParams.get('to');
