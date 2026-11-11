@@ -86,13 +86,13 @@ export type ChinaWbFeedSyncResult = {
  * Basic WB tokens can be limited to one request per THREE HOURS. Pagination
  * in a single Vercel invocation is not safe under that limit.
  *
- * Automatically fill the oldest unverified day in the last 3 complete days.
+ * Fetch the newest unverified day first; confirmed finance covers older dates.
  * Historical finance rows cover older dates. Never mark a day verified unless
  * the entire one-day result fits in a single page (< PAGE_LIMIT).
  */
 export async function syncChinaWbOrderFeed(): Promise<ChinaWbFeedSyncResult> {
   const today = dateInKrasnoyarsk();
-  const candidates = [-3, -2, -1].map((delta) => dayOffset(today, delta));
+  const candidates = [-1, -2, -3].map((delta) => dayOffset(today, delta));
   const db = createAdminClient();
 
   const { data: verified, error: dayError } = await db
@@ -104,7 +104,7 @@ export async function syncChinaWbOrderFeed(): Promise<ChinaWbFeedSyncResult> {
   const target = candidates.find((day) => !verifiedDays.has(day));
   if (!target) {
     return {
-      ok: true, reused: true, from: candidates[0], to: candidates[2],
+      ok: true, reused: true, from: candidates[2], to: candidates[0],
       fbwOrders: 0, fbwBuyouts: (verified ?? []).reduce(
         (sum, x) => sum + Number(x.fbw_buyouts ?? 0), 0),
       fbwReturns: (verified ?? []).reduce(
