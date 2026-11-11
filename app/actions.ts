@@ -187,15 +187,59 @@ async function callSupabaseRpc(
 // 1. РАССЧИТАТЬ ПОТРЕБНОСТЬ И ТРАНСПОРТ
 // ============================================
 
-export async function runChinaCalculation() {
-  await requireChinaEditor();
+export type ChinaCalculationSubmitState = {
+  ok: boolean | null;
+  message: string;
+};
 
-  // One transactional database call: demand by SKU + automatic transport
-  // volume. There is no manual input for "new products" on this screen.
-  await callSupabaseRpc("run_china_calculation_with_transport");
+export async function runChinaCalculation(
+  _previousState: ChinaCalculationSubmitState,
+  _formData: FormData,
+): Promise<ChinaCalculationSubmitState> {
+  try {
+    await requireChinaEditor();
 
-  revalidatePath("/zakup");
-  revalidatePath("/");
+    // Atomically refresh confirmed WB daily operations, calculate demand and
+    // recalculate transport. No manual m³ and no new VED order created.
+    await callSupabaseRpc("run_china_calculation_with_transport");
+
+    revalidatePath("/zakup");
+    revalidatePath("/");
+    return { ok: true, message: "Потребность и кубатура пересчитаны." };
+  } catch (error) {
+    console.error("[ZAKUP_CALCULATION] failed", error);
+
+    const raw = error instanceof Error ? error.message : "";
+    const jsonStart = raw.indexOf('{"code":');
+    let details = "";
+    if (jsonStart >= 0) {
+      try {
+        const payload = JSON.parse(raw.slice(jsonStart)) as { message?: unknown };
+        if (typeof payload.message === "string") details = payload.message;
+      } catch {
+        // Never expose raw RPC response bodies or internal exception details.
+      }
+    }
+
+    if (/Нет общего полного 28-дневного периода/.test(details)) {
+      return { ok: false,
+        message: "Нет полного 28-дневного периода продаж для всех трёх маркетплейсов. Проверьте, завершилась ли ежедневная выгрузка WB." };
+    }
+
+    if (/Закуп заблокирован:/.test(details)) {
+      return { ok: false, message: details };
+    }
+
+    if (/Недостаточно прав|необходимо войти|необходимо войти в WorkSpace|Не удалось проверить права/.test(raw)) {
+      return { ok: false,
+        message: "Недостаточно прав для расчёта или необходимо повторно войти в WorkSpace." };
+    }
+
+    return {
+      ok: false,
+      message: "Не удалось рассчитать потребность. Повторите попытку после обновления источников данных.",
+    };
+  }
 }
 
 

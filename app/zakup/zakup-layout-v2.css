@@ -1971,3 +1971,41 @@ html[data-theme="dark"]
     grid-template-columns: 1fr;
   }
 }
+
+/* Purchase calculation: safe inline feedback instead of a Next.js error screen. */
+.zakup-reference-page .zakup-calculate-form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 7px;
+}
+
+.zakup-reference-page .zakup-calculate-message {
+  max-width: 360px;
+  padding: 7px 10px;
+  border: 1px solid var(--ws-border);
+  border-radius: 7px;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.zakup-reference-page .zakup-calculate-message--error {
+  color: var(--ws-red, #e76877);
+}
+
+.zakup-reference-page .zakup-calculate-message--success {
+  color: var(--zakup-v2-green);
+}
+
+.zakup-reference-page .zakup-confirmed-period {
+  margin-top: 5px;
+  font-size: 11px;
+}
+
+@media (max-width: 720px) {
+  .zakup-reference-page .zakup-calculate-form {
+    width: 100%;
+  }
+}
