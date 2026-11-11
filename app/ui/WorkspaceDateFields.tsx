@@ -258,8 +258,12 @@ function TimePanel({ value, onPick, onDone, clear }: {
   onDone: () => void;
   clear?: () => void;
 }) {
-  const hour = isTimeKey(value) ? value.slice(0, 2) : "09";
-  const minute = isTimeKey(value) ? value.slice(3, 5) : "00";
+  // Keep hour selection local. Persist only on minute click so saved-note
+  // updates cannot temporarily disable and close the popover.
+  const initialHour = isTimeKey(value) ? value.slice(0, 2) : "09";
+  const initialMinute = isTimeKey(value) ? value.slice(3, 5) : "00";
+  const [hour, setHour] = useState(initialHour);
+  const [minute, setMinute] = useState(initialMinute);
   const hourList = useRef<HTMLDivElement>(null), minuteList = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (hourList.current) hourList.current.scrollTop = Math.max(0, Number(hour) * 32 - 85);
@@ -274,7 +278,7 @@ function TimePanel({ value, onPick, onDone, clear }: {
           {HOURS.map(h => <button type="button" key={h}
             className={h === hour ? styles.timeSelected : ""}
             aria-pressed={h === hour}
-            onClick={() => onPick(h + ":" + minute)}>{h}</button>)}
+            onClick={() => setHour(h)}>{h}</button>)}
         </div>
       </div>
       <div className={styles.timeColumn}>
@@ -283,7 +287,7 @@ function TimePanel({ value, onPick, onDone, clear }: {
           {MINUTES.map(m => <button type="button" key={m}
             className={m === minute ? styles.timeSelected : ""}
             aria-pressed={m === minute}
-            onClick={() => { onPick(hour + ":" + m); onDone(); }}>{m}</button>)}
+            onClick={() => { setMinute(m); onPick(hour + ":" + m); onDone(); }}>{m}</button>)}
         </div>
       </div>
     </div>

@@ -697,11 +697,9 @@ export default function WorkspaceShell({
       data-accent-area={accentArea}
       data-workspace-mode={adminMode ? "admin" : "work"}
       className={
-        sidebarCollapsed
-
-          ? "home-shell home-shell--sidebar-collapsed"
-
-          : "home-shell"
+        "home-shell"
+        + (sidebarCollapsed ? " home-shell--sidebar-collapsed" : "")
+        + (pathname === "/" ? " home-shell--dashboard" : "")
       }
     >
 

@@ -49,4 +49,17 @@ assert.ok(sku.includes('label: "Сентябрь"') && sku.includes('label: "О�
 const header = get("app/HomeHeaderActions.tsx");
 assert.ok(header.includes('target.closest("[data-workspace-picker-popup]")'),
   "Header note modal must stay open when using the portaled time picker");
+// Hour selection remains local until a minute is selected. Avoids an immediate
+// saved-note RPC, which briefly disables the selector and closes its popup.
+const timePanel = shared.slice(shared.indexOf("function TimePanel("), shared.indexOf("export function TimeField("));
+assert.ok(timePanel.includes("onClick={() => setHour(h)}"), "Hour selection must not persist or close");
+assert.ok(timePanel.includes('onPick(hour + ":" + m); onDone();'), "Minute click commits and closes");
+assert.ok(!timePanel.includes('onPick(h + ":" + minute)'), "Hour click must not trigger server change");
+const workspaceShell = get("app/WorkspaceShell.tsx");
+const workspaceCss = get("app/workspace-reference-shell.css");
+assert.ok(workspaceShell.includes('pathname === "/" ? " home-shell--dashboard"'), "Dashboard height only on homepage");
+assert.match(workspaceCss, /\.home-shell--dashboard > \.home-main\s*\{[^}]*height: 100dvh;/s, "Dashboard main fits viewport");
+assert.match(workspaceCss, /\.home-shell--dashboard \.home-marketplace-board\s*\{[^}]*height: auto;[^}]*min-height: 0;/s, "Board flexes inside viewport");
+assert.ok(workspaceCss.includes("@media (min-width: 801px) and (min-height: 471px)"), "Short/mobile screens retain scrolling");
+console.log("PASS Time selection: hour stays open, minute commits; homepage avoids unnecessary scrolling");
 console.log("PASS Unified calendars/time: theme, navigation, 13 date modules, notes and SKU month/year");

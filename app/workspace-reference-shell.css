@@ -2068,3 +2068,35 @@ button.active {
     --workspace-page-gutter: 16px;
   }
 }
+
+
+/* Homepage dashboard only: fit cards into viewport without body scroll.
+   Short/touch screens retain natural page scrolling. */
+@media (min-width: 801px) and (min-height: 471px) {
+  .home-shell--dashboard > .home-main {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    min-height: 0;
+  }
+  .home-shell--dashboard > .home-main > .home-topbar {
+    flex: 0 0 auto;
+  }
+  .home-shell--dashboard > .home-main > .home-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .home-shell--dashboard > .home-main > .home-content > section[aria-label="Главная страница"] {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .home-shell--dashboard .home-marketplace-board {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+  }
+}
