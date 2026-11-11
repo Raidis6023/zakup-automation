@@ -51,8 +51,10 @@ function moneyTone(value:number|null|undefined):string{
   return "";
 }
 function advertising(r:FinancialRow):number|null {
-  if(r.advertising_amount!==0)return r.advertising_amount;
+  // The "Реклама" and DRR columns represent campaign spend by SKU and
+  // campaign day. Seller postings belong to the separate P&L ledger.
   if(r.performance_ad_expense!=null)return -Math.abs(r.performance_ad_expense);
+  if(r.advertising_amount!==0)return r.advertising_amount; // provisional
   return null;
 }
 function adShare(r:FinancialRow):number|null{
@@ -240,7 +242,10 @@ export default function FinancierDetailTable({
       value:money(operatingProfit),tone:moneyTone(operatingProfit)},
     {name:"Выручка",value:money(sumRevenue),tone:moneyTone(sumRevenue)},
     {name:"Рентабельность",value:pct(profitability),tone:moneyTone(profitability)},
-    {name:adReferenceOnly?"Реклама по SKU (неполная)":adUnknown?"Реклама (нет данных)":data?.ads_covered?"Реклама":"Реклама"+(includeUnallocated?"":" (часть)"),
+    {name:adReferenceOnly?"Реклама Performance (неполная)":adUnknown?"Реклама (нет данных)":
+      includeUnallocated&&globalAdvertising.kind==='performance_complete'?"Реклама Performance":
+      includeUnallocated&&globalAdvertising.kind==='seller'?"Реклама Seller (временно)":
+      data?.ads_covered?"Реклама Performance":"Реклама Performance (часть)",
       value:money(adAmount),tone:adAmount==null?"":Math.abs(adAmount)>0?"ozf-bad":"ozf-good"},
     {name:"Платное хранение",value:money(storageAmount),tone:storageAmount==null?"":Math.abs(storageAmount)>0?"ozf-bad":"ozf-good"},
     {name:"Положительные позиции",value:qty(positionsPositive),tone:positionsPositive>0?"ozf-good":"ozf-bad"},
@@ -276,6 +281,11 @@ export default function FinancierDetailTable({
         {['Выручка','Операционная прибыль'].includes(k.name)?<button type="button" className="ozf-kpi-link" onClick={()=>setGraphMetric(k.name==='Выручка'?'revenue':'profit')}>{k.name}</button>:<span>{k.name}</span>}<strong>{k.value}</strong>
       </div>)}
     </div>
+    {includeUnallocated&&referenceBySku!==null&&<p className="ozf-notice" role="status" style={{marginTop:8}}>
+      Реклама по кампаниям Performance за {data?.from} — {data?.to}: {money(-Math.abs(referenceBySku))}{!data?.ads_covered?' (данные пока неполные)':''}.
+      Финансовые начисления Seller за тот же период: {sellerAdGlobal===null?'нет данных':money(sellerAdGlobal)}.
+      Даты начисления и даты рекламных показов могут отличаться. В операционной прибыли расход Seller остаётся учтён только один раз.
+    </p>}
     {profitIsPartial&&<p className="ozf-notice" role="status" style={{marginTop:8}}>
       Общий финансовый результат предварительный: прибыль не рассчитана для {missingProfitCount} из {rows.length} артикулов.
       Показана только известная часть с нераспределёнными начислениями.
