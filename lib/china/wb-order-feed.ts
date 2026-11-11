@@ -9,8 +9,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const WB_ORDER_FEED_URL =
   "https://seller-analytics-api.wildberries.ru/api/analytics/v1/order-feed";
 const PAGE_LIMIT = 1000;
-const MAX_PAGES = 4;
-const PAGE_DELAY_MS = 61_000;
 
 type FeedOrder = {
   srid: string;
@@ -47,10 +45,6 @@ function dayOffset(day: string, delta: number): string {
   return new Date(time).toISOString().slice(0, 10);
 }
 
-async function pause(milliseconds: number) {
-  await new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
-}
-
 function asFeedOrder(value: unknown): FeedOrder | null {
   if (!value || typeof value !== "object") {
     throw new Error("WB: некорректная строка Ленты заказов");
@@ -82,169 +76,177 @@ export type ChinaWbFeedSyncResult = {
   fbwBuyouts: number;
   fbwReturns: number;
   totalOrders: number;
+  skipped?: boolean;
+  retrySeconds?: number;
 };
 
-/** Refreshes the two last completed Krasnoyarsk days from WB Order Feed. */
-export async function syncChinaWbOrderFeed({
-  force = false,
-  maxPages = MAX_PAGES,
-}: { force?: boolean; maxPages?: number } = {}): Promise<ChinaWbFeedSyncResult> {
-  if (!Number.isInteger(maxPages) || maxPages < 1 || maxPages > MAX_PAGES) {
-    throw new Error("Закуп: неверный лимит страниц Ленты WB");
-  }
+
+/**
+ * Performs at most ONE WB HTTP request, from a scheduled server-only call.
+ * Basic WB tokens can be limited to one request per THREE HOURS. Pagination
+ * in a single Vercel invocation is not safe under that limit.
+ *
+ * Automatically fill the oldest unverified day in the last 3 complete days.
+ * Historical finance rows cover older dates. Never mark a day verified unless
+ * the entire one-day result fits in a single page (< PAGE_LIMIT).
+ */
+export async function syncChinaWbOrderFeed(): Promise<ChinaWbFeedSyncResult> {
   const today = dateInKrasnoyarsk();
-  const to = dayOffset(today, -1);
-  const from = dayOffset(today, -2);
+  const candidates = [-3, -2, -1].map((delta) => dayOffset(today, delta));
   const db = createAdminClient();
-  const { data: previous, error: lastError } = await db
-    .from("china_wb_feed_days").select("verified_at,fbw_buyouts,fbw_returns")
-    .eq("sale_day", to).maybeSingle();
-  if (lastError) throw new Error("Закуп: не удалось прочитать состояние Ленты WB");
 
-  const fresh = previous?.verified_at
-    && Date.now() - Date.parse(previous.verified_at) < 4 * 3_600_000;
-  if (!force && fresh) {
-    const { data: fromDay, error } = await db.from("china_wb_feed_days")
-      .select("verified_at,fbw_buyouts,fbw_returns")
-      .eq("sale_day", from).maybeSingle();
-    if (error) throw new Error("Закуп: не удалось проверить второй день Ленты WB");
-    if (fromDay?.verified_at) {
-      return {
-        ok: true, reused: true, from, to, fbwOrders: 0,
-        fbwBuyouts: Number(previous.fbw_buyouts ?? 0) + Number(fromDay.fbw_buyouts ?? 0),
-        fbwReturns: Number(previous.fbw_returns ?? 0) + Number(fromDay.fbw_returns ?? 0),
-        totalOrders: 0,
-      };
-    }
+  const { data: verified, error: dayError } = await db
+    .from("china_wb_feed_days").select("sale_day,verified_at,fbw_buyouts,fbw_returns")
+    .in("sale_day", candidates);
+  if (dayError) throw new Error("Закуп: не удалось проверить статусы WB");
+
+  const verifiedDays = new Map((verified ?? []).map((x) => [x.sale_day, x]));
+  const target = candidates.find((day) => !verifiedDays.has(day));
+  if (!target) {
+    return {
+      ok: true, reused: true, from: candidates[0], to: candidates[2],
+      fbwOrders: 0, fbwBuyouts: (verified ?? []).reduce(
+        (sum, x) => sum + Number(x.fbw_buyouts ?? 0), 0),
+      fbwReturns: (verified ?? []).reduce(
+        (sum, x) => sum + Number(x.fbw_returns ?? 0), 0),
+      totalOrders: 0,
+    };
   }
 
+  const from = target, to = target;
   const token = process.env.WB_READ_TOKEN?.trim();
   if (!token) throw new Error("Закуп: токен WB_READ_TOKEN не настроен");
 
-  // Scope the report to products that may participate in China procurement.
-  // This cuts the number of pages and prevents unrelated seller orders from
-  // exhausting WB's strict one-request-per-minute limit.
   const { data: listings, error: listingsError } = await db
-    .from("marketplace_listings")
-    .select("external_id")
-    .eq("account_key", "main")
-    .eq("marketplace", "wildberries")
-    .eq("is_active", true)
-    .eq("china_procurement_enabled", true);
-  if (listingsError) throw new Error("Закуп: не удалось получить артикулы WB для Ленты заказов");
-  const nmIds = [...new Set(
-    (listings ?? []).map((x) => Number(x.external_id))
-      .filter((x) => Number.isSafeInteger(x) && x > 0)
-  )];
+    .from("marketplace_listings").select("external_id")
+    .eq("account_key", "main").eq("marketplace", "wildberries")
+    .eq("is_active", true).eq("china_procurement_enabled", true);
+  if (listingsError) throw new Error("Закуп: не удалось получить список товаров WB");
+
+  const nmIds = [...new Set((listings ?? [])
+    .map((x) => Number(x.external_id))
+    .filter((x) => Number.isSafeInteger(x) && x > 0))];
   if (nmIds.length === 0 || nmIds.length > 1000) {
-    throw new Error("Закуп: некорректное количество артикулов WB для запроса Ленты");
+    throw new Error("Закуп: неверное количество артикулов WB");
   }
 
   const { data: acquired, error: beginError } = await db
     .rpc("china_begin_wb_feed_sync");
-  if (beginError) throw new Error("Закуп: не удалось захватить блокировку WB");
+  if (beginError) throw new Error("Закуп: не удалось проверить лимит WB");
   if (acquired !== true) {
-    throw new Error("Лента WB уже обновляется либо достигнут лимит 1 запрос в минуту. Повторите расчёт позднее.");
+    return {
+      ok: false, reused: false, skipped: true, from, to,
+      fbwOrders: 0, fbwBuyouts: 0, fbwReturns: 0, totalOrders: 0,
+    };
   }
 
+  let deferred = false;
   try {
-    const snapshotOrders = new Map<string, FeedOrder>();
-    let snapshotTime: string | null = null;
-    let offset = 0;
-    let totalOrders = 0;
-    let finished = false;
-
-    for (let page = 0; page < maxPages; page++) {
-      if (page > 0) await pause(PAGE_DELAY_MS);
-      const payload: Record<string, unknown> = {
+    const response = await fetch(WB_ORDER_FEED_URL, {
+      method: "POST", cache: "no-store",
+      headers: {
+        Authorization: token,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
         selectedPeriod: {
           start: from + "T00:00:00+03:00",
           end: to + "T23:59:59+03:00",
         },
-        nmIds, subjectIds: [], brandNames: [], tagIds: [],
-        pagination: {
-          offset, limit: PAGE_LIMIT,
-          ...(snapshotTime ? { snapshotTime } : {}),
-        },
-      };
-      const response = await fetch(WB_ORDER_FEED_URL, {
-        method: "POST", cache: "no-store",
-        headers: {
-          Authorization: token, Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(30_000),
+        nmIds,
+        pagination: { offset: 0, limit: PAGE_LIMIT },
+      }),
+      signal: AbortSignal.timeout(30_000),
+    });
+
+    if (response.status === 429) {
+      // WB documents X-Ratelimit-Retry in seconds. Missing headers must not
+      // trigger a tight loop, especially for Basic 1-request/3h tokens.
+      const retryHeader = response.headers.get("X-Ratelimit-Retry")
+        ?? response.headers.get("Retry-After");
+      const parsed = Number(retryHeader);
+      const retrySeconds = retryHeader && Number.isFinite(parsed) && parsed > 0
+        ? Math.min(10_800, Math.max(70, Math.ceil(parsed) + 15))
+        : 10_800;
+      const message = "WB 429: лимит Ленты заказов. Следующий запрос не раньше "
+        + retrySeconds + " сек.";
+      const { error: cooldownError } = await db.rpc(
+        "china_defer_wb_feed_sync",
+        { p_wait_seconds: retrySeconds, p_error: message },
+      );
+      if (cooldownError) throw new Error(
+        "Закуп: не удалось записать время следующего запроса WB");
+      deferred = true;
+      console.warn("[CHINA WB ORDER FEED] throttled", {
+        retrySeconds, day: target, message,
       });
-      if (!response.ok) {
-        throw new Error(
-          response.status === 429
-            ? "Лента WB ограничила частоту запросов. Результат не сохранён."
-            : `Лента заказов WB вернула HTTP ${response.status}. Результат не сохранён.`,
-        );
-      }
-      const body = await response.json() as {
-        data?: { snapshotTime?: unknown; orders?: unknown };
+      return {
+        ok: false, reused: false, skipped: true, retrySeconds,
+        from, to, fbwOrders: 0, fbwBuyouts: 0, fbwReturns: 0, totalOrders: 0,
       };
-      const data = body?.data;
-      if (!data || typeof data.snapshotTime !== "string"
-        || data.snapshotTime.length < 5 || !Array.isArray(data.orders)) {
-        throw new Error("WB: отсутствуют маркер снимка или массив заказов");
-      }
-      if (snapshotTime && snapshotTime !== data.snapshotTime) {
-        throw new Error("WB: сменился снимок при пагинации. Не сохраняем неполный результат.");
-      }
-      snapshotTime = data.snapshotTime;
-      const orders = data.orders;
-      totalOrders += orders.length;
-
-      const pageSrids = new Set<string>();
-      for (const value of orders) {
-        const raw = value as Record<string, unknown>;
-        if (typeof raw?.srid !== "string" || !raw.srid) {
-          throw new Error("WB: строка без srid");
-        }
-        if (pageSrids.has(raw.srid) || snapshotOrders.has(raw.srid)) {
-          throw new Error("WB: повторяющийся srid между страницами");
-        }
-        pageSrids.add(raw.srid);
-        const normalized = asFeedOrder(value);
-        if (normalized) snapshotOrders.set(normalized.srid, normalized);
-      }
-      offset += orders.length;
-      if (orders.length < PAGE_LIMIT) {
-        finished = true;
-        break;
-      }
-    }
-    if (!finished || !snapshotTime) {
-      throw new Error("WB: больше страниц, чем безопасно загрузить за один запуск. Неполный снимок не принят.");
     }
 
-    const statuses = [...snapshotOrders.values()];
+    if (!response.ok) {
+      throw new Error("Лента WB вернула HTTP " + response.status
+        + ". Неполный отчёт не сохранён.");
+    }
+
+    const body = await response.json() as {
+      data?: { snapshotTime?: unknown; orders?: unknown };
+    };
+    const data = body?.data;
+    if (!data || typeof data.snapshotTime !== "string"
+      || data.snapshotTime.length < 5 || !Array.isArray(data.orders)) {
+      throw new Error("WB: неполный ответ Ленты заказов");
+    }
+
+    if (data.orders.length >= PAGE_LIMIT) {
+      // Do not count the first page as a whole day.
+      throw new Error("WB: за день более " + PAGE_LIMIT
+        + " заказов. Нужна межзапусковая пагинация; данные не сохранены.");
+    }
+
+    const normalized: FeedOrder[] = [];
+    const seen = new Set<string>();
+    for (const item of data.orders) {
+      const order = item as Record<string, unknown>;
+      if (typeof order?.srid !== "string" || !order.srid
+        || seen.has(order.srid)) {
+        throw new Error("WB: некорректный или повторяющийся SRID");
+      }
+      seen.add(order.srid);
+      const record = asFeedOrder(item);
+      if (record) normalized.push(record);
+    }
+
     const { error: storeError } = await db.rpc("china_store_wb_feed_batch", {
-      p_date_from: from, p_date_to: to, p_snapshot: snapshotTime,
-      p_orders: statuses, p_total_orders: totalOrders,
+      p_date_from: from,
+      p_date_to: to,
+      p_snapshot: data.snapshotTime,
+      p_orders: normalized,
+      p_total_orders: data.orders.length,
     });
     if (storeError) {
-      throw new Error("Закуп: не удалось атомарно сохранить статусы WB: " + storeError.message);
+      throw new Error("Закуп: не удалось сохранить WB Ленту: "
+        + storeError.message);
     }
+
     return {
       ok: true, reused: false, from, to,
-      fbwOrders: statuses.length,
-      fbwBuyouts: statuses.filter((x) => x.status === "buyout").length,
-      fbwReturns: statuses.filter((x) => x.status === "return" || x.status === "returnDefective").length,
-      totalOrders,
+      fbwOrders: normalized.length,
+      fbwBuyouts: normalized.filter((x) => x.status === "buyout").length,
+      fbwReturns: normalized.filter(
+        (x) => x.status === "return" || x.status === "returnDefective").length,
+      totalOrders: data.orders.length,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Неизвестная ошибка WB";
+    const message = error instanceof Error ? error.message : String(error);
     console.error("[CHINA WB ORDER FEED]", message);
-    try {
+    if (!deferred) {
       await db.rpc("china_finish_wb_feed_sync", {
         p_error: message.slice(0, 300),
       });
-    } catch {
-      // Preserve the original WB error. The database lock has a 6-minute TTL.
     }
     throw error;
   }
