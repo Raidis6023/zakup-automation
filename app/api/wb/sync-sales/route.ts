@@ -6,8 +6,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// Both manual refresh and daily cron use SAVED WB finance and Yandex/Ozon
-// sales sync windows. Never request WB supplier/sales from procurement.
+// Legacy procurement refresh endpoint: read-only WB daily source status.
+// The separate procurement cron was retired. Finance rows are never copied.
 async function authorized(request: NextRequest): Promise<boolean> {
   if (request.method === "GET") {
     const secret = process.env.CRON_SECRET;
@@ -40,33 +40,40 @@ async function sync(request: NextRequest) {
   }
 
   const db = createAdminClient();
-  const { data, error } = await db.rpc("china_import_wb_sales_from_daily");
+  // No procurement-side import, no new WB rows and no Marketplace request.
+  const { data, error } = await db
+    .from("wb_finance_cache_jobs")
+    .select("run_day,date_from,date_to,status,rows_saved,completed_at")
+    .eq("status", "complete")
+    .order("completed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
   if (error) {
-    // Show the readiness failure; do not call the rate-limited WB Statistics.
-    console.error("[CHINA DAILY SALES] import failed", error.message);
+    console.error("[CHINA WB SOURCE STATUS] query failed", error.message);
     return NextResponse.json(
-      { ok: false, error: error.message, source: "wb_finance_daily" },
-      { status: 409 }
+      { ok: false, error: "Не удалось проверить ежедневный источник WB" },
+      { status: 502 },
     );
   }
-  if (!data || data.ok !== true) {
+  if (!data?.completed_at || Number(data.rows_saved) <= 0) {
     return NextResponse.json(
-      { ok: false, error: "Не удалось подтвердить ежедневную выгрузку WB" },
-      { status: 502 }
+      { ok: false, error: "Нет завершённой ежедневной финансовой выгрузки WB" },
+      { status: 409 },
     );
   }
 
-  console.info("[CHINA DAILY SALES] verified", {
-    dateFrom: data.dateFrom,
-    dateTo: data.dateTo,
-    rowsSaved: data.rowsSaved,
-    fbwSales: data.fbwSales,
-    fbwReturns: data.fbwReturns,
-    unmatchedFbwOperations: data.unmatchedFbwOperations,
-    source: data.source,
+  return NextResponse.json({
+    ok: true,
+    readOnly: true,
+    source: "wb_finance_cache_lines",
+    runDay: data.run_day,
+    dateFrom: data.date_from,
+    dateTo: data.date_to,
+    rowsSaved: data.rows_saved,
+    completedAt: data.completed_at,
   });
 
-  return NextResponse.json(data, { status: 200 });
 }
 
 export async function GET(request: NextRequest) { return sync(request); }
