@@ -864,8 +864,8 @@ export default async function Home() {
               </div>
             </div>
             <div className="zakup-v2-action-controls">
-              <ZakupCalculationInfo rules={run} />
               <ZakupCalculateButton />
+              <ZakupCalculationInfo rules={run} />
             </div>
           </section>
 
