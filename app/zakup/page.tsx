@@ -731,7 +731,7 @@ export default async function Home() {
     } else if (selectedSkuCount > 0) {
       orderDescription = `Подтверждено товаров: ${selectedSkuCount}. Будет создан черновик ВЭД (${orderScenario === "container" ? "контейнер" : "фура"}). Остальные позиции не войдут в заказ.`;
     } else {
-      orderDescription = "Подтвердите хотя бы один товар в таблице «Потребность в закупке». Неподтверждённые позиции в заказ не попадут.";
+      orderDescription = "Будет создан пустой черновик ВЭД. Неподтверждённые товары из таблицы «Потребность в закупке» не переносятся.";
     }
   }
 
@@ -868,7 +868,6 @@ export default async function Home() {
               <CreateVedDraftSubmitButton
                 hasCalculation={Boolean(run && simulation)}
                 scenario={orderScenario}
-                confirmedCount={selectedSkuCount}
               />
             </form>
 

@@ -7,20 +7,18 @@ import Button from "../ui/Button";
 type Props = {
   hasCalculation: boolean;
   scenario: "container" | "truck" | null;
-  confirmedCount: number;
 };
 
 export default function CreateVedDraftSubmitButton({
   hasCalculation,
   scenario,
-  confirmedCount,
 }: Props) {
   const { pending } = useFormStatus();
   const [warning, setWarning] = useState("");
 
   useEffect(() => {
     setWarning("");
-  }, [hasCalculation, scenario, confirmedCount]);
+  }, [hasCalculation, scenario]);
 
   function handleClick(event: MouseEvent<HTMLButtonElement>) {
     if (!hasCalculation) {
@@ -32,12 +30,6 @@ export default function CreateVedDraftSubmitButton({
     if (!scenario) {
       event.preventDefault();
       setWarning("Транспортный сценарий требует ручного решения перед созданием заказа.");
-      return;
-    }
-
-    if (confirmedCount <= 0) {
-      event.preventDefault();
-      setWarning("Подтвердите хотя бы один товар кнопкой «В заказ» в таблице «Потребность в закупке».");
       return;
     }
 

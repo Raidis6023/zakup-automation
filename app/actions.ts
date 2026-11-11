@@ -507,34 +507,39 @@ export async function createVedOrderDraft(
   }
 
 
-  // ==========================================
-  // АВТОМАТИЧЕСКИ ПОЛУЧАЕМ ФОТО
-  // ==========================================
+  // У пустого черновика нет фотографий для импорта.
+  // Не выполняем лишнюю загрузку из Ozon.
+  if (Number(result.items_created ?? 0) > 0) {
+    // ==========================================
+    // АВТОМАТИЧЕСКИ ПОЛУЧАЕМ ФОТО
+    // ==========================================
 
-  try {
+    try {
 
-    const photoSyncResult =
-      await syncVedOrderPhotos(
-        result.order_id
+      const photoSyncResult =
+        await syncVedOrderPhotos(
+          result.order_id
+        );
+
+
+      console.log(
+        "VED automatic photo sync completed:",
+        photoSyncResult
       );
 
-
-    console.log(
-      "VED automatic photo sync completed:",
-      photoSyncResult
-    );
-
-  } catch (
-    error
-  ) {
-
-    console.error(
-      "VED order created, but automatic photo sync failed:",
+    } catch (
       error
-    );
+    ) {
+
+      console.error(
+        "VED order created, but automatic photo sync failed:",
+        error
+      );
+
+    }
+
 
   }
-
 
   // ==========================================
   // ОБНОВЛЯЕМ СТРАНИЦЫ
