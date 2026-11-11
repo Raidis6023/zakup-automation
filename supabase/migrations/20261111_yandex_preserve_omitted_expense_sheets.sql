@@ -72,4 +72,4 @@ begin
  source_report_id=excluded.source_report_id,line_count=excluded.line_count,
  order_count=excluded.order_count,captured_at=excluded.captured_at;
  get diagnostics published=row_count;return published;
-end $function$
+end $function$;
