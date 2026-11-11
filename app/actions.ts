@@ -203,7 +203,7 @@ export async function runChinaCalculation(
     // Verify the last two completed days from WB Order Feed before selecting
     // the common 28-day period. One order / srid, FBO-only buyout statuses.
     // Never replace missing WB data with zero or use unconfirmed orders.
-    const wb = await syncChinaWbOrderFeed();
+    const wb = await syncChinaWbOrderFeed({ maxPages: 2 });
     await callSupabaseRpc("run_china_calculation_with_transport");
 
     revalidatePath("/zakup");

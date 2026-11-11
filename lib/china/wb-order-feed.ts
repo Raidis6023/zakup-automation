@@ -87,7 +87,11 @@ export type ChinaWbFeedSyncResult = {
 /** Refreshes the two last completed Krasnoyarsk days from WB Order Feed. */
 export async function syncChinaWbOrderFeed({
   force = false,
-}: { force?: boolean } = {}): Promise<ChinaWbFeedSyncResult> {
+  maxPages = MAX_PAGES,
+}: { force?: boolean; maxPages?: number } = {}): Promise<ChinaWbFeedSyncResult> {
+  if (!Number.isInteger(maxPages) || maxPages < 1 || maxPages > MAX_PAGES) {
+    throw new Error("Закуп: неверный лимит страниц Ленты WB");
+  }
   const today = dateInKrasnoyarsk();
   const to = dayOffset(today, -1);
   const from = dayOffset(today, -2);
@@ -117,6 +121,25 @@ export async function syncChinaWbOrderFeed({
   const token = process.env.WB_READ_TOKEN?.trim();
   if (!token) throw new Error("Закуп: токен WB_READ_TOKEN не настроен");
 
+  // Scope the report to products that may participate in China procurement.
+  // This cuts the number of pages and prevents unrelated seller orders from
+  // exhausting WB's strict one-request-per-minute limit.
+  const { data: listings, error: listingsError } = await db
+    .from("marketplace_listings")
+    .select("external_id")
+    .eq("account_key", "main")
+    .eq("marketplace", "wildberries")
+    .eq("is_active", true)
+    .eq("china_procurement_enabled", true);
+  if (listingsError) throw new Error("Закуп: не удалось получить артикулы WB для Ленты заказов");
+  const nmIds = [...new Set(
+    (listings ?? []).map((x) => Number(x.external_id))
+      .filter((x) => Number.isSafeInteger(x) && x > 0)
+  )];
+  if (nmIds.length === 0 || nmIds.length > 1000) {
+    throw new Error("Закуп: некорректное количество артикулов WB для запроса Ленты");
+  }
+
   const { data: acquired, error: beginError } = await db
     .rpc("china_begin_wb_feed_sync");
   if (beginError) throw new Error("Закуп: не удалось захватить блокировку WB");
@@ -131,14 +154,14 @@ export async function syncChinaWbOrderFeed({
     let totalOrders = 0;
     let finished = false;
 
-    for (let page = 0; page < MAX_PAGES; page++) {
+    for (let page = 0; page < maxPages; page++) {
       if (page > 0) await pause(PAGE_DELAY_MS);
       const payload: Record<string, unknown> = {
         selectedPeriod: {
           start: from + "T00:00:00+03:00",
           end: to + "T23:59:59+03:00",
         },
-        nmIds: [], subjectIds: [], brandNames: [], tagIds: [],
+        nmIds, subjectIds: [], brandNames: [], tagIds: [],
         pagination: {
           offset, limit: PAGE_LIMIT,
           ...(snapshotTime ? { snapshotTime } : {}),
