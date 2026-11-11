@@ -362,6 +362,8 @@ export async function saveChinaManualAdjustment(
     items?: Array<{
       calculation_item_id: string;
       needs_china_order?: boolean;
+      container_order_units?: number | null;
+      truck_order_units?: number | null;
       units_per_carton?: number | null;
     }>;
   };
@@ -369,8 +371,11 @@ export async function saveChinaManualAdjustment(
   const row = dashboard.items?.find(item =>
     item.calculation_item_id === calculationItemId
   );
-  if (!row || row.needs_china_order !== true) {
-    throw new Error("Редактировать можно только актуальные позиции с потребностью в закупке");
+  const requiredUnits = scenario === "container"
+    ? Number(row?.container_order_units ?? 0)
+    : Number(row?.truck_order_units ?? 0);
+  if (!row || row.needs_china_order !== true || requiredUnits <= 0) {
+    throw new Error("Для выбранного транспорта у артикула нет актуальной потребности в закупке");
   }
 
   const unitsPerCarton = Number(row.units_per_carton ?? 0);
