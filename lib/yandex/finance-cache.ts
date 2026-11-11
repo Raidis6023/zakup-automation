@@ -6,6 +6,19 @@ export async function readFinance(from:string,to:string,scheme?:'fbo'|'fbs'){
  let {data:report,error}=await db.from('yandex_finance_reports').select('id,date_from,date_to,status,line_count,completed_at,order_units_complete,error')
   .eq('status','ready').lte('date_from',from).gte('date_to',to).order('created_at',{ascending:false}).limit(1).maybeSingle();
  if(error)throw error;
+ const warningFromReady=report?.error??null;
+ // When Yandex omits entire expense sheets, the raw new report cannot
+ // represent preserved older confirmed rows for those sources. Prefer the
+ // complete published day snapshots if they exist, retaining source lineage.
+ if(report&&warningFromReady?.includes('ЯМ не включил листы услуг')){
+  const expectedDays=Math.round((Date.parse(to)-Date.parse(from))/86400000)+1;
+  const history=await db.from('yandex_finance_daily_snapshots').select('snapshot_day')
+   .gte('snapshot_day',from).lte('snapshot_day',to).order('snapshot_day');
+  if(history.error)throw history.error;
+  if((history.data??[]).length===expectedDays&&history.data?.every((x,i)=>
+   x.snapshot_day===new Date(Date.parse(from)+i*86400000).toISOString().slice(0,10)))
+   report=null;
+ }
  const lines:Line[]=[],orders:OrderQuantity[]=[];
  if(report){
   for(let offset=0;offset<report.line_count;offset+=1000){
@@ -31,9 +44,11 @@ export async function readFinance(from:string,to:string,scheme?:'fbo'|'fbs'){
    const snapshot=snapshots![i];if(snapshot.snapshot_day!==day)return null;
    const lengthBefore=lines.length,ordersBefore=orders.length;
    for(let offset=0;offset<snapshot.line_count;offset+=1000){
-    const {data,error}=await db.from('yandex_finance_daily_lines').select('payload')
+    const {data,error}=await db.from('yandex_finance_daily_lines').select('payload,source_report_id')
      .eq('snapshot_day',day).order('line_index').range(offset,offset+999);
-    if(error)throw error;lines.push(...(data??[]).map(x=>x.payload as Line));
+    if(error)throw error;lines.push(...(data??[]).map(x=>({
+      ...x.payload,__carriedForward:x.source_report_id!==snapshot.source_report_id
+     } as Line)));
    }
    if(lines.length-lengthBefore!==snapshot.line_count)throw Error('Неполные дневные строки ЯМ '+day);
    for(let offset=0;offset<snapshot.order_count;offset+=1000){
@@ -44,7 +59,7 @@ export async function readFinance(from:string,to:string,scheme?:'fbo'|'fbs'){
    }
    if(orders.length-ordersBefore!==snapshot.order_count)throw Error('Неполные дневные заказы ЯМ '+day);
   }
-  report={id:'daily-history',date_from:from,date_to:to,status:'ready',line_count:lines.length,completed_at:snapshots![snapshots!.length-1].captured_at,order_units_complete:true,error:null};
+  report={id:'daily-history',date_from:from,date_to:to,status:'ready',line_count:lines.length,completed_at:snapshots![snapshots!.length-1].captured_at,order_units_complete:true,error:warningFromReady};
  }
  if(!report)return null;
  if(scheme){
@@ -142,19 +157,20 @@ export async function readFinance(from:string,to:string,scheme?:'fbo'|'fbs'){
  const rows=result.rows.map(p=>{const own=p.master_code?ownByMaster.get(p.master_code):null;const manager=managerByKey.get(p.master_code??'article:'+p.article);return {...p,manager:manager??'Не назначен',dataGaps:manager?p.dataGaps:[...p.dataGaps,'Нет КМ'],marketplaceStock:stockAvailable?marketplaceStock.get(p.article)??0:null,mainStock:own?.main??null,oxStock:own?.ox??null,inChina:chinaReady&&p.master_code?chinaByMaster.get(p.master_code)??0:null,inCrossdock:null as number|null,discontinued:!!(p.master_code&&/выведен|выводится/i.test(statusByMaster.get(p.master_code)??''))};});
  // Per-source coverage audit. A sheet omitted by Yandex is UNKNOWN,
  // not an implicit zero-cost service; every source and income is visible.
- const audit=new Map<string,{rows:number;amount:number}>();
+ const audit=new Map<string,{rows:number;amount:number;preserved:boolean}>();
  for(const line of lines){
   const day=line.source==='income'?line.orderDate:line.serviceDate;
   if(day<from||day>to)continue;
   const source=line.source==='income'?'Транзакции по заказам и товарам':line.sheet;
-  const old=audit.get(source)??{rows:0,amount:0};
-  audit.set(source,{rows:old.rows+1,amount:old.amount+line.amount});
+  const old=audit.get(source)??{rows:0,amount:0,preserved:false};
+  const carried=Boolean((line as Line&{__carriedForward?:boolean}).__carriedForward);
+  audit.set(source,{rows:old.rows+1,amount:old.amount+line.amount,preserved:old.preserved||carried});
  }
  const expectedSources=['Транзакции по заказам и товарам',...rules.map(([name])=>name),'Реклама на Маркете'];
  const sourceAudit=expectedSources.map(name=>({
   name,kind:name==='Транзакции по заказам и товарам'?'income':'expense',
   rows:audit.get(name)?.rows??0,amount:audit.get(name)?.amount??null,
-  status:audit.has(name)?'present':'not_provided'
+  status:!audit.has(name)?'not_provided':audit.get(name)?.preserved?'preserved':'present'
  }));
  return {...result,rows,report,daily,dailyReconciled,sourceAudit,
   scheme:scheme??null,stockDate:stockAvailable?stockRun.data?.snapshot_date??null:null};
