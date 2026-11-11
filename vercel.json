@@ -82,7 +82,11 @@
     },
     {
       "path": "/api/china/wb-order-feed-sync-late",
-      "schedule": "25 5 * * *"
+      "schedule": "25 7 * * *"
+    },
+    {
+      "path": "/api/china/wb-order-feed-sync-evening",
+      "schedule": "25 12 * * *"
     }
   ]
 }
