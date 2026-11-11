@@ -151,7 +151,10 @@ html[data-theme="dark"] .home-shell.home-shell--dashboard[data-accent-area="gene
     var(--ws-page);
 }
 html[data-theme="dark"] .home-shell--dashboard > .home-main > .home-content {
+  /* The two vector curves live behind the cards and the assistant.
+     Keep them pinned to the dashboard and never show them in light mode. */
   background:
+    url("/panda/home-champagne-waves.svg") center bottom / 100% 100% no-repeat,
     radial-gradient(ellipse 42% 35% at 13% 100%, rgba(197, 161, 104, .16), transparent 78%),
     radial-gradient(ellipse 33% 30% at 94% 98%, rgba(197, 161, 104, .13), transparent 78%),
     var(--ws-page);

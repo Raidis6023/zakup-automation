@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="715" viewBox="0 0 1920 715" preserveAspectRatio="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="champagne-flow-main" x1="0" y1="0" x2="1" y2="0" objectBoundingBox="true">
+      <stop offset="0%" stop-color="#C5A168" stop-opacity="0"/>
+      <stop offset="29%" stop-color="#C5A168" stop-opacity=".21"/>
+      <stop offset="52%" stop-color="#D7AE73" stop-opacity=".72"/>
+      <stop offset="77%" stop-color="#E1BB84" stop-opacity=".84"/>
+      <stop offset="100%" stop-color="#C5A168" stop-opacity=".34"/>
+    </linearGradient>
+    <linearGradient id="champagne-flow-soft" x1="0" y1="0" x2="1" y2="0" objectBoundingBox="true">
+      <stop offset="0%" stop-color="#C5A168" stop-opacity="0"/>
+      <stop offset="43%" stop-color="#C5A168" stop-opacity=".13"/>
+      <stop offset="79%" stop-color="#D7AE73" stop-opacity=".45"/>
+      <stop offset="100%" stop-color="#C5A168" stop-opacity=".13"/>
+    </linearGradient>
+  </defs>
+  <path d="M 660 752 C 880 735 1045 714 1180 667 C 1430 580 1565 422 1940 404" fill="none" stroke="url(#champagne-flow-main)" stroke-width="9" opacity=".10"/>
+  <path d="M 660 752 C 880 735 1045 714 1180 667 C 1430 580 1565 422 1940 404" fill="none" stroke="url(#champagne-flow-main)" stroke-width="1.35" stroke-linecap="round"/>
+  <path d="M 1290 764 C 1390 681 1505 613 1640 601 C 1750 584 1845 616 1950 646" fill="none" stroke="url(#champagne-flow-soft)" stroke-width="7" opacity=".07"/>
+  <path d="M 1290 764 C 1390 681 1505 613 1640 601 C 1750 584 1845 616 1950 646" fill="none" stroke="url(#champagne-flow-soft)" stroke-width="1.1" stroke-linecap="round"/>
+</svg>
