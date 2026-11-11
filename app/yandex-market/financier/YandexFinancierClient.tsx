@@ -105,7 +105,7 @@ export default function YandexFinancierClient({initial,initialError}:{initial:Da
   <div className="ozf-scroll"><table className="ozf-table"><thead><tr><th>Статья</th><th>Источник</th><th>Строк</th><th>Сумма</th><th>Статус</th></tr></thead><tbody>
    {data.sourceAudit.map(x=><tr key={x.name}><td>{x.name}</td><td>{x.kind==='income'?'Доход':'Расход'}</td><td>{x.rows||'—'}</td>
     <td>{x.amount===null?'Не подтверждено':money(x.amount)}</td>
-    <td>{x.status==='present'?'Есть операции':'Нет листа/операций в отчёте'}</td></tr>)}
+    <td>{x.status==='present'?'Есть операции':x.status==='preserved'?'Сохранено из предыдущего подтверждённого отчёта':'Нет листа/операций в отчёте'}</td></tr>)}
   </tbody></table></div>
  </details>
  <OrderFulfillmentPanels market="yandex" from={data.from} to={data.to}/>
