@@ -842,6 +842,7 @@ export default async function Home() {
 
         {/* Единый расчёт: потребность и транспорт запускаются одной операцией */}
         <div className="zakup-v2-calculation-layout">
+          <div className="zakup-v2-top-actions">
           <section className="zakup-v2-action-strip">
             <div className="zakup-v2-action-copy">
               <span className="zakup-v2-section-icon">
@@ -867,6 +868,107 @@ export default async function Home() {
               <ZakupCalculationInfo rules={run} />
             </div>
           </section>
+
+          <section
+            className=
+              "zakup-v2-order-strip"
+          >
+
+            <div
+              className=
+                "zakup-v2-order-copy"
+            >
+
+              <span
+                className=
+                  "zakup-v2-order-icon"
+              >
+
+                <ReferenceIcon
+                  name="document"
+                />
+
+              </span>
+
+
+              <div
+                className=
+                  "zakup-v2-order-text"
+              >
+
+                <strong
+                  className=
+                    "zakup-v2-order-title"
+                >
+                  Формирование заказа
+                </strong>
+
+
+                <div
+                  className=
+                    "muted zakup-v2-order-description"
+                >
+                  {
+                    orderDescription
+                  }
+                </div>
+
+              </div>
+
+            </div>
+
+
+            {
+              canCreateOrder
+              &&
+              orderScenario
+              &&
+              simulation
+
+                ? (
+
+                  <form
+                    action={
+                      createVedOrderDraft
+                    }
+                  >
+
+                    <input
+                      type="hidden"
+
+                      name=
+                        "scenario"
+
+                      value={
+                        orderScenario
+                      }
+                    />
+
+
+                    <CreateVedDraftSubmitButton />
+
+                  </form>
+
+                )
+
+                : (
+
+                  <button
+                    type="button"
+
+                    className=
+                      "primary-button"
+
+                    disabled
+                  >
+                    Сформировать заказ
+                  </button>
+
+                )
+            }
+
+          </section>
+          </div>
 
           <section className="zakup-v2-result-grid zakup-v2-result-grid--single-row">
               <div
@@ -1021,6 +1123,20 @@ export default async function Home() {
               </div>
 
 
+
+              <div className="zakup-v2-result-card zakup-v2-result-card--decision">
+                <span className="zakup-v2-result-icon zakup-v2-result-icon--blue">
+                  <ReferenceIcon name="info" />
+                </span>
+                <div className="zakup-v2-result-copy">
+                  <div className="card-label">Решение по транспорту</div>
+                  <strong className="zakup-v2-decision-title">{decisionTitle}</strong>
+                  <div className="muted zakup-v2-result-subtitle zakup-v2-decision-description">
+                    {decisionDescription}
+                  </div>
+                </div>
+              </div>
+
           </section>
         </div>
 
@@ -1036,171 +1152,6 @@ export default async function Home() {
         >
           <ZakupDemandTableClient items={demandItems} scenario={reviewScenario} />
         </ZakupProductsSectionClient>
-
-        {/* ===================================
-            ФОРМИРОВАНИЕ ЗАКАЗА + РЕШЕНИЕ
-            =================================== */}
-
-        <div
-          className=
-            "zakup-v2-bottom-grid"
-        >
-
-          <section
-            className=
-              "zakup-v2-order-strip"
-          >
-
-            <div
-              className=
-                "zakup-v2-order-copy"
-            >
-
-              <span
-                className=
-                  "zakup-v2-order-icon"
-              >
-
-                <ReferenceIcon
-                  name="document"
-                />
-
-              </span>
-
-
-              <div
-                className=
-                  "zakup-v2-order-text"
-              >
-
-                <strong
-                  className=
-                    "zakup-v2-order-title"
-                >
-                  Формирование заказа
-                </strong>
-
-
-                <div
-                  className=
-                    "muted zakup-v2-order-description"
-                >
-                  {
-                    orderDescription
-                  }
-                </div>
-
-              </div>
-
-            </div>
-
-
-            {
-              canCreateOrder
-              &&
-              orderScenario
-              &&
-              simulation
-
-                ? (
-
-                  <form
-                    action={
-                      createVedOrderDraft
-                    }
-                  >
-
-                    <input
-                      type="hidden"
-
-                      name=
-                        "scenario"
-
-                      value={
-                        orderScenario
-                      }
-                    />
-
-
-                    <CreateVedDraftSubmitButton />
-
-                  </form>
-
-                )
-
-                : (
-
-                  <button
-                    type="button"
-
-                    className=
-                      "primary-button"
-
-                    disabled
-                  >
-                    Сформировать заказ
-                  </button>
-
-                )
-            }
-
-          </section>
-
-
-          <section
-            className=
-              "zakup-v2-decision-strip"
-          >
-
-            <div
-              className=
-                "zakup-v2-decision-copy"
-            >
-
-              <span
-                className=
-                  "zakup-v2-decision-icon"
-              >
-
-                <ReferenceIcon
-                  name="info"
-                />
-
-              </span>
-
-
-              <div
-                className=
-                  "zakup-v2-decision-text"
-              >
-
-                <strong
-                  className=
-                    "zakup-v2-decision-title"
-                >
-                  {
-                    decisionTitle
-                  }
-                </strong>
-
-
-                <div
-                  className=
-                    "muted zakup-v2-decision-description"
-                >
-                  {
-                    decisionDescription
-                  }
-                </div>
-
-              </div>
-
-            </div>
-
-          </section>
-
-        </div>
-
 
         {/* ===================================
             ТОВАРЫ

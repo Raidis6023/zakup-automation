@@ -2009,3 +2009,89 @@ html[data-theme="dark"]
     width: 100%;
   }
 }
+
+
+/* Закуп: действия в два столбца, затем четыре равных результата. */
+.zakup-reference-page .zakup-v2-top-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: var(--zakup-v2-gap);
+  min-width: 0;
+}
+
+.zakup-reference-page .zakup-v2-top-actions > .zakup-v2-action-strip,
+.zakup-reference-page .zakup-v2-top-actions > .zakup-v2-order-strip {
+  min-width: 0;
+  min-height: var(--zakup-v2-row-height);
+  margin: 0;
+}
+
+.zakup-reference-page .zakup-v2-top-actions .zakup-v2-action-copy,
+.zakup-reference-page .zakup-v2-top-actions .zakup-v2-order-copy {
+  min-width: 0;
+}
+
+.zakup-reference-page .zakup-v2-top-actions .zakup-v2-order-description {
+  overflow-wrap: anywhere;
+}
+
+.zakup-reference-page .zakup-v2-result-grid--single-row {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.zakup-reference-page .zakup-v2-result-card--decision {
+  min-width: 0;
+}
+
+.zakup-reference-page .zakup-v2-result-card--decision .zakup-v2-decision-title {
+  margin-top: 3px;
+  font-size: 14px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.zakup-reference-page .zakup-v2-result-card--decision .zakup-v2-decision-description {
+  margin-top: 6px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1400px) {
+  .zakup-reference-page .zakup-v2-top-actions > .zakup-v2-action-strip,
+  .zakup-reference-page .zakup-v2-top-actions > .zakup-v2-order-strip {
+    flex-wrap: wrap;
+  }
+
+  .zakup-reference-page .zakup-v2-top-actions .zakup-v2-action-controls,
+  .zakup-reference-page .zakup-v2-top-actions .zakup-v2-order-strip > form,
+  .zakup-reference-page .zakup-v2-top-actions .zakup-v2-order-strip > button {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 1080px) {
+  .zakup-reference-page .zakup-v2-top-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .zakup-reference-page .zakup-v2-result-grid--single-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .zakup-reference-page .zakup-v2-result-grid--single-row {
+    grid-template-columns: 1fr;
+  }
+
+  .zakup-reference-page .zakup-v2-top-actions .zakup-v2-order-strip > form,
+  .zakup-reference-page .zakup-v2-top-actions .zakup-v2-order-strip > button {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .zakup-reference-page .zakup-v2-top-actions .zakup-v2-action-controls {
+    margin-left: 0;
+  }
+}
