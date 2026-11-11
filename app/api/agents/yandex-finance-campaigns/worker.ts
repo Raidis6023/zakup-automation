@@ -38,7 +38,12 @@ export async function advancePromotion(scope?:{from?:string;to?:string;priority?
    const lease=x.locked_until?Date.parse(x.locked_until):0;
    if(lease>Date.now())return true;
    const age=Date.now()-Date.parse(x.created_at);
-   return ['services_poll','orders_poll'].includes(x.phase)&&age<90*60000;
+   // Financial income/expense collection has priority across the *entire*
+   // report-generation workflow. Otherwise every next promotion job creates
+   // another provider UUID and the finance job remains at services_request
+   // forever. An exceptionally stale finance job releases this preference.
+   return ['services_request','orders_request','services_poll','orders_poll','order_units_pull'].includes(x.phase)
+    &&age<90*60000;
   });
   if(financeBusy)return {ok:true,phase:'finance_loading'};
   if(c.data.next_request_at&&Date.parse(c.data.next_request_at)>Date.now())return {ok:true,phase:'cooldown'};
