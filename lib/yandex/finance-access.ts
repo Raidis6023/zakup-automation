@@ -1,7 +1,12 @@
 import {createClient} from '../supabase/server';
 import {createAdminClient} from '../supabase/admin';
 export async function financeAccess(request?: Request){
- if(request && process.env.CRON_SECRET && request.headers.get('authorization')==='Bearer '+process.env.CRON_SECRET)return createAdminClient();
+ if(request){
+  const token=request.headers.get('authorization');
+  if(token&&((process.env.CRON_SECRET&&token==='Bearer '+process.env.CRON_SECRET)||
+    (process.env.YANDEX_FINANCE_CRON_SECRET&&token==='Bearer '+process.env.YANDEX_FINANCE_CRON_SECRET)))
+   return createAdminClient();
+ }
  const session=await createClient();const {data:verified,error:authError}=await session.auth.getClaims();
  const claims=verified?.claims;
  const user=!authError&&claims?.sub?{id:claims.sub}:null;
