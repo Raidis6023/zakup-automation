@@ -1,0 +1,417 @@
+/*
+ * PANDA — global visual palette. All routes use one anthracite / champagne
+ * pair, with opposite roles in light and dark themes. Login pages do not
+ * mount .home-shell. Logos and semantic warning/success/error colors stay.
+ * The source blocks below match the approved homepage values exactly.
+ */
+
+.home-shell[data-accent-area],
+.home-shell.home-shell--dashboard[data-accent-area] {
+  --panda-home-anthracite: #101820;
+  --panda-home-champagne: #c5a168;
+  --panda-home-cream: #f1e7d6;
+
+  color-scheme: light;
+  --ws-page: var(--panda-home-cream);
+  --ws-sidebar: #f4eadb;
+  --ws-topbar: rgba(244, 234, 219, 0.97);
+  --ws-surface: #fff9ef;
+  --ws-surface-soft: #eee1ce;
+  --ws-surface-hover: #e5d7c2;
+  --ws-border: #c9b9a1;
+  --ws-border-soft: #ddccb4;
+  --ws-text: var(--panda-home-anthracite);
+  --ws-text-secondary: #354758;
+  --ws-text-muted: #687482;
+  --ws-nav-text: var(--panda-home-anthracite);
+  --ws-nav-hover-text: var(--panda-home-anthracite);
+  --ws-blue: var(--panda-home-anthracite);
+  --ws-blue-hover: #263b50;
+  --ws-blue-soft: #ded3c3;
+  --ws-icon: var(--panda-home-anthracite);
+  --ws-active: var(--panda-home-anthracite);
+  --ws-active-text: #fff8ec;
+  --ws-utility-icon: var(--panda-home-anthracite);
+  --ws-utility-soft: #e8dac5;
+  --ws-utility-border: #b7a48c;
+
+  --ws-shadow-soft: 0 4px 14px rgba(16, 24, 32, 0.07);
+  --ws-shadow-popup: 0 18px 45px rgba(16, 24, 32, 0.17);
+
+  --background: var(--ws-page);
+  --surface: var(--ws-surface);
+  --surface-soft: var(--ws-surface-soft);
+  --surface-strong: #e7dac6;
+  --input: #fff9ef;
+  --secondary-button: #eee1ce;
+  --secondary-button-hover: #e1d1bb;
+  --border: var(--ws-border);
+  --border-soft: var(--ws-border-soft);
+  --border-strong: #bca991;
+  --text: var(--ws-text);
+  --text-secondary: var(--ws-text-secondary);
+  --text-muted: var(--ws-text-muted);
+  --button: var(--panda-home-anthracite);
+  --button-hover: #263b50;
+  --button-text: #fff8ec;
+  --accent: var(--panda-home-anthracite);
+
+  --sidebar-active-background: linear-gradient(115deg, #101820, #253a4a);
+  --sidebar-active-border-color: #30495c;
+  --sidebar-active-shadow: inset 0 0 9px rgba(16, 24, 32, .18);
+  --sidebar-icon-ring-color: #253b4c;
+  --sidebar-icon-ring-shadow: 0 0 9px rgba(16, 24, 32, .24);
+  --sidebar-icon-glow: radial-gradient(ellipse at 35% 80%, rgba(16, 24, 32, .22), transparent 68%);
+  --emerald-nav: var(--panda-home-anthracite);
+
+  --ws-decor-1-from: #101820;
+  --ws-decor-1-to: #1b2a37;
+  --ws-decor-2-from: #1f303f;
+  --ws-decor-2-to: #31475b;
+  --ws-decor-3-from: #395266;
+  --ws-decor-3-to: #50697b;
+  --ws-decor-4-from: #566e7c;
+  --ws-decor-4-mid: #405766;
+  --ws-decor-4-to: #263c4c;
+
+}
+
+html[data-theme="dark"] .home-shell[data-accent-area],
+html[data-theme="dark"] .home-shell.home-shell--dashboard[data-accent-area] {
+  color-scheme: dark;
+  --ws-page: var(--panda-home-anthracite);
+  --ws-sidebar: #0d141b;
+  --ws-topbar: rgba(11, 17, 23, 0.98);
+  --ws-surface: #1a222b;
+  --ws-surface-soft: #212b35;
+  --ws-surface-hover: #2e3540;
+  --ws-border: #39424c;
+  --ws-border-soft: #2d3640;
+  --ws-text: #f5f0e9;
+  --ws-text-secondary: #d1c8bc;
+  --ws-text-muted: #a9adb2;
+  --ws-nav-text: #eeeae4;
+  --ws-nav-hover-text: #e0b981;
+  --ws-blue: var(--panda-home-champagne);
+  --ws-blue-hover: #e0bb84;
+  --ws-blue-soft: #302e2c;
+  --ws-icon: #d9b27c;
+  --ws-active: #ae8758;
+  --ws-active-text: #101820;
+  --ws-utility-icon: #d9b27c;
+  --ws-utility-soft: #2e2d2b;
+  --ws-utility-border: #746044;
+
+  --ws-shadow-soft: 0 4px 14px rgba(0, 0, 0, .15);
+  --ws-shadow-popup: 0 18px 45px rgba(0, 0, 0, .45);
+
+  --background: var(--ws-page);
+  --surface: var(--ws-surface);
+  --surface-soft: var(--ws-surface-soft);
+  --surface-strong: #28323d;
+  --input: #171f28;
+  --secondary-button: #283039;
+  --secondary-button-hover: #353d45;
+  --border: var(--ws-border);
+  --border-soft: var(--ws-border-soft);
+  --border-strong: #5c5a55;
+  --text: var(--ws-text);
+  --text-secondary: var(--ws-text-secondary);
+  --text-muted: var(--ws-text-muted);
+  --button: var(--panda-home-champagne);
+  --button-hover: #e0bb84;
+  --button-text: var(--panda-home-anthracite);
+  --accent: #d9b27c;
+
+  --sidebar-active-background: linear-gradient(115deg, #a17c4e, #655038);
+  --sidebar-active-border-color: #d1a86e;
+  --sidebar-active-shadow: inset 0 0 10px rgba(224, 187, 132, .17);
+  --sidebar-icon-ring-color: #d9b27c;
+  --sidebar-icon-ring-shadow: 0 0 10px rgba(217, 178, 124, .36);
+  --sidebar-icon-glow: radial-gradient(ellipse at 35% 80%, rgba(217, 178, 124, .4), transparent 68%);
+  --emerald-nav: #d9b27c;
+
+  --ws-decor-1-from: #dec18f;
+  --ws-decor-1-to: #e7c693;
+  --ws-decor-2-from: #d8b47e;
+  --ws-decor-2-to: #c6a071;
+  --ws-decor-3-from: #c4a078;
+  --ws-decor-3-to: #a78260;
+  --ws-decor-4-from: #a68465;
+  --ws-decor-4-mid: #937051;
+  --ws-decor-4-to: #6d513d;
+
+}
+
+/* Shared component tokens. This does not touch native status meanings. */
+.home-shell[data-accent-area] {
+  --ws-accent: var(--ws-blue);
+  --home-blue: var(--ws-blue);
+  --home-blue-dark: var(--ws-blue-hover);
+  --home-blue-soft: var(--ws-blue-soft);
+  --ui-accent: var(--ws-blue);
+  --ui-accent-hover: var(--ws-blue-hover);
+  --ui-primary-text: var(--button-text);
+  --ui-primary-background: var(--button);
+  --ui-primary-border: var(--ws-blue);
+  --ui-primary-shadow: none;
+  --ui-primary-hover-shadow: none;
+  --ui-table-header-background: var(--ws-surface-soft);
+  --ws-table-row-odd: var(--ws-surface);
+  --ws-table-row-even: color-mix(in srgb, var(--ws-surface) 90%, var(--ws-surface-soft));
+}
+
+/* A route-specific sheet can assign a local surface accent; unify those, too. */
+.home-shell .workspace-ui {
+  --ui-accent: var(--ws-blue);
+  --ui-accent-hover: var(--ws-blue-hover);
+  --ui-primary-background: var(--button);
+  --ui-primary-border: var(--ws-blue);
+  --ui-primary-text: var(--button-text);
+  --ui-primary-shadow: none;
+  --ui-primary-hover-shadow: none;
+}
+.home-shell .wb-reference-page.workspace-ui,
+html[data-theme="dark"] .home-shell .wb-reference-page.workspace-ui {
+  --ui-primary-background: var(--button);
+  --ui-primary-border: var(--ws-blue);
+  --ui-primary-text: var(--button-text);
+  --ui-primary-shadow: none;
+  --ui-primary-hover-shadow: none;
+  --ui-disabled-background: var(--ws-surface-soft);
+  --ui-disabled-border: var(--ws-border-soft);
+  --ui-disabled-text: var(--ws-text-muted);
+}
+.home-shell .ozon-reference-page,
+.home-shell .wb-reference-page,
+.home-shell .yandex-reference-page {
+  --ozon-blue: var(--ws-icon);
+  --wb-accent: var(--ws-icon);
+  --wb-accent-soft: color-mix(in srgb, var(--ws-icon) 11%, transparent);
+  --ym-accent: var(--ws-icon);
+  --ym-accent-soft: color-mix(in srgb, var(--ws-icon) 11%, transparent);
+  --ym-products-orange: var(--ws-icon);
+  --ym-products-orange-readable: var(--ws-icon);
+  --ym-products-border: var(--ws-border-soft);
+  --ym-products-border-strong: var(--ws-border);
+  --ym-products-hover: var(--ws-surface-hover);
+  --wb-products-border: var(--ws-border-soft);
+  --wb-products-border-strong: var(--ws-border);
+  --wb-products-hover: var(--ws-surface-hover);
+}
+html[data-theme="dark"] .home-shell[data-accent-area="wildberries"] .wb-reference-page,
+html[data-theme="dark"] .home-shell[data-accent-area="yandex-market"] .yandex-reference-page {
+  --wb-products-border: var(--ws-border-soft);
+  --wb-products-border-strong: var(--ws-border);
+  --wb-products-hover: var(--ws-surface-hover);
+  --ym-products-orange: var(--ws-icon);
+  --ym-products-orange-readable: var(--ws-icon);
+  --ym-products-border: var(--ws-border-soft);
+  --ym-products-border-strong: var(--ws-border);
+  --ym-products-hover: var(--ws-surface-hover);
+}
+
+/* Graphical decorations belong to the page background, never to foreground
+   overlays. Fixed backgrounds keep the curves at the bottom of the viewport
+   even if a module has long tables and internal scroll areas. */
+.home-shell:not(.home-shell--dashboard) > .home-main > .home-content {
+  background:
+    url("/panda/home-anthracite-waves.svg") center bottom / 100% 100% no-repeat,
+    radial-gradient(ellipse 42% 38% at 22% 88%, rgba(255, 253, 247, .98) 0%, rgba(255, 249, 237, .61) 37%, transparent 82%),
+    radial-gradient(ellipse 39% 41% at 7% 103%, rgba(177, 135, 87, .30) 0%, rgba(194, 158, 115, .18) 42%, transparent 82%),
+    radial-gradient(ellipse 25% 34% at 86% 82%, rgba(255, 252, 244, .86) 0%, rgba(255, 250, 240, .35) 44%, transparent 86%),
+    radial-gradient(ellipse 35% 43% at 97% 103%, rgba(53, 73, 93, .26) 0%, rgba(67, 89, 108, .11) 44%, transparent 83%),
+    radial-gradient(ellipse 55% 35% at 61% 112%, rgba(213, 185, 151, .15), transparent 85%),
+    linear-gradient(180deg, var(--ws-page) 0%, var(--ws-page) 51%, #ebddc9 100%);
+  background-attachment: fixed;
+}
+html[data-theme="dark"] .home-shell:not(.home-shell--dashboard) > .home-main > .home-content {
+  background:
+    url("/panda/home-champagne-waves.svg") center bottom / 100% 100% no-repeat,
+    radial-gradient(ellipse 42% 35% at 13% 100%, rgba(197, 161, 104, .16), transparent 78%),
+    radial-gradient(ellipse 33% 30% at 94% 98%, rgba(197, 161, 104, .13), transparent 78%),
+    var(--ws-page);
+  background-attachment: fixed;
+}
+@media (max-width: 800px) {
+  .home-shell:not(.home-shell--dashboard) > .home-main > .home-content {
+    background-attachment: scroll;
+  }
+}
+
+/* Common marketplace navigation. Only the real logos remain branded. */
+.home-shell .home-sidebar .home-workspace-link[data-marketplace] {
+  --sidebar-market-accent: var(--ws-blue);
+  --sidebar-market-bright: var(--ws-icon);
+}
+.home-shell .home-sidebar .home-workspace-link[data-marketplace]:is(:hover, :focus-visible):not(.home-workspace-link--active) {
+  color: var(--ws-nav-hover-text);
+  background: color-mix(in srgb, var(--ws-icon) 14%, var(--ws-sidebar));
+  border-color: color-mix(in srgb, var(--ws-icon) 28%, var(--ws-border));
+}
+.home-shell .home-sidebar .home-workspace-link[data-marketplace].home-workspace-link--active,
+.home-shell .home-sidebar .home-workspace-link[data-marketplace].home-workspace-link--active:is(:hover, :focus-visible) {
+  background: var(--sidebar-active-background);
+  border-color: var(--sidebar-active-border-color);
+  box-shadow: var(--sidebar-active-shadow);
+  color: var(--ws-active-text);
+}
+.home-shell .home-sidebar .home-workspace-link[data-marketplace].home-workspace-link--active .home-brand-icon {
+  color: var(--ws-active-text);
+}
+.home-shell .home-sidebar .home-workspace-link[data-marketplace].home-workspace-link--active .home-brand-icon::before {
+  border-color: var(--sidebar-icon-ring-color);
+  box-shadow: var(--sidebar-icon-ring-shadow);
+}
+.home-shell .home-sidebar .home-workspace-link[data-marketplace].home-workspace-link--active .home-brand-icon::after {
+  background: var(--sidebar-icon-glow);
+}
+.home-shell .home-sidebar .home-workspace-link--active :is(.home-brand-icon, .home-workspace-icon),
+.home-shell .home-sidebar .home-ved-subnav-link--active .home-brand-icon,
+.home-shell .home-topbar-right .home-icon-button:is(.active, :focus-visible) .home-utility-icon-visual {
+  color: var(--ws-active-text);
+}
+.home-shell .home-sidebar .home-ved-nav-toggle:is(:hover, :focus-visible),
+.home-shell .home-sidebar .home-ved-subnav-link:is(:hover, :focus-visible):not(.home-ved-subnav-link--active) {
+  color: var(--ws-nav-hover-text);
+  background: color-mix(in srgb, var(--ws-icon) 12%, var(--ws-sidebar));
+  border-color: color-mix(in srgb, var(--ws-icon) 28%, var(--ws-border));
+}
+.home-shell .home-sidebar .home-ved-subnav-link--active,
+.home-shell .home-sidebar .home-ved-subnav-link--active:hover {
+  color: var(--ws-active-text);
+  background: var(--sidebar-active-background);
+  border-color: var(--sidebar-active-border-color);
+}
+.home-shell .home-topbar-right .home-icon-button:is(.active, :focus-visible) .home-utility-icon-visual::before {
+  border-color: var(--sidebar-icon-ring-color);
+  box-shadow: var(--sidebar-icon-ring-shadow);
+}
+.home-shell .home-topbar-right .home-icon-button:is(.active, :focus-visible) .home-utility-icon-visual::after {
+  background: var(--sidebar-icon-glow);
+}
+.home-shell .home-sidebar .home-brand-icon,
+.home-shell .home-sidebar .home-workspace-icon,
+.home-shell .home-topbar-right .home-utility-icon-visual {
+  color: var(--ws-utility-icon);
+}
+.home-shell .home-sidebar .home-workspace-link--active :is(.home-brand-icon, .home-workspace-icon) {
+  color: var(--ws-active-text);
+}
+.home-shell .home-topbar-right .home-icon-button:is(.active, :focus-visible) .home-utility-icon-visual {
+  color: var(--ws-icon);
+}
+.home-shell .home-workspace-link:not([data-marketplace]) {
+  --emerald-nav: var(--ws-icon);
+}
+
+/* Recolor all four home KPI cards identically (brand logos remain intact).
+   Shared values are CSS custom properties, not changes to financial data. */
+.home-shell .home-marketplace-metric-card,
+html[data-theme="dark"] .home-shell .home-marketplace-metric-card {
+  --home-metric-accent: var(--ws-blue);
+  --home-metric-soft: color-mix(in srgb, var(--ws-blue) 11%, transparent);
+  --home-metric-border: color-mix(in srgb, var(--ws-blue) 31%, transparent);
+  color: var(--ws-text);
+  background: linear-gradient(180deg, var(--ws-surface), color-mix(in srgb, var(--ws-blue) 7%, var(--ws-surface)));
+}
+.home-shell .home-marketplace-card-brand strong,
+.home-shell .home-marketplace-card-metric span,
+html[data-theme="dark"] .home-shell .home-marketplace-card-brand strong,
+html[data-theme="dark"] .home-shell .home-marketplace-card-metric span {
+  color: var(--ws-text);
+}
+.home-shell .home-marketplace-ip-badge,
+html[data-theme="dark"] .home-shell .home-marketplace-ip-badge {
+  background: var(--ws-blue);
+  color: var(--button-text);
+}
+
+/* The SKU overview used a different highlight for every marketplace.
+   Keep the selected tab and table grid identical on all four tabs. */
+.home-shell .sku-list-page,
+.home-shell .sku-list-data-section,
+html[data-theme="dark"] .home-shell .sku-list-page,
+html[data-theme="dark"] .home-shell .sku-list-data-section {
+  --sku-ozon-accent: var(--ws-blue);
+  --sku-ozon-soft: var(--ws-blue-soft);
+  --sku-ozon-grid: color-mix(in srgb, var(--ws-blue) 25%, transparent);
+  --sku-ozon-scroll: var(--ws-icon);
+}
+.home-shell .sku-list-tab:is(.sku-list-tab--all, .sku-list-tab--ozon, .sku-list-tab--wildberries, .sku-list-tab--yandex):not(.sku-list-tab--active):hover,
+html[data-theme="dark"] .home-shell .sku-list-tab:is(.sku-list-tab--all, .sku-list-tab--ozon, .sku-list-tab--wildberries, .sku-list-tab--yandex):not(.sku-list-tab--active):hover {
+  border-color: color-mix(in srgb, var(--ws-blue) 40%, transparent);
+  background: var(--ws-blue-soft);
+  color: var(--ws-blue);
+}
+.home-shell .sku-list-tab.sku-list-tab--active,
+html[data-theme="dark"] .home-shell .sku-list-tab.sku-list-tab--active {
+  border-color: var(--ws-blue);
+  background: var(--ws-blue);
+  color: var(--button-text);
+}
+
+/* Buttons formerly hard-coded emerald, purple, blue or orange. */
+.home-shell .unit-market-tabs button.active,
+.home-shell .unit-model-tabs button.active {
+  color: var(--button-text);
+  background: linear-gradient(125deg, var(--ws-blue), var(--ws-blue-hover));
+  border-color: var(--ws-blue);
+}
+.home-shell .yandex-reference-page .ym-sync-hero-button {
+  background: linear-gradient(125deg, var(--button), var(--button-hover));
+  border-color: var(--ws-blue);
+  color: var(--button-text);
+  box-shadow: 0 7px 18px color-mix(in srgb, var(--ws-blue) 17%, transparent);
+}
+.home-shell .yandex-reference-page .ym-sync-hero-button:hover:not(:disabled) {
+  box-shadow: 0 9px 22px color-mix(in srgb, var(--ws-blue) 25%, transparent);
+}
+.home-shell .yandex-reference-page .ym-sync-hero-button:disabled {
+  border-color: var(--ws-border);
+  background: var(--ws-surface-soft);
+  color: var(--ws-text-muted);
+  box-shadow: none;
+}
+.home-shell .yandex-reference-page .ym-summary-icon--green,
+.home-shell .yandex-reference-page .ym-summary-icon--orange,
+.home-shell .yandex-reference-page .ym-summary-icon--blue {
+  color: var(--ws-icon);
+  background: var(--ws-blue-soft);
+}
+/* Do not recolor red failures, rejected orders, returns or other alert states. */
+.home-shell .ozf-page .ozf-primary {
+  border-color: var(--ws-blue);
+  background: var(--ws-blue);
+  color: var(--button-text);
+}
+.home-shell .ozf-page :is(.ozf-back, .ozf-eyebrow, .ozf-progress) {
+  color: var(--ws-icon);
+}
+.home-shell .workspace-content--module .primary-button {
+  background: var(--button);
+  border-color: var(--ws-blue);
+  color: var(--button-text);
+}
+html[data-theme="dark"] .home-shell[data-accent-area] .workspace-content--module .primary-button {
+  background: var(--button);
+  border-color: var(--ws-blue);
+  color: var(--button-text);
+}
+html[data-theme="dark"] .home-shell[data-accent-area] .workspace-content--module .primary-button:hover:not(:disabled) {
+  background: var(--button-hover);
+  border-color: var(--button-hover);
+  color: var(--button-text);
+}
+
+/* Decorative headings, item tiles and back controls should follow the
+   shared palette; leave semantic success/error/warning statuses unchanged. */
+.home-shell :is(.ozon-reference-page, .wb-reference-page, .yandex-reference-page)
+  :is(.ozon-panel-icon, .wb-panel-icon, .ym-panel-icon, .ozon-info-icon, .wb-info-icon, .ym-panel-icon, .ozon-products-toggle-icon, .wb-products-toggle-icon, .ym-products-section-icon) {
+  color: var(--ws-icon);
+}
+.home-shell .home-search:focus-within,
+.home-shell :is(.sku-list-period-control select, .unit-toolbar-right input, .unit-editor input):focus-visible {
+  border-color: var(--ws-blue);
+  outline-color: var(--ws-blue);
+}
