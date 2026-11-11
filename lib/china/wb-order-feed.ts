@@ -23,6 +23,18 @@ type FeedOrder = {
 
 const ALLOWED = new Set(["created", "buyout", "cancel", "return", "returnDefective"]);
 
+// WB timestamps may be returned without an explicit offset. Treat such values
+// as Moscow-local, never as UTC (otherwise events near midnight shift days).
+function normalizedWbTime(value: unknown): string {
+  if (typeof value !== "string") throw new Error("WB: статус без даты");
+  const source = value.trim().replace(" ", "T");
+  const withZone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(source)
+    ? source : source + "+03:00";
+  const parsed = Date.parse(withZone);
+  if (!Number.isFinite(parsed)) throw new Error("WB: неправильная дата статуса");
+  return new Date(parsed).toISOString();
+}
+
 function dateInKrasnoyarsk(): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Krasnoyarsk",
@@ -48,15 +60,16 @@ function asFeedOrder(value: unknown): FeedOrder | null {
     || !Number.isSafeInteger(x.nmId) || Number(x.nmId) <= 0
     || typeof x.status !== "string" || !ALLOWED.has(x.status)
     || typeof x.isMp !== "boolean"
-    || typeof x.createdAt !== "string" || !Number.isFinite(Date.parse(x.createdAt))
-    || typeof x.updatedAt !== "string" || !Number.isFinite(Date.parse(x.updatedAt))) {
+    || typeof x.createdAt !== "string" || typeof x.updatedAt !== "string") {
     throw new Error("WB: ответ Ленты заказов не соответствует документированному формату");
   }
   // FBS records are never persisted in the procurement status ledger.
   if (x.isMp) return null;
   return {
     srid: x.srid, nmId: Number(x.nmId), status: x.status as FeedOrder["status"],
-    isMp: false, createdAt: x.createdAt, updatedAt: x.updatedAt,
+    isMp: false,
+    createdAt: normalizedWbTime(x.createdAt),
+    updatedAt: normalizedWbTime(x.updatedAt),
   };
 }
 
