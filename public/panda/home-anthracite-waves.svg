@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="715" viewBox="0 0 1920 715" preserveAspectRatio="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="anthracite-flow-main" x1="0" y1="0" x2="1" y2="0" objectBoundingBox="true">
+      <stop offset="0%" stop-color="#101820" stop-opacity="0"/>
+      <stop offset="29%" stop-color="#101820" stop-opacity=".08"/>
+      <stop offset="52%" stop-color="#101820" stop-opacity=".24"/>
+      <stop offset="77%" stop-color="#101820" stop-opacity=".30"/>
+      <stop offset="100%" stop-color="#101820" stop-opacity=".13"/>
+    </linearGradient>
+    <linearGradient id="anthracite-flow-soft" x1="0" y1="0" x2="1" y2="0" objectBoundingBox="true">
+      <stop offset="0%" stop-color="#101820" stop-opacity="0"/>
+      <stop offset="43%" stop-color="#101820" stop-opacity=".04"/>
+      <stop offset="79%" stop-color="#101820" stop-opacity=".14"/>
+      <stop offset="100%" stop-color="#101820" stop-opacity=".05"/>
+    </linearGradient>
+  </defs>
+  <path d="M 660 752 C 880 735 1045 714 1180 667 C 1430 580 1565 422 1940 404" fill="none" stroke="url(#anthracite-flow-main)" stroke-width="7" opacity=".04"/>
+  <path d="M 660 752 C 880 735 1045 714 1180 667 C 1430 580 1565 422 1940 404" fill="none" stroke="url(#anthracite-flow-main)" stroke-width="1.35" stroke-linecap="round"/>
+  <path d="M 1290 764 C 1390 681 1505 613 1640 601 C 1750 584 1845 616 1950 646" fill="none" stroke="url(#anthracite-flow-soft)" stroke-width="7" opacity=".03"/>
+  <path d="M 1290 764 C 1390 681 1505 613 1640 601 C 1750 584 1845 616 1950 646" fill="none" stroke="url(#anthracite-flow-soft)" stroke-width="1.1" stroke-linecap="round"/>
+</svg>

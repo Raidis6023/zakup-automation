@@ -143,12 +143,16 @@ html[data-theme="dark"] .home-shell.home-shell--dashboard[data-accent-area="gene
   --ws-decor-4-to: #6d513d;
 }
 
-/* Background treatment: no DOM nodes or layout changes. */
+/* Background treatment: no DOM nodes or layout changes.
+ * In light mode the original dark lines become quiet anthracite curves.
+ * Ivory glows and a very soft slate halo behind the panda add depth. */
 .home-shell--dashboard > .home-main > .home-content {
   background:
-    radial-gradient(ellipse 42% 29% at 15% 100%, rgba(16, 24, 32, .07), transparent 78%),
-    radial-gradient(ellipse 33% 28% at 92% 98%, rgba(16, 24, 32, .06), transparent 78%),
-    var(--ws-page);
+    url("/panda/home-anthracite-waves.svg") center bottom / 100% 100% no-repeat,
+    radial-gradient(ellipse 43% 34% at 16% 100%, rgba(255, 249, 239, .92), transparent 80%),
+    radial-gradient(ellipse 32% 30% at 90% 97%, rgba(247, 249, 251, .78), transparent 75%),
+    radial-gradient(ellipse 28% 30% at 95% 100%, rgba(61, 83, 107, .12), transparent 80%),
+    linear-gradient(180deg, var(--ws-page) 0%, var(--ws-page) 68%, #ebdfcd 100%);
 }
 html[data-theme="dark"] .home-shell--dashboard > .home-main > .home-content {
   /* The two vector curves live behind the cards and the assistant.
