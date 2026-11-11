@@ -150,7 +150,7 @@ export async function readFinance(from:string,to:string,scheme?:'fbo'|'fbs'){
   const old=audit.get(source)??{rows:0,amount:0};
   audit.set(source,{rows:old.rows+1,amount:old.amount+line.amount});
  }
- const expectedSources=['Транзакции по заказам и товарам',...rules.map(([name])=>name)];
+ const expectedSources=['Транзакции по заказам и товарам',...rules.map(([name])=>name),'Реклама на Маркете'];
  const sourceAudit=expectedSources.map(name=>({
   name,kind:name==='Транзакции по заказам и товарам'?'income':'expense',
   rows:audit.get(name)?.rows??0,amount:audit.get(name)?.amount??null,
