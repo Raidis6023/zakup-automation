@@ -28,10 +28,10 @@ const ymClient=fs.readFileSync('app/yandex-market/financier/YandexFinancierClien
 assert(ymClient.includes('coverage_warning'));
 assert(ymClient.includes('sourceAudit'));
 const ymCache=fs.readFileSync('lib/yandex/finance-cache.ts','utf8');
-assert(ymCache.includes('status:audit.has(name)'));
+assert(ymCache.includes("status:!audit.has(name)?'not_provided':audit.get(name)?.preserved?'preserved':'present'"));
 assert(ymCache.includes("excludedRows:audit.get(name)?.excludedRows??0"));
 assert(ymCache.includes("'Реклама на Маркете'"));
-assert(ymCache.includes('status:audit.has(name)'));
+assert(ymCache.includes("status:!audit.has(name)?'not_provided':audit.get(name)?.preserved?'preserved':'present'"));
 const cron=fs.readFileSync('app/api/agents/yandex-finance-cron/route.ts','utf8');
 assert(cron.includes('YANDEX_FINANCE_CRON_SECRET'));
 assert(cron.includes('advancePromotion'));

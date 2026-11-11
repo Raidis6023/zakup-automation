@@ -39,6 +39,10 @@ export function parseWorkbooks(services:XLSX.WorkBook,orders:XLSX.WorkBook,onMis
  // Advertising billed for the whole campaign has no truthful SKU allocation.
  // This sheet is separate from the historical sales-boost and banner sheets.
  const marketingSheet='Реклама на Маркете';
+ // A provider workbook can omit the campaign-billing sheet altogether.
+ // Record the missing source explicitly instead of silently assuming zero.
+ if(!services.SheetNames.some(n=>normalizedSheet(n)===normalizedSheet(marketingSheet)))
+  missing.push(marketingSheet);
  if(services.SheetNames.some(n=>normalizedSheet(n)===normalizedSheet(marketingSheet))){
   const sr=rows(services,marketingSheet);
   const findCol=(label:string):string|undefined=>{

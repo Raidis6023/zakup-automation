@@ -115,9 +115,13 @@ export default function FinancierClient() {
         setAdsProgress(report);
         const seen=lastAdsSeen.current;
         lastAdsSeen.current=report.latest_sku_update;
+        // Campaign reports and Seller finance are two independent clocks.
+        // Comparing Performance.synced_at with Seller.cache_updated_at caused
+        // the UI to keep old (e.g. 165k RUB) advertising long after all
+        // campaigns were saved. On first view always refetch the finance
+        // aggregate once, then only when campaign source has advanced.
         if(report.latest_sku_update&&!autoRefreshActive.current&&
-          (seen?Date.parse(report.latest_sku_update)>Date.parse(seen):
-           Date.parse(report.latest_sku_update)>Date.parse(data.cache_updated_at??'1970-01-01'))){
+          (seen===null||Date.parse(report.latest_sku_update)>Date.parse(seen))){
           autoRefreshActive.current=true;
           try{await load()}finally{autoRefreshActive.current=false}
         }
