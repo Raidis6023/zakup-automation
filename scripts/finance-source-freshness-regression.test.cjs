@@ -14,7 +14,7 @@ assert(yandex.includes('Отсутствующие статьи доходов/�
 const cache=fs.readFileSync('lib/yandex/finance-cache.ts','utf8');
 assert(cache.includes("...rules.map(([name])=>name),'Реклама на Маркете'"),
  'YM audit must include separately billed marketplace advertising');
-assert(cache.includes("status:audit.has(name)?'present':'not_provided'"));
+assert(cache.includes("status:!audit.has(name)?'not_provided':audit.get(name)?.preserved?'preserved':'present'"));
 const parser=fs.readFileSync('lib/yandex/finance-parser.ts','utf8');
 assert(parser.includes('missing.push(marketingSheet)'),
  'Missing advertising worksheet must remain an unconfirmed expense source');
