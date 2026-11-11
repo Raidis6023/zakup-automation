@@ -1,9 +1,9 @@
 .panel {
   --collapsible-accent:
-    #11865d;
+    var(--ws-icon);
 
   --collapsible-soft:
-    #e0f2e8;
+    var(--ws-blue-soft);
 
   margin-top: var(--ui-surface-section-gap);
 
@@ -24,37 +24,37 @@
 
 .tone_general {
   --collapsible-accent:
-    #11865d;
+    var(--ws-icon);
 
   --collapsible-soft:
-    #e0f2e8;
+    var(--ws-blue-soft);
 }
 
 
 .tone_ozon {
   --collapsible-accent:
-    #157dbc;
+    var(--ws-icon);
 
   --collapsible-soft:
-    #e3f3ff;
+    var(--ws-blue-soft);
 }
 
 
 .tone_wildberries {
   --collapsible-accent:
-    #8231b4;
+    var(--ws-icon);
 
   --collapsible-soft:
-    #f4e9fb;
+    var(--ws-blue-soft);
 }
 
 
 .tone_yandex {
   --collapsible-accent:
-    #b65a15;
+    var(--ws-icon);
 
   --collapsible-soft:
-    #fff0e0;
+    var(--ws-blue-soft);
 }
 
 
@@ -333,28 +333,28 @@
 html[data-theme="dark"]
 .tone_general {
   --collapsible-accent:
-    #37c98e;
+    var(--ws-icon);
 }
 
 
 html[data-theme="dark"]
 .tone_ozon {
   --collapsible-accent:
-    #75c4f2;
+    var(--ws-icon);
 }
 
 
 html[data-theme="dark"]
 .tone_wildberries {
   --collapsible-accent:
-    #d7a0ef;
+    var(--ws-icon);
 }
 
 
 html[data-theme="dark"]
 .tone_yandex {
   --collapsible-accent:
-    #ffb67b;
+    var(--ws-icon);
 }
 
 

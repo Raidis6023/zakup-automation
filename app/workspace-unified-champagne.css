@@ -415,3 +415,136 @@ html[data-theme="dark"] .home-shell[data-accent-area] .workspace-content--module
   border-color: var(--ws-blue);
   outline-color: var(--ws-blue);
 }
+
+/* Compact/expanded panels previously bound their eyebrow, icon and active
+   border to separate Ozon / WB / Yandex / emerald colors. The panel CSS
+   module now takes its tone from --ws-icon for every route. */
+
+/* Tasks: selection, focus rings and draft highlights are brand accents.
+   Finished/cancelled status colors still retain their original semantics. */
+.home-shell .tasks-board .tasks-tab-active {
+  color: var(--button-text);
+  background: var(--ws-blue);
+  border-color: var(--ws-blue);
+}
+.home-shell .tasks-board .tasks-tab-active:hover {
+  background: var(--ws-blue-hover);
+  border-color: var(--ws-blue-hover);
+}
+.home-shell .tasks-board .tasks-table tbody tr.tasks-draft-row td {
+  background: color-mix(in srgb, var(--ws-blue) 7%, var(--ws-surface));
+}
+.home-shell .tasks-board :is(.tasks-inline-input, .tasks-inline-select):focus {
+  border-color: var(--ws-blue);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ws-blue) 15%, transparent);
+}
+.home-shell .tasks-board :is(button, input, select, textarea):focus-visible {
+  outline-color: var(--ws-blue);
+}
+.home-shell .tasks-board .tasks-action-button:not(.tasks-finish-button):not(.tasks-delete-task) {
+  border-color: var(--ws-blue);
+  background: var(--ws-blue);
+  color: var(--button-text);
+}
+.home-shell .tasks-board .tasks-action-button:not(.tasks-finish-button):not(.tasks-delete-task):hover:not(:disabled) {
+  background: var(--ws-blue-hover);
+}
+
+/* VED: common action buttons and editable fields, not calculation statuses. */
+.home-shell .ved-registry-actions :is(button, a),
+.home-shell .ved-registry-open,
+.home-shell .ved-quote-action,
+.home-shell .ved-offer-bulk button,
+.home-shell .ved-offer-actions button,
+.home-shell .ved-offer-version button {
+  background: color-mix(in srgb, var(--ws-blue) 11%, var(--ws-surface));
+  color: var(--ws-blue);
+  border-color: color-mix(in srgb, var(--ws-blue) 38%, var(--ws-border));
+}
+.home-shell .ved-registry-actions :is(button, a):hover,
+.home-shell .ved-registry-open:hover,
+.home-shell .ved-offer-bulk button:hover,
+.home-shell .ved-offer-actions button:hover,
+.home-shell .ved-offer-version button:hover {
+  background: color-mix(in srgb, var(--ws-blue) 17%, var(--ws-surface));
+  border-color: var(--ws-blue);
+}
+.home-shell .ved-registry-filters :is(input, select):focus-visible,
+.home-shell .ved-calc-field :is(input, select):focus-visible {
+  outline-color: var(--ws-blue);
+}
+.home-shell .ved-calc-check input {
+  accent-color: var(--ws-blue);
+}
+.home-shell .ved-calc-average {
+  border-color: color-mix(in srgb, var(--ws-blue) 36%, var(--ws-border));
+  background: color-mix(in srgb, var(--ws-blue) 8%, var(--ws-surface));
+}
+.home-shell .ved-offer-heading a,
+.home-shell .ved-offer-product-head > button strong {
+  color: var(--ws-icon);
+}
+.home-shell .ved-upload-drop-zone {
+  border-color: color-mix(in srgb, var(--ws-blue) 44%, var(--ws-border));
+  background: color-mix(in srgb, var(--ws-blue) 5%, var(--ws-surface));
+}
+.home-shell .ved-upload-drop-zone:is(:hover, :focus-visible),
+.home-shell .ved-upload-drop-zone--dragging {
+  background: color-mix(in srgb, var(--ws-blue) 14%, var(--ws-surface));
+  border-color: var(--ws-blue);
+  outline-color: var(--ws-blue);
+}
+.home-shell .ved-upload-drop-zone svg {
+  stroke: var(--ws-blue);
+}
+.home-shell .ved-upload-parts button {
+  color: var(--ws-blue);
+  background: color-mix(in srgb, var(--ws-blue) 9%, var(--ws-surface));
+  border-color: color-mix(in srgb, var(--ws-blue) 40%, var(--ws-border));
+}
+.home-shell .ved-upload-parts button:hover {
+  border-color: var(--ws-blue);
+}
+.home-shell .ved-upload-import-commit {
+  color: var(--button-text) !important;
+  background: var(--ws-blue) !important;
+  border-color: var(--ws-blue) !important;
+}
+.home-shell .ved-quote-entry-toggle strong {
+  color: var(--ws-icon);
+}
+/* .ved-quote-ready and .ved-registry-state--calculated deliberately stay green. */
+
+/* The old/new economics engine toggle is a UI state, not success. */
+.home-shell .unit-pilot {
+  --unit-pilot-accent: var(--ws-icon);
+}
+.home-shell .unit-version-controls button.active,
+.home-shell .unit-pilot-views button.active {
+  background: var(--ws-blue-soft);
+  border-color: var(--ws-blue);
+  color: var(--ws-text);
+}
+.home-shell :is(.unit-version-controls button, .unit-pilot button):focus-visible {
+  outline-color: var(--ws-blue);
+}
+
+/* Administrative service cards: service identity lives in its name/logo;
+   green and blue decorations no longer define the card background. */
+.home-shell .api-settings-service-icon,
+.home-shell .api-settings-service-icon--ozon-performance {
+  color: var(--ws-icon);
+  border-color: color-mix(in srgb, var(--ws-blue) 38%, var(--ws-border));
+  background: color-mix(in srgb, var(--ws-blue) 10%, var(--ws-surface));
+}
+.home-shell .api-settings-field input:focus {
+  border-color: var(--ws-blue);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ws-blue) 14%, transparent);
+}
+.home-shell .api-settings-card-footer button {
+  color: var(--button-text);
+  border-color: var(--ws-blue);
+  background: var(--ws-blue);
+}
+/* Ready/connected, warnings, errors and financial profit/loss retain their
+   dedicated status colors for readability. */
