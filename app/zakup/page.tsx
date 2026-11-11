@@ -1,3 +1,4 @@
+export const maxDuration = 300;
 import PageHeader from "../ui/PageHeader";
 
 

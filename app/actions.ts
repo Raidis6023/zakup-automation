@@ -15,6 +15,7 @@ import {
 import {
   syncVedOrderPhotos,
 } from "@/lib/ved-order-photo-sync";
+import { syncChinaWbOrderFeed } from "@/lib/china/wb-order-feed";
 
 
 // ============================================
@@ -199,13 +200,19 @@ export async function runChinaCalculation(
   try {
     await requireChinaEditor();
 
-    // Atomically refresh confirmed WB daily operations, calculate demand and
-    // recalculate transport. No manual m³ and no new VED order created.
+    // Verify the last two completed days from WB Order Feed before selecting
+    // the common 28-day period. One order / srid, FBO-only buyout statuses.
+    // Never replace missing WB data with zero or use unconfirmed orders.
+    const wb = await syncChinaWbOrderFeed();
     await callSupabaseRpc("run_china_calculation_with_transport");
 
     revalidatePath("/zakup");
     revalidatePath("/");
-    return { ok: true, message: "Потребность и кубатура пересчитаны." };
+    return {
+      ok: true,
+      message:
+        `Потребность и транспорт рассчитаны. WB Лента: ${wb.fbwBuyouts} подтверждённых FBW-выкупов за ${wb.from} – ${wb.to}. Возвраты: ${wb.fbwReturns}.`,
+    };
   } catch (error) {
     console.error("[ZAKUP_CALCULATION] failed", error);
 
@@ -228,6 +235,10 @@ export async function runChinaCalculation(
 
     if (/Закуп заблокирован:/.test(details)) {
       return { ok: false, message: details };
+    }
+
+    if (/Лента|WB:|WB Order Feed|Закуп:/.test(raw)) {
+      return { ok: false, message: raw.slice(0, 350) };
     }
 
     if (/Недостаточно прав|необходимо войти|необходимо войти в WorkSpace|Не удалось проверить права/.test(raw)) {
