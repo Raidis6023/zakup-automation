@@ -54,4 +54,26 @@ r=parseWorkbooks(extra,orders,x=>missing=x);
 assert.equal(r.filter(x=>x.sheet==='Платное хранение с 01.09.26').length,1);
 assert(!missing.includes('Платное хранение с 01.09.26'));
 assert.equal(r.find(x=>x.sheet==='Платное хранение с 01.09.26').amount,1250);
-console.log('PASS Yandex finance parser: missing optional services, required tabs, schema guard, renamed storage');
+// The report may use any month in a paid-storage tab title.
+const octoberName='Платное хранение с 01.10.2026';
+const octoberSheet=sheet({Z1:'Стоимость платного хранения',A2:1,I2:'SKU1',X2:'2026-11-09',Z2:7.5});
+const octoberServices={SheetNames:[...services.SheetNames,octoberName],Sheets:{
+ ...services.Sheets,[octoberName]:octoberSheet
+}};
+missing=[];
+r=parseWorkbooks(octoberServices,orders,x=>missing=x);
+assert.equal(r.filter(x=>x.sheet==='Платное хранение с 01.09.26').length,1);
+assert.equal(r.find(x=>x.sheet==='Платное хранение с 01.09.26').amount,750);
+assert(!missing.includes('Платное хранение с 01.09.26'));
+const novemberName='ПЛАТНОЕ ХРАНЕНИЕ (с 01.11.2026)';
+const novemberSheet=sheet({Z1:'Стоимость платного хранения',A2:1,I2:'SKU1',X2:'2026-11-10',Z2:2.25});
+const multipleStorage={SheetNames:[...octoberServices.SheetNames,novemberName],Sheets:{
+ ...octoberServices.Sheets,[novemberName]:novemberSheet
+}};
+missing=[];
+r=parseWorkbooks(multipleStorage,orders,x=>missing=x);
+const stored=r.filter(x=>x.sheet==='Платное хранение с 01.09.26');
+assert.equal(stored.length,2,'Two dated storage tabs must both be imported');
+assert.equal(stored.reduce((sum,x)=>sum+x.amount,0),975);
+assert(!missing.includes('Платное хранение с 01.09.26'));
+console.log('PASS Yandex finance parser: optional sheets and storage titles independent of dates');

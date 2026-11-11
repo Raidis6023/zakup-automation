@@ -85,24 +85,24 @@ export default function YandexFinancierClient({initial,initialError}:{initial:Da
     "Период с":data.from,"Период по":data.to}))}
   ]);
  }
+ const missingSources=data?.sourceAudit.filter(x=>x.status!=='present')??[];
+ const optionalSheetsWarning=Boolean(data?.report.error?.startsWith('Предупреждение: ЯМ не включил листы услуг:'));
+ const sourceName=(name:string)=>name.startsWith('Платное хранение')?'Платное хранение':name;
  return <>
  <section className="ozf-panel ozf-filters"><label>С даты<DateField value={from} onChange={e=>setFrom(e.target.value)} max={shift(localDay(),-1)} disabled={busy}/></label><label>По дату (включительно)<DateField value={to} onChange={e=>setTo(e.target.value>shift(localDay(),-1)?shift(localDay(),-1):e.target.value)} max={shift(localDay(),-1)} disabled={busy}/></label><button className="ozf-btn ozf-primary" onClick={load} disabled={busy}>Сформировать</button><button className="ozf-btn" onClick={sync} disabled={busy}>Загрузить / продолжить из ЯМ</button><button className="ozf-btn" disabled={adBusy} onClick={async()=>{setAdBusy(true);setAdStatus('Загружаем рекламные отчёты…');try{const r=await fetch('/api/agents/yandex-finance-campaigns-cron',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({from,to})}),j=await r.json();setAdStatus(r.ok?'Реклама ЯМ '+from+' — '+to+': '+String(j.phase??'обработка')+'; готово за запуск: '+String(j.finished??0):'Ошибка рекламы: '+String(j.error??r.status));}catch(e){setAdStatus(String(e))}finally{setAdBusy(false)}}}>{adBusy?'Выгружаем рекламу…':'Продолжить рекламу ЯМ'}</button><span role="status">{adStatus}</span><span role="status">{busy?'Загрузка… ':''}{progress}</span></section>
  {error&&<p role="alert" className="ymf-warning">{error}</p>}
  {data&&<>
  {data.coverage_warning&&<p className="ymf-warning" role="alert">{data.coverage_warning}</p>}
- {data.report.error&&<p className="ymf-warning" role="status">{data.report.error}</p>}
- {data.sourceAudit.some(x=>x.status!=='present')&&<p className="ymf-warning" role="status">
-  Источники требуют сверки: {data.sourceAudit.filter(x=>x.status!=='present').map(x=>x.name).join('; ')}.
-  Отсутствующие статьи доходов/расходов не подтверждены нулём. Подробности в «Проверка всех источников».
- </p>}
+ {data.report.error&&!optionalSheetsWarning&&<p className="ymf-warning" role="status">{data.report.error}</p>}
  <p>Показан период: <b>{data.from} — {data.to}</b> включительно. Кэш: {data.report.completed_at?new Date(data.report.completed_at).toLocaleString('ru-RU',{timeZone:'Asia/Krasnoyarsk'}):'—'} (Красноярск).</p>
 
  <div className="ozf-toolbar"><button className="ozf-btn" onClick={()=>void exportFinancialResult()}>Скачать финрез XLSX</button><button className="ozf-btn" onClick={()=>void exportMissingData()}>Недостающие данные XLSX · {data.rows.filter(r=>r.dataGaps.length>0||!r.master_code||r.manager==="Не назначен").length}</button></div>
  <details className="ozf-panel" style={{marginTop:10,marginBottom:10}}>
-  <summary style={{cursor:'pointer',fontWeight:600}}>Проверка всех источников доходов и расходов ЯМ · {data.sourceAudit.filter(x=>x.status==='present').length}/{data.sourceAudit.length} с операциями</summary>
-  <p className="ymf-warning">Отсутствующий лист или статья не считаются подтверждённым нулём. Из исходных отчётов выделены операции с датами за пределами выбранного периода. Они не включены в итог повторно и не исчезли из сохранённого источника.</p>
+  <summary style={{cursor:'pointer',fontWeight:600}}>Проверка всех источников доходов и расходов ЯМ · {data.sourceAudit.filter(x=>x.status==='present').length}/{data.sourceAudit.length} с операциями{missingSources.length?' · '+missingSources.length+' требуют сверки':''}</summary>
+  {missingSources.length>0&&<p className="ymf-warning" role="status">Источники требуют сверки: {missingSources.map(x=>sourceName(x.name)).join('; ')}. Отсутствующие статьи доходов/расходов не подтверждены нулём. Если в кабинете есть начисления по этим услугам, их нужно сверить с отчётом.</p>}
+  <p>Яндекс Маркет может не включать отдельные листы услуг в конкретную выгрузку. В таблице показаны операции, фактически найденные или сохранённые из предыдущих отчётов. Из исходных отчётов выделены операции с датами за пределами выбранного периода. Они не включены в итог повторно и не исчезли из сохранённого источника.</p>
   <div className="ozf-scroll"><table className="ozf-table"><thead><tr><th>Статья</th><th>Источник</th><th>Строк в периоде</th><th>Сумма в периоде</th><th>Строк вне периода</th><th>Сумма вне периода</th><th>Статус</th></tr></thead><tbody>
-   {data.sourceAudit.map(x=><tr key={x.name}><td>{x.name}</td><td>{x.kind==='income'?'Доход':'Расход'}</td><td>{x.rows||'—'}</td>
+   {data.sourceAudit.map(x=><tr key={x.name}><td>{sourceName(x.name)}</td><td>{x.kind==='income'?'Доход':'Расход'}</td><td>{x.rows||'—'}</td>
     <td>{x.amount===null?'Не подтверждено':money(x.amount)}</td>
     <td>{x.excludedRows||'—'}</td><td>{x.excludedAmount===null?'—':money(x.excludedAmount)}</td>
     <td>{x.status==='present'?'Есть операции':x.status==='preserved'?'Сохранено из предыдущего подтверждённого отчёта':'Нет листа/операций в отчёте'}</td></tr>)}
