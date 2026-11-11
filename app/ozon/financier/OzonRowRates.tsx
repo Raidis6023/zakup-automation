@@ -1,9 +1,10 @@
 'use client';
 import { DateField } from "@/app/ui/WorkspaceDateFields";
+import { FINANCE_TARIFF_EFFECTIVE_FROM } from '@/lib/finance-tariff-date';
 import {useEffect,useState} from 'react';
 type Rate={master_code:string;valid_from:string;unit_cost_rub:number};
 export default function OzonRowRates({master,onSaved}:{master:string|null;onSaved:()=>void|Promise<void>}){
- const [date,setDate]=useState(()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Krasnoyarsk',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())),[cost,setCost]=useState(''),[mayak,setMayak]=useState(''),[costs,setCosts]=useState<Rate[]>([]),[mayaks,setMayaks]=useState<Rate[]>([]),[manager,setManager]=useState(''),[loaded,setLoaded]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
+ const [date,setDate]=useState<string>(FINANCE_TARIFF_EFFECTIVE_FROM),[cost,setCost]=useState(''),[mayak,setMayak]=useState(''),[costs,setCosts]=useState<Rate[]>([]),[mayaks,setMayaks]=useState<Rate[]>([]),[manager,setManager]=useState(''),[loaded,setLoaded]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
  useEffect(()=>{if(!master)return;setLoaded(false);let live=true;fetch('/api/agents/ozon-finance?mode=rateHistory&master_code='+encodeURIComponent(master),{cache:'no-store'}).then(async r=>{const data=await r.json();if(!r.ok||!data.ok)throw Error(data.error??'Не удалось загрузить тарифы');if(live){setCosts(data.costs);setMayaks(data.mayak);setManager(data.manager??'');setLoaded(true);}}).catch(e=>{if(live)setMessage(e.message);});return()=>{live=false}},[master]);
  useEffect(()=>{const c=costs.find(x=>x.valid_from<=date),m=mayaks.find(x=>x.valid_from<=date);setCost(c?String(c.unit_cost_rub).replace('.',','):'');setMayak(m?String(m.unit_cost_rub).replace('.',','):'');},[costs,mayaks,date]);
  async function save(){setBusy(true);setMessage('');try{
