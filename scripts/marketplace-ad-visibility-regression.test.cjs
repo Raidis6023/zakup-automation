@@ -21,6 +21,7 @@ assert(worker.includes(".eq('status','requested')"));
 assert(worker.indexOf(".eq('status','requested')")<worker.indexOf(".eq('status','pending')"));
 assert(worker.includes("scope?.priority==='oldest'"));
 assert(worker.includes("if(financeBusy)return"));
+assert(worker.includes("['services_request','orders_request','services_poll','orders_poll','order_units_pull']"));
 const finance=fs.readFileSync('app/api/agents/ozon-finance/route.ts','utf8');
 assert(finance.includes("g.estimated_result=calculateProvisionalSkuProfit("));
 assert(!finance.includes("missingSettlement"));
