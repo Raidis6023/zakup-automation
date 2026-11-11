@@ -67,8 +67,8 @@ BEGIN
   v_cartons_new := replace(v_cartons_new,
     chr(10)||'                  OR d.truck_order_units <'||chr(10)||'                      d.units_per_carton','');
   v_cartons_new := replace(v_cartons_new,'round(','ceil(');
-  IF v_cartons_new=v_cartons_old OR strpos(v_cartons_new,'OR d.container_order_units <')>0
-     OR strpos(v_cartons_new,'OR d.truck_order_units <')>0 THEN
+  IF v_cartons_new=v_cartons_old OR strpos(v_cartons_new,'OR d.container_order_units <'||chr(10))>0
+     OR strpos(v_cartons_new,'OR d.truck_order_units <'||chr(10))>0 THEN
     RAISE EXCEPTION 'China carton rounding did not change safely';
   END IF;
 
