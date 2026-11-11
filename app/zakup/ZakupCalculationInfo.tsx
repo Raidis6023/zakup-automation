@@ -1,5 +1,8 @@
 type Rules = {
   sales_window_days?: number;
+  container_lead_days?: number;
+  truck_lead_days?: number;
+  safety_buffer_days?: number;
   container_order_point_days?: number;
   truck_order_point_days?: number;
   container_capacity_m3?: number;
@@ -8,8 +11,11 @@ type Rules = {
 
 export default function ZakupCalculationInfo({ rules }: { rules: Rules }) {
   const windowDays = rules?.sales_window_days ?? 28;
-  const containerDays = rules?.container_order_point_days ?? 100;
-  const truckDays = rules?.truck_order_point_days ?? 70;
+  const containerLeadDays = rules?.container_lead_days ?? 90;
+  const truckLeadDays = rules?.truck_lead_days ?? 60;
+  const bufferDays = rules?.safety_buffer_days ?? 14;
+  const containerDays = rules?.container_order_point_days ?? containerLeadDays + bufferDays;
+  const truckDays = rules?.truck_order_point_days ?? truckLeadDays + bufferDays;
   const containerCapacity = rules?.container_capacity_m3 ?? 68;
   const containerTolerance = containerCapacity + (rules?.container_tolerance_m3 ?? 0.5);
 
@@ -25,8 +31,8 @@ export default function ZakupCalculationInfo({ rules }: { rules: Rules }) {
         <dl>
           <div><dt>Продажи</dt><dd>{windowDays} дней, среднее за сутки</dd></div>
           <div><dt>Порог отбора</dt><dd>Запас меньше 60 дней продаж</dd></div>
-          <div><dt>Контейнер</dt><dd>Пополнение до {containerDays} дней (90 + 10 буфер)</dd></div>
-          <div><dt>Фура</dt><dd>Пополнение до {truckDays} дней (60 + 10 буфер)</dd></div>
+          <div><dt>Контейнер</dt><dd>Пополнение до {containerDays} дней ({containerLeadDays} + {bufferDays} буфер)</dd></div>
+          <div><dt>Фура</dt><dd>Пополнение до {truckDays} дней ({truckLeadDays} + {bufferDays} буфер)</dd></div>
           <div><dt>Вместимость</dt><dd>Контейнер {containerCapacity} м³ (до {containerTolerance.toLocaleString("ru-RU")} м³ на проверку), фура 90/100 м³</dd></div>
           <div><dt>Остатки</dt><dd>Склад, ОХ, три маркетплейса и заказы ВЭД, сопоставленные по ЕНОТ</dd></div>
           <div><dt>Кубатура</dt><dd>Из вложимости и габаритов транспортных коробок товаров с потребностью</dd></div>
