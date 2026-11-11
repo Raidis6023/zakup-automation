@@ -2095,3 +2095,34 @@ html[data-theme="dark"]
     margin-left: 0;
   }
 }
+
+
+/* Статус ручного формирования заказа: кнопка доступна,
+   неподтверждённые SKU не входят в черновик. */
+.zakup-reference-page .zakup-v2-order-submit {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.zakup-reference-page .zakup-v2-order-warning {
+  max-width: 300px;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: right;
+  color: var(--ws-text-secondary);
+}
+
+@media (max-width: 720px) {
+  .zakup-reference-page .zakup-v2-order-submit {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .zakup-reference-page .zakup-v2-order-warning {
+    max-width: none;
+    text-align: left;
+  }
+}
