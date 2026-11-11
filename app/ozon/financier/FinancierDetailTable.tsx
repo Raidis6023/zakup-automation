@@ -29,7 +29,7 @@ type Data = {
   unallocated_details?:Array<{name:string;amount:number}>;
   ads_covered?:boolean;ads_covered_days?:number;ads_performance_total?:number|null;
   ads_campaigns_total?:number;ads_campaigns_complete?:number;
-  ads_partial_spend?:number;ads_partial_skus?:number;
+  ads_partial_spend?:number;ads_partial_skus?:number;ads_unmapped_spend?:number;ads_unmapped_skus?:number;
   ads_jobs?:Array<{status:string;last_error:string|null;date_from:string;date_to:string}>;
   cache_updated_at?:string|null;
   advertising?:{finance_total:number;finance_unallocated:number;partial_performance_total?:number;performance_complete?:boolean};
@@ -191,7 +191,7 @@ export default function FinancierDetailTable({
     (data?.advertising?.partial_performance_total??data?.ads_partial_spend??null):
     numericSum(rows,r=>r.performance_ad_expense===null?null:Math.abs(r.performance_ad_expense));
   const globalAdvertising=advertisingDisplay(sellerAdGlobal,referenceBySku,!!data?.ads_covered);
-  const hasLocalReference=rows.some(r=>r.performance_ad_expense!==null&&r.advertising_amount===0);
+  const hasLocalReference=!data?.ads_covered&&rows.some(r=>r.performance_ad_expense!==null&&r.advertising_amount===0);
   const adAmount=includeUnallocated?globalAdvertising.amount:marketingBySku;
   const adReferenceOnly=includeUnallocated
     ?globalAdvertising.kind==='performance_partial':hasLocalReference;
@@ -285,7 +285,8 @@ export default function FinancierDetailTable({
       Реклама по кампаниям Performance за {data?.from} — {data?.to}: {money(-Math.abs(referenceBySku))}{!data?.ads_covered?' (данные пока неполные)':''}.
       Финансовые начисления Seller за тот же период: {sellerAdGlobal===null?'нет данных':money(sellerAdGlobal)}.
       Даты начисления и даты рекламных показов могут отличаться. В операционной прибыли расход Seller остаётся учтён только один раз.
-    </p>}
+      {Number(data?.ads_unmapped_spend??0)>0&&<> Из расходов Performance {money(-Math.abs(Number(data?.ads_unmapped_spend)))} пока не сопоставлены с артикулами ({data?.ads_unmapped_skus} SKU); эта сумма включена в общий показатель, но не распределена по товарам.</>}
+    </p>
     {profitIsPartial&&<p className="ozf-notice" role="status" style={{marginTop:8}}>
       Общий финансовый результат предварительный: прибыль не рассчитана для {missingProfitCount} из {rows.length} артикулов.
       Показана только известная часть с нераспределёнными начислениями.
