@@ -630,6 +630,17 @@ BEGIN
             WHERE d.sale_day=((l.payload->>'saleDt')::timestamptz
                 AT TIME ZONE 'Europe/Moscow')::date
           )
+          -- Cross-date de-duplication: an order must not be counted in
+          -- historical finance and again in the new WB Order Feed.
+          AND NOT EXISTS (
+            SELECT 1 FROM public.china_wb_feed_orders f
+            JOIN public.china_wb_feed_days d
+              ON d.sale_day=(f.status_at AT TIME ZONE 'Europe/Moscow')::date
+            WHERE f.srid=l.payload->>'srid' AND f.is_mp=false
+              AND f.status IN ('buyout','return','returnDefective')
+              AND (f.status_at AT TIME ZONE 'Europe/Moscow')::date
+                  BETWEEN v_date_from AND v_date_to
+          )
         GROUP BY e.master_code
     ),
 
