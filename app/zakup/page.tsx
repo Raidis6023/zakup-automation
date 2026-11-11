@@ -670,29 +670,6 @@ export default async function Home() {
           : null;
 
 
-  const hasOrderItems =
-
-    orderScenario !==
-      null
-
-      ? dashboard.items.some(
-          item =>
-
-            orderScenario ===
-              "container"
-
-              ? item
-                  .container_effective_final_units >
-                0
-
-              : item
-                  .truck_effective_final_units >
-                0
-        )
-
-      : false;
-
-
   const demandItems = dashboard.items.filter(item => item.needs_china_order === true);
   const reviewScenario: "container" | "truck" =
     simulation?.transport_scenario === "truck_90" ||
@@ -707,20 +684,6 @@ export default async function Home() {
       ? item.container_manual_quantity == null
       : item.truck_manual_quantity == null
   ).length;
-
-  const canCreateOrder =
-    Boolean(
-      run
-      &&
-      simulation
-      &&
-      orderScenario
-      &&
-      hasOrderItems
-      &&
-      pendingDecisions === 0
-    );
-
 
   const containerTotalVolume =
     simulation
@@ -752,46 +715,16 @@ export default async function Home() {
 
 
   let orderDescription =
-    "Сначала рассчитайте потребность и транспорт одной кнопкой.";
+    "Сначала рассчитайте потребность и транспорт. Кнопка формирования заказа доступна.";
 
-
-  if (
-    simulation
-  ) {
-
-    if (pendingDecisions > 0) {
-      orderDescription = "Осталось принять решение по " + pendingDecisions +
-        " товарам. Откройте отдельную таблицу «Потребность в закупке»: включите нужные позиции или исключите их.";
-    } else if (
-      canCreateOrder
-      &&
-      orderScenario
-    ) {
-
-      orderDescription =
-        `Будет создан внутренний черновик ВЭД. Сценарий: ${
-          orderScenario ===
-            "container"
-
-            ? "контейнер"
-
-            : "фура"
-        }.`;
-
-    } else if (
-      orderScenario
-    ) {
-
-      orderDescription =
-        "В выбранном сценарии нет SKU с итоговым количеством больше 0.";
-
+  if (simulation) {
+    if (!orderScenario) {
+      orderDescription = "Транспортный сценарий требует ручного решения. Кнопка остаётся доступной, но заказ нельзя создать до выбора транспорта.";
+    } else if (selectedSkuCount > 0) {
+      orderDescription = `Подтверждено товаров: ${selectedSkuCount}. Будет создан черновик ВЭД (${orderScenario === "container" ? "контейнер" : "фура"}). Остальные позиции не войдут в заказ.`;
     } else {
-
-      orderDescription =
-        "Текущий транспортный сценарий требует ручного решения.";
-
+      orderDescription = "Подтвердите хотя бы один товар в таблице «Потребность в закупке». Неподтверждённые позиции в заказ не попадут.";
     }
-
   }
 
 
@@ -918,54 +851,18 @@ export default async function Home() {
             </div>
 
 
-            {
-              canCreateOrder
-              &&
-              orderScenario
-              &&
-              simulation
-
-                ? (
-
-                  <form
-                    action={
-                      createVedOrderDraft
-                    }
-                  >
-
-                    <input
-                      type="hidden"
-
-                      name=
-                        "scenario"
-
-                      value={
-                        orderScenario
-                      }
-                    />
-
-
-                    <CreateVedDraftSubmitButton />
-
-                  </form>
-
-                )
-
-                : (
-
-                  <button
-                    type="button"
-
-                    className=
-                      "primary-button"
-
-                    disabled
-                  >
-                    Сформировать заказ
-                  </button>
-
-                )
-            }
+            <form action={createVedOrderDraft}>
+              <input
+                type="hidden"
+                name="scenario"
+                value={orderScenario ?? ""}
+              />
+              <CreateVedDraftSubmitButton
+                hasCalculation={Boolean(run && simulation)}
+                scenario={orderScenario}
+                confirmedCount={selectedSkuCount}
+              />
+            </form>
 
           </section>
           </div>
