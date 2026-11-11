@@ -1026,22 +1026,10 @@ html[data-theme="dark"]
    текущего открытого раздела. Цвета Ozon, WB и ЯМ не затрагивает.
    ============================================================ */
 
-.home-workspace-link:not([data-marketplace]) {
-  --ws-surface-hover: #e5f6eb;
-  --ws-border-soft: #a8dcc0;
-  --ws-nav-hover-text: #11865d;
-  --ws-active: #11865d;
-  --ws-blue-hover: #0b6c4b;
-}
-
-html[data-theme="dark"]
-.home-workspace-link:not([data-marketplace]) {
-  --ws-surface-hover: #18372a;
-  --ws-border-soft: #355e49;
-  --ws-nav-hover-text: #56dba0;
-  --ws-active: #177c5e;
-  --ws-blue-hover: #0b6c4b;
-}
+/* Do not redefine theme colors on individual navigation links:
+   the Workspace shell owns the anthracite/champagne tokens.
+   Former per-link emerald overrides here won the CSS cascade
+   over --ws-nav-hover-text and kept labels green on hover. */
 
 /* Подложка видна при фокусе с клавиатуры так же, как при hover. */
 .home-workspace-link:not([data-marketplace]):focus-visible:not(.home-workspace-link--active) {
