@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "@/app/ui/WorkspaceDateFields";
 import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import {calculateVed,VedInputError,type VedCalculationInput,type VedCalculationResult} from "@/lib/ved-calculation/engine";
 import type {TariffRow,VedTariffKey} from "@/lib/ved-calculation/tariffs";
@@ -249,7 +250,7 @@ export default function VedWholeOfferCalculator({offerId,initialItemId,initialVe
    <div><small>Всего товаров</small><strong>{rows.length}</strong></div>
    <div><small>Рассчитано</small><strong>{ready}</strong></div>
    <div><small>Требуют данных</small><strong>{rows.length-ready}</strong></div>
-   <label>Дата тарифов и расчёта<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
+   <label>Дата тарифов и расчёта<DateField  value={date} onChange={e=>setDate(e.target.value)}/></label>
   </div>
   <p className="ved-offer-help">Выберите артикул непосредственно в калькуляторе. Все его исходные параметры, сценарии 40HQ / MOQ / 1 м³ и правки сохраняются в одном общем расчёте КП.</p>
   <div className="ved-offer-bulk">

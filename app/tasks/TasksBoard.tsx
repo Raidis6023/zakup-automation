@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "../../lib/supabase/client";
 import { isTaskIssuedToAnotherDepartment } from "../HomeTasksData";
 import { usePathname } from "next/navigation";
+import { DateTimeField } from "@/app/ui/WorkspaceDateFields";
 import "./tasks.css";
 
 type Urgency = "current" | "urgent" | "critical";
@@ -192,7 +193,7 @@ function NotesRow({ note, busy, onAction }: {
     <td><UrgencyCell value={note.urgency} editable={!busy} onChange={value =>
       void onAction("note_update", { id: note.id, urgency: value })} /></td>
     <td><div className="tasks-note-date">
-      <input type="datetime-local" className="tasks-inline-input tasks-note-date-input" aria-label="Когда напомнить (Красноярск)"
+      <DateTimeField className="tasks-note-date-input" aria-label="Когда напомнить (Красноярск)"
         disabled={busy} value={localInput(note.remind_at)}
         onChange={e => void onAction("note_update", {
           id: note.id, remind_at: inputIso(e.target.value),
@@ -426,7 +427,7 @@ export default function TasksBoard() {
               </div></td>
               <td><UrgencyCell value={newNoteUrgency} editable={!busy} onChange={setNewNoteUrgency} /></td>
               <td><div className="tasks-note-date">
-                <input className="tasks-inline-input tasks-note-date-input" type="datetime-local"
+                <DateTimeField className="tasks-note-date-input"
                   aria-label="Дата и время новой заметки (Красноярск)" value={newNoteDate}
                   disabled={busy} onChange={e => setNewNoteDate(e.target.value)} />
               </div></td>

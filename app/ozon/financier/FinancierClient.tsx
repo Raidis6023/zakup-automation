@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "@/app/ui/WorkspaceDateFields";
 import {prepareFinanceSeries,clearFinanceSeries} from '../../components/finance/finance-series-cache';
 import OzonMissingRateEditor from "./OzonMissingRateEditor";
 import OrderFulfillmentPanels from "../../components/finance/OrderFulfillmentPanels";
@@ -417,8 +418,8 @@ export default function FinancierClient() {
   return (
     <section className="ozf-layout">
       <div className="ozf-panel ozf-filters">
-        <label>С даты<input type="date" value={from} onChange={e=>setFrom(e.target.value)} disabled={busy}/></label>
-        <label>По дату (включительно)<input type="date" value={to} onChange={e=>setTo(e.target.value)} disabled={busy}/></label>
+        <label>С даты<DateField  value={from} onChange={e=>setFrom(e.target.value)} disabled={busy}/></label>
+        <label>По дату (включительно)<DateField  value={to} onChange={e=>setTo(e.target.value)} disabled={busy}/></label>
         <label>КМ<select disabled={busy||loading} value={pendingManager} onChange={e=>setPendingManager(e.target.value)}>
           {managers.map(m=><option key={m} value={m}>{m}</option>)}
         </select></label>

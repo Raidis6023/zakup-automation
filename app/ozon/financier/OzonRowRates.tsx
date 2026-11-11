@@ -1,4 +1,5 @@
 'use client';
+import { DateField } from "@/app/ui/WorkspaceDateFields";
 import {useEffect,useState} from 'react';
 type Rate={master_code:string;valid_from:string;unit_cost_rub:number};
 export default function OzonRowRates({master,onSaved}:{master:string|null;onSaved:()=>void|Promise<void>}){
@@ -13,5 +14,5 @@ export default function OzonRowRates({master,onSaved}:{master:string|null;onSave
   await onSaved();setMessage('Изменения сохранены.');
  }catch(e){setMessage(e instanceof Error?e.message:'Ошибка сохранения');}finally{setBusy(false);}}
  if(!master)return <p>Для редактирования тарифов сначала привяжите ЕНОТ в списке артикулов.</p>;
- return <section className="ozf-row-rates"><h3>Цена закупа и ТК Маяк</h3><div className="ozf-edit"><label>Тарифы действуют с<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label><label>Цена закупа, руб<input inputMode="decimal" value={cost} onChange={e=>setCost(e.target.value)}/></label><label>ТК Маяк, ₽/шт<input inputMode="decimal" value={mayak} onChange={e=>setMayak(e.target.value)}/></label><label>КМ<input value={manager} maxLength={80} onChange={e=>setManager(e.target.value)}/></label><button className="ozf-btn ozf-primary" disabled={busy||!loaded} onClick={()=>void save()}>{busy?'Сохраняем…':!loaded?'Загружаем тарифы…':'Сохранить изменения'}</button></div><p role="status">{message}</p></section>;
+ return <section className="ozf-row-rates"><h3>Цена закупа и ТК Маяк</h3><div className="ozf-edit"><label>Тарифы действуют с<DateField  value={date} onChange={e=>setDate(e.target.value)}/></label><label>Цена закупа, руб<input inputMode="decimal" value={cost} onChange={e=>setCost(e.target.value)}/></label><label>ТК Маяк, ₽/шт<input inputMode="decimal" value={mayak} onChange={e=>setMayak(e.target.value)}/></label><label>КМ<input value={manager} maxLength={80} onChange={e=>setManager(e.target.value)}/></label><button className="ozf-btn ozf-primary" disabled={busy||!loaded} onClick={()=>void save()}>{busy?'Сохраняем…':!loaded?'Загружаем тарифы…':'Сохранить изменения'}</button></div><p role="status">{message}</p></section>;
 }

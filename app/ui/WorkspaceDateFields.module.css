@@ -1,0 +1,116 @@
+.trigger,
+.choiceTrigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid var(--ws-border, var(--border, #d5e2ec));
+  border-radius: 9px;
+  background: var(--ws-surface-soft, var(--surface-soft, #f3f8fc));
+  color: var(--ws-text, var(--text, #18324d));
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color .15s ease, background-color .15s ease;
+}
+.trigger:hover:not(:disabled), .choiceTrigger:hover:not(:disabled) {
+  border-color: var(--ws-blue, #11865d);
+}
+.trigger:focus-visible, .choiceTrigger:focus-visible {
+  outline: 2px solid var(--ws-blue, #11865d);
+  outline-offset: 2px;
+}
+.trigger:disabled, .choiceTrigger:disabled { opacity: .5; cursor: not-allowed; }
+.trigger > span, .choiceTrigger > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.value { color: var(--ws-text, var(--text, #18324d)); font-variant-numeric: tabular-nums; }
+.placeholder { color: var(--ws-text-muted, var(--text-muted, #8295a9)); }
+.glyph, .chevron {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.choiceTrigger { border: 0; padding: 4px; min-height: 24px; background: transparent; font-weight: 700; }
+.choiceTrigger .chevron { width: 13px; height: 13px; flex-basis: 13px; transform: rotate(90deg); }
+.popover {
+  --picker-accent: var(--ws-blue, #11865d);
+  --picker-text: var(--ws-text, var(--text, #1c344a));
+  --picker-muted: var(--ws-text-muted, var(--text-muted, #8195a7));
+  --picker-surface: var(--ws-surface, var(--surface, #fff));
+  --picker-soft: var(--ws-surface-soft, var(--surface-soft, #f1f7fb));
+  position: fixed;
+  z-index: 20000;
+  box-sizing: border-box;
+  max-height: calc(100dvh - 16px);
+  overflow: auto;
+  padding: 15px;
+  border: 1px solid var(--ws-border, var(--border, #d5e3ee));
+  border-radius: 15px;
+  background: var(--picker-surface);
+  color: var(--picker-text);
+  box-shadow: 0 14px 38px rgba(21, 49, 79, .17);
+  font-family: inherit;
+  font-size: 12px;
+}
+.monthHeader { display: grid; grid-template-columns: 34px 1fr 34px; align-items: center; gap: 5px; margin-bottom: 14px; }
+.monthHeader strong { text-align: center; font-size: 14px; font-weight: 750; text-transform: capitalize; }
+.arrow { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--picker-muted); cursor: pointer; }
+.arrow:hover { background: var(--picker-soft); color: var(--picker-accent); }
+.arrow .chevron { width: 18px; height: 18px; flex: 0 0 18px; }
+.weekdays, .days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.weekdays { margin-bottom: 5px; }
+.weekdays span { display: flex; align-items: center; justify-content: center; height: 28px; color: var(--picker-muted); font-size: 10px; font-weight: 650; }
+.day { display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; max-width: 100%; margin: 2px auto; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--picker-text); font: inherit; font-size: 12px; cursor: pointer; }
+.day:hover:not(:disabled):not(.selected) { background: var(--picker-soft); color: var(--picker-accent); }
+.day:disabled { cursor: not-allowed; opacity: .28; }
+.otherMonth { color: var(--picker-muted); opacity: .48; }
+.today { font-weight: 750; outline: 1px solid var(--picker-accent); outline-offset: -1px; }
+.selected { background: var(--picker-accent); color: #fff; font-weight: 750; box-shadow: 0 4px 12px color-mix(in srgb, var(--picker-accent) 22%, transparent); }
+.todayButton { width: 100%; margin-top: 12px; padding: 10px 12px; background: var(--picker-soft); color: var(--picker-text); border: 1px solid var(--ws-border, var(--border, #d9e2ea)); border-radius: 9px; font-size: 11px; font-weight: 600; cursor: pointer; }
+.todayButton:hover:not(:disabled) { color: var(--picker-accent); border-color: var(--picker-accent); }
+.todayButton:disabled { opacity: .5; cursor: not-allowed; }
+.timeHeader { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; font-size: 13px; font-weight: 700; }
+.timeHeader strong { color: var(--picker-accent); font-size: 16px; font-variant-numeric: tabular-nums; }
+.timeColumns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.timeColumn > span { display: block; text-align: center; margin-bottom: 5px; color: var(--picker-muted); font-size: 11px; font-weight: 700; }
+.timeChoices { display: flex; flex-direction: column; gap: 2px; max-height: 202px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.timeChoices button { display: flex; align-items: center; justify-content: center; min-height: 30px; flex: 0 0 30px; padding: 2px; border: 0; border-radius: 7px; background: transparent; color: var(--picker-text); font: inherit; cursor: pointer; }
+.timeChoices button:hover:not(.timeSelected) { background: var(--picker-soft); color: var(--picker-accent); }
+.timeChoices .timeSelected { background: var(--picker-accent); color: #fff; font-weight: 750; }
+.dateTime { display: flex; align-items: center; gap: 5px; box-sizing: border-box; width: 300px; max-width: 100%; min-width: 0; }
+.dateSegment { min-width: 0; flex: 1 1 60%; }
+.timeSegment { min-width: 0; flex: 1 1 40%; }
+.dateSegment .trigger, .timeSegment .trigger { width: 100%; font-size: 11px; padding: 7px 6px; }
+.dateSegment .glyph, .timeSegment .glyph { width: 13px; height: 13px; flex-basis: 13px; }
+.choiceList { display: flex; flex-direction: column; gap: 3px; }
+.choiceList button { display: flex; justify-content: flex-start; padding: 10px; border: 0; border-radius: 8px; background: transparent; color: var(--picker-text); font: inherit; font-size: 12px; cursor: pointer; }
+.choiceList button:hover:not(.choiceSelected) { background: var(--picker-soft); color: var(--picker-accent); }
+.choiceList .choiceSelected { background: var(--picker-accent); color: #fff; font-weight: 750; }
+@media(max-width:420px) { .popover { padding: 10px; } .day { width: 31px; height: 31px; } }
+
+.clearButton {
+  display: block;
+  width: 100%;
+  padding: 7px 10px;
+  margin-top: 5px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--picker-muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+.clearButton:hover { background: var(--picker-soft); color: var(--picker-accent); }

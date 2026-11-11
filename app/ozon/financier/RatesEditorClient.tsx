@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "@/app/ui/WorkspaceDateFields";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type Rate = {
@@ -128,7 +129,7 @@ export default function RatesEditorClient() {
       </div>
       <div className="ozf-rate-controls">
         <label>Тарифы действуют с
-          <input type="date" value={effectiveDate} onChange={e=>setEffectiveDate(e.target.value)} disabled={busy}/>
+          <DateField  value={effectiveDate} onChange={e=>setEffectiveDate(e.target.value)} disabled={busy}/>
         </label>
         <label>Импорт Excel (A:I)
           <input type="file" accept=".xlsx,.xls" disabled={busy} onChange={e=>{

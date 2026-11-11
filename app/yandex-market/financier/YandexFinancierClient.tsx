@@ -1,4 +1,5 @@
 'use client';
+import { DateField } from "@/app/ui/WorkspaceDateFields";
 import {useEffect,useRef,useState} from 'react';
 import {rules} from '../../../lib/yandex/finance';
 import type {readFinance} from '../../../lib/yandex/finance-cache';
@@ -75,7 +76,7 @@ export default function YandexFinancierClient({initial,initialError}:{initial:Da
   ]);
  }
  return <>
- <section className="ozf-panel ozf-filters"><label>С даты<input type="date" value={from} onChange={e=>setFrom(e.target.value)} disabled={busy}/></label><label>По дату (включительно)<input type="date" value={to} onChange={e=>setTo(e.target.value)} disabled={busy}/></label><button className="ozf-btn ozf-primary" onClick={load} disabled={busy}>Сформировать</button><button className="ozf-btn" onClick={sync} disabled={busy}>Загрузить / продолжить из ЯМ</button><button className="ozf-btn" disabled={adBusy} onClick={async()=>{setAdBusy(true);setAdStatus('Загружаем рекламные отчёты…');try{const r=await fetch('/api/agents/yandex-finance-campaigns-cron',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({from,to})}),j=await r.json();setAdStatus(r.ok?'Реклама ЯМ '+from+' — '+to+': '+String(j.phase??'обработка')+'; готово за запуск: '+String(j.finished??0):'Ошибка рекламы: '+String(j.error??r.status));}catch(e){setAdStatus(String(e))}finally{setAdBusy(false)}}}>{adBusy?'Выгружаем рекламу…':'Продолжить рекламу ЯМ'}</button><span role="status">{adStatus}</span><span role="status">{busy?'Загрузка… ':''}{progress}</span></section>
+ <section className="ozf-panel ozf-filters"><label>С даты<DateField  value={from} onChange={e=>setFrom(e.target.value)} disabled={busy}/></label><label>По дату (включительно)<DateField  value={to} onChange={e=>setTo(e.target.value)} disabled={busy}/></label><button className="ozf-btn ozf-primary" onClick={load} disabled={busy}>Сформировать</button><button className="ozf-btn" onClick={sync} disabled={busy}>Загрузить / продолжить из ЯМ</button><button className="ozf-btn" disabled={adBusy} onClick={async()=>{setAdBusy(true);setAdStatus('Загружаем рекламные отчёты…');try{const r=await fetch('/api/agents/yandex-finance-campaigns-cron',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({from,to})}),j=await r.json();setAdStatus(r.ok?'Реклама ЯМ '+from+' — '+to+': '+String(j.phase??'обработка')+'; готово за запуск: '+String(j.finished??0):'Ошибка рекламы: '+String(j.error??r.status));}catch(e){setAdStatus(String(e))}finally{setAdBusy(false)}}}>{adBusy?'Выгружаем рекламу…':'Продолжить рекламу ЯМ'}</button><span role="status">{adStatus}</span><span role="status">{busy?'Загрузка… ':''}{progress}</span></section>
  {error&&<p role="alert" className="ymf-warning">{error}</p>}
  {data&&<>
  {data.report.error&&<p className="ymf-warning" role="status">{data.report.error}</p>}

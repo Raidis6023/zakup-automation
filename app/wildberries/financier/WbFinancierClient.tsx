@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "@/app/ui/WorkspaceDateFields";
 import FinanceDynamics from "../../components/finance/FinanceDynamics";
 import CostPerUnitComparison from '../../components/finance/CostPerUnitComparison';
 import WbAdvertisingCharts from "../../components/finance/WbAdvertisingCharts";
@@ -173,8 +174,8 @@ function exportMissingData(){
 return <div className="ozf-layout">
 <section className="ozf-panel">
 <div className="ozf-filters">
-<label>С даты <input type="date" value={from} onChange={e=>setFrom(e.target.value)} /></label>
-<label>По дату включительно <input type="date" value={to} onChange={e=>setTo(e.target.value)} /></label>
+<label>С даты <DateField  value={from} onChange={e=>setFrom(e.target.value)} /></label>
+<label>По дату включительно <DateField  value={to} onChange={e=>setTo(e.target.value)} /></label>
 <label>КМ <select disabled><option>Все КМ · справочник ожидается</option></select></label>
 <button className="ozf-btn ozf-primary" disabled={busy||blocked} onClick={()=>void load()}>{busy?"Загружаем...":blocked?"Лимит WB · ожидание":"Сформировать"}</button>
 <button className="ozf-btn" disabled={busy||blocked} onClick={()=>void load(true)}>Обновить отчёт</button>
@@ -218,7 +219,7 @@ return <div className="ozf-layout">
 {selected===r.nm_id&&active&&<tr className="ozf-expanded-row"><td colSpan={columns.length} onClick={e=>e.stopPropagation()}><div className="ozf-expanded-content">
 <div className="ozf-pinned-article"><strong>{active.article||active.nm_id} · WB {active.nm_id}</strong><CopyArticle article={active.article||active.nm_id}/></div>
 <p>{active.name||"Товар WB"} · {active.rows} строк финансового отчёта · {data.from} — {data.to}</p><WbBreakdown row={active}/><details className="ymf-rate-edit"><summary>Изменить КМ, себестоимость и ТК «Маяк»</summary><div className="ozf-rate-editor"><h3>Тарифы и коммерческий менеджер</h3><div className="ozf-filters"><label>КМ <input value="" disabled title="Назначение КМ WB будет подключено из отдельного справочника" placeholder="Назначается отдельно для WB"/></label><button className="ozf-btn" onClick={()=>void saveManager()} disabled>{managerSaving?'Сохраняем…':'Сохранить КМ'}</button></div>{!active.master_code&&<p className="ozf-error">Для назначения КМ требуется подтверждённый ЕНОТ.</p>}<div className="ozf-filters">
-<label>Действуют с <input type="date" value={validFrom} onChange={e=>setValidFrom(e.target.value)}/></label>
+<label>Действуют с <DateField  value={validFrom} onChange={e=>setValidFrom(e.target.value)}/></label>
 <label>Себестоимость, ₽/шт <input inputMode="decimal" value={costInput} onChange={e=>setCostInput(e.target.value)} placeholder="Не задана"/></label>
 <label>ТК «Маяк», ₽/шт <input inputMode="decimal" value={mayakInput} onChange={e=>setMayakInput(e.target.value)} placeholder="Не задана"/></label>
 <button className="ozf-btn ozf-primary" disabled={savingRates||busy} onClick={()=>void saveRates()}>{savingRates?"Сохраняем…":"Сохранить и пересчитать"}</button></div>

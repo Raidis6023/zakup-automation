@@ -1,4 +1,5 @@
 'use client';
+import { DateField } from "@/app/ui/WorkspaceDateFields";
 import {useEffect,useState} from 'react';
 type Market='wb'|'ozon'|'yandex';
 type Item={query:string;values:Record<string,number|null>;raw:Record<string,unknown>};
@@ -28,8 +29,8 @@ export default function KeywordAnalyticsClient({market,article,from,to}:{market:
   <div className="ozf-filters">
    <label>Маркетплейс <select value={selectedMarket} onChange={e=>setSelectedMarket(e.target.value as Market)}><option value="wb">Wildberries</option><option value="ozon">Ozon</option><option value="yandex">Яндекс Маркет</option></select></label>
    <label>Артикул <input value={product} onChange={e=>setProduct(e.target.value)} placeholder="nmId WB или артикул Ozon"/></label>
-   <label>С даты <input type="date" value={first} onChange={e=>setFirst(e.target.value)}/></label>
-   <label>По дату <input type="date" value={last} onChange={e=>setLast(e.target.value)}/></label>
+   <label>С даты <DateField  value={first} onChange={e=>setFirst(e.target.value)}/></label>
+   <label>По дату <DateField  value={last} onChange={e=>setLast(e.target.value)}/></label>
    <button className="ozf-btn ozf-primary" disabled={busy||!product||!valid(first)||!valid(last)} onClick={()=>setCounter(x=>x+1)}>{busy?'Получаем данные…':'Сформировать'}</button>
   </div>
   {error&&<p role="alert" className="ozf-error">{error}</p>}

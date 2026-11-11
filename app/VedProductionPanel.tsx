@@ -1,5 +1,6 @@
 "use client";
 
+import { DateField } from "@/app/ui/WorkspaceDateFields";
 import Button from "./ui/Button";
 
 import {
@@ -1602,8 +1603,8 @@ export default function VedProductionPanel(
               </div>
 
 
-              <input
-                type="date"
+              <DateField
+                
 
                 value={
                   arrivalDate
@@ -1952,8 +1953,8 @@ export default function VedProductionPanel(
               </div>
 
 
-              <input
-                type="date"
+              <DateField
+                
 
                 value={
                   transitDate
@@ -2202,8 +2203,8 @@ export default function VedProductionPanel(
           </div>
 
 
-          <input
-            type="date"
+          <DateField
+            
 
             value={
               productionDate

@@ -1,5 +1,6 @@
 "use client";
 
+import { DateField } from "@/app/ui/WorkspaceDateFields";
 import {useMemo} from "react";
 import {
   calculateVed, VedInputError,
@@ -165,7 +166,7 @@ export function VedCalculatorWorkspace({
             </label>
             <label className="ved-calc-field">
               <span>Дата ставки сбора</span>
-              <input type="date" value={t.feeDate ?? "2026-10-30"}
+              <DateField  value={t.feeDate ?? "2026-10-30"}
                 onChange={event => update("customs", "feeDate", event.target.value)} />
             </label>
             {t.feeMode === "manual" && nf("expenses", "customsOperationsFeeRub", "Ручной сбор на каждый сценарий, ₽", e.customsOperationsFeeRub)}

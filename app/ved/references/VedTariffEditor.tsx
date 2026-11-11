@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "@/app/ui/WorkspaceDateFields";
 import {useCallback,useEffect,useMemo,useState} from "react";
 import {VED_TARIFFS,type VedTariffKey,type TariffRow} from "@/lib/ved-calculation/tariffs";
 import "./ved-tariffs.css";
@@ -51,7 +52,7 @@ export default function VedTariffEditor(){
   <div className="ved-tariffs-top">
    <div><h2>Единые справочники тарифов</h2><p>Каждая редакция сохраняется отдельно с датой действия. Старые расчёты не пересчитываются.</p></div>
    <label className="ved-tariffs-control"><span>Показать значения на дату</span>
-    <input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
+    <DateField  value={date} onChange={e=>setDate(e.target.value)}/></label>
   </div>
   {error&&<p role="alert" className="ved-tariffs-error">{error}</p>}
   {data?.fxError&&<p role="alert" className="ved-tariffs-error">Курсы ЦБ недоступны: {data.fxError}. Транспортные константы доступны, валютные значения не подменяются старыми.</p>}
@@ -90,7 +91,7 @@ export default function VedTariffEditor(){
     <label className="ved-tariffs-control"><span>Значение ({current.unit})</span>
      <input inputMode="decimal" type="number" min="0" step="any" value={amount} onChange={e=>setAmount(e.target.value)}/></label>
     <label className="ved-tariffs-control"><span>Действует с даты</span>
-     <input type="date" value={effectiveFrom} onChange={e=>setEffectiveFrom(e.target.value)}/></label>
+     <DateField  value={effectiveFrom} onChange={e=>setEffectiveFrom(e.target.value)}/></label>
     <label className="ved-tariffs-control"><span>Причина изменения / источник</span>
      <input type="text" maxLength={1000} value={reason} onChange={e=>setReason(e.target.value)} placeholder="Договор перевозчика, решение ВЭД…"/></label>
     <button type="button" disabled={saving||!effectiveFrom} onClick={()=>void save()}>{saving?"Сохранение…":"Сохранить новую редакцию"}</button>

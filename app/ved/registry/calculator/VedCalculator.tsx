@@ -1,5 +1,6 @@
 "use client";
 
+import { DateField } from "@/app/ui/WorkspaceDateFields";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {VedCalculatorWorkspace} from "./VedCalculatorWorkspace";
 import { applyTariffValues, VED_TARIFFS, type TariffRow, type VedTariffKey } from "@/lib/ved-calculation/tariffs";
@@ -266,7 +267,7 @@ export default function VedCalculator() {
       <div className="ved-calc-persist-bar">
         <label className="ved-calc-field">
           <span>Дата для справочников / сохранения</span>
-          <input type="date" value={tariffDate} onChange={e=>setTariffDate(e.target.value)}/>
+          <DateField  value={tariffDate} onChange={e=>setTariffDate(e.target.value)}/>
         </label>
         <button type="button" className="ved-calc-reset" onClick={applyRates}>Применить тарифы на дату</button>
         <a className="ved-calc-reset" href="/ved/references">Открыть справочники</a>

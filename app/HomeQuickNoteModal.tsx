@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { createClient } from "../lib/supabase/client";
 import styles from "./HomeHeaderActions.module.css";
+import { TimeField } from "@/app/ui/WorkspaceDateFields";
 
 type Urgency = "current" | "urgent" | "critical";
 
@@ -154,9 +155,8 @@ export default function HomeQuickNoteModal({ date, onClose }: Props) {
   
               <label className={styles.noteField}>
                 <span>Время напоминания</span>
-                <input
+                <TimeField
                   className={styles.noteControl}
-                  type="time"
                   step={60}
                   value={time}
                   required

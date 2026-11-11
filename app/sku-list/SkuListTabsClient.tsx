@@ -1,5 +1,7 @@
 "use client";
 
+import { ChoiceField } from "@/app/ui/WorkspaceDateFields";
+
 import {
   useCallback,
   useLayoutEffect,
@@ -1143,25 +1145,25 @@ export default function SkuListTabsClient({
         <div className="sku-list-period-controls">
           <label className="sku-list-period-control">
             <span>Год</span>
-            <select
-              aria-label="Год"
+            <ChoiceField
+              label="Год"
               value={selectedYear}
-              onChange={event => setSelectedYear(event.target.value)}
-            >
-              <option value="2026">2026</option>
-            </select>
+              onChange={setSelectedYear}
+              options={[{ value: "2026", label: "2026" }]}
+            />
           </label>
 
           <label className="sku-list-period-control">
             <span>Месяц</span>
-            <select
-              aria-label="Месяц"
+            <ChoiceField
+              label="Месяц"
               value={selectedMonth}
-              onChange={event => setSelectedMonth(event.target.value)}
-            >
-              <option value="09">Сентябрь</option>
-              <option value="10">Октябрь</option>
-            </select>
+              onChange={setSelectedMonth}
+              options={[
+                { value: "09", label: "Сентябрь" },
+                { value: "10", label: "Октябрь" },
+              ]}
+            />
           </label>
         </div>
       </div>

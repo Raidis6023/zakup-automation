@@ -1774,6 +1774,7 @@ export default function HomeHeaderActions() {
         if (
           target instanceof Node
           && !calendarActionRef.current?.contains(target)
+          && !(target instanceof Element && target.closest("[data-workspace-picker-popup]"))
         ) {
           if (quickNoteDate) setQuickNoteDate(null);
           if (openPanel === "calendar") setOpenPanel(null);

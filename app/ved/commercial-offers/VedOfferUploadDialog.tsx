@@ -1,5 +1,6 @@
 "use client";
 
+import { DateField } from "@/app/ui/WorkspaceDateFields";
 import {useEffect,useRef,useState} from "react";
 import {createPortal} from "react-dom";
 import {createClient} from "@/lib/supabase/client";
@@ -104,7 +105,7 @@ export default function VedOfferUploadDialog(){
       </select>
      </label>
      <label>Дата получения КП
-      <input type="date" value={quoteDate} disabled={busy} onChange={e=>setQuoteDate(e.target.value)}/>
+      <DateField  value={quoteDate} disabled={busy} onChange={e=>setQuoteDate(e.target.value)}/>
      </label>
     </div>
     <input ref={fileRef} type="file" className="ved-upload-file-input"
