@@ -1,0 +1,244 @@
+/*
+ * PANDA dashboard: anthracite ↔ champagne.
+ *
+ * Route-scoped to "/": WorkspaceShell sets home-shell--dashboard only there.
+ * Do not change the global theme tokens or marketplace module palettes.
+ * Both themes share the same #101820 anthracite and champagne family.
+ */
+
+/* Light mode: champagne page, the same dark anthracite as the accent. */
+.home-shell.home-shell--dashboard[data-accent-area="general"] {
+  --panda-home-anthracite: #101820;
+  --panda-home-champagne: #c5a168;
+  --panda-home-cream: #f1e7d6;
+
+  color-scheme: light;
+  --ws-page: var(--panda-home-cream);
+  --ws-sidebar: #f4eadb;
+  --ws-topbar: rgba(244, 234, 219, 0.97);
+  --ws-surface: #fff9ef;
+  --ws-surface-soft: #eee1ce;
+  --ws-surface-hover: #e5d7c2;
+  --ws-border: #c9b9a1;
+  --ws-border-soft: #ddccb4;
+  --ws-text: var(--panda-home-anthracite);
+  --ws-text-secondary: #354758;
+  --ws-text-muted: #687482;
+  --ws-nav-text: var(--panda-home-anthracite);
+  --ws-nav-hover-text: var(--panda-home-anthracite);
+  --ws-blue: var(--panda-home-anthracite);
+  --ws-blue-hover: #263b50;
+  --ws-blue-soft: #ded3c3;
+  --ws-icon: var(--panda-home-anthracite);
+  --ws-active: var(--panda-home-anthracite);
+  --ws-active-text: #fff8ec;
+  --ws-utility-icon: var(--panda-home-anthracite);
+  --ws-utility-soft: #e8dac5;
+  --ws-utility-border: #b7a48c;
+
+  --ws-shadow-soft: 0 4px 14px rgba(16, 24, 32, 0.07);
+  --ws-shadow-popup: 0 18px 45px rgba(16, 24, 32, 0.17);
+
+  --background: var(--ws-page);
+  --surface: var(--ws-surface);
+  --surface-soft: var(--ws-surface-soft);
+  --surface-strong: #e7dac6;
+  --input: #fff9ef;
+  --secondary-button: #eee1ce;
+  --secondary-button-hover: #e1d1bb;
+  --border: var(--ws-border);
+  --border-soft: var(--ws-border-soft);
+  --border-strong: #bca991;
+  --text: var(--ws-text);
+  --text-secondary: var(--ws-text-secondary);
+  --text-muted: var(--ws-text-muted);
+  --button: var(--panda-home-anthracite);
+  --button-hover: #263b50;
+  --button-text: #fff8ec;
+  --accent: var(--panda-home-anthracite);
+
+  --sidebar-active-background: linear-gradient(115deg, #101820, #253a4a);
+  --sidebar-active-border-color: #30495c;
+  --sidebar-active-shadow: inset 0 0 9px rgba(16, 24, 32, .18);
+  --sidebar-icon-ring-color: #253b4c;
+  --sidebar-icon-ring-shadow: 0 0 9px rgba(16, 24, 32, .24);
+  --sidebar-icon-glow: radial-gradient(ellipse at 35% 80%, rgba(16, 24, 32, .22), transparent 68%);
+  --emerald-nav: var(--panda-home-anthracite);
+
+  --ws-decor-1-from: #101820;
+  --ws-decor-1-to: #1b2a37;
+  --ws-decor-2-from: #1f303f;
+  --ws-decor-2-to: #31475b;
+  --ws-decor-3-from: #395266;
+  --ws-decor-3-to: #50697b;
+  --ws-decor-4-from: #566e7c;
+  --ws-decor-4-mid: #405766;
+  --ws-decor-4-to: #263c4c;
+}
+
+/* Dark mode: the exact same anthracite becomes the page,
+ * while muted champagne and warm gold become the accents. */
+html[data-theme="dark"] .home-shell.home-shell--dashboard[data-accent-area="general"] {
+  color-scheme: dark;
+  --ws-page: var(--panda-home-anthracite);
+  --ws-sidebar: #0d141b;
+  --ws-topbar: rgba(11, 17, 23, 0.98);
+  --ws-surface: #1a222b;
+  --ws-surface-soft: #212b35;
+  --ws-surface-hover: #2e3540;
+  --ws-border: #39424c;
+  --ws-border-soft: #2d3640;
+  --ws-text: #f5f0e9;
+  --ws-text-secondary: #d1c8bc;
+  --ws-text-muted: #a9adb2;
+  --ws-nav-text: #eeeae4;
+  --ws-nav-hover-text: #e0b981;
+  --ws-blue: var(--panda-home-champagne);
+  --ws-blue-hover: #e0bb84;
+  --ws-blue-soft: #302e2c;
+  --ws-icon: #d9b27c;
+  --ws-active: #ae8758;
+  --ws-active-text: #101820;
+  --ws-utility-icon: #d9b27c;
+  --ws-utility-soft: #2e2d2b;
+  --ws-utility-border: #746044;
+
+  --ws-shadow-soft: 0 4px 14px rgba(0, 0, 0, .15);
+  --ws-shadow-popup: 0 18px 45px rgba(0, 0, 0, .45);
+
+  --background: var(--ws-page);
+  --surface: var(--ws-surface);
+  --surface-soft: var(--ws-surface-soft);
+  --surface-strong: #28323d;
+  --input: #171f28;
+  --secondary-button: #283039;
+  --secondary-button-hover: #353d45;
+  --border: var(--ws-border);
+  --border-soft: var(--ws-border-soft);
+  --border-strong: #5c5a55;
+  --text: var(--ws-text);
+  --text-secondary: var(--ws-text-secondary);
+  --text-muted: var(--ws-text-muted);
+  --button: var(--panda-home-champagne);
+  --button-hover: #e0bb84;
+  --button-text: var(--panda-home-anthracite);
+  --accent: #d9b27c;
+
+  --sidebar-active-background: linear-gradient(115deg, #a17c4e, #655038);
+  --sidebar-active-border-color: #d1a86e;
+  --sidebar-active-shadow: inset 0 0 10px rgba(224, 187, 132, .17);
+  --sidebar-icon-ring-color: #d9b27c;
+  --sidebar-icon-ring-shadow: 0 0 10px rgba(217, 178, 124, .36);
+  --sidebar-icon-glow: radial-gradient(ellipse at 35% 80%, rgba(217, 178, 124, .4), transparent 68%);
+  --emerald-nav: #d9b27c;
+
+  --ws-decor-1-from: #dec18f;
+  --ws-decor-1-to: #e7c693;
+  --ws-decor-2-from: #d8b47e;
+  --ws-decor-2-to: #c6a071;
+  --ws-decor-3-from: #c4a078;
+  --ws-decor-3-to: #a78260;
+  --ws-decor-4-from: #a68465;
+  --ws-decor-4-mid: #937051;
+  --ws-decor-4-to: #6d513d;
+}
+
+/* Background treatment: no DOM nodes or layout changes. */
+.home-shell--dashboard > .home-main > .home-content {
+  background:
+    radial-gradient(ellipse 42% 29% at 15% 100%, rgba(16, 24, 32, .07), transparent 78%),
+    radial-gradient(ellipse 33% 28% at 92% 98%, rgba(16, 24, 32, .06), transparent 78%),
+    var(--ws-page);
+}
+html[data-theme="dark"] .home-shell--dashboard > .home-main > .home-content {
+  background:
+    radial-gradient(ellipse 42% 35% at 13% 100%, rgba(197, 161, 104, .16), transparent 78%),
+    radial-gradient(ellipse 33% 30% at 94% 98%, rgba(197, 161, 104, .13), transparent 78%),
+    var(--ws-page);
+}
+
+/* Original sidebar and topbar components, recolored only on the dashboard. */
+.home-shell.home-shell--dashboard .home-sidebar,
+.home-shell.home-shell--dashboard .home-company-logo {
+  background: var(--ws-sidebar);
+  border-color: var(--ws-border);
+}
+.home-shell.home-shell--dashboard .home-topbar {
+  background: var(--ws-topbar);
+  border-bottom-color: var(--ws-border);
+}
+.home-shell.home-shell--dashboard .home-search {
+  background: var(--ws-surface);
+  border-color: var(--ws-border);
+}
+.home-shell.home-shell--dashboard .home-search:focus-within {
+  border-color: var(--ws-blue);
+}
+.home-shell.home-shell--dashboard .home-sidebar .home-brand-icon,
+.home-shell.home-shell--dashboard .home-sidebar .home-workspace-icon,
+.home-shell.home-shell--dashboard .home-topbar-right .home-utility-icon-visual,
+.home-shell.home-shell--dashboard .home-topbar-right .home-icon-button:is(.active, :focus-visible) .home-utility-icon-visual {
+  color: var(--ws-utility-icon);
+}
+.home-shell.home-shell--dashboard .home-sidebar .home-workspace-link:not([data-marketplace]):is(:hover, :focus-visible),
+.home-shell.home-shell--dashboard .home-sidebar .home-ved-subnav-link:is(:hover, :focus-visible),
+.home-shell.home-shell--dashboard .home-sidebar .home-ved-nav-toggle:is(:hover, :focus-visible) {
+  color: var(--ws-nav-hover-text);
+  background: color-mix(in srgb, var(--ws-utility-icon) 12%, var(--ws-sidebar));
+  border-color: color-mix(in srgb, var(--ws-utility-icon) 28%, var(--ws-border));
+}
+.home-shell.home-shell--dashboard .home-topbar-right .home-theme-toggle {
+  border-color: color-mix(in srgb, var(--ws-icon) 35%, var(--ws-border));
+}
+.home-shell.home-shell--dashboard .home-topbar-right .home-theme-toggle button.active {
+  color: var(--ws-icon);
+}
+.home-shell.home-shell--dashboard .home-topbar-right .home-icon-button:is(.active, :focus-visible) {
+  outline-color: var(--ws-utility-icon);
+}
+.home-shell.home-shell--dashboard .home-topbar-right .home-icon-button:is(.active, :focus-visible) .home-utility-icon-visual::before {
+  border-color: var(--sidebar-icon-ring-color);
+}
+
+/* Preserve the marketplace logos and marketplace-colored financial numbers.
+ * The "All" aggregate is the only KPI card using the PANDA brand palette. */
+.home-shell.home-shell--dashboard .home-marketplace-metric-card--all {
+  --home-metric-accent: #101820;
+  --home-metric-soft: rgba(16, 24, 32, .08);
+  --home-metric-border: rgba(16, 24, 32, .30);
+}
+html[data-theme="dark"] .home-shell.home-shell--dashboard .home-marketplace-metric-card--all {
+  --home-metric-accent: #e1b97e;
+  --home-metric-soft: rgba(225, 185, 126, .10);
+  --home-metric-border: rgba(225, 185, 126, .38);
+}
+.home-shell.home-shell--dashboard .home-marketplace-metric-card {
+  color: var(--ws-text);
+  background: linear-gradient(
+    180deg,
+    var(--ws-surface) 0%,
+    color-mix(in srgb, var(--home-metric-accent) 9%, var(--ws-surface)) 100%
+  );
+  box-shadow: 0 6px 22px rgba(16, 24, 32, .10);
+}
+html[data-theme="dark"] .home-shell.home-shell--dashboard .home-marketplace-metric-card {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .25);
+}
+.home-shell.home-shell--dashboard .home-marketplace-card-brand strong,
+.home-shell.home-shell--dashboard .home-marketplace-card-metric span {
+  color: var(--ws-text);
+}
+.home-shell.home-shell--dashboard .home-marketplace-ip-badge {
+  color: var(--ws-page);
+}
+
+/* Panda stays the same size and place; only the message box changes color. */
+.home-shell.home-shell--dashboard aside[aria-label="Панда-помощник WorkSpace"] > div:first-child,
+.home-shell.home-shell--dashboard aside[aria-label="Панда-помощник WorkSpace"] > div:first-child::after {
+  background: var(--ws-surface);
+  border-color: var(--ws-blue);
+  color: var(--ws-text);
+}
+.home-shell.home-shell--dashboard aside[aria-label="Панда-помощник WorkSpace"] > div:first-child strong {
+  color: var(--ws-blue);
+}
