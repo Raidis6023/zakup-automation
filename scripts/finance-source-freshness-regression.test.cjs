@@ -15,4 +15,16 @@ const cache=fs.readFileSync('lib/yandex/finance-cache.ts','utf8');
 assert(cache.includes("...rules.map(([name])=>name),'Реклама на Маркете'"),
  'YM audit must include separately billed marketplace advertising');
 assert(cache.includes("status:audit.has(name)?'present':'not_provided'"));
+const parser=fs.readFileSync('lib/yandex/finance-parser.ts','utf8');
+assert(parser.includes('missing.push(marketingSheet)'),
+ 'Missing advertising worksheet must remain an unconfirmed expense source');
+assert(cache.includes("warningFromReady?.includes('ЯМ не включил листы услуг')"),
+ 'Prefer preserved day snapshots for source-omitting report');
+assert(cache.includes('source_report_id!==snapshot.source_report_id'),
+ 'Daily report must preserve source lineage across replacements');
+assert(cache.includes("status:!audit.has(name)?'not_provided':audit.get(name)?.preserved?'preserved':'present'"),
+ 'Historical carried expenses are marked as provisional provenance');
+const sql=fs.readFileSync('supabase/migrations/20261111_yandex_preserve_omitted_expense_sheets.sql','utf8');
+assert(sql.includes("d.payload->>'sheet'") && sql.includes('any(missing_sources)'));
+assert(sql.includes('max(kept.line_index)+1'), 'Preserved line positions must not collide');
 console.log('PASS finance source freshness: Ozon Performance independent of Seller clock; YM fallback and all-category audit');
