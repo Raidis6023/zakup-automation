@@ -2036,3 +2036,35 @@ button.active {
   outline: var(--ui-focus-width, 2px) solid var(--ws-utility-icon);
   outline-offset: var(--ui-focus-offset, 3px);
 }
+
+/* ============================================================
+   ЕДИНЫЕ БОКОВЫЕ ПОЛЯ ВСЕХ СТРАНИЦ WORKSPACE
+
+   Полосы вне карточек и таблиц остаются свободными, чтобы
+   прокрутка колесом над ними перемещала страницу, а не
+   собственную прокручиваемую область таблицы.
+
+   56 CSS px ≈ 1.5 см при условных 96 CSS px на дюйм.
+   Физическая длина зависит от масштабирования и монитора.
+   ============================================================ */
+
+.home-shell {
+  --workspace-page-gutter: 56px;
+}
+
+.home-shell > .home-main > .home-content {
+  padding-left: var(--workspace-page-gutter);
+  padding-right: var(--workspace-page-gutter);
+}
+
+@media (max-width: 800px) {
+  .home-shell {
+    --workspace-page-gutter: 20px;
+  }
+}
+
+@media (max-width: 520px) {
+  .home-shell {
+    --workspace-page-gutter: 16px;
+  }
+}
