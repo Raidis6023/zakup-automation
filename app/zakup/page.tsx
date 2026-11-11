@@ -38,6 +38,7 @@ type ChinaDashboard = {
     container_lead_days: number;
     truck_lead_days: number;
     safety_buffer_days: number;
+    order_batch_days?: number;
     container_order_point_days: number;
     truck_order_point_days: number;
     container_capacity_m3: number;
@@ -670,17 +671,24 @@ export default async function Home() {
           : null;
 
 
-  const demandItems = dashboard.items.filter(item => item.needs_china_order === true);
   const reviewScenario: "container" | "truck" =
     simulation?.transport_scenario === "truck_90" ||
     simulation?.transport_scenario === "truck_100" ||
     simulation?.transport_scenario === "manual_review_over_100"
       ? "truck" : "container";
 
-  // An item with positive calculated demand is NEVER implicitly approved.
-  // A manual quantity of 0 means explicitly excluded from the new VED draft.
+  // Show demand only for the currently selected transport horizon:
+  // 194 days for container, 164 days for truck.
+  const demandItems = dashboard.items.filter(item =>
+    reviewScenario === "container"
+      ? item.container_order_units > 0
+      : item.truck_order_units > 0
+  );
+
+  // Pending SKU decisions never prevent draft creation, but keep the
+  // displayed volume flagged as preliminary until each item is reviewed.
   const pendingDecisions = demandItems.filter(item =>
-    (orderScenario ?? reviewScenario) === "container"
+    reviewScenario === "container"
       ? item.container_manual_quantity == null
       : item.truck_manual_quantity == null
   ).length;
