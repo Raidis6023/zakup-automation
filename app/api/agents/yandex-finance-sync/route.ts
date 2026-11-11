@@ -72,7 +72,7 @@ export async function POST(req:NextRequest){
       XLSX.read(binary,{type:'buffer'}),
       missing=>{missingSheets=missing;}
      );
-     const warning=missingSheets.length?'Предупреждение: ЯМ не включил листы услуг: '+missingSheets.join('; ')+'. Их суммы не подтверждены; проверьте источник.':null;
+     const warning=missingSheets.length?'Предупреждение: ЯМ не включил листы услуг: '+missingSheets.map(name=>name.startsWith('Платное хранение')?'Платное хранение':name).join('; ')+'. Их суммы не подтверждены; проверьте источник.':null;
      if(warning)console.warn('[yandex-finance] '+warning);
      const removed=await db.from('yandex_finance_lines').delete().eq('report_id',id);if(removed.error)throw removed.error;
      for(let i=0;i<lines.length;i+=500){const {error}=await db.from('yandex_finance_lines').insert(lines.slice(i,i+500).map((payload,j)=>({report_id:id,line_index:i+j,payload})));if(error)throw error;}
