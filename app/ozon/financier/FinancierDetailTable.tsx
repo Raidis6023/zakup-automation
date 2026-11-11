@@ -286,7 +286,7 @@ export default function FinancierDetailTable({
       Финансовые начисления Seller за тот же период: {sellerAdGlobal===null?'нет данных':money(sellerAdGlobal)}.
       Даты начисления и даты рекламных показов могут отличаться. В операционной прибыли расход Seller остаётся учтён только один раз.
       {Number(data?.ads_unmapped_spend??0)>0&&<> Из расходов Performance {money(-Math.abs(Number(data?.ads_unmapped_spend)))} пока не сопоставлены с артикулами ({data?.ads_unmapped_skus} SKU); эта сумма включена в общий показатель, но не распределена по товарам.</>}
-    </p>
+    </p>}
     {profitIsPartial&&<p className="ozf-notice" role="status" style={{marginTop:8}}>
       Общий финансовый результат предварительный: прибыль не рассчитана для {missingProfitCount} из {rows.length} артикулов.
       Показана только известная часть с нераспределёнными начислениями.
