@@ -22,7 +22,10 @@ export async function POST(req:NextRequest){
  try{
   db=await financeAccess(req);const input=await req.json();
   if(input.action==='start'){
-   const {from,to}=input;if(!validDate(from)||!validDate(to)||from>to||Date.parse(to)-Date.parse(from)>90*86400000)return NextResponse.json({error:'Выберите период не более 91 дня'},{status:400});
+   const {from,to}=input;
+   const lastFullDay=new Date(Date.now()+7*3600000-86400000).toISOString().slice(0,10);
+   if(!validDate(from)||!validDate(to)||from>to||Date.parse(to)-Date.parse(from)>90*86400000||to>lastFullDay)
+    return NextResponse.json({error:'Выберите период не более 91 дня, без будущих дат. Последний полный день: '+lastFullDay},{status:400});
    const {data:active,error:findError}=await db.from('yandex_finance_reports').select('id,date_from,date_to,status,phase').eq('status','loading').order('created_at',{ascending:false}).limit(1).maybeSingle();if(findError)throw findError;if(active)return NextResponse.json(active);
    // Retry a failed XLSX parse from the saved provider reports instead of
    // consuming the shared report-generation quota all over again.
