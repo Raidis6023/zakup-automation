@@ -16,6 +16,21 @@
   min-height: 42px;
   margin-bottom: 8px;
 }
+/* Recipient selector sits immediately after the tabs and a breadcrumb-style accent. */
+.tasks-toolbar-other { justify-content: flex-start; gap: 16px; }
+.tasks-toolbar-other .tasks-department-picker { margin-left: 2px; }
+.tasks-toolbar-other .tasks-department-picker::before {
+  content: "";
+  display: block;
+  flex: 0 0 4px;
+  width: 4px;
+  height: 26px;
+  margin-right: 9px;
+  border-radius: 999px;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--ws-icon, #11865d) 70%, #e8b5ff),
+    var(--ws-icon, #11865d));
+}
 .tasks-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -258,19 +273,14 @@ select.tasks-pill { cursor: pointer; padding-right: 18px; }
 }
 .tasks-note-title { display: flex; align-items: center; gap: 8px; }
 .tasks-note-title > .tasks-inline-input { flex: 1; }
-.tasks-note-date { display: flex; align-items: center; gap: 12px; }
-.tasks-note-date input { max-width: 300px; }
-.tasks-overdue { color: #b87912; font-size: 11px; font-weight: 700; }
-.tasks-delete {
-  width: 28px; height: 28px;
-  flex: none;
-  border: 1px solid var(--ws-border);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--ws-text-muted);
-  cursor: pointer;
-  font-size: 18px;
+.tasks-note-date { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.tasks-note-date > .tasks-note-date-input {
+  flex: 0 0 300px;
+  width: 300px;
+  max-width: 100%;
 }
+.tasks-notes-table thead th:last-child { text-align: center; }
+.tasks-overdue { color: #b87912; font-size: 11px; font-weight: 700; }
 .tasks-empty {
   padding: 30px 16px !important;
   text-align: center;
@@ -287,7 +297,7 @@ select.tasks-pill { cursor: pointer; padding-right: 18px; }
 @media (max-width: 800px) {
   .tasks-board { padding: 0 10px 32px; }
   .tasks-toolbar { align-items: start; }
-  .tasks-department-picker { width: 100%; justify-content: space-between; }
+  .tasks-department-picker { width: auto; justify-content: flex-start; }
   .tasks-tab { padding: 7px 11px; min-height: 34px; }
 }
 

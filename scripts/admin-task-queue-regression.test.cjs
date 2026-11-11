@@ -93,4 +93,22 @@ assert.ok(!rolesSource.includes('commercial_director'), "obsolete commercial dir
 assert.ok(!rolesSource.includes('Категорийные менеджеры (общий)'), "obsolete title must not show in the UI");
 console.log("PASS Task departments: removed commercial director and renamed common category managers");
 console.log("PASS Admin task refinements: centered action/header, compact single-row tabs, badge alignment and selected state");
+// Layout and privacy regression checks for the personal notes task table.
+const notesStart = board.indexOf('function NotesRow');
+const notesEnd = board.indexOf('export default function TasksBoard');
+const noteRow = board.slice(notesStart, notesEnd);
+assert.ok(noteRow.includes('<TaskTrashIcon />'), "notes must reuse the existing task trash icon");
+assert.ok(noteRow.includes('className="tasks-delete-task"'), "notes must reuse the task delete style");
+assert.ok(!noteRow.includes('window.confirm'), "delete personal notes immediately without browser confirmation");
+assert.ok(!noteRow.includes('className="tasks-delete"'), "remove the inline × next to note text");
+assert.ok(board.includes('<th>Статус</th><th>Действие</th>'), "notes need a final action column");
+assert.ok(board.includes('colSpan={5}'), "notes empty state must span five columns");
+assert.equal((board.match(/tasks-note-date-input/g) || []).length, 2, "both reminder inputs must use identical size styles");
+assert.ok(board.includes('className={"tasks-toolbar" + (tab === "other" ?'), "recipient toolbar should be mode-specific");
+assert.match(css, /\.tasks-toolbar-other \.tasks-department-picker::before\s*\{[^}]*height: 26px/s);
+assert.match(css, /\.tasks-note-date > \.tasks-note-date-input\s*\{[^}]*width: 300px/s);
+const commonKmMigration = fs.readFileSync(path.join(root, "supabase/migrations/20261111_shared_category_manager_task_access.sql"), "utf8");
+assert.ok(commonKmMigration.includes("v_role='category_manager' and v_task.target_department='category_manager'"), "shared KM queue must be operable by category managers");
+assert.ok(!commonKmMigration.includes("or v_role='manager'"), "unrelated departments cannot take shared KM jobs");
+console.log("PASS Notes: reordered action column, consistent reminders and author-only trash");
 console.log("PASS Admin queue: mixed statuses, badge, anonymous department assignment, work separation and styles");

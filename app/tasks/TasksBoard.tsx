@@ -187,13 +187,12 @@ function NotesRow({ note, busy, onAction }: {
         onBlur={() => { if (title.trim() && title.trim() !== note.title) {
           void onAction("note_update", { id: note.id, title: title.trim() });
         } }} />
-      <button className="tasks-delete" type="button" title="Удалить заметку" aria-label="Удалить заметку"
-        disabled={busy} onClick={() => { if (window.confirm("Удалить заметку?")) void onAction("note_delete", { id: note.id }); }}>×</button>
+
     </div></td>
     <td><UrgencyCell value={note.urgency} editable={!busy} onChange={value =>
       void onAction("note_update", { id: note.id, urgency: value })} /></td>
     <td><div className="tasks-note-date">
-      <input type="datetime-local" className="tasks-inline-input" aria-label="Когда напомнить (Красноярск)"
+      <input type="datetime-local" className="tasks-inline-input tasks-note-date-input" aria-label="Когда напомнить (Красноярск)"
         disabled={busy} value={localInput(note.remind_at)}
         onChange={e => void onAction("note_update", {
           id: note.id, remind_at: inputIso(e.target.value),
@@ -202,6 +201,13 @@ function NotesRow({ note, busy, onAction }: {
     </div></td>
     <td><StatusCell value={note.status} editable={!busy}
       onChange={value => void onAction("note_update", { id: note.id, status: value })} /></td>
+    <td className="tasks-actions-cell">
+      <button className="tasks-delete-task" type="button"
+        title="Удалить заметку" aria-label="Удалить заметку" disabled={busy}
+        onClick={() => void onAction("note_delete", { id: note.id })}>
+        <TaskTrashIcon />
+      </button>
+    </td>
   </tr>;
 }
 
@@ -328,7 +334,7 @@ export default function TasksBoard() {
   }
 
   return <div className="tasks-board">
-    <div className="tasks-toolbar">
+    <div className={"tasks-toolbar" + (tab === "other" ? " tasks-toolbar-other" : "")}>
       <div className="tasks-tabs" role="tablist" aria-label="Разделы задач">
         {([
           ["my", "Мой отдел", myTasks.length],
@@ -402,9 +408,14 @@ export default function TasksBoard() {
             </td></tr>}
           </tbody>
         </table> : <table className="tasks-table tasks-notes-table">
-          <colgroup><col style={{ width: "46%" }} /><col style={{ width: "16%" }} />
-            <col style={{ width: "22%" }} /><col style={{ width: "16%" }} /></colgroup>
-          <thead><tr><th>Заметка</th><th>Срочность</th><th>Когда напомнить</th><th>Статус</th></tr></thead>
+          <colgroup>
+            <col style={{ width: "40%" }} />
+            <col style={{ width: "16%" }} />
+            <col style={{ width: "24%" }} />
+            <col style={{ width: "10%" }} />
+            <col style={{ width: "10%" }} />
+          </colgroup>
+          <thead><tr><th>Заметка</th><th>Срочность</th><th>Когда напомнить</th><th>Статус</th><th>Действие</th></tr></thead>
           <tbody>
             <tr className="tasks-draft-row">
               <td><div className="tasks-note-title">
@@ -412,17 +423,21 @@ export default function TasksBoard() {
                   placeholder="Новая заметка" aria-label="Новая заметка"
                   onChange={e => setNewNote(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter") void submitNote(); }} />
-                <button type="button" className="tasks-action-button" disabled={busy || !newNote.trim()}
-                  onClick={() => void submitNote()}>Добавить</button>
               </div></td>
               <td><UrgencyCell value={newNoteUrgency} editable={!busy} onChange={setNewNoteUrgency} /></td>
-              <td><input className="tasks-inline-input" type="datetime-local"
-                aria-label="Дата и время новой заметки (Красноярск)" value={newNoteDate}
-                disabled={busy} onChange={e => setNewNoteDate(e.target.value)} /></td>
+              <td><div className="tasks-note-date">
+                <input className="tasks-inline-input tasks-note-date-input" type="datetime-local"
+                  aria-label="Дата и время новой заметки (Красноярск)" value={newNoteDate}
+                  disabled={busy} onChange={e => setNewNoteDate(e.target.value)} />
+              </div></td>
               <td><StatusCell value="not_started" /></td>
+              <td className="tasks-actions-cell">
+                <button type="button" className="tasks-action-button" disabled={busy || !newNote.trim()}
+                  onClick={() => void submitNote()}>Добавить</button>
+              </td>
             </tr>
             {data.notes.map(note => <NotesRow key={note.id} note={note} busy={busy} onAction={onAction} />)}
-            {data.notes.length === 0 && <tr><td colSpan={4} className="tasks-empty">
+            {data.notes.length === 0 && <tr><td colSpan={5} className="tasks-empty">
               Здесь будут ваши личные заметки. Их не видят другие сотрудники.
             </td></tr>}
           </tbody>
