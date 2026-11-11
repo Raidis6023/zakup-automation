@@ -32,6 +32,8 @@ type ChinaDashboard = {
     calculated_at: string;
     calculation_version: string;
     sales_window_days: number;
+    sales_date_from?: string | null;
+    sales_date_to?: string | null;
     container_lead_days: number;
     truck_lead_days: number;
     safety_buffer_days: number;
@@ -849,12 +851,18 @@ export default async function Home() {
                 <div className="muted">
                   Потребность по товарам и кубатура транспорта рассчитываются вместе
                 </div>
+                {run?.sales_date_from && run?.sales_date_to ? (
+                  <div className="muted zakup-confirmed-period">
+                    Подтверждённые продажи:{" "}
+                    {new Date(run.sales_date_from + "T12:00:00Z").toLocaleDateString("ru-RU", { timeZone: "UTC" })}
+                    {" – "}
+                    {new Date(run.sales_date_to + "T12:00:00Z").toLocaleDateString("ru-RU", { timeZone: "UTC" })}
+                  </div>
+                ) : null}
               </div>
             </div>
             <div className="zakup-v2-action-controls">
-              <form action={runChinaCalculation}>
-                <ZakupCalculateButton />
-              </form>
+              <ZakupCalculateButton />
               <ZakupCalculationInfo rules={run} />
             </div>
           </section>
