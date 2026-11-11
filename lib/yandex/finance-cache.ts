@@ -142,18 +142,27 @@ export async function readFinance(from:string,to:string,scheme?:'fbo'|'fbs'){
  const rows=result.rows.map(p=>{const own=p.master_code?ownByMaster.get(p.master_code):null;const manager=managerByKey.get(p.master_code??'article:'+p.article);return {...p,manager:manager??'Не назначен',dataGaps:manager?p.dataGaps:[...p.dataGaps,'Нет КМ'],marketplaceStock:stockAvailable?marketplaceStock.get(p.article)??0:null,mainStock:own?.main??null,oxStock:own?.ox??null,inChina:chinaReady&&p.master_code?chinaByMaster.get(p.master_code)??0:null,inCrossdock:null as number|null,discontinued:!!(p.master_code&&/выведен|выводится/i.test(statusByMaster.get(p.master_code)??''))};});
  // Per-source coverage audit. A sheet omitted by Yandex is UNKNOWN,
  // not an implicit zero-cost service; every source and income is visible.
- const audit=new Map<string,{rows:number;amount:number}>();
+ const audit=new Map<string,{rows:number;amount:number;excludedRows:number;excludedAmount:number}>();
  for(const line of lines){
   const day=line.source==='income'?line.orderDate:line.serviceDate;
-  if(day<from||day>to)continue;
   const source=line.source==='income'?'Транзакции по заказам и товарам':line.sheet;
-  const old=audit.get(source)??{rows:0,amount:0};
-  audit.set(source,{rows:old.rows+1,amount:old.amount+line.amount});
+  const old=audit.get(source)??{rows:0,amount:0,excludedRows:0,excludedAmount:0};
+  if(day>=from&&day<=to){
+   old.rows+=1;old.amount+=line.amount;
+  }else{
+   // Provider order sheets also include transactions for orders created
+   // before the selected window. Keep their values visible for audit but
+   // never relabel historical orders as current-period income.
+   old.excludedRows+=1;old.excludedAmount+=line.amount;
+  }
+  audit.set(source,old);
  }
- const expectedSources=['Транзакции по заказам и товарам',...rules.map(([name])=>name)];
+ const expectedSources=['Транзакции по заказам и товарам',...rules.map(([name])=>name),'Реклама на Маркете'];
  const sourceAudit=expectedSources.map(name=>({
   name,kind:name==='Транзакции по заказам и товарам'?'income':'expense',
-  rows:audit.get(name)?.rows??0,amount:audit.get(name)?.amount??null,
+  rows:audit.get(name)?.rows??0,amount:audit.get(name)?.rows?audit.get(name)!.amount:null,
+  excludedRows:audit.get(name)?.excludedRows??0,
+  excludedAmount:audit.get(name)?.excludedRows?audit.get(name)!.excludedAmount:null,
   status:audit.has(name)?'present':'not_provided'
  }));
  return {...result,rows,report,daily,dailyReconciled,sourceAudit,

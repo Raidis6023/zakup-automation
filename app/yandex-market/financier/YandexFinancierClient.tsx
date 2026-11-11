@@ -87,10 +87,11 @@ export default function YandexFinancierClient({initial,initialError}:{initial:Da
  <div className="ozf-toolbar"><button className="ozf-btn" onClick={()=>void exportFinancialResult()}>Скачать финрез XLSX</button><button className="ozf-btn" onClick={()=>void exportMissingData()}>Недостающие данные XLSX · {data.rows.filter(r=>r.dataGaps.length>0||!r.master_code||r.manager==="Не назначен").length}</button></div>
  <details className="ozf-panel" style={{marginTop:10,marginBottom:10}}>
   <summary style={{cursor:'pointer',fontWeight:600}}>Проверка всех источников доходов и расходов ЯМ · {data.sourceAudit.filter(x=>x.status==='present').length}/{data.sourceAudit.length} с операциями</summary>
-  <p className="ymf-warning">Отсутствующий лист или статья не считаются подтверждённым нулём. ЯМ может не формировать пустые листы; для недостающих сумм нужна сверка с кабинетом.</p>
-  <div className="ozf-scroll"><table className="ozf-table"><thead><tr><th>Статья</th><th>Источник</th><th>Строк</th><th>Сумма</th><th>Статус</th></tr></thead><tbody>
+  <p className="ymf-warning">Отсутствующий лист или статья не считаются подтверждённым нулём. Из исходных отчётов выделены операции с датами за пределами выбранного периода. Они не включены в итог повторно и не исчезли из сохранённого источника.</p>
+  <div className="ozf-scroll"><table className="ozf-table"><thead><tr><th>Статья</th><th>Источник</th><th>Строк в периоде</th><th>Сумма в периоде</th><th>Строк вне периода</th><th>Сумма вне периода</th><th>Статус</th></tr></thead><tbody>
    {data.sourceAudit.map(x=><tr key={x.name}><td>{x.name}</td><td>{x.kind==='income'?'Доход':'Расход'}</td><td>{x.rows||'—'}</td>
     <td>{x.amount===null?'Не подтверждено':money(x.amount)}</td>
+    <td>{x.excludedRows||'—'}</td><td>{x.excludedAmount===null?'—':money(x.excludedAmount)}</td>
     <td>{x.status==='present'?'Есть операции':'Нет листа/операций в отчёте'}</td></tr>)}
   </tbody></table></div>
  </details>
