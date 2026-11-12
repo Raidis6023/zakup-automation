@@ -4,10 +4,10 @@ import {createAdminClient} from '../supabase/admin';
 /** Sanitized shipment snapshots only. Buyer addresses and phone numbers are
  * never persisted. This is the provider's order-date ledger, not Seller P&L. */
 export type FbsOrderUnit={
- posting_number:string;order_day:string;sku:string;article:string;
+ posting_number:string;order_day:string;sku:string;article:string;name:string;
  quantity:number;status:string;cancelled:boolean;shipped:boolean;packing_units:number;
 };
-type FbsProduct={sku?:string|number;offer_id?:string;quantity?:number};
+type FbsProduct={sku?:string|number;offer_id?:string;quantity?:number;name?:string};
 type FbsPosting={
  posting_number?:string;in_process_at?:string;created_at?:string;
  status?:string;delivering_date?:string|null;
@@ -38,7 +38,7 @@ function sanitize(posting:FbsPosting,from:string,to:string):FbsOrderUnit[]{
  const cancelled=status==='cancelled'||status==='canceled';
  const shipped=!!posting.delivering_date||['delivering','delivered','driver_pickup','sent_by_seller','not_accepted','returning_to_seller'].includes(status);
  return posting.products.filter(p=>Number(p.quantity)>0).map(p=>({
-  posting_number:num,order_day:day,sku:String(p.sku??''),article:String(p.offer_id??''),
+  posting_number:num,order_day:day,sku:String(p.sku??''),article:String(p.offer_id??''),name:String(p.name??''),
   quantity:Math.floor(Number(p.quantity)),status,cancelled,shipped,
   packing_units:fbsPackingUnits(status,Number(p.quantity),posting.delivering_date)
  })).filter(p=>!!p.sku||!!p.article);
