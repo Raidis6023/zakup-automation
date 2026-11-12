@@ -2,6 +2,7 @@ import { getOzonCredentials } from "../../../../lib/integrations/secrets";
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "../../../../lib/supabase/admin";
+import { accrualTypeId } from "../../../../lib/ozon/accrual-type";
 import { createClient } from "../../../../lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -29,10 +30,11 @@ type Job = {
 type OzonRow = {
   accrued_category?: string;
   type_id?: string | number;
+  non_item_fee?: {type_id?:string|number};
   unit_number?: string;
   total_amount?: { amount?: string; currency?: string };
   posting?: { products?: Array<{ sku?: string | number }> };
-  item_fees?: { fees?: Array<{ sku?: string | number }> };
+  item_fees?: { fees?: Array<{ sku?: string | number; fees?:Array<{type_id?:string|number}> }> };
   [key: string]: unknown;
 };
 type Page = { accruals?: OzonRow[]; last_id?: string };
@@ -205,7 +207,7 @@ async function syncPage(db: AdminDB, day: string, restart: boolean) {
     const data = page.accruals!.map((entry, index) => ({
       account_key: ACCOUNT, day, run_id: job.run_id,
       row_index: job.rows_saved + index, amount: money(entry),
-      type_id: entry.type_id == null ? null : String(entry.type_id),
+      type_id: accrualTypeId(entry),
       accrued_category: entry.accrued_category ?? null,
       unit_number: entry.unit_number ?? null,
       sku: extractSku(entry), raw: entry,

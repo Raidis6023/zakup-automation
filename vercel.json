@@ -50,7 +50,7 @@
     },
     {
       "path": "/api/agents/ozon-finance-ads-retry-morning",
-      "schedule": "20 4 * * *"
+      "schedule": "45 1 * * *"
     },
     {
       "path": "/api/agents/ozon-finance-ads-retry-afternoon",
