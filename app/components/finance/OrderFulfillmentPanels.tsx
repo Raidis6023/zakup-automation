@@ -5,7 +5,7 @@ import CopyArticle from './CopyArticle';
 import './order-fulfillment.css';
 type Item={article:string;orders:number;cancelled:number|null;amount:number|null};
 type Group={orders:number;cancelled:number|null;amount:number|null;knownAmount:number;articles:Item[]};
-type Payload={ok:boolean;note:string;schemes:{fbo?:Group;fbw?:Group;fbs?:Group};error?:string};
+type Payload={ok:boolean;note:string;schemes:{fbo?:Group;fbw?:Group;fbs?:Group|null};fbsError?:string|null;error?:string};
 type Market='ozon'|'wb'|'yandex';
 type Row={article:string;name:string;master_code:string|null;manager:string;orders:number|null;cancelled:number|null;buyouts:number|null;revenue:number|null;charges:number|null;cogs:number|null;mayak:number|null;advertising:number|null;storage:number|null;packing?:number|null;shipped_units?:number|null;profit:number|null;note:string;details?:Array<{name:string;category:string;count:number|null;amount:number}>};
 type Sheet={ok:boolean;source:string;note:string;rows:Row[];error?:string};
@@ -68,7 +68,7 @@ function SchemeTable({market,scheme,from,to}:{market:Market;scheme:string;from:s
     typeof rows[0]?.[key]==='number'?fmt(totals(key),['orders','cancelled','buyouts'].includes(key)?'':'₽'):'—'}</td>)}</tr></tfoot>
   </table></div></div>;
 }
-function SchemePanel({market,scheme,label,from,to,group,note,error}:{market:Market;scheme:string;label:string;from:string;to:string;group?:Group;note:string;error:string}){
+function SchemePanel({market,scheme,label,from,to,group,note,error}:{market:Market;scheme:string;label:string;from:string;to:string;group?:Group|null;note:string;error:string}){
  const [open,setOpen]=useState(false);
  const [title,description='Склад продавца']=label.split(' · ');
  return <details className="ozf-scheme-panel" open={open} onToggle={e=>setOpen(e.currentTarget.open)}>
@@ -102,6 +102,6 @@ export default function OrderFulfillmentPanels({market,from,to}:{market:Market;f
  const first=market==='wb'?'fbw':'fbo';
  return <section className="ozf-scheme-panels" aria-label="Финансовые отчёты по схемам отгрузки">
  <SchemePanel market={market} scheme={first} label={market==='wb'?'FBW · склад Wildberries':market==='yandex'?'FBY · склад Яндекс Маркета':'FBO · склад Ozon'} from={from} to={to} group={data?.schemes[first]} note={data?.note??''} error={error}/>
- <SchemePanel market={market} scheme="fbs" label="FBS · склад продавца" from={from} to={to} group={data?.schemes.fbs} note={data?.note??''} error={error}/>
+ <SchemePanel market={market} scheme="fbs" label="FBS · склад продавца" from={from} to={to} group={data?.schemes.fbs} note={data?.note??''} error={data?.fbsError??error}/>
  </section>;
 }
