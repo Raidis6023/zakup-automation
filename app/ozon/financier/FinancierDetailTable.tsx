@@ -178,7 +178,12 @@ export default function FinancierDetailTable({
   // The summary is scoped to the selected KM, not the free-text search.
   const sumProfit=numericSum(rows,r=>r.estimated_result);
   const missingProfitCount=rows.filter(r=>r.estimated_result===null).length;
-  const profitIsPartial=missingProfitCount>0;
+  // Campaign spending can exist before Seller books the PPC charge.
+  // Keep the ledger-based profit visible, but never call it finalized.
+  const sellerAdvertisingUnconfirmed=includeUnallocated&&
+    Number(data?.advertising?.finance_total??0)===0&&
+    Number(data?.ads_partial_spend??0)>0;
+  const profitIsPartial=missingProfitCount>0||sellerAdvertisingUnconfirmed;
   const globalAdjustment=includeUnallocated?Number(data?.unallocated_amount??0):0;
   // This is the known subtotal, never a confirmed whole-company P&L when
   // any SKU has missing order coverage or acquisition cost.
@@ -238,14 +243,11 @@ export default function FinancierDetailTable({
   const totalMain=uniqueStock(rows,stockKey,r=>r.main_stock),totalOx=uniqueStock(rows,stockKey,r=>r.ox_stock),totalChina=uniqueStock(rows,stockKey,r=>r.in_china);
   const totalOzon=knownSum(rows,r=>r.ozon_stock),totalBalance=[totalMain,totalOx,totalOzon].every(x=>x!==null)?Number(totalMain)+Number(totalOx)+Number(totalOzon):null;
   const kpis=[
-    {name:profitIsPartial?"Операционная прибыль (известная часть)":"Операционная прибыль",
+    {name:profitIsPartial?"Операционная прибыль (предв.)":"Операционная прибыль",
       value:money(operatingProfit),tone:moneyTone(operatingProfit)},
     {name:"Выручка",value:money(sumRevenue),tone:moneyTone(sumRevenue)},
     {name:"Рентабельность",value:pct(profitability),tone:moneyTone(profitability)},
-    {name:adReferenceOnly?"Реклама Performance (неполная)":adUnknown?"Реклама (нет данных)":
-      includeUnallocated&&globalAdvertising.kind==='performance_complete'?"Реклама Performance":
-      includeUnallocated&&globalAdvertising.kind==='seller'?"Реклама Seller (временно)":
-      data?.ads_covered?"Реклама Performance":"Реклама Performance (часть)",
+    {name:"Реклама",
       value:money(adAmount),tone:adAmount==null?"":Math.abs(adAmount)>0?"ozf-bad":"ozf-good"},
     {name:"Платное хранение",value:money(storageAmount),tone:storageAmount==null?"":Math.abs(storageAmount)>0?"ozf-bad":"ozf-good"},
     {name:"Положительные позиции",value:qty(positionsPositive),tone:positionsPositive>0?"ozf-good":"ozf-bad"},
@@ -283,19 +285,19 @@ export default function FinancierDetailTable({
     </div>
     {includeUnallocated&&referenceBySku!==null&&<p className="ozf-notice" role="status" style={{marginTop:8}}>
       Реклама по кампаниям Performance за {data?.from} — {data?.to}: {money(-Math.abs(referenceBySku))}{!data?.ads_covered?' (данные пока неполные)':''}.
-      Финансовые начисления Seller за тот же период: {sellerAdGlobal===null?'нет данных':money(sellerAdGlobal)}.
+      Начисления рекламы Seller за тот же период: {sellerAdGlobal===null||sellerAdvertisingUnconfirmed?'ещё не подтверждены':money(sellerAdGlobal)}.
       Даты начисления и даты рекламных показов могут отличаться. В операционной прибыли расход Seller остаётся учтён только один раз.
       {Number(data?.ads_unmapped_spend??0)>0&&<> Из расходов Performance {money(-Math.abs(Number(data?.ads_unmapped_spend)))} пока не сопоставлены с артикулами ({data?.ads_unmapped_skus} SKU); эта сумма включена в общий показатель, но не распределена по товарам.</>}
     </p>}
-    {profitIsPartial&&<p className="ozf-notice" role="status" style={{marginTop:8}}>
+    {missingProfitCount>0&&<p className="ozf-notice" role="status" style={{marginTop:8}}>
       Общий финансовый результат предварительный: прибыль не рассчитана для {missingProfitCount} из {rows.length} артикулов.
       Показана только известная часть с нераспределёнными начислениями.
       Для оставшихся позиций проверь себестоимость, ТК Маяк и полноту заказов.
     </p>}
     {adReferenceOnly&&<p className="ozf-notice" role="status" style={{marginTop:8}}>
-      В рекламной карточке показаны доступные расходы Performance по SKU, справочно.
-      В финансовых начислениях Seller за этот период реклама ещё не подтверждена.
-      Эти расходы не списываются из прибыли второй раз; сумма может увеличиться после завершения истории РК.
+      Реклама выгружена не полностью: показана только найденная часть расходов по SKU.
+      Начисления Seller ещё не подтверждены, поэтому итог прибыли предварительный.
+      Статистику рекламы нельзя повторно вычитать из прибыли: возможен двойной расход.
     </p>}
     {adUnknown&&<p className="ozf-notice" role="status" style={{marginTop:8}}>
       Расходы на рекламу пока не подтверждены, ноль не означает отсутствие кампаний.
