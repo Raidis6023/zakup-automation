@@ -604,6 +604,22 @@ function getKrasnoyarskToday() {
 }
 
 
+// Note reminders are stored as ISO timestamps. Match the calendar by
+// Krasnoyarsk civil date rather than the viewer's local timezone.
+function reminderDayKey(remindAt: string): string | null {
+  const date = new Date(remindAt);
+  if (Number.isNaN(date.getTime())) return null;
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Krasnoyarsk",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const part = (type: string) => parts.find(item => item.type === type)?.value;
+  const year = part("year"), month = part("month"), day = part("day");
+  return year && month && day ? year + "-" + month + "-" + day : null;
+}
+
 function formatCalendarDateInput(
   date:
     Date
@@ -983,6 +999,17 @@ export default function HomeHeaderActions() {
     loading: workspaceTasksLoading,
     error: workspaceTasksError,
   } = useWorkspaceTasks(adminMode ? "admin" : "work");
+
+  // Existing author-only notes already refresh on save and realtime events.
+  const daysWithNotes = useMemo(() => {
+    const days = new Set<string>();
+    for (const note of workspaceTaskSnapshot?.notes ?? []) {
+      if (!note.remind_at) continue;
+      const day = reminderDayKey(note.remind_at);
+      if (day) days.add(day);
+    }
+    return days;
+  }, [workspaceTaskSnapshot?.notes]);
 
 
   const [
@@ -4179,6 +4206,9 @@ export default function HomeHeaderActions() {
                             today
                           );
 
+                        const hasNote =
+                          daysWithNotes.has(formatCalendarDateInput(date));
+
 
                         return (
 
@@ -4190,7 +4220,7 @@ export default function HomeHeaderActions() {
                             type="button"
 
                             className={
-                              `home-calendar-day${currentDay ? " today" : ""}${pastDay ? " past" : ""}`
+                              `home-calendar-day${currentDay ? " today" : ""}${pastDay ? " past" : ""}${hasNote ? " has-note" : ""}`
                             }
 
                             aria-current={
@@ -4202,7 +4232,7 @@ export default function HomeHeaderActions() {
                             }
 
                             aria-label={
-                              "Создать заметку на " + formatToday(date)
+                              "Создать заметку на " + formatToday(date) + (hasNote ? ". Есть заметка" : "")
                             }
 
                             aria-disabled={pastDay}

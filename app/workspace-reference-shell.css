@@ -2033,3 +2033,12 @@ button.active {
     min-height: 0;
   }
 }
+
+
+/* Home headline aligns with the module PageHeader heading, without moving
+   the draggable marketplace cards or shifting the fixed right decoration. */
+@media (min-width: 801px) {
+  .home-shell--dashboard .home-title-row > div:first-child {
+    margin-left: 28px;
+  }
+}

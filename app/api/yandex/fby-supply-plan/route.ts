@@ -1,3 +1,4 @@
+import { removeMergedCellsFromWorkbook } from "@/lib/excel/unmerge";
 import ExcelJS from "exceljs";
 import {
   eligibleOnCluster, eligibilityIsStale,
@@ -587,6 +588,7 @@ export async function POST(request: Request) {
       ].forEach((value, idx) => note.getCell(idx + 1, 1).value = value);
       note.getRow(1).font = { bold: true, color: { argb: "FFD8463D" } };
     }
+    removeMergedCellsFromWorkbook(workbook);
     const buffer = await workbook.xlsx.writeBuffer();
     const date = new Date().toISOString().slice(0, 10);
     return new Response(new Uint8Array(buffer) as BodyInit, {

@@ -21,6 +21,7 @@ export async function downloadFinanceWorkbook(filename:string,sheets:ExcelSheet[
    wch:Math.min(42,Math.max(12,header.length+2,...normalized.map(row=>String(row[header]??'').length+2)))
   }));
   sheet['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:Math.max(0,normalized.length),c:Math.max(0,headers.length-1)}})};
+  delete sheet['!merges'];
   XLSX.utils.book_append_sheet(book,sheet,sheetName(source.name));
  }
  XLSX.writeFile(book,filename,{compression:true});

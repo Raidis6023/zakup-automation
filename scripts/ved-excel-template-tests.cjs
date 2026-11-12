@@ -3,6 +3,13 @@ const path=require("node:path");
 const {brotliDecompressSync}=require("node:zlib");
 const ExcelJS=require("exceljs");
 const assert=require("node:assert/strict");
+const ts=require("typescript");
+const helperCode=fs.readFileSync(path.join(__dirname,"../lib/excel/unmerge.ts"),"utf8");
+const helperModule={exports:{}};
+new Function("require","exports","module",ts.transpileModule(helperCode,{
+ compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}
+}).outputText)(require,helperModule.exports,helperModule);
+const {removeMergedCellsFromWorkbook}=helperModule.exports;
 async function main(){
  const content=fs.readFileSync(path.join(__dirname,"../lib/ved-calculation/template-blueprint.ts"),"utf8");
  const base64=content.match(/VED_TEMPLATE_BLUEPRINT_BROTLI_BASE64\s*=\s*"([^"]+)"/)?.[1];
@@ -25,6 +32,9 @@ async function main(){
  for(const m of b.merged)sh.mergeCells(m);
  sh.getCell("A22").value=null;sh.getCell("B22").value="Проверка нового товара";
  sh.getCell("B4").value=12345.67;
+ assert.equal(sh.model.merges.length,b.merged.length,"template must preserve input merge blueprint");
+ removeMergedCellsFromWorkbook(wb);
+ assert.equal(sh.model.merges.length,0,"no merged cells before Excel download");
  const out=Buffer.from(await wb.xlsx.writeBuffer());
  const copy=new ExcelJS.Workbook();await copy.xlsx.load(out);
  const s=copy.getWorksheet("Товар 1");
@@ -32,7 +42,7 @@ async function main(){
  assert.equal(s.getCell("A3").value,"Наименование расходов");
  assert.equal(s.getCell("B22").value,"Проверка нового товара");
  assert.equal(s.getCell("B4").value,12345.67);
- assert(s.getCell("A1").isMerged&&s.getCell("Q22").isMerged,"Merged regions lost");
- console.log("PASS VED export: original 24-row visual blueprint, 115 styles, 15 merges, cells and valid XLSX");
+ assert.equal(s.model.merges.length,0,"exported XLSX must contain no merged ranges");
+ console.log("PASS VED export: original blueprint, 115 styles, no output merges, valid XLSX");
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});

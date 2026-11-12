@@ -1,3 +1,4 @@
+import { removeMergedCellsFromWorkbook } from "@/lib/excel/unmerge";
 import ExcelJS from "exceljs";
 import {
   FBY_WAREHOUSES, mapWarehouseColumn, normalizeHeader, normalizeOfferId,
@@ -127,6 +128,7 @@ async function exportCatalog():Promise<Response>{
     "Результат проверки временный; перед реальной поставкой обновляйте проверочную матрицу."
   ].forEach((x,i)=>instructions.getCell(i+1,1).value=x);
   instructions.getRow(1).font={bold:true,color:{argb:"FFB02A2A"}};
+  removeMergedCellsFromWorkbook(wb);
   const buffer=await wb.xlsx.writeBuffer();
   return new Response(new Uint8Array(buffer) as BodyInit,{
     headers:{

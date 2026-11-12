@@ -1,3 +1,4 @@
+import { removeMergedCellsFromWorkbook } from "@/lib/excel/unmerge";
 import ExcelJS from 'exceljs';
 import {NextRequest} from 'next/server';
 import {createClient} from '../../../../lib/supabase/server';
@@ -52,6 +53,7 @@ export async function GET(req:NextRequest){
   const stor=sheet(wb,'Хранение',['Дата','nmId','Артикул','Склад','Сумма, ₽','Исходные данные JSON']);for(const r of storage)stor.addRow([r.snapshot_day,r.nm_id??'',r.article??'',r.warehouse??'',r.amount,JSON.stringify(r.payload??{})]);
   const ord=sheet(wb,'Заказы',['Дата заказа','srid','nmId','Артикул','Штрихкод','Склад','Тип склада','Отменён','Дата отмены','Исходные данные JSON']);for(const r of orders)ord.addRow([r.order_date,r.srid,r.nm_id,r.supplier_article,r.barcode,r.warehouse_name,r.warehouse_type,r.is_cancel?'Да':'Нет',r.cancel_date??'',JSON.stringify(r.raw??{})]);
   for(const ws of wb.worksheets)fit(ws,ws.name==='Финансы_по_дням'?28:42);
+  removeMergedCellsFromWorkbook(wb);
   const buffer=await wb.xlsx.writeBuffer();return new Response(new Uint8Array(buffer),{headers:{'Content-Type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','Content-Disposition':`attachment; filename="WB_finance_${from}_${to}.xlsx"`,'Cache-Control':'private, no-store'}});
  }catch(e){return Response.json({ok:false,error:e instanceof Error?e.message:String(e)},{status:500});}
 }
