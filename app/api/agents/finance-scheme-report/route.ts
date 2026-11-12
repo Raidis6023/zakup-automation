@@ -20,7 +20,7 @@ export async function GET(req:NextRequest){try{
  if(market==='yandex'){
   const d=await readFinance(from,to,scheme as 'fbo'|'fbs');
   if(!d)return NextResponse.json({error:'Нет сохранённых финансов ЯМ за период'},{status:404});
-  const rows:Row[]=d.rows.map(r=>({article:r.article,name:r.name,master_code:r.master_code,manager:r.manager,orders:r.orders,cancelled:r.cancelledTotal,buyouts:r.buyouts,revenue:cents(r.income),charges:cents(r.expense),cogs:cents(r.cogs),mayak:cents(r.mayak),advertising:cents(r.advertising),storage:cents(r.storage),packing:cents(r.packing),profit:cents(r.result),note:r.dataGaps.join('; ')}));
+  const rows:Row[]=d.rows.map(r=>({article:r.article,name:r.name,master_code:r.master_code,manager:r.manager,orders:r.orders,cancelled:r.cancelledTotal,buyouts:r.buyouts,revenue:cents(r.income),charges:cents(r.expense),cogs:cents(r.cogs),mayak:cents(r.mayak),advertising:cents(r.advertising),storage:cents(r.storage),packing:cents(r.packing),profit:cents(r.result),details:r.details.filter(d=>d.amount!==null).map(d=>({name:d.name,category:d.category,count:d.count,amount:cents(d.amount)??0})),note:r.dataGaps.join('; ')}));
   return NextResponse.json({ok:true,source:'yandex_finance_lines по ID заказа',rows,note:'Та же формула финансового результата ЯМ, но только исходные операции заказов выбранной схемы. Общие расходы без ID заказа остаются в основном финансовом результате и здесь не распределены.'},{headers:{'Cache-Control':'private,no-store'}});
  }
  if(market==='wb'){
