@@ -2,6 +2,7 @@ import {NextRequest,NextResponse} from 'next/server';
 import {financeAccess} from '../../../../lib/yandex/finance-access';
 import {createAdminClient} from '../../../../lib/supabase/admin';
 import {validDate} from '../../../../lib/yandex/finance';
+import {readOzonFbsOrders} from '../../../../lib/ozon/finance-fbs-orders';
 export const runtime='nodejs';export const dynamic='force-dynamic';export const maxDuration=300;
 type Item={article:string;orders:number;cancelled:number|null;amount:number|null};
 type Group={orders:number;cancelled:number|null;amount:number|null;knownAmount:number;articles:Item[]};
@@ -64,10 +65,21 @@ export async function GET(req:NextRequest){
     if(!entry.accruals.has(accrual)){entry.accruals.add(accrual);entry.amount+=Number(r.amount)||0;}
     postings.set(key,entry);
    }
-   for(const p of postings.values())add(b[p.kind],p.article,p.amount,null);
-   note='Ozon: количество уникальных отправлений из начислений; сумма включает только POSTING-начисления, не стоимость заказов. Сведения об отменах в этом источнике отсутствуют.';source='ozon_finance_accruals';
+   for(const p of postings.values())if(p.kind==='fbo')add(b.fbo,p.article,p.amount,null);
+   note='Ozon: FBO отражает начисления по отправлениям и не является полной статистикой созданных заказов. FBS читается отдельно из актуального списка v4 с реальными статусами и отменами.';source='ozon_finance_accruals + v4/posting/fbs/list';
   }
-  const fbo=result(b.fbo,market==='ozon'),fbs=result(b.fbs,market==='ozon');
-  return NextResponse.json({ok:true,source,note,schemes:{fbo,fbw:fbo,fbs}},{headers:{'Cache-Control':'private,no-store'}});
+  const fbo=result(b.fbo,market==='ozon');
+  let fbs:Group|null=null,fbsError:string|null=null;
+  if(market==='ozon'){
+   try{
+    const orders=await readOzonFbsOrders(from,to);
+    for(const o of orders){
+     const article=o.article||('SKU:'+o.sku);
+     add(b.fbs,article,null,o.cancelled,o.quantity);
+    }
+    fbs=result(b.fbs);
+   }catch(err){fbsError=err instanceof Error?err.message:'Нет подтверждённых заказов FBS';}
+  }else fbs=result(b.fbs);
+  return NextResponse.json({ok:true,source,note,fbsError,schemes:{fbo,fbw:fbo,fbs}},{headers:{'Cache-Control':'private,no-store'}});
  }catch(e){const error=e instanceof Error?e.message:'Ошибка статистики заказов';return NextResponse.json({ok:false,error},{status:error==='Требуется авторизация'?401:error.startsWith('Недостаточно прав')?403:500});}
 }
