@@ -1198,8 +1198,7 @@ export default function SkuListTabsClient({
         </label>
         {activeTab !== "all" && (
           <label className="sku-list-filter-status">
-            <span>Статус товара</span>
-            <select value={statusFilter}
+            <select aria-label="Фильтр по статусу товара" value={statusFilter}
               onChange={event => setStatusFilter(event.target.value as ProductArticleStatus | "all")}>
               <option value="all">Все статусы</option>
               {STATUS_OPTIONS.map(status => <option key={status} value={status}>{status}</option>)}
