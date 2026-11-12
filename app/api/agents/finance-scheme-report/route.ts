@@ -4,6 +4,7 @@ import {createAdminClient} from '../../../../lib/supabase/admin';
 import {validDate} from '../../../../lib/yandex/finance';
 import {readFinance} from '../../../../lib/yandex/finance-cache';
 import {GET as wbFinance} from '../wb-finance/route';
+import {readOzonFbsOrders} from '../../../../lib/ozon/finance-fbs-orders';
 export const runtime='nodejs';export const dynamic='force-dynamic';export const maxDuration=300;
 type Detail={name:string;category:string;count:number|null;amount:number};
 type Row={article:string;name:string;master_code:string|null;manager:string;orders:number|null;cancelled:number|null;buyouts:number|null;revenue:number|null;charges:number|null;cogs:number|null;mayak:number|null;advertising:number|null;storage:number|null;packing:number|null;shipped_units?:number|null;details?:Detail[];profit:number|null;note:string};
@@ -157,9 +158,44 @@ export async function GET(req:NextRequest){try{
    details,note:'Отправления из финансового реестра, не дата исходного заказа. Отмены и выкупы этим источником не подтверждены.'
   });
  }
+ let orderSourceError='';
+ if(kind==='fbs'){
+  try{
+   const orderUnits=await readOzonFbsOrders(from,to);
+   const countBySku=new Map<string,{orders:number;cancelled:number}>();
+   for(const item of orderUnits){
+    const key=item.sku||[...bySku].find(([,link])=>link.offer_id===item.article)?.[0]||'';
+    if(!key)continue;
+    const prev=countBySku.get(key)??{orders:0,cancelled:0};
+    prev.orders+=item.quantity;if(item.cancelled)prev.cancelled+=item.quantity;
+    countBySku.set(key,prev);
+   }
+   for(const [sku,count] of countBySku){
+    const match=rows.find(r=>r.article===(bySku.get(sku)?.offer_id??'SKU:'+sku));
+    if(match){match.orders=count.orders;match.cancelled=count.cancelled;}
+    else {
+     const linked=bySku.get(sku),article=linked?.offer_id??'SKU:'+sku,master=linked?.master_code??null;
+     rows.push({article,name:names.get(article)??'',master_code:master,
+      manager:master?byManager.get(master)??'Не назначен':'Не назначен',
+      orders:count.orders,cancelled:count.cancelled,buyouts:null,revenue:null,charges:null,
+      cogs:null,mayak:0,advertising:null,storage:0,packing:0,
+      shipped_units:0,profit:null,details:[],
+      note:'Созданные FBS заказы есть, но финансовые начисления за выбранную дату пока отсутствуют.'});
+    }
+   }
+   // A SKU with bookings outside the request's ORDER dates is not a zero-order SKU.
+   for(const row of rows)if(!countBySku.has(
+    [...bySku].find(([,link])=>link.offer_id===row.article)?.[0]??row.article.slice(4)
+   )){row.orders=0;row.cancelled=0;}
+  }catch(e){
+   orderSourceError=e instanceof Error?e.message:'Недоступна история заказов FBS';
+   for(const row of rows){row.orders=null;row.cancelled=null;}
+  }
+ }
  rows.sort((a,b)=>num(b.revenue)-num(a.revenue));
  const note='Ozon: только подтверждённые операции схемы '+kind.toUpperCase()+
-  ' (POSTING и сопоставимые ITEM). Столбец «Заказы» фактически содержит отгруженные единицы из начислений, а не все созданные заказы; отмены не определяются по финансовому реестру. Упаковка FBS: 20 ₽ на подтверждённую отгруженную единицу, отмены до отгрузки не начисляются. Реклама и общие NON_ITEM не распределены, прибыль предварительная.'+
+  ' (POSTING и сопоставимые ITEM). Для FBO в столбце отправлений указаны финансовые отправления. Для FBS заказы и отмены берутся из отдельного списка Ozon v4 по дате заказа, а финансовые суммы из начислений по дате проводки. Упаковка FBS: 20 ₽ на подтверждённую отгруженную единицу. Реклама и общие NON_ITEM не распределены, прибыль предварительная.'+
+  (orderSourceError?' Ошибка загрузки FBS заказов: '+orderSourceError+'.':'')+
   (noSku?' Не распределено отправлений без подтверждённого SKU: '+noSku+'.':'');
  return NextResponse.json({ok:true,source:'ozon_finance_accruals · active POSTING + linked ITEM',rows,note},
   {headers:{'Cache-Control':'private,no-store'}});
