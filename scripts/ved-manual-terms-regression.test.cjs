@@ -41,18 +41,21 @@ assert.ok(route.includes('manualCartons?: number'));
 assert.ok(route.includes('"preview_ved_order_item_terms"'),"Normal preview must remain");
 assert.ok(route.includes('"confirm_ved_order_item_terms"'),"Normal confirm must remain");
 
-assert.ok(client.includes('manualCartons: item.cartons === null ? "0" : String(item.cartons)'));
-assert.ok(client.includes('manualCartons: "0"'));
-assert.ok(client.includes('manualCartons: string;'));
-assert.ok(client.includes('item.added_manually && item.selected_demand_units === null'));
-assert.ok(client.includes('... (manualCartons !== undefined') || client.includes('...(manualCartons !== undefined'));
-assert.ok(client.includes('Количество коробов вручную'));
-assert.ok(client.includes('0 = подтвердить MOQ и цену'));
-assert.ok(client.includes('item.added_manually ? "" :'));
-assert.ok(client.includes('selectedItem.added_manually &&'));
-assert.ok(client.includes('selectedItem.selected_demand_units === null'));
+// Historical manual-terms route stays available for compatibility with old
+// VED flows. The preparation page now uses two explicit confirmation blocks.
+assert.ok(client.includes('import VedOrderPreparationBlocks from "./VedOrderPreparationBlocks"'));
+assert.ok(client.includes('<VedOrderPreparationBlocks'));
+assert.ok(!client.includes('Подтвердить MOQ и цену'),"No separate MOQ/price button in preparation");
+const block=read("app/VedOrderPreparationBlocks.tsx");
+assert.ok(block.includes("Подтвердить характеристики"));
+assert.ok(block.includes("Подтвердить условия заказа"));
+assert.ok(block.includes('selected_demand_units'));
+assert.ok(block.includes('characteristics_confirmed_at'));
+assert.ok(block.includes('order_terms_confirmed_at'));
+assert.ok(block.includes("FOB/FCA и порт"));
+assert.ok(block.includes('changeCharacteristic'));
 
-for(const filename of ["app/api/ved-orders/items/[id]/terms/route.ts","app/VedOrderDetailClient.tsx"]){
+for(const filename of ["app/api/ved-orders/items/[id]/terms/route.ts","app/VedOrderDetailClient.tsx","app/VedOrderPreparationBlocks.tsx"]){
  const source=read(filename);
  const compiled=ts.transpileModule(source,{
   fileName:filename,reportDiagnostics:true,compilerOptions:{

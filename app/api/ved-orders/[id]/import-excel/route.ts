@@ -146,7 +146,7 @@ export async function POST(request:NextRequest,ctx:Context){
      uploaded.push(photoPath);
     }
     payload.push({
-     mode:"new",sheet:item.sheet,name:item.name,our_article:item.our_article,
+     mode:"new",sheet:item.sheet,name:item.name,our_article:"",
      chinese_article:item.chinese_article,cartons:item.cartons||"0",
      units_per_carton:item.units_per_carton,unit_price_cny:item.unit_price_cny,
      moq_quantity:item.moq_quantity,

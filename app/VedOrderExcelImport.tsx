@@ -19,7 +19,6 @@ type Field=keyof Pick<Row,
  "carton_height_cm"|"carton_volume_m3"|"carton_weight_kg">;
 const fields:[Field,string][]=[
  ["name","Название товара"],
- ["our_article","Наш артикул"],
  ["chinese_article","Китайский артикул"],
  ["cartons","Заказываем коробов"],
  ["units_per_carton","Штук в коробке"],

@@ -603,6 +603,15 @@ export async function GET(
             "product_name_snapshot",
 
             "photo_url",
+            "characteristics_confirmed_at",
+            "order_terms_confirmed_at",
+            "import_hs_code",
+            "import_carton_length_cm",
+            "import_carton_width_cm",
+            "import_carton_height_cm",
+            "import_individual_length_cm",
+            "import_individual_width_cm",
+            "import_individual_height_cm",
 
 
             "priority_group",
@@ -746,21 +755,15 @@ export async function GET(
     // 5. СТАТИСТИКА ГОТОВНОСТИ
     // ========================================================
 
-    const termsConfirmedCount =
-      items.filter(
-        (
-          item
-        ) =>
-          item.moq_confirmed_at
-          &&
-          item.price_confirmed_at
-      ).length;
-
-
-    const termsPendingCount =
-      items.length
-      -
-      termsConfirmedCount;
+    const activeItems = items.filter(item => item.moq_review_status !== "rejected");
+    const characteristicsConfirmedCount = activeItems.filter(item =>
+      item.characteristics_confirmed_at !== null).length;
+    const orderBlockConfirmedCount = activeItems.filter(item =>
+      item.order_terms_confirmed_at !== null).length;
+    const termsConfirmedCount = activeItems.filter(item =>
+      item.characteristics_confirmed_at !== null &&
+      item.order_terms_confirmed_at !== null).length;
+    const termsPendingCount = activeItems.length - termsConfirmedCount;
 
 
     const moqReviewPendingCount =
@@ -834,6 +837,9 @@ export async function GET(
 
           terms_confirmed:
             termsConfirmedCount,
+
+          characteristics_confirmed: characteristicsConfirmedCount,
+          order_block_confirmed: orderBlockConfirmedCount,
 
           terms_pending:
             termsPendingCount,

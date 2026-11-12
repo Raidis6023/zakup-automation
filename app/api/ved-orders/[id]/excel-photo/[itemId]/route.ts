@@ -37,7 +37,7 @@ export async function GET(_request:NextRequest,ctx:Params){
  const {data,error}=await admin.storage.from("ved-product-photos").createSignedUrl(path,90);
  if(error||!data)return new NextResponse(null,{status:404});
  const response=NextResponse.redirect(data.signedUrl,302);
- response.headers.set("Cache-Control","private,max-age=40");
+ response.headers.set("Cache-Control","private,no-store");
  return response;
 }
 
@@ -67,7 +67,7 @@ export async function POST(request:NextRequest,ctx:Params){
  }
  const {data:item}=await admin.from("ved_order_items").select("added_manually,photo_url,import_product_photo_path")
   .eq("ved_order_id",id).eq("id",itemId).maybeSingle();
- if(!item?.added_manually)return NextResponse.json({ok:false,error:"Можно изменить только вручную добавленную позицию"},{status:409});
+ if(!item)return NextResponse.json({ok:false,error:"Товар заказа не найден"},{status:404});
 
  let uploadPath="";
  try{
@@ -91,7 +91,8 @@ export async function POST(request:NextRequest,ctx:Params){
 
   const link="/api/ved-orders/"+id+"/excel-photo/"+itemId;
   const {error:saveError}=await admin.from("ved_order_items").update({
-   import_product_photo_path:uploadPath,photo_url:link
+   import_product_photo_path:uploadPath,photo_url:link,
+   characteristics_confirmed_at:null,characteristics_confirmed_by_user_id:null
   }).eq("ved_order_id",id).eq("id",itemId);
   if(saveError)throw new Error("Не удалось привязать фотографию к позиции");
   const {error:auditError}=await admin.from("ved_order_audit_log").insert({

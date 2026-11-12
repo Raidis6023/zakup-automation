@@ -2,6 +2,7 @@
 
 import Button from "./ui/Button";
 import VedOrderAddItemsDialog from "./VedOrderAddItemsDialog";
+import VedOrderPreparationBlocks from "./VedOrderPreparationBlocks";
 
 import {
   useEffect,
@@ -67,6 +68,15 @@ type VedOrderItem = {
   product_name_snapshot: string | null;
 
   photo_url: string | null;
+  characteristics_confirmed_at: string | null;
+  order_terms_confirmed_at: string | null;
+  import_hs_code: string | null;
+  import_carton_length_cm: number | null;
+  import_carton_width_cm: number | null;
+  import_carton_height_cm: number | null;
+  import_individual_length_cm: number | null;
+  import_individual_width_cm: number | null;
+  import_individual_height_cm: number | null;
 
   priority_group: string | null;
   position_sort: number | null;
@@ -124,6 +134,8 @@ type VedOrderTotals = {
 
 type VedOrderStatistics = {
   items_count: number;
+  characteristics_confirmed: number;
+  order_block_confirmed: number;
 
   terms_confirmed: number;
   terms_pending: number;
@@ -1295,10 +1307,7 @@ export default function VedOrderDetailClient(
                 ),
 
           // New/manual goods must never acquire FOB/FCA without a choice.
-          incoterm: item.incoterm ?? (
-            item.added_manually ? "" :
-            result.order?.calculation_scenario === "truck" ? "FCA" : "FOB"
-          ),
+          incoterm: item.incoterm ?? "",
 
           port:
             item.port
@@ -1672,7 +1681,7 @@ export default function VedOrderDetailClient(
               "",
 
             incoterm:
-              "FOB",
+              "",
 
             port:
               "",
@@ -3378,8 +3387,7 @@ export default function VedOrderDetailClient(
                 article={selectedItem.our_article_snapshot}
                 size={120}
               />
-              {selectedItem.added_manually &&
-                ["draft", "returned_for_edit"].includes(order.workflow_status) && (
+              {["draft", "returned_for_edit"].includes(order.workflow_status) && (
                 <label className="ved-excel-photo-upload">
                   {uploadingPhotoId === selectedItem.id ? "Загружаем фото…" :
                     selectedItem.photo_url ? "Заменить фото" : "Добавить фото"}
@@ -3471,811 +3479,17 @@ export default function VedOrderDetailClient(
           </div>
 
 
-          {/* ==================================================
-              PREPARATION
-              ================================================== */}
-
-          {preparationEditable
-            &&
-            selectedEditor && (
-
-            <>
-
-              <div
-                style={{
-                  marginTop:
-                    "22px",
-
-                  paddingTop:
-                    "18px",
-
-                  borderTop:
-                    "1px solid var(--border)",
-                }}
-              >
-
-                <div
-                  style={{
-                    fontWeight:
-                      700,
-
-                    marginBottom:
-                      "12px",
-                  }}
-                >
-                  Данные товара
-                </div>
-
-
-                <div
-                  style={{
-                    display:
-                      "grid",
-
-                    gridTemplateColumns:
-                      "repeat(auto-fit, minmax(210px, 1fr))",
-
-                    gap:
-                      "14px",
-                  }}
-                >
-
-                  <div>
-
-                    <div
-                      className="card-label"
-
-                      style={{
-                        marginBottom:
-                          "6px",
-                      }}
-                    >
-                      Китайский артикул
-                    </div>
-
-
-                    <input
-                      type="text"
-
-                      value={
-                        selectedEditor
-                          .chineseArticle
-                      }
-
-                      disabled={
-                        selectedBusy
-                        ||
-                        chineseArticleLocked
-                      }
-
-                      placeholder=
-                        "Введите китайский артикул"
-
-                      onChange={
-                        (
-                          event
-                        ) => {
-
-                          updateEditor(
-                            selectedItem.id,
-                            {
-                              chineseArticle:
-                                event
-                                  .target
-                                  .value,
-
-                              error:
-                                "",
-                            }
-                          );
-
-                        }
-                      }
-
-                      className="ws-editor-input"
-                    />
-
-                  </div>
-
-
-                  <ReadOnlyField
-                    label="Наш артикул"
-                    value={
-                      selectedItem
-                        .our_article_snapshot
-                      ??
-                      "—"
-                    }
-                  />
-
-
-                  <div>
-
-                    <div
-                      className="card-label"
-
-                      style={{
-                        marginBottom:
-                          "6px",
-                      }}
-                    >
-                      Вес 1 короба, кг
-                    </div>
-
-
-                    <input
-                      type="text"
-
-                      inputMode="decimal"
-
-                      value={
-                        selectedEditor
-                          .cartonWeightKg
-                      }
-
-                      disabled={
-                        selectedBusy
-                      }
-
-                      placeholder="Вес"
-
-                      onChange={
-                        (
-                          event
-                        ) => {
-
-                          updateEditor(
-                            selectedItem.id,
-                            {
-                              cartonWeightKg:
-                                event
-                                  .target
-                                  .value,
-
-                              error:
-                                "",
-                            }
-                          );
-
-                        }
-                      }
-
-                      className="ws-editor-input"
-                    />
-
-                  </div>
-
-
-                  <ReadOnlyField
-                    label="В 1 коробе"
-                    value={
-                      `${formatNumber(
-                        selectedItem
-                          .units_per_carton_snapshot
-                      )} шт.`
-                    }
-                  />
-
-
-                  <ReadOnlyField
-                    label="Объём 1 короба"
-                    value={
-                      `${formatNumber(
-                        selectedItem
-                          .carton_volume_m3_snapshot,
-                        6
-                      )} м³`
-                    }
-                  />
-
-
-                  <ReadOnlyField
-                    label="Условия поставки"
-                    value={
-                      selectedItem
-                        .incoterm
-                      ??
-                      "—"
-                    }
-                  />
-
-                </div>
-
-
-                <div
-                  style={{
-                    marginTop:
-                      "12px",
-                  }}
-                >
-
-                  <Button variant="secondary"
-                    type="button"
-
-                    
-
-                    disabled={
-                      selectedBusy
-                    }
-
-                    onClick={
-                      () => {
-
-                        void savePreparationData(
-                          selectedItem
-                        );
-
-                      }
-                    }
-                  >
-
-                    {selectedEditor
-                      .loadingPreparation
-
-                      ? "Сохраняем..."
-
-                      : "Сохранить данные"}
-
-                  </Button>
-
-                </div>
-
-              </div>
-
-
-              <div
-                style={{
-                  marginTop:
-                    "22px",
-
-                  paddingTop:
-                    "18px",
-
-                  borderTop:
-                    "1px solid var(--border)",
-                }}
-              >
-
-                <div
-                  style={{
-                    fontWeight:
-                      700,
-
-                    marginBottom:
-                      "12px",
-                  }}
-                >
-                  Условия заказа
-                </div>
-
-
-                <div
-                  style={{
-                    display:
-                      "grid",
-
-                    gridTemplateColumns:
-                      "repeat(auto-fit, minmax(210px, 1fr))",
-
-                    gap:
-                      "14px",
-                  }}
-                >
-
-                  <div>
-
-                    <div
-                      className="card-label"
-
-                      style={{
-                        marginBottom:
-                          "6px",
-                      }}
-                    >
-                      MOQ
-                    </div>
-
-
-                    <input
-                      type="text"
-
-                      inputMode="numeric"
-
-                      value={
-                        selectedEditor.moq
-                      }
-
-                      disabled={
-                        selectedBusy
-                      }
-
-                      placeholder="MOQ"
-
-                      onChange={
-                        (
-                          event
-                        ) => {
-
-                          updateEditor(
-                            selectedItem.id,
-                            {
-                              moq:
-                                event
-                                  .target
-                                  .value,
-
-                              preview:
-                                null,
-
-                              error:
-                                "",
-                            }
-                          );
-
-                        }
-                      }
-
-                      className="ws-editor-input"
-                    />
-
-                  </div>
-
-
-                  <div>
-
-                    <div
-                      className="card-label"
-
-                      style={{
-                        marginBottom:
-                          "6px",
-                      }}
-                    >
-                      Цена за 1 шт., CNY
-                    </div>
-
-
-                    <input
-                      type="text"
-
-                      inputMode="decimal"
-
-                      value={
-                        selectedEditor.price
-                      }
-
-                      disabled={
-                        selectedBusy
-                      }
-
-                      placeholder="Цена"
-
-                      onChange={
-                        (
-                          event
-                        ) => {
-
-                          updateEditor(
-                            selectedItem.id,
-                            {
-                              price:
-                                event
-                                  .target
-                                  .value,
-
-                              preview:
-                                null,
-
-                              error:
-                                "",
-                            }
-                          );
-
-                        }
-                      }
-
-                      className="ws-editor-input"
-                    />
-
-                  </div>
-
-
-                  {selectedItem.added_manually &&
-                    selectedItem.selected_demand_units === null && (
-                      <div>
-                        <div className="card-label" style={{ marginBottom: "6px" }}>
-                          Коробов к заказу
-                        </div>
-                        <input
-                          type="number"
-                          min="0"
-                          max="100000"
-                          step="1"
-                          inputMode="numeric"
-                          className="ws-editor-input"
-                          value={selectedEditor.manualCartons}
-                          disabled={selectedBusy}
-                          onChange={event => updateEditor(selectedItem.id, {
-                            manualCartons: event.target.value,
-                            preview: null,
-                            error: "",
-                          })}
-                          aria-label="Количество коробов вручную"
-                        />
-                        <div className="muted" style={{ fontSize: "11px", marginTop: "5px" }}>
-                          0 = подтвердить MOQ и цену, но пока не включать товар в заказ.
-                          {Number(selectedEditor.moq) > 0 && Number(selectedItem.units_per_carton_snapshot) > 0
-                            ? " Минимум по MOQ: " +
-                              Math.ceil(Number(selectedEditor.moq) /
-                                Number(selectedItem.units_per_carton_snapshot)) + " кор."
-                            : ""}
-                        </div>
-                      </div>
-                    )}
-
-                  <ReadOnlyField
-                    label="Порт"
-                    value={
-                      selectedItem.port
-                      ??
-                      "—"
-                    }
-                  />
-
-                </div>
-
-
-                <div
-                  style={{
-                    marginTop:
-                      "18px",
-                  }}
-                >
-
-                  <div
-                    style={{
-                      fontWeight:
-                        700,
-
-                      marginBottom:
-                        "10px",
-                    }}
-                  >
-                    Расчёт
-                  </div>
-
-
-                  <div
-                    style={{
-                      display:
-                        "grid",
-
-                      gridTemplateColumns:
-                        "repeat(auto-fit, minmax(145px, 1fr))",
-
-                      gap:
-                        "8px",
-                    }}
-                  >
-
-                    <CompactMetric
-                      label="Потребность 100"
-                      value={
-                        `${formatNumber(
-                          selectedItem
-                            .demand_container_units
-                        )} шт.`
-                      }
-                    />
-
-
-                    <CompactMetric
-                      label="Потребность 70"
-                      value={
-                        `${formatNumber(
-                          selectedItem
-                            .demand_truck_units
-                        )} шт.`
-                      }
-                    />
-
-
-                    <CompactMetric
-                      label="Выбрано"
-                      value={
-                        `${formatNumber(
-                          selectedItem
-                            .selected_demand_units
-                        )} шт.`
-                      }
-                    />
-
-
-                    <CompactMetric
-                      label="Целевой горизонт"
-                      value={
-                        selectedItem.added_manually &&
-                        selectedItem.selected_demand_units === null
-                          ? "—"
-                          : `${targetDays} дн.`
-                      }
-                    />
-
-                  </div>
-
-
-                  {selectedPreview && (
-
-                    <div
-                      style={{
-                        marginTop:
-                          "12px",
-
-                        padding:
-                          "14px",
-
-                        border:
-                          "1px solid var(--border)",
-
-                        borderRadius:
-                          "10px",
-                      }}
-                    >
-
-                      <div
-                        style={{
-                          display:
-                            "grid",
-
-                          gridTemplateColumns:
-                            "repeat(auto-fit, minmax(140px, 1fr))",
-
-                          gap:
-                            "8px",
-                        }}
-                      >
-
-                        <CompactMetric
-                          label="Обычное округление"
-                          value={
-                            `${formatNumber(
-                              selectedPreview
-                                .standard_cartons
-                            )} кор. / ${formatNumber(
-                              selectedPreview
-                                .standard_quantity
-                            )} шт.`
-                          }
-                        />
-
-
-                        <CompactMetric
-                          label="После MOQ"
-                          value={
-                            `${formatNumber(
-                              selectedPreview
-                                .final_cartons
-                            )} кор. / ${formatNumber(
-                              selectedPreview
-                                .final_quantity
-                            )} шт.`
-                          }
-                        />
-
-
-                        <CompactMetric
-                          label="Покрытие"
-                          value={
-                            `${formatNumber(
-                              selectedPreview
-                                .coverage_after_order_days,
-                              1
-                            )} дн.`
-                          }
-                        />
-
-
-                        <CompactMetric
-                          label="Стоимость"
-                          value={
-                            `${formatNumber(
-                              selectedPreview
-                                .total_price_cny,
-                              2
-                            )} CNY`
-                          }
-                        />
-
-
-                        <CompactMetric
-                          label="Объём"
-                          value={
-                            `${formatNumber(
-                              selectedPreview
-                                .total_volume_m3,
-                              6
-                            )} м³`
-                          }
-                        />
-
-
-                        <CompactMetric
-                          label="Вес"
-                          value={
-                            `${formatNumber(
-                              selectedPreview
-                                .total_weight_tons,
-                              6
-                            )} т`
-                          }
-                        />
-
-                      </div>
-
-                    </div>
-
-                  )}
-
-
-                  <div
-                    style={{
-                      display:
-                        "flex",
-
-                      gap:
-                        "9px",
-
-                      flexWrap:
-                        "wrap",
-
-                      marginTop:
-                        "12px",
-                    }}
-                  >
-
-                    <Button variant="secondary"
-                      type="button"
-
-                      
-
-                      disabled={
-                        selectedBusy
-                      }
-
-                      onClick={
-                        () => {
-
-                          void previewTerms(
-                            selectedItem
-                          );
-
-                        }
-                      }
-                    >
-                      Рассчитать
-                    </Button>
-
-
-                    {selectedPreview
-                      &&
-                      selectedItem
-                        .moq_review_status !==
-                        "pending" && (
-
-                      <Button
-                        type="button"
-
-                        
-
-                        disabled={
-                          selectedBusy
-                        }
-
-                        onClick={
-                          () => {
-
-                            void confirmTerms(
-                              selectedItem
-                            );
-
-                          }
-                        }
-                      >
-                        Подтвердить MOQ и цену
-                      </Button>
-
-                    )}
-
-
-                    {selectedItem
-                      .moq_review_status ===
-                      "pending"
-                      &&
-                      selectedPreview && (
-
-                      <>
-
-                        <Button
-                          type="button"
-
-                          
-
-                          disabled={
-                            selectedBusy
-                          }
-
-                          onClick={
-                            () => {
-
-                              void resolveMoqReview(
-                                selectedItem,
-                                "approve"
-                              );
-
-                            }
-                          }
-                        >
-                          Включить в заказ
-                        </Button>
-
-
-                        <Button variant="secondary"
-                          type="button"
-
-                          
-
-                          disabled={
-                            selectedBusy
-                          }
-
-                          onClick={
-                            () => {
-
-                              void resolveMoqReview(
-                                selectedItem,
-                                "reject"
-                              );
-
-                            }
-                          }
-                        >
-                          Не заказывать
-                        </Button>
-
-                      </>
-
-                    )}
-
-                  </div>
-
-
-                  {selectedEditor.error && (
-
-                    <div
-                      style={{
-                        marginTop:
-                          "10px",
-
-                        color:
-                          "#d64545",
-
-                        fontWeight:
-                          600,
-                      }}
-                    >
-                      {selectedEditor.error}
-                    </div>
-
-                  )}
-
-                </div>
-
-              </div>
-
-            </>
-
+          {/* Two independently confirmed blocks: the only procurement approvals. */}
+          {preparationEditable && (
+            <VedOrderPreparationBlocks
+              key={selectedItem.id + ":" +
+                (selectedItem.characteristics_confirmed_at || "") + ":" +
+                (selectedItem.order_terms_confirmed_at || "") + ":" +
+                String(selectedItem.units_per_carton_snapshot ?? "")}
+              item={selectedItem}
+              onSaved={refreshAll}
+            />
           )}
-
 
           {/* ==================================================
               WAITING FOR VED
@@ -4860,6 +4074,8 @@ export default function VedOrderDetailClient(
                         "var(--text)",
                     }}
                   >
+
+                    <option value="">Выберите условия поставки</option>
 
                     <option value="FOB">
                       FOB
@@ -5814,7 +5030,7 @@ export default function VedOrderDetailClient(
 
 
             <CompactMetric
-              label="MOQ + цена"
+              label="Оба блока"
               value={
                 formatNumber(
                   statistics.terms_confirmed
@@ -5822,6 +5038,16 @@ export default function VedOrderDetailClient(
               }
             />
 
+
+            <CompactMetric
+              label="Характеристики"
+              value={formatNumber(statistics.characteristics_confirmed)}
+            />
+
+            <CompactMetric
+              label="Условия заказа"
+              value={formatNumber(statistics.order_block_confirmed)}
+            />
 
             <CompactMetric
               label="Ждут"

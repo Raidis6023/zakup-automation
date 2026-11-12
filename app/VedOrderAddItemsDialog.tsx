@@ -268,7 +268,6 @@ export default function VedOrderAddItemsDialog({
                     onChange={event => setNewItem(current => ({ ...current, name: event.target.value }))} />
                 </label>
                 {([
-                  ["our_article", "Наш артикул", "Например, AVD-001"],
                   ["chinese_article", "Китайский артикул", "Артикул поставщика"],
                   ["cartons", "Количество коробов", "0"],
                   ["units_per_carton", "Штук в коробке", "0"],
