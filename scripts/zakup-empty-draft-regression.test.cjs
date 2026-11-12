@@ -11,7 +11,11 @@ const migration = read("supabase/migrations/20261111_allow_empty_ved_order_draft
 
 assert.doesNotMatch(button, /confirmedCount|Подтвердите хотя бы один товар/);
 assert.match(button, /disabled=\{pending\}/);
-assert.match(page, /Будет создан пустой черновик ВЭД/);
+// The explanatory paragraph was deliberately removed from the interface.
+// Validate the actual submit path, not the old on-screen copy.
+assert.match(page, /<CreateVedDraftSubmitButton/);
+assert.match(page, /scenario=\{orderScenario\}/);
+assert.doesNotMatch(page, /orderDescription/);
 assert.doesNotMatch(page, /confirmedCount=\{/);
 assert.match(action, /Number\(result\.items_created \?\? 0\) > 0/);
 assert.match(migration, /v_has_selected_items AND NOT EXISTS/);
