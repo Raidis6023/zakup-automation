@@ -11,7 +11,9 @@ import {
   METRIC_IDS, DEFAULT_SLOTS, DEFAULT_SIZES,
   COLUMN_COUNT, CARD_GAP, CARD_HEIGHT,
   baseCardWidth, slotPosition, assistantReserve, collides, planCardLayout,
-  type MetricId, type SlotMap, type SizeMap, type CardSize,
+  resizeCardRectangle,
+  type MetricId, type SlotMap, type SizeMap, type CardSize, type CardOrigins,
+  type CardRectangle, type ResizeEdge,
 } from "./home-marketplace-layout";
 
 type MarketplaceKind = Exclude<MetricId, "all">;
@@ -29,20 +31,19 @@ export type HomeMarketplaceMetric = {
 
 type Position = { x: number; y: number };
 type DragState = { id: MetricId; offsetX: number; offsetY: number };
-type ResizeDirection = "horizontal" | "vertical" | "both";
 type ResizeState = {
   id: MetricId;
-  direction: ResizeDirection;
+  edge: ResizeEdge;
   startX: number;
   startY: number;
-  originalWidth: number;
-  originalHeight: number;
+  original: CardRectangle;
 };
 type PeriodMap = Record<MetricId, HomePeriod>;
 
 const SLOTS_STORAGE_KEY = "workspace-home-marketplace-card-slots-v1";
 const SIZES_STORAGE_KEY = "workspace-home-marketplace-card-sizes-v1";
 const PERIOD_STORAGE_KEY = "workspace-home-marketplace-periods-v1";
+const ORIGINS_STORAGE_KEY = "workspace-home-marketplace-card-anchors-v1";
 const DEFAULT_PERIODS: PeriodMap = {
   all: "2026-09",
   ozon: "2026-09",
@@ -80,11 +81,34 @@ function readSavedSizes(): SizeMap | null {
     if (!METRIC_IDS.every(id => {
       const item = parsed[id];
       return item &&
-        Number.isFinite(item.widthUnits) && item.widthUnits >= 1 && item.widthUnits <= 4 &&
+        Number.isFinite(item.widthUnits) && item.widthUnits >= 1 && item.widthUnits <= 5 &&
         Number.isFinite(item.height) && item.height >= CARD_HEIGHT && item.height <= 2000;
     })) return null;
     return parsed as SizeMap;
   } catch { return null; }
+}
+
+function readSavedOrigins(): CardOrigins {
+  try {
+    const parsed: unknown = JSON.parse(
+      window.localStorage.getItem(ORIGINS_STORAGE_KEY) || "null"
+    );
+    if (!parsed || typeof parsed !== "object") return {};
+    const result: CardOrigins = {};
+    for (const id of METRIC_IDS) {
+      const maybe = (parsed as Record<string, { x?: unknown; y?: unknown }>)[id];
+      if (maybe &&
+          typeof maybe.x === "number" && Number.isFinite(maybe.x) &&
+          typeof maybe.y === "number" && Number.isFinite(maybe.y) &&
+          maybe.x >= 0 && maybe.x <= 1 &&
+          maybe.y >= 0 && maybe.y <= 1) {
+        result[id] = { x: maybe.x, y: maybe.y };
+      }
+    }
+    return result;
+  } catch {
+    return {};
+  }
 }
 
 function readSavedPeriods(): PeriodMap | null {
@@ -119,10 +143,13 @@ export default function HomeMarketplaceCards({ metrics }: {
   const resizeRef = useRef<ResizeState | null>(null);
   const targetSlotRef = useRef<number | null>(null);
   const sizesRef = useRef<SizeMap>(DEFAULT_SIZES);
+  const originsRef = useRef<CardOrigins>({});
 
   const [slots, setSlots] = useState<SlotMap>(DEFAULT_SLOTS);
   const [sizes, setSizes] = useState<SizeMap>(DEFAULT_SIZES);
+  const [origins, setOrigins] = useState<CardOrigins>({});
   const [periods, setPeriods] = useState<PeriodMap>(DEFAULT_PERIODS);
+  const [openedMonthId, setOpenedMonthId] = useState<MetricId | null>(null);
   const [boardSize, setBoardSize] = useState({ width: 0, height: 0, viewportWidth: 0 });
   const [draggingId, setDraggingId] = useState<MetricId | null>(null);
   const [dragPosition, setDragPosition] = useState<Position | null>(null);
@@ -133,6 +160,9 @@ export default function HomeMarketplaceCards({ metrics }: {
     const savedSlots = readSavedSlots();
     const savedSizes = readSavedSizes();
     const savedPeriods = readSavedPeriods();
+    const savedOrigins = readSavedOrigins();
+    originsRef.current = savedOrigins;
+    setOrigins(savedOrigins);
     if (savedSlots) setSlots(savedSlots);
     if (savedSizes) { setSizes(savedSizes); sizesRef.current = savedSizes; }
     if (savedPeriods) setPeriods(savedPeriods);
@@ -163,12 +193,33 @@ export default function HomeMarketplaceCards({ metrics }: {
     };
   }, []);
 
+  // A single styled popup, outside clipped cards and above all their edges.
+  useEffect(() => {
+    if (!openedMonthId) return;
+    function dismiss(event: PointerEvent) {
+      const target = event.target;
+      if (!(target instanceof Element) ||
+          !target.closest(".home-marketplace-period-trigger, .home-marketplace-month-menu")) {
+        setOpenedMonthId(null);
+      }
+    }
+    function onEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpenedMonthId(null);
+    }
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", onEscape);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", onEscape);
+    };
+  }, [openedMonthId]);
+
   const cardWidth = baseCardWidth(boardSize.width);
   const requestedLayout = useMemo(
     () => planCardLayout(
-      slots, sizes, boardSize.width, boardSize.height, boardSize.viewportWidth,
+      slots, sizes, boardSize.width, boardSize.height, boardSize.viewportWidth, origins,
     ),
-    [slots, sizes, boardSize],
+    [slots, sizes, origins, boardSize],
   );
   const fallbackLayout = useMemo(
     () => planCardLayout(
@@ -187,8 +238,9 @@ export default function HomeMarketplaceCards({ metrics }: {
 
   function startDrag(event: ReactPointerEvent<HTMLDivElement>, id: MetricId) {
     if (!event.isPrimary || event.button !== 0 || resizingId || !layout) return;
-    // The month selector is a control, not a drag handle.
-    if ((event.target as HTMLElement).closest("select, option, button")) return;
+    // Controls are not drag handles.
+    if ((event.target as HTMLElement).closest("button, [role='listbox']")) return;
+    setOpenedMonthId(null);
     const card = event.currentTarget.closest("article");
     if (!card) return;
     const cardRect = card.getBoundingClientRect();
@@ -240,10 +292,13 @@ export default function HomeMarketplaceCards({ metrics }: {
       const dRight = (right.x - position.x) ** 2 + (right.y - position.y) ** 2;
       return dLeft - dRight;
     });
+    const candidateOrigins = { ...originsRef.current };
+    delete candidateOrigins[drag.id];
     for (const candidate of candidates) {
       const proposed = swapSlot(slots, drag.id, candidate);
       if (planCardLayout(
         proposed, sizes, board.clientWidth, board.clientHeight, window.innerWidth,
+        candidateOrigins,
       )) {
         targetSlotRef.current = candidate;
         setTargetSlot(candidate);
@@ -257,9 +312,15 @@ export default function HomeMarketplaceCards({ metrics }: {
     if (!drag) return;
     if (targetSlotRef.current !== null && targetSlotRef.current !== slots[drag.id]) {
       const proposed = swapSlot(slots, drag.id, targetSlotRef.current);
+      const candidateOrigins = { ...originsRef.current };
+      delete candidateOrigins[drag.id];
       if (planCardLayout(
         proposed, sizes, boardSize.width, boardSize.height, boardSize.viewportWidth,
+        candidateOrigins,
       )) {
+        originsRef.current = candidateOrigins;
+        setOrigins(candidateOrigins);
+        store(ORIGINS_STORAGE_KEY, candidateOrigins);
         setSlots(proposed);
         store(SLOTS_STORAGE_KEY, proposed);
       }
@@ -274,33 +335,55 @@ export default function HomeMarketplaceCards({ metrics }: {
     setTargetSlot(null);
   }
 
-  function applySize(id: MetricId, desired: CardSize) {
+  function applyRectangle(id: MetricId, rect: CardRectangle) {
     const board = boardRef.current;
     if (!board || cardWidth <= 0) return;
-    const next: SizeMap = { ...sizesRef.current, [id]: desired };
-    // Reject a resize if it would overlap another card or the panda.
-    if (!planCardLayout(
-      slots, next, board.clientWidth, board.clientHeight, window.innerWidth,
-    )) return;
-    sizesRef.current = next;
-    setSizes(next);
+    const nextSizes: SizeMap = {
+      ...sizesRef.current,
+      [id]: {
+        widthUnits: rect.width / cardWidth,
+        height: rect.height,
+      },
+    };
+    const nextOrigins: CardOrigins = {
+      ...originsRef.current,
+      [id]: {
+        x: rect.x / board.clientWidth,
+        y: rect.y / board.clientHeight,
+      },
+    };
+    // Pin the resized rectangle first. Move neighbours to free slots;
+    // reject only when there is no collision-free placement.
+    const nextLayout = planCardLayout(
+      slots, nextSizes, board.clientWidth, board.clientHeight, window.innerWidth,
+      nextOrigins, id,
+    );
+    if (!nextLayout) return;
+    sizesRef.current = nextSizes;
+    originsRef.current = nextOrigins;
+    setSizes(nextSizes);
+    setOrigins(nextOrigins);
   }
 
-  function startResize(event: ReactPointerEvent<HTMLSpanElement>,
-    id: MetricId, direction: ResizeDirection) {
+  function startResize(
+    event: ReactPointerEvent<HTMLSpanElement>,
+    id: MetricId,
+    edge: ResizeEdge,
+  ) {
     if (event.button !== 0 || !event.isPrimary || draggingId || !layout) return;
     event.preventDefault();
     event.stopPropagation();
-    const current = layout[id];
-    resizeRef.current = {
-      id, direction, startX: event.clientX, startY: event.clientY,
-      originalWidth: current.width, originalHeight: current.height,
-    };
-    // On narrow viewports previously saved sizes may no longer fit.
     if (!requestedLayout) {
       sizesRef.current = DEFAULT_SIZES;
+      originsRef.current = {};
       setSizes(DEFAULT_SIZES);
+      setOrigins({});
     }
+    resizeRef.current = {
+      id, edge, startX: event.clientX, startY: event.clientY,
+      original: { ...layout[id] },
+    };
+    setOpenedMonthId(null);
     setResizingId(id);
     event.currentTarget.setPointerCapture(event.pointerId);
   }
@@ -311,18 +394,13 @@ export default function HomeMarketplaceCards({ metrics }: {
     if (!active || !board || cardWidth <= 0) return;
     event.preventDefault();
     event.stopPropagation();
-    const width = active.originalWidth + event.clientX - active.startX;
-    const height = active.originalHeight + event.clientY - active.startY;
-    const existing = sizesRef.current[active.id];
-    const widthUnits = active.direction === "vertical"
-      ? existing.widthUnits
-      : Math.round(clamp(width / cardWidth, 1, 4) * 20) / 20;
-    const newHeight = active.direction === "horizontal"
-      ? existing.height
-      : Math.round(clamp(height, CARD_HEIGHT, board.clientHeight) / 4) * 4;
-    if (existing.widthUnits !== widthUnits || existing.height !== newHeight) {
-      applySize(active.id, { widthUnits, height: newHeight });
-    }
+    const next = resizeCardRectangle(
+      active.original, active.edge,
+      event.clientX - active.startX,
+      event.clientY - active.startY,
+      cardWidth, board.clientWidth, board.clientHeight,
+    );
+    applyRectangle(active.id, next);
   }
 
   function endResize(event: ReactPointerEvent<HTMLSpanElement>) {
@@ -333,37 +411,40 @@ export default function HomeMarketplaceCards({ metrics }: {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
     store(SIZES_STORAGE_KEY, sizesRef.current);
+    store(ORIGINS_STORAGE_KEY, originsRef.current);
     resizeRef.current = null;
     setResizingId(null);
   }
 
-  function resizeWithKeyboard(event: ReactKeyboardEvent<HTMLSpanElement>,
-    id: MetricId, direction: ResizeDirection) {
-    const old = sizesRef.current[id];
-    let newWidth = old.widthUnits;
-    let newHeight = old.height;
-    if (direction !== "vertical") {
-      if (event.key === "ArrowRight") newWidth += 0.25;
-      if (event.key === "ArrowLeft") newWidth -= 0.25;
-    }
-    if (direction !== "horizontal") {
-      if (event.key === "ArrowDown") newHeight += 30;
-      if (event.key === "ArrowUp") newHeight -= 30;
-    }
-    if (newWidth === old.widthUnits && newHeight === old.height) return;
+  function resizeWithKeyboard(
+    event: ReactKeyboardEvent<HTMLSpanElement>,
+    id: MetricId,
+    edge: ResizeEdge,
+  ) {
+    if (!layout) return;
+    const dx = event.key === "ArrowLeft" ? -24 : event.key === "ArrowRight" ? 24 : 0;
+    const dy = event.key === "ArrowUp" ? -24 : event.key === "ArrowDown" ? 24 : 0;
+    const changeX = edge.includes("left") || edge.includes("right");
+    const changeY = edge.includes("top") || edge.includes("bottom");
+    if ((!dx && !dy) || (dx && !changeX) || (dy && !changeY)) return;
     event.preventDefault();
     event.stopPropagation();
-    applySize(id, {
-      widthUnits: clamp(newWidth, 1, 4),
-      height: clamp(newHeight, CARD_HEIGHT, boardSize.height),
-    });
+    const next = resizeCardRectangle(
+      layout[id], edge, dx, dy,
+      cardWidth, boardSize.width, boardSize.height,
+    );
+    applyRectangle(id, next);
     store(SIZES_STORAGE_KEY, sizesRef.current);
+    store(ORIGINS_STORAGE_KEY, originsRef.current);
   }
 
+  const proposedOrigins: CardOrigins = { ...origins };
+  if (draggingId) delete proposedOrigins[draggingId];
   const proposedLayout = draggingId !== null && targetSlot !== null && layout
     ? planCardLayout(
         swapSlot(slots, draggingId, targetSlot),
         sizes, boardSize.width, boardSize.height, boardSize.viewportWidth,
+        proposedOrigins,
       )
     : null;
   const targetRect = draggingId && proposedLayout ? proposedLayout[draggingId] : null;
@@ -425,23 +506,32 @@ export default function HomeMarketplaceCards({ metrics }: {
                 )}
                 <strong>{metric.title}</strong>
               </div>
-              <label className="home-marketplace-period-control">
-                <span className="home-marketplace-visually-hidden">
-                  Месяц для {metric.title}
-                </span>
-                <select
-                  value={periods[id]}
-                  onChange={event => changePeriod(id, event.target.value as HomePeriod)}
+              <div className="home-marketplace-period-control">
+                <button
+                  type="button"
+                  className="home-marketplace-period-trigger"
+                  aria-label={"Выбрать месяц: " + metric.title}
+                  aria-haspopup="listbox"
+                  aria-expanded={openedMonthId === id}
+                  aria-controls={openedMonthId === id ? "home-month-options-" + id : undefined}
+                  onClick={event => {
+                    event.stopPropagation();
+                    setOpenedMonthId(current => current === id ? null : id);
+                  }}
+                  onKeyDown={event => {
+                    if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setOpenedMonthId(id);
+                    }
+                  }}
                   onPointerDown={event => event.stopPropagation()}
                   onPointerMove={event => event.stopPropagation()}
                   onPointerUp={event => event.stopPropagation()}
-                  aria-label={"Месяц для " + metric.title}
                 >
-                  {PERIODS.map(period => (
-                    <option key={period.value} value={period.value}>{period.label}</option>
-                  ))}
-                </select>
-              </label>
+                  {PERIODS.find(period => period.value === periods[id])?.label}
+                  <span className="home-marketplace-period-chevron" aria-hidden="true" />
+                </button>
+              </div>
             </div>
             <div className="home-marketplace-card-metrics" aria-live="polite">
               <div className="home-marketplace-card-metric">
@@ -454,26 +544,83 @@ export default function HomeMarketplaceCards({ metrics }: {
               </div>
             </div>
             {([
-              ["horizontal", "right", "Изменить ширину"],
-              ["vertical", "bottom", "Изменить высоту"],
-              ["both", "corner", "Изменить размер"],
-            ] as const).map(([direction, positionName, label]) => (
+              ["left", "Слева"],
+              ["right", "Справа"],
+              ["top", "Сверху"],
+              ["bottom", "Снизу"],
+              ["top-left", "Сверху слева"],
+              ["top-right", "Сверху справа"],
+              ["bottom-left", "Снизу слева"],
+              ["bottom-right", "Снизу справа"],
+            ] as const).map(([edge, label]) => (
               <span
-                key={positionName}
-                className={"home-marketplace-resize-handle home-marketplace-resize-handle--" + positionName}
+                key={edge}
+                className={"home-marketplace-resize-handle home-marketplace-resize-handle--" + edge}
                 role="separator"
                 tabIndex={0}
-                aria-label={label + ": " + metric.title}
-                onPointerDown={event => startResize(event, id, direction)}
+                aria-label={"Изменить размер " + label.toLowerCase() + ": " + metric.title}
+                onPointerDown={event => startResize(event, id, edge)}
                 onPointerMove={moveResize}
                 onPointerUp={endResize}
                 onPointerCancel={endResize}
-                onKeyDown={event => resizeWithKeyboard(event, id, direction)}
+                onKeyDown={event => resizeWithKeyboard(event, id, edge)}
               />
             ))}
           </article>
         );
       })}
+      {openedMonthId && layout && (
+        <div
+          id={"home-month-options-" + openedMonthId}
+          className="home-marketplace-month-menu"
+          role="listbox"
+          aria-label={"Выбор месяца: " + metrics.find(item => item.id === openedMonthId)?.title}
+          style={{
+            left: Math.max(0, Math.min(
+              boardSize.width - 106,
+              layout[openedMonthId].x + layout[openedMonthId].width - 118,
+            )),
+            top: layout[openedMonthId].y + 44,
+          }}
+          onPointerDown={event => event.stopPropagation()}
+          onKeyDown={event => {
+            if (event.key === "Escape") {
+              setOpenedMonthId(null);
+            } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+              event.preventDefault();
+              const buttons = Array.from(
+                event.currentTarget.querySelectorAll<HTMLButtonElement>("button"),
+              );
+              const focusedIndex = buttons.findIndex(button => button === document.activeElement);
+              const delta = event.key === "ArrowDown" ? 1 : -1;
+              const nextIndex = (focusedIndex + delta + buttons.length) % buttons.length;
+              buttons[nextIndex]?.focus();
+            }
+          }}
+        >
+          {PERIODS.map(period => (
+            <button
+              type="button"
+              role="option"
+              key={period.value}
+              aria-selected={periods[openedMonthId] === period.value}
+              className={
+                "home-marketplace-month-option" +
+                (periods[openedMonthId] === period.value ? " is-selected" : "")
+              }
+              onClick={() => {
+                changePeriod(openedMonthId, period.value);
+                setOpenedMonthId(null);
+              }}
+            >
+              {period.label}
+              {periods[openedMonthId] === period.value ? (
+                <span aria-hidden="true">✓</span>
+              ) : null}
+            </button>
+          ))}
+        </div>
+      )}
       <HomeIdlePanda />
     </div>
   );
