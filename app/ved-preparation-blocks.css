@@ -45,3 +45,48 @@
 .ved-confirm-error{font-size:12px;color:#d66b6b;margin:0}
 .ved-confirm-success{font-size:12px;color:var(--panda-table-fg,var(--ws-text));margin:0}
 @media(max-width:600px){.ved-confirm-block,.ved-confirm-summary{padding:11px}.ved-confirm-grid{grid-template-columns:1fr}}
+
+/* Preparation card layout: cap field count per row regardless of large/zoomed viewport. */
+.ved-confirm-block,.ved-confirm-summary{padding:20px}
+.ved-confirm-header strong{font-size:17px;line-height:1.35}
+.ved-confirm-status{font-size:12px}
+.ved-confirm-description{font-size:13px;line-height:1.55;margin-bottom:17px}
+.ved-confirm-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:stretch}
+.ved-confirm-group{min-width:0;padding:16px;border:1px solid var(--panda-table-border,var(--ws-border-soft));border-radius:9px;background:var(--panda-table-background-alt,var(--ws-surface))}
+.ved-confirm-group--wide{grid-column:1/-1}
+.ved-confirm-group-title{font-size:14px;line-height:1.4;font-weight:700;margin:0 0 13px;color:var(--panda-table-fg,var(--ws-text))}
+.ved-confirm-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;align-items:start}
+.ved-confirm-grid--individual,.ved-confirm-grid--terms{max-width:1100px}
+.ved-confirm-field{font-size:13px;line-height:1.4;gap:7px}
+.ved-confirm-field>span{overflow-wrap:break-word}
+.ved-confirm-field input{box-sizing:border-box;min-width:0;min-height:43px;padding:9px 11px;font-size:15px;font-weight:500;line-height:1.3}
+.ved-confirm-field small{font-size:12px;line-height:1.4}
+.ved-confirm-readonly{min-height:74px;padding:10px 12px}
+.ved-confirm-readonly span{font-size:12px}
+.ved-confirm-readonly strong{font-size:14px}
+.ved-confirm-actions{margin-top:18px}
+.ved-confirm-actions button{min-height:42px;padding:10px 16px;font-size:13px}
+.ved-confirm-actions span{font-size:12px;line-height:1.4}
+.ved-confirm-calculation{max-width:1500px;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:16px}
+.ved-confirm-calculation div{min-width:0;padding:12px}
+.ved-confirm-calculation span,.ved-confirm-summary small{font-size:12px;line-height:1.4}
+.ved-confirm-calculation strong{font-size:15px;overflow-wrap:anywhere}
+.ved-confirm-summary strong{font-size:14px}
+.ved-confirm-summary span{font-size:13px}
+@media(max-width:1500px){
+  .ved-confirm-groups{grid-template-columns:minmax(0,1fr)}
+  .ved-confirm-group--wide{grid-column:auto}
+}
+@media(max-width:1050px){
+  .ved-confirm-calculation{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:760px){
+  .ved-confirm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ved-confirm-calculation{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:560px){
+  .ved-confirm-block,.ved-confirm-summary{padding:13px}
+  .ved-confirm-group{padding:12px}
+  .ved-confirm-grid,.ved-confirm-calculation{grid-template-columns:minmax(0,1fr)}
+  .ved-confirm-header strong{font-size:16px}
+}

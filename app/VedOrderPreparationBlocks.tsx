@@ -159,6 +159,19 @@ export default function VedOrderPreparationBlocks({
     { key: "individualHeightCm", label: "Высота индивидуальной упаковки, см" },
     { key: "hsCode", label: "ТН ВЭД (предварительный)" },
   ];
+  const renderCharacteristic = ({ key, label, hint }: (typeof charFields)[number]) => (
+    <label key={key} className="ved-confirm-field">
+      <span>{label}</span>
+      <input type="text"
+        inputMode={["name", "chineseArticle", "hsCode"].includes(key) ? "text" : "decimal"}
+        value={characteristics[key]}
+        maxLength={key === "name" ? 250 : key === "chineseArticle" ? 120 : 25}
+        onChange={event => changeCharacteristic(key, event.target.value)}
+        disabled={busy !== null} aria-label={label}
+      />
+      {hint && <small>{hint}</small>}
+    </label>
+  );
   return (
     <div className="ved-two-blocks">
       <section className="ved-confirm-block" aria-label="Характеристики товара">
@@ -172,28 +185,33 @@ export default function VedOrderPreparationBlocks({
           Можно исправить характеристики и нового, и уже продаваемого товара.
           Изменения сохраняются в заказе, исходный каталог ЕНОТ не меняется.
         </p>
-        <div className="ved-confirm-grid">
-          {charFields.map(({ key, label, hint }) => (
-            <label key={key} className="ved-confirm-field">
-              {label}
-              <input type="text" inputMode={
-                ["name", "chineseArticle", "hsCode"].includes(key) ? "text" : "decimal"
-              } value={characteristics[key]}
-                maxLength={key === "name" ? 250 : key === "chineseArticle" ? 120 : 25}
-                onChange={event => changeCharacteristic(key, event.target.value)}
-                disabled={busy !== null}
-                aria-label={label}
-              />
-              {hint && <small>{hint}</small>}
-            </label>
-          ))}
-          <div className="ved-confirm-field ved-confirm-readonly">
-            <span>Наш артикул</span>
-            <strong>{item.our_article_snapshot || "Заполняет ВЭД"}</strong>
+        <div className="ved-confirm-groups">
+          <div className="ved-confirm-group">
+            <h3 className="ved-confirm-group-title">Основные данные</h3>
+            <div className="ved-confirm-grid">
+              {charFields.slice(0,2).map(renderCharacteristic)}
+              {charFields.slice(11,12).map(renderCharacteristic)}
+              <div className="ved-confirm-field ved-confirm-readonly">
+                <span>Наш артикул</span>
+                <strong>{item.our_article_snapshot || "Заполняет ВЭД"}</strong>
+              </div>
+              <div className="ved-confirm-field ved-confirm-readonly">
+                <span>Основное фото товара *</span>
+                <strong>{item.photo_url ? "Прикреплено" : "Отсутствует, загрузите выше"}</strong>
+              </div>
+            </div>
           </div>
-          <div className="ved-confirm-field ved-confirm-readonly">
-            <span>Основное фото товара *</span>
-            <strong>{item.photo_url ? "Прикреплено" : "Отсутствует, загрузите выше"}</strong>
+          <div className="ved-confirm-group">
+            <h3 className="ved-confirm-group-title">Транспортный короб</h3>
+            <div className="ved-confirm-grid">
+              {charFields.slice(2,8).map(renderCharacteristic)}
+            </div>
+          </div>
+          <div className="ved-confirm-group ved-confirm-group--wide">
+            <h3 className="ved-confirm-group-title">Индивидуальная упаковка</h3>
+            <div className="ved-confirm-grid ved-confirm-grid--individual">
+              {charFields.slice(8,11).map(renderCharacteristic)}
+            </div>
           </div>
         </div>
         <div className="ved-confirm-actions">
@@ -216,7 +234,7 @@ export default function VedOrderPreparationBlocks({
           Вводятся MOQ, цена и количество транспортных коробов. FOB/FCA и порт
           заполняет ВЭД после передачи заказа.
         </p>
-        <div className="ved-confirm-grid">
+        <div className="ved-confirm-grid ved-confirm-grid--terms">
           {([
             ["moq", "MOQ, шт. *"],
             ["priceCny", "Цена за штуку, CNY *"],
