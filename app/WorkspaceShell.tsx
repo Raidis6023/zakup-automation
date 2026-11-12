@@ -55,6 +55,7 @@ import "./sidebar-emerald.css";
 import "./ved-nav.css";
 import "./home-champagne-theme.css";
 import "./workspace-unified-champagne.css";
+import "./workspace-unified-tables.css";
 
 
 // ============================================================

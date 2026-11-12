@@ -1,0 +1,44 @@
+"use strict";
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const root = path.join(__dirname,"..");
+const read = name => fs.readFileSync(path.join(root,name),"utf8");
+
+const css=read("app/workspace-unified-tables.css");
+const shell=read("app/WorkspaceShell.tsx");
+const tokens=read("app/workspace-unified-champagne.css");
+const sku=read("app/sku-list/sku-list.css");
+const procurement=read("app/zakup/ZakupDemandTableClient.tsx");
+const ym=read("app/yandex-market/YandexProductsTableClient.tsx");
+
+assert.ok(shell.indexOf('import "./workspace-unified-tables.css";') >
+  shell.indexOf('import "./workspace-unified-champagne.css";'),"table layer must follow approved palette");
+assert.match(css,/\.home-shell\[data-accent-area\] table thead > tr > th/);
+assert.match(css,/\.home-shell\[data-accent-area\] table tbody > tr > td/);
+assert.match(css,/html\[data-theme="dark"\] \.home-shell\[data-accent-area\]/);
+assert.match(css,/--panda-table-background: #fff9ef/);
+assert.match(css,/--panda-table-background: #1a222b/);
+assert.match(css,/--panda-table-border: #ddccb4/);
+assert.match(css,/--panda-table-border: #36404b/);
+assert.match(css,/height: 42px/);
+assert.match(css,/height: 39px/);
+assert.match(css,/table tbody > tr:nth-child\(even\)/);
+assert.match(css,/\.ym-product-details:nth-of-type\(even\)/);
+assert.match(css,/\.zakup-demand-table tbody > tr > td/);
+assert.match(css,/\.zakup-products-mp-group/);
+assert.match(css,/\.sku-list-total-cell/);
+assert.match(css,/\.ozf-discontinued > td/);
+assert.match(css,/notification-focus/);
+assert.match(css,/\.ozf-missing-explainer/);
+assert.doesNotMatch(css,/@media\s*\(\s*prefers-color-scheme/);
+assert.doesNotMatch(css,/(?:^|\n)\s*(?:body|html|:root)\s+table\b/);
+assert.match(tokens,/--ws-page: var\(--panda-home-cream\)/);
+assert.match(tokens,/--ws-page: var\(--panda-home-anthracite\)/);
+assert.match(sku,/height: 39px/);
+assert.match(sku,/height: 42px/);
+assert.match(procurement,/className="table zakup-sortable-table zakup-demand-table"/);
+assert.match(ym,/ym-products-grid ym-product-summary/);
+const count = (source,char) => Array.from(source).filter(x=>x===char).length;
+assert.equal(count(css,"{"),count(css,"}"),"CSS block braces");
+console.log("PASS PANDA tables: all workspace table geometry, compact SKU reference, procurement, finance, YM grid, independent light/dark palette and status preservation");

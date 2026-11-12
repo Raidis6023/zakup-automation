@@ -1,0 +1,288 @@
+/* ================================================================
+   PANDA / ЕДИНЫЙ СТИЛЬ ТАБЛИЦ
+   Эталон: «Список артикулов», тёмная и светлая темы.
+   Этот файл импортируется ПОСЛЕ общих стилей оболочки.
+
+   Только рабочая оболочка: login, восстановление доступа и формы
+   вне .home-shell не затрагиваются. Расчёты, сортировка, ширины
+   столбцов, sticky, размеры скролл-областей и смысловые статусы
+   принадлежат исходным компонентам.
+   ================================================================ */
+
+/* Две независимые палитры. Не используем prefers-color-scheme:
+   выбор пользователя хранится в html[data-theme]. */
+.home-shell[data-accent-area] {
+  --panda-table-background: #fff9ef;
+  --panda-table-background-alt: #f8f0e5;
+  --panda-table-heading: #eee1ce;
+  --panda-table-border: #ddccb4;
+  --panda-table-hover: #e9ddcb;
+  --panda-table-fg: #101820;
+  --panda-table-muted: #687482;
+  --panda-table-code: #101820;
+  --panda-table-discontinued: #efe5d8;
+  --panda-table-selected: #e8dece;
+}
+
+html[data-theme="dark"] .home-shell[data-accent-area] {
+  --panda-table-background: #1a222b;
+  --panda-table-background-alt: #1e2731;
+  --panda-table-heading: #212b35;
+  --panda-table-border: #36404b;
+  --panda-table-hover: #2b3540;
+  --panda-table-fg: #f5f0e9;
+  --panda-table-muted: #a9adb2;
+  --panda-table-code: #d9b27c;
+  --panda-table-discontinued: #202831;
+  --panda-table-selected: #293440;
+}
+
+/* Одни геометрия и поверхность для обычных HTML-таблиц на всех
+   маршрутах, включая внутренние таблицы финансов и ВЭД. */
+.home-shell[data-accent-area] table {
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--panda-table-background);
+  color: var(--panda-table-fg);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-shell[data-accent-area] table thead > tr > th {
+  box-sizing: border-box;
+  height: 42px;
+  padding: 8px 10px !important;
+  background: var(--panda-table-heading) !important;
+  color: var(--panda-table-muted) !important;
+  font-size: 11px !important;
+  font-weight: 700;
+  line-height: 1.25;
+  vertical-align: middle;
+  opacity: 1 !important;
+  border-right: 1px solid var(--panda-table-border) !important;
+  border-bottom: 1px solid var(--panda-table-border) !important;
+  box-shadow: none !important;
+}
+
+.home-shell[data-accent-area] table thead > tr > th:has(> button) {
+  padding: 0 !important;
+}
+
+.home-shell[data-accent-area] table thead > tr > th > button {
+  min-height: 42px;
+  color: var(--panda-table-muted);
+  font-size: 11px;
+}
+
+.home-shell[data-accent-area] table thead > tr > th > button:hover {
+  background: var(--panda-table-hover) !important;
+  color: var(--panda-table-fg) !important;
+}
+
+/* Не перекрашиваем слова «ошибка», отрицательную прибыль, проверку
+   возвратов и иные семантические статусы. Они оформлены локально. */
+.home-shell[data-accent-area] table tbody > tr > td {
+  box-sizing: border-box;
+  height: 39px;
+  padding: 7px 10px !important;
+  font-size: 12px !important;
+  line-height: 1.35;
+  vertical-align: middle;
+  border-right: 1px solid var(--panda-table-border) !important;
+  border-bottom: 1px solid var(--panda-table-border) !important;
+}
+
+/* Нейтральное чередование как у «Списка артикулов».
+   Особые строки сохраняют смысловую подсветку/раскрытое содержимое. */
+.home-shell[data-accent-area] table tbody > tr:not(.ozf-expanded-row):not(.ozf-discontinued):not(.ozf-missing-explainer):not(.ozf-row-active):not(.tasks-draft-row):not(.tasks-note-due):not([data-status]) > td:not([class*="notification-focus"]) {
+  background: var(--panda-table-background) !important;
+}
+
+.home-shell[data-accent-area] table tbody > tr:nth-child(even):not(.ozf-expanded-row):not(.ozf-discontinued):not(.ozf-missing-explainer):not(.ozf-row-active):not(.tasks-draft-row):not(.tasks-note-due):not([data-status]) > td:not([class*="notification-focus"]) {
+  background: var(--panda-table-background-alt) !important;
+}
+
+.home-shell[data-accent-area] table tbody > tr:hover:not(.ozf-expanded-row):not(.ozf-discontinued):not(.ozf-missing-explainer):not(.tasks-draft-row):not(.tasks-note-due) > td:not([class*="notification-focus"]) {
+  background: var(--panda-table-hover) !important;
+}
+
+.home-shell[data-accent-area] table thead > tr > th:last-child,
+.home-shell[data-accent-area] table tbody > tr > td:last-child,
+.home-shell[data-accent-area] table tfoot > tr > td:last-child {
+  border-right: 0 !important;
+}
+
+.home-shell[data-accent-area] table tbody > tr:last-child > td {
+  border-bottom: 0 !important;
+}
+
+.home-shell[data-accent-area] table tfoot > tr > td {
+  background: var(--panda-table-heading) !important;
+  border-right: 1px solid var(--panda-table-border) !important;
+  color: var(--panda-table-fg);
+}
+
+/* Переопределения устаревшего тёмно-синего фона финансового модуля:
+   и раскрытая информация, и выведенные из продажи SKU используют
+   СВОЮ текущую тему вместо одной принудительно тёмной заливки. */
+.home-shell[data-accent-area] .ozf-financial-table tbody > tr.ozf-expanded-row > td {
+  background: var(--panda-table-background) !important;
+  color: var(--panda-table-fg);
+}
+.home-shell[data-accent-area] .ozf-financial-table tbody > tr.ozf-discontinued > td {
+  background: var(--panda-table-discontinued) !important;
+  color: var(--panda-table-muted) !important;
+}
+.home-shell[data-accent-area] .ozf-financial-table tbody > tr.ozf-row-active > td {
+  background: var(--panda-table-selected) !important;
+}
+.home-shell[data-accent-area] .ozf-financial-table tbody > tr.ozf-missing-explainer > td {
+  background: color-mix(in srgb, var(--ui-feedback-warning) 12%, var(--panda-table-background)) !important;
+}
+.home-shell[data-accent-area] .ozf-expanded-content .ozf-pinned-article {
+  background: var(--panda-table-heading);
+  border-bottom-color: var(--panda-table-border);
+}
+
+/* Контейнеры: рамка и поверхность эталонной таблицы.
+   Прокрутку и закрепление заголовков НЕ меняем. */
+.home-shell[data-accent-area] :is(
+  .table-wrapper,
+  .sku-list-table-card,
+  .sku-new-scroll,
+  .ozon-products-table-shell,
+  .wb-products-table-shell,
+  .ym-products-table-shell,
+  .ozf-financial-scroll,
+  .ozf-table-scroll,
+  .unit-table-scroller,
+  .unit-pilot-scroller,
+  .ved-registry-scroll,
+  .stocks-page .table-wrapper,
+  .tasks-board .tasks-table-wrapper
+) {
+  border-color: var(--panda-table-border) !important;
+  background: var(--panda-table-background);
+}
+
+/* Код ЕНОТ и активная сортировка используют один акцент,
+   не фирменные цвета отдельных маркетплейсов. */
+.home-shell[data-accent-area] :is(
+  .sku-list-enot,
+  .sku-new-enot,
+  .ozon-products-master-code,
+  .wb-products-enot,
+  .ym-products-enot,
+  .ved-registry-average,
+  .sku-list-sort-button--active,
+  .zakup-sort-button--active
+) {
+  color: var(--panda-table-code) !important;
+}
+
+/* Шапки групп маркетплейсов в Закупе больше не раскрашены
+   в Ozon/WB/ЯМ: одна нейтральная полоса в обеих темах. */
+.home-shell[data-accent-area] .zakup-reference-page .zakup-products-table-content
+  .zakup-products-group-row > th.zakup-products-mp-group {
+  background: var(--panda-table-heading) !important;
+  color: var(--panda-table-muted) !important;
+  border-bottom-color: var(--panda-table-border) !important;
+}
+
+/* Таблица «Потребность»: сохранить выбор товара, но убрать
+   зелёный фон строк и избыточную высоту старого оформления. */
+.home-shell[data-accent-area] .zakup-reference-page .zakup-products-collapsible {
+  border-color: var(--panda-table-border);
+  background: var(--panda-table-background);
+}
+.home-shell[data-accent-area] .zakup-reference-page .zakup-demand-table tbody > tr > td {
+  padding: 4px 8px !important;
+}
+.home-shell[data-accent-area] .zakup-reference-page .zakup-demand-decision {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.home-shell[data-accent-area] .zakup-reference-page .zakup-demand-status {
+  font-size: 10px;
+}
+.home-shell[data-accent-area] .zakup-reference-page .zakup-demand-action {
+  min-height: 25px;
+  padding: 3px 7px;
+  font-size: 10px;
+}
+.home-shell[data-accent-area] .zakup-reference-page .zakup-demand-quantity .input {
+  height: 29px;
+}
+.home-shell[data-accent-area] .zakup-reference-page .zakup-demand-toolbar {
+  border-bottom-color: var(--panda-table-border);
+}
+
+/* Список артикулов остаётся эталоном: 39px строка, 42px шапка,
+   вся таблица в нейтральной сетке. Убираем остаточные оттенки МП. */
+.home-shell[data-accent-area] .sku-list-page,
+.home-shell[data-accent-area] .sku-list-data-section {
+  --sku-ozon-grid: var(--panda-table-border);
+  --sku-ozon-soft: var(--panda-table-hover);
+  --sku-ozon-scroll: var(--panda-table-muted);
+  --sku-ozon-accent: var(--panda-table-code);
+}
+.home-shell[data-accent-area] .sku-list-total-cell {
+  background: var(--panda-table-heading);
+  color: var(--panda-table-fg);
+  border-color: var(--panda-table-border);
+}
+
+/* «Данные по товарам» ЯМ построены на CSS grid, а не на <table>.
+   Та же геометрия/палитра, не затрагивая summary/details и прокрутку. */
+.home-shell[data-accent-area] .yandex-reference-page .ym-products-table-header {
+  background: var(--panda-table-heading) !important;
+  color: var(--panda-table-muted);
+  border-bottom-color: var(--panda-table-border) !important;
+  box-shadow: none !important;
+}
+.home-shell[data-accent-area] .yandex-reference-page .ym-products-header-cell {
+  min-height: 42px;
+  border-right-color: var(--panda-table-border) !important;
+  color: var(--panda-table-muted);
+}
+.home-shell[data-accent-area] .yandex-reference-page .ym-products-sort-button {
+  min-height: 42px;
+  color: var(--panda-table-muted);
+  font-size: 11px;
+}
+.home-shell[data-accent-area] .yandex-reference-page .ym-products-sort-button:hover {
+  background: var(--panda-table-hover) !important;
+  color: var(--panda-table-fg) !important;
+}
+.home-shell[data-accent-area] .yandex-reference-page .ym-product-details > summary {
+  min-height: 39px;
+  background: var(--panda-table-background) !important;
+  border-bottom: 1px solid var(--panda-table-border);
+}
+.home-shell[data-accent-area] .yandex-reference-page .ym-product-details:nth-of-type(even) > summary {
+  background: var(--panda-table-background-alt) !important;
+}
+.home-shell[data-accent-area] .yandex-reference-page .ym-product-details > summary:hover {
+  background: var(--panda-table-hover) !important;
+}
+.home-shell[data-accent-area] .yandex-reference-page .ym-products-main-cell {
+  min-height: 39px;
+  padding: 7px 10px !important;
+  border-right-color: var(--panda-table-border) !important;
+  color: var(--panda-table-fg);
+  font-size: 12px;
+}
+.home-shell[data-accent-area] .yandex-reference-page .ym-product-details {
+  border-bottom-color: var(--panda-table-border);
+}
+.home-shell[data-accent-area] .yandex-reference-page .ym-product-details--notification-focus > summary {
+  outline: 2px solid var(--panda-table-code);
+  outline-offset: -2px;
+}
+
+/* Уважать системную настройку движения, клавиатуру и семантику. */
+.home-shell[data-accent-area] table thead > tr > th > button:focus-visible {
+  outline: 2px solid var(--panda-table-code);
+  outline-offset: -2px;
+}
