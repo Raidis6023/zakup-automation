@@ -358,3 +358,8 @@ html[data-theme="dark"] .ozf-page {
   align-items: center;
   justify-content: center;
 }
+
+/* Financial register: every column title centered, without affecting numeric cell alignment. */
+.ozf-financial-summary .ozf-financial-table thead th{text-align:center!important;vertical-align:middle}
+.ozf-financial-summary .ozf-financial-table thead .ozf-sort-control{display:flex;align-items:center;justify-content:center;text-align:center;width:100%;gap:2px}
+.ozf-expanded-content .ozf-collapse-detail{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:5px 11px;font-size:11px}
