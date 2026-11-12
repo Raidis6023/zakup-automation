@@ -635,11 +635,66 @@ html[data-theme="dark"] .home-shell[data-accent-area] .home-sidebar
  * keep their normal placeholder text and spacing. */
 .home-shell input.workspace-search-field {
   padding-inline-start: 40px !important;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23101820' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-4.2-4.2'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23101820' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-4.2-4.2'/%3E%3C/svg%3E") !important;
   background-repeat: no-repeat;
   background-position: 12px center;
   background-size: 18px 18px;
 }
 html[data-theme="dark"] .home-shell input.workspace-search-field {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d9b27c' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-4.2-4.2'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d9b27c' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-4.2-4.2'/%3E%3C/svg%3E") !important;
+}
+
+/* PANDA dropdowns: style the OPEN picker, not just the closed select.
+   Browser-native select state, keyboard controls, and form events remain intact.
+   Unsupported browsers keep their normal native select as a safe fallback. */
+@supports (appearance: base-select) {
+  .home-shell select:not([multiple]):not([size]):not([data-native-picker]) {
+    appearance: base-select;
+    cursor: pointer;
+  }
+  .home-shell select:not([multiple]):not([size]):not([data-native-picker])::picker-icon {
+    color: var(--ws-text-secondary);
+    margin-inline-start: 8px;
+  }
+  .home-shell select:not([multiple]):not([size]):not([data-native-picker])::picker(select) {
+    appearance: base-select;
+    box-sizing: border-box;
+    min-width: anchor-size(width);
+    max-width: min(520px, calc(100vw - 24px));
+    max-height: min(360px, 55vh);
+    overflow-y: auto;
+    padding: 5px;
+    border: 1px solid var(--ws-border);
+    border-radius: 10px;
+    color: var(--ws-text);
+    background: var(--ws-surface);
+    box-shadow: var(--ws-shadow-popup, 0 16px 35px rgba(16,24,32,.17));
+    scrollbar-color: var(--ws-border) transparent;
+  }
+  .home-shell select:not([multiple]):not([size]):not([data-native-picker]) option {
+    padding: 9px 12px;
+    border-radius: 7px;
+    font: inherit;
+    font-size: 12px;
+    line-height: 1.35;
+    color: var(--ws-text);
+    background: var(--ws-surface);
+    white-space: normal;
+  }
+  .home-shell select:not([multiple]):not([size]):not([data-native-picker]) option:hover,
+  .home-shell select:not([multiple]):not([size]):not([data-native-picker]) option:focus-visible {
+    color: var(--ws-text);
+    background: var(--ws-surface-hover);
+  }
+  .home-shell select:not([multiple]):not([size]):not([data-native-picker]) option:checked {
+    background: var(--ws-surface-soft);
+    color: var(--ws-text);
+    font-weight: 700;
+  }
+  .home-shell select:not([multiple]):not([size]):not([data-native-picker]) option:disabled {
+    opacity: .45;
+  }
+  .home-shell select:not([multiple]):not([size]):not([data-native-picker]) option::checkmark {
+    color: var(--ws-text);
+  }
 }

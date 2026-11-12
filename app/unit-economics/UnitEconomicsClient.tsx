@@ -70,7 +70,7 @@ export default function UnitEconomicsClient(){
    <a href={WORKBOOK_URL} target="_blank" rel="noopener noreferrer" className="unit-external">Открыть исходные Google Таблицы ↗</a>
   </div>
   <div className="unit-market-tabs" role="tablist" aria-label="Маркетплейс">{marketplaces.map(m=><button role="tab" aria-selected={m===market} className={m===market?"active":""} onClick={()=>setMarket(m)} key={m}>{MARKET_NAMES[m]}</button>)}</div>
-  <div className="unit-model-bar"><span>Модель продаж</span><div className="unit-model-tabs" role="tablist">{choices[market].map(k=><button role="tab" aria-selected={k===model} key={k} onClick={()=>setSelected(x=>({...x,[market]:k}))} className={k===model?"active":""}>{MODELS[k].label}</button>)}</div><span className="unit-model-caption">{MODELS[model].tab}</span></div>
+  <div className="unit-model-bar"><span>Модель продаж</span><div className="unit-model-tabs" role="tablist">{choices[market].map(k=><button role="tab" aria-selected={k===model} key={k} onClick={()=>setSelected(x=>({...x,[market]:k}))} className={k===model?"active":""}>{MODELS[k].label}</button>)}</div></div>
   {payload&&!payload.live&&<div className="unit-notice">Данные: сохранённый снимок от {payload.asOf.slice(0,10)}. {payload.partial?"Он не содержит все строки исходной книги. ":""}Для постоянной синхронизации требуется подключение сервисного аккаунта Google в настройках сервера.</div>}
   {payload?.warning&&<div className="unit-warning">{payload.warning}</div>}
   <div className="unit-table-toolbar">
