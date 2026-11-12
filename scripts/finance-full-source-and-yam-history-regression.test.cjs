@@ -13,8 +13,9 @@ assert.deepEqual(advertisingDisplay(-165373,0,true),
  {amount:0,kind:'confirmed_zero'});
 const ui=fs.readFileSync('app/ozon/financier/FinancierDetailTable.tsx','utf8');
 assert(ui.indexOf('if(r.performance_ad_expense!=null)')<ui.indexOf('if(r.advertising_amount!==0)'));
-assert(ui.includes('Реклама Performance'));
-assert(ui.includes('Финансовые начисления Seller за тот же период'));
+assert(ui.includes('{name:"Реклама",'));
+assert(ui.includes('Реклама выгружена не полностью'));
+assert(ui.includes('Начисления рекламы Seller за тот же период'));
 const ozonRoute=fs.readFileSync('app/api/agents/ozon-finance/route.ts','utf8');
 assert(ozonRoute.includes('performanceTotal=round(performanceTotal)'));
 assert(ozonRoute.includes('ads_unmapped_spend:unmappedPerformance'));
