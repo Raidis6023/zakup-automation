@@ -27,7 +27,7 @@ function SchemeTable({market,scheme,from,to}:{market:Market;scheme:string;from:s
   ['packing','Упаковка FBS'],['profit','Опер. прибыль']
  ];
  const rows=(sheet?.rows??[]).filter(r=>r.article&&r.article!=='SKU:null'&&r.article!=='SKU:undefined'
-  &&(r.orders!==0||r.revenue!==0||r.charges!==0||r.profit!==0||Number(r.packing??0)!==0))
+  &&[r.orders,r.revenue,r.charges,r.profit,r.packing].some(v=>typeof v==='number'&&Number.isFinite(v)&&Math.abs(v)>.005))
   .slice().sort((a,b)=>{const x=a[sort],y=b[sort];if(x==null)return y==null?0:1;if(y==null)return -1;const n=typeof x==='number'&&typeof y==='number'?x-y:String(x).localeCompare(String(y),'ru');return desc?-n:n});
  const totals=(key:keyof Row):number|null=>!rows.length||rows.some(r=>r[key]==null)||typeof rows[0]?.[key]!=='number'
   ?null:rows.reduce((v,r)=>v+Number(r[key]),0);
