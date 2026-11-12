@@ -131,7 +131,7 @@ export async function GET(req:NextRequest){try{
    detail(v,name,'Услуга Ozon · ITEM',amount);
   }
  }
- const packedBySku=new Map((packing.data??[]).map(x=>[String(x.sku),{units:num(x.units),amount:num(x.amount)}]));
+ const packedBySku=new Map<string,{units:number;amount:number}>(((packing.data??[]) as Array<{sku:string;units:number;amount:number}>).map(x=>[String(x.sku),{units:num(x.units),amount:num(x.amount)}]));
  const rows:Row[]=[];
  for(const [sku,v] of grouped){
   const link=bySku.get(sku),master=link?.master_code??null,article=link?.offer_id??'SKU:'+sku;
