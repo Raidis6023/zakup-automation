@@ -297,6 +297,7 @@ type ItemEditorState = {
 
   moq: string;
   price: string;
+  manualCartons: string;
 
   loadingPreparation: boolean;
   loadingPreview: boolean;
@@ -1201,6 +1202,8 @@ export default function VedOrderDetailClient(
                     .unit_price_cny
                 ),
 
+          manualCartons: item.cartons === null ? "0" : String(item.cartons),
+
           loadingPreparation:
             false,
 
@@ -1291,18 +1294,11 @@ export default function VedOrderDetailClient(
                     .moq_quantity
                 ),
 
-          incoterm:
-            item.incoterm
-            ??
-            (
-              result.order
-                ?.calculation_scenario ===
-                "truck"
-
-                ? "FCA"
-
-                : "FOB"
-            ),
+          // New/manual goods must never acquire FOB/FCA without a choice.
+          incoterm: item.incoterm ?? (
+            item.added_manually ? "" :
+            result.order?.calculation_scenario === "truck" ? "FCA" : "FOB"
+          ),
 
           port:
             item.port
@@ -1599,6 +1595,8 @@ export default function VedOrderDetailClient(
 
             price:
               "",
+
+            manualCartons: "0",
 
             loadingPreparation:
               false,
@@ -1993,6 +1991,22 @@ export default function VedOrderDetailClient(
     }
 
 
+
+    // Manually added products have no demand calculated by procurement.
+    // 0 cartons confirms MOQ/price without automatically ordering the MOQ.
+    const manualCartons = item.added_manually && item.selected_demand_units === null
+      ? Number(editor.manualCartons) : undefined;
+    if (manualCartons !== undefined && (
+      editor.manualCartons.trim() === "" ||
+      !Number.isSafeInteger(manualCartons) || manualCartons < 0 || manualCartons > 100000
+    )) {
+      updateEditor(item.id, {
+        error: "Укажите целое количество коробов от 0 до 100 000",
+        preview: null,
+      });
+      return;
+    }
+
     updateEditor(
       item.id,
       {
@@ -2033,6 +2047,8 @@ export default function VedOrderDetailClient(
 
                   unitPriceCny:
                     price,
+
+                  ...(manualCartons !== undefined ? { manualCartons } : {}),
                 }
               ),
 
@@ -2197,6 +2213,22 @@ export default function VedOrderDetailClient(
     }
 
 
+
+    // Manually added products have no demand calculated by procurement.
+    // 0 cartons confirms MOQ/price without automatically ordering the MOQ.
+    const manualCartons = item.added_manually && item.selected_demand_units === null
+      ? Number(editor.manualCartons) : undefined;
+    if (manualCartons !== undefined && (
+      editor.manualCartons.trim() === "" ||
+      !Number.isSafeInteger(manualCartons) || manualCartons < 0 || manualCartons > 100000
+    )) {
+      updateEditor(item.id, {
+        error: "Укажите целое количество коробов от 0 до 100 000",
+        preview: null,
+      });
+      return;
+    }
+
     updateEditor(
       item.id,
       {
@@ -2234,6 +2266,8 @@ export default function VedOrderDetailClient(
 
                   unitPriceCny:
                     price,
+
+                  ...(manualCartons !== undefined ? { manualCartons } : {}),
 
                   actorName,
 
@@ -3846,6 +3880,39 @@ export default function VedOrderDetailClient(
                   </div>
 
 
+                  {selectedItem.added_manually &&
+                    selectedItem.selected_demand_units === null && (
+                      <div>
+                        <div className="card-label" style={{ marginBottom: "6px" }}>
+                          Коробов к заказу
+                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100000"
+                          step="1"
+                          inputMode="numeric"
+                          className="ws-editor-input"
+                          value={selectedEditor.manualCartons}
+                          disabled={selectedBusy}
+                          onChange={event => updateEditor(selectedItem.id, {
+                            manualCartons: event.target.value,
+                            preview: null,
+                            error: "",
+                          })}
+                          aria-label="Количество коробов вручную"
+                        />
+                        <div className="muted" style={{ fontSize: "11px", marginTop: "5px" }}>
+                          0 = подтвердить MOQ и цену, но пока не включать товар в заказ.
+                          {Number(selectedEditor.moq) > 0 && Number(selectedItem.units_per_carton_snapshot) > 0
+                            ? " Минимум по MOQ: " +
+                              Math.ceil(Number(selectedEditor.moq) /
+                                Number(selectedItem.units_per_carton_snapshot)) + " кор."
+                            : ""}
+                        </div>
+                      </div>
+                    )}
+
                   <ReadOnlyField
                     label="Порт"
                     value={
@@ -3927,7 +3994,10 @@ export default function VedOrderDetailClient(
                     <CompactMetric
                       label="Целевой горизонт"
                       value={
-                        `${targetDays} дн.`
+                        selectedItem.added_manually &&
+                        selectedItem.selected_demand_units === null
+                          ? "—"
+                          : `${targetDays} дн.`
                       }
                     />
 
