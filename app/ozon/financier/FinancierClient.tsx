@@ -23,6 +23,7 @@ type FinanceRow = {
 type AdsProgress={
  latest_sku_update:string|null;campaigns_total:number;campaigns_confirmed:number;
  campaigns_pending:number;unstarted_job_windows:number;complete_days:number;expected_days:number;
+ worker_phase?:string|null;worker_retry_after?:string|null;
 };
 type FinanceReport = {
   cache_updated_at?:string|null;
@@ -449,7 +450,10 @@ if(daily?.ok||['report_saved','complete','already_cached'].includes(String(j.pha
         Историческая реклама: проверено {adsProgress.campaigns_confirmed} из {adsProgress.campaigns_total} поставленных в очередь кампаний;
         полностью подтверждено дней {adsProgress.complete_days} из {adsProgress.expected_days}.
         {adsProgress.unstarted_job_windows>0?' Ожидают создания очереди ещё '+adsProgress.unstarted_job_windows+' периодов.':''}
-        {' '}Данные по SKU обновляются автоматически по мере загрузки. Неподтверждённые расходы не считаются нулём.
+        {adsProgress.worker_phase==='ozon_global_quota'?
+          ' Ozon ограничил одновременные запросы к рекламе.'+
+          (adsProgress.worker_retry_after?' Повторная попытка после '+new Date(adsProgress.worker_retry_after).toLocaleString('ru-RU',{timeZone:'Asia/Krasnoyarsk'})+' (Красноярск).':''):''}
+        {' '}Данные по SKU обновляются по мере загрузки. Неподтверждённые расходы не считаются нулём.
       </p>}
        {connectionStatus && <p className="ozf-progress" role="status">{connectionStatus}</p>}
       {error && <p className="ozf-error" role="alert">{error}</p>}
