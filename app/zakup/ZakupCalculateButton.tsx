@@ -31,10 +31,6 @@ export default function ZakupCalculateButton() {
         <div role="alert" className="zakup-calculate-message zakup-calculate-message--error">
           {state.message}
         </div>
-      ) : state.ok === true ? (
-        <div role="status" className="zakup-calculate-message zakup-calculate-message--success">
-          {state.message}
-        </div>
       ) : null}
     </form>
   );

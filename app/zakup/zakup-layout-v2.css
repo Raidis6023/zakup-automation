@@ -2235,27 +2235,3 @@ thead tr.zakup-products-subheader-row th .zakup-sort-button {
     max-width: 100%;
   }
 }
-
-/* Supplier-sales WB refresh: secondary action beside procurement recalculation. */
-.zakup-reference-page .zakup-wb-live-sync {
-  max-width: 250px;
-  flex: 0 1 auto;
-  min-width: 0;
-}
-.zakup-reference-page .zakup-wb-live-sync button {
-  white-space: nowrap;
-  min-height: 42px;
-  padding: 0 12px;
-}
-.zakup-reference-page .zakup-wb-live-sync p {
-  font-size: 12px;
-  line-height: 1.4;
-  margin: 6px 0 0;
-  overflow-wrap: anywhere;
-}
-.zakup-reference-page .zakup-wb-live-error {
-  color: var(--ws-error, #b84949);
-}
-@media (max-width: 1400px) {
-  .zakup-reference-page .zakup-v2-action-controls { flex-wrap: wrap; }
-}

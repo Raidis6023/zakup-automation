@@ -7,7 +7,7 @@ const root = path.join(__dirname, "..");
 function read(name) { return fs.readFileSync(path.join(root,name), "utf8"); }
 
 const route = read("app/api/china/wb-operational-sales-sync/route.ts");
-const button = read("app/zakup/WbSalesRefreshButton.tsx");
+const calcButton = read("app/zakup/ZakupCalculateButton.tsx");
 const page = read("app/zakup/page.tsx");
 const config = JSON.parse(read("vercel.json"));
 const sql = read("supabase/migrations/20261112_china_wb_operational_sales_live.sql");
@@ -29,8 +29,11 @@ assert.match(route,/china_finish_wb_operational_import/);
 assert.match(route,/request\.headers\.get\("authorization"\) === "Bearer " \+ secret/);
 assert.match(route,/app_user_access/);
 assert.match(route,/function isAuthorized/);
-assert.match(button,/api\/china\/wb-operational-sales-sync/);
-assert.match(page,/WbSalesRefreshButton/);
+assert.doesNotMatch(page,/WbSalesRefreshButton/);
+assert.doesNotMatch(calcButton,/zakup-calculate-message--success/);
+assert.match(calcButton,/state\.ok === false/);
+assert.match(calcButton,/zakup-calculate-message--error/);
+assert.equal(fs.existsSync(path.join(root, "app/zakup/WbSalesRefreshButton.tsx")),false);
 assert.match(sql,/CREATE TABLE IF NOT EXISTS public\.china_wb_operational_sales/);
 assert.match(sql,/CREATE TABLE IF NOT EXISTS public\.china_wb_operational_days/);
 assert.match(sql,/wb_operational_verified AS/);
@@ -38,7 +41,7 @@ assert.match(sql,/wb_finance_fallback AS/);
 assert.match(priority,/v_wb_finance_days/);
 for(const [name,source] of [
   ["app/api/china/wb-operational-sales-sync/route.ts",route],
-  ["app/zakup/WbSalesRefreshButton.tsx",button],
+  ["app/zakup/ZakupCalculateButton.tsx",calcButton],
   ["app/zakup/page.tsx",page],
 ]){
   const transpiled=ts.transpileModule(source,{
@@ -53,4 +56,4 @@ for(const [name,source] of [
   const errors=(transpiled.diagnostics||[]).filter(d=>d.category===ts.DiagnosticCategory.Error);
   assert.equal(errors.length,0,name+": "+errors.map(e=>e.messageText).join("; "));
 }
-console.log("PASS China WB supplier/sales: FBW-only, S/R returns, 2-hour lock, 80k checkpoint, finance precedence, one cron, authenticated manual action, TSX");
+console.log("PASS China WB supplier/sales: FBW-only, S/R returns, 2-hour lock, 80k checkpoint, finance precedence, one cron, automatic cron, no manual refresh UI, errors visible, TSX");
