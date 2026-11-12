@@ -76,7 +76,7 @@ export default function StocksClient(props: Props) {
         <p className="stocks-caption">Δ означает разницу между двумя Excel-снимками.
           Причину изменения система пока не знает.</p></div></div>
       <div className="stocks-controls">
-        <input className="ws-text-field stocks-search" aria-label="Поиск" placeholder="Поиск по артикулу, названию или master_code"
+        <input className="ws-text-field stocks-search workspace-search-field" aria-label="Поиск по артикулу, названию или ЕНОТ"
           value={search} onChange={(e) => {setSearch(e.target.value);setLimit(50);}} />
         <label><input type="checkbox" checked={changed}
           onChange={(e) => {setChanged(e.target.checked);setLimit(50);}} /> Только с изменениями</label>

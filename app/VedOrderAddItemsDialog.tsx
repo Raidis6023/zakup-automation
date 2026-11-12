@@ -195,8 +195,7 @@ export default function VedOrderAddItemsDialog({
                   Поиск по ЕНОТ, нашему или китайскому артикулу, названию
                 </label>
                 <input
-                  id="ved-add-search" autoFocus className="ved-add-input"
-                  placeholder="Введите ЕНОТ, артикул или название..."
+                  id="ved-add-search" autoFocus className="ved-add-input workspace-search-field"
                   value={query} onChange={event => setQuery(event.target.value)}
                 />
                 <div className="ved-add-results" role="list">

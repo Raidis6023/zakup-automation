@@ -1271,14 +1271,6 @@ export default function WorkspaceShell({
             <input
               type="text"
 
-              placeholder={
-                adminMode
-
-                  ? "Поиск по сотрудникам, доступам, настройкам..."
-
-                  : "Поиск по товарам, SKU, документам, разделам..."
-              }
-
               aria-label="Поиск"
             />
 

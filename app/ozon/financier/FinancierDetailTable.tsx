@@ -308,7 +308,7 @@ export default function FinancierDetailTable({
       {' '}Остатки собственных складов не обновляются вместе с остатками маркетплейса.
     </p>}
     <FinanceDynamics key={graphMetric} marketplace="ozon" revision={data?.cache_updated_at??''} from={data?.from??''} to={data?.to??''} offers={includeUnallocated?undefined:rows.map(r=>r.offer_id)} selected={graphMetric} expectedProfit={profitIsPartial?null:operatingProfit}/><div className="ozf-section-tools">
-      <input placeholder="Поиск по артикулу, коду или КМ" aria-label="Поиск товаров" value={search}
+      <input className="workspace-search-field" aria-label="Поиск товаров" value={search}
         onChange={e=>setSearch(e.target.value)} />
       <span>Сортировка: {defs.find(d=>d[0]===sort.key)?.[1]} {sort.dir===-1?"↓":"↑"}</span>
     </div>

@@ -139,8 +139,8 @@ export default function RatesEditorClient() {
           }}/>
         </label>
         <label>Найти товар
-          <input value={query} onChange={e=>setQuery(e.target.value)}
-            placeholder="Код, артикул, КМ или название"/>
+          <input className="workspace-search-field" aria-label="Найти товар по коду, артикулу, КМ или названию"
+            value={query} onChange={e=>setQuery(e.target.value)}/>
         </label>
       </div>
       <p className="ozf-footnote">При импорте сверяем Product ID и master_code с базой. Пустую себестоимость не заменяем нулём. Повторная загрузка на ту же дату обновит тарифы, поэтому импорт требует подтверждения.</p>

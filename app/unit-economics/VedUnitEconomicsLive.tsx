@@ -630,9 +630,9 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
        <p className="unit-pilot-note">Однозначное точное совпадение назначается автоматически.
         Неоднозначные категории можно подтвердить вручную. Комиссии сохраняются сразу для двух схем.</p>
        <label>Поиск категории
-        <input className="unit-pilot-price-input" value={otherQuery}
+        <input className="unit-pilot-price-input workspace-search-field" aria-label="Поиск категории Ozon или Яндекс Маркета" value={otherQuery}
          onChange={e=>{setOtherQuery(e.target.value);setOtherSelected(null)}}
-         placeholder="Введите название товара или категории"/>
+/>
        </label>
        {otherError&&<p className="unit-pilot-error" role="alert">{otherError}</p>}
        {!!otherMatches.length&&<div className="unit-ved-category-list">
@@ -666,8 +666,8 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
        <p className="unit-pilot-note">Выбирайте предмет из реального справочника комиссий WB.
         После подтверждения комиссия подставится отдельно для FBW и FBS; затем запрашиваются показатели MPStats.</p>
        <label>Поиск категории WB
-        <input className="unit-pilot-price-input" value={categoryQuery}
-         onChange={e=>{setCategoryQuery(e.target.value);setCategorySelected(null)}} placeholder="Например, Ватные палочки"/>
+        <input className="unit-pilot-price-input workspace-search-field" aria-label="Поиск категории Wildberries" value={categoryQuery}
+         onChange={e=>{setCategoryQuery(e.target.value);setCategorySelected(null)}}/>
        </label>
        {!!categoryMatches.length&&<div className="unit-ved-category-list">
         {categoryMatches.map((c,i)=><button type="button" key={c.name+":"+c.group+":"+i}
@@ -702,9 +702,9 @@ export default function VedUnitEconomicsLive({modalProductId,activeModel,onClose
          сохранится для всех новых товаров этой категории WB.
         </p>
         <label>Название или часть пути категории MPStats
-         <input className="unit-pilot-price-input" value={mpstatsQuery}
+         <input className="unit-pilot-price-input workspace-search-field" aria-label="Поиск категории MPStats" value={mpstatsQuery}
           onChange={e=>{setMpstatsQuery(e.target.value);setMpstatsSelected(null)}} 
-          placeholder="Попробуйте: ватные, палочки, красота, гигиена"/>
+/>
         </label>
         {mpstatsSearching&&<p className="unit-pilot-note">Поиск в справочнике MPStats…</p>}
         {mpstatsSearchError&&<p role="alert" className="unit-pilot-error">{mpstatsSearchError}</p>}

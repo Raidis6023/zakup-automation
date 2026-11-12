@@ -157,8 +157,7 @@ export default function LogsClient() {
         <form className="logs-search" onSubmit={e=>{e.preventDefault();setAppliedSearch(query.trim());setPage(0)}}>
           <label htmlFor="logs-search-input">Поиск</label>
           <div className="logs-search-controls">
-            <input id="logs-search-input" value={query} maxLength={100}
-              placeholder="ЕНОТ, заказ, раздел, действие"
+            <input id="logs-search-input" className="workspace-search-field" value={query} maxLength={100}
               onChange={e=>setQuery(e.target.value)} />
             <button type="submit">Найти</button>
           </div>

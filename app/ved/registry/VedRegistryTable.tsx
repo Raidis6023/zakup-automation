@@ -57,7 +57,7 @@ export default function VedRegistryTable({rows,limited}:{
   <div className="ved-registry-filters">
    <label><span>Поиск по артикулу, товару, КП и коду ТН ВЭД</span>
     <input value={search} onChange={event=>setSearch(event.target.value)}
-     placeholder="Например, RCAB-AVD26828-1" type="search"/>
+     className="workspace-search-field" aria-label="Поиск в реестре товаров и расчётов" type="search"/>
    </label>
    <label><span>Состояние</span><select value={status} onChange={e=>setStatus(e.target.value as Status)}>
     <option value="all">Все товары</option>

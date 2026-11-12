@@ -904,7 +904,6 @@ export default async function SkuListPage() {
         <PageHeader
             variant="sku-list"
             title="Список артикулов"
-            description="Финансовые показатели по артикулам маркетплейсов с привязкой к ЕНОТ."
           />
 
         <SkuListTabsClient

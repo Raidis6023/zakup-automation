@@ -244,7 +244,7 @@ export default function FbwSupplyWizard(){
      {choice&&<>
        <div className={styles.bar}>
          <strong>Точки отгрузки: {points.length} из {choice.points.length}</strong>
-         <input className={styles.search} placeholder="Город, склад, СЦ или адрес" value={search} onChange={e=>setSearch(e.target.value)}/>
+         <input className={styles.search + " workspace-search-field"} aria-label="Поиск склада, СЦ, города или адреса" value={search} onChange={e=>setSearch(e.target.value)}/>
        </div>
        <div className={styles.filters}>
          <button className={kind==="all"?styles.filterActive:""} onClick={()=>setKind("all")}>Все точки</button>

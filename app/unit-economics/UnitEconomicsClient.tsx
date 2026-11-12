@@ -75,7 +75,7 @@ export default function UnitEconomicsClient(){
   {payload?.warning&&<div className="unit-warning">{payload.warning}</div>}
   <div className="unit-table-toolbar">
    <div className="unit-table-title">Расчётная таблица <span>{filtered.length} строк</span></div>
-   <div className="unit-toolbar-right"><input aria-label="Поиск товара" placeholder="Поиск по товару, артикулу, категории..." value={search} onChange={e=>setSearch(e.target.value)}/>
+   <div className="unit-toolbar-right"><input className="workspace-search-field" aria-label="Поиск товара" value={search} onChange={e=>setSearch(e.target.value)}/>
    {analyst&&<button className="unit-button" onClick={()=>{setEditOpen(!editOpen);setSettings(false);setSaveMessage("")}}>Поменять тарифы</button>}
    <button type="button" className={"unit-gear "+(settings?"active":"")} aria-label="Настройка отображения столбцов" aria-expanded={settings} onClick={()=>{setSettings(!settings);setEditOpen(false)}} title="Показать / скрыть и перетащить столбцы">⚙</button></div>
   </div>

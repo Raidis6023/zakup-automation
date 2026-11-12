@@ -100,7 +100,7 @@ export default function VedTariffEditor(){
   {data?.canEdit&&<details className="ved-tariffs-editor">
    <summary>История изменений ({data.history?.length??0} последних записей)</summary>
    <label className="ved-tariffs-control"><span>Фильтр истории</span>
-    <input value={filter} onChange={e=>setFilter(e.target.value)} placeholder="Название параметра"/></label>
+    <input className="workspace-search-field" aria-label="Поиск по истории тарифов" value={filter} onChange={e=>setFilter(e.target.value)}/></label>
    <div className="ved-tariffs-history">
     {(data.history||[]).filter(row=>!filter||VED_TARIFFS.find(t=>t.key===row.tariff_key)?.title.toLowerCase().includes(filter.toLowerCase())).map(row=><div className="ved-tariffs-line" key={row.id}>
      <span>{VED_TARIFFS.find(t=>t.key===row.tariff_key)?.title||row.tariff_key}</span>

@@ -209,7 +209,7 @@ return <div className="ozf-layout">
  <WbAdvertisingCharts rows={data.ads.items} from={data.from} to={data.to} complete={data.ads.coverage==='cached_complete'} revenues={totalAdRevenueByDay}/>
  <p className="ozf-notice">Статус рекламной выгрузки: <b>{data.ad_sync?.stage??'не запускалась'}</b>{data.ad_sync?.last_error?' · '+data.ad_sync.last_error:''}. В столбце рекламы не показываем ноль, пока нет подтверждённых данных WB.</p>
 
-<div className="ozf-toolbar" style={{marginTop:18}}><input placeholder="Поиск по артикулу, nmId или товару" value={filter} onChange={e=>setFilter(e.target.value)}/><span>Артикулов: {rows.length} · Финансовых операций: {data.financial_rows}</span></div>
+<div className="ozf-toolbar" style={{marginTop:18}}><input className="workspace-search-field" aria-label="Поиск товара WB" value={filter} onChange={e=>setFilter(e.target.value)}/><span>Артикулов: {rows.length} · Финансовых операций: {data.financial_rows}</span></div>
 <div className="ozf-financial-scroll" role="region" aria-label="Финансовый результат WB">
 <table className="ozf-table ozf-financial-table" style={{minWidth:1950}}>
 <thead><tr>{columns.map(([k,label])=><th key={k}><button type="button" className="ozf-sort-control" onClick={()=>setSort(old=>({key:k,dir:old.key===k&&old.dir===-1?1:-1}))}>{label}{sort.key===k?(sort.dir===-1?' ↓':' ↑'):' ↕'}</button></th>)}</tr></thead>

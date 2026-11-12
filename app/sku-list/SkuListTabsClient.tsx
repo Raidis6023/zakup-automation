@@ -1192,9 +1192,8 @@ export default function SkuListTabsClient({
         }}
       >
         <label className="sku-list-search">
-          <span className="sku-list-search-heading">Поиск по артикулу, ЕНОТ, SKU или названию</span>
-          <input type="search" aria-label="Поиск товара в списке артикулов"
-            autoComplete="off" placeholder="Например, артикул, ЕНОТ, SKU или название товара"
+          <input type="search" className="workspace-search-field" aria-label="Поиск товара в списке артикулов"
+            autoComplete="off"
             value={searchQuery} onChange={event => setSearchQuery(event.target.value)} />
         </label>
         {activeTab !== "all" && (

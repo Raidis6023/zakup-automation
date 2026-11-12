@@ -628,3 +628,18 @@ html[data-theme="dark"] .home-shell[data-accent-area] .home-sidebar
 .home-ved-subnav-link--active .home-brand-icon {
   color: #f1e7d6;
 }
+
+
+/* Shared search affordance: a magnifying glass replaces placeholder prose.
+ * Only explicitly marked search inputs get the icon. Other data-entry fields
+ * keep their normal placeholder text and spacing. */
+.home-shell input.workspace-search-field {
+  padding-inline-start: 40px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23101820' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-4.2-4.2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 12px center;
+  background-size: 18px 18px;
+}
+html[data-theme="dark"] .home-shell input.workspace-search-field {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d9b27c' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-4.2-4.2'/%3E%3C/svg%3E");
+}
