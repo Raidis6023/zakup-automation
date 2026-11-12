@@ -45,6 +45,7 @@ type RevenueRow = { sku:string;revenue:number };
 type AdRow = {sku:string;expense:number|string};
 type Itemized = {sku:string;type_id:string;name:string;amount:string|number;item_count:number};
 type AdDay = {day:string};
+type FbsPacking={sku:string;units:number;amount:number};
 type TransitRow = { sku:string;quantity:number;open_order_value:number|null;as_of:string };
 type CrossdockRow = {sku:string;quantity:number;as_of:string};
 type StockRow = {product_id:string;ozon_stock:number|null;main_stock:number|null;ox_stock:number|null;ozon_at:string|null;main_at:string|null;ox_at:string|null};
@@ -73,6 +74,8 @@ type Group = {
   advertising_amount: number;
   performance_ad_expense: number | null;
   allocated_seller_ppc: number;
+  packing_expense:number;
+  packing_units:number;
   order_count: number | null;
   cancelled_units: number | null;
   revenue: number | null;
@@ -252,7 +255,7 @@ async function syncOneDay(db: ReturnType<typeof createAdminClient>, day: string)
 }
 async function buildReport(db: ReturnType<typeof createAdminClient>, from: string, to: string) {
   const days = dateRange(from, to);
-  const [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, adJobsRes, adTasksRes, itemizedRes, transitRes, crossdockRes, crossdockCurrentRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes, unallocatedDailyRes, incomeComponentsRes] =
+  const [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, adJobsRes, adTasksRes, itemizedRes, transitRes, crossdockRes, crossdockCurrentRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes, unallocatedDailyRes, incomeComponentsRes, fbsPackingRes] =
     await Promise.all([
       db.from("ozon_finance_sync_days").select("day,record_count,synced_at").eq("account_key", ACCOUNT)
         .gte("day", from).lte("day", to),
@@ -290,8 +293,9 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
       db.rpc("ozon_finance_unallocated_v3",{p_from:from,p_to:to,p_account:ACCOUNT}),
       db.rpc("ozon_finance_unallocated_daily_v1",{p_from:from,p_to:to,p_account:ACCOUNT}),
        db.rpc("ozon_finance_posting_income_components_v1",{p_from:from,p_to:to,p_account:ACCOUNT}),
+       db.rpc("ozon_finance_fbs_packing_v1",{p_from:from,p_to:to,p_account:ACCOUNT}),
     ]);
-  for (const item of [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, adJobsRes, adTasksRes, itemizedRes, transitRes, crossdockRes, crossdockCurrentRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes, unallocatedDailyRes, incomeComponentsRes]) {
+  for (const item of [syncRes, ledgerRes, mappingsRes, costsRes, mayakRes, managersRes, expenseRes, ordersRes, revenueRes, adRes, adDaysRes, adJobsRes, adTasksRes, itemizedRes, transitRes, crossdockRes, crossdockCurrentRes, stocksRes, vedOrdersRes, vedItemsRes, statusesRes, salesRunsRes, typesRes, productsRes, jobsRes, unallocatedRes, unallocatedDailyRes, incomeComponentsRes, fbsPackingRes]) {
     if (item.error) throw item.error;
   }
   const loaded = new Set((syncRes.data ?? []).map(r => r.day));
@@ -312,6 +316,12 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
    .gte('day',from).lte('day',to).order('day',{ascending:false});
   if(recentAdError)throw recentAdError;
 
+  const fbsPackingByOffer=new Map<string,{units:number;amount:number}>();
+  for(const packed of (fbsPackingRes.data??[]) as FbsPacking[]){
+    const offer=mapBySku.get(String(packed.sku))?.offer_id||"SKU:"+packed.sku;
+    const old=fbsPackingByOffer.get(offer)??{units:0,amount:0};
+    fbsPackingByOffer.set(offer,{units:old.units+Number(packed.units),amount:old.amount+Number(packed.amount)});
+  }
   const adByOffer=new Map<string,number>();
   const performanceRows=(adRes.data as AdRow[]??[]);
   let performanceTotal=0,unmappedPerformance=0;
@@ -437,7 +447,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
         ozon_amount: 0, sold_units: null, buyout_units: null, data_gaps: [], unit_cost: null, cogs: null,
         mayak_unit: null, mayak_expense: null, mayak_covered_units: null,
         estimated_result: null, advertising_amount: 0, performance_ad_expense:null,
-        allocated_seller_ppc:0,
+        allocated_seller_ppc:0,packing_expense:0,packing_units:0,
         order_count:null,cancelled_units:null,revenue:null,
         main_stock:null,ox_stock:null,ozon_stock:null,
         in_china:null,in_crossdock:null,in_transit:null,
@@ -465,6 +475,9 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     run.date_from<=day && run.date_to>=day));
   let totalMayak = 0;
   for (const g of byOffer.values()) {
+    const packed=fbsPackingByOffer.get(g.offer_id);
+    g.packing_expense=round(packed?.amount??0);
+    g.packing_units=packed?.units??0;
     g.ozon_amount = round(g.ozon_amount);
     g.advertising_amount = round(g.advertising_amount);
     // Performance SKU allocation is analytic ONLY. Financial Seller postings
@@ -532,6 +545,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     // labels are descriptive, not required inputs to this calculation.
     g.estimated_result=calculateProvisionalSkuProfit(
       g.ozon_amount,g.cogs,g.mayak_expense,salesWindowCovered);
+    if(g.estimated_result!==null)g.estimated_result=round(g.estimated_result-g.packing_expense);
     g.details = g.details.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
   }
   // Attribution of the REAL Seller PPC charge to SKU. The Performance
@@ -589,6 +603,10 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     ])if(x.amount!==0)row.details.push({...x,count:0,is_advertising:false,is_reference:true});
   }
   for(const row of byOffer.values()){
+    if(row.packing_units>0)row.details.push({
+      type_id:'FBS_PACKING',name:'Упаковка на складе FBS · 20 ₽ за подтверждённую отгрузку',
+      amount:-row.packing_expense,count:row.packing_units,is_advertising:false
+    });
     if(!row.details.some(x=>x.type_id==='SALES')){
       const posting=row.details.find(x=>x.type_id==='POSTING');
       if(posting)row.details.push({...posting,type_id:'POSTING_INCOME',name:'Доходные начисления по отправлениям (справочно)',is_reference:true});
@@ -627,6 +645,7 @@ async function buildReport(db: ReturnType<typeof createAdminClient>, from: strin
     cache_updated_at:(syncRes.data??[]).map(x=>String(x.synced_at??'')).filter(Boolean).sort().at(-1)??null,
     from, to, synced_days: loaded.size, total_days: days.length, missing_days: missingDays,
     operation_count: operationCount, total_mayak: round(totalMayak),
+    total_fbs_packing: round([...fbsPackingByOffer.values()].reduce((sum,v)=>sum+v.amount,0)),
     ledger_amount: fromKopecks(accounting.ledgerKopecks),
     allocated_amount: fromKopecks(accounting.directKopecks),
     unallocated_amount: fromKopecks(accounting.unallocatedKopecks-allocatedPpcCents),
