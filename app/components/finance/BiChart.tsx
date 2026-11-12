@@ -34,9 +34,10 @@ export default function BiChart({points,series,unit='₽',stacked=false,zero=fal
  ])}</defs>
  {[0,.25,.5,.75,1].map(t=><g key={t}><line x1={left} x2={w-right} y1={y(lo+(hi-lo)*t)} y2={y(lo+(hi-lo)*t)} stroke="currentColor" opacity=".09"/><text x={left-10} y={y(lo+(hi-lo)*t)+4} textAnchor="end" className="bi-axis">{chartNumber(lo+(hi-lo)*t,unit,true)}</text></g>)}
  {stacked?points.map((p,i)=>{let level=0,cell=barWidth,barX=left+i*cell;
-  const unavailable=series.some(s=>p.values[s.key]===null||p.values[s.key]===undefined);
-  return <g key={p.day}>{unavailable?<rect x={barX+1} y={top} width={Math.max(0,cell-2)} height={h-bottom-top} fill="#475569" opacity=".07" stroke="#64748b" strokeDasharray="4 5"/>:series.map(s=>{const v=Math.max(0,p.values[s.key]??0),start=level;level+=v;return <rect key={s.key} x={barX} y={y(level)} width={cell} height={Math.max(0,y(start)-y(level))} fill={s.color} stroke="#64748b" strokeOpacity=".34" strokeWidth=".35" opacity=".97"/>})}
-  {!unavailable&&<rect x={barX+.5} y={y(100)+.5} width={Math.max(0,cell-1)} height={Math.max(0,y(0)-y(100)-1)} fill="none" stroke="#91a4c5" strokeOpacity=".42"/>}</g>;
+  const unavailable=series.every(s=>p.values[s.key]===null||p.values[s.key]===undefined);
+  const partial=!unavailable&&series.some(s=>p.values[s.key]===null||p.values[s.key]===undefined);
+  return <g key={p.day}>{unavailable?<rect x={barX+1} y={top} width={Math.max(0,cell-2)} height={h-bottom-top} fill="#475569" opacity=".07" stroke="#64748b" strokeDasharray="4 5"/>:series.map(s=>{if(p.values[s.key]==null)return null;const v=Math.max(0,p.values[s.key]??0),start=level;level+=v;return <rect key={s.key} x={barX} y={y(level)} width={cell} height={Math.max(0,y(start)-y(level))} fill={s.color} stroke="#64748b" strokeOpacity=".34" strokeWidth=".35" opacity=".97"/>})}
+  {!unavailable&&<rect x={barX+.5} y={y(100)+.5} width={Math.max(0,cell-1)} height={Math.max(0,y(0)-y(100)-1)} fill="none" stroke={partial?'#e6bb69':'#91a4c5'} strokeDasharray={partial?'5 4':undefined} strokeOpacity=".65"/>}</g>;
  }):series.map(s=>{
   const segments:Array<Array<[number,number]>>=[];let current:Array<[number,number]>=[];
   for(let i=0;i<points.length;i++){const value=points[i].values[s.key];if(value===null||value===undefined){if(current.length)segments.push(current);current=[];continue;}current.push([x(i),y(value)]);}
