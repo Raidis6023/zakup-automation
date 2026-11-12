@@ -72,12 +72,12 @@ async function main(){
  assert(Math.abs(imgs[0].range.tl.row-2.3)<0.15,"Product photo must start within row 3");
  assert(Math.abs(imgs[1].range.tl.col-6.1)<0.15,"Package photo must start inside G11:I19, not column X");
  assert(Math.abs(imgs[1].range.tl.row-10.2)<0.15,"Package photo must start within row 11");
- assert.equal(tab.getCell("E16").value,10000,"MOQ must be in merged cell MASTER E16, NOT F16");
+ assert.equal(tab.getCell("E16").value,10000,"MOQ must survive XLSX unmerge in the master cell E16");
  for(const ref of ["F17","F23"]){
   assert.equal(tab.getCell(ref).formula,"E16",ref+" must refer to MOQ master E16");
  }
  assert.equal(tab.getCell("C19").formula,"IFERROR(E16/D22*F19,0)",
-  "MOQ volume must refer to E16, not its empty merged child F16");
+  "MOQ volume must refer to the source E16, not F16");
  assert(Math.abs(tab.getCell("C19").result-result.scenarios.moq.volumeM3)<1e-8,
   "MOQ volume formula cached result is inconsistent with the calculation engine");
  tab.eachRow(row=>row.eachCell(cell=>{
@@ -96,6 +96,6 @@ async function main(){
  assert.equal(tab.getCell("AF24").value,500000);
  const exportZip=Buffer.from(buffer);
  assert(exportZip.length>10000,"export is too small");
- console.log("PASS VED Excel: original product J3:Q19, package G11:I19, source details, 2 sheets, MOQ merged E16 formulas and cached results");
+ console.log("PASS VED Excel: product and packaging photos, 2 unmerged sheets, retained MOQ E16 formulas and cached results");
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

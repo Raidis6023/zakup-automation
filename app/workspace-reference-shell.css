@@ -2035,10 +2035,27 @@ button.active {
 }
 
 
-/* Home headline aligns with the module PageHeader heading, without moving
-   the draggable marketplace cards or shifting the fixed right decoration. */
+/* One geometric origin for all PANDA page headings: content gutter + 48px
+   sidebar-collapse reserve. Apply it to PageHeader, not unrelated headers
+   or the body tables. The home title uses the same origin. */
+.home-shell {
+  --workspace-heading-inset: 48px;
+}
 @media (min-width: 801px) {
   .home-shell--dashboard .home-title-row > div:first-child {
-    margin-left: 28px;
+    margin-inline-start: var(--workspace-heading-inset);
+  }
+  .home-shell .workspace-content--module .workspace-page-header {
+    padding-inline-start: var(--workspace-heading-inset) !important;
+  }
+  /* The Unit Economics module has its own 20px horizontal body padding.
+     Remove only that duplicate offset from its title, not its tables. */
+  .home-shell .workspace-content--module .unit-page > .workspace-page-header > :first-child {
+    margin-inline-start: -20px;
+  }
+}
+@media (min-width: 801px) and (max-width: 900px) {
+  .home-shell .workspace-content--module .unit-page > .workspace-page-header > :first-child {
+    margin-inline-start: -12px;
   }
 }

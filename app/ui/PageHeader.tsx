@@ -97,7 +97,7 @@ export default function PageHeader({
   const config = variants[variant];
 
   return (
-    <header className={config.root}>
+    <header className={classNames(config.root, "workspace-page-header")}>
       <div className={classNames(config.titleArea, styles.titleArea)}>
         <div className={styles.copy}>
           {eyebrow ? <div className={eyebrowClassName || "small-label"}>{eyebrow}</div> : null}
