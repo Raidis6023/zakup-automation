@@ -1,3 +1,4 @@
+import { removeMergedCellsFromWorkbook } from "@/lib/excel/unmerge";
 import {
   NextRequest,
   NextResponse,
@@ -2158,6 +2159,8 @@ export async function GET(
     // ========================================================
     // 23. WRITE
     // ========================================================
+
+    removeMergedCellsFromWorkbook(workbook);
 
     const excelBuffer =
       await workbook.xlsx

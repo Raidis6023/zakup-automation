@@ -1,3 +1,4 @@
+import { removeMergedCellsFromWorkbook } from "./excel/unmerge";
 import ExcelJS from "exceljs";
 
 export type MarketName="ozon"|"wildberries"|"yandex";
@@ -152,6 +153,7 @@ export async function downloadProductsExcel(
 ):Promise<void>{
  const date=new Date();
  const book=buildProductsWorkbook(market,products,periodDays,date);
+ removeMergedCellsFromWorkbook(book);
  const data=await book.xlsx.writeBuffer();
  const bytes=new Uint8Array(data.byteLength);
  bytes.set(new Uint8Array(data));

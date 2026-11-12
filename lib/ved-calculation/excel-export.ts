@@ -1,3 +1,4 @@
+import { removeMergedCellsFromWorkbook } from "../excel/unmerge";
 import ExcelJS from "exceljs";
 import sharp from "sharp";
 import {brotliDecompressSync} from "node:zlib";
@@ -320,5 +321,6 @@ export async function buildVedExport(items:VedExportItem[]):Promise<Buffer>{
   await drawPhoto(wb,sh,item.productPhoto,"product");
   await drawPhoto(wb,sh,item.packagingPhoto,"packaging");
  }
+ removeMergedCellsFromWorkbook(wb);
  return Buffer.from(await wb.xlsx.writeBuffer());
 }

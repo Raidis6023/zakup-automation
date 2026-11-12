@@ -338,3 +338,23 @@ html[data-theme="dark"] .ozf-page {
 .ozf-cost-unit-table th:first-child,.ozf-cost-unit-table td:first-child{text-align:left;white-space:normal}
 .ozf-cost-unit-table tfoot th{font-weight:700;background:rgba(92,112,137,.13)}
 @media(max-width:1050px){.ozf-income-unit-grid{grid-template-columns:1fr}}
+
+
+/* Unified control typography across Ozon, Wildberries and Yandex financiers.
+   Preserve existing semantic colors, sizes of icon-only controls and states. */
+.home-shell .ozf-page :is(button, a.ozf-btn, a[class*="-btn"], a[role="button"]) {
+  font-family: inherit !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  text-decoration: none !important;
+}
+.home-shell .ozf-page :is(button, a.ozf-btn, a[class*="-btn"], a[role="button"]):hover,
+.home-shell .ozf-page :is(button, a.ozf-btn, a[class*="-btn"], a[role="button"]):focus-visible {
+  text-decoration: none !important;
+}
+.home-shell .ozf-page a.ozf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

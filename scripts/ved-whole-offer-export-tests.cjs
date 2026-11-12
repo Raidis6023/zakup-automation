@@ -13,8 +13,10 @@ function compile(rel,imports={}){
 async function main(){
  const template=compile("lib/ved-calculation/template-blueprint.ts");
  const engine=compile("lib/ved-calculation/engine.ts");
+ const unmerge=compile("lib/excel/unmerge.ts");
  const excel=compile("lib/ved-calculation/excel-export.ts",{
   "./template-blueprint":template,
+  "../excel/unmerge":unmerge,
  });
  const photos=compile("lib/ved-calculation/offer-photos.ts",{});
  const input={
@@ -54,6 +56,7 @@ async function main(){
  const buffer=await excel.buildVedExport([product,{...product,id:"2",article:"RCAB-AVD26828-2"}]);
  const loaded=new ExcelJS.Workbook();await loaded.xlsx.load(buffer);
  assert.equal(loaded.worksheets.length,2);
+ for(const sheet of loaded.worksheets) assert.equal(sheet.model.merges.length,0,"no merged cells in generated VED XLSX");
  const tab=loaded.worksheets[0];
  assert.equal(tab.getCell("A31").value,"Вид и состав упаковки");
  assert.equal(tab.getCell("E31").value,"Зип-пакет, стикер, Честный знак");

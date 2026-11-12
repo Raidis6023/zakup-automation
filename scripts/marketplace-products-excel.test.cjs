@@ -14,8 +14,15 @@ const js=ts.transpileModule(read("lib/marketplace-products-excel.ts"),{
  compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,
   esModuleInterop:true}
 }).outputText;
-new Function("require","module","exports",js)(require,module_,module_.exports);
+const unmergeModule={exports:{}};
+const unmergeJs=ts.transpileModule(read("lib/excel/unmerge.ts"),{
+ compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}
+}).outputText;
+new Function("require","module","exports",unmergeJs)(require,unmergeModule,unmergeModule.exports);
+const projectRequire=id=>id==="./excel/unmerge"?unmergeModule.exports:require(id);
+new Function("require","module","exports",js)(projectRequire,module_,module_.exports);
 const {buildProductsWorkbook}=module_.exports;
+const {removeMergedCellsFromWorkbook}=unmergeModule.exports;
 const sample={
  masterCode:"EN0001",sku:"0012300",article:"OZ-COT-123",name:"Товар 1",
  sales:70,average:2.5,cancellations:3,stock:180,stockDays:72,
@@ -42,10 +49,13 @@ test("Ozon: separate .xlsx with total row and collapsible real clusters",async()
  assert.equal(sh.getRow(9).hidden,true);
  assert.equal(sh.getRow(10).hidden,true);
  assert.match(sh.getCell("M9").value.formula,/H9\/H8/);
+ removeMergedCellsFromWorkbook(book);
+ assert.equal(book.worksheets[0].model.merges.length,0);
  const bytes=await book.xlsx.writeBuffer();
  const again=new ExcelJS.Workbook();
  await again.xlsx.load(bytes);
  const sheet=again.getWorksheet("Данные по товарам");
+ assert.equal(sheet.model.merges.length,0,"no merged ranges in downloadable XLSX");
  assert.equal(sheet.getRow(9).outlineLevel,1);
  assert.equal(sheet.getRow(9).hidden,true);
  assert.equal(sheet.getCell("C8").value,"0012300");
@@ -102,6 +112,8 @@ test("Office-compatible XLSX: all 3 marketplaces have well-formed worksheet and 
    name:"Набор\u0000 с контрольным символом \u0007 и кириллицей",
    details:market==="wildberries"?[]:sample.details};
   const book=buildProductsWorkbook(market,[product],28);
+  removeMergedCellsFromWorkbook(book);
+  assert.equal(book.worksheets[0].model.merges.length,0);
   const buffer=await book.xlsx.writeBuffer();
   const zip=await JSZip.loadAsync(buffer);
   for(const location of [
