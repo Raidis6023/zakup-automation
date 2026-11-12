@@ -118,11 +118,15 @@ function campaignIds(input:unknown):string[]{
    if(Array.isArray(v)){for(const x of v.slice(0,10000))inspect(x,depth+1);return}
    if(typeof v!=="object")return;
    const o=v as Record<string,unknown>;
+   // expense/json can identify a campaign with id + moneySpent rather
+   // than the fields used by GET /campaign. Never discard those IDs.
    const raw=o.campaignId??o.campaign_id??o.campaignID??
-     (o.title!==undefined||o.name!==undefined||o.expense!==undefined?o.id:undefined);
+     (o.title!==undefined||o.name!==undefined||o.expense!==undefined||
+      o.moneySpent!==undefined||o.money_spent!==undefined||
+      o.date!==undefined?o.id:undefined);
    if((typeof raw==="number"||typeof raw==="string")&&/^\d{4,20}$/.test(String(raw)))
       ids.add(String(raw));
-   for(const key of ["report","rows","list","data","items","campaigns","result","statistics"]){
+   for(const key of ["report","rows","list","data","items","campaigns","result","statistics","expenses","daily"]){
      if(o[key]!==undefined)inspect(o[key],depth+1);
    }
  }
@@ -273,11 +277,11 @@ export async function runHistoricalAdvertising(request:NextRequest){
     .eq("account_key","main").in("status",["running","pending","failed"])
     .order("status",{ascending:false}).order("date_to",{ascending:false}).limit(1).maybeSingle();
   }else{
-   // Prioritize RECENT missing historical dates. Previously a months-old
-   // running job permanently blocked every newer day even with 100+ pending
-   // campaigns, leaving the dashboard advertising column empty.
+   // Prioritize the most recent COMPLETED local day: the earlier -2-day
+   // cutoff left yesterday's campaign history unstarted while CPC SKU showed
+   // only one incomplete slice, misleading yesterday's financial dashboard.
    const krasnoyarskToday=new Date(Date.now()+7*3600000).toISOString().slice(0,10);
-   const lastHistorical=new Date(Date.parse(krasnoyarskToday+'T00:00:00Z')-2*86400000)
+   const lastHistorical=new Date(Date.parse(krasnoyarskToday+'T00:00:00Z')-86400000)
      .toISOString().slice(0,10);
    const firstHistorical=new Date(Date.parse(lastHistorical+'T00:00:00Z')-14*86400000)
      .toISOString().slice(0,10);
