@@ -2581,3 +2581,121 @@ html[data-theme="dark"] .home-header-sync-notification-icon--alert {
 .home-calendar-day.today.has-note::after {
   box-shadow: 0 0 0 1.5px var(--home-blue, #173a56);
 }
+
+
+
+/* ============================================================
+   HOME: MONTHLY KPI CONTROLS AND RESIZABLE, NONOVERLAPPING CARDS
+   The original four-card size remains the minimum.
+   ============================================================ */
+.home-marketplace-metric-card {
+  box-sizing: border-box;
+}
+.home-marketplace-metric-card--resizing {
+  z-index: 8;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+  box-shadow: 0 9px 30px rgba(20, 37, 32, .15);
+}
+.home-marketplace-ip-badge {
+  font-family: inherit;
+  font-size: clamp(17px, 1.15vw, 21px);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+}
+.home-marketplace-period-control {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  user-select: auto;
+  touch-action: auto;
+}
+.home-marketplace-period-control select {
+  appearance: none;
+  width: 106px;
+  max-width: 106px;
+  min-height: 28px;
+  padding: 5px 20px 5px 8px;
+  border: 1px solid var(--ws-border, #c9c5bd);
+  border-radius: 7px;
+  background-color: var(--ws-surface, #fff);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='m1 1 4 4 4-4' fill='none' stroke='%23606a70' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: right 6px center;
+  background-repeat: no-repeat;
+  color: var(--ws-text, #20272b);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.home-marketplace-period-control select:focus-visible {
+  outline: 2px solid var(--ws-blue, #4b7699);
+  outline-offset: 2px;
+}
+.home-marketplace-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.home-marketplace-resize-handle {
+  position: absolute;
+  z-index: 12;
+  display: block;
+  touch-action: none;
+  border-radius: 4px;
+  outline-offset: -3px;
+}
+.home-marketplace-resize-handle--right {
+  top: 54px;
+  bottom: 16px;
+  right: 0;
+  width: 10px;
+  cursor: ew-resize;
+}
+.home-marketplace-resize-handle--bottom {
+  bottom: 0;
+  left: 12px;
+  right: 16px;
+  height: 10px;
+  cursor: ns-resize;
+}
+.home-marketplace-resize-handle--corner {
+  bottom: 0;
+  right: 0;
+  width: 17px;
+  height: 17px;
+  cursor: nwse-resize;
+}
+.home-marketplace-resize-handle--corner::after {
+  content: "";
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--ws-text-muted, #778080);
+  border-bottom: 2px solid var(--ws-text-muted, #778080);
+  opacity: .5;
+}
+.home-marketplace-resize-handle:hover,
+.home-marketplace-resize-handle:focus-visible,
+.home-marketplace-metric-card--resizing .home-marketplace-resize-handle {
+  background: color-mix(in srgb, var(--home-metric-accent) 14%, transparent);
+}
+.home-marketplace-metric-card:hover .home-marketplace-resize-handle--corner::after,
+.home-marketplace-metric-card--resizing .home-marketplace-resize-handle--corner::after {
+  opacity: .95;
+}
+@media (pointer: coarse) {
+  .home-marketplace-resize-handle--right { width: 14px; }
+  .home-marketplace-resize-handle--bottom { height: 14px; }
+  .home-marketplace-resize-handle--corner { width: 22px; height: 22px; }
+}
