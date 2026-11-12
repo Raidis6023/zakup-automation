@@ -24,3 +24,11 @@
 .ozf-scheme-content .ozf-financial-scroll{max-height:min(64vh,760px);overflow:auto}
 @media(max-width:1000px){.ozf-scheme-panels{grid-template-columns:1fr}.ozf-scheme-panel[open]{grid-column:auto}}
 @media(max-width:600px){.ozf-scheme-summary{padding:13px;gap:12px}.ozf-scheme-stats{grid-template-columns:repeat(3,minmax(0,1fr));flex-basis:100%;gap:8px}.ozf-scheme-action{margin-left:0}.ozf-scheme-stats strong{font-size:13px}}
+
+/* Scheme footer must line up with the right-aligned numeric columns. */
+.ozf-scheme-finance-table th:nth-child(n+5),
+.ozf-scheme-finance-table td:nth-child(n+5){text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ozf-scheme-finance-table tfoot td:nth-child(n+5){vertical-align:middle;text-align:right;font-weight:700}
+.ozf-scheme-finance-table .ozf-expanded-row td{text-align:left;white-space:normal}
+.ozf-scheme-finance-table .ozf-breakdown-table td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.ozf-scheme-finance-table td:first-child{min-width:180px}

@@ -103,7 +103,20 @@ export async function readFinance(from:string,to:string,scheme?:'fbo'|'fbs'){
    fulfillmentByOrder.set(String(item.order_id),old&&old!==mode?'unknown':mode);
   }
  }
- for(const o of orders)o.fulfillment=fulfillmentByOrder.get(o.order_id)??'unknown';
+ // Preserve the detailed cancellation stage from operational orders. The
+ // financial order sheet usually collapses every cancellation into CANCELLED,
+ // losing the distinction between pre-packaging and in-delivery returns.
+ const orderStatus=new Map<string,string>();
+ for(let i=0;i<orderIds.length;i+=150){
+  const lookup=await db.from('yandex_orders').select('order_id,status')
+   .in('order_id',orderIds.slice(i,i+150));
+  if(lookup.error)throw lookup.error;
+  for(const item of lookup.data??[])orderStatus.set(String(item.order_id),String(item.status??''));
+ }
+ for(const o of orders){
+  o.fulfillment=fulfillmentByOrder.get(o.order_id)??'unknown';
+  if(o.fulfillment==='fbs'&&orderStatus.get(o.order_id))o.status=orderStatus.get(o.order_id)!;
+ }
  const result=financialReport(lines,from,to,rates,listings,orders,report.order_units_complete,verifiedReturns);
  const daily=Array.from({length:Math.round((Date.parse(to)-Date.parse(from))/86400000)+1},(_,index)=>{
   const day=new Date(Date.parse(from)+index*86400000).toISOString().slice(0,10);
@@ -121,12 +134,12 @@ export async function readFinance(from:string,to:string,scheme?:'fbo'|'fbs'){
   // cost/transport, construct a separately labeled provisional structure
   // from only fully costed SKUs. Never attribute unknown costs to the MP.
   const included=item.rows.filter(r=>r.result!==null&&r.cogs!==null&&r.mayak!==null);
-  const totals=(key:'income'|'result'|'cogs'|'mayak'|'advertising')=>
+  const totals=(key:'income'|'result'|'cogs'|'mayak'|'packing'|'advertising')=>
    included.reduce((sum,r)=>sum+Number(r[key]??0),0);
   const complete=item.totals.result!==null;
   const structureIncome=complete?item.totals.income:totals('income');
   const structureProfit=complete?Number(item.totals.result):totals('result');
-  const structureInbound=complete?item.totals.cogs+item.totals.mayak:totals('cogs')+totals('mayak');
+  const structureInbound=complete?item.totals.cogs+item.totals.mayak+item.totals.packing:totals('cogs')+totals('mayak')+totals('packing');
   const structureAd=complete?item.totals.advertising:totals('advertising');
   const hasKnownStructure=complete||included.length>0;
   const structure=hasKnownStructure?{
