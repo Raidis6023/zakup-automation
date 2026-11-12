@@ -17,7 +17,7 @@ export async function GET(request:NextRequest){
   const span=Date.parse(to+'T00:00:00Z')-Date.parse(from+'T00:00:00Z');
   if(!valid(from)||!valid(to)||span<0||span>30*86400000)
    return NextResponse.json({ok:false,error:'Неверный период (максимум 31 день)'},{status:400,headers});
-  const [latest,covered,jobs]=await Promise.all([
+  const [latest,covered,jobs,control]=await Promise.all([
    db.from('ozon_finance_ad_sku_daily').select('synced_at')
     .eq('account_key','main').gte('day',from).lte('day',to)
     .order('synced_at',{ascending:false}).limit(1).maybeSingle(),
@@ -26,10 +26,14 @@ export async function GET(request:NextRequest){
    db.from('ozon_finance_ad_sync_jobs').select('id,status,date_from,date_to')
     .eq('account_key','main').lte('date_from',to).gte('date_to',from)
     .order('date_to',{ascending:false}).limit(250),
+   db.from('ozon_finance_ad_worker_control')
+    .select('last_phase,last_error,retry_after,updated_at')
+    .eq('account_key','main').maybeSingle(),
   ]);
   if(latest.error)throw latest.error;
   if(covered.error)throw covered.error;
   if(jobs.error)throw jobs.error;
+  if(control.error)throw control.error;
   const ids=(jobs.data??[]).map(j=>j.id);
   const stats=ids.length?await db.from('ozon_finance_ad_campaign_tasks')
    .select('job_id,status,metrics_ready').in('job_id',ids).lte('day',to).gte('date_to',from).limit(5000):
@@ -45,6 +49,8 @@ export async function GET(request:NextRequest){
    campaigns_pending:total-loaded,unstarted_job_windows:pendingDays,
    complete_days:(covered.data??[]).length,
    expected_days:Math.round(span/86400000)+1,
+   worker_phase:control.data?.last_phase??null,
+   worker_retry_after:control.data?.retry_after??null,
   },{headers});
  }catch(e){
   return NextResponse.json({ok:false,error:e instanceof Error?e.message:'Не удалось проверить рекламную очередь'},
