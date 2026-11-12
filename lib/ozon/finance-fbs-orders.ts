@@ -25,12 +25,13 @@ export function fbsPackingUnits(statusValue:string,quantity:number,deliveringDat
 const localDay=(value:string):string=>{
  const date=new Date(value);
  if(Number.isNaN(date.getTime()))throw Error('Некорректная дата FBS отправления Ozon');
- return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Krasnoyarsk',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);
+ return new Date(date.getTime()+7*3600000).toISOString().slice(0,10);
 };
 function sanitize(posting:FbsPosting,from:string,to:string):FbsOrderUnit[]{
  const num=String(posting.posting_number??'').trim();
  const status=String(posting.status??'').trim().toLowerCase();
- const created=posting.in_process_at??posting.created_at;
+ // Order chronology must use creation, not the subsequent acceptance-to-work time.
+ const created=posting.created_at??posting.in_process_at;
  if(!num||!status||!created)throw Error('Ozon прислал отправление FBS без номера, даты или статуса');
  const day=localDay(created);if(day<from||day>to)return [];
  if(!Array.isArray(posting.products))throw Error('Ozon не передал состав FBS отправления '+num);
