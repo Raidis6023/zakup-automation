@@ -48,7 +48,13 @@ export default function BiChart({points,series,unit='₽',stacked=false,zero=fal
    <path d={area} fill={`url(#${id+s.key+'negative'})`} clipPath={`url(#${id+s.key+'negative-clip'})`}/>
    <path d={d} fill="none" stroke={s.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
    <path d={d} fill="none" stroke={s.negativeColor??'#ef4444'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" clipPath={`url(#${id+s.key+'negative-clip'})`}/>
-   </g>})}</g>;
+   </g>})}
+   {/* A line segment containing a single observed day has no visible stroke.
+       Render an explicit point for every confirmed observation, including
+       isolated days separated by unknown campaign metrics. */}
+   {points.map((p,i)=>{const v=p.values[s.key];return v==null||!Number.isFinite(v)?null:
+    <circle key={p.day} cx={x(i)} cy={y(v)} r="3" fill={s.color} stroke="#0d1729" strokeWidth="1.2"/>;})}
+   </g>;
  })}
  {points.map((p,i)=>i%labelInterval!==0&&i!==points.length-1?null:<text className="bi-axis" x={x(i)} y={h-12} textAnchor="middle" key={p.day}>{p.day.slice(8)}.{p.day.slice(5,7)}</text>)}
  {selected&&active!==null&&<g pointerEvents="none">
