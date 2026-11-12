@@ -42,6 +42,19 @@ const theme = read("app/workspace-unified-champagne.css");
 assert.ok(theme.includes(".home-shell input.workspace-search-field"), "Search icon shared across pages");
 assert.ok(theme.includes('html[data-theme="dark"] .home-shell input.workspace-search-field'), "Search icon respects dark theme");
 assert.ok(theme.includes("stroke='%23101820'") && theme.includes("stroke='%23d9b27c'"), "Use the brand icon colors");
+const pilotStyles = read("app/unit-economics/unit-economics-pilot.css");
+assert.match(pilotStyles, /\.unit-version-root \.unit-pilot \.unit-table-toolbar input\s*\{[\s\S]*?background:var\(--ws-surface\)/,
+  "Pilot stylesheet resets background subproperties through shorthand");
+const searchIconRule = theme.match(/\.home-shell input\.workspace-search-field\s*\{([^}]+)\}/)?.[1] ?? "";
+for (const [property, expected] of [
+  ["background-image", /url\([^)]+\)\s*!important/],
+  ["background-repeat", /no-repeat\s*!important/],
+  ["background-position", /12px center\s*!important/],
+  ["background-size", /18px 18px\s*!important/],
+]) {
+  assert.match(searchIconRule, new RegExp(property + ":\\s*" + expected.source),
+    property + " must override the pilot toolbar background shorthand");
+}
 for (const file of ["app/login/LoginForm.tsx", "app/tasks/TasksBoard.tsx"]) {
   assert.ok(read(file).includes("placeholder="), "Non-search form hints must stay untouched: "+file);
 }
