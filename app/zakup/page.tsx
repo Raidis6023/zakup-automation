@@ -722,20 +722,6 @@ export default async function Home() {
     );
 
 
-  let orderDescription =
-    "Сначала рассчитайте потребность и транспорт. Кнопка формирования заказа доступна.";
-
-  if (simulation) {
-    if (!orderScenario) {
-      orderDescription = "Транспортный сценарий требует ручного решения. Кнопка остаётся доступной, но заказ нельзя создать до выбора транспорта.";
-    } else if (selectedSkuCount > 0) {
-      orderDescription = `Подтверждено товаров: ${selectedSkuCount}. Будет создан черновик ВЭД (${orderScenario === "container" ? "контейнер" : "фура"}). Остальные позиции не войдут в заказ.`;
-    } else {
-      orderDescription = "Будет создан пустой черновик ВЭД. Неподтверждённые товары из таблицы «Потребность в закупке» не переносятся.";
-    }
-  }
-
-
   const decisionTitle =
     simulation
 
@@ -745,13 +731,6 @@ export default async function Home() {
         )}`
 
       : "Решение: Требуется расчет транспорта";
-
-
-  const decisionDescription =
-    simulation
-      ?.decision_reason
-    ??
-    "Для определения транспорта выполните расчёт.";
 
 
   return (
@@ -773,7 +752,6 @@ export default async function Home() {
         <PageHeader
           variant="zakup"
           title="Китай — расчёт потребности"
-          description="Тестовый режим. Формируется внутренний черновик ВЭД. Внешний заказ поставщику автоматически не отправляется."
         />
 
 
@@ -843,16 +821,6 @@ export default async function Home() {
                 >
                   Формирование заказа
                 </strong>
-
-
-                <div
-                  className=
-                    "muted zakup-v2-order-description"
-                >
-                  {
-                    orderDescription
-                  }
-                </div>
 
               </div>
 
@@ -1033,11 +1001,7 @@ export default async function Home() {
                   <ReferenceIcon name="info" />
                 </span>
                 <div className="zakup-v2-result-copy">
-                  <div className="card-label">Решение по транспорту</div>
                   <strong className="zakup-v2-decision-title">{decisionTitle}</strong>
-                  <div className="muted zakup-v2-result-subtitle zakup-v2-decision-description">
-                    {decisionDescription}
-                  </div>
                 </div>
               </div>
 
