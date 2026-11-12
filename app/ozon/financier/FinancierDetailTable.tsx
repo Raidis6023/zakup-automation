@@ -280,7 +280,7 @@ export default function FinancierDetailTable({
     </div><div className="ozf-toolbar"><button type="button" className="ozf-btn" onClick={()=>void exportFinancialResult()}>Скачать финрез XLSX</button><button type="button" className="ozf-btn" onClick={()=>void exportMissingData()}>Недостающие данные XLSX · {missingData.length}</button><a href="#ozf-unallocated" className="ozf-btn ozf-jump">Нераспределённые расходы ↓</a></div></div>
     <div className="ozf-kpi-grid">{kpis.map(k=>
       <div key={k.name} className={"ozf-kpi "+k.tone}>
-        {['Выручка','Операционная прибыль'].includes(k.name)?<button type="button" className="ozf-kpi-link" onClick={()=>setGraphMetric(k.name==='Выручка'?'revenue':'profit')}>{k.name}</button>:<span>{k.name}</span>}<strong>{k.value}</strong>
+        {(k.name==='Выручка'||k.name.startsWith('Операционная прибыль'))?<button type="button" className="ozf-kpi-link" onClick={()=>setGraphMetric(k.name==='Выручка'?'revenue':'profit')}>{k.name}</button>:<span>{k.name}</span>}<strong>{k.value}</strong>
       </div>)}
     </div>
     {includeUnallocated&&referenceBySku!==null&&<p className="ozf-notice" role="status" style={{marginTop:8}}>
