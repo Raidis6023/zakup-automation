@@ -139,6 +139,16 @@ type VedOrderItem = {
   photo_url:
     string | null;
 
+  characteristics_confirmed_at: string | null;
+  order_terms_confirmed_at: string | null;
+  import_hs_code: string | null;
+  import_carton_length_cm: number | null;
+  import_carton_width_cm: number | null;
+  import_carton_height_cm: number | null;
+  import_individual_length_cm: number | null;
+  import_individual_width_cm: number | null;
+  import_individual_height_cm: number | null;
+
   priority_group:
     string | null;
 

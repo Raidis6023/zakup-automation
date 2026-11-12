@@ -277,9 +277,9 @@ export default function VedOrderAddItemsDialog({
                 ] as const).map(([key, title, hint]) => (
                   <label className="ved-add-label" key={key}>{title}
                     <input className="ved-add-input" placeholder={hint}
-                      type={["our_article", "chinese_article"].includes(key) ? "text" : "text"}
-                      inputMode={["our_article", "chinese_article"].includes(key) ? "text" : "decimal"}
-                      maxLength={key === "our_article" || key === "chinese_article" ? 120 : 24}
+                      type="text"
+                      inputMode={key === "chinese_article" ? "text" : "decimal"}
+                      maxLength={key === "chinese_article" ? 120 : 24}
                       value={newItem[key]}
                       onChange={event => setNewItem(current => ({ ...current, [key]: event.target.value }))} />
                   </label>
