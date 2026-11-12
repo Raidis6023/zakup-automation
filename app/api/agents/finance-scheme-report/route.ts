@@ -35,9 +35,11 @@ export async function GET(req:NextRequest){try{
  // An accrual is NOT a new order. Preserve its real posting day and never
  // invent cancellations from a fee ledger.
  const db=createAdminClient(),kind=scheme==='fbo'?'fbo':'fbs';
- type ProductFee={sku?:number|string;quantity?:number;commission?:{
-  sale_price?:{amount?:string};bonus?:{amount?:string};commission?:{amount?:string};
- };delivery?:{services?:Array<{type_id?:number|string;accrued?:{amount?:string}}>}}};
+ type ProductFee={
+  sku?:number|string;quantity?:number;
+  commission?:{sale_price?:{amount?:string};bonus?:{amount?:string};commission?:{amount?:string}};
+  delivery?:{services?:Array<{type_id?:number|string;accrued?:{amount?:string}}>}
+ };
  type Acc={sku:string|null;day:string;run_id:string;unit_number:string|null;amount:number;type_id:string|null;
   raw:{accrual_id?:number|string;posting?:{delivery_schema?:string;products?:ProductFee[]};
    item_fees?:{fees?:Array<{sku?:number|string;fees?:Array<{type_id?:number|string;accrued?:{amount?:string}}>}>}}};
@@ -110,7 +112,7 @@ export async function GET(req:NextRequest){try{
   for(const fee of prod?.delivery?.services??[])
    take(typeNames.get(String(fee.type_id))??'Услуга Ozon №'+fee.type_id,'Услуга Ozon',fee.accrued);
   const difference=Math.round((amount-classified)*100)/100;
-  if(Math.abs(difference)>.005)parts.push({name:'Прочие начисления по отправлению','Начисление Ozon',value:difference});
+  if(Math.abs(difference)>.005)parts.push({name:'Прочие начисления по отправлению',category:'Начисление Ozon',value:difference});
   for(const p of parts){if(p.value>0)v.income+=p.value;else v.expense+=p.value;detail(v,p.name,p.category,p.value);}
  }
  // Scheme-specific item fees can be matched only by a known shipment and SKU.
