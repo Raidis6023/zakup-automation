@@ -1,6 +1,7 @@
 "use client";
 
 import Button from "./ui/Button";
+import VedOrderAddItemsDialog from "./VedOrderAddItemsDialog";
 
 import {
   useEffect,
@@ -59,6 +60,7 @@ type VedOrderItem = {
 
   status: string;
   item_kind: string;
+  added_manually: boolean;
 
   chinese_article_snapshot: string | null;
   our_article_snapshot: string | null;
@@ -962,6 +964,9 @@ export default function VedOrderDetailClient(
       true
     );
 
+  const [removingItemId, setRemovingItemId] = useState<string | null>(null);
+  const [removeError, setRemoveError] = useState("");
+
 
   const [
     error,
@@ -1495,6 +1500,36 @@ export default function VedOrderDetailClient(
     );
 
   }
+
+  async function removeManualItem(itemId: string) {
+    if (removingItemId || !window.confirm("Удалить добавленный товар из черновика заказа?")) {
+      return;
+    }
+    setRemoveError("");
+    setRemovingItemId(itemId);
+    try {
+      const response = await fetch(
+        "/api/ved-orders/" + encodeURIComponent(orderId) + "/add-items", {
+          method: "DELETE",
+          cache: "no-store",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ itemId }),
+        }
+      );
+      const result = await response.json() as { ok?: boolean; error?: string };
+      if (!response.ok || !result.ok) {
+        throw new Error(result.error || "Не удалось удалить товар");
+      }
+      setSelectedItemId(current => current === itemId ? null : current);
+      await refreshAll();
+    } catch (cause) {
+      setRemoveError(cause instanceof Error ? cause.message : "Ошибка удаления позиции");
+    } finally {
+      setRemovingItemId(null);
+    }
+  }
+
 
 
   // ==========================================================
@@ -5875,13 +5910,24 @@ export default function VedOrderDetailClient(
           </h2>
 
 
-          <div className="muted">
-            {formatNumber(
-              items.length
-            )} товаров
+          <div style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}>
+            <span className="muted">
+              {formatNumber(items.length)} товаров
+            </span>
+            {(["draft", "returned_for_edit"].includes(order.workflow_status)) && (
+              <VedOrderAddItemsDialog
+                orderId={orderId}
+                existingProductIds={items.filter(item => item.product_id !== null)
+                  .map(item => item.product_id as string)}
+                onAdded={refreshAll}
+              />
+            )}
           </div>
 
         </div>
+        {removeError && (
+          <p role="alert" className="ved-add-remove-error">{removeError}</p>
+        )}
 
 
         <div
@@ -6201,6 +6247,21 @@ export default function VedOrderDetailClient(
                         {getItemListStatus(
                           item
                         )}
+
+                        {item.added_manually &&
+                          (["draft", "returned_for_edit"].includes(order.workflow_status)) && (
+                            <button type="button" className="ved-add-remove"
+                              disabled={removingItemId !== null}
+                              onClick={event => {
+                                event.stopPropagation();
+                                void removeManualItem(item.id);
+                              }}
+                              onKeyDown={event => event.stopPropagation()}
+                              aria-label={"Удалить из заказа: " + (item.our_article_snapshot || item.product_name_snapshot || "товар")}
+                            >
+                              {removingItemId === item.id ? "Удаляем…" : "Удалить"}
+                            </button>
+                          )}
                       </td>
 
                     </tr>

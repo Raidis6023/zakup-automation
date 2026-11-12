@@ -125,6 +125,8 @@ type VedOrderItem = {
   item_kind:
     string;
 
+  added_manually: boolean;
+
   chinese_article_snapshot:
     string | null;
 
@@ -590,6 +592,8 @@ export async function GET(
             "status",
 
             "item_kind",
+
+            "added_manually",
 
 
             "chinese_article_snapshot",
