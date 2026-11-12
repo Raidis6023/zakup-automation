@@ -769,17 +769,6 @@ export default async function Home() {
               </span>
               <div className="zakup-v2-action-text">
                 <h2 className="controls-title">Расчёт закупки</h2>
-                <div className="muted">
-                  Потребность по товарам и кубатура транспорта рассчитываются вместе
-                </div>
-                {run?.sales_date_from && run?.sales_date_to ? (
-                  <div className="muted zakup-confirmed-period">
-                    Подтверждённые продажи:{" "}
-                    {new Date(run.sales_date_from + "T12:00:00Z").toLocaleDateString("ru-RU", { timeZone: "UTC" })}
-                    {" – "}
-                    {new Date(run.sales_date_to + "T12:00:00Z").toLocaleDateString("ru-RU", { timeZone: "UTC" })}
-                  </div>
-                ) : null}
               </div>
             </div>
             <div className="zakup-v2-action-controls">

@@ -15,6 +15,9 @@ assert.doesNotMatch(page, /className="card-label">Решение по транс
 assert.match(page, /className="zakup-v2-decision-title">\{decisionTitle\}/);
 assert.match(page, /<CreateVedDraftSubmitButton/);
 assert.match(page, /<ZakupCalculateButton/);
+assert.match(page, /<h2 className="controls-title">Расчёт закупки<\/h2>/);
+assert.doesNotMatch(page, /Потребность по товарам и кубатура транспорта рассчитываются вместе/);
+assert.doesNotMatch(page, /Подтверждённые продажи|zakup-confirmed-period/);
 assert.match(info, /<dl>[\s\S]*?<\/dl>/);
 assert.doesNotMatch(info, /<p>/);
 for (const [name,content] of [["app/zakup/page.tsx",page],["app/zakup/ZakupCalculationInfo.tsx",info]]) {
