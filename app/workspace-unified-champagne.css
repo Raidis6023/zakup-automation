@@ -650,11 +650,18 @@ html[data-theme="dark"] .home-shell input.workspace-search-field {
 @supports (appearance: base-select) {
   .home-shell select:not([multiple]):not([size]):not([data-native-picker]) {
     appearance: base-select;
+    /* Chromium's base-select defaults to start alignment in compact inputs.
+       Enforce the original vertical centering in all admin, tasks and finance controls. */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     cursor: pointer;
   }
   .home-shell select:not([multiple]):not([size]):not([data-native-picker])::picker-icon {
     color: var(--ws-text-secondary);
-    margin-inline-start: 8px;
+    margin-inline-start: auto;
+    padding-inline-start: 8px;
+    flex: 0 0 auto;
   }
   .home-shell select:not([multiple]):not([size]):not([data-native-picker])::picker(select) {
     appearance: base-select;
@@ -672,6 +679,8 @@ html[data-theme="dark"] .home-shell input.workspace-search-field {
     scrollbar-color: var(--ws-border) transparent;
   }
   .home-shell select:not([multiple]):not([size]):not([data-native-picker]) option {
+    display: flex;
+    align-items: center;
     padding: 9px 12px;
     border-radius: 7px;
     font: inherit;
@@ -695,6 +704,8 @@ html[data-theme="dark"] .home-shell input.workspace-search-field {
     opacity: .45;
   }
   .home-shell select:not([multiple]):not([size]):not([data-native-picker]) option::checkmark {
-    color: var(--ws-text);
+    /* Never display the browser's checkmark in any PANDA dropdown. */
+    display: none !important;
+    content: none !important;
   }
 }
