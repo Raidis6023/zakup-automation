@@ -28,7 +28,7 @@ import HomeRightPanel
   from "./HomeRightPanel";
 
 import FixedWorkspaceBrand from "./FixedWorkspaceBrand";
-import { workspaceBreadcrumbs } from "./ui/workspace-breadcrumb-routes";
+import { canonicalWorkspacePath, workspaceBreadcrumbs } from "./ui/workspace-breadcrumb-routes";
 
 import WorkspaceCompanyLogo
   from "./WorkspaceCompanyLogo";
@@ -206,10 +206,7 @@ export default function WorkspaceShell({
   module = false,
 }: WorkspaceShellProps) {
 
-  const pathname =
-    usePathname()
-    ??
-    "/";
+  const pathname = canonicalWorkspacePath(usePathname() ?? "/");
 
   // One consistent accent across each marketplace's page and shell.
   // All other routes, including China procurement and VED, use emerald.
@@ -276,17 +273,22 @@ export default function WorkspaceShell({
 
 
   const isVedOrderDetail =
-    pathname.startsWith(
-      "/ved-orders/"
-    );
+    pathname.startsWith("/orders/");
 
 
   // Keep VED subnavigation visible on its own pages; other modules stay uncluttered.
   useEffect(() => {
-    if (pathname === "/ved" || pathname.startsWith("/ved/") || pathname.startsWith("/ved-orders")) {
+    if (
+      pathname === "/orders" ||
+      pathname === "/commercial-offers" ||
+      pathname === "/registry" || pathname.startsWith("/registry/") ||
+      pathname === "/documents" ||
+      pathname === "/references" ||
+      isVedOrderDetail
+    ) {
       setVedMenuExpanded(true);
     }
-  }, [pathname]);
+  }, [pathname, isVedOrderDetail]);
 
 
   // ==========================================================
@@ -511,46 +513,33 @@ export default function WorkspaceShell({
 
 
       case "ved":
-
-        return (
-          pathname ===
-            "/ved"
-          ||
-          pathname.startsWith(
-            "/ved/"
-          )
-          ||
-          pathname ===
-            "/ved-orders"
-          ||
-          (
-            isVedOrderDetail
-            &&
-            vedOrderSource ===
-              "ved"
-          )
-        );
-
+        return pathname === "/orders"
+          || pathname === "/commercial-offers"
+          || pathname === "/registry"
+          || pathname.startsWith("/registry/")
+          || pathname === "/documents"
+          || pathname === "/references"
+          || (isVedOrderDetail && vedOrderSource === "ved");
 
       case "ved-orders":
-        return pathname === "/ved" || pathname === "/ved-orders"
+        return pathname === "/orders"
           || (isVedOrderDetail && vedOrderSource === "ved");
 
       case "ved-offers":
-        return pathname === "/ved/commercial-offers"
-          || pathname.startsWith("/ved/commercial-offers/");
+        return pathname === "/commercial-offers"
+          || pathname.startsWith("/commercial-offers/");
 
       case "ved-registry":
-        return pathname === "/ved/registry"
-          || pathname.startsWith("/ved/registry/");
+        return pathname === "/registry"
+          || pathname.startsWith("/registry/");
 
       case "ved-documents":
-        return pathname === "/ved/documents"
-          || pathname.startsWith("/ved/documents/");
+        return pathname === "/documents"
+          || pathname.startsWith("/documents/");
 
       case "ved-references":
-        return pathname === "/ved/references"
-          || pathname.startsWith("/ved/references/");
+        return pathname === "/references"
+          || pathname.startsWith("/references/");
 
       case "unit-economics":
         return pathname === "/unit-economics" || pathname.startsWith("/unit-economics/");
@@ -943,7 +932,7 @@ export default function WorkspaceShell({
                 <div className="home-ved-nav-group">
                   <div className="home-ved-nav-parent">
                     <Link
-                      href="/ved"
+                      href="/orders"
                       onClick={event => {
                         setVedMenuExpanded(true);
                         handleNavClick(event, "ved");
@@ -975,11 +964,11 @@ export default function WorkspaceShell({
                     aria-label="Подразделы ВЭД"
                   >
                     {([
-                      { key: "ved-orders", label: "Заказы", href: "/ved", icon: "orders" },
-                      { key: "ved-offers", label: "Коммерческие предложения", href: "/ved/commercial-offers", icon: "offers" },
-                      { key: "ved-registry", label: "Реестр товаров и расчётов", href: "/ved/registry", icon: "registry" },
-                      { key: "ved-documents", label: "Документы", href: "/ved/documents", icon: "documents" },
-                      { key: "ved-references", label: "Справочники ВЭД", href: "/ved/references", icon: "references" },
+                      { key: "ved-orders", label: "Заказы", href: "/orders", icon: "orders" },
+                      { key: "ved-offers", label: "Коммерческие предложения", href: "/commercial-offers", icon: "offers" },
+                      { key: "ved-registry", label: "Реестр товаров и расчётов", href: "/registry", icon: "registry" },
+                      { key: "ved-documents", label: "Документы", href: "/documents", icon: "documents" },
+                      { key: "ved-references", label: "Справочники ВЭД", href: "/references", icon: "references" },
                     ] as const).map(item => (
                       <Link
                         key={item.key}

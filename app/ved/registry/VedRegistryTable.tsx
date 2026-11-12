@@ -14,10 +14,10 @@ const state=(row:VedRegistryRow):Exclude<Status,"all">=>{
 };
 const linkTo=(row:VedRegistryRow,version?:VedRegistryHistory)=>{
  if(version?.type==="single")
-  return "/ved/registry/calculator?snapshotId="+encodeURIComponent(version.id);
+  return "/registry/calculator?snapshotId="+encodeURIComponent(version.id);
  const params=new URLSearchParams({offerId:row.offerId,offerItem:row.id});
  if(version)params.set("versionId",version.id);
- return "/ved/registry/calculator?"+params.toString();
+ return "/registry/calculator?"+params.toString();
 };
 export default function VedRegistryTable({rows,limited}:{
  rows:VedRegistryRow[];limited:boolean;
@@ -44,7 +44,7 @@ export default function VedRegistryTable({rows,limited}:{
     <p>Данные из загруженных КП, общих и отдельных сохранённых расчётов. Сценарии 40HQ, MOQ и средняя себестоимость.</p></div>
    <div className="ved-registry-actions">
     <button type="button" onClick={()=>router.refresh()}>Обновить</button>
-    <Link href="/ved/registry/calculator">Черновой калькулятор</Link>
+    <Link href="/registry/calculator">Черновой калькулятор</Link>
    </div>
   </div>
   <div className="ved-registry-kpis">
@@ -72,7 +72,7 @@ export default function VedRegistryTable({rows,limited}:{
   </div>
   {limited&&<p className="ved-registry-warning">Отображена ограниченная выборка последних КП и версий. Старые расчёты не удалены.</p>}
   {!rows.length?<div className="ved-registry-empty">
-   Пока нет импортированных товаров. Загрузите КП в разделе <Link href="/ved/commercial-offers">«Коммерческие предложения»</Link>.
+   Пока нет импортированных товаров. Загрузите КП в разделе <Link href="/commercial-offers">«Коммерческие предложения»</Link>.
   </div>:!filtered.length?<p className="ved-registry-empty">По заданным фильтрам ничего не найдено.</p>:
   <div className="ved-registry-scroll">
    <table className="ved-registry-table">

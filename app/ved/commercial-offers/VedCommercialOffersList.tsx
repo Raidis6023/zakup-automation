@@ -55,7 +55,7 @@ export default function VedCommercialOffersList(){
        <span>{offer.supplier_code} · {offer.quote_date} · {offer.item_count} товаров</span>
        <small>{offer.original_file_name}</small>
       </button>
-      <Link className="ved-quote-action" href={"/ved/registry/calculator?offerId="+encodeURIComponent(offer.id)}>Рассчитать всё КП</Link>
+      <Link className="ved-quote-action" href={"/registry/calculator?offerId="+encodeURIComponent(offer.id)}>Рассчитать всё КП</Link>
       <button type="button" className="ved-quote-original" onClick={()=>void openSource(offer.id)}>Исходный Excel</button>
      </div>
      <span className="ved-quote-status">{offer.status==="imported"?"Распознано":offer.status==="needs_review"?"Нужна проверка формата":offer.status==="uploading"?"Загрузка":"Ошибка"}</span>

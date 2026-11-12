@@ -38,7 +38,6 @@ export default function Breadcrumbs({
                 href={item.href}
                 className={styles.link}
                 aria-current={current ? "page" : undefined}
-                title={item.label}
               >
                 <span className={styles.fullLabel}>{item.label}</span>
                 {item.shortLabel && (
