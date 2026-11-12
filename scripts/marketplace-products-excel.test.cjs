@@ -146,3 +146,23 @@ test("Office-compatible XLSX: all 3 marketplaces have well-formed worksheet and 
    "Bad control character must be removed, not serialized");
  }
 });
+
+
+test("Excel unmerge keeps source values, formula results and unrelated cells", () => {
+ const book = new ExcelJS.Workbook();
+ const ws = book.addWorksheet("Без потери данных");
+ ws.getCell("A1").value = {formula:"D2*2",result:42};
+ ws.getCell("D2").value = 21;
+ ws.getCell("F5").value = "Проверка сохранности";
+ ws.mergeCells("A1:C2");
+ assert.equal(ws.model.merges.length,1);
+ removeMergedCellsFromWorkbook(book);
+ assert.equal(ws.model.merges.length,0);
+ assert.equal(ws.getCell("A1").formula,"D2*2");
+ assert.equal(ws.getCell("A1").result,42);
+ assert.equal(ws.getCell("D2").value,21);
+ assert.equal(ws.getCell("F5").value,"Проверка сохранности");
+ assert.equal(ws.getCell("B1").value,null);
+ removeMergedCellsFromWorkbook(book);
+ assert.equal(ws.model.merges.length,0);
+});
