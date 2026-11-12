@@ -270,7 +270,7 @@ export default function VedCalculator() {
           <DateField  value={tariffDate} onChange={e=>setTariffDate(e.target.value)}/>
         </label>
         <button type="button" className="ved-calc-reset" onClick={applyRates}>Применить тарифы на дату</button>
-        <a className="ved-calc-reset" href="/ved/references">Открыть справочники</a>
+        <a className="ved-calc-reset" href="/references">Открыть справочники</a>
       </div>
       <p className="ved-calc-hint">{ratesStatus}</p>
       <div className="ved-calc-persist-bar">

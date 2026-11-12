@@ -789,7 +789,7 @@ export default function ChinaTransportClient() {
 
 
       router.push(
-        `/ved-orders/${result.order_id}`
+        `/orders/${result.order_id}`
       );
 
 

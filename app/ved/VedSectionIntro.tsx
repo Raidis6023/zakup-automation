@@ -29,7 +29,7 @@ export default function VedSectionIntro({
         </section>
         <p className="ved-module-footer">
           Документы, исходные предложения и сохранённые расчёты ВЭД доступны в соответствующих разделах.{" "}
-          <Link href="/ved">Перейти к заказам</Link>
+          <Link href="/orders">Перейти к заказам</Link>
         </p>
       </div>
     </main>

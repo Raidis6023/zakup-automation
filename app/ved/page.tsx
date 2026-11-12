@@ -702,17 +702,17 @@ async function takeOrderInWork(
 
 
   revalidatePath(
-    "/ved"
+    "/orders"
   );
 
 
   revalidatePath(
-    `/ved-orders/${orderId}`
+    `/orders/${orderId}`
   );
 
 
   redirect(
-    `/ved-orders/${orderId}?from=ved`
+    `/orders/${orderId}?from=ved`
   );
 
 }
@@ -1548,7 +1548,7 @@ export default async function VedPage() {
 
                                   <Link
                                     href={
-                                      `/ved-orders/${order.id}?from=ved`
+                                      `/orders/${order.id}?from=ved`
                                     }
                                     className="ved-order-link"
                                   >
@@ -1732,7 +1732,7 @@ export default async function VedPage() {
 
                                         <ButtonLink
                                           href={
-                                            `/ved-orders/${order.id}?from=ved`
+                                            `/orders/${order.id}?from=ved`
                                           }
                                           variant="secondary"
                                           className="ved-action-button"

@@ -550,11 +550,11 @@ export async function createVedOrderDraft(
   );
 
   revalidatePath(
-    "/ved"
+    "/orders"
   );
 
   revalidatePath(
-    `/ved-orders/${result.order_id}`
+    `/orders/${result.order_id}`
   );
 
 
@@ -563,7 +563,7 @@ export async function createVedOrderDraft(
   // ==========================================
 
   redirect(
-    `/ved-orders/${result.order_id}?from=zakup`
+    `/orders/${result.order_id}?from=zakup`
   );
 
 }
@@ -586,8 +586,8 @@ export async function refreshVedOrderPhotos(orderId: string) {
 
   const result = await syncVedOrderPhotos(orderId);
 
-  revalidatePath(`/ved-orders/${orderId}`);
-  revalidatePath("/ved");
+  revalidatePath(`/orders/${orderId}`);
+  revalidatePath("/orders");
 
   return result;
 }

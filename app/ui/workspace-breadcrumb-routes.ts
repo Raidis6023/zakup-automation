@@ -21,12 +21,12 @@ const routes: Record<string, RouteSpec> = {
   "/logistics-import": {
     label: "Импорт логистики", shortLabel: "Габариты", parent: "/zakup",
   },
-  "/ved": { label: "ВЭД" },
-  "/ved/commercial-offers": { label: "Коммерческие предложения", parent: "/ved" },
-  "/ved/registry": { label: "Реестр товаров и расчётов", parent: "/ved" },
-  "/ved/registry/calculator": { label: "Калькулятор ВЭД", parent: "/ved/registry" },
-  "/ved/documents": { label: "Документы", parent: "/ved" },
-  "/ved/references": { label: "Справочники ВЭД", parent: "/ved" },
+  "/orders": { label: "Заказы" },
+  "/commercial-offers": { label: "Коммерческие предложения" },
+  "/registry": { label: "Реестр товаров и расчётов" },
+  "/registry/calculator": { label: "Калькулятор ВЭД", parent: "/registry" },
+  "/documents": { label: "Документы" },
+  "/references": { label: "Справочники ВЭД" },
   "/unit-economics": { label: "Юнит-экономика" },
   "/unit-economics/commissions": { label: "Комиссии", parent: "/unit-economics" },
   "/unit-economics/logistics": { label: "Логистика и тарифы", parent: "/unit-economics" },
@@ -116,11 +116,19 @@ function getFallback(pathname: string): RouteSpec {
   return { label };
 }
 
+export function canonicalWorkspacePath(pathname: string): string {
+  const path = pathname.replace(/\/+$/, "") || "/";
+  if (path === "/ved" || path === "/ved-orders") return "/orders";
+  if (path.startsWith("/ved-orders/")) return "/orders" + path.slice("/ved-orders".length);
+  if (path.startsWith("/ved/")) return path.slice("/ved".length);
+  return path;
+}
+
 export function workspaceBreadcrumbs(
   pathname: string,
   vedOrderSource: "zakup" | "ved" | null = null,
 ): BreadcrumbItem[] {
-  const path = pathname.replace(/\/+$/, "") || "/";
+  const path = canonicalWorkspacePath(pathname);
   if (path === "/") return [];
 
   // Administrative breadcrumbs have their own home destination. The generic
@@ -147,25 +155,13 @@ export function workspaceBreadcrumbs(
     return [...chain, ...parents];
   }
 
-  // /ved displays the Orders page, while the VED section entry is
-  // /ved/commercial-offers. Keep both levels visible in the breadcrumb.
-  if (path === "/ved") {
+  // A VED order detail belongs to Orders, except when opened from Procurement.
+  // Never display the VED group as a separate breadcrumb level.
+  if (path.startsWith("/orders/")) {
+    const parent = vedOrderSource === "zakup" ? "/zakup" : "/orders";
     return [
       { label: "Главная", href: "/" },
-      { label: "ВЭД", href: "/ved/commercial-offers" },
-      { label: "Заказы", href: "/ved" },
-    ];
-  }
-
-  // Dynamic VED order IDs must never become a fabricated parent route.
-  if (path.startsWith("/ved-orders/")) {
-    const parent = vedOrderSource === "zakup" ? "/zakup" : "/ved";
-    return [
-      { label: "Главная", href: "/" },
-      {
-        label: routes[parent].label,
-        href: parent === "/ved" ? "/ved/commercial-offers" : parent,
-      },
+      { label: routes[parent].label, href: parent },
       { label: "Заказ в Китай", href: path },
     ];
   }
@@ -179,7 +175,7 @@ export function workspaceBreadcrumbs(
     const entry = routes[current] ?? getFallback(current);
     parents.unshift({
       label: entry.label,
-      href: current === "/ved" ? "/ved/commercial-offers" : current,
+      href: current,
       ...(entry.shortLabel ? { shortLabel: entry.shortLabel } : {}),
     });
     current = entry.parent ?? "/";

@@ -244,7 +244,7 @@ export default function VedWholeOfferCalculator({offerId,initialItemId,initialVe
   <div className="ved-offer-heading">
    <div><h2>{offer?.quote_code} · общий расчёт</h2>
     <p>{offer?.supplier_code} · КП от {offer?.quote_date}. Один расчёт на всё КП, один товар на лист Excel.</p></div>
-   <a href="/ved/commercial-offers">К списку КП</a>
+   <a href="/commercial-offers">К списку КП</a>
   </div>
   <div className="ved-offer-summary">
    <div><small>Всего товаров</small><strong>{rows.length}</strong></div>
