@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Button from "./ui/Button";
 import "./ved-add-items.css";
+import VedOrderExcelImport from "./VedOrderExcelImport";
 
 type CatalogProduct = {
   id: string;
@@ -52,6 +53,7 @@ export default function VedOrderAddItemsDialog({
   const [searching, setSearching] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [excelActive,setExcelActive] = useState(false);
 
   const existing = useMemo(() => new Set(existingProductIds), [existingProductIds]);
   const selectedCount = Object.keys(selected).length;
@@ -182,7 +184,7 @@ export default function VedOrderAddItemsDialog({
             </header>
             <div className="ved-add-tabs" role="group" aria-label="Тип добавления">
               <button type="button" aria-pressed={mode === "catalog"}
-                onClick={() => { setMode("catalog"); setError(""); }}>Из каталога ЕНОТ</button>
+                onClick={() => { setMode("catalog"); setError(""); setExcelActive(false); }}>Из каталога ЕНОТ</button>
               <button type="button" aria-pressed={mode === "new"}
                 onClick={() => { setMode("new"); setError(""); }}>Новый товар</button>
             </div>
@@ -249,6 +251,16 @@ export default function VedOrderAddItemsDialog({
               </div>
             ) : (
               <div className="ved-add-body ved-add-new">
+                <VedOrderExcelImport orderId={orderId}
+                  onStateChange={setExcelActive}
+                  onImported={async () => {
+                    await onAdded();
+                    setExcelActive(false);
+                    setOpen(false);
+                  }}
+                />
+                {!excelActive && <>
+                <div className="ved-add-manual-divider">Или добавьте один товар вручную</div>
                 <p className="ved-add-hint">Позиция будет создана только в этом заказе.
                   ЕНОТ и новый товар в общем каталоге автоматически не создаются.</p>
                 <label className="ved-add-label ved-add-full">Название товара *
@@ -274,10 +286,11 @@ export default function VedOrderAddItemsDialog({
                       onChange={event => setNewItem(current => ({ ...current, [key]: event.target.value }))} />
                   </label>
                 ))}
+                </>}
               </div>
             )}
             {error && <div className="ved-add-error" role="alert">{error}</div>}
-            <footer className="ved-add-footer">
+            {(mode !== "new" || !excelActive) && <footer className="ved-add-footer">
               <span>{mode === "catalog" ? "Выбрано: " + selectedCount : "Новая позиция"}</span>
               <div className="ved-add-footer-actions">
                 <Button type="button" variant="secondary" disabled={saving}
@@ -288,7 +301,7 @@ export default function VedOrderAddItemsDialog({
                   {saving ? "Сохраняем…" : mode === "catalog" ? "Добавить выбранные" : "Добавить товар"}
                 </Button>
               </div>
-            </footer>
+            </footer>}
           </section>
         </div>
       )}

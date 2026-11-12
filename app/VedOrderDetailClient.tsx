@@ -966,6 +966,8 @@ export default function VedOrderDetailClient(
 
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
   const [removeError, setRemoveError] = useState("");
+  const [uploadingPhotoId, setUploadingPhotoId] = useState<string | null>(null);
+  const [photoUploadError, setPhotoUploadError] = useState("");
 
 
   const [
@@ -1531,6 +1533,35 @@ export default function VedOrderDetailClient(
   }
 
 
+
+
+  async function uploadManualPhoto(itemId: string, file: File) {
+    if (uploadingPhotoId) return;
+    setPhotoUploadError("");
+    if (file.size > 3 * 1024 * 1024) {
+      setPhotoUploadError("Фото не должно превышать 3 МБ");
+      return;
+    }
+    setUploadingPhotoId(itemId);
+    try {
+      const data = new FormData();
+      data.append("photo", file);
+      const response = await fetch(
+        "/api/ved-orders/" + encodeURIComponent(orderId) +
+        "/excel-photo/" + encodeURIComponent(itemId), {
+          method: "POST", cache: "no-store",
+          credentials: "same-origin", body: data
+        }
+      );
+      const result = await response.json() as { ok?: boolean; error?: string };
+      if (!response.ok || !result.ok) throw new Error(result.error || "Фото не сохранено");
+      await refreshAll();
+    } catch (cause) {
+      setPhotoUploadError(cause instanceof Error ? cause.message : "Ошибка загрузки фото");
+    } finally {
+      setUploadingPhotoId(null);
+    }
+  }
 
   // ==========================================================
   // UPDATE PREPARATION EDITOR
@@ -3307,20 +3338,31 @@ export default function VedOrderDetailClient(
             }}
           >
 
-            <ProductPhoto
-              url={
-                selectedItem.photo_url
-              }
-
-              article={
-                selectedItem
-                  .our_article_snapshot
-              }
-
-              size={
-                120
-              }
-            />
+            <div className="ved-excel-detail-photo">
+              <ProductPhoto
+                url={selectedItem.photo_url}
+                article={selectedItem.our_article_snapshot}
+                size={120}
+              />
+              {selectedItem.added_manually &&
+                ["draft", "returned_for_edit"].includes(order.workflow_status) && (
+                <label className="ved-excel-photo-upload">
+                  {uploadingPhotoId === selectedItem.id ? "Загружаем фото…" :
+                    selectedItem.photo_url ? "Заменить фото" : "Добавить фото"}
+                  <input type="file" accept="image/jpeg,image/png,image/webp"
+                    disabled={uploadingPhotoId !== null}
+                    onChange={event => {
+                      const file = event.target.files?.[0];
+                      if (file) void uploadManualPhoto(selectedItem.id, file);
+                      event.target.value = "";
+                    }}
+                  />
+                </label>
+              )}
+              {photoUploadError && <span role="alert" className="ved-excel-error">
+                {photoUploadError}
+              </span>}
+            </div>
 
 
             <div
