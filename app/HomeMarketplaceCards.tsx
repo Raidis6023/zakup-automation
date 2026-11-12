@@ -614,9 +614,6 @@ export default function HomeMarketplaceCards({ metrics }: {
               }}
             >
               {period.label}
-              {periods[openedMonthId] === period.value ? (
-                <span aria-hidden="true">✓</span>
-              ) : null}
             </button>
           ))}
         </div>
