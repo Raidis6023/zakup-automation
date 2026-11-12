@@ -548,3 +548,51 @@ html[data-theme="dark"] .home-shell[data-accent-area] .workspace-content--module
 }
 /* Ready/connected, warnings, errors and financial profit/loss retain their
    dedicated status colors for readability. */
+
+/* PANDA active-navigation icon tiles: same 34px footprint as before.
+ * Only selected navigation items receive the small rounded square.
+ * Keep logo art, text, row height and full-width pill unchanged. */
+.home-shell .home-sidebar .home-workspace-link--active :is(.home-brand-icon, .home-workspace-icon),
+.home-shell .home-sidebar .home-workspace-link[data-marketplace].home-workspace-link--active .home-brand-icon,
+.home-shell .home-sidebar .home-ved-subnav-link--active .home-brand-icon,
+.home-shell[data-workspace-mode="admin"] .home-sidebar .home-workspace-link--active .home-workspace-icon {
+  box-sizing: border-box;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 10px;
+  border: 1px solid #101820;
+  background: #f1e7d6;
+  color: #101820;
+  box-shadow: inset 0 0 0 1px rgba(16, 24, 32, .09), 0 0 0 1px rgba(241, 231, 214, .25);
+}
+
+/* Reuse the old glow layer as a square rim, rather than a clipped circle. */
+.home-shell .home-sidebar .home-workspace-link--active :is(.home-brand-icon, .home-workspace-icon)::before,
+.home-shell .home-sidebar .home-ved-subnav-link--active .home-brand-icon::before {
+  inset: 1px;
+  border-radius: 8px;
+  border: 1px solid rgba(16, 24, 32, .24);
+  box-shadow: none;
+}
+.home-shell .home-sidebar .home-workspace-link--active :is(.home-brand-icon, .home-workspace-icon)::after,
+.home-shell .home-sidebar .home-ved-subnav-link--active .home-brand-icon::after {
+  content: none;
+}
+
+/* Dark theme: the tile becomes anthracite inside the champagne active pill.
+ * The selected icon itself is champagne for readable contrast. */
+html[data-theme="dark"] .home-shell .home-sidebar .home-workspace-link--active :is(.home-brand-icon, .home-workspace-icon),
+html[data-theme="dark"] .home-shell .home-sidebar .home-workspace-link[data-marketplace].home-workspace-link--active .home-brand-icon,
+html[data-theme="dark"] .home-shell .home-sidebar .home-ved-subnav-link--active .home-brand-icon,
+html[data-theme="dark"] .home-shell[data-workspace-mode="admin"] .home-sidebar .home-workspace-link--active .home-workspace-icon {
+  border-color: #e0bb84;
+  background: rgba(16, 24, 32, .87);
+  color: #f1e7d6;
+  box-shadow: inset 0 0 0 1px rgba(241, 231, 214, .08), 0 0 10px rgba(224, 187, 132, .23);
+}
+html[data-theme="dark"] .home-shell .home-sidebar .home-workspace-link--active :is(.home-brand-icon, .home-workspace-icon)::before,
+html[data-theme="dark"] .home-shell .home-sidebar .home-ved-subnav-link--active .home-brand-icon::before {
+  border-color: rgba(224, 187, 132, .22);
+  box-shadow: none;
+}
