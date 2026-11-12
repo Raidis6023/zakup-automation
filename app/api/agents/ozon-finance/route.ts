@@ -852,7 +852,7 @@ export async function GET(request: NextRequest) {
     const from = url.searchParams.get("from") ?? "";
     const to = url.searchParams.get("to") ?? "";
     const report=await buildReport(db,from,to);
-    if(url.searchParams.get('compact')==='1')return NextResponse.json({ok:true,rows:report.rows.map(r=>({offer_id:r.offer_id,revenue:r.revenue,cogs:r.cogs,mayak_expense:r.mayak_expense,estimated_result:r.estimated_result,advertising_amount:r.advertising_amount,order_count:r.order_count,buyout_units:r.buyout_units})),unallocated_amount:report.unallocated_amount,advertising:report.advertising,missing_days:report.missing_days});
+    if(url.searchParams.get('compact')==='1')return NextResponse.json({ok:true,rows:report.rows.map(r=>({offer_id:r.offer_id,revenue:r.revenue,cogs:r.cogs,mayak_expense:r.mayak_expense,packing_expense:r.packing_expense,estimated_result:r.estimated_result,advertising_amount:r.advertising_amount,performance_ad_expense:r.performance_ad_expense,order_count:r.order_count,buyout_units:r.buyout_units})),unallocated_amount:report.unallocated_amount,advertising:report.advertising,ads_covered:report.ads_covered,missing_days:report.missing_days});
     return NextResponse.json({ok:true,...report});
   } catch (e) { return fail(e, 400); }
 }
