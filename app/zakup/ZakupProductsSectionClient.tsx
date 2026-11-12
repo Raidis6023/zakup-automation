@@ -69,14 +69,12 @@ export default function ZakupProductsSectionClient({
   skuCount,
   children,
   title = "Товары",
-  subtitle = "Итоговые значения текущего расчёта",
   sectionId = "zakup-products-table",
   showLinks = true,
 }: {
   skuCount: number;
   children: ReactNode;
   title?: string;
-  subtitle?: string;
   sectionId?: string;
   showLinks?: boolean;
 }) {
@@ -156,13 +154,7 @@ export default function ZakupProductsSectionClient({
             </strong>
   
   
-            <span
-              className=
-                "muted zakup-products-toggle-subtitle"
-            >
-              {subtitle}
-            </span>
-  
+
           </span>
   
         </button>

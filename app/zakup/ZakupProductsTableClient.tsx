@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import Button from "../ui/Button";
 
 // The main procurement calculation is unchanged. Both table modes
 // show the same ENOT-linked products and the same inventory snapshot.
@@ -339,7 +338,7 @@ function columnClass(key: SortKey): string {
 }
 
 export default function ZakupProductsTableClient({ items }: { items: ZakupTableItem[] }) {
-  const [showBreakdown, setShowBreakdown] = useState(true);
+  const [showBreakdown, setShowBreakdown] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("avg_sales_per_day");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
@@ -369,8 +368,8 @@ export default function ZakupProductsTableClient({ items }: { items: ZakupTableI
     }
   }
 
-  function toggleBreakdown() {
-    const next = !showBreakdown;
+  function changeView(next: boolean) {
+    if (next === showBreakdown) return;
     const nextColumns = next ? BREAKDOWN_COLUMNS : SUMMARY_COLUMNS;
     if (!nextColumns.some(column => column.key === sortKey)) {
       setSortKey(next ? "ozon_sales_28_days" : "avg_sales_per_day");
@@ -395,10 +394,24 @@ export default function ZakupProductsTableClient({ items }: { items: ZakupTableI
   return (
     <>
       <div className="zakup-products-view-toolbar">
-        <span className="muted">Продажи за 28 дней, остатки в штуках. Данные объединены по ЕНОТ.</span>
-        <Button type="button" variant="secondary" aria-expanded={showBreakdown} onClick={toggleBreakdown}>
-          {showBreakdown ? "Скрыть разбивку по маркетплейсам" : "Показать разбивку по маркетплейсам"}
-        </Button>
+        <div className="zakup-products-view-tabs" role="group" aria-label="Отображение товаров">
+          <button
+            type="button"
+            className="zakup-products-view-tab"
+            aria-pressed={!showBreakdown}
+            onClick={() => changeView(false)}
+          >
+            Без разбивки
+          </button>
+          <button
+            type="button"
+            className="zakup-products-view-tab"
+            aria-pressed={showBreakdown}
+            onClick={() => changeView(true)}
+          >
+            По маркетплейсам
+          </button>
+        </div>
       </div>
 
       <div className="table-wrapper" style={{ overflowX: "auto" }}>

@@ -1003,7 +1003,6 @@ export default async function Home() {
         <ZakupProductsSectionClient
           skuCount={demandItems.length}
           title="Потребность в закупке"
-          subtitle="Отдельный список для включения и исключения товаров из заказа"
           sectionId="zakup-demand-table"
           showLinks={false}
         >

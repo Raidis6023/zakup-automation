@@ -1661,6 +1661,20 @@ html[data-theme="dark"]
   min-width: 0;
 }
 
+
+/* Hover belongs to the entire collapsible header, not only its
+   title button. The independent links remain clickable. */
+.zakup-reference-page .zakup-products-header {
+  transition: background-color 0.12s ease;
+}
+.zakup-reference-page .zakup-products-header:hover,
+.zakup-reference-page .zakup-products-header:focus-within {
+  background: var(--panda-table-hover, var(--ws-surface-hover));
+}
+.zakup-reference-page .zakup-products-header .zakup-products-toggle:hover {
+  background: transparent;
+}
+
 .zakup-reference-page .zakup-products-header-links {
   display: flex;
   align-items: center;
@@ -2136,10 +2150,57 @@ html[data-theme="dark"]
 .zakup-reference-page .zakup-products-view-toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
+  justify-content: flex-start;
+  padding: 10px 14px;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--panda-table-border, var(--ws-border-soft));
+}
+
+.zakup-reference-page .zakup-products-view-tabs {
+  display: inline-flex;
+  align-items: stretch;
+  max-width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--panda-table-border, var(--ws-border-soft));
+  border-radius: 8px;
+  background: var(--panda-table-background, var(--ws-surface));
+}
+
+.zakup-reference-page .zakup-products-view-tab {
+  min-height: 34px;
+  padding: 7px 14px;
+  border: 0;
+  border-right: 1px solid var(--panda-table-border, var(--ws-border-soft));
+  background: transparent;
+  color: var(--panda-table-muted, var(--ws-text-muted));
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.zakup-reference-page .zakup-products-view-tab:last-child {
+  border-right: 0;
+}
+
+.zakup-reference-page .zakup-products-view-tab[aria-pressed="true"] {
+  background: var(--panda-table-selected, var(--ws-surface-hover));
+  color: var(--panda-table-fg, var(--ws-text));
+}
+
+.zakup-reference-page .zakup-products-view-tab:hover:not([aria-pressed="true"]) {
+  background: var(--panda-table-hover, var(--ws-surface-hover));
+  color: var(--panda-table-fg, var(--ws-text));
+}
+
+.zakup-reference-page .zakup-products-view-tab:focus-visible {
+  outline: 2px solid var(--panda-table-code, var(--ws-text));
+  outline-offset: -3px;
+  position: relative;
+  z-index: 1;
 }
 
 .zakup-reference-page .zakup-products-table-content .table.zakup-sortable-table--summary {
@@ -2230,8 +2291,12 @@ thead tr.zakup-products-subheader-row th .zakup-sort-button {
 }
 
 @media (max-width: 720px) {
-  .zakup-reference-page .zakup-products-view-toolbar .primary-button,
-  .zakup-reference-page .zakup-products-view-toolbar button {
-    max-width: 100%;
+  .zakup-reference-page .zakup-products-view-toolbar {
+    padding: 8px 10px;
+  }
+
+  .zakup-reference-page .zakup-products-view-tab {
+    padding: 7px 10px;
+    font-size: 11px;
   }
 }
