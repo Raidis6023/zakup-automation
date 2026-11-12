@@ -108,8 +108,8 @@ function ozonExpenseAndAdCount(r:FinancialRow){
 function ozonBreakdownLines(r:FinancialRow):FinanceBreakdownLine[]{
  const entries:FinanceBreakdownLine[]=r.details.map((item,i)=>({
   id:item.type_id+'-'+i,
-  name:item.name==='ITEM'?'Товарное начисление Ozon (ITEM)':item.name,
-  category:item.is_reference?'Начисление Ozon':item.type_id==='SALES'?'Выручка':
+  name:item.type_id==='SALE_COMPONENT'||item.type_id==='SALES'?'Выручка от продажи':item.type_id==='BONUS_COMPONENT'?'Баллы за скидки':item.type_id==='PARTNER_COMPONENT'?'Поддержка партнёрских программ':item.name==='ITEM'?'Товарное начисление Ozon (ITEM)':item.name,
+  category:item.type_id==='SALE_COMPONENT'||item.type_id==='SALES'?'Выручка':item.type_id==='BONUS_COMPONENT'?'Компенсация скидки':item.type_id==='PARTNER_COMPONENT'?'Партнёрские программы':item.is_reference?'Справочно · учтено':
    item.type_id==='COMMISSION'?'Комиссия':item.type_id==='REMAINDER'?'Прочее':
    item.type_id==='SERVICE'?'Услуга Ozon':'Начисление Ozon',
   amount:item.amount,count:item.count,reference:!!item.is_reference
@@ -118,7 +118,7 @@ function ozonBreakdownLines(r:FinancialRow):FinanceBreakdownLine[]{
  if(r.mayak_expense!==null)entries.push({id:'mayak',name:'ТК Маяк × заказанные единицы',category:'Внешний расход',amount:-Math.abs(r.mayak_expense),count:r.order_count});
  if(r.performance_ad_expense!==null){
   const {operations}=ozonExpenseAndAdCount(r);
-  entries.push({id:'performance-reference',name:'Реклама по SKU (Performance, справочно)',
+  entries.push({id:'performance-reference',name:'Реклама',
    category:'Распределение рекламы',amount:-Math.abs(r.performance_ad_expense),
    count:operations,reference:true});
  }
@@ -234,7 +234,7 @@ export default function FinancierDetailTable({
   }
   const positionsPositive=rows.filter(r=>r.estimated_result!=null&&r.estimated_result>0).length;
   const positionsNegative=rows.filter(r=>r.estimated_result!=null&&r.estimated_result<0).length;
-  const profitability=!profitIsPartial&&operatingProfit!=null&&sumRevenue!=null&&sumRevenue>0
+  const profitability=operatingProfit!=null&&sumRevenue!=null&&sumRevenue>0
     ?operatingProfit/sumRevenue:null;
   const totalRoas=ratioTotal(rows,r=>advertising(r)===null?null:r.estimated_result,r=>{const ad=advertising(r);return ad===null?null:Math.abs(ad)});
   const transitDrr=ratioTotal(rows,r=>{const ad=advertising(r);return ad===null?null:Math.abs(ad)},r=>r.transit_revenue);
@@ -246,7 +246,7 @@ export default function FinancierDetailTable({
     {name:profitIsPartial?"Операционная прибыль (предв.)":"Операционная прибыль",
       value:money(operatingProfit),tone:moneyTone(operatingProfit)},
     {name:"Выручка",value:money(sumRevenue),tone:moneyTone(sumRevenue)},
-    {name:"Рентабельность",value:pct(profitability),tone:moneyTone(profitability)},
+    {name:profitIsPartial?"Рентабельность (предв.)":"Рентабельность",value:pct(profitability),tone:moneyTone(profitability)},
     {name:"Реклама",
       value:money(adAmount),tone:adAmount==null?"":Math.abs(adAmount)>0?"ozf-bad":"ozf-good"},
     {name:"Платное хранение",value:money(storageAmount),tone:storageAmount==null?"":Math.abs(storageAmount)>0?"ozf-bad":"ozf-good"},
@@ -280,7 +280,7 @@ export default function FinancierDetailTable({
     </div><div className="ozf-toolbar"><button type="button" className="ozf-btn" onClick={()=>void exportFinancialResult()}>Скачать финрез XLSX</button><button type="button" className="ozf-btn" onClick={()=>void exportMissingData()}>Недостающие данные XLSX · {missingData.length}</button><a href="#ozf-unallocated" className="ozf-btn ozf-jump">Нераспределённые расходы ↓</a></div></div>
     <div className="ozf-kpi-grid">{kpis.map(k=>
       <div key={k.name} className={"ozf-kpi "+k.tone}>
-        {['Выручка','Операционная прибыль'].includes(k.name)?<button type="button" className="ozf-kpi-link" onClick={()=>setGraphMetric(k.name==='Выручка'?'revenue':'profit')}>{k.name}</button>:<span>{k.name}</span>}<strong>{k.value}</strong>
+        {(k.name==='Выручка'||k.name.startsWith('Операционная прибыль'))?<button type="button" className="ozf-kpi-link" onClick={()=>setGraphMetric(k.name==='Выручка'?'revenue':'profit')}>{k.name}</button>:<span>{k.name}</span>}<strong>{k.value}</strong>
       </div>)}
     </div>
     {includeUnallocated&&referenceBySku!==null&&<p className="ozf-notice" role="status" style={{marginTop:8}}>
@@ -357,7 +357,7 @@ export default function FinancierDetailTable({
           </tr>
           {expanded===r.offer_id&&<tr key={r.offer_id+"-detail"} className="ozf-expanded-row">
             <td colSpan={25}>
-              <div className="ozf-expanded-content"><div className="ozf-pinned-article"><strong>{r.offer_id}</strong><CopyArticle article={r.offer_id}/></div>{r.offer_id.startsWith('SKU:')&&<p className="ozf-error">Нет подтверждённой связки SKU {r.offer_id.slice(4)} с артикулом продавца. Скопируй SKU и найди его в кабинете Ozon в списке товаров. Автоматическое сопоставление с чужой карточкой отключено.</p>}
+              <div className="ozf-expanded-content"><div className="ozf-pinned-article"><strong>{r.offer_id}</strong><CopyArticle article={r.offer_id}/><button type="button" className="ozf-btn ozf-collapse-detail" onClick={()=>setExpanded(null)}>Скрыть детализацию ↑</button></div>{r.offer_id.startsWith('SKU:')&&<p className="ozf-error">Нет подтверждённой связки SKU {r.offer_id.slice(4)} с артикулом продавца. Скопируй SKU и найди его в кабинете Ozon в списке товаров. Автоматическое сопоставление с чужой карточкой отключено.</p>}
                 <div className="ozf-income-unit-grid"><div><table className="ozf-breakdown-table"><thead><tr>
                   <th>Статья</th><th>Категория</th><th>Операций</th><th>Сумма, ₽</th>
                 </tr></thead><tbody>
@@ -380,7 +380,7 @@ export default function FinancierDetailTable({
                   </tr>
                 </tbody></table></div><CostPerUnitComparison market="Ozon" units={r.buyout_units} items={ozonPerUnitItems(r)}/></div>
                 <details><summary>{r.offer_id} · КМ, себестоимость и ТК Маяк</summary><OzonRowRates master={r.master_code} onSaved={onSaved}/></details><FinanceDynamics marketplace="ozon" revision={data?.cache_updated_at??''} from={data?.from??''} to={data?.to??''} offer={r.offer_id}/>
-                <CampaignCharts offer={r.offer_id} from={data?.from??''} to={data?.to??''}/>
+                <CampaignCharts offer={r.offer_id} from={data?.from??''} to={data?.to??''}/><button type="button" className="ozf-btn ozf-collapse-detail" onClick={()=>setExpanded(null)}>Скрыть детализацию ↑</button>
               </div>
             </td>
           </tr>}

@@ -39,7 +39,7 @@ type FinanceReport = {
   source: string; calculation_includes_api_calls: boolean;
   reference_gaps: Array<{offer_id:string;master_code:string|null;name:string|null;manager:string;missing:string[]}>;
   background_jobs: Array<{day:string;status:string;pages_completed:number;rows_saved:number;last_error:string|null;updated_at:string}>;
-  rows: FinanceRow[]; unallocated_details: Array<{ type_id?:string; name: string; amount: number;daily?:Array<{date:string;amount:number;count:number}> }>;
+  rows: FinanceRow[]; unallocated_details: Array<{ type_id?:string; category?:string; name: string; amount: number;daily?:Array<{date:string;amount:number;count:number}> }>;
 };
 const API = "/api/agents/ozon-finance";
 const currency = (v: number | null | undefined) =>
@@ -501,7 +501,7 @@ if(daily?.ok||['report_saved','complete','already_cached'].includes(String(j.pha
             !["41","46"].includes(String(d.type_id??"")) &&
             !/оплата за клик|реклам|размещени.*склад|платн.*хранени/i.test(d.name));
           const otherTotal=Math.round(other.reduce((sum,d)=>sum+Number(d.amount),0)*100)/100;
-          return <AccrualBreakdownList items={other.map(x=>({...x,typeId:String(x.type_id??'')}))} market="ozon" from={data.from} to={data.to} total={otherTotal}
+          return <AccrualBreakdownList items={other.map(x=>({...x,typeId:String(x.type_id??''),category:String(x.category??'NON_ITEM')}))} market="ozon" from={data.from} to={data.to} total={otherTotal}
             totalLabel="Итого прочие нераспределённые начисления"/>;
         })()}
       </div>}

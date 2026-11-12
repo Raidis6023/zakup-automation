@@ -2,16 +2,16 @@
 import {useEffect,useState} from 'react';
 
 export type AccrualDay={date:string;amount:number;count?:number};
-export type AccrualItem={name:string;amount:number;typeId?:string;daily?:AccrualDay[]};
+export type AccrualItem={name:string;amount:number;typeId?:string;category?:string;daily?:AccrualDay[]};
 type Source='ozon'|'yandex'|'wb';
 type Op={id:string;orderId?:string|null;article?:string|null;amount:number;type?:string};
 const rubles=(value:number)=>(Math.sign(value)*Math.round(Math.abs(value))||0).toLocaleString('ru-RU',{style:'currency',currency:'RUB',minimumFractionDigits:0,maximumFractionDigits:0});
-function DayOperations({market,name,typeId,day,from,to,minorUnits,invert}:{market:Source;name:string;typeId?:string;day:string;from:string;to:string;minorUnits:boolean;invert:boolean}){
+function DayOperations({market,name,typeId,category,day,from,to,minorUnits,invert}:{market:Source;name:string;typeId?:string;category?:string;day:string;from:string;to:string;minorUnits:boolean;invert:boolean}){
  const [rows,setRows]=useState<Op[]|null>(null),[error,setError]=useState(''),[more,setMore]=useState(false),[page,setPage]=useState(0),[busy,setBusy]=useState(false);
- useEffect(()=>{const abort=new AbortController();const p=new URLSearchParams({market,name,day,from,to,typeId:typeId??'',page:String(page)});
+ useEffect(()=>{const abort=new AbortController();const p=new URLSearchParams({market,name,day,from,to,typeId:typeId??'',category:category??'',page:String(page)});
   fetch('/api/agents/finance-unallocated-operations?'+p,{signal:abort.signal,cache:'no-store'}).then(async r=>{const d=await r.json();if(!r.ok)throw Error(d.error??'Нет операций');return d;})
   .then(d=>{if(!abort.signal.aborted){setRows(old=>page===0?d.items??[]:[...(old??[]),...(d.items??[])]);setMore(Boolean(d.more));setBusy(false);}}).catch(e=>{if(!abort.signal.aborted){setError(e instanceof Error?e.message:'Ошибка');setBusy(false);}});
-  return()=>abort.abort();},[market,name,typeId,day,from,to,page]);
+  return()=>abort.abort();},[market,name,typeId,category,day,from,to,page]);
  const shown=(value:number)=>rubles((invert?-value:value)/(minorUnits?100:1));
  if(error)return <p role="alert" className="ozf-error">{error}</p>;
  if(!rows)return <p>Получаем ID начислений…</p>;
@@ -25,11 +25,11 @@ export default function AccrualBreakdownList({items,total,totalLabel,minorUnits=
 }){
  const shown=(v:number)=>rubles((invert?-v:v)/(minorUnits?100:1));
  return <div className="ozf-accrual-list">
- {items.map((item,index)=><details key={item.name+'-'+index} className="ozf-accrual-item">
+ {items.map((item,index)=><details key={item.name+'-'+(item.category??'')+'-'+index} className="ozf-accrual-item">
   <summary><span>{item.name==='ITEM'?'Товарное начисление без привязки (ITEM)':item.name}</span><strong>{shown(item.amount)}</strong></summary>
   <div className="ozf-accrual-days">{(item.daily??[]).length?(item.daily??[]).map(day=>market?<details key={day.date}>
    <summary><time dateTime={day.date}>{day.date.split('-').reverse().join('.')}</time>{day.count!=null&&<small>{day.count.toLocaleString('ru-RU')} операций</small>}<b>{shown(day.amount)}</b></summary>
-   <DayOperations market={market} name={item.name} typeId={item.typeId} day={day.date} from={from} to={to} minorUnits={minorUnits} invert={invert}/>
+   <DayOperations market={market} name={item.name} typeId={item.typeId} category={item.category} day={day.date} from={from} to={to} minorUnits={minorUnits} invert={invert}/>
   </details>:<div key={day.date}><time dateTime={day.date}>{day.date.split('-').reverse().join('.')}</time>{day.count!=null&&<small>{day.count.toLocaleString('ru-RU')} операций</small>}<b>{shown(day.amount)}</b></div>):<p>Дневная детализация отсутствует.</p>}</div>
  </details>)}
  <div className="ozf-accrual-total"><span>{totalLabel}</span><strong>{shown(total)}</strong></div>
