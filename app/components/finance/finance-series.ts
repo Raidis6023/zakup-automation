@@ -8,6 +8,14 @@ export function amounts(d:Report,market:string,offer?:string,offers?:string[]):V
  if(whole)profit=ym?d.totals?.result==null?null:d.totals.result/100:profit===null?null:profit+Number(d.unallocated_amount??0);
  const ledgerAd=sum('advertising_amount');
  let advertising=ym?sum('advertising'):whole?d.advertising?.finance_total==null?null:-d.advertising.finance_total:ledgerAd===null?null:-ledgerAd;
+ // The visual advertising metric uses campaign-day spend when it is available;
+ // bookkeeping/P&L still uses Seller postings and never charges it twice.
+ if(market==='ozon'){
+  const reported=whole?d.advertising?.partial_performance_total:
+   rows.some(r=>r.performance_ad_expense!=null)
+    ?rows.reduce((a,r)=>a+Math.abs(Number(r.performance_ad_expense??0)),0):null;
+  if(reported!=null&&Number.isFinite(Number(reported)))advertising=Math.abs(Number(reported));
+ }
  // This composition describes actual Seller ledger charges, not the
  // independent Performance campaign spend. A booked zero is valid here when
  // the Seller ledger day is loaded; its campaign completeness is flagged
@@ -22,15 +30,16 @@ export function amounts(d:Report,market:string,offer?:string,offers?:string[]):V
 
 export function percentageComposition(v:Values):Record<string,number|null>{
  const keys=['marketplace','inbound','advertising','profit'] as const;
- if(keys.some(k=>v[k]===null))return Object.fromEntries(keys.map(k=>[k,null]));
- const normalized:Record<(typeof keys)[number],number>={
-  marketplace:Math.abs(v.marketplace!),
-  inbound:Math.abs(v.inbound!),
-  advertising:Math.abs(v.advertising!),
-  profit:Math.max(0,v.profit!),
+ // Unknown categories stay unknown. Draw the shares of *known* components
+ // instead of hiding known spending because another accounting entry is late.
+ const normalized:Record<(typeof keys)[number],number|null>={
+  marketplace:v.marketplace==null?null:Math.abs(v.marketplace),
+  inbound:v.inbound==null?null:Math.abs(v.inbound),
+  advertising:v.advertising==null?null:Math.abs(v.advertising),
+  profit:v.profit==null?null:Math.max(0,v.profit),
  };
- const total=keys.reduce((sum,k)=>sum+normalized[k],0);
- return Object.fromEntries(keys.map(k=>[k,total>0?normalized[k]/total*100:null]));
+ const total=keys.reduce((sum,k)=>sum+(normalized[k]??0),0);
+ return Object.fromEntries(keys.map(k=>[k,normalized[k]===null||total<=0?null:normalized[k]!/total*100]));
 }
 /** A partial structure is calculated only over rows with known COGS,
  * Mayak and Seller profit. Other rows are excluded, never silently assigned
@@ -42,7 +51,10 @@ export function compositionAmounts(d:Report,market:string,offer?:string,offers?:
  // The graph presents spend by campaign day when it is available, even
  // if Seller booked the PPC accrual in another accounting period. Keep P&L
  // Seller-only; this figure is reference data and the residual provisional.
- const stats=(d.advertising as {partial_performance_total?:number|null}|undefined)?.partial_performance_total;
+ const stats=(offer||offers?.length)
+  ?chosen.some(r=>r.performance_ad_expense!=null)
+    ?chosen.reduce((sum,r)=>sum+Math.abs(Number(r.performance_ad_expense??0)),0):null
+  :(d.advertising as {partial_performance_total?:number|null}|undefined)?.partial_performance_total;
  const campaignSpend=stats!=null&&Number.isFinite(Number(stats))&&Number(stats)>0?Number(stats):null;
  const withCampaign=(v:Values):Values=>campaignSpend===null?v:{
   ...v,advertising:campaignSpend,
