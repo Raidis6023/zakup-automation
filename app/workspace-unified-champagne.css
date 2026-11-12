@@ -650,18 +650,25 @@ html[data-theme="dark"] .home-shell input.workspace-search-field {
 @supports (appearance: base-select) {
   .home-shell select:not([multiple]):not([size]):not([data-native-picker]) {
     appearance: base-select;
-    /* Chromium's base-select defaults to start alignment in compact inputs.
-       Enforce the original vertical centering in all admin, tasks and finance controls. */
+    /* Keep selected text vertically centered, but render our own fixed arrow.
+       The browser's ::picker-icon is an anonymous flex child and can drift
+       toward the label in controls with varying widths and nested styles. */
     display: flex;
     align-items: center;
     justify-content: space-between;
     cursor: pointer;
+    padding-inline-end: 32px !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1h10L6 7z' fill='%23354758'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 11px center !important;
+    background-size: 12px 8px !important;
+  }
+  html[data-theme="dark"] .home-shell select:not([multiple]):not([size]):not([data-native-picker]) {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1h10L6 7z' fill='%23d9b27c'/%3E%3C/svg%3E") !important;
   }
   .home-shell select:not([multiple]):not([size]):not([data-native-picker])::picker-icon {
-    color: var(--ws-text-secondary);
-    margin-inline-start: auto;
-    padding-inline-start: 8px;
-    flex: 0 0 auto;
+    display: none !important;
+    content: none !important;
   }
   .home-shell select:not([multiple]):not([size]):not([data-native-picker])::picker(select) {
     appearance: base-select;

@@ -15,7 +15,11 @@ assert.match(theme, /display:\s*flex;\s*align-items:\s*center;\s*justify-content
 assert.match(theme, /option\s*\{\s*display:\s*flex;\s*align-items:\s*center;/, "Picker items are vertically centered");
 assert.match(theme, /option::checkmark\s*\{[^}]*display:\s*none\s*!important;/, "Native option checkmarks must be hidden globally");
 assert.match(theme, /option::checkmark\s*\{[^}]*content:\s*none\s*!important;/, "No generated checkmark content");
-assert.match(theme, /picker-icon[^}]*margin-inline-start:\s*auto;/, "Dropdown arrow sits after the label");
+assert.match(theme, /background-position:\s*right 11px center\s*!important;/, "Custom select arrow stays pinned to the right edge");
+assert.match(theme, /padding-inline-end:\s*32px\s*!important;/, "Reserve space so text never overlaps the arrow");
+assert.match(theme, /background-size:\s*12px 8px\s*!important;/, "Arrow has a consistent size");
+assert.match(theme, /::picker-icon\s*\{\s*display:\s*none\s*!important;/, "Native arrows must not drift inward");
+assert.match(theme, /html\[data-theme="dark"\][^\n]*select:not/, "Dark theme uses its own arrow color");
 assert.match(theme, /option:hover/);
 assert.equal((theme.match(/background-image:[^\n]+!important/g)||[]).length,2);
 assert.match(pilot, /className="workspace-search-field" aria-label="Поиск пилотных товаров"/);
