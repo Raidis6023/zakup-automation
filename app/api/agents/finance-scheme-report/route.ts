@@ -28,7 +28,12 @@ export async function GET(req:NextRequest){try{
   const url=new URL(req.url);url.pathname='/api/agents/wb-finance';url.searchParams.delete('market');url.searchParams.set('scheme',scheme);
   const r=await wbFinance(new NextRequest(url.toString(),{headers:req.headers})),d=await r.json();
   if(!r.ok)return NextResponse.json({error:d.error??'Нет данных WB'},{status:r.status});
-  const rows:Row[]=(d.rows as Array<Record<string,unknown>>).map(x=>({article:String(x.article??''),name:String(x.name??''),master_code:x.master_code==null?null:String(x.master_code),manager:String(x.manager??'Не назначен'),orders:num(x.order_count),cancelled:num(x.cancel_count),buyouts:num(x.buyouts),revenue:num(x.realization),charges:num(x.delivery)+num(x.acceptance)+num(x.penalty)+num(x.deduction),cogs:x.cogs==null?null:num(x.cogs),mayak:x.mayak_expense==null?null:num(x.mayak_expense),advertising:null,storage:x.storage_in_report==null?null:num(x.storage_in_report),packing:null,profit:x.preliminary_result==null?null:num(x.preliminary_result),note:Array.isArray(x.missing_rates)?x.missing_rates.join('; '):''}));
+  const rows:Row[]=(d.rows as Array<Record<string,unknown>>).map(x=>({article:String(x.article??''),name:String(x.name??''),master_code:x.master_code==null?null:String(x.master_code),manager:String(x.manager??'Не назначен'),orders:num(x.order_count),cancelled:num(x.cancel_count),buyouts:num(x.buyouts),revenue:num(x.realization),charges:num(x.delivery)+num(x.acceptance)+num(x.penalty)+num(x.deduction),cogs:x.cogs==null?null:num(x.cogs),mayak:x.mayak_expense==null?null:num(x.mayak_expense),advertising:null,storage:x.storage_in_report==null?null:num(x.storage_in_report),packing:null,profit:x.preliminary_result==null?null:num(x.preliminary_result),details:Object.entries((x.operations??{}) as Record<string,{amount:number;count:number;realization:number;delivery:number;storage:number;penalty:number;deduction:number}>).map(([name,op])=>({
+   name,category:'Операция WB · по финансовому отчёту',count:Number(op.count??0),
+   amount:num(op.amount)-num(op.delivery)-num(op.storage)-num(op.penalty)-num(op.deduction)
+  })).filter(x=>Math.abs(x.amount)>.005),
+  note:[...(Array.isArray(x.missing_rates)?x.missing_rates.map(String):[]),
+   'Детализация отражает операции WB, общие рекламные расходы и хранение без связи с SRID не распределены.'].join('; ')}));
   return NextResponse.json({ok:true,source:'wb_finance_daily_lines, srid и officeName',rows,note:'Исходные финансовые операции WB нужной схемы. Реклама, общее хранение и расходы без подтверждённой связи с SRID остаются вне этой таблицы. Прибыль предварительная без них.'},{headers:{'Cache-Control':'private,no-store'}});
  }
  // Ozon: the statement is anchored in the active financial accrual run.
