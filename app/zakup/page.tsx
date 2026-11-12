@@ -19,6 +19,7 @@ import "./zakup-reference.css";
 import CreateVedDraftSubmitButton from "./CreateVedDraftSubmitButton";
 import ZakupCalculationInfo from "./ZakupCalculationInfo";
 import ZakupCalculateButton from "./ZakupCalculateButton";
+import WbSalesRefreshButton from "./WbSalesRefreshButton";
 
 import "./zakup-layout-v2.css";
 
@@ -805,6 +806,7 @@ export default async function Home() {
               </div>
             </div>
             <div className="zakup-v2-action-controls">
+              <WbSalesRefreshButton />
               <ZakupCalculateButton />
               <ZakupCalculationInfo rules={run} />
             </div>
