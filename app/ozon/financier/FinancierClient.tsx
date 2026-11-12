@@ -39,7 +39,7 @@ type FinanceReport = {
   source: string; calculation_includes_api_calls: boolean;
   reference_gaps: Array<{offer_id:string;master_code:string|null;name:string|null;manager:string;missing:string[]}>;
   background_jobs: Array<{day:string;status:string;pages_completed:number;rows_saved:number;last_error:string|null;updated_at:string}>;
-  rows: FinanceRow[]; unallocated_details: Array<{ type_id?:string; name: string; amount: number;daily?:Array<{date:string;amount:number;count:number}> }>;
+  rows: FinanceRow[]; unallocated_details: Array<{ type_id?:string; category?:string; name: string; amount: number;daily?:Array<{date:string;amount:number;count:number}> }>;
 };
 const API = "/api/agents/ozon-finance";
 const currency = (v: number | null | undefined) =>
