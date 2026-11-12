@@ -31,11 +31,10 @@ type OzonRow = {
   accrued_category?: string;
   type_id?: string | number;
   non_item_fee?: {type_id?:string|number};
-  item_fees?: {fees?:Array<{fees?:Array<{type_id?:string|number}>}>};
   unit_number?: string;
   total_amount?: { amount?: string; currency?: string };
   posting?: { products?: Array<{ sku?: string | number }> };
-  item_fees?: { fees?: Array<{ sku?: string | number }> };
+  item_fees?: { fees?: Array<{ sku?: string | number; fees?:Array<{type_id?:string|number}> }> };
   [key: string]: unknown;
 };
 type Page = { accruals?: OzonRow[]; last_id?: string };
