@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { createClient } from "../../../lib/supabase/client";
 import { DateField } from "../../ui/WorkspaceDateFields";
+import { formatAuditEvent } from "./auditLabels";
 
 type AuditEvent = {
   id: string;
@@ -41,6 +42,7 @@ const STATUSES: Record<string,string> = {
   success: "Успешно",
   warning: "Предупреждение",
   error: "Ошибка",
+  pending: "В процессе",
 };
 
 function formatTime(timestamp: string) {
@@ -75,6 +77,18 @@ export default function LogsClient() {
   const [loading,setLoading] = useState(true);
   const [error,setError] = useState<string | null>(null);
   const [revision,setRevision] = useState(0);
+  const [opened,setOpened] = useState<AuditEvent | null>(null);
+
+  useEffect(() => {
+    if (!opened) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpened(null);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [opened]);
+
+  useEffect(() => setOpened(null), [tab, result, from, to, appliedSearch, page]);
 
   const refresh = useCallback(() => setRevision(n=>n+1),[]);
   useEffect(()=>{
@@ -157,6 +171,14 @@ export default function LogsClient() {
     {error && <p className="logs-error" role="alert">{error}</p>}
     <div className="logs-table-viewport">
       <table className="logs-table">
+        <colgroup>
+          <col style={{width:"15%"}} />
+          <col style={{width:"13%"}} />
+          <col style={{width:"34%"}} />
+          <col style={{width:"15%"}} />
+          <col style={{width:"12%"}} />
+          <col style={{width:"11%"}} />
+        </colgroup>
         <thead><tr>
           <th>Дата и время</th><th>Раздел</th><th>Действие</th>
           <th>Сотрудник</th><th>Результат</th><th>Подробности</th>
@@ -166,36 +188,69 @@ export default function LogsClient() {
             {error ? "Журнал временно недоступен" : "По заданным фильтрам событий не найдено"}
           </td></tr>}
           {loading && <tr><td colSpan={6} className="logs-empty">Загружаем историю…</td></tr>}
-          {!loading && feed.items.map(event=><tr key={event.id}>
-            <td className="logs-date">{formatTime(event.created_at)}</td>
-            <td>{MODULES[event.module]||event.module}</td>
-            <td className="logs-title">
-              <strong>{event.title}</strong>
-              <span>{event.object_id||event.object_type}</span>
-            </td>
-            <td>{event.actor_name||"Система"}</td>
-            <td><span className={"logs-status logs-status--"+event.result}>
-              {STATUSES[event.result]||event.result}
-            </span></td>
-            <td className="logs-details-cell">
-              <details>
-                <summary>Открыть</summary>
-                <div className="logs-details">
-                  <dl>
-                    <dt>Действие</dt><dd>{event.action}</dd>
-                    <dt>Объект</dt><dd>{event.object_type} · {event.object_id||"нет ID"}</dd>
-                    <dt>Время (Красноярск)</dt><dd>{formatTime(event.created_at)}</dd>
-                  </dl>
-                  <div className="logs-diff">
-                    <div><strong>Было</strong><pre>{prettyJson(event.old_data)}</pre></div>
-                    <div><strong>Стало</strong><pre>{prettyJson(event.new_data)}</pre></div>
-                  </div>
-                  <strong>Дополнительные сведения</strong>
-                  <pre>{prettyJson(event.details)}</pre>
-                </div>
-              </details>
-            </td>
-          </tr>)}
+          {!loading && feed.items.map(event=>{
+            const caption = formatAuditEvent(event);
+            const expanded = opened?.id === event.id;
+            return <Fragment key={event.id}>
+              <tr>
+                <td className="logs-date">{formatTime(event.created_at)}</td>
+                <td>{MODULES[event.module]||event.module}</td>
+                <td className="logs-title">
+                  <strong>{caption.title}</strong>
+                  <span>{caption.subtitle}</span>
+                </td>
+                <td>{event.actor_name||"Система"}</td>
+                <td><span className={"logs-status logs-status--"+event.result}>
+                  {STATUSES[event.result]||event.result}
+                </span></td>
+                <td className="logs-details-cell">
+                  <button type="button" className="logs-details-button"
+                    aria-expanded={expanded}
+                    onClick={()=>setOpened(expanded ? null : event)}>
+                    {expanded ? "Скрыть" : "Открыть"}
+                  </button>
+                </td>
+              </tr>
+              {expanded && <tr className="logs-expanded-row">
+                <td colSpan={6}>
+                  <section className="logs-dialog logs-dialog-inline"
+                    aria-label={"Подробности: "+caption.title}>
+                    <header className="logs-dialog-header">
+                      <div>
+                        <span className="logs-dialog-eyebrow">{MODULES[event.module]||event.module} · {formatTime(event.created_at)}</span>
+                        <h2>{caption.title}</h2>
+                        <p>{caption.subtitle}</p>
+                      </div>
+                    </header>
+                    <div className="logs-dialog-body">
+                      <dl className="logs-dialog-meta">
+                        <dt>Кто выполнил</dt><dd>{event.actor_name||"Система"}</dd>
+                        <dt>Результат</dt><dd>{STATUSES[event.result]||event.result}</dd>
+                        <dt>Тип объекта</dt><dd>{event.object_type}</dd>
+                        <dt>Идентификатор</dt><dd>{event.object_id||"Нет"}</dd>
+                        <dt>Системное действие</dt><dd>{event.action}</dd>
+                      </dl>
+                      {event.old_data && <div className="logs-dialog-section">
+                        <h3>Было</h3><pre>{prettyJson(event.old_data)}</pre>
+                      </div>}
+                      {event.new_data && <div className="logs-dialog-section">
+                        <h3>{event.old_data ? "Стало" : "Результат и параметры"}</h3>
+                        <pre>{prettyJson(event.new_data)}</pre>
+                      </div>}
+                      {event.details && Object.keys(event.details).length > 0 &&
+                        <div className="logs-dialog-section">
+                          <h3>Дополнительная информация</h3>
+                          <pre>{prettyJson(event.details)}</pre>
+                        </div>}
+                    </div>
+                    <footer className="logs-dialog-footer">
+                      <button type="button" onClick={()=>setOpened(null)}>Скрыть подробности</button>
+                    </footer>
+                  </section>
+                </td>
+              </tr>}
+            </Fragment>;
+          })}
         </tbody>
       </table>
     </div>

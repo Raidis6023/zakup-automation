@@ -1,4 +1,4 @@
-/* VED subnavigation inherits the workspace emerald palette and sidebar width. */
+/* VED subnavigation inherits the PANDA palette and shared sidebar width. */
 .home-shell .home-sidebar .home-ved-nav-group {
   position: relative;
   min-width: 0;
@@ -26,8 +26,8 @@
 }
 .home-shell .home-sidebar .home-ved-nav-toggle:hover,
 .home-shell .home-sidebar .home-ved-nav-toggle:focus-visible {
-  color: #44ffbd;
-  background: rgba(55,201,142,.15);
+  color: var(--ws-nav-hover-text);
+  background: color-mix(in srgb, var(--ws-utility-icon) 12%, var(--ws-sidebar));
 }
 .home-shell .home-sidebar .home-ved-nav-toggle svg {
   width: 16px; height: 16px; fill: none; stroke: currentColor;
@@ -63,8 +63,8 @@
 .home-shell .home-sidebar .home-ved-subnav-link:hover,
 .home-shell .home-sidebar .home-ved-subnav-link:focus-visible {
   color: var(--ws-nav-hover-text);
-  background: color-mix(in srgb, #37c98e 10%, var(--ws-sidebar));
-  border-color: rgba(55,201,142,.24);
+  background: color-mix(in srgb, var(--ws-utility-icon) 10%, var(--ws-sidebar));
+  border-color: color-mix(in srgb, var(--ws-utility-icon) 24%, var(--ws-border));
 }
 .home-shell .home-sidebar .home-ved-subnav-link--active,
 .home-shell .home-sidebar .home-ved-subnav-link--active:hover {

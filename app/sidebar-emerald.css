@@ -108,13 +108,13 @@ html[data-theme="dark"] .home-shell[data-accent-area] {
   border-radius: 12px;
 }
 
-/* Every administrative sidebar icon keeps one emerald base color
-   in light and dark themes. Selection uses the shared active accent. */
+/* Administrative icons follow the active PANDA theme in both modes.
+   Never hardcode a legacy emerald color on the admin navigation. */
 .home-shell[data-workspace-mode="admin"] .home-sidebar .home-workspace-icon {
-  color: #11865d;
+  color: var(--ws-utility-icon);
 }
 .home-shell[data-workspace-mode="admin"] .home-sidebar .home-workspace-link--active .home-workspace-icon {
-  color: #44ffbd;
+  color: var(--ws-active-text);
 }
 
 .home-shell .home-sidebar .home-brand-icon svg,
@@ -131,7 +131,7 @@ html[data-theme="dark"] .home-shell[data-accent-area] {
 .home-shell .home-sidebar .home-workspace-link--active .home-brand-icon,
 .home-shell .home-sidebar .home-workspace-link--active .home-workspace-icon,
 .home-shell .home-sidebar .home-ved-subnav-link--active .home-brand-icon {
-  color: #44ffbd;
+  color: var(--ws-active-text);
 }
 .home-shell .home-sidebar .home-workspace-link--active :is(.home-brand-icon, .home-workspace-icon)::before,
 .home-shell .home-sidebar .home-ved-subnav-link--active .home-brand-icon::before,
@@ -179,7 +179,7 @@ html[data-theme="dark"] .home-shell[data-accent-area] {
 /* The topbar draws the same ring on a 34px inner icon slot as the sidebar,
    never on the entire 38px clickable button. The unread badge stays outside. */
 .home-shell .home-topbar-right .home-icon-button:is(.active, :focus-visible) .home-utility-icon-visual {
-  color: #44ffbd;
+  color: var(--ws-active-text);
 }
 .home-shell .home-topbar-right .home-utility-icon-visual > svg {
   display: block;

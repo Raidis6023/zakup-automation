@@ -596,3 +596,35 @@ html[data-theme="dark"] .home-shell .home-sidebar .home-ved-subnav-link--active 
   border-color: rgba(224, 187, 132, .22);
   box-shadow: none;
 }
+
+
+/* PANDA sidebar: every unselected navigation glyph inherits the same
+   anthracite (light) / champagne (dark) palette. This overrides the old
+   hard-coded emerald admin icons without touching the approved selected tiles. */
+.home-shell[data-accent-area] .home-sidebar
+.home-workspace-link:not(.home-workspace-link--active)
+:is(.home-brand-icon, .home-workspace-icon),
+.home-shell[data-accent-area] .home-sidebar
+.home-ved-subnav-link:not(.home-ved-subnav-link--active)
+.home-brand-icon {
+  color: var(--ws-utility-icon);
+}
+.home-shell[data-accent-area] .home-sidebar
+.home-ved-nav-toggle,
+.home-shell[data-accent-area] .home-sidebar
+.home-workspace-link:not(.home-workspace-link--active) .emerald-sidebar-glyph {
+  color: var(--ws-utility-icon);
+}
+/* Keep active icon tiles legible in both themes, including admin mode. */
+.home-shell[data-accent-area] .home-sidebar
+.home-workspace-link--active :is(.home-brand-icon, .home-workspace-icon),
+.home-shell[data-accent-area] .home-sidebar
+.home-ved-subnav-link--active .home-brand-icon {
+  color: #101820;
+}
+html[data-theme="dark"] .home-shell[data-accent-area] .home-sidebar
+.home-workspace-link--active :is(.home-brand-icon, .home-workspace-icon),
+html[data-theme="dark"] .home-shell[data-accent-area] .home-sidebar
+.home-ved-subnav-link--active .home-brand-icon {
+  color: #f1e7d6;
+}

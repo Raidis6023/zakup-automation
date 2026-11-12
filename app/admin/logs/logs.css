@@ -43,3 +43,111 @@
 .logs-pagination { display: flex; gap: 9px; align-items: center; }
 .logs-error { color: #d24142; padding: 12px 18px; background: rgba(220,60,66,.07); margin: 0; font-size: 12px; }
 @media(max-width:680px) { .logs-toolbar { padding: 12px; } .logs-tabs { flex-wrap: nowrap; overflow-x: auto; } .logs-tab { white-space: nowrap; } .logs-filters { align-items: stretch; } .logs-search { flex-basis: 100%; } }
+
+
+/* Stable six-column grid. Expanded audit details are displayed in an overlay,
+   never inside a table cell where they could resize the entire column. */
+.logs-table { table-layout: fixed; min-width: 1040px; }
+.logs-table td { overflow-wrap: anywhere; }
+.logs-table .logs-title { max-width: none; }
+.logs-table .logs-title strong { display: block; line-height: 1.4; }
+.logs-table .logs-title span { line-height: 1.4; color: var(--text-secondary); }
+.logs-details-cell { min-width: 0; white-space: nowrap; }
+.logs-details-button {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 80px; height: 32px; padding: 0 12px;
+  border: 1px solid var(--ws-border); border-radius: 9px;
+  color: var(--ws-text); background: var(--ws-surface-soft);
+  font-size: 12px; font-weight: 650; cursor: pointer;
+  transition: background .14s ease, border-color .14s ease;
+}
+.logs-details-button:is(:hover, :focus-visible) {
+  background: var(--ws-surface-hover); border-color: var(--ws-blue);
+}
+.logs-details-button[aria-expanded="true"] {
+  background: var(--ws-blue); color: var(--button-text); border-color: var(--ws-blue);
+}
+.logs-status--pending { color: var(--ws-text-secondary); background: var(--ws-surface-soft); }
+
+/* Dialog follows the anthracite/champagne theme, with its own scroll area. */
+.logs-dialog-backdrop {
+  position: fixed; z-index: 300; inset: 0;
+  display: grid; place-items: center;
+  padding: 20px;
+  background: rgba(5, 11, 16, .55);
+  backdrop-filter: blur(3px);
+}
+.logs-dialog {
+  width: min(730px, 100%);
+  max-height: min(82dvh, 850px);
+  display: flex; flex-direction: column; overflow: hidden;
+  color: var(--ws-text); background: var(--ws-surface);
+  border: 1px solid var(--ws-border);
+  border-radius: 16px;
+  box-shadow: 0 24px 70px rgba(0,0,0,.22);
+}
+.logs-dialog-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 14px; padding: 22px 24px 16px;
+  border-bottom: 1px solid var(--ws-border);
+}
+.logs-dialog-eyebrow { color: var(--ws-text-muted); font-size: 11px; }
+.logs-dialog h2 { font-size: 19px; font-weight: 750; line-height: 1.35; margin: 8px 0 4px; }
+.logs-dialog-header p { font-size: 12px; color: var(--ws-text-secondary); margin: 0; }
+.logs-dialog-close {
+  width: 32px; height: 32px; flex: 0 0 32px;
+  border-radius: 9px; border: 1px solid var(--ws-border);
+  background: var(--ws-surface-soft); color: var(--ws-text);
+  cursor: pointer; font-size: 23px; line-height: 1;
+}
+.logs-dialog-close:hover { background: var(--ws-surface-hover); }
+.logs-dialog-body { padding: 20px 24px; overflow-y: auto; min-height: 0; }
+.logs-dialog-meta {
+  margin: 0; display: grid; grid-template-columns: 152px minmax(0, 1fr);
+  gap: 10px 12px; font-size: 12px; line-height: 1.45;
+}
+.logs-dialog-meta dt { color: var(--ws-text-muted); }
+.logs-dialog-meta dd { margin: 0; overflow-wrap: anywhere; color: var(--ws-text); }
+.logs-dialog-section { margin-top: 18px; }
+.logs-dialog-section h3 { font-size: 12px; color: var(--ws-text); margin: 0 0 7px; }
+.logs-dialog-section pre {
+  margin: 0; padding: 13px 14px; white-space: pre-wrap; overflow-wrap: anywhere;
+  background: var(--ws-surface-soft); border: 1px solid var(--ws-border-soft);
+  border-radius: 10px; color: var(--ws-text-secondary);
+  font-size: 11px; line-height: 1.6;
+}
+.logs-dialog-footer { display: flex; justify-content: flex-end; padding: 13px 24px; border-top: 1px solid var(--ws-border); }
+.logs-dialog-footer button {
+  background: var(--ws-blue); color: var(--button-text); border: 1px solid var(--ws-blue);
+  padding: 9px 18px; border-radius: 9px; cursor: pointer; font-weight: 700; font-size: 12px;
+}
+.logs-dialog-footer button:hover { background: var(--ws-blue-hover); }
+@media (max-width: 600px) {
+  .logs-dialog-backdrop { padding: 8px; }
+  .logs-dialog-header,.logs-dialog-body { padding: 16px; }
+  .logs-dialog-meta { grid-template-columns: 110px minmax(0, 1fr); }
+}
+
+
+/* Full-width detail row: one colSpan across the fixed table, so opening a
+   record never redistributes the six column widths. The toggle stays visible. */
+.logs-expanded-row > td {
+  overflow: visible;
+  padding: 0 !important;
+  background: var(--ws-surface-soft);
+  border-top: 1px solid var(--ws-border);
+  border-bottom: 1px solid var(--ws-border);
+}
+.logs-table tbody .logs-expanded-row:hover { background: var(--ws-surface-soft); }
+.logs-dialog-inline {
+  width: 100%;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+  background: var(--ws-surface-soft);
+}
+.logs-dialog-inline .logs-dialog-header,
+.logs-dialog-inline .logs-dialog-footer { border-color: var(--ws-border-soft); }
+.logs-dialog-inline .logs-dialog-body { overflow: visible; }
