@@ -21,7 +21,8 @@ assert.match(theme, /background-size:\s*12px 8px\s*!important;/, "Arrow has a co
 assert.match(theme, /::picker-icon\s*\{\s*display:\s*none\s*!important;/, "Native arrows must not drift inward");
 assert.match(theme, /html\[data-theme="dark"\][^\n]*select:not/, "Dark theme uses its own arrow color");
 assert.match(theme, /option:hover/);
-assert.equal((theme.match(/background-image:[^\n]+!important/g)||[]).length,2);
+assert.equal((theme.match(/background-image:[^\n]+!important/g)||[]).length,4,
+  "Two search magnifiers and two select arrows, one per theme each");
 assert.match(pilot, /className="workspace-search-field" aria-label="Поиск пилотных товаров"/);
 assert.doesNotMatch(unit, /unit-model-caption/);
 assert.match(tasks, /className="tasks-department-picker"/);
