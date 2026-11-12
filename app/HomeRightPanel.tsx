@@ -34,6 +34,7 @@ import {
 
 import {
   dismissSyncNotification,
+  markSyncNotificationRead,
   loadVisibleSyncNotifications,
   SYNC_NOTIFICATION_DISMISSED_EVENT,
   type SyncNotification,
@@ -335,8 +336,13 @@ export default function HomeRightPanel() {
       }
 
       void loadSyncNotifications();
+      // Server-backed inbox also receives events from scheduled reminders and sync runs.
+      const refreshInterval = window.setInterval(() => {
+        void loadSyncNotifications();
+      }, 60_000);
 
       return () => {
+        window.clearInterval(refreshInterval);
         controller.abort();
         if (taskNotificationChannel) {
           void supabase.removeChannel(taskNotificationChannel);
@@ -804,6 +810,8 @@ export default function HomeRightPanel() {
                           `home-sync-notification ${
                             notification.kind === "stock_zero"
                               || notification.kind === "task_cancelled"
+                              || notification.severity === "warning"
+                              || notification.severity === "critical"
 
                               ? "home-sync-notification--alert"
 
@@ -822,12 +830,10 @@ export default function HomeRightPanel() {
                         role="button"
                         tabIndex={0}
 
-                        onClick={
-                          () =>
-                            router.push(
-                              notification.href
-                            )
-                        }
+                        onClick={() => {
+                          markSyncNotificationRead(notification.id);
+                          router.push(notification.href);
+                        }}
 
                         onKeyDown={
                           event => {
@@ -842,6 +848,7 @@ export default function HomeRightPanel() {
 
                               event.preventDefault();
 
+                              markSyncNotificationRead(notification.id);
                               router.push(
                                 notification.href
                               );
@@ -855,7 +862,7 @@ export default function HomeRightPanel() {
                           className={
                             notification.kind === "task_cancelled"
                               ? "home-sync-notification-icon home-sync-notification-icon--task-cancelled"
-                              : notification.kind === "stock_zero"
+                              : notification.kind === "stock_zero" || notification.severity === "warning" || notification.severity === "critical"
                                 ? "home-sync-notification-icon home-sync-notification-icon--alert"
                                 : "home-sync-notification-icon"
                           }
@@ -863,7 +870,7 @@ export default function HomeRightPanel() {
                           {
                             notification.kind === "task_cancelled"
                               ? <TaskCancelledIcon />
-                              : notification.kind === "stock_zero"
+                              : notification.kind === "stock_zero" || notification.severity === "warning" || notification.severity === "critical"
                                 ? <StockAlertIcon />
                                 : <SyncSuccessIcon />
                           }

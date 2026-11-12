@@ -1,41 +1,15 @@
 import PageHeader from "../../ui/PageHeader";
+import LogsClient from "./LogsClient";
+import "./logs.css";
+
+export const dynamic = "force-dynamic";
+
 export default function AdminLogsPage() {
-
   return (
-
-    <section
-      aria-label=
-        "История логов"
-    >
-
-      <PageHeader variant="admin" title="История логов" description="Журнал административных действий в WorkSpace." />
-
-
-      <section
-        className=
-          "section"
-      >
-
-        <h2
-          className=
-            "section-title"
-        >
-          История действий
-        </h2>
-
-
-        <div
-          className=
-            "muted"
-        >
-          Здесь будет отображаться история изменений,
-          выполненных администраторами.
-        </div>
-
-      </section>
-
+    <section aria-label="История логов">
+      <PageHeader variant="admin" title="История логов"
+        description="Действия сотрудников, изменения данных и состояние системных процессов." />
+      <LogsClient />
     </section>
-
   );
-
 }

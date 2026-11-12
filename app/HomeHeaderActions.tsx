@@ -50,6 +50,7 @@ import HomeQuickNoteModal from "./HomeQuickNoteModal";
 
 import {
   dismissSyncNotification,
+  markSyncNotificationRead,
   loadVisibleSyncNotifications,
   SYNC_NOTIFICATION_DISMISSED_EVENT,
   type SyncNotification,
@@ -2600,8 +2601,7 @@ export default function HomeHeaderActions() {
 
   const unreadCount =
     notifications.length
-    +
-    syncNotifications.length;
+    + syncNotifications.filter(notification => notification.unread !== false).length;
 
 
   const currentUserTasks =
@@ -3739,6 +3739,8 @@ export default function HomeHeaderActions() {
                                       `home-header-sync-notification ${
                                         notification.kind === "stock_zero"
                                         || notification.kind === "task_cancelled"
+                                        || notification.severity === "warning"
+                                        || notification.severity === "critical"
 
                                         ? "home-header-sync-notification--alert"
 
@@ -3764,6 +3766,7 @@ export default function HomeHeaderActions() {
                                           null
                                         );
 
+                                        markSyncNotificationRead(notification.id);
                                         router.push(
                                           notification.href
                                         );
@@ -3788,7 +3791,8 @@ export default function HomeHeaderActions() {
                                             null
                                           );
 
-                                          router.push(
+                                          markSyncNotificationRead(notification.id);
+                                        router.push(
                                             notification.href
                                           );
 
@@ -3802,7 +3806,7 @@ export default function HomeHeaderActions() {
                                       className={
                                         notification.kind === "task_cancelled"
                                           ? "home-header-sync-notification-icon home-header-sync-notification-icon--task-cancelled"
-                                          : notification.kind === "stock_zero"
+                                          : notification.kind === "stock_zero" || notification.severity === "warning" || notification.severity === "critical"
                                             ? "home-header-sync-notification-icon home-header-sync-notification-icon--alert"
                                             : "home-header-sync-notification-icon"
                                       }
@@ -3810,7 +3814,7 @@ export default function HomeHeaderActions() {
                                       {
                                         notification.kind === "task_cancelled"
                                           ? <TaskCancelledIcon />
-                                          : notification.kind === "stock_zero"
+                                          : notification.kind === "stock_zero" || notification.severity === "warning" || notification.severity === "critical"
                                             ? <StockAlertIcon />
                                             : <SyncSuccessIcon />
                                       }

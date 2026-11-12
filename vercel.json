@@ -77,16 +77,8 @@
       "schedule": "20 13 * * *"
     },
     {
-      "path": "/api/china/wb-order-feed-sync",
-      "schedule": "25 0 * * *"
-    },
-    {
-      "path": "/api/china/wb-order-feed-sync-late",
-      "schedule": "25 7 * * *"
-    },
-    {
-      "path": "/api/china/wb-order-feed-sync-evening",
-      "schedule": "25 12 * * *"
+      "path": "/api/china/wb-operational-sales-sync",
+      "schedule": "35 1 * * *"
     }
   ]
 }

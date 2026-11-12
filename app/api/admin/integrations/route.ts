@@ -24,7 +24,7 @@ async function requireAdmin() {
     return { error: "Управлять ключами могут только администраторы", status: 403 } as const;
   }
 
-  return { admin: createAdminClient() } as const;
+  return { admin: createAdminClient(), actorId: user.id } as const;
 }
 
 function clean(value: unknown, min: number, max: number, label: string) {
@@ -138,6 +138,20 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Only service and names of changed settings are recorded. Never log secret values.
+  const { error: auditError } = await access.admin.from("app_audit_events").insert({
+    module: "admin",
+    action: "integration_settings_updated",
+    actor_id: access.actorId,
+    object_type: "integration",
+    object_id: body.service,
+    title: "Обновлены настройки подключения",
+    details: { changed_fields: Object.keys(secrets) },
+  });
+  if (auditError) {
+    // The credentials are already saved: avoid suggesting a second submission.
+    console.error("Failed to record integration audit event:", auditError.message);
+  }
   invalidateIntegrationSecretsCache();
   return NextResponse.json({ ok: true, service: body.service }, { headers });
 }
