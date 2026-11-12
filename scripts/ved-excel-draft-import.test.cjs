@@ -86,7 +86,7 @@ async function test(){
  assert.match(route,/parseVedExcel\(bytes,false\)/);
  assert.match(route,/ved_import_excel_draft_items/);
  assert.match(route,/action==="preview"/);
- assert.match(route,/action==="confirm"/);
+ assert.match(route,/if\(action!=="confirm"\)/);
  assert.match(route,/new URL\(origin\)\.host!==host/);
  assert.match(route,/const batch=randomUUID\(\),uploaded:string\[\]=\[\]/);
  assert.match(photo,/createSignedUrl\(path,90\)/);
