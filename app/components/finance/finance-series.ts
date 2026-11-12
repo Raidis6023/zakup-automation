@@ -12,7 +12,8 @@ export function amounts(d:Report,market:string,offer?:string,offers?:string[]):V
  // independent Performance campaign spend. A booked zero is valid here when
  // the Seller ledger day is loaded; its campaign completeness is flagged
  // separately and must never be presented as "no advertising campaigns".
- const inbound=cogs===null||mayak===null?null:cogs+mayak;
+ const pack=ym?sum('packing'):sum('packing_expense');
+ const inbound=cogs===null||mayak===null||pack===null?null:cogs+mayak+pack;
  const marketplace=revenue===null||profit===null||inbound===null||advertising===null?null:revenue-profit-inbound-advertising;
  return {orders:qty(ym?'orders':'order_count'),buyouts:qty(ym?'buyouts':'buyout_units'),revenue,profit,advertising,inbound,marketplace};}
 
@@ -52,7 +53,7 @@ export function compositionAmounts(d:Report,market:string,offer?:string,offers?:
  if(!known.length)return {v:all,provisional:true,adUnconfirmed};
  const total=(field:string)=>known.reduce((sum,r)=>sum+Number(r[field]??0),0);
  const revenue=total('revenue'),profit=total('estimated_result');
- const inbound=total('cogs')+total('mayak_expense'),advertising=-total('advertising_amount');
+ const inbound=total('cogs')+total('mayak_expense')+total('packing_expense'),advertising=-total('advertising_amount');
  return {v:withCampaign({...all,revenue,profit,inbound,advertising,
   marketplace:revenue-profit-inbound-advertising}),provisional:true,adUnconfirmed};
 }
