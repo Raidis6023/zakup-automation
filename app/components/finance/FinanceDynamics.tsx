@@ -14,8 +14,10 @@ export default function FinanceDynamics({marketplace,from,to,offer,offers,select
  useEffect(()=>{if(provided){setPoints(provided);return;}let live=true;setPoints(null);setError('');if(!from||!to)return;prepareFinanceSeries(marketplace,from,to,revision).then(bundle=>{if(live)setPoints(dailyChanges(bundle,marketplace,offer,offerKey?.split('\0')))}).catch(e=>{if(live)setError(e.message)});return()=>{live=false}},[marketplace,from,to,offer,offerKey,revision,provided]);
  const keys=flow?(['profit','advertising','inbound','marketplace'] as const):[metric];
  const basis=(p:FinancePoint)=>flow?(p.composition??p.v):p.v;
+ // Exclude days with no financial operations in an article-scoped chart.
+ // A booking without any charge is not evidence of revenue/profit.
  const plottedPoints=useMemo(()=>offer||offers?.length
-  ?(points??[]).filter(p=>[p.v.orders,p.v.buyouts,p.v.revenue,p.v.profit].some(v=>v!==null&&v!==0))
+  ?(points??[]).filter(p=>[p.v.revenue,p.v.profit,p.v.advertising].some(v=>typeof v==='number'&&Math.abs(v)>0.005))
   :(points??[]),[points,offer,offerKey]);
  const plot=useMemo(()=>plottedPoints.map(p=>({day:p.day,values:flow?percentageComposition(p.composition??p.v):p.v})),[plottedPoints,flow]);
  const incomplete=Boolean(points&&points.some(p=>p.v.profit===null));

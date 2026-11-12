@@ -14,6 +14,12 @@ assert(sql.includes("jsonb_typeof(a.raw #> '{posting,products,0,commission}')='o
 assert(sql.includes("sum(confirmed.qty)*20"));
 const scheme=fs.readFileSync('app/api/agents/finance-scheme-report/route.ts','utf8');
 assert(scheme.includes("readOzonFbsOrders(from,to)"));
+assert(scheme.includes('prev.packingUnits+=item.packing_units'));
+assert(scheme.includes('match.profit+priorPacking-packingAmount'));
+assert(scheme.includes("storage:null,packing:packingAmount"));
+assert(scheme.includes("match.orders=count.orders;match.cancelled=count.cancelled"));
+const graphSource=fs.readFileSync('app/components/finance/FinanceDynamics.tsx','utf8');
+assert(graphSource.includes("[p.v.revenue,p.v.profit,p.v.advertising]"));
 assert(scheme.includes("packing:kind==='fbs'?v.packing:0"));
 assert(scheme.includes("details"));
 const graph=fs.readFileSync('app/components/finance/FinanceDynamics.tsx','utf8');

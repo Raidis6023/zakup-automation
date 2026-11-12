@@ -12,8 +12,8 @@ const sku=read("app/sku-list/sku-list.css");
 const procurement=read("app/zakup/ZakupDemandTableClient.tsx");
 const ym=read("app/yandex-market/YandexProductsTableClient.tsx");
 
-assert.ok(shell.indexOf('import "./workspace-unified-tables.css";') >
-  shell.indexOf('import "./workspace-unified-champagne.css";'),"table layer must follow approved palette");
+assert.ok(shell.indexOf('import '+JSON.stringify("./workspace-unified-tables.css")+';') >
+  shell.indexOf('import '+JSON.stringify("./workspace-unified-champagne.css")+';'),"table layer must follow approved palette");
 assert.match(css,/\.home-shell\[data-accent-area\] table thead > tr > th/);
 assert.match(css,/\.home-shell\[data-accent-area\] table tbody > tr > td/);
 assert.match(css,/html\[data-theme="dark"\] \.home-shell\[data-accent-area\]/);

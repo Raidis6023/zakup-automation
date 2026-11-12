@@ -160,7 +160,7 @@ export async function GET(req:NextRequest){try{
   rows.push({article,name:names.get(article)??'',master_code:master,manager:master?byManager.get(master)??'Не назначен':'Не назначен',
    orders:count,cancelled:null,buyouts:null,revenue:v.income,charges:v.expense,
    cogs:v.missing?null:Math.round(v.cogs*100)/100,mayak:kind==='fbs'?0:v.missing?null:Math.round(v.mayak*100)/100,
-   advertising:null,storage:kind==='fbs'?0:null,packing:kind==='fbs'?v.packing:0,shipped_units:v.packedUnits,
+   advertising:null,storage:null,packing:kind==='fbs'?v.packing:0,shipped_units:v.packedUnits,
    profit:v.missing?null:Math.round((v.income+v.expense-v.cogs-v.mayak-v.packing)*100)/100,
    details,note:'Отправления из финансового реестра, не дата исходного заказа. Отмены и выкупы этим источником не подтверждены.'
   });
@@ -169,39 +169,64 @@ export async function GET(req:NextRequest){try{
  if(kind==='fbs'){
   try{
    const orderUnits=await readOzonFbsOrders(from,to);
-   const countBySku=new Map<string,{orders:number;cancelled:number}>();
+   type OrderTotals={orders:number;cancelled:number;packingUnits:number;name:string};
+   const countBySku=new Map<string,OrderTotals>();
    for(const item of orderUnits){
     const key=item.sku||[...bySku].find(([,link])=>link.offer_id===item.article)?.[0]||'';
     if(!key)continue;
-    const prev=countBySku.get(key)??{orders:0,cancelled:0};
-    prev.orders+=item.quantity;if(item.cancelled)prev.cancelled+=item.quantity;
+    const prev=countBySku.get(key)??{orders:0,cancelled:0,packingUnits:0,name:''};
+    prev.orders+=item.quantity;
+    if(item.cancelled)prev.cancelled+=item.quantity;
+    // The provider status distinguishes pre-dispatch cancellation from
+    // an order that was packed and actually left the seller's warehouse.
+    prev.packingUnits+=item.packing_units;
+    if(!prev.name&&item.name)prev.name=item.name;
     countBySku.set(key,prev);
    }
    for(const [sku,count] of countBySku){
-    const match=rows.find(r=>r.article===(bySku.get(sku)?.offer_id??'SKU:'+sku));
-    if(match){match.orders=count.orders;match.cancelled=count.cancelled;}
-    else {
-     const linked=bySku.get(sku),article=linked?.offer_id??'SKU:'+sku,master=linked?.master_code??null;
-     rows.push({article,name:names.get(article)??'',master_code:master,
+    const article=bySku.get(sku)?.offer_id??'SKU:'+sku;
+    const match=rows.find(r=>r.article===article);
+    const packingAmount=count.packingUnits*20;
+    if(match){
+     // Replace the accounting-date proxy with order-date status evidence.
+     // Never book packaging twice.
+     const priorPacking=match.packing??0;
+     match.orders=count.orders;match.cancelled=count.cancelled;
+     match.shipped_units=count.packingUnits;match.packing=packingAmount;
+     if(!match.name)match.name=names.get(article)||count.name||'';
+     if(match.profit!==null)match.profit=Math.round((match.profit+priorPacking-packingAmount)*100)/100;
+     match.details=(match.details??[]).filter(d=>!d.name.startsWith('Упаковка на складе'));
+     if(packingAmount)match.details.push({name:'Упаковка на складе · 20 ₽ за единицу',category:'Внешний расход',count:count.packingUnits,amount:-packingAmount});
+    }else{
+     const linked=bySku.get(sku),master=linked?.master_code??null;
+     rows.push({article,name:names.get(article)||count.name||'',master_code:master,
       manager:master?byManager.get(master)??'Не назначен':'Не назначен',
       orders:count.orders,cancelled:count.cancelled,buyouts:null,revenue:null,charges:null,
-      cogs:null,mayak:0,advertising:null,storage:0,packing:0,
-      shipped_units:0,profit:null,details:[],
-      note:'Созданные FBS заказы есть, но финансовые начисления за выбранную дату пока отсутствуют.'});
+      cogs:null,mayak:0,advertising:null,storage:null,packing:packingAmount,
+      shipped_units:count.packingUnits,profit:null,details:packingAmount?[{name:'Упаковка на складе · 20 ₽ за единицу',category:'Внешний расход',count:count.packingUnits,amount:-packingAmount}]:[],
+      note:'Заказ FBS есть, но начисления по нему за выбранные даты не подтверждены. Финансовый результат не рассчитан.'});
     }
    }
-   // A SKU with bookings outside the request's ORDER dates is not a zero-order SKU.
-   for(const row of rows)if(!countBySku.has(
-    [...bySku].find(([,link])=>link.offer_id===row.article)?.[0]??row.article.slice(4)
-   )){row.orders=0;row.cancelled=0;}
+   // An accounting entry without a booking in the selected ORDER-date range
+   // is not evidence of zero orders or zero storage cost.
+   const mapped=new Set([...countBySku].map(([sku])=>bySku.get(sku)?.offer_id??'SKU:'+sku));
+   for(const row of rows)if(!mapped.has(row.article)){
+    row.orders=null;row.cancelled=null;row.packing=null;row.shipped_units=null;
+    row.profit=null;
+    row.details=(row.details??[]).filter(d=>!d.name.startsWith('Упаковка на складе'));
+    row.note+=' Заказы по дате создания в выбранном периоде не найдены: расходы на упаковку и прибыль не подтверждены.';
+   }
   }catch(e){
    orderSourceError=e instanceof Error?e.message:'Недоступна история заказов FBS';
-   for(const row of rows){row.orders=null;row.cancelled=null;}
+   for(const row of rows){
+    row.orders=null;row.cancelled=null;row.packing=null;row.shipped_units=null;row.profit=null;
+    row.note+=' Источник статусов FBS недоступен; расход на упаковку не подтверждён.';
+   }
   }
  }
  rows.sort((a,b)=>num(b.revenue)-num(a.revenue));
  const note='Ozon: только подтверждённые операции схемы '+kind.toUpperCase()+
-  ' (POSTING и сопоставимые ITEM). Для FBO в столбце отправлений указаны финансовые отправления. Для FBS заказы и отмены берутся из отдельного списка Ozon v4 по дате заказа, а финансовые суммы из начислений по дате проводки. Упаковка FBS: 20 ₽ на подтверждённую отгруженную единицу. Реклама и общие NON_ITEM не распределены, прибыль предварительная.'+
+  ' (POSTING и сопоставимые ITEM). Для FBO в столбце отправлений указаны финансовые отправления. Для FBS заказы и отмены берутся из отдельного списка Ozon v4 по дате заказа, а финансовые суммы из начислений по дате проводки. Упаковка FBS: 20 ₽ на единицу по статусу заказа, кроме отменённых до отправки. Расход относится к дате заказа, начисления Ozon — к дате проводки. Реклама и хранение без связи с конкретной FBS-отправкой не распределяются; отсутствие такой связи не означает нулевого расхода. Прибыль предварительная.'+
   (orderSourceError?' Ошибка загрузки FBS заказов: '+orderSourceError+'.':'')+
   (noSku?' Не распределено отправлений без подтверждённого SKU: '+noSku+'.':'');
  return NextResponse.json({ok:true,source:'ozon_finance_accruals · active POSTING + linked ITEM',rows,note},
