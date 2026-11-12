@@ -37,4 +37,8 @@ assert(chart.includes('const unavailable=series.every('));
 assert(chart.includes('const partial=!unavailable&&series.some('));
 const source=read('app/components/finance/finance-series-cache.ts');
 assert(source.includes("'performance_ad_expense'"));
+const compact=read('app/api/agents/ozon-finance/route.ts').split("if(url.searchParams.get('compact')==='1')")[1].split('return NextResponse.json({ok:true,...report})')[0];
+assert(compact.includes('performance_ad_expense:r.performance_ad_expense'),'compact daily finance must include SKU advertising');
+assert(compact.includes('packing_expense:r.packing_expense'),'compact daily finance must include FBS packing');
+assert(compact.includes('ads_covered:report.ads_covered'),'compact daily finance must include coverage status');
 console.log('PASS Ozon nine-point finance review: drilldown, category, revenue, preliminary profitability, known chart parts and SKU ads');
