@@ -83,6 +83,16 @@ export function formatAuditEvent(e: AuditCaptionSource): Caption {
         return { title: "Синхронизация данных", subtitle: completed };
     }
   }
+  if (e.module === "procurement" && e.action === "demand_calculation") {
+    const from = readableDate(data.sales_from);
+    const to = readableDate(data.sales_to);
+    const window = from && to ? "Продажи: " + from + " – " + to : "";
+    return {
+      title: "Закуп · рассчитана потребность в товарах",
+      subtitle: detail([window, numOf(data.buffer_days) !== null
+        ? "Буфер: " + String(data.buffer_days) + " дней" : ""]),
+    };
+  }
   if (e.module === "ved") {
     if (e.action === "tariff_changed") {
       return { title: "ВЭД · изменён тариф", subtitle: detail([e.object_id ? "Тариф: " + e.object_id : "", readableDate(data.effective_from)]) };

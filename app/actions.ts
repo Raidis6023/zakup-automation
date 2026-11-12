@@ -198,7 +198,7 @@ export async function runChinaCalculation(
   _formData: FormData,
 ): Promise<ChinaCalculationSubmitState> {
   try {
-    await requireChinaEditor();
+    const { user } = await requireChinaEditor();
 
     // NEVER request WB here. Its Order Feed can be limited to one request
     // per three hours, so user clicks must not consume its rate-limit budget.
@@ -208,6 +208,17 @@ export async function runChinaCalculation(
     };
 
     const admin = createAdminClient();
+    // Manual recalculations are attributed to the authenticated employee.
+    // Audit metadata must not turn an otherwise successful calculation into an error.
+    if (result?.calculation_run_id) {
+      try {
+        const { error: actorError } = await admin.from("china_calculation_runs")
+          .update({ actor_id: user.id }).eq("id", result.calculation_run_id);
+        if (actorError) console.error("[ZAKUP_CALCULATION] audit actor:", actorError.message);
+      } catch (auditError) {
+        console.error("[ZAKUP_CALCULATION] audit actor:", auditError);
+      }
+    }
     const [latestRun, latestFeed] = await Promise.all([
       result?.calculation_run_id
         ? admin.from("china_calculation_runs").select("sales_date_from,sales_date_to")

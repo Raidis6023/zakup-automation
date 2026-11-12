@@ -4,6 +4,7 @@ import { ChoiceField } from "@/app/ui/WorkspaceDateFields";
 
 import {
   useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -26,6 +27,7 @@ export type SkuListFinancialRow = {
   sku: string | null;
   sellerArticle: string;
   productName: string | null;
+  searchIndex?: string;
   revenue: number;
   operatingProfit: number;
   purchases: number;
@@ -296,6 +298,8 @@ SkuListFinancialRow[] {
 
             productName:
               row.productName,
+            searchIndex: [row.sellerArticle, row.sku, row.productName]
+              .filter(Boolean).join(" "),
 
             revenue:
               row.revenue,
@@ -310,6 +314,9 @@ SkuListFinancialRow[] {
 
         continue;
       }
+
+      current.searchIndex = [current.searchIndex, row.sellerArticle, row.sku, row.productName]
+        .filter(Boolean).join(" ");
 
       current.revenue +=
         row.revenue;
@@ -382,6 +389,13 @@ export default function SkuListTabsClient({
 
   const [statusOverrides, setStatusOverrides] =
     useState<Record<string, ProductArticleStatus>>({});
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<ProductArticleStatus | "all">("all");
+
+  useEffect(() => {
+    // A filter from one marketplace should not silently hide rows in another.
+    setStatusFilter("all");
+  }, [activeTab]);
 
   const periodMarketplaceRows = useMemo(
     () => {
@@ -488,6 +502,18 @@ export default function SkuListTabsClient({
 
           : marketplaceRows
               .ozon;
+
+  const filteredRows = useMemo(() => {
+    const terms = searchQuery.trim().toLocaleLowerCase("ru-RU")
+      .replaceAll("ё", "е").split(/\s+/).filter(Boolean);
+    return rows.filter(row => {
+      if (activeTab !== "all" && statusFilter !== "all" && row.status !== statusFilter) return false;
+      if (!terms.length) return true;
+      const text = [row.enot, row.sku, row.sellerArticle, row.productName, row.searchIndex]
+        .filter(Boolean).join(" ").toLocaleLowerCase("ru-RU").replaceAll("ё", "е");
+      return terms.every(term => text.includes(term));
+    });
+  }, [rows, activeTab, searchQuery, statusFilter]);
 
   const [
     savingMasterCodes,
@@ -716,7 +742,7 @@ export default function SkuListTabsClient({
   const totals =
     useMemo(
       () =>
-        rows.reduce(
+        filteredRows.reduce(
           (
             accumulator,
             row
@@ -748,7 +774,7 @@ export default function SkuListTabsClient({
           }
         ),
       [
-        rows,
+        filteredRows,
       ]
     );
 
@@ -756,7 +782,7 @@ export default function SkuListTabsClient({
   const sortedRows =
     useMemo(
       () =>
-        rows
+        filteredRows
           .map(
             (
               row,
@@ -787,7 +813,7 @@ export default function SkuListTabsClient({
               item.row
           ),
       [
-        rows,
+        filteredRows,
         sortKey,
         sortDirection,
       ]
@@ -1024,15 +1050,6 @@ export default function SkuListTabsClient({
     >
       <div
         className="sku-list-toolbar"
-        style={{
-          paddingRight: totalsLayout
-            ? 72
-              + totalsLayout.revenueWidth
-              + totalsLayout.profitWidth
-              + totalsLayout.purchasesWidth
-              + 12
-            : 0,
-        }}
       >
         <div
           className=
@@ -1142,19 +1159,16 @@ export default function SkuListTabsClient({
         </button>
         </div>
 
-        <div className="sku-list-period-controls">
-          <label className="sku-list-period-control">
-            <span>Год</span>
+        <div className="sku-list-period-controls" aria-label="Период отчёта">
+          <div className="sku-list-period-control">
             <ChoiceField
               label="Год"
               value={selectedYear}
               onChange={setSelectedYear}
               options={[{ value: "2026", label: "2026" }]}
             />
-          </label>
-
-          <label className="sku-list-period-control">
-            <span>Месяц</span>
+          </div>
+          <div className="sku-list-period-control">
             <ChoiceField
               label="Месяц"
               value={selectedMonth}
@@ -1164,8 +1178,26 @@ export default function SkuListTabsClient({
                 { value: "10", label: "Октябрь" },
               ]}
             />
-          </label>
+          </div>
         </div>
+      </div>
+      <div className="sku-list-filters">
+        <label className="sku-list-search">
+          <span className="sku-list-search-heading">Поиск по артикулу, ЕНОТ, SKU или названию</span>
+          <input type="search" aria-label="Поиск товара в списке артикулов"
+            autoComplete="off" placeholder="Например, артикул, ЕНОТ, SKU или название товара"
+            value={searchQuery} onChange={event => setSearchQuery(event.target.value)} />
+        </label>
+        {activeTab !== "all" && (
+          <label className="sku-list-filter-status">
+            <span>Статус товара</span>
+            <select value={statusFilter}
+              onChange={event => setStatusFilter(event.target.value as ProductArticleStatus | "all")}>
+              <option value="all">Все статусы</option>
+              {STATUS_OPTIONS.map(status => <option key={status} value={status}>{status}</option>)}
+            </select>
+          </label>
+        )}
       </div>
 
       {
@@ -1442,7 +1474,9 @@ export default function SkuListTabsClient({
                               colSpan={activeTab === "all" ? 5 : 8}
                               className="sku-list-period-empty"
                             >
-                              Данные за {selectedMonth === "10" ? "октябрь" : "сентябрь"} {selectedYear} для этого маркетплейса ещё не загружены.
+                              {searchQuery.trim() || (activeTab !== "all" && statusFilter !== "all")
+                                ? "По заданным условиям товары не найдены."
+                                : <>Данные за {selectedMonth === "10" ? "октябрь" : "сентябрь"} {selectedYear} для этого маркетплейса ещё не загружены.</>}
                             </td>
                           </tr>
                         )
