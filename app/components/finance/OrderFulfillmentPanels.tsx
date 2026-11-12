@@ -21,7 +21,7 @@ function SchemeTable({market,scheme,from,to}:{market:Market;scheme:string;from:s
  },[market,scheme,from,to]);
  const fields:[keyof Row,string][]=[
   ['article','Артикул'],['name','Товар'],['master_code','ЕНОТ'],['manager','КМ'],
-  ['orders','Заказы'],['cancelled','Отмены'],['buyouts','Выкупы'],
+  ['orders',market==='ozon'&&scheme==='fbo'?'Отправления*':'Заказы'],['cancelled','Отмены'],['buyouts','Выкупы'],
   ['revenue','Выручка'],['charges','Начисления/удержания'],['advertising','Реклама'],
   ['storage','Хранение'],['cogs','Себестоимость'],['mayak','ТК Маяк'],
   ['packing','Упаковка FBS'],['profit','Опер. прибыль']
@@ -78,7 +78,7 @@ function SchemePanel({market,scheme,label,from,to,group,note,error}:{market:Mark
     <span><strong>{title}</strong><small>{description}</small></span>
    </div>
    <div className="ozf-scheme-stats">
-    <span><small>{market==='ozon'?'Начисл. отправлений':'Заказы'}</small><strong>{group?fmt(group.orders):'—'}</strong></span>
+    <span><small>{market==='ozon'&&scheme==='fbo'?'Начисл. отправлений':'Заказы'}</small><strong>{group?fmt(group.orders):'—'}</strong></span>
     <span><small>Отмены</small><strong>{group?fmt(group.cancelled):'—'}</strong></span>
     <span><small>Сумма заказов</small><strong>{group?fmt(group.amount,'₽'):'—'}</strong></span>
    </div>
