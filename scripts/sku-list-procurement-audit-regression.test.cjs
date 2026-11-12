@@ -36,4 +36,12 @@ assert.match(source,/По заданным условиям товары не н
 assert.match(styles,/\.sku-list-search \{/);
 assert.match(styles,/\.sku-list-filter-status \{/);
 assert.match(styles,/\.sku-list-filters/);
-console.log("PASS procurement audit history and live SKU search/status filters: period bar, actor and totals");
+const modeStyles = read("app/WorkspaceModeSwitcher.module.css");
+assert.match(source,/maxWidth:\s*totalsLayout[\s\S]*?totalsLayout\.left - 12/,"Search controls must stop before the measured totals panel");
+assert.match(modeStyles,/--mode-foreground:\s*var\(--ws-text-muted\)/,"Light work mode must mirror the inactive moon");
+assert.match(modeStyles,/--mode-foreground:\s*var\(--ws-blue\)/,"Light admin mode must mirror the selected sun");
+assert.match(modeStyles,/:global\(html\[data-theme="dark"\]\) \.modeButton \{/,"Dark work mode must mirror the inactive sun");
+assert.match(modeStyles,/color-mix\(in srgb, var\(--ws-icon\) 82%, #ffffff\)/,"Dark sun tone must match the theme switch");
+assert.match(modeStyles,/:global\(html\[data-theme="dark"\]\) \.modeButtonAdmin \{/,"Dark admin must mirror the selected moon");
+assert.match(modeStyles,/color-mix\(in srgb, var\(--ws-icon\) 13%, var\(--ws-surface\)\)/,"Selected dark moon background must match the theme switch");
+console.log("PASS procurement audit history and live SKU search/status filters: period bar, actor, totals, responsive filters and theme mode colors");

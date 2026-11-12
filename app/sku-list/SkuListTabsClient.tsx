@@ -1181,7 +1181,16 @@ export default function SkuListTabsClient({
           </div>
         </div>
       </div>
-      <div className="sku-list-filters">
+      <div
+        className="sku-list-filters"
+        style={{
+          // The totals bar starts at the measured revenue-column boundary.
+          // Keep the search and status filter to its left, including on resize.
+          maxWidth: totalsLayout
+            ? Math.max(0, totalsLayout.left - 12)
+            : "calc(100% - 340px)",
+        }}
+      >
         <label className="sku-list-search">
           <span className="sku-list-search-heading">Поиск по артикулу, ЕНОТ, SKU или названию</span>
           <input type="search" aria-label="Поиск товара в списке артикулов"

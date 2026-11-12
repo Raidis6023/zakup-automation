@@ -1,212 +1,84 @@
+/* The workspace-mode pill mirrors the two halves of the actual theme toggle.
+ * Light: work = moon (inactive), admin = sun (selected).
+ * Dark:  work = sun (inactive), admin = moon (selected).
+ * All tones reuse the same live workspace palette as .home-theme-toggle. */
 .modeButton {
+  --mode-foreground: var(--ws-text-muted);
+  --mode-background: var(--ws-surface-soft);
+  --mode-border: var(--ws-border);
+
   display: inline-flex;
-
   align-items: center;
-
   justify-content: center;
-
   gap: 8px;
-
   height: 36px;
-
-  padding:
-    0
-    12px;
-
-  border:
-    1px solid
-    var(--border);
-
+  padding: 0 12px;
+  border: 1px solid var(--mode-border);
   border-radius: 999px;
-
-  background:
-    var(--surface-soft);
-
-  color:
-    var(--text-secondary);
-
-  font-family:
-    inherit;
-
+  background: var(--mode-background);
+  color: var(--mode-foreground);
+  font-family: inherit;
   font-size: 11px;
-
   font-weight: 700;
-
   white-space: nowrap;
-
   cursor: pointer;
-
-  transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease,
-    color 0.15s ease;
+  transition: border-color .15s ease, background-color .15s ease, color .15s ease;
 }
-
-
 .modeButton:hover {
-  border-color:
-    var(--border-strong);
-
-  background:
-    var(--surface-strong);
-
-  color:
-    var(--text);
+  --mode-background: var(--ws-surface-hover);
+  --mode-border: var(--border-strong);
 }
-
-
+/* The selected sun in the light theme uses --ws-surface and --ws-blue. */
 .modeButtonAdmin {
-  border-color:
-    color-mix(in srgb, var(--ws-blue) 45%, transparent);
-
-  background:
-    color-mix(in srgb, var(--ws-blue) 10%, transparent);
-
-  color:
-    var(--ws-blue);
+  --mode-foreground: var(--ws-blue);
+  --mode-background: var(--ws-surface);
+  --mode-border: color-mix(in srgb, var(--ws-blue) 35%, var(--ws-border));
+  box-shadow: 0 1px 6px rgba(0,0,0,.12);
 }
-
-
 .modeButtonAdmin:hover {
-  border-color:
-    color-mix(in srgb, var(--ws-blue) 70%, transparent);
-
-  background:
-    color-mix(in srgb, var(--ws-blue) 16%, transparent);
-
-  color:
-    var(--ws-blue-hover);
+  --mode-background: var(--ws-surface);
+  --mode-border: color-mix(in srgb, var(--ws-blue) 60%, var(--ws-border));
 }
-
-
 .modeIcon {
   display: inline-flex;
-
   align-items: center;
-
   justify-content: center;
-
   width: 16px;
-
   height: 16px;
-
-  flex:
-    0 0 16px;
+  flex: 0 0 16px;
 }
-
-
 .modeIcon svg {
   width: 16px;
-
   height: 16px;
-
   fill: none;
-
-  stroke:
-    currentColor;
-
+  stroke: currentColor;
   stroke-width: 1.8;
-
   stroke-linecap: round;
-
   stroke-linejoin: round;
 }
 
-
-@media (
-  max-width: 900px
-) {
-
-  .modeLabel {
-    display: none;
-  }
-
-
-  .modeButton {
-    width: 36px;
-
-    padding: 0;
-  }
-
-}
-
-
-/* ============================================================
-   DARK THEME CONTRAST
-   ============================================================ */
-
+/* Sun (unselected) in the dark toggle; same background and glyph treatment. */
 :global(html[data-theme="dark"]) .modeButton {
-  border-color:
-    color-mix(
-      in srgb,
-      var(--ws-border) 72%,
-      #ffffff
-    );
-
-  background:
-    color-mix(
-      in srgb,
-      var(--ws-surface-soft) 88%,
-      #ffffff
-    );
-
-  color:
-    var(--ws-text-secondary);
+  --mode-foreground: color-mix(in srgb, var(--ws-icon) 82%, #ffffff);
+  --mode-background: color-mix(in srgb, var(--ws-surface-soft) 88%, var(--ws-icon));
+  --mode-border: color-mix(in srgb, var(--ws-icon) 34%, var(--ws-border));
 }
-
 :global(html[data-theme="dark"]) .modeButton:hover {
-  border-color:
-    color-mix(
-      in srgb,
-      var(--ws-border) 55%,
-      #ffffff
-    );
-
-  background:
-    color-mix(
-      in srgb,
-      var(--ws-surface-hover) 88%,
-      #ffffff
-    );
-
-  color:
-    var(--ws-text);
+  --mode-background: color-mix(in srgb, var(--ws-surface-soft) 78%, var(--ws-icon));
+  --mode-border: color-mix(in srgb, var(--ws-icon) 48%, var(--ws-border));
 }
-
+/* Moon (selected) in the dark toggle; mirrors its gold-on-dark active face. */
 :global(html[data-theme="dark"]) .modeButtonAdmin {
-  border-color:
-    color-mix(
-      in srgb,
-      var(--ws-icon) 62%,
-      transparent
-    );
-
-  background:
-    color-mix(
-      in srgb,
-      var(--ws-icon) 14%,
-      var(--ws-surface)
-    );
-
-  color:
-    var(--ws-icon);
+  --mode-foreground: var(--ws-icon);
+  --mode-background: color-mix(in srgb, var(--ws-icon) 13%, var(--ws-surface));
+  --mode-border: color-mix(in srgb, var(--ws-icon) 38%, var(--ws-border));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ws-icon) 24%, transparent);
 }
-
 :global(html[data-theme="dark"]) .modeButtonAdmin:hover {
-  border-color:
-    color-mix(
-      in srgb,
-      var(--ws-icon) 82%,
-      transparent
-    );
-
-  background:
-    color-mix(
-      in srgb,
-      var(--ws-icon) 20%,
-      var(--ws-surface)
-    );
-
-  color:
-    var(--ws-icon);
+  --mode-background: color-mix(in srgb, var(--ws-icon) 19%, var(--ws-surface));
+  --mode-border: color-mix(in srgb, var(--ws-icon) 60%, var(--ws-border));
+}
+@media (max-width: 900px) {
+  .modeLabel { display: none; }
+  .modeButton { width: 36px; padding: 0; }
 }
