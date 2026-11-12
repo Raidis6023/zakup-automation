@@ -363,3 +363,22 @@ html[data-theme="dark"] .ozf-page {
 .ozf-financial-summary .ozf-financial-table thead th{text-align:center!important;vertical-align:middle}
 .ozf-financial-summary .ozf-financial-table thead .ozf-sort-control{display:flex;align-items:center;justify-content:center;text-align:center;width:100%;gap:2px}
 .ozf-expanded-content .ozf-collapse-detail{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:5px 11px;font-size:11px}
+
+
+/* Common for Ozon, WB and Yandex: center sortable table headings, not data cells.
+   Earlier nth-child rules still right-align financial amounts; they must not
+   override the center of the header buttons. */
+.ozf-page table.ozf-financial-table thead tr > th {
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+.ozf-page table.ozf-financial-table thead tr > th > button.ozf-sort-control {
+  display: flex !important;
+  width: 100% !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  white-space: normal !important;
+  line-height: 1.2 !important;
+  gap: 2px;
+}
