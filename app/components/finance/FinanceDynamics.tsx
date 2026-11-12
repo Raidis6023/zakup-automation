@@ -13,7 +13,6 @@ export default function FinanceDynamics({marketplace,from,to,offer,offers,select
  const offerKey=offers?.slice().sort().join('\0');useEffect(()=>{setMetric(selected);setFlow(false)},[selected]);
  useEffect(()=>{if(provided){setPoints(provided);return;}let live=true;setPoints(null);setError('');if(!from||!to)return;prepareFinanceSeries(marketplace,from,to,revision).then(bundle=>{if(live)setPoints(dailyChanges(bundle,marketplace,offer,offerKey?.split('\0')))}).catch(e=>{if(live)setError(e.message)});return()=>{live=false}},[marketplace,from,to,offer,offerKey,revision,provided]);
  const keys=flow?(['profit','advertising','inbound','marketplace'] as const):[metric];
- const basis=(p:FinancePoint)=>flow?(p.composition??p.v):p.v;
  // Exclude days with no financial operations in an article-scoped chart.
  // A booking without any charge is not evidence of revenue/profit.
  const plottedPoints=useMemo(()=>offer||offers?.length
@@ -23,8 +22,8 @@ export default function FinanceDynamics({marketplace,from,to,offer,offers,select
  const incomplete=Boolean(points&&points.some(p=>p.v.profit===null));
  const actual=points?.reduce((s,p)=>s+(p.v.profit??0),0)??null;
  const mismatch=!incomplete&&expectedProfit!==null&&actual!==null&&Math.abs(actual-expectedProfit)>Math.max(.03,Math.abs(expectedProfit)*.000001);
- const hasValue=Boolean(points?.some(p=>flow?keys.every(k=>basis(p)[k]!==null):p.v[metric]!==null));
- const hasGaps=Boolean(points?.some(p=>flow?keys.some(k=>basis(p)[k]===null):p.v[metric]===null));
+ const hasValue=Boolean(plot.some(p=>flow?keys.some(k=>p.values[k]!==null):p.values[metric]!==null));
+ const hasGaps=Boolean(plot.some(p=>flow?keys.some(k=>p.values[k]===null):p.values[metric]===null));
  const provisionalFlow=Boolean(flow&&points?.some(p=>p.provisional));
  const incompletePerformance=Boolean(flow&&marketplace==='ozon'&&points?.some(p=>p.adUnconfirmed));
  const unavailable=Boolean(points&&!hasValue);
@@ -33,7 +32,7 @@ export default function FinanceDynamics({marketplace,from,to,offer,offers,select
  {error?<p className="ozf-error" role="alert">{error}</p>:!points?<div className="bi-skeleton" role="status">Подготавливаем весь период…</div>:unavailable?<p className="ozf-error" role="alert">Для выбранного графика пока нет подтверждённых данных.</p>:<>
   {mismatch&&<p className="ozf-notice" role="status">Дневная прибыль пока не сверена с итогом периода: сумма по дням {new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(actual!)} ₽, итог {new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(expectedProfit!)} ₽, расхождение {new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(actual!-expectedProfit!)} ₽. График доступен для анализа, но суммы пока нельзя считать сверенными.</p>}
   {hasGaps&&<p className="bi-note">Часть дней не содержит достаточных данных для выбранной метрики. Пропуски не заменены нулём.</p>}
- {provisionalFlow&&<p className="bi-note">Структура предварительная: при неполных себестоимости или ТК Маяк участвуют только позиции с известными расходами. Эти доли не являются полным итогом магазина.</p>}
+ {provisionalFlow&&<p className="bi-note">Структура предварительная: доли рассчитаны только из известных величин. Отсутствующие статьи не заменены нулями; 100% здесь не означает полный финансовый результат.</p>}
  {marketplace==='ozon'&&flow&&<p className="bi-note">Реклама в структуре: фактические доступные расходы кампаний по дате показов, при отсутствии истории показываются начисления Seller. Эти суммы справочные и не вычитаются повторно из прибыли. Остальные доли предварительные до сверки бухгалтерских дат.{incompletePerformance?' История кампаний ещё неполная.':''}</p>}
  <BiChart points={plot} series={keys.map(key=>({key,label:names[key],color:flow?flowColors[key]:colors[key],negativeColor:key==='profit'?'#ef4444':undefined}))} unit={flow?'%':['orders','buyouts'].includes(metric)?'шт.':'₽'} stacked={flow} zero={zero} label={flow?'Доли затрат и прибыли по дням':names[metric]}/>{flow&&<div className="bi-legend">{keys.map(k=><span key={k}><i style={{background:flowColors[k]}}/>{names[k]}</span>)}</div>}</>}
  </section>;
