@@ -92,6 +92,25 @@ jobs:
           console.log("PASS: official Supabase database ports exposed only on localhost");
           NODE
 
+      - name: Boot disposable PostgreSQL 17 and verify extensions
+        shell: bash
+        run: |
+          # This is an isolated GitHub runner, not our office or cloud database.
+          docker network create panda_shared
+          cd .panda-local/supabase
+          cleanup() {
+            docker compose -f docker-compose.yml -f docker-compose.panda.yml \
+              --env-file .env down --volumes --remove-orphans || true
+            docker network rm panda_shared || true
+          }
+          trap cleanup EXIT
+          timeout 240s docker compose -f docker-compose.yml -f docker-compose.panda.yml \
+            --env-file .env up -d --wait db
+          docker compose -f docker-compose.yml -f docker-compose.panda.yml \
+            --env-file .env exec -T db \
+            psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
+              < "$GITHUB_WORKSPACE/infra/migration/selfhost-postgres-smoke.sql"
+
       - name: Build image with complete regression suite
         run: docker compose --env-file .env.docker build --progress plain panda-web
 
