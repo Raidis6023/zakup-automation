@@ -115,6 +115,7 @@ jobs:
               -f "$GITHUB_WORKSPACE/compose.server.yaml" \
               --env-file "$GITHUB_WORKSPACE/.env.docker" \
               down --volumes --remove-orphans || true
+            cd "$GITHUB_WORKSPACE/.panda-local/supabase"
             docker compose -f docker-compose.yml -f docker-compose.panda.yml \
               -f docker-compose.smoke.yml --env-file .env down --volumes --remove-orphans || true
             docker network rm panda_shared || true
@@ -178,7 +179,7 @@ jobs:
           # Panda must be able to find the private gateway from its container.
           docker compose -f compose.yaml -f compose.server.yaml \
             --env-file .env.docker exec -T panda-web node -e \
-            "fetch('http://supabase-gateway:8000/auth/v1/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+            "fetch('http://supabase-gateway:8000/auth/v1/health',{headers:{apikey:process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}}).then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
           node infra/migration/panda-connected-smoke.mjs "$RUNNER_TEMP/panda-ci-1c-token"
           rm -f "$RUNNER_TEMP/panda-ci-1c-token"
 
