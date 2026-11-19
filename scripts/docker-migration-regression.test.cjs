@@ -15,6 +15,7 @@ const wb = read("app/api/wb/daily-sync/route.ts");
 const ym = read("app/api/yandex/daily-sync/route.ts");
 const china = read("app/api/china/wb-operational-sales-sync/route.ts");
 const internal = read("lib/server/internal-origin.ts");
+const registryAlias = read("app/registry/page.tsx");
 
 assert.match(dockerfile, /FROM node:24-bookworm-slim AS deps/);
 assert.match(dockerfile, /COPY vendor\/xlsx-0\.20\.3\.tgz/);
@@ -31,6 +32,9 @@ assert.match(ignore, /^\.env\*/m);
 assert.doesNotMatch(ignore, /^vendor\b/m);
 
 assert.match(internal, /process\.env\.INTERNAL_APP_URL/);
+// The alias is a user-authenticated page and cannot be statically rendered.
+assert.match(registryAlias, /export const dynamic = "force-dynamic"/);
+assert.match(registryAlias, /export const runtime = "nodejs"/);
 assert.match(wb, /getInternalAppOrigin\(\)/);
 assert.match(ym, /return getInternalAppOrigin\(\)/);
 assert.doesNotMatch(wb + ym, /zakup-automation\.vercel\.app/);
