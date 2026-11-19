@@ -46,5 +46,36 @@
       "callsOldVercel": true
     }
   ],
-  "disclaimer": "Point-in-time counts. No user rows, personal data, credentials, secret values, cron commands, or file contents."
+  "disclaimer": "Point-in-time counts. No user rows, personal data, credentials, secret values, cron commands, or file contents.",
+  "schemaFingerprint": {
+    "columns": {
+      "count": 1354,
+      "digest": "9155a9d41309bd0efdfdc5f3fef188d2"
+    },
+    "constraints": {
+      "count": 478,
+      "digest": "fc23614a457fd701d6156981da4ffb12"
+    },
+    "functions": {
+      "count": 131,
+      "digest": "3fd66dd92ab8fa25c0b0b6f3f650fca9"
+    },
+    "indexes": {
+      "count": 298,
+      "digest": "0807e743ad13139026c8c448a46f7156"
+    },
+    "policies": {
+      "count": 4,
+      "digest": "90238cab9b422fd4c59f3592c308051a"
+    },
+    "tables": {
+      "count": 123,
+      "digest": "f07652530c19ddeef48dd7e2963292c7"
+    },
+    "triggers": {
+      "count": 15,
+      "digest": "31f6bd12dad4da2968d49aee0ab305e6"
+    }
+  },
+  "schemaFingerprintNote": "Read-only hash of public schema from 2026-11-19; rerun SQL immediately before cutover. Comparing against another day may legitimately differ."
 }
