@@ -9,6 +9,8 @@ services:
       # Browser continues to use NEXT_PUBLIC_SUPABASE_URL=https://public-address.
       # Server-side traffic stays inside Docker and bypasses NAT hairpin issues.
       SUPABASE_INTERNAL_URL: http://supabase-gateway:8000
+      # Legacy server-side REST calls also understand this older name.
+      SUPABASE_URL: http://supabase-gateway:8000
       SUPABASE_SECRET_KEY_FILE: /run/secrets/supabase_secret_key
       CRON_SECRET_FILE: /run/secrets/cron_secret
     secrets:
