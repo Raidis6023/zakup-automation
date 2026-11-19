@@ -22,7 +22,7 @@ type ChinaRun = {
 };
 
 async function read<T>(table: string, options: Record<string, string>): Promise<T[]> {
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const base = (process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL);
   const key = process.env.SUPABASE_SECRET_KEY;
   if (!base || !key) throw Error("Не настроен Supabase");
   const url = new URL(base + "/rest/v1/" + table);
