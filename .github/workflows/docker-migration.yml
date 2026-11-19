@@ -217,7 +217,7 @@ jobs:
           sudo grep -Eq 'ACL.*TABLE panda_ci_acl_probe' "$bundle/postgres-objects.txt"
           echo "PASS: the encrypted PostgreSQL backup preserves role definitions and GRANT privileges"
           cd "$GITHUB_WORKSPACE/.panda-local/supabase"
-          PANDA_RESTORE_BUNDLE="$bundle" PANDA_CI_DISPOSABLE=yes \
+          sudo -E env PANDA_RESTORE_BUNDLE="$bundle" PANDA_CI_DISPOSABLE=yes \
             bash "$GITHUB_WORKSPACE/infra/backup/disposable-full-restore.sh"
           cd "$GITHUB_WORKSPACE"
           docker compose -f compose.yaml -f compose.server.yaml --env-file .env.docker \
