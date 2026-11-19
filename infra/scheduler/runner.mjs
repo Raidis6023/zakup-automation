@@ -1,6 +1,5 @@
 import { readFile, writeFile, rename, mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { validateJobs, minuteKey, dueJobs } from "./schedule.mjs";
 
 const ENABLE_VALUE = "CUTOVER_CONFIRMED";
@@ -40,9 +39,9 @@ let ticking = false;
 const running = new Set();
 
 async function persist() {
-  const old = Object.keys(ledger).sort();
-  for (const key of old.slice(0, Math.max(0, old.length - 14 * 24 * 60))) {
-    delete ledger[key];
+  const cutoff = new Date(Date.now() - 14 * 86400000).toISOString().slice(0, 16);
+  for (const key of Object.keys(ledger)) {
+    if (key < cutoff) delete ledger[key];
   }
   const temp = statePath + ".tmp";
   await writeFile(temp, JSON.stringify(ledger), { mode: 0o600 });
