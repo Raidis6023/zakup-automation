@@ -6,7 +6,11 @@ services:
   api-gw:
     ports: !override
       - "127.0.0.1:8000:8000"
+    # Keep default network: api-gw must reach auth, rest and storage.
+    # A Compose override that specifies only panda_shared disconnects it
+    # from all the upstream services, despite passing static config tests.
     networks:
+      default: {}
       panda_shared:
         aliases:
           - supabase-gateway
