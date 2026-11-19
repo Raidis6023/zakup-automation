@@ -1,6 +1,6 @@
 # Separate overlay. Never starts without --profile cutover AND explicit gate.
 # Example (only after old cron is disabled and the data cutover is verified):
-# docker compose -f compose.yaml -f compose.scheduler.yaml --profile cutover up -d
+# docker compose -f compose.yaml -f compose.server.yaml -f compose.scheduler.yaml --profile cutover up -d
 services:
   panda-scheduler:
     container_name: panda-scheduler
@@ -20,7 +20,8 @@ services:
       - cron_secret
     volumes:
       - panda_scheduler_state:/state
-    restart: "no"
+    # Once explicitly enabled at cutover, survive physical server restarts.
+    restart: unless-stopped
     read_only: true
     tmpfs:
       - /tmp:size=16m,mode=1777
