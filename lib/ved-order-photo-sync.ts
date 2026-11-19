@@ -1,3 +1,4 @@
+import { getOzonCredentials } from "@/lib/integrations/secrets";
 // ============================================================
 // ТИПЫ
 // ============================================================
@@ -88,71 +89,12 @@ export type VedPhotoSyncResult = {
 // ============================================================
 
 function getConfig() {
-
-  const supabaseUrl =
-    (process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL);
-
-
-  const supabaseSecretKey =
-    process.env
-      .SUPABASE_SECRET_KEY;
-
-
-  const ozonClientId =
-    process.env
-      .OZON_CLIENT_ID;
-
-
-  const ozonApiKey =
-    process.env
-      .OZON_API_KEY;
-
-
-  if (!supabaseUrl) {
-
-    throw new Error(
-      "Vercel не видит NEXT_PUBLIC_SUPABASE_URL"
-    );
-
-  }
-
-
-  if (!supabaseSecretKey) {
-
-    throw new Error(
-      "Vercel не видит SUPABASE_SECRET_KEY"
-    );
-
-  }
-
-
-  if (!ozonClientId) {
-
-    throw new Error(
-      "Vercel не видит OZON_CLIENT_ID"
-    );
-
-  }
-
-
-  if (!ozonApiKey) {
-
-    throw new Error(
-      "Vercel не видит OZON_API_KEY"
-    );
-
-  }
-
-
-  return {
-    supabaseUrl,
-    supabaseSecretKey,
-    ozonClientId,
-    ozonApiKey,
-  };
-
+  const supabaseUrl = process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
+  if (!supabaseUrl) throw new Error("Не настроен адрес Supabase");
+  if (!supabaseSecretKey) throw new Error("Не настроен служебный ключ Supabase");
+  return { supabaseUrl, supabaseSecretKey };
 }
-
 
 // ============================================================
 // SUPABASE REQUEST
@@ -249,7 +191,11 @@ async function ozonPost<T>(
   path: string,
   body: Record<string, unknown>
 ): Promise<T> {
-  const { ozonClientId, ozonApiKey } = getConfig();
+  const { sellerClientId: ozonClientId, sellerApiKey: ozonApiKey } =
+    await getOzonCredentials();
+  if (!ozonClientId || !ozonApiKey) {
+    throw new Error("Не настроены ключи Ozon Seller в администрировании ПАНДЫ");
+  }
   let lastError: Error | null = null;
 
   // Small, bounded retry for Ozon's transient 429/5xx responses.
