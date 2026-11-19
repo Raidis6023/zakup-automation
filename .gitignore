@@ -40,3 +40,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local server data and secret mounts (never commit).
+/.panda-local/
+/.ci-secrets/
+/secrets/
+/backups/
