@@ -41,8 +41,10 @@ compose() {
 version="$(compose exec -T db psql -U postgres -d postgres -At -v ON_ERROR_STOP=1 -c 'SHOW server_version_num;' | tr -d '\r\n')"
 [[ "$version" =~ ^17[0-9]{4}$ ]] || die "Unexpected PostgreSQL version"
 # Full dump includes Auth, Storage metadata, Vault ciphertext and database functions.
+# Do NOT suppress owner/grants: Panda uses explicit database permissions.
+# The full backup must preserve role-specific privileges on restored data.
 compose exec -T db pg_dump -U postgres -d postgres --format=custom \
-  --no-owner --no-acl > "$stage/postgres.dump"
+  > "$stage/postgres.dump"
 [[ -s "$stage/postgres.dump" ]] || die "Postgres dump is empty"
 compose exec -T db pg_restore --list < "$stage/postgres.dump" > "$stage/postgres-objects.txt"
 [[ -s "$stage/postgres-objects.txt" ]] || die "Postgres dump cannot be inspected"
