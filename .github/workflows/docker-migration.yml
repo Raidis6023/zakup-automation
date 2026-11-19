@@ -92,24 +92,31 @@ jobs:
           console.log("PASS: official Supabase database ports exposed only on localhost");
           NODE
 
-      - name: Boot disposable PostgreSQL 17 and verify extensions
+      - name: Boot disposable PostgreSQL, Auth, REST and private Storage
         shell: bash
         run: |
-          # This is an isolated GitHub runner, not our office or cloud database.
+          # GitHub-only test: no production credentials and no cloud project.
           docker network create panda_shared
           cd .panda-local/supabase
+          umask 077
+          sh utils/generate-keys.sh --update-env > /dev/null
+          sh utils/add-new-auth-keys.sh --update-env > /dev/null
+          rm -f .env.old
+          # No public signup on the test database; create a synthetic user via admin.
+          sed -i 's/^DISABLE_SIGNUP=.*/DISABLE_SIGNUP=true/' .env
           cleanup() {
             docker compose -f docker-compose.yml -f docker-compose.panda.yml \
-              --env-file .env down --volumes --remove-orphans || true
+              -f docker-compose.smoke.yml --env-file .env down --volumes --remove-orphans || true
             docker network rm panda_shared || true
           }
           trap cleanup EXIT
-          timeout 240s docker compose -f docker-compose.yml -f docker-compose.panda.yml \
-            --env-file .env up -d --wait db
+          timeout 300s docker compose -f docker-compose.yml -f docker-compose.panda.yml \
+            -f docker-compose.smoke.yml --env-file .env up -d --wait api-gw
           docker compose -f docker-compose.yml -f docker-compose.panda.yml \
-            --env-file .env exec -T db \
+            -f docker-compose.smoke.yml --env-file .env exec -T db \
             psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
               < "$GITHUB_WORKSPACE/infra/migration/selfhost-postgres-smoke.sql"
+          node "$GITHUB_WORKSPACE/infra/migration/supabase-stack-smoke.mjs" .env
 
       - name: Build image with complete regression suite
         run: docker compose --env-file .env.docker build --progress plain panda-web
