@@ -117,9 +117,17 @@ const signed=await expectJson(await request("/storage/v1/object/sign/"+objectPat
   method:"POST",key:serviceKey,token:serviceKey,body:{expiresIn:60}
 }),[200],"Create private signed photo URL");
 const signedPath=signed.signedURL||signed.signedUrl;
-assert.ok(typeof signedPath==="string" && signedPath.startsWith("/storage/v1/"),"Invalid signed photo URL");
-const signedUrl=new URL(signedPath,origin);
-assert.equal(signedUrl.origin,origin,"Signed URL pointed to another host");
+assert.ok(typeof signedPath==="string","Missing signed photo URL");
+// The raw Storage REST endpoint returns a path relative to /storage/v1,
+// while SDK clients may return the full /storage/v1/object/sign/... URL.
+// Accept both, but never follow a URL pointing at a different origin.
+const parsed=new URL(signedPath,origin);
+assert.equal(parsed.origin,origin,"Signed photo URL pointed to an external host");
+const relativePath=parsed.pathname.startsWith("/storage/v1/")
+  ? parsed.pathname.slice("/storage/v1".length)
+  : parsed.pathname;
+assert.ok(relativePath.startsWith("/object/sign/"),"Unexpected signed photo URL path");
+const signedUrl=new URL("/storage/v1"+relativePath+parsed.search,origin);
 const signedResponse=await fetch(signedUrl,{signal:AbortSignal.timeout(15000),redirect:"error"});
 assert.equal(signedResponse.status,200,"Signed private photo was inaccessible");
 assert.deepEqual(Buffer.from(await signedResponse.arrayBuffer()),bytes,"Signed photo bytes were changed");
