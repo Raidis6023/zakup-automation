@@ -1,0 +1,22 @@
+# Overlay for the official Supabase self-hosted Docker stack.
+# Requires Docker Compose 2.24.4+ for !override.
+# The official upstream defaults publish API and DB ports on all interfaces.
+# Explicitly replace them with loopback-only bindings.
+services:
+  api-gw:
+    ports: !override
+      - "127.0.0.1:8000:8000"
+    networks:
+      panda_shared:
+        aliases:
+          - supabase-gateway
+
+  supavisor:
+    ports: !override
+      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:6543:6543"
+
+networks:
+  panda_shared:
+    external: true
+    name: panda_shared
