@@ -11,13 +11,19 @@ die() { echo "RESTORE BLOCKED: $*" >&2; exit 78; }
   die "Background jobs and external writes must be disabled"
 [[ "${PANDA_TEST_DUMP_DIR:-}" == /* && -d "$PANDA_TEST_DUMP_DIR" &&
    ! -L "$PANDA_TEST_DUMP_DIR" ]] || die "Absolute protected dump directory required"
+[[ "$(stat -c %a "$PANDA_TEST_DUMP_DIR")" == "700" &&
+   "$(stat -c %u "$PANDA_TEST_DUMP_DIR")" == "0" ]] ||
+  die "Sensitive dump directory must be owned by root and mode 0700"
+if git -C "$PANDA_TEST_DUMP_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  die "Sensitive source dump cannot be located inside a Git repository"
+fi
 [[ "${PGSERVICEFILE:-}" == /* && -s "$PGSERVICEFILE" && ! -L "$PGSERVICEFILE" ]] ||
   die "Provide local libpq service file, not a database URL with password"
 [[ "$(stat -c %a "$PGSERVICEFILE")" == "600" ]] || die "PGSERVICEFILE requires mode 600"
 [[ "${PANDA_TARGET_PGSERVICE:-}" =~ ^[A-Za-z0-9_-]+$ ]] || die "Invalid local service name"
 [[ "${PANDA_EXPECT_AUTH_USERS:-}" =~ ^[1-9][0-9]*$ ]] || die "Source staff count required"
 [[ "${PANDA_EXPECT_TABLES:-}" =~ ^[1-9][0-9]*$ ]] || die "Source table count required"
-for t in psql node grep stat; do command -v "$t" >/dev/null || die "Missing $t"; done
+for t in psql node grep stat git; do command -v "$t" >/dev/null || die "Missing $t"; done
 for name in roles schema data; do
   [[ -s "$PANDA_TEST_DUMP_DIR/$name.sql" && ! -L "$PANDA_TEST_DUMP_DIR/$name.sql" ]] ||
     die "Missing $name.sql"
