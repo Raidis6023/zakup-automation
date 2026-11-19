@@ -27,6 +27,9 @@ trap cleanup EXIT
 # Restore protected Vault schema with the privileged administrative role.
 admin="$(compose exec -T db psql -U postgres -d postgres -At -v ON_ERROR_STOP=1 -c "SELECT CASE WHEN rolsuper THEN 'yes' ELSE 'no' END FROM pg_roles WHERE rolname='supabase_admin'")"
 [[ "$admin" == "yes" ]] || die "Supabase administrative superuser is missing"
+source_auth_owner="$(compose exec -T db psql -U postgres -d postgres -At -v ON_ERROR_STOP=1 -c "SELECT pg_get_userbyid(relowner) FROM pg_class WHERE oid='auth.users'::regclass")"
+source_storage_owner="$(compose exec -T db psql -U postgres -d postgres -At -v ON_ERROR_STOP=1 -c "SELECT pg_get_userbyid(relowner) FROM pg_class WHERE oid='storage.objects'::regclass")"
+[[ -n "$source_auth_owner" && -n "$source_storage_owner" ]] || die "Missing source object owners"
 compose exec -T db createdb -U postgres -T template0 "$db"
 log="$(mktemp)"
 trap 'rm -f "$log"; cleanup' EXIT
@@ -34,7 +37,7 @@ echo "CHECK: attempting full database restore into isolated temporary DB"
 if ! timeout 240s docker compose -f docker-compose.yml -f docker-compose.panda.yml \
     -f docker-compose.smoke.yml --env-file .env exec -T db \
     pg_restore -U supabase_admin --dbname="$db" \
-    --no-owner --single-transaction --exit-on-error \
+    --single-transaction --exit-on-error \
     < "$PANDA_RESTORE_BUNDLE/postgres.dump" > "$log" 2>&1; then
   echo "FAIL: full backup cannot yet be restored into a clean PostgreSQL database" >&2
   grep -m 1 -E '^(pg_restore: error:|ERROR:)' "$log" | cut -c 1-180 >&2 || true
@@ -45,6 +48,15 @@ SELECT 'people='||count(*) FROM auth.users;
 SELECT 'photos='||count(*) FROM storage.objects;
 SELECT 'acl_fixture='||count(*) FROM public.panda_ci_acl_probe WHERE marker='fixture-only';
 SELECT 'acl_grant='||has_table_privilege('panda_ci_backup_reader','public.panda_ci_acl_probe','SELECT');
+SELECT 'vault_secret='||EXISTS(
+  SELECT 1 FROM vault.decrypted_secrets
+  WHERE name='panda_ci_restore_fixture'
+    AND decrypted_secret='synthetic-only-ci-secret-2026'
+);
+SELECT 'auth_owner='||pg_get_userbyid(relowner)
+  FROM pg_class WHERE oid='auth.users'::regclass;
+SELECT 'storage_owner='||pg_get_userbyid(relowner)
+  FROM pg_class WHERE oid='storage.objects'::regclass;
 SQL
 )"
 # The SQL above returns counts and one boolean only, never real records.
@@ -53,5 +65,8 @@ printf '%s\n' "$checks"
 printf '%s\n' "$checks" | grep -qx 'people=1'
 printf '%s\n' "$checks" | grep -qx 'photos=1'
 printf '%s\n' "$checks" | grep -qx 'acl_fixture=1'
-printf '%s\n' "$checks" | grep -qx 'acl_grant=t'
-echo "PASS: full dump restored to independent database, with synthetic Auth, Storage and ACL rows"
+printf '%s\n' "$checks" | grep -qx 'acl_grant=true'
+printf '%s\n' "$checks" | grep -qx 'vault_secret=true'
+printf '%s\n' "$checks" | grep -Fqx "auth_owner=$source_auth_owner"
+printf '%s\n' "$checks" | grep -Fqx "storage_owner=$source_storage_owner"
+echo "PASS: full dump restored to independent database, with synthetic Auth, Storage, ACL, ownership and Vault decryption"
