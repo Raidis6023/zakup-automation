@@ -6,7 +6,7 @@
  * signed links, tokens, password, or response bodies on failure.
  */
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 
 const envPath = process.argv[2];
@@ -132,4 +132,12 @@ const signedResponse=await fetch(signedUrl,{signal:AbortSignal.timeout(15000),re
 assert.equal(signedResponse.status,200,"Signed private photo was inaccessible");
 assert.deepEqual(Buffer.from(await signedResponse.arrayBuffer()),bytes,"Signed photo bytes were changed");
 console.log("PASS: private Storage upload/download, access denied publicly, signed photo URL");
+// Record only synthetic test credentials for the restart test.
+// Do not print them and never persist any working-system credentials.
+if (process.argv[3]) {
+  await writeFile(process.argv[3], JSON.stringify({
+    userId: created.id, email, password, objectPath,
+  }), {mode: 0o600});
+  console.log("PASS: synthetic restart fixture saved with private permissions");
+}
 console.log("PASS: isolated Supabase Auth, REST and Storage integration");
