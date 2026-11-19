@@ -38,6 +38,9 @@ jobs:
       - name: Validate migration guardrails
         run: node scripts/docker-migration-regression.test.cjs
 
+      - name: Verify marketplace keys remain admin-managed
+        run: node scripts/docker-credentials-regression.test.cjs
+
       - name: Validate scheduled jobs without starting them
         run: node scripts/docker-scheduler.test.mjs
 
@@ -58,6 +61,31 @@ jobs:
           PANDA_SECRETS_DIR="$GITHUB_WORKSPACE/.ci-secrets" \
             docker compose -f compose.yaml -f compose.server.yaml \
               -f compose.scheduler.yaml --env-file .env.docker config --quiet
+
+      - name: Check official self-hosted database network isolation
+        shell: bash
+        run: |
+          bash infra/supabase/prepare.sh "$GITHUB_WORKSPACE/.panda-local/supabase"
+          cd .panda-local/supabase
+          docker compose -f docker-compose.yml -f docker-compose.panda.yml \
+            --env-file .env config --format json > "$RUNNER_TEMP/supabase-resolved.json"
+          node - "$RUNNER_TEMP/supabase-resolved.json" <<'NODE'
+          const fs = require("fs");
+          const cfg = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const allowed = { "api-gw": ["8000"], "supavisor": ["5432", "6543"] };
+          for (const [name, service] of Object.entries(cfg.services ?? {})) {
+            const ports = service.ports ?? [];
+            const expected = allowed[name] ?? [];
+            if (ports.length !== expected.length) throw Error(name + ": unexpected public ports");
+            for (const port of ports) {
+              if (port.host_ip !== "127.0.0.1" ||
+                  !expected.includes(String(port.published))) {
+                throw Error(name + ": non-loopback or unexpected published port");
+              }
+            }
+          }
+          console.log("PASS: official Supabase database ports exposed only on localhost");
+          NODE
 
       - name: Build image with complete regression suite
         run: docker compose --env-file .env.docker build --progress plain panda-web
