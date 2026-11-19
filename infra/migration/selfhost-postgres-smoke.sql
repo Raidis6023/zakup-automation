@@ -14,6 +14,9 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_available_extensions WHERE name = 'pg_net') THEN
     RAISE EXCEPTION 'pg_net is absent from the selected DB image';
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_available_extensions WHERE name = 'supabase_vault') THEN
+    RAISE EXCEPTION 'supabase_vault is absent: admin-managed marketplace keys cannot be restored';
+  END IF;
 END;
 $panda$;
-SELECT 'PASS: PostgreSQL 17 and required cron/net extensions are available' AS status;
+SELECT 'PASS: PostgreSQL 17, pg_cron, pg_net and supabase_vault are available' AS status;
