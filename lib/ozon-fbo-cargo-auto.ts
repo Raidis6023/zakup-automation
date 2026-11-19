@@ -114,7 +114,7 @@ function chunk<T>(values: T[], size: number) {
 async function getConfig() {
   const { sellerClientId: ozonClientId, sellerApiKey: ozonApiKey } = await getOzonCredentials();
   const supabaseUrl =
-    process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
+    (process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL)?.replace(/\/$/, "");
   const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY?.trim();
 
   if (!ozonClientId || !ozonApiKey || !supabaseUrl || !supabaseSecretKey) {
