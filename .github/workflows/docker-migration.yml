@@ -53,6 +53,8 @@ jobs:
         run: |
           bash -n infra/supabase/prepare.sh
           bash -n infra/migration/disposable-backup-smoke.sh
+          bash -n infra/migration/check-migration-baseline.sh
+          node --check infra/migration/panda-connected-smoke.mjs
           node --check infra/docker/entrypoint.mjs
           node --check infra/scheduler/schedule.mjs
           node --check infra/scheduler/runner.mjs
@@ -97,6 +99,7 @@ jobs:
         shell: bash
         run: |
           # GitHub-only test: no production credentials and no cloud project.
+          export PANDA_SECRETS_DIR="$GITHUB_WORKSPACE/.ci-secrets"
           docker network create panda_shared
           cp "$GITHUB_WORKSPACE/infra/supabase/docker-compose.smoke.yml" .panda-local/supabase/docker-compose.smoke.yml
           cd .panda-local/supabase
@@ -107,6 +110,11 @@ jobs:
           # No public signup on the test database; create a synthetic user via admin.
           sed -i 's/^DISABLE_SIGNUP=.*/DISABLE_SIGNUP=true/' .env
           cleanup() {
+            # Tear down web first so its private network dependency is released.
+            docker compose -f "$GITHUB_WORKSPACE/compose.yaml" \
+              -f "$GITHUB_WORKSPACE/compose.server.yaml" \
+              --env-file "$GITHUB_WORKSPACE/.env.docker" \
+              down --volumes --remove-orphans || true
             docker compose -f docker-compose.yml -f docker-compose.panda.yml \
               -f docker-compose.smoke.yml --env-file .env down --volumes --remove-orphans || true
             docker network rm panda_shared || true
@@ -136,6 +144,37 @@ jobs:
           # files are actually restorable, not merely created.
           PANDA_CI_DISPOSABLE=yes \
             bash "$GITHUB_WORKSPACE/infra/migration/disposable-backup-smoke.sh"
+
+          # Prove that the existing 85+ SQL migration files are incremental.
+          # A fresh blank database requires a safe full schema export first.
+          PANDA_CI_DISPOSABLE=yes \
+            bash "$GITHUB_WORKSPACE/infra/migration/check-migration-baseline.sh"
+
+          # Exercise the actual Panda web image against the same isolated
+          # official Supabase Auth/REST/Storage installation.
+          publishable="$(sed -n 's/^SUPABASE_PUBLISHABLE_KEY=//p' .env | tail -1)"
+          service="$(sed -n 's/^SUPABASE_SECRET_KEY=//p' .env | tail -1)"
+          test -n "$publishable" && test -n "$service"
+          printf '%s\n' "$service" > "$PANDA_SECRETS_DIR/supabase-secret-key"
+          openssl rand -hex 32 > "$PANDA_SECRETS_DIR/cron-secret"
+          sudo chgrp 1000 "$PANDA_SECRETS_DIR/supabase-secret-key" "$PANDA_SECRETS_DIR/cron-secret"
+          chmod 640 "$PANDA_SECRETS_DIR/supabase-secret-key" "$PANDA_SECRETS_DIR/cron-secret"
+          cat > "$GITHUB_WORKSPACE/.env.docker" <<ENV
+          NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:8000
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$publishable
+          ENV
+          chmod 600 "$GITHUB_WORKSPACE/.env.docker"
+          cd "$GITHUB_WORKSPACE"
+          docker compose -f compose.yaml -f compose.server.yaml \
+            --env-file .env.docker build --progress plain panda-web
+          docker compose -f compose.yaml -f compose.server.yaml \
+            --env-file .env.docker up -d --no-build --wait panda-web
+
+          # Panda must be able to find the private gateway from its container.
+          docker compose -f compose.yaml -f compose.server.yaml \
+            --env-file .env.docker exec -T panda-web node -e \
+            "fetch('http://supabase-gateway:8000/auth/v1/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+          node infra/migration/panda-connected-smoke.mjs
 
       - name: Build image with complete regression suite
         run: docker compose --env-file .env.docker build --progress plain panda-web
