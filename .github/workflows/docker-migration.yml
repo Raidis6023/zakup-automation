@@ -41,6 +41,24 @@ jobs:
       - name: Validate scheduled jobs without starting them
         run: node scripts/docker-scheduler.test.mjs
 
+      - name: Check infrastructure scripts and security guardrails
+        run: |
+          bash -n infra/supabase/prepare.sh
+          node --check infra/docker/entrypoint.mjs
+          node --check infra/scheduler/schedule.mjs
+          node --check infra/scheduler/runner.mjs
+          node scripts/docker-infra-regression.test.cjs
+
+      - name: Validate protected server overlays
+        shell: bash
+        run: |
+          mkdir -p .ci-secrets
+          printf 'not-a-real-key\n' > .ci-secrets/supabase-secret-key
+          printf 'not-a-real-secret-just-ci-validation-value\n' > .ci-secrets/cron-secret
+          PANDA_SECRETS_DIR="$GITHUB_WORKSPACE/.ci-secrets" \
+            docker compose -f compose.yaml -f compose.server.yaml \
+              -f compose.scheduler.yaml --env-file .env.docker config --quiet
+
       - name: Build image with complete regression suite
         run: docker compose --env-file .env.docker build --progress plain panda-web
 
