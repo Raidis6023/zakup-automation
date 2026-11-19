@@ -23,13 +23,17 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Ordinary "postgres" is not a superuser in Supabase.
+# Restore protected Vault schema with the privileged administrative role.
+admin="$(compose exec -T db psql -U postgres -d postgres -At -v ON_ERROR_STOP=1 -c "SELECT CASE WHEN rolsuper THEN 'yes' ELSE 'no' END FROM pg_roles WHERE rolname='supabase_admin'")"
+[[ "$admin" == "yes" ]] || die "Supabase administrative superuser is missing"
 compose exec -T db createdb -U postgres -T template0 "$db"
 log="$(mktemp)"
 trap 'rm -f "$log"; cleanup' EXIT
 echo "CHECK: attempting full database restore into isolated temporary DB"
 if ! timeout 240s docker compose -f docker-compose.yml -f docker-compose.panda.yml \
     -f docker-compose.smoke.yml --env-file .env exec -T db \
-    pg_restore -U postgres --dbname="$db" \
+    pg_restore -U supabase_admin --dbname="$db" \
     --no-owner --single-transaction --exit-on-error \
     < "$PANDA_RESTORE_BUNDLE/postgres.dump" > "$log" 2>&1; then
   echo "FAIL: full backup cannot yet be restored into a clean PostgreSQL database" >&2
