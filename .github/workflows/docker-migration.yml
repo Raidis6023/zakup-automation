@@ -117,7 +117,19 @@ jobs:
             -f docker-compose.smoke.yml --env-file .env exec -T db \
             psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
               < "$GITHUB_WORKSPACE/infra/migration/selfhost-postgres-smoke.sql"
-          node "$GITHUB_WORKSPACE/infra/migration/supabase-stack-smoke.mjs" .env
+          node "$GITHUB_WORKSPACE/infra/migration/supabase-stack-smoke.mjs" \
+            .env "$RUNNER_TEMP/panda-ci-persistence.json"
+
+          # A restart must keep database rows and private file bytes intact.
+          # NEVER use down --volumes for this test.
+          docker compose -f docker-compose.yml -f docker-compose.panda.yml \
+            -f docker-compose.smoke.yml --env-file .env stop \
+            api-gw auth rest storage imgproxy db
+          timeout 180s docker compose -f docker-compose.yml -f docker-compose.panda.yml \
+            -f docker-compose.smoke.yml --env-file .env up -d --wait api-gw
+          node "$GITHUB_WORKSPACE/infra/migration/supabase-persistence-smoke.mjs" \
+            .env "$RUNNER_TEMP/panda-ci-persistence.json"
+          rm -f "$RUNNER_TEMP/panda-ci-persistence.json"
 
       - name: Build image with complete regression suite
         run: docker compose --env-file .env.docker build --progress plain panda-web
