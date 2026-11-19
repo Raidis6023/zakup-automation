@@ -63,6 +63,16 @@ jobs:
           node --check infra/scheduler/runner.mjs
           node scripts/docker-infra-regression.test.cjs
 
+      - name: Verify actual-data restore safeguards without touching any database
+        shell: bash
+        run: |
+          bash -n infra/migration/restore-platform-test.sh
+          bash -n infra/migration/copy-verify-private-storage.sh
+          bash -n infra/migration/test-restore-guards.sh
+          bash -n infra/migration/test-storage-guards.sh
+          sudo env GITHUB_ACTIONS=true bash infra/migration/test-restore-guards.sh
+          sudo env GITHUB_ACTIONS=true bash infra/migration/test-storage-guards.sh
+
       - name: Validate protected server overlays
         shell: bash
         run: |
