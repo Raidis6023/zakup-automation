@@ -1,3 +1,4 @@
+import { getServerSupabaseFetch } from "./server-fetch";
 import {
   createServerClient,
 } from "@supabase/ssr";
@@ -234,6 +235,7 @@ export async function updateSession(
       supabaseUrl,
       supabasePublishableKey,
       {
+        global: { fetch: getServerSupabaseFetch() },
         cookies: {
 
           getAll() {
