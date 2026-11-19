@@ -1,5 +1,5 @@
 export function parseDailySchedule(value) {
-  const match = /^(\\d{1,2}) (\\d{1,2}) \\* \\* \\*$/.exec(value);
+  const match = /^(\d{1,2}) (\d{1,2}) \* \* \*$/.exec(value);
   if (!match) throw new Error("Only fixed daily UTC schedules are supported");
   const minute = Number(match[1]);
   const hour = Number(match[2]);
@@ -13,7 +13,7 @@ export function validateJobs(jobs) {
   return jobs.map((job) => {
     if (
       !job || typeof job.path !== "string" ||
-      !/^\\/api\\/[a-z0-9/_-]+$/.test(job.path) ||
+      !/^\/api\/(?:[a-z0-9_-]+\/)*[a-z0-9_-]+$/.test(job.path) ||
       typeof job.schedule !== "string" || paths.has(job.path)
     ) throw new Error("Invalid or repeated scheduler route");
     paths.add(job.path);
