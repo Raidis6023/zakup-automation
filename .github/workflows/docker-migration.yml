@@ -155,6 +155,10 @@ jobs:
           publishable="$(sed -n 's/^SUPABASE_PUBLISHABLE_KEY=//p' .env | tail -1)"
           service="$(sed -n 's/^SUPABASE_SECRET_KEY=//p' .env | tail -1)"
           test -n "$publishable" && test -n "$service"
+          one_c_token="$(openssl rand -hex 32)"
+          one_c_hash="$(printf '%s' "$one_c_token" | sha256sum | cut -d' ' -f1)"
+          printf '%s' "$one_c_token" > "$RUNNER_TEMP/panda-ci-1c-token"
+          chmod 600 "$RUNNER_TEMP/panda-ci-1c-token"
           printf '%s\n' "$service" > "$PANDA_SECRETS_DIR/supabase-secret-key"
           openssl rand -hex 32 > "$PANDA_SECRETS_DIR/cron-secret"
           sudo chgrp 1000 "$PANDA_SECRETS_DIR/supabase-secret-key" "$PANDA_SECRETS_DIR/cron-secret"
@@ -162,6 +166,7 @@ jobs:
           cat > "$GITHUB_WORKSPACE/.env.docker" <<ENV
           NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:8000
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$publishable
+          ONE_C_API_KEY_SHA256=$one_c_hash
           ENV
           chmod 600 "$GITHUB_WORKSPACE/.env.docker"
           cd "$GITHUB_WORKSPACE"
@@ -174,7 +179,8 @@ jobs:
           docker compose -f compose.yaml -f compose.server.yaml \
             --env-file .env.docker exec -T panda-web node -e \
             "fetch('http://supabase-gateway:8000/auth/v1/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
-          node infra/migration/panda-connected-smoke.mjs
+          node infra/migration/panda-connected-smoke.mjs "$RUNNER_TEMP/panda-ci-1c-token"
+          rm -f "$RUNNER_TEMP/panda-ci-1c-token"
 
       - name: Build image with complete regression suite
         run: docker compose --env-file .env.docker build --progress plain panda-web
