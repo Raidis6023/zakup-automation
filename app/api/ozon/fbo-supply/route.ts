@@ -1,3 +1,4 @@
+import { getOzonCredentials } from "@/lib/integrations/secrets";
 import {
   createNextAutomaticCargoBatch,
 } from "@/lib/ozon-fbo-cargo-auto";
@@ -483,67 +484,13 @@ class OzonApiError extends Error {
 // ============================================================
 
 function getConfig() {
-
-  const ozonClientId =
-    process.env
-      .OZON_CLIENT_ID;
-
-  const ozonApiKey =
-    process.env
-      .OZON_API_KEY;
-
-  const supabaseUrl =
-    process.env
-      .NEXT_PUBLIC_SUPABASE_URL;
-
-  const supabaseSecretKey =
-    process.env
-      .SUPABASE_SECRET_KEY;
-
-
-  if (!ozonClientId) {
-
-    throw new Error(
-      "Не найдена OZON_CLIENT_ID"
-    );
-
-  }
-
-
-  if (!ozonApiKey) {
-
-    throw new Error(
-      "Не найдена OZON_API_KEY"
-    );
-
-  }
-
-
-  if (!supabaseUrl) {
-
-    throw new Error(
-      "Не найдена NEXT_PUBLIC_SUPABASE_URL"
-    );
-
-  }
-
-
-  if (!supabaseSecretKey) {
-
-    throw new Error(
-      "Не найдена SUPABASE_SECRET_KEY"
-    );
-
-  }
-
-
-  return {
-    ozonClientId,
-    ozonApiKey,
-    supabaseUrl,
-    supabaseSecretKey,
-  };
-
+  const supabaseUrl = (
+    process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+  )?.replace(/\/$/, "");
+  const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY?.trim();
+  if (!supabaseUrl) throw new Error("Не настроен адрес базы ПАНДЫ");
+  if (!supabaseSecretKey) throw new Error("Не настроен служебный ключ базы ПАНДЫ");
+  return { supabaseUrl, supabaseSecretKey };
 }
 
 
@@ -1296,11 +1243,11 @@ async function ozonPost<T>(
 ):
 Promise<T> {
 
-  const {
-    ozonClientId,
-    ozonApiKey,
-  } =
-    getConfig();
+  const { sellerClientId: ozonClientId, sellerApiKey: ozonApiKey } =
+    await getOzonCredentials();
+  if (!ozonClientId || !ozonApiKey) {
+    throw new Error("Укажите ключи Ozon Seller в администрировании ПАНДЫ");
+  }
 
 
   let lastError:
