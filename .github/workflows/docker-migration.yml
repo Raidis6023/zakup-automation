@@ -53,6 +53,8 @@ jobs:
         run: |
           bash -n infra/supabase/prepare.sh
           bash -n infra/migration/disposable-backup-smoke.sh
+          bash -n infra/backup/backup.sh
+          bash -n infra/backup/verify-bundle.sh
           bash -n infra/migration/check-migration-baseline.sh
           node --check infra/migration/panda-connected-smoke.mjs
           node --check infra/docker/entrypoint.mjs
@@ -182,6 +184,32 @@ jobs:
             "fetch('http://supabase-gateway:8000/auth/v1/health',{headers:{apikey:process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}}).then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
           node infra/migration/panda-connected-smoke.mjs "$RUNNER_TEMP/panda-ci-1c-token"
           rm -f "$RUNNER_TEMP/panda-ci-1c-token"
+
+          # Full encrypted backup rehearsal using ONLY synthetic local data.
+          # The production script normally refuses local repositories.
+          # This exception works exclusively inside the disposable CI runner.
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq restic >/dev/null
+          export RESTIC_REPOSITORY="$RUNNER_TEMP/panda-restic-repo"
+          export RESTIC_PASSWORD_FILE="$RUNNER_TEMP/panda-restic-password"
+          openssl rand -hex 32 > "$RESTIC_PASSWORD_FILE"
+          chmod 600 "$RESTIC_PASSWORD_FILE"
+          sudo -E restic init >/dev/null
+          sudo -E env PANDA_CI_DISPOSABLE=yes PANDA_WRITES_PAUSED=YES \
+            PANDA_SUPABASE_DIR="$GITHUB_WORKSPACE/.panda-local/supabase" \
+            PANDA_APP_DIR="$GITHUB_WORKSPACE" \
+            PANDA_SECRETS_DIR="$PANDA_SECRETS_DIR" \
+            PANDA_BACKUP_STAGE_DIR="$RUNNER_TEMP" \
+            bash "$GITHUB_WORKSPACE/infra/backup/backup.sh"
+          sudo -E restic check >/dev/null
+          sudo -E restic restore latest --target "$RUNNER_TEMP/panda-restored" >/dev/null
+          restored_dump="$(sudo find "$RUNNER_TEMP/panda-restored" -type f -name postgres.dump -print -quit)"
+          test -n "$restored_dump"
+          bundle="$(dirname "$restored_dump")"
+          sudo bash "$GITHUB_WORKSPACE/infra/backup/verify-bundle.sh" "$bundle"
+          docker compose -f compose.yaml -f compose.server.yaml --env-file .env.docker \
+            exec -T panda-web node -e "process.exit(0)"
+          echo "PASS: encrypted full backup created, repository checked and all components restored"
 
       - name: Build image with complete regression suite
         run: docker compose --env-file .env.docker build --progress plain panda-web
