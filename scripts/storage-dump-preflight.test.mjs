@@ -45,7 +45,21 @@ try {
   );
   assert.equal(quotedMetadata.status, 2);
 
-  console.log("PASS: migration guard detects stale photo rows and missing staff accounts");
+  const vaultDump = run(
+    "COPY auth.users (id) FROM stdin;\n100\n\\.\n" +
+    "COPY vault.secrets (id) FROM stdin;\n200\n\\.\n"
+  );
+  assert.equal(vaultDump.status, 4);
+  assert.match(vaultDump.stderr, /vault\.secrets/);
+
+  const cronDump = run(
+    "COPY auth.users (id) FROM stdin;\n100\n\\.\n" +
+    "COPY cron.job (jobid) FROM stdin;\n1\n\\.\n"
+  );
+  assert.equal(cronDump.status, 5);
+  assert.match(cronDump.stderr, /cron\.job/);
+
+  console.log("PASS: migration guards block stale Storage metadata, encrypted Vault rows, obsolete cron and missing users");
 } finally {
   rmSync(dir, { recursive: true, force: true });
 }
