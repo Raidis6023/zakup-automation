@@ -50,6 +50,7 @@ echo "CHECK: new private localhost PostgreSQL 17 target is empty"
 psql -X -w -q --single-transaction --set ON_ERROR_STOP=1 \
  --dbname "$conn" \
  --file "$PANDA_TEST_DUMP_DIR/roles.sql" \
+ --command 'ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM anon, authenticated;' \
  --file "$PANDA_TEST_DUMP_DIR/schema.sql" \
  --command 'SET session_replication_role = replica;' \
  --file "$PANDA_TEST_DUMP_DIR/data.sql" >/dev/null
