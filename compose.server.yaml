@@ -9,8 +9,20 @@ services:
       # Browser continues to use NEXT_PUBLIC_SUPABASE_URL=https://public-address.
       # Server-side traffic stays inside Docker and bypasses NAT hairpin issues.
       SUPABASE_INTERNAL_URL: http://supabase-gateway:8000
+      SUPABASE_SECRET_KEY_FILE: /run/secrets/supabase_secret_key
+      CRON_SECRET_FILE: /run/secrets/cron_secret
+    secrets:
+      - supabase_secret_key
+      - cron_secret
 
 networks:
   panda_shared:
     name: panda_shared
     external: true
+
+# Provide these files only on the target host, mode 600, never in Git.
+secrets:
+  supabase_secret_key:
+    file: ${PANDA_SECRETS_DIR:?Set PANDA_SECRETS_DIR}/supabase-secret-key
+  cron_secret:
+    file: ${PANDA_SECRETS_DIR:?Set PANDA_SECRETS_DIR}/cron-secret
