@@ -1,0 +1,14 @@
+[
+  {
+    "path": "/api/agents/ozon-finance-ads",
+    "schedule": "*/5 * * * *"
+  },
+  {
+    "path": "/api/agents/yandex-finance-cron",
+    "schedule": "*/10 * * * *"
+  },
+  {
+    "path": "/api/agents/yandex-finance-campaigns-cron",
+    "schedule": "5-59/10 * * * *"
+  }
+]
