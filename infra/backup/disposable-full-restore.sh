@@ -26,7 +26,10 @@ trap cleanup EXIT
 compose exec -T db createdb -U postgres -T template0 "$db"
 log="$(mktemp)"
 trap 'rm -f "$log"; cleanup' EXIT
-if ! compose exec -T db pg_restore -U postgres --dbname="$db" \
+echo "CHECK: attempting full database restore into isolated temporary DB"
+if ! timeout 240s docker compose -f docker-compose.yml -f docker-compose.panda.yml \
+    -f docker-compose.smoke.yml --env-file .env exec -T db \
+    pg_restore -U postgres --dbname="$db" \
     --no-owner --single-transaction --exit-on-error \
     < "$PANDA_RESTORE_BUNDLE/postgres.dump" > "$log" 2>&1; then
   echo "FAIL: full backup cannot yet be restored into a clean PostgreSQL database" >&2
