@@ -20,9 +20,9 @@ const secretPath = process.env.CRON_SECRET_FILE || "/run/secrets/cron_secret";
 const secret = (await readFile(secretPath, "utf8")).trim();
 if (secret.length < 32) throw new Error("Missing or unsafe CRON_SECRET");
 
-const jobs = validateJobs(JSON.parse(
-  await readFile(new URL("./jobs.json", import.meta.url), "utf8")
-));
+const dailyJobs = JSON.parse(await readFile(new URL("./jobs.json", import.meta.url), "utf8"));
+const recoveryJobs = JSON.parse(await readFile(new URL("./recovery-jobs.json", import.meta.url), "utf8"));
+const jobs = validateJobs([...dailyJobs, ...recoveryJobs]);
 const stateDir = process.env.SCHEDULER_STATE_DIR || "/state";
 const statePath = join(stateDir, "ledger.json");
 await mkdir(stateDir, { recursive: true });
