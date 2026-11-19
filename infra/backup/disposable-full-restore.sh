@@ -47,6 +47,9 @@ SELECT 'acl_fixture='||count(*) FROM public.panda_ci_acl_probe WHERE marker='fix
 SELECT 'acl_grant='||has_table_privilege('panda_ci_backup_reader','public.panda_ci_acl_probe','SELECT');
 SQL
 )"
+# The SQL above returns counts and one boolean only, never real records.
+echo "CHECK: post-restore synthetic counts and grant flags:"
+printf '%s\n' "$checks"
 printf '%s\n' "$checks" | grep -qx 'people=1'
 printf '%s\n' "$checks" | grep -qx 'photos=1'
 printf '%s\n' "$checks" | grep -qx 'acl_fixture=1'
