@@ -38,6 +38,11 @@ jobs:
       - name: Validate migration guardrails
         run: node scripts/docker-migration-regression.test.cjs
 
+      - name: Validate database dump safety without any real data
+        run: |
+          node --check scripts/storage-dump-preflight.mjs
+          node scripts/storage-dump-preflight.test.mjs
+
       - name: Verify marketplace keys remain admin-managed
         run: node scripts/docker-credentials-regression.test.cjs
 
