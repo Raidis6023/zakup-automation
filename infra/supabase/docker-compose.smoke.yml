@@ -1,0 +1,12 @@
+# Used ONLY by disposable GitHub tests to avoid pulling the admin studio,
+# pooler, Realtime, functions, analytics and monitoring services.
+# The normal production topology stays untouched.
+services:
+  api-gw:
+    depends_on: !override
+      auth:
+        condition: service_healthy
+      rest:
+        condition: service_healthy
+      storage:
+        condition: service_healthy
