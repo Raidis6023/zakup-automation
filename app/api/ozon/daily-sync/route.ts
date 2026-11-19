@@ -1,3 +1,4 @@
+import { getOzonCredentials } from "@/lib/integrations/secrets";
 export const runtime =
   "nodejs";
 
@@ -684,86 +685,15 @@ string | null {
 // ============================================================
 
 function getConfig() {
+  const supabaseUrl = process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
+  const cronSecret = process.env.CRON_SECRET;
 
-  const ozonClientId =
-    process.env
-      .OZON_CLIENT_ID;
-
-
-  const ozonApiKey =
-    process.env
-      .OZON_API_KEY;
-
-
-  const supabaseUrl =
-    (process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL);
-
-
-  const supabaseSecretKey =
-    process.env
-      .SUPABASE_SECRET_KEY;
-
-
-  const cronSecret =
-    process.env
-      .CRON_SECRET;
-
-
-  if (!ozonClientId) {
-
-    throw new Error(
-      "Не найдена переменная OZON_CLIENT_ID"
-    );
-
-  }
-
-
-  if (!ozonApiKey) {
-
-    throw new Error(
-      "Не найдена переменная OZON_API_KEY"
-    );
-
-  }
-
-
-  if (!supabaseUrl) {
-
-    throw new Error(
-      "Не найдена переменная NEXT_PUBLIC_SUPABASE_URL"
-    );
-
-  }
-
-
-  if (!supabaseSecretKey) {
-
-    throw new Error(
-      "Не найдена переменная SUPABASE_SECRET_KEY"
-    );
-
-  }
-
-
-  if (!cronSecret) {
-
-    throw new Error(
-      "Не найдена переменная CRON_SECRET"
-    );
-
-  }
-
-
-  return {
-    ozonClientId,
-    ozonApiKey,
-    supabaseUrl,
-    supabaseSecretKey,
-    cronSecret,
-  };
-
+  if (!supabaseUrl) throw new Error("Не настроен адрес Supabase");
+  if (!supabaseSecretKey) throw new Error("Не настроен служебный ключ Supabase");
+  if (!cronSecret) throw new Error("Не настроен CRON_SECRET");
+  return { supabaseUrl, supabaseSecretKey, cronSecret };
 }
-
 
 // ============================================================
 // AUTH
@@ -985,11 +915,11 @@ async function ozonPost<T>(
 ):
 Promise<T> {
 
-  const {
-    ozonClientId,
-    ozonApiKey,
-  } =
-    getConfig();
+  const { sellerClientId: ozonClientId, sellerApiKey: ozonApiKey } =
+    await getOzonCredentials();
+  if (!ozonClientId || !ozonApiKey) {
+    throw new Error("Не настроены ключи Ozon Seller в администрировании ПАНДЫ");
+  }
 
 
   for (
