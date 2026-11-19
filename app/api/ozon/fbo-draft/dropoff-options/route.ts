@@ -1,3 +1,4 @@
+import { getOzonCredentials } from "@/lib/integrations/secrets";
 export const runtime =
   "nodejs";
 
@@ -109,41 +110,10 @@ type DropOffResponse = {
 // CONFIG
 // ============================================================
 
-function getConfig() {
-
-  const ozonClientId =
-    process.env
-      .OZON_CLIENT_ID;
-
-
-  const ozonApiKey =
-    process.env
-      .OZON_API_KEY;
-
-
-  if (!ozonClientId) {
-
-    throw new Error(
-      "Не найдена переменная OZON_CLIENT_ID"
-    );
-
-  }
-
-
-  if (!ozonApiKey) {
-
-    throw new Error(
-      "Не найдена переменная OZON_API_KEY"
-    );
-
-  }
-
-
-  return {
-    ozonClientId,
-    ozonApiKey,
-  };
-
+async function getConfig() {
+  const { sellerClientId: ozonClientId, sellerApiKey: ozonApiKey } = await getOzonCredentials();
+  if (!ozonClientId || !ozonApiKey) throw new Error("Укажите ключи Ozon Seller в администрировании ПАНДЫ");
+  return { ozonClientId, ozonApiKey };
 }
 
 
@@ -182,7 +152,7 @@ Promise<T> {
     ozonClientId,
     ozonApiKey,
   } =
-    getConfig();
+    await getConfig();
 
 
   const controller =
