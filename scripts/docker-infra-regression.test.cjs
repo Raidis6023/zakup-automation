@@ -25,7 +25,7 @@ assert.match(overlay, /api-gw:/);
 assert.match(overlay, /supavisor:/);
 assert.equal((overlay.match(/ports: !override/g) ?? []).length, 2);
 for (const port of ["8000", "5432", "6543"])
-  assert.match(overlay, new RegExp("127\\\\.0\\\\.0\\\\.1:" + port + ":" + port));
+  assert.match(overlay, new RegExp("127\\.0\\.0\\.1:" + port + ":" + port));
 
 assert.match(app, /SUPABASE_INTERNAL_URL: http:\/\/supabase-gateway:8000/);
 assert.match(app, /SUPABASE_SECRET_KEY_FILE: \/run\/secrets\/supabase_secret_key/);
