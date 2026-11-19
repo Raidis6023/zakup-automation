@@ -16,3 +16,16 @@ CREATE TABLE public.panda_ci_acl_probe (
 );
 INSERT INTO public.panda_ci_acl_probe VALUES (1, 'fixture-only');
 GRANT SELECT ON TABLE public.panda_ci_acl_probe TO panda_ci_backup_reader;
+
+-- This synthetic secret must decrypt after restore with the original
+-- pgsodium root key. Never use marketplace keys in CI.
+DO $panda$
+BEGIN
+  PERFORM vault.create_secret(
+    'synthetic-only-ci-secret-2026',
+    'panda_ci_restore_fixture',
+    'Only a disposable automated test'
+  );
+END;
+$panda$;
+
