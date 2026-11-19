@@ -27,7 +27,7 @@ compose exec -T db createdb -U postgres -T template0 "$db"
 log="$(mktemp)"
 trap 'rm -f "$log"; cleanup' EXIT
 if ! compose exec -T db pg_restore -U postgres --dbname="$db" \
-    --no-owner --no-acl --single-transaction --exit-on-error \
+    --no-owner --single-transaction --exit-on-error \
     < "$PANDA_RESTORE_BUNDLE/postgres.dump" > "$log" 2>&1; then
   echo "FAIL: full backup cannot yet be restored into a clean PostgreSQL database" >&2
   grep -m 1 -E '^(pg_restore: error:|ERROR:)' "$log" | cut -c 1-180 >&2 || true
