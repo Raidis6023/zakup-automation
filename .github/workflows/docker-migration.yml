@@ -55,6 +55,7 @@ jobs:
           bash -n infra/migration/disposable-backup-smoke.sh
           bash -n infra/backup/backup.sh
           bash -n infra/backup/verify-bundle.sh
+          bash -n infra/backup/disposable-full-restore.sh
           bash -n infra/migration/check-migration-baseline.sh
           node --check infra/migration/panda-connected-smoke.mjs
           node --check infra/docker/entrypoint.mjs
@@ -215,6 +216,10 @@ jobs:
           sudo grep -q 'panda_ci_backup_reader' "$bundle/postgres-globals.sql"
           sudo grep -Eq 'ACL.*TABLE panda_ci_acl_probe' "$bundle/postgres-objects.txt"
           echo "PASS: the encrypted PostgreSQL backup preserves role definitions and GRANT privileges"
+          cd "$GITHUB_WORKSPACE/.panda-local/supabase"
+          PANDA_RESTORE_BUNDLE="$bundle" PANDA_CI_DISPOSABLE=yes \
+            bash "$GITHUB_WORKSPACE/infra/backup/disposable-full-restore.sh"
+          cd "$GITHUB_WORKSPACE"
           docker compose -f compose.yaml -f compose.server.yaml --env-file .env.docker \
             exec -T panda-web node -e "process.exit(0)"
           echo "PASS: encrypted full backup created, repository checked and all components restored"
