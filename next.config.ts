@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 // Public VED URLs are flat. Old bookmarks keep working through temporary
 // redirects, without changing existing server-side page implementation.
 const nextConfig: NextConfig = {
+  // Docker: ship the traced server with minimal runtime dependencies.
+  output: "standalone",
   async redirects() {
     return [
       { source: "/ved", destination: "/orders", permanent: false },
