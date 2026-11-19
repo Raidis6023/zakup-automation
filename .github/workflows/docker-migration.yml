@@ -185,6 +185,11 @@ jobs:
           node infra/migration/panda-connected-smoke.mjs "$RUNNER_TEMP/panda-ci-1c-token"
           rm -f "$RUNNER_TEMP/panda-ci-1c-token"
 
+          # Confirm the backup retains custom PostgreSQL role permissions,
+          # not just tables and their data. This role is entirely synthetic.
+          docker exec -i supabase-db psql -U postgres -d postgres \
+            -v ON_ERROR_STOP=1 < infra/backup/disposable-acl-fixture.sql
+
           # Full encrypted backup rehearsal using ONLY synthetic local data.
           # The production script normally refuses local repositories.
           # This exception works exclusively inside the disposable CI runner.
@@ -207,6 +212,9 @@ jobs:
           test -n "$restored_dump"
           bundle="$(dirname "$restored_dump")"
           sudo bash "$GITHUB_WORKSPACE/infra/backup/verify-bundle.sh" "$bundle"
+          sudo grep -q 'panda_ci_backup_reader' "$bundle/postgres-globals.sql"
+          sudo grep -Eq 'ACL.*TABLE panda_ci_acl_probe' "$bundle/postgres-objects.txt"
+          echo "PASS: the encrypted PostgreSQL backup preserves role definitions and GRANT privileges"
           docker compose -f compose.yaml -f compose.server.yaml --env-file .env.docker \
             exec -T panda-web node -e "process.exit(0)"
           echo "PASS: encrypted full backup created, repository checked and all components restored"
