@@ -97,6 +97,7 @@ jobs:
         run: |
           # GitHub-only test: no production credentials and no cloud project.
           docker network create panda_shared
+          cp "$GITHUB_WORKSPACE/infra/supabase/docker-compose.smoke.yml" .panda-local/supabase/docker-compose.smoke.yml
           cd .panda-local/supabase
           umask 077
           sh utils/generate-keys.sh --update-env > /dev/null
