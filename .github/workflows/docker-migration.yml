@@ -38,6 +38,9 @@ jobs:
       - name: Validate migration guardrails
         run: node scripts/docker-migration-regression.test.cjs
 
+      - name: Validate scheduled jobs without starting them
+        run: node scripts/docker-scheduler.test.mjs
+
       - name: Build image with complete regression suite
         run: docker compose --env-file .env.docker build --progress plain panda-web
 
