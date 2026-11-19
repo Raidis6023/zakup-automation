@@ -19,3 +19,10 @@ npm-debug.log*
 .DS_Store
 .vscode
 .idea
+
+# Local self-hosted database, secrets, backups and temporary CI credentials.
+.panda-local
+.ci-secrets
+secrets
+backups
+*.secret
