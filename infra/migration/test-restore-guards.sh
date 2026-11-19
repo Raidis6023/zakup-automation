@@ -8,6 +8,7 @@ repo="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 temp="$(mktemp -d)"
 trap 'rm -rf -- "$temp"' EXIT
 mkdir -p "$temp/bin" "$temp/dumps"
+chmod 700 "$temp/dumps"
 printf 'SELECT 1;\n' > "$temp/dumps/roles.sql"
 printf 'CREATE TABLE public.example(id integer);\n' > "$temp/dumps/schema.sql"
 printf 'COPY auth.users (id) FROM stdin;\n1\n\\.\n' > "$temp/dumps/data.sql"
