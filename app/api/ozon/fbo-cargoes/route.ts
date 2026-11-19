@@ -1,3 +1,4 @@
+import { getOzonCredentials } from "@/lib/integrations/secrets";
 export const runtime =
   "nodejs";
 
@@ -210,55 +211,13 @@ function chunks<T>(
 
 
 function getConfig() {
-
-  const ozonClientId =
-    process.env
-      .OZON_CLIENT_ID
-      ?.trim();
-
-  const ozonApiKey =
-    process.env
-      .OZON_API_KEY
-      ?.trim();
-
-  const supabaseUrl =
-    process.env
-      .NEXT_PUBLIC_SUPABASE_URL
-      ?.replace(
-        /\/$/,
-        ""
-      );
-
-  const supabaseSecretKey =
-    process.env
-      .SUPABASE_SECRET_KEY
-      ?.trim();
-
-
-  if (
-    !ozonClientId
-    ||
-    !ozonApiKey
-    ||
-    !supabaseUrl
-    ||
-    !supabaseSecretKey
-  ) {
-
-    throw new Error(
-      "Не найдены настройки Ozon / Supabase"
-    );
-
-  }
-
-
-  return {
-    ozonClientId,
-    ozonApiKey,
-    supabaseUrl,
-    supabaseSecretKey,
-  };
-
+  const supabaseUrl = (
+    process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+  )?.replace(/\/$/, "");
+  const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY?.trim();
+  if (!supabaseUrl) throw new Error("Не настроен адрес базы ПАНДЫ");
+  if (!supabaseSecretKey) throw new Error("Не настроен служебный ключ базы ПАНДЫ");
+  return { supabaseUrl, supabaseSecretKey };
 }
 
 
@@ -329,11 +288,11 @@ async function ozonPost<T>(
 ):
 Promise<T> {
 
-  const {
-    ozonClientId,
-    ozonApiKey,
-  } =
-    getConfig();
+  const { sellerClientId: ozonClientId, sellerApiKey: ozonApiKey } =
+    await getOzonCredentials();
+  if (!ozonClientId || !ozonApiKey) {
+    throw new Error("Укажите ключи Ozon Seller в администрировании ПАНДЫ");
+  }
 
 
   for (

@@ -1,3 +1,4 @@
+import { getIntegrationSecret } from "@/lib/integrations/secrets";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -82,7 +83,7 @@ async function syncSales(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Нет прав на загрузку WB" }, { status: 403 });
   }
 
-  const token = process.env.WB_READ_TOKEN?.trim();
+  const token = (await getIntegrationSecret("wb_read_token"))?.trim();
   if (!token) {
     return NextResponse.json({ ok: false, error: "WB_READ_TOKEN не настроен" }, { status: 503 });
   }

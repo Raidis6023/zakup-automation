@@ -1,3 +1,4 @@
+import { getInternalAppOrigin } from "@/lib/server/internal-origin";
 export const runtime =
   "nodejs";
 
@@ -209,46 +210,8 @@ value is JsonObject {
 }
 
 
-function getInternalBaseUrl():
-string {
-
-  const productionHost =
-    process.env
-      .VERCEL_PROJECT_PRODUCTION_URL
-      ?.trim()
-    ||
-    process.env
-      .NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL
-      ?.trim();
-
-
-  if (productionHost) {
-
-    if (
-      productionHost.startsWith(
-        "http://"
-      )
-      ||
-      productionHost.startsWith(
-        "https://"
-      )
-    ) {
-
-      return productionHost.replace(
-        /\/+$/,
-        ""
-      );
-
-    }
-
-
-    return `https://${productionHost}`;
-
-  }
-
-
-  return "https://zakup-automation.vercel.app";
-
+function getInternalBaseUrl(): string {
+  return getInternalAppOrigin();
 }
 
 
@@ -262,8 +225,7 @@ Config {
 
 
   const supabaseUrl =
-    process.env
-      .NEXT_PUBLIC_SUPABASE_URL
+    (process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL)
       ?.trim()
     ||
     process.env

@@ -1,3 +1,4 @@
+import { getOzonCredentials } from "@/lib/integrations/secrets";
 import {
   NextResponse,
 } from "next/server";
@@ -175,52 +176,18 @@ class OzonHttpError extends Error {
 // HEADERS OZON
 // ============================================================
 
-function getOzonHeaders() {
-
-  const clientId =
-    process.env
-      .OZON_CLIENT_ID;
-
-
-  const apiKey =
-    process.env
-      .OZON_API_KEY;
-
-
-  if (!clientId) {
-
-    throw new Error(
-      "Vercel не видит OZON_CLIENT_ID"
-    );
-
+async function getOzonHeaders() {
+  const { sellerClientId: clientId, sellerApiKey: apiKey } = await getOzonCredentials();
+  if (!clientId || !apiKey) {
+    throw new Error("Не настроены ключи Ozon Seller в администрировании ПАНДЫ");
   }
-
-
-  if (!apiKey) {
-
-    throw new Error(
-      "Vercel не видит OZON_API_KEY"
-    );
-
-  }
-
-
   return {
-    "Client-Id":
-      clientId,
-
-    "Api-Key":
-      apiKey,
-
-    "Content-Type":
-      "application/json",
-
-    Accept:
-      "application/json",
+    "Client-Id": clientId,
+    "Api-Key": apiKey,
+    "Content-Type": "application/json",
+    Accept: "application/json",
   };
-
 }
-
 
 // ============================================================
 // SUPABASE CONFIG
@@ -512,7 +479,7 @@ async function ozonPost<T>(
 Promise<T> {
 
   const headers =
-    getOzonHeaders();
+    await getOzonHeaders();
 
 
   const maxAttempts =

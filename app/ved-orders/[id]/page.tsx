@@ -37,8 +37,7 @@ Promise<boolean> {
   try {
 
     const supabaseUrl =
-      process.env
-        .NEXT_PUBLIC_SUPABASE_URL;
+      (process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL);
 
 
     const supabaseSecretKey =
@@ -215,7 +214,7 @@ Promise<boolean> {
 // ============================================================
 
 async function hasMissingVedOrderPhotos(orderId: string): Promise<boolean> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseUrl = (process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL);
   const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
 
   if (!supabaseUrl || !supabaseSecretKey) {

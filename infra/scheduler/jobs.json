@@ -1,0 +1,82 @@
+[
+  {
+    "path": "/api/ozon/daily-sync",
+    "schedule": "0 22 * * *"
+  },
+  {
+    "path": "/api/agents/ozon-finance-cron",
+    "schedule": "10 22 * * *"
+  },
+  {
+    "path": "/api/agents/ozon-finance-plan",
+    "schedule": "5 22 * * *"
+  },
+  {
+    "path": "/api/agents/ozon-finance-support-cron",
+    "schedule": "30 22 * * *"
+  },
+  {
+    "path": "/api/agents/ozon-finance-ads",
+    "schedule": "40 22 * * *"
+  },
+  {
+    "path": "/api/wb/daily-sync",
+    "schedule": "0 23 * * *"
+  },
+  {
+    "path": "/api/agents/wb-finance-cron",
+    "schedule": "10 23 * * *"
+  },
+  {
+    "path": "/api/yandex/daily-sync",
+    "schedule": "0 0 * * *"
+  },
+  {
+    "path": "/api/agents/yandex-finance-campaigns-cron",
+    "schedule": "10 0 * * *"
+  },
+  {
+    "path": "/api/agents/yandex-finance-cron",
+    "schedule": "25 23 * * *"
+  },
+  {
+    "path": "/api/agents/wb-finance-history-cron",
+    "schedule": "30 2 * * *"
+  },
+  {
+    "path": "/api/agents/wb-finance-ads-cron",
+    "schedule": "10 4 * * *"
+  },
+  {
+    "path": "/api/agents/ozon-finance-ads-retry-morning",
+    "schedule": "45 1 * * *"
+  },
+  {
+    "path": "/api/agents/ozon-finance-ads-retry-afternoon",
+    "schedule": "20 10 * * *"
+  },
+  {
+    "path": "/api/agents/ozon-finance-ads-retry-evening",
+    "schedule": "20 16 * * *"
+  },
+  {
+    "path": "/api/agents/ozon-finance-retry",
+    "schedule": "20 11 * * *"
+  },
+  {
+    "path": "/api/agents/yandex-finance-campaigns-retry-morning",
+    "schedule": "20 7 * * *"
+  },
+  {
+    "path": "/api/agents/yandex-finance-campaigns-retry-evening",
+    "schedule": "20 17 * * *"
+  },
+  {
+    "path": "/api/agents/yandex-finance-retry",
+    "schedule": "20 13 * * *"
+  },
+  {
+    "path": "/api/china/wb-operational-sales-sync",
+    "schedule": "35 1 * * *"
+  }
+]

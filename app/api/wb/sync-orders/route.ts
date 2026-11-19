@@ -322,8 +322,7 @@ export async function GET() {
     process.env.SUPABASE_URL
     ?.trim()
     ??
-    process.env
-      .NEXT_PUBLIC_SUPABASE_URL
+    (process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL)
       ?.trim();
 
 

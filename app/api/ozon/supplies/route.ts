@@ -1,3 +1,4 @@
+import { getOzonCredentials } from "@/lib/integrations/secrets";
 export const runtime =
   "nodejs";
 
@@ -208,37 +209,10 @@ type OzonCargoResponse = {
 };
 
 
-function getCredentials() {
-
-  const clientId =
-    process.env
-      .OZON_CLIENT_ID
-      ?.trim();
-
-  const apiKey =
-    process.env
-      .OZON_API_KEY
-      ?.trim();
-
-
-  if (
-    !clientId
-    ||
-    !apiKey
-  ) {
-
-    throw new Error(
-      "Не найдены OZON_CLIENT_ID / OZON_API_KEY"
-    );
-
-  }
-
-
-  return {
-    clientId,
-    apiKey,
-  };
-
+async function getCredentials() {
+  const { sellerClientId: clientId, sellerApiKey: apiKey } = await getOzonCredentials();
+  if (!clientId || !apiKey) throw new Error("Укажите ключи Ozon Seller в администрировании ПАНДЫ");
+  return { clientId, apiKey };
 }
 
 
@@ -271,7 +245,7 @@ Promise<T> {
     clientId,
     apiKey,
   } =
-    getCredentials();
+    await getCredentials();
 
 
   for (

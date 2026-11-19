@@ -1,3 +1,4 @@
+import { getInternalAppOrigin } from "@/lib/server/internal-origin";
 import {
   NextRequest,
   NextResponse,
@@ -329,7 +330,7 @@ async function runDailySync(
 
 
   const origin =
-    "https://zakup-automation.vercel.app";
+    getInternalAppOrigin();
 
 
   // ==========================================================

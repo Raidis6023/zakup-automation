@@ -1,3 +1,4 @@
+import { getServerSupabaseFetch } from "./server-fetch";
 import {
   createClient as createSupabaseClient,
 } from "@supabase/supabase-js";
@@ -57,6 +58,7 @@ export function createAdminClient() {
         persistSession: false,
         detectSessionInUrl: false,
       },
+      global: { fetch: getServerSupabaseFetch() },
     }
   );
 

@@ -1,0 +1,81 @@
+{
+  "date": "2026-11-19",
+  "source": "read-only aggregate SQL, connected cloud Supabase",
+  "postgresVersion": "17.11",
+  "databaseBytes": 1363416755,
+  "publicTables": 123,
+  "publicTablesWithRLS": 123,
+  "publicPolicies": 4,
+  "authUsers": 3,
+  "storage": [
+    {
+      "bucket": "avatars",
+      "public": false,
+      "objects": 2
+    },
+    {
+      "bucket": "ved-commercial-offers",
+      "public": false,
+      "objects": 4
+    },
+    {
+      "bucket": "ved-product-photos",
+      "public": false,
+      "objects": 38
+    }
+  ],
+  "cron": [
+    {
+      "job": "app-personal-notes-v1",
+      "schedule": "* * * * *",
+      "callsOldVercel": false
+    },
+    {
+      "job": "ozon_finance_ads_backfill_10min",
+      "schedule": "*/5 * * * *",
+      "callsOldVercel": true
+    },
+    {
+      "job": "yandex_finance_recovery_10min",
+      "schedule": "*/10 * * * *",
+      "callsOldVercel": true
+    },
+    {
+      "job": "yandex_promotion_recovery_10min",
+      "schedule": "5-59/10 * * * *",
+      "callsOldVercel": true
+    }
+  ],
+  "disclaimer": "Point-in-time counts. No user rows, personal data, credentials, secret values, cron commands, or file contents.",
+  "schemaFingerprint": {
+    "columns": {
+      "count": 1354,
+      "digest": "9155a9d41309bd0efdfdc5f3fef188d2"
+    },
+    "constraints": {
+      "count": 478,
+      "digest": "fc23614a457fd701d6156981da4ffb12"
+    },
+    "functions": {
+      "count": 131,
+      "digest": "3fd66dd92ab8fa25c0b0b6f3f650fca9"
+    },
+    "indexes": {
+      "count": 298,
+      "digest": "0807e743ad13139026c8c448a46f7156"
+    },
+    "policies": {
+      "count": 4,
+      "digest": "90238cab9b422fd4c59f3592c308051a"
+    },
+    "tables": {
+      "count": 123,
+      "digest": "f07652530c19ddeef48dd7e2963292c7"
+    },
+    "triggers": {
+      "count": 15,
+      "digest": "31f6bd12dad4da2968d49aee0ab305e6"
+    }
+  },
+  "schemaFingerprintNote": "Read-only hash of public schema from 2026-11-19; rerun SQL immediately before cutover. Comparing against another day may legitimately differ."
+}
